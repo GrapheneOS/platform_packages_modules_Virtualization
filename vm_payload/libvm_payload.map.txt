@@ -12,7 +12,7 @@ LIBVM_PAYLOAD {
     AVmAttestationResult_getPrivateKey;  # systemapi introduced=VanillaIceCream
     AVmAttestationResult_sign;           # systemapi introduced=VanillaIceCream
     AVmAttestationResult_free;           # systemapi introduced=VanillaIceCream
-    AVmAttestationResult_resultToString; # systemapi introduced=VanillaIceCream
+    AVmAttestationStatus_toString;       # systemapi introduced=VanillaIceCream
     AVmAttestationResult_getCertificateCount; # systemapi introduced=VanillaIceCream
     AVmAttestationResult_getCertificateAt; # systemapi introduced=VanillaIceCream
   local:

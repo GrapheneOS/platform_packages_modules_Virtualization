@@ -23,10 +23,10 @@ use std::{
     result,
 };
 use vm_payload_bindgen::{
-    attestation_status_t, AVmAttestationResult, AVmAttestationResult_free,
-    AVmAttestationResult_getCertificateAt, AVmAttestationResult_getCertificateCount,
-    AVmAttestationResult_getPrivateKey, AVmAttestationResult_resultToString,
-    AVmAttestationResult_sign, AVmPayload_requestAttestation,
+    AVmAttestationResult, AVmAttestationResult_free, AVmAttestationResult_getCertificateAt,
+    AVmAttestationResult_getCertificateCount, AVmAttestationResult_getPrivateKey,
+    AVmAttestationResult_sign, AVmAttestationStatus, AVmAttestationStatus_toString,
+    AVmPayload_requestAttestation,
 };
 
 /// Entry point of the Service VM client.
@@ -56,7 +56,7 @@ fn try_main() -> Result<()> {
     ensure!(res.is_err());
     let status = res.unwrap_err();
     ensure!(
-        status == attestation_status_t::ATTESTATION_ERROR_INVALID_CHALLENGE,
+        status == AVmAttestationStatus::ATTESTATION_ERROR_INVALID_CHALLENGE,
         "Unexpected status: {:?}",
         status
     );
@@ -89,7 +89,7 @@ fn try_main() -> Result<()> {
 struct AttestationResult(NonNull<AVmAttestationResult>);
 
 impl AttestationResult {
-    fn request_attestation(challenge: &[u8]) -> result::Result<Self, attestation_status_t> {
+    fn request_attestation(challenge: &[u8]) -> result::Result<Self, AVmAttestationStatus> {
         let mut res: *mut AVmAttestationResult = ptr::null_mut();
         // SAFETY: It is safe as we only read the challenge within its bounds and the
         // function does not retain any reference to it.
@@ -100,7 +100,7 @@ impl AttestationResult {
                 &mut res,
             )
         };
-        if status == attestation_status_t::ATTESTATION_OK {
+        if status == AVmAttestationStatus::ATTESTATION_OK {
             info!("Attestation succeeds. Status: {:?}", status_to_cstr(status));
             let res = NonNull::new(res).expect("The attestation result is null");
             Ok(Self(res))
@@ -219,11 +219,11 @@ fn sign_with_attested_key(res: &AVmAttestationResult, message: &[u8]) -> Result<
     Ok(signature.into_boxed_slice())
 }
 
-fn status_to_cstr(status: attestation_status_t) -> &'static CStr {
+fn status_to_cstr(status: AVmAttestationStatus) -> &'static CStr {
     // SAFETY: The function only reads the given enum status and returns a pointer to a
     // static string.
-    let message = unsafe { AVmAttestationResult_resultToString(status) };
-    // SAFETY: The pointer returned by `AVmAttestationResult_resultToString` is guaranteed to
+    let message = unsafe { AVmAttestationStatus_toString(status) };
+    // SAFETY: The pointer returned by `AVmAttestationStatus_toString` is guaranteed to
     // point to a valid C String that lives forever.
     unsafe { CStr::from_ptr(message) }
 }

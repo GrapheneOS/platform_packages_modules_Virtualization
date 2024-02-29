@@ -35,6 +35,7 @@ java_test_host {
         "initrd_bootconfig",
         "lpmake",
         "lpunpack",
+        "lz4",
         "sign_virt_apex",
         "simg2img",
         "dtdiff",

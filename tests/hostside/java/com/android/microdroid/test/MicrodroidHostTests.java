@@ -954,7 +954,43 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         assertThat(hasDebugPolicy).isFalse();
     }
 
+    private boolean isLz4(String path) throws Exception {
+        File lz4tool = findTestFile("lz4");
+        CommandResult result =
+                new RunUtil().runTimedCmd(5000, lz4tool.getAbsolutePath(), "-t", path);
+        return result.getStatus() == CommandStatus.SUCCESS;
+    }
+
+    private void decompressLz4(String inputPath, String outputPath) throws Exception {
+        File lz4tool = findTestFile("lz4");
+        CommandResult result =
+                new RunUtil()
+                        .runTimedCmd(
+                                5000, lz4tool.getAbsolutePath(), "-d", "-f", inputPath, outputPath);
+        String out = result.getStdout();
+        String err = result.getStderr();
+        assertWithMessage(
+                        "lz4 image "
+                                + inputPath
+                                + " decompression failed."
+                                + "\n\tout: "
+                                + out
+                                + "\n\terr: "
+                                + err
+                                + "\n")
+                .about(command_results())
+                .that(result)
+                .isSuccess();
+    }
+
     private String avbInfo(String image_path) throws Exception {
+        if (isLz4(image_path)) {
+            File decompressedImage = FileUtil.createTempFile("decompressed", ".img");
+            decompressedImage.deleteOnExit();
+            decompressLz4(image_path, decompressedImage.getAbsolutePath());
+            image_path = decompressedImage.getAbsolutePath();
+        }
+
         File avbtool = findTestFile("avbtool");
         List<String> command =
                 Arrays.asList(avbtool.getAbsolutePath(), "info_image", "--image", image_path);

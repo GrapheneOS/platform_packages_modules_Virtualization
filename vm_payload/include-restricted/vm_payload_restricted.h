@@ -72,7 +72,7 @@ size_t AVmPayload_getDiceAttestationCdi(void* _Nullable data, size_t size);
  *               succeeds. The result remains valid until it is freed with
  *              `AVmPayload_freeAttestationResult`.
  */
-attestation_status_t AVmPayload_requestAttestationForTesting(
+AVmAttestationStatus AVmPayload_requestAttestationForTesting(
         const void* _Nonnull challenge, size_t challenge_size,
         struct AVmAttestationResult* _Nullable* _Nonnull result) __INTRODUCED_IN(__ANDROID_API_V__);
 

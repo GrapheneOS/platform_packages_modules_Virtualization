@@ -45,8 +45,6 @@ use log::{error, info};
 use microdroid_metadata::PayloadMetadata;
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
 use nix::sys::signal::Signal;
-use openssl::hkdf::hkdf;
-use openssl::md::Md;
 use payload::load_metadata;
 use rpcbinder::RpcSession;
 use rustutils::sockets::android_get_control_socket;
@@ -73,6 +71,8 @@ const AVF_NEW_INSTANCE: &str = "/proc/device-tree/chosen/avf,new-instance";
 const AVF_DEBUG_POLICY_RAMDUMP: &str = "/proc/device-tree/avf/guest/common/ramdump";
 const DEBUG_MICRODROID_NO_VERIFIED_BOOT: &str =
     "/proc/device-tree/virtualization/guest/debug-microdroid,no-verified-boot";
+const SECRETKEEPER_KEY: &str = "/proc/device-tree/avf/secretkeeper_public_key";
+const INSTANCE_ID_PATH: &str = "/proc/device-tree/avf/untrusted/instance-id";
 
 const ENCRYPTEDSTORE_BIN: &str = "/system/bin/encryptedstore";
 const ZIPFUSE_BIN: &str = "/system/bin/zipfuse";
@@ -143,6 +143,23 @@ fn write_death_reason_to_serial(err: &Error) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// The (host allocated) instance_id can be found at node /avf/untrusted/ in the device tree.
+fn get_instance_id() -> Result<Option<[u8; ID_SIZE]>> {
+    let path = Path::new(INSTANCE_ID_PATH);
+    let instance_id = if path.exists() {
+        Some(
+            fs::read(path)?
+                .try_into()
+                .map_err(|x: Vec<_>| anyhow!("Expected {ID_SIZE} bytes, found {:?}", x.len()))?,
+        )
+    } else {
+        // TODO(b/325094712): x86 support for Device tree in nested guest is limited/broken/
+        // untested. So instance_id will not be present in cuttlefish.
+        None
+    };
+    Ok(instance_id)
 }
 
 fn main() -> Result<()> {
@@ -284,19 +301,8 @@ fn try_run_payload(
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
     let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
-    // TODO(b/291213394): This will be the Id for non-pVM only, instance_data.salt is all 0
-    // for protected VM, implement a mechanism for pVM!
-    let mut vm_id = [0u8; ID_SIZE];
-    hkdf(
-        &mut vm_id,
-        Md::sha256(),
-        &instance_data.salt,
-        /* salt */ b"",
-        /* info */ b"VM_ID",
-    )
-    .context("hkdf failed")?;
     let vm_secret =
-        VmSecret::new(vm_id, dice_artifacts, service).context("Failed to create VM secrets")?;
+        VmSecret::new(dice_artifacts, service).context("Failed to create VM secrets")?;
 
     if cfg!(dice_changes) {
         // Now that the DICE derivation is done, it's ok to allow payload code to run.

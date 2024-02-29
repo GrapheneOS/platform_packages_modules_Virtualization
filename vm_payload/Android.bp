@@ -34,7 +34,7 @@ rust_bindgen {
     source_stem: "bindings",
     bindgen_flags: [
         "--default-enum-style rust",
-        "--allowlist-type=attestation_status_t",
+        "--allowlist-type=AVmAttestationStatus",
     ],
     visibility: [":__subpackages__"],
 }

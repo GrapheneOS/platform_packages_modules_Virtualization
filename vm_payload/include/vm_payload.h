@@ -25,20 +25,19 @@
 
 __BEGIN_DECLS
 
-struct AIBinder;
 typedef struct AIBinder AIBinder;
 
 /**
  * Introduced in API 35.
  * Remote attestation result if the attestation succeeds.
  */
-struct AVmAttestationResult;
+typedef struct AVmAttestationResult AVmAttestationResult;
 
 /**
  * Introduced in API 35.
  * Remote attestation status types returned from remote attestation functions.
  */
-typedef enum attestation_status_t : int32_t {
+typedef enum AVmAttestationStatus : int32_t {
     /** The remote attestation completes successfully. */
     ATTESTATION_OK = 0,
 
@@ -50,7 +49,7 @@ typedef enum attestation_status_t : int32_t {
 
     /** Remote attestation is not supported in the current environment. */
     ATTESTATION_ERROR_UNSUPPORTED = -10003,
-} attestation_status_t;
+} AVmAttestationStatus;
 
 /**
  * Notifies the host that the payload is ready.
@@ -151,9 +150,10 @@ const char* _Nullable AVmPayload_getEncryptedStoragePath(void);
  *
  * \return ATTESTATION_OK upon successful attestation.
  */
-attestation_status_t AVmPayload_requestAttestation(
-        const void* _Nonnull challenge, size_t challenge_size,
-        struct AVmAttestationResult* _Nullable* _Nonnull result) __INTRODUCED_IN(__ANDROID_API_V__);
+AVmAttestationStatus AVmPayload_requestAttestation(const void* _Nonnull challenge,
+                                                   size_t challenge_size,
+                                                   AVmAttestationResult* _Nullable* _Nonnull result)
+        __INTRODUCED_IN(__ANDROID_API_V__);
 
 /**
  * Converts the return value from `AVmPayload_requestAttestation` to a text string
@@ -162,7 +162,7 @@ attestation_status_t AVmPayload_requestAttestation(
  * \return a constant string value representing the status code. The string should not
  * be deleted or freed by the application and remains valid for the lifetime of the VM.
  */
-const char* _Nonnull AVmAttestationResult_resultToString(attestation_status_t status)
+const char* _Nonnull AVmAttestationStatus_toString(AVmAttestationStatus status)
         __INTRODUCED_IN(__ANDROID_API_V__);
 
 /**
@@ -173,7 +173,7 @@ const char* _Nonnull AVmAttestationResult_resultToString(attestation_status_t st
  *
  * \param result A pointer to the attestation result.
  */
-void AVmAttestationResult_free(struct AVmAttestationResult* _Nullable result)
+void AVmAttestationResult_free(AVmAttestationResult* _Nullable result)
         __INTRODUCED_IN(__ANDROID_API_V__);
 
 /**
@@ -192,7 +192,7 @@ void AVmAttestationResult_free(struct AVmAttestationResult* _Nullable result)
  *
  * [RFC 5915 s3]: https://datatracker.ietf.org/doc/html/rfc5915#section-3
  */
-size_t AVmAttestationResult_getPrivateKey(const struct AVmAttestationResult* _Nonnull result,
+size_t AVmAttestationResult_getPrivateKey(const AVmAttestationResult* _Nonnull result,
                                           void* _Nullable data, size_t size)
         __INTRODUCED_IN(__ANDROID_API_V__);
 
@@ -215,7 +215,7 @@ size_t AVmAttestationResult_getPrivateKey(const struct AVmAttestationResult* _No
  *
  * [RFC 6979]: https://datatracker.ietf.org/doc/html/rfc6979
  */
-size_t AVmAttestationResult_sign(const struct AVmAttestationResult* _Nonnull result,
+size_t AVmAttestationResult_sign(const AVmAttestationResult* _Nonnull result,
                                  const void* _Nonnull message, size_t message_size,
                                  void* _Nullable data, size_t size)
         __INTRODUCED_IN(__ANDROID_API_V__);
@@ -232,7 +232,7 @@ size_t AVmAttestationResult_sign(const struct AVmAttestationResult* _Nonnull res
  *
  * \return The number of certificates in the certificate chain.
  */
-size_t AVmAttestationResult_getCertificateCount(const struct AVmAttestationResult* _Nonnull result)
+size_t AVmAttestationResult_getCertificateCount(const AVmAttestationResult* _Nonnull result)
         __INTRODUCED_IN(__ANDROID_API_V__);
 
 /**
@@ -256,7 +256,7 @@ size_t AVmAttestationResult_getCertificateCount(const struct AVmAttestationResul
  *
  * \return The total size of the certificate at the given `index`.
  */
-size_t AVmAttestationResult_getCertificateAt(const struct AVmAttestationResult* _Nonnull result,
+size_t AVmAttestationResult_getCertificateAt(const AVmAttestationResult* _Nonnull result,
                                              size_t index, void* _Nullable data, size_t size)
         __INTRODUCED_IN(__ANDROID_API_V__);
 

@@ -153,12 +153,18 @@ def ExtractAvbPubkey(args, key, output):
                '--key', key, '--output', output])
 
 
+def is_lz4(args, path):
+    # error 44: Unrecognized header
+    result = RunCommand(args, ['lz4', '-t', path], expected_return_values={0, 44})
+    return result[1] == 0
+
+
 def AvbInfo(args, image_path):
     """Parses avbtool --info image output
 
     Args:
       args: program arguments.
-      image_path: The path to the image.
+      image_path: The path to the image, either raw or lz4 compressed
       descriptor_name: Descriptor name of interest.
 
     Returns:
@@ -168,6 +174,11 @@ def AvbInfo(args, image_path):
     """
     if not os.path.exists(image_path):
         raise ValueError(f'Failed to find image: {image_path}')
+
+    if is_lz4(args, image_path):
+        with tempfile.NamedTemporaryFile() as decompressed_image:
+            RunCommand(args, ['lz4', '-d', '-f', image_path, decompressed_image.name])
+            return AvbInfo(args, decompressed_image.name)
 
     output, ret_code = RunCommand(
         args, ['avbtool', 'info_image', '--image', image_path], expected_return_values={0, 1})
@@ -560,11 +571,7 @@ def SignVirtApex(args):
                             wait=[vbmeta_f])
 
     # Re-sign kernel. Note kernel's vbmeta contain addition descriptor from ramdisk(s)
-    def resign_kernel(kernel, initrd_normal, initrd_debug):
-        kernel_file = files[kernel]
-        initrd_normal_file = files[initrd_normal]
-        initrd_debug_file = files[initrd_debug]
-
+    def resign_decompressed_kernel(kernel_file, initrd_normal_file, initrd_debug_file):
         _, kernel_image_descriptors = AvbInfo(args, kernel_file)
         salts = extract_hash_descriptors(
             kernel_image_descriptors, lambda descriptor: descriptor['Salt'])
@@ -580,21 +587,47 @@ def SignVirtApex(args):
               additional_images=[initrd_normal_hashdesc, initrd_debug_hashdesc],
               wait=[initrd_n_f, initrd_d_f])
 
+    def resign_compressed_kernel(kernel_file, initrd_normal_file, initrd_debug_file):
+        # decompress, re-sign, compress again
+        with tempfile.TemporaryDirectory() as work_dir:
+            decompressed_kernel_file = os.path.join(work_dir, os.path.basename(kernel_file))
+            RunCommand(args, ['lz4', '-d', kernel_file, decompressed_kernel_file])
+            resign_decompressed_kernel(decompressed_kernel_file, initrd_normal_file,
+                                       initrd_debug_file).result()
+            RunCommand(args, ['lz4', '-9', '-f', decompressed_kernel_file, kernel_file])
+
+    def resign_kernel(kernel, initrd_normal, initrd_debug):
+        kernel_file = files[kernel]
+        initrd_normal_file = files[initrd_normal]
+        initrd_debug_file = files[initrd_debug]
+
+        # kernel may be compressed with lz4.
+        if is_lz4(args, kernel_file):
+            return Async(resign_compressed_kernel, kernel_file, initrd_normal_file,
+                         initrd_debug_file)
+        else:
+            return resign_decompressed_kernel(kernel_file, initrd_normal_file, initrd_debug_file)
+
     _, original_kernel_descriptors = AvbInfo(args, files['kernel'])
-    resign_kernel_task = resign_kernel('kernel', 'initrd_normal.img', 'initrd_debuggable.img')
+    resign_kernel_tasks = [resign_kernel('kernel', 'initrd_normal.img', 'initrd_debuggable.img')]
+    original_kernels = {"kernel" : original_kernel_descriptors}
 
     for ver in gki_versions:
         if f'gki-{ver}_kernel' in files:
-            resign_kernel(
-                f'gki-{ver}_kernel',
+            kernel_name = f'gki-{ver}_kernel'
+            _, original_kernel_descriptors = AvbInfo(args, files[kernel_name])
+            task = resign_kernel(
+                kernel_name,
                 f'gki-{ver}_initrd_normal.img',
                 f'gki-{ver}_initrd_debuggable.img')
+            resign_kernel_tasks.append(task)
+            original_kernels[kernel_name] = original_kernel_descriptors
 
     # Re-sign rialto if it exists. Rialto only exists in arm64 environment.
     if os.path.exists(files['rialto']):
         update_initrd_digests_task = Async(
-            update_initrd_digests_in_rialto, original_kernel_descriptors, args,
-            files, wait=[resign_kernel_task])
+            update_initrd_digests_of_kernels_in_rialto, original_kernels, args, files,
+            wait=resign_kernel_tasks)
         Async(resign_rialto, args, key, files['rialto'], wait=[update_initrd_digests_task])
 
 def resign_rialto(args, key, rialto_path):
@@ -628,18 +661,7 @@ def assert_different_value(original, updated, key, context):
         f"Value of '{key}' should change for '{context}'" \
         f"Original value: {original[key]}, updated value: {updated[key]}"
 
-def update_initrd_digests_in_rialto(original_descriptors, args, files):
-    _, updated_descriptors = AvbInfo(args, files['kernel'])
-
-    original_digests = extract_hash_descriptors(
-        original_descriptors, lambda x: binascii.unhexlify(x['Digest']))
-    updated_digests = extract_hash_descriptors(
-        updated_descriptors, lambda x: binascii.unhexlify(x['Digest']))
-    assert original_digests.pop("boot") == updated_digests.pop("boot"), \
-        "Hash descriptor of boot should not change for kernel. " \
-        f"Original descriptors: {original_descriptors}, " \
-        f"updated descriptors: {updated_descriptors}"
-
+def update_initrd_digests_of_kernels_in_rialto(original_kernels, args, files):
     # Update the hashes of initrd_normal and initrd_debug in rialto if the
     # bootconfigs in them are updated.
     if args.do_not_update_bootconfigs:
@@ -647,6 +669,26 @@ def update_initrd_digests_in_rialto(original_descriptors, args, files):
 
     with open(files['rialto'], "rb") as file:
         content = file.read()
+
+    for kernel_name, descriptors in original_kernels.items():
+        content = update_initrd_digests_in_rialto(
+            descriptors, args, files, kernel_name, content)
+
+    with open(files['rialto'], "wb") as file:
+        file.write(content)
+
+def update_initrd_digests_in_rialto(
+        original_descriptors, args, files, kernel_name, content):
+    _, updated_descriptors = AvbInfo(args, files[kernel_name])
+
+    original_digests = extract_hash_descriptors(
+        original_descriptors, lambda x: binascii.unhexlify(x['Digest']))
+    updated_digests = extract_hash_descriptors(
+        updated_descriptors, lambda x: binascii.unhexlify(x['Digest']))
+    assert original_digests.pop("boot") == updated_digests.pop("boot"), \
+        "Hash descriptor of boot should not change for " + kernel_name + \
+        f"\nOriginal descriptors: {original_descriptors}, " \
+        f"\nUpdated descriptors: {updated_descriptors}"
 
     # Check that the original and updated digests are different before updating rialto.
     partition_names = {'initrd_normal', 'initrd_debug'}
@@ -671,8 +713,7 @@ def update_initrd_digests_in_rialto(original_descriptors, args, files):
             f"original digest of the partition {partition_name} not found."
         content = new_content
 
-    with open(files['rialto'], "wb") as file:
-        file.write(content)
+    return content
 
 def extract_hash_descriptors(descriptors, f=lambda x: x):
     return {desc["Partition Name"]: f(desc) for desc in

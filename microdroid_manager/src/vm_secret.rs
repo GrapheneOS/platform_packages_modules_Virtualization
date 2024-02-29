@@ -19,7 +19,7 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::ISecretkeeper;
 use secretkeeper_comm::data_types::request::Request;
 use binder::{Strong};
-use coset::CborSerializable;
+use coset::{CoseKey, CborSerializable, CborOrdering};
 use dice_policy_builder::{CertIndex, ConstraintSpec, ConstraintType, policy_for_dice_chain, MissingAction, WILDCARD_FULL_ARRAY};
 use diced_open_dice::{DiceArtifacts, OwnedDiceArtifacts};
 use keystore2_crypto::ZVec;
@@ -34,6 +34,7 @@ use secretkeeper_comm::data_types::packet::{ResponsePacket, ResponseType};
 use secretkeeper_comm::data_types::request_response_impl::{
     StoreSecretRequest, GetSecretResponse, GetSecretRequest};
 use secretkeeper_comm::data_types::error::SecretkeeperError;
+use std::fs;
 use zeroize::Zeroizing;
 
 const ENCRYPTEDSTORE_KEY_IDENTIFIER: &str = "encryptedstore_key";
@@ -58,11 +59,6 @@ const SALT_PAYLOAD_SERVICE: &[u8] = &[
     0x55, 0xF8, 0x08, 0x23, 0x81, 0x5F, 0xF5, 0x16, 0x20, 0x3E, 0xBE, 0xBA, 0xB7, 0xA8, 0x43, 0x92,
 ];
 
-const SKP_SECRET_NP_VM: [u8; SECRET_SIZE] = [
-    0xA9, 0x89, 0x97, 0xFE, 0xAE, 0x97, 0x55, 0x4B, 0x32, 0x35, 0xF0, 0xE8, 0x93, 0xDA, 0xEA, 0x24,
-    0x06, 0xAC, 0x36, 0x8B, 0x3C, 0x95, 0x50, 0x16, 0x67, 0x71, 0x65, 0x26, 0xEB, 0xD0, 0xC3, 0x98,
-];
-
 pub enum VmSecret {
     // V2 secrets are derived from 2 independently secured secrets:
     //      1. Secretkeeper protected secrets (skp secret).
@@ -81,9 +77,16 @@ pub enum VmSecret {
     V1 { dice_artifacts: OwnedDiceArtifacts },
 }
 
+// For supporting V2 secrets, guest expects the public key to be present in the Linux device tree.
+fn get_secretkeeper_identity() -> Result<CoseKey> {
+    let key = fs::read(super::SECRETKEEPER_KEY)?;
+    let mut key = CoseKey::from_slice(&key)?;
+    key.canonicalize(CborOrdering::Lexicographic);
+    Ok(key)
+}
+
 impl VmSecret {
     pub fn new(
-        id: [u8; ID_SIZE],
         dice_artifacts: OwnedDiceArtifacts,
         vm_service: &Strong<dyn IVirtualMachineService>,
     ) -> Result<Self> {
@@ -93,29 +96,27 @@ impl VmSecret {
             // Use V1 secrets if Secretkeeper is not supported.
             return Ok(Self::V1 { dice_artifacts });
         };
+
         let explicit_dice =
             OwnedDiceArtifactsWithExplicitKey::from_owned_artifacts(dice_artifacts)?;
-        let explicit_dice_chain = explicit_dice
-            .explicit_key_dice_chain()
-            .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
-        let policy = sealing_policy(explicit_dice_chain).map_err(anyhow_err)?;
-
-        // Start a new session with Secretkeeper!
-        let mut session = SkSession::new(sk_service, &explicit_dice, None)?;
+        // For pVM, skp_secret are stored in Secretkeeper. For non-protected it is all 0s.
         let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
         if super::is_strict_boot() {
+            let mut session =
+                SkSession::new(sk_service, &explicit_dice, Some(get_secretkeeper_identity()?))?;
+            let id = super::get_instance_id()?.ok_or(anyhow!("Missing instance_id"))?;
+            let explicit_dice_chain = explicit_dice
+                .explicit_key_dice_chain()
+                .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
+            let policy = sealing_policy(explicit_dice_chain).map_err(anyhow_err)?;
             if super::is_new_instance() {
+                // New instance -> create a secret & store in Secretkeeper.
                 *skp_secret = rand::random();
                 store_secret(&mut session, id, skp_secret.clone(), policy)?;
             } else {
                 // Subsequent run of the pVM -> get the secret stored in Secretkeeper.
                 *skp_secret = get_secret(&mut session, id, Some(policy))?;
             }
-        } else {
-            // TODO(b/291213394): Non protected VM don't need to use Secretkeeper, remove this
-            // once we have sufficient testing on protected VM.
-            store_secret(&mut session, id, SKP_SECRET_NP_VM.into(), policy)?;
-            *skp_secret = get_secret(&mut session, id, None)?;
         }
         Ok(Self::V2 {
             dice_artifacts: explicit_dice,
@@ -273,17 +274,13 @@ fn is_sk_supported(
     host: &Strong<dyn IVirtualMachineService>,
 ) -> Result<Option<Strong<dyn ISecretkeeper>>> {
     let sk = if cfg!(llpvm_changes) {
-        if super::is_strict_boot() {
-            // TODO: For protected VM check for Secretkeeper authentication data in device tree.
-            None
-        } else {
-            // For non-protected VM, believe what host claims.
-            host.getSecretkeeper()
-                // TODO rename this error!
-                .map_err(|e| {
-                    super::MicrodroidError::FailedToConnectToVirtualizationService(e.to_string())
-                })?
-        }
+        host.getSecretkeeper()
+            // TODO rename this error!
+            .map_err(|e| {
+                super::MicrodroidError::FailedToConnectToVirtualizationService(format!(
+                    "Failed to get Secretkeeper: {e:?}"
+                ))
+            })?
     } else {
         // LLPVM flag is disabled
         None
