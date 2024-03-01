@@ -17,9 +17,20 @@
 package android.system.virtualizationmaintenance;
 
 interface IVirtualizationMaintenance {
+    /**
+     * Notification that an app has been permanently removed, to allow related global state to
+     * be removed.
+     *
+     * @param userId The Android user ID for whom the notification applies.
+     */
     void appRemoved(int userId, int appId);
 
+    /**
+     * Notification that a user has been removed, to allow related global state to be removed.
+     *
+     * @param userId The Android user ID of the user.
+     */
     void userRemoved(int userId);
 
-    // TODO: Something for daily reconciliation
+    // TODO(b/294177871): Something for daily reconciliation
 }

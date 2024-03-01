@@ -42,7 +42,7 @@ use binder::Strong;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
 use log::{error, info};
-use microdroid_metadata::PayloadMetadata;
+use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
 use nix::sys::signal::Signal;
 use payload::load_metadata;
@@ -236,16 +236,12 @@ fn try_main() -> Result<()> {
     }
 }
 
-fn try_run_payload(
-    service: &Strong<dyn IVirtualMachineService>,
-    vm_payload_service_fd: OwnedFd,
-) -> Result<i32> {
-    let metadata = load_metadata().context("Failed to load payload metadata")?;
-    let dice = DiceDriver::new(Path::new("/dev/open-dice0")).context("Failed to load DICE")?;
-
+fn verify_payload_with_instance_img(
+    metadata: &Metadata,
+    dice: &DiceDriver,
+) -> Result<MicrodroidData> {
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
-    let saved_data =
-        instance.read_microdroid_data(&dice).context("Failed to read identity data")?;
+    let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
     if is_strict_boot() {
         // Provisioning must happen on the first boot and never again.
@@ -265,7 +261,7 @@ fn try_run_payload(
     }
 
     // Verify the payload before using it.
-    let extracted_data = verify_payload(&metadata, saved_data.as_ref())
+    let extracted_data = verify_payload(metadata, saved_data.as_ref())
         .context("Payload verification failed")
         .map_err(|e| MicrodroidError::PayloadVerificationFailed(e.to_string()))?;
 
@@ -289,9 +285,27 @@ fn try_run_payload(
     } else {
         info!("Saving verified data.");
         instance
-            .write_microdroid_data(&extracted_data, &dice)
+            .write_microdroid_data(&extracted_data, dice)
             .context("Failed to write identity data")?;
         extracted_data
+    };
+    Ok(instance_data)
+}
+
+fn try_run_payload(
+    service: &Strong<dyn IVirtualMachineService>,
+    vm_payload_service_fd: OwnedFd,
+) -> Result<i32> {
+    let metadata = load_metadata().context("Failed to load payload metadata")?;
+    let dice = DiceDriver::new(Path::new("/dev/open-dice0")).context("Failed to load DICE")?;
+
+    // TODO(b/291306122): Checking with host about Secretkeeper support multiple times introduces
+    // a whole range of security vulnerability since host can give different answers. Guest should
+    // check only once and the same answer should be known to pVM Firmware and Microdroid.
+    let instance_data = if let Some(_sk) = vm_secret::is_sk_supported(service)? {
+        verify_payload(&metadata, None)?
+    } else {
+        verify_payload_with_instance_img(&metadata, &dice)?
     };
 
     let payload_metadata = metadata.payload.ok_or_else(|| {

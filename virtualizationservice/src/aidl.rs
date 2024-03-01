@@ -15,11 +15,13 @@
 //! Implementation of the AIDL interface of the VirtualizationService.
 
 use crate::atom::{forward_vm_booted_atom, forward_vm_creation_atom, forward_vm_exited_atom};
+use crate::maintenance;
 use crate::remote_provisioning;
 use crate::rkpvm::{generate_ecdsa_p256_key_pair, request_attestation};
 use crate::{get_calling_pid, get_calling_uid, REMOTELY_PROVISIONED_COMPONENT_SERVICE_NAME};
 use android_os_permissions_aidl::aidl::android::os::IPermissionController;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon;
+use android_system_virtualizationmaintenance::aidl::android::system::virtualizationmaintenance;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice;
 use android_system_virtualizationservice_internal as android_vs_internal;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice;
@@ -49,6 +51,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak};
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
+use virtualizationmaintenance::IVirtualizationMaintenance::IVirtualizationMaintenance;
 use virtualizationservice::{
     AssignableDevice::AssignableDevice, VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
@@ -60,9 +63,7 @@ use virtualizationservice_internal::{
     IGlobalVmContext::{BnGlobalVmContext, IGlobalVmContext},
     IVfioHandler::VfioDev::VfioDev,
     IVfioHandler::{BpVfioHandler, IVfioHandler},
-    IVirtualizationServiceInternal::{
-        BnVirtualizationServiceInternal, IVirtualizationServiceInternal,
-    },
+    IVirtualizationServiceInternal::IVirtualizationServiceInternal,
 };
 use virtualmachineservice::IVirtualMachineService::VM_TOMBSTONES_SERVICE_PORT;
 use vsock::{VsockListener, VsockStream};
@@ -160,14 +161,15 @@ fn is_valid_guest_cid(cid: Cid) -> bool {
 
 /// Singleton service for allocating globally-unique VM resources, such as the CID, and running
 /// singleton servers, like tombstone receiver.
-#[derive(Debug, Default)]
+#[derive(Clone)]
 pub struct VirtualizationServiceInternal {
     state: Arc<Mutex<GlobalState>>,
 }
 
 impl VirtualizationServiceInternal {
-    pub fn init() -> Strong<dyn IVirtualizationServiceInternal> {
-        let service = VirtualizationServiceInternal::default();
+    pub fn init() -> VirtualizationServiceInternal {
+        let service =
+            VirtualizationServiceInternal { state: Arc::new(Mutex::new(GlobalState::new())) };
 
         std::thread::spawn(|| {
             if let Err(e) = handle_stream_connection_tombstoned() {
@@ -175,7 +177,7 @@ impl VirtualizationServiceInternal {
             }
         });
 
-        BnVirtualizationServiceInternal::new_binder(service, BinderFeatures::default())
+        service
     }
 }
 
@@ -390,6 +392,41 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         info!("Allocated a VM's instance_id: {:?}, for uid: {:?}", hex::encode(id), uid);
         Ok(id)
     }
+
+    fn removeVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
+        let state = &mut *self.state.lock().unwrap();
+        if let Some(sk_state) = &mut state.sk_state {
+            info!("removeVmInstance(): delete secret");
+            sk_state.delete_ids(&[*instance_id]);
+        } else {
+            info!("ignoring removeVmInstance() as no ISecretkeeper");
+        }
+        Ok(())
+    }
+}
+
+impl IVirtualizationMaintenance for VirtualizationServiceInternal {
+    fn appRemoved(&self, user_id: i32, app_id: i32) -> binder::Result<()> {
+        let state = &mut *self.state.lock().unwrap();
+        if let Some(sk_state) = &mut state.sk_state {
+            info!("packageRemoved(user_id={user_id}, app_id={app_id})");
+            sk_state.delete_ids_for_app(user_id, app_id).or_service_specific_exception(-1)?;
+        } else {
+            info!("ignoring packageRemoved(user_id={user_id}, app_id={app_id})");
+        }
+        Ok(())
+    }
+
+    fn userRemoved(&self, user_id: i32) -> binder::Result<()> {
+        let state = &mut *self.state.lock().unwrap();
+        if let Some(sk_state) = &mut state.sk_state {
+            info!("userRemoved({user_id})");
+            sk_state.delete_ids_for_user(user_id).or_service_specific_exception(-1)?;
+        } else {
+            info!("ignoring userRemoved(user_id={user_id})");
+        }
+        Ok(())
+    }
 }
 
 // KEEP IN SYNC WITH assignable_devices.xsd
@@ -474,7 +511,6 @@ impl GlobalVmInstance {
 
 /// The mutable state of the VirtualizationServiceInternal. There should only be one instance
 /// of this struct.
-#[derive(Debug, Default)]
 struct GlobalState {
     /// VM contexts currently allocated to running VMs. A CID is never recycled as long
     /// as there is a strong reference held by a GlobalVmContext.
@@ -482,9 +518,20 @@ struct GlobalState {
 
     /// Cached read-only FD of VM DTBO file. Also serves as a lock for creating the file.
     dtbo_file: Mutex<Option<File>>,
+
+    /// State relating to secrets held by (optional) Secretkeeper instance on behalf of VMs.
+    sk_state: Option<maintenance::State>,
 }
 
 impl GlobalState {
+    fn new() -> Self {
+        Self {
+            held_contexts: HashMap::new(),
+            dtbo_file: Mutex::new(None),
+            sk_state: maintenance::State::new(),
+        }
+    }
+
     /// Get the next available CID, or an error if we have run out. The last CID used is stored in
     /// a system property so that restart of virtualizationservice doesn't reuse CID while the host
     /// Android is up.
@@ -729,7 +776,6 @@ fn check_use_custom_virtual_machine() -> binder::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     const TEST_RKP_CERT_CHAIN_PATH: &str = "testdata/rkp_cert_chain.der";
 

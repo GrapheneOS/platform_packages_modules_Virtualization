@@ -96,4 +96,11 @@ interface IVirtualizationServiceInternal {
      * Allocate an instance_id to the (newly created) VM.
      */
     byte[64] allocateInstanceId();
+
+    /**
+     * Notification that state associated with a VM should be removed.
+     *
+     * @param instanceId The ID for the VM.
+     */
+    void removeVmInstance(in byte[64] instanceId);
 }

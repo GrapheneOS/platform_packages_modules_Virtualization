@@ -852,11 +852,11 @@ public class VirtualMachine implements AutoCloseable {
                 VirtualMachineConfig vmConfig = getConfig();
                 VirtualMachineAppConfig appConfig =
                         vmConfig.toVsConfig(mContext.getPackageManager());
+                appConfig.instanceImage =
+                        ParcelFileDescriptor.open(mInstanceFilePath, MODE_READ_WRITE);
                 appConfig.name = mName;
                 if (mInstanceIdPath != null) {
                     appConfig.instanceId = Files.readAllBytes(mInstanceIdPath.toPath());
-                    appConfig.instanceImage =
-                            ParcelFileDescriptor.open(mInstanceFilePath, MODE_READ_WRITE);
                 } else {
                     // FEATURE_LLPVM_CHANGES is disabled, instance_id is not used.
                     appConfig.instanceId = new byte[64];
@@ -1298,7 +1298,9 @@ public class VirtualMachine implements AutoCloseable {
             try {
                 return new VirtualMachineDescriptor(
                         ParcelFileDescriptor.open(mConfigFilePath, MODE_READ_ONLY),
-                        ParcelFileDescriptor.open(mInstanceIdPath, MODE_READ_ONLY),
+                        mInstanceIdPath != null
+                                ? ParcelFileDescriptor.open(mInstanceIdPath, MODE_READ_ONLY)
+                                : null,
                         ParcelFileDescriptor.open(mInstanceFilePath, MODE_READ_ONLY),
                         mEncryptedStoreFilePath != null
                                 ? ParcelFileDescriptor.open(mEncryptedStoreFilePath, MODE_READ_ONLY)

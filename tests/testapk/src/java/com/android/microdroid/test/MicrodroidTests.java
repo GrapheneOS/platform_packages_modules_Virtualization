@@ -1070,6 +1070,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     })
     public void instancesOfSameVmHaveDifferentCdis() throws Exception {
         assumeSupportedDevice();
+        // TODO(b/325094712): VMs on CF with same payload have the same secret. This is because
+        // `instance-id` which is input to DICE is contained in DT which is missing in CF.
+        assumeFalse(
+                "Cuttlefish doesn't support device tree under /proc/device-tree", isCuttlefish());
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig normalConfig =
@@ -1504,6 +1508,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"9.17/C-1-1"})
     public void encryptedStorageIsInaccessibleToDifferentVm() throws Exception {
         assumeSupportedDevice();
+        // TODO(b/325094712): VMs on CF with same payload have the same secret. This is because
+        // `instance-id` which is input to DICE is contained in DT which is missing in CF.
+        assumeFalse(
+                "Cuttlefish doesn't support device tree under /proc/device-tree", isCuttlefish());
 
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")

@@ -375,7 +375,8 @@ impl VirtualizationService {
             check_gdb_allowed(config)?;
         }
 
-        // Currently, VirtMgr adds the host copy of reference DT & an untrusted prop (instance-id)
+        // Currently, VirtMgr adds the host copy of reference DT & untrusted properties
+        // (e.g. instance-id)
         let host_ref_dt = Path::new(VM_REFERENCE_DT_ON_HOST_PATH);
         let host_ref_dt = if host_ref_dt.exists()
             && read_dir(host_ref_dt).or_service_specific_exception(-1)?.next().is_some()
@@ -404,12 +405,16 @@ impl VirtualizationService {
         };
 
         let instance_id;
-        let untrusted_props = if cfg!(llpvm_changes) {
+        let mut untrusted_props = Vec::with_capacity(2);
+        if cfg!(llpvm_changes) {
             instance_id = extract_instance_id(config);
-            vec![(cstr!("instance-id"), &instance_id[..])]
-        } else {
-            vec![]
-        };
+            untrusted_props.push((cstr!("instance-id"), &instance_id[..]));
+            if is_secretkeeper_supported() {
+                // Let guest know that it can defer rollback protection to Secretkeeper by setting
+                // an empty property in untrusted node in DT. This enables Updatable VMs.
+                untrusted_props.push((cstr!("defer-rollback-protection"), &[]))
+            }
+        }
 
         let device_tree_overlay =
             if host_ref_dt.is_some() || !untrusted_props.is_empty() || !trusted_props.is_empty() {
@@ -1501,7 +1506,7 @@ impl IVirtualMachineService for VirtualMachineService {
     }
 
     fn getSecretkeeper(&self) -> binder::Result<Option<Strong<dyn ISecretkeeper>>> {
-        let sk = if is_secretkeeper_present() {
+        let sk = if is_secretkeeper_supported() {
             Some(binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?)
         } else {
             None
@@ -1514,7 +1519,7 @@ impl IVirtualMachineService for VirtualMachineService {
     }
 }
 
-fn is_secretkeeper_present() -> bool {
+fn is_secretkeeper_supported() -> bool {
     binder::is_declared(SECRETKEEPER_IDENTIFIER)
         .expect("Could not check for declared Secretkeeper interface")
 }

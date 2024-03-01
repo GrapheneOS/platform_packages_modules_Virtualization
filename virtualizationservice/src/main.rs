@@ -20,10 +20,16 @@ mod maintenance;
 mod remote_provisioning;
 mod rkpvm;
 
-use crate::aidl::{remove_temporary_dir, VirtualizationServiceInternal, TEMPORARY_DIRECTORY};
+use crate::aidl::{remove_temporary_dir, TEMPORARY_DIRECTORY, VirtualizationServiceInternal};
 use android_logger::{Config, FilterBuilder};
+use android_system_virtualizationservice_internal::aidl::android::system::{
+    virtualizationservice_internal::IVirtualizationServiceInternal::BnVirtualizationServiceInternal
+};
+use android_system_virtualizationmaintenance::aidl::android::system::virtualizationmaintenance::{
+    IVirtualizationMaintenance::BnVirtualizationMaintenance
+};
 use anyhow::{bail, Context, Error, Result};
-use binder::{register_lazy_service, ProcessState, ThreadState};
+use binder::{register_lazy_service, BinderFeatures, ProcessState, ThreadState};
 use log::{error, info, LevelFilter};
 use std::fs::{create_dir, read_dir};
 use std::os::unix::raw::{pid_t, uid_t};
@@ -69,16 +75,25 @@ fn try_main() -> Result<()> {
     create_dir(common_dir_path).context("Failed to create common directory")?;
 
     ProcessState::start_thread_pool();
-    register(INTERNAL_SERVICE_NAME, VirtualizationServiceInternal::init())?;
+
+    // One instance of `VirtualizationServiceInternal` implements both the internal interface
+    // and (optionally) the maintenance interface.
+    let service = VirtualizationServiceInternal::init();
+    let internal_service =
+        BnVirtualizationServiceInternal::new_binder(service.clone(), BinderFeatures::default());
+    register(INTERNAL_SERVICE_NAME, internal_service)?;
 
     if cfg!(remote_attestation) {
         // The IRemotelyProvisionedComponent service is only supposed to be triggered by rkpd for
         // RKP VM attestation.
-        register(REMOTELY_PROVISIONED_COMPONENT_SERVICE_NAME, remote_provisioning::new_binder())?;
+        let remote_provisioning_service = remote_provisioning::new_binder();
+        register(REMOTELY_PROVISIONED_COMPONENT_SERVICE_NAME, remote_provisioning_service)?;
     }
 
     if cfg!(llpvm_changes) {
-        register(MAINTENANCE_SERVICE_NAME, maintenance::new_binder())?;
+        let maintenance_service =
+            BnVirtualizationMaintenance::new_binder(service.clone(), BinderFeatures::default());
+        register(MAINTENANCE_SERVICE_NAME, maintenance_service)?;
     }
 
     ProcessState::join_thread_pool();

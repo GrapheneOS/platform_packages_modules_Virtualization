@@ -5,7 +5,10 @@ package {
 rust_defaults {
     name: "virtualizationservice_defaults",
     crate_name: "virtualizationservice",
-    defaults: ["avf_build_flags_rust"],
+    defaults: [
+        "avf_build_flags_rust",
+        "secretkeeper_use_latest_hal_aidl_rust",
+    ],
     edition: "2021",
     srcs: ["src/main.rs"],
     // Only build on targets which crosvm builds on.
@@ -36,11 +39,13 @@ rust_defaults {
         "libhypervisor_props",
         "liblazy_static",
         "liblibc",
+        "liblibsqlite3_sys",
         "liblog_rust",
         "libnix",
         "libopenssl",
         "librand",
         "librkpd_client",
+        "librusqlite",
         "librustutils",
         "libstatslog_virtualization_rust",
         "libtombstoned_client_rust",
@@ -67,7 +72,10 @@ xsd_config {
 
 rust_test {
     name: "virtualizationservice_test",
-    defaults: ["virtualizationservice_defaults"],
+    defaults: [
+        "authgraph_use_latest_hal_aidl_rust",
+        "virtualizationservice_defaults",
+    ],
     test_suites: ["general-tests"],
     data: [
         ":test_rkp_cert_chain",

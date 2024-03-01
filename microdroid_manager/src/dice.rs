@@ -14,11 +14,11 @@
 
 use crate::dice_driver::DiceDriver;
 use crate::instance::{ApexData, ApkData};
-use crate::{is_debuggable, MicrodroidData};
+use crate::{is_debuggable, is_strict_boot, MicrodroidData};
 use anyhow::{bail, Context, Result};
 use ciborium::{cbor, Value};
 use coset::CborSerializable;
-use diced_open_dice::OwnedDiceArtifacts;
+use diced_open_dice::{Hidden, OwnedDiceArtifacts, HIDDEN_SIZE};
 use microdroid_metadata::PayloadMetadata;
 use openssl::sha::{sha512, Sha512};
 use std::iter::once;
@@ -53,8 +53,35 @@ pub fn dice_derivation(
     let debuggable = is_debuggable()?;
 
     // Send the details to diced
-    let hidden = instance_data.salt.clone().try_into().unwrap();
+    let hidden = if cfg!(llpvm_changes) {
+        hidden_input_from_instance_id()?
+    } else {
+        instance_data.salt.clone().try_into().unwrap()
+    };
     dice.derive(code_hash, &config_descriptor, authority_hash, debuggable, hidden)
+}
+
+// Get the "Hidden input" for DICE derivation.
+// This provides differentiation of secrets for different VM instances with same payload.
+fn hidden_input_from_instance_id() -> Result<Hidden> {
+    // For protected VM: this is all 0s, pvmfw ensures differentiation is added early in secrets.
+    // For non-protected VM: this is derived from instance_id of the VM instance.
+    let hidden_input = if !is_strict_boot() {
+        if let Some(id) = super::get_instance_id()? {
+            sha512(&id)
+        } else {
+            // TODO(b/325094712): Absence of instance_id occurs due to missing DT in some
+            // x86_64 test devices (such as Cuttlefish). From security perspective, this is
+            // acceptable for non-protected VM.
+            log::warn!(
+                "Instance Id missing, this may lead to 2 non protected VMs having same secrets"
+            );
+            [0u8; HIDDEN_SIZE]
+        }
+    } else {
+        [0u8; HIDDEN_SIZE]
+    };
+    Ok(hidden_input)
 }
 
 struct Subcomponent {
