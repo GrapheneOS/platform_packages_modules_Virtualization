@@ -1,4 +1,5 @@
 /dts-v1/;
+/plugin/;
 
 / {
     host {
@@ -6,113 +7,62 @@
         #size-cells = <0x1>;
         rng {
             reg = <0x0 0x12f00000 0xFF>;
-            iommus = <0x1 0x3>;
-            android,pvmfw,target = <0x2>;
+            iommus = <&iommu0 0x3>;
+            android,pvmfw,target = <&rng>;
         };
         light {
             reg = <0x0 0x00f00000 0x1000>, <0x0 0x00f10000 0x1000>;
-            iommus = <0x3 0x4>, <0x4 0x5>;
-            android,pvmfw,target = <0x5>;
+            iommus = <&iommu1 0x4>, <&iommu2 0x5>;
+            android,pvmfw,target = <&light>;
         };
         led {
             reg = <0x0 0x12000000 0x9>;
-            iommus = <0x1 0x9>;
-            android,pvmfw,target = <0x6>;
+            iommus = <&iommu0 0x9>;
+            android,pvmfw,target = <&led>;
         };
         bus0 {
             #address-cells = <0x1>;
             #size-cells = <0x1>;
             backlight {
                 reg = <0x300 0xFF>;
-                android,pvmfw,target = <0x7>;
+                android,pvmfw,target = <&backlight>;
             };
         };
-        iommu0 {
+        iommu0: iommu0 {
             #iommu-cells = <0x1>;
             android,pvmfw,token = <0x0 0x12e40000>;
-            phandle = <0x1>;
         };
-        iommu1 {
+        iommu1: iommu1 {
             #iommu-cells = <0x1>;
             android,pvmfw,token = <0x0 0x40000>;
-            phandle = <0x3>;
         };
-        iommu2 {
+        iommu2: iommu2 {
             #iommu-cells = <0x1>;
             android,pvmfw,token = <0x0 0x50000>;
-            phandle = <0x4>;
         };
     };
-    fragment@rng {
-        target-path = "/";
-        __overlay__ {
-            rng {
-                compatible = "android,rng";
-                android,rng,ignore-gctrl-reset;
-                phandle = <0x2>;
-            };
-        };
+};
+
+&{/} {
+    rng: rng {
+        compatible = "android,rng";
+        android,rng,ignore-gctrl-reset;
     };
-    fragment@sensor {
-        target-path = "/";
-        __overlay__ {
-            light {
-                compatible = "android,light";
-                version = <0x1 0x2>;
-                phandle = <0x5>;
-            };
-        };
+
+    light: light {
+        compatible = "android,light";
+        version = <0x1 0x2>;
     };
-    fragment@led {
-        target-path = "/";
-        __overlay__ {
-            led {
-                compatible = "android,led";
-                prop = <0x555>;
-                phandle = <0x6>;
-            };
-        };
+
+    led: led {
+        compatible = "android,led";
+        prop = <0x555>;
     };
-    fragment@backlight {
-        target-path = "/";
-        __overlay__ {
-            bus0 {
-                backlight {
-                    compatible = "android,backlight";
-                    android,backlight,ignore-gctrl-reset;
-                    phandle = <0x7>;
-                };
-            };
-        };
-    };
-    __symbols__ {
-        iommu0 = "/host/iommu0";
-        iommu1 = "/host/iommu1";
-        iommu2 = "/host/iommu2";
-        rng = "/fragment@rng/__overlay__/rng";
-        light = "/fragment@sensor/__overlay__/light";
-        led = "/fragment@led/__overlay__/led";
-        backlight = "/fragment@backlight/__overlay__/bus0/backlight";
-    };
-    __local_fixups__ {
-        host {
-            rng {
-                iommus = <0x0>;
-                android,pvmfw,target = <0x0>;
-            };
-            light {
-                iommus = <0x0 0x8>;
-                android,pvmfw,target = <0x0>;
-            };
-            led {
-                iommus = <0x0>;
-                android,pvmfw,target = <0x0>;
-            };
-            bus0 {
-                backlight {
-                    android,pvmfw,target = <0x0>;
-                };
-            };
+
+    bus0 {
+        backlight: backlight {
+            compatible = "android,backlight";
+            android,backlight,ignore-gctrl-reset;
         };
     };
 };

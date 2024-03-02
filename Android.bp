@@ -87,7 +87,7 @@ avf_flag_aware_cc_defaults {
 genrule_defaults {
     name: "dts_to_dtb",
     tools: ["dtc"],
-    cmd: "FILES=($(in)) && $(location dtc) -I dts -O dtb $${FILES[-1]} -o $(out)",
+    cmd: "FILES=($(in)) && $(location dtc) -@ -I dts -O dtb $${FILES[-1]} -o $(out)",
 }
 
 // This is a temporary workaround until b/309090563 is implemented.

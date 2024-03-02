@@ -165,10 +165,10 @@ Here's a simple example device tree source with four assignable devices nodes.
 ```
 
 If you compile the above with `dtc -@`, then you'll get `__symbols__` for free.
-The generated `__symbols__` indicates that there are four assignable devices.
+`__symbol__` has label of nodes, and it's required for the next step.
 
 ```dts
-    // generated __symbols__. AVF will ignore non-overlayable nodes.
+    // generated __symbols__
     __symbols__ {
         iommu0 = "/host/iommu0";
         iommu1 = "/host/iommu1";
@@ -200,10 +200,10 @@ Here's example.
 
 * `<kind>`: Device kind. Currently only used for debugging purposes and not used
   for device assignment.
-* `<dtbo_label>`: Label in the VM DTBO (i.e. symbols in `__symbols__`). Must be
-  unique.
+* `<dtbo_label>`: Label in the VM DTBO (i.e. symbol in `__symbols__`). Must be
+  non-empty and unique in the XML.
 * `<sysfs_path>`: Sysfs path of the device in host, used to bind to the VFIO
-  driver. Must be unique in the XML.
+  driver. Must be non-empty and unique in the XML.
 
 ## Boot with VM DTBO
 
