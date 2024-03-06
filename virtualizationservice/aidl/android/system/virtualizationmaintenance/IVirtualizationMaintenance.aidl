@@ -16,6 +16,8 @@
 
 package android.system.virtualizationmaintenance;
 
+import android.system.virtualizationmaintenance.IVirtualizationReconciliationCallback;
+
 interface IVirtualizationMaintenance {
     /**
      * Notification that an app has been permanently removed, to allow related global state to
@@ -32,5 +34,13 @@ interface IVirtualizationMaintenance {
      */
     void userRemoved(int userId);
 
-    // TODO(b/294177871): Something for daily reconciliation
+    /*
+     * Requests virtualization service to perform reconciliation of Secretkeeper secrets.
+     * Secrets belonging to apps or users that no longer exist should be deleted.
+     * The supplied callback allows for querying of existence.
+     * This method should return on successful completion of the reconciliation process.
+     * It should throw an exception if there is any failure, or if any of the callback
+     * functions return {@code ERROR_STOP_REQUESTED}.
+     */
+    void performReconciliation(IVirtualizationReconciliationCallback callback);
 }

@@ -14,7 +14,7 @@
 
 //! Class for encapsulating & managing represent VM secrets.
 
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::ISecretkeeper;
 use secretkeeper_comm::data_types::request::Request;
@@ -92,30 +92,41 @@ impl VmSecret {
     ) -> Result<Self> {
         ensure!(dice_artifacts.bcc().is_some(), "Dice chain missing");
 
-        let Some(sk_service) = is_sk_supported(vm_service)? else {
+        let Some(sk_service) =
+            is_sk_supported(vm_service).context("Failed to check if Secretkeeper is supported")?
+        else {
             // Use V1 secrets if Secretkeeper is not supported.
             return Ok(Self::V1 { dice_artifacts });
         };
 
-        let explicit_dice =
-            OwnedDiceArtifactsWithExplicitKey::from_owned_artifacts(dice_artifacts)?;
+        let explicit_dice = OwnedDiceArtifactsWithExplicitKey::from_owned_artifacts(dice_artifacts)
+            .context("Failed to get Dice artifacts in explicit key format")?;
         // For pVM, skp_secret are stored in Secretkeeper. For non-protected it is all 0s.
         let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
         if super::is_strict_boot() {
-            let mut session =
-                SkSession::new(sk_service, &explicit_dice, Some(get_secretkeeper_identity()?))?;
-            let id = super::get_instance_id()?.ok_or(anyhow!("Missing instance_id"))?;
+            let mut session = SkSession::new(
+                sk_service,
+                &explicit_dice,
+                Some(get_secretkeeper_identity().context("Failed to get secretkeeper identity")?),
+            )
+            .context("Failed to setup a Secretkeeper session")?;
+            let id = super::get_instance_id()
+                .context("Failed to get instance-id")?
+                .ok_or(anyhow!("Missing instance-id"))?;
             let explicit_dice_chain = explicit_dice
                 .explicit_key_dice_chain()
                 .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
-            let policy = sealing_policy(explicit_dice_chain).map_err(anyhow_err)?;
+            let policy = sealing_policy(explicit_dice_chain)
+                .map_err(|e| anyhow!("Failed to build a sealing_policy: {e}"))?;
             if super::is_new_instance() {
                 // New instance -> create a secret & store in Secretkeeper.
                 *skp_secret = rand::random();
-                store_secret(&mut session, id, skp_secret.clone(), policy)?;
+                store_secret(&mut session, id, skp_secret.clone(), policy)
+                    .context("Failed to store secret in Secretkeeper")?;
             } else {
                 // Subsequent run of the pVM -> get the secret stored in Secretkeeper.
-                *skp_secret = get_secret(&mut session, id, Some(policy))?;
+                *skp_secret = get_secret(&mut session, id, Some(policy))
+                    .context("Failed to get secret from Secretkeeper")?;
             }
         }
         Ok(Self::V2 {

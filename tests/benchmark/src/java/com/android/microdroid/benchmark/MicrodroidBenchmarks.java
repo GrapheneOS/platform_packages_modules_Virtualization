@@ -127,12 +127,21 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         }
     }
 
+    public MicrodroidBenchmarks() throws IOException {
+        // See b/325745564#comment28. Calling this method here ensures that threads spawned for
+        // @Test methods are with the desired task profile. If this is called in @Before, the task
+        // profile may not be set to the test threads because they may be spanwed prior to the
+        // execution of the @Before method (though the test methods will be executed after the
+        // @Before method).  With this, children of this benchmark process (virtmgr and crosvm) also
+        // run in the desired task profile.
+        setMaxPerformanceTaskProfile();
+    }
+
     @Before
     public void setup() throws IOException {
         grantPermission(VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION);
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         prepareTestSetup(mProtectedVm, mGki);
-        setMaxPerformanceTaskProfile();
         mInstrumentation = getInstrumentation();
     }
 

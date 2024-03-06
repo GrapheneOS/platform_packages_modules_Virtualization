@@ -16,6 +16,7 @@
 
 package com.android.system.virtualmachine;
 
+import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -58,6 +59,8 @@ public class VirtualizationSystemService extends SystemService {
 
         mHandler = BackgroundThread.getHandler();
         new Receiver().registerForBroadcasts();
+
+        SecretkeeperJobService.scheduleJob(getContext().getSystemService(JobScheduler.class));
     }
 
     private void notifyAppRemoved(int uid) {
@@ -78,7 +81,7 @@ public class VirtualizationSystemService extends SystemService {
         }
     }
 
-    private static IVirtualizationMaintenance connectToMaintenanceService() {
+    static IVirtualizationMaintenance connectToMaintenanceService() {
         IBinder binder = ServiceManager.waitForService(SERVICE_NAME);
         IVirtualizationMaintenance maintenance =
                 IVirtualizationMaintenance.Stub.asInterface(binder);

@@ -51,7 +51,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak};
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
-use virtualizationmaintenance::IVirtualizationMaintenance::IVirtualizationMaintenance;
+use virtualizationmaintenance::{
+    IVirtualizationMaintenance::IVirtualizationMaintenance,
+    IVirtualizationReconciliationCallback::IVirtualizationReconciliationCallback,
+};
 use virtualizationservice::{
     AssignableDevice::AssignableDevice, VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
@@ -426,6 +429,14 @@ impl IVirtualizationMaintenance for VirtualizationServiceInternal {
             info!("ignoring userRemoved(user_id={user_id})");
         }
         Ok(())
+    }
+
+    fn performReconciliation(
+        &self,
+        _callback: &Strong<dyn IVirtualizationReconciliationCallback>,
+    ) -> binder::Result<()> {
+        Err(anyhow!("performReconciliation not supported"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
     }
 }
 
