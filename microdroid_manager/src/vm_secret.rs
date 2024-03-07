@@ -279,9 +279,9 @@ fn anyhow_err<E: core::fmt::Debug>(err: E) -> anyhow::Error {
     anyhow!("{:?}", err)
 }
 
-/// Get the secretkeeper connection if supported. Host can be consulted whether the device supports
-/// secretkeeper but that should be used with caution for protected VM.
-pub fn is_sk_supported(
+// Get the secretkeeper connection if supported. Host can be consulted whether the device supports
+// secretkeeper but that should be used with caution for protected VM.
+fn is_sk_supported(
     host: &Strong<dyn IVirtualMachineService>,
 ) -> Result<Option<Strong<dyn ISecretkeeper>>> {
     let sk = if cfg!(llpvm_changes) {
