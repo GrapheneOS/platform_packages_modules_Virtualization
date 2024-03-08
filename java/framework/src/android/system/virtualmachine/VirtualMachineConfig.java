@@ -829,12 +829,12 @@ public final class VirtualMachineConfig {
         @SystemApi
         @NonNull
         public Builder setPayloadBinaryName(@NonNull String payloadBinaryName) {
+            requireNonNull(payloadBinaryName, "payloadBinaryName must not be null");
             if (payloadBinaryName.contains(File.separator)) {
                 throw new IllegalArgumentException(
                         "Invalid binary file name: " + payloadBinaryName);
             }
-            mPayloadBinaryName =
-                    requireNonNull(payloadBinaryName, "payloadBinaryName must not be null");
+            mPayloadBinaryName = payloadBinaryName;
             return this;
         }
 
