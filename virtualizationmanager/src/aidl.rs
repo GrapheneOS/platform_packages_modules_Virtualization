@@ -49,7 +49,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
         BnVirtualMachineService, IVirtualMachineService,
 };
-use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::{BnSecretkeeper, ISecretkeeper};
+use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::ISecretkeeper;
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::SecretId::SecretId;
 use android_hardware_security_authgraph::aidl::android::hardware::security::authgraph::{
     Arc::Arc as AuthgraphArc, IAuthGraphKeyExchange::IAuthGraphKeyExchange,
@@ -1506,12 +1506,10 @@ impl IVirtualMachineService for VirtualMachineService {
     }
 
     fn getSecretkeeper(&self) -> binder::Result<Option<Strong<dyn ISecretkeeper>>> {
-        let sk = if is_secretkeeper_supported() {
-            Some(binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?)
-        } else {
-            None
-        };
-        Ok(sk.map(|s| BnSecretkeeper::new_binder(SecretkeeperProxy(s), BinderFeatures::default())))
+        // TODO(b/327526008): Session establishment wth secretkeeper is failing.
+        // Re-enable this when fixed.
+        let _sk_supported = is_secretkeeper_supported();
+        Ok(None)
     }
 
     fn requestAttestation(&self, csr: &[u8], test_mode: bool) -> binder::Result<Vec<Certificate>> {
