@@ -21,7 +21,10 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use bssl_avf::EcKey;
-use ciborium::{cbor, value::Value};
+use ciborium::{
+    cbor,
+    value::{CanonicalValue, Value},
+};
 use core::result;
 use coset::{iana, AsCborValue, CoseSign1, CoseSign1Builder, HeaderBuilder};
 use diced_open_dice::{derive_cdi_leaf_priv, kdf, sign, DiceArtifacts, PrivateKey};
@@ -106,18 +109,24 @@ pub(super) fn generate_certificate_request(
 
 /// Generates the device info required by the RKP server as a temporary placeholder.
 /// More details in b/301592917.
-fn device_info() -> Value {
-    cbor!({"brand" => "aosp-avf",
-    "manufacturer" => "aosp-avf",
-    "product" => "avf",
-    "model" => "avf",
-    "device" => "avf",
-    "vbmeta_digest" => Value::Bytes(vec![0u8; 0]),
-    "system_patch_level" => 202402,
-    "boot_patch_level" => 20240202,
-    "vendor_patch_level" => 20240202,
-    "fused" => 1})
+///
+/// The keys of the map should be in the length-first core deterministic encoding order
+/// as per RFC8949.
+fn device_info() -> CanonicalValue {
+    cbor!({
+        "brand" => "aosp-avf",
+        "fused" => 1,
+        "model" => "avf",
+        "device" => "avf",
+        "product" => "avf",
+        "manufacturer" => "aosp-avf",
+        "vbmeta_digest" => Value::Bytes(vec![0u8; 0]),
+        "boot_patch_level" => 20240202,
+        "system_patch_level" => 202402,
+        "vendor_patch_level" => 20240202,
+    })
     .unwrap()
+    .into()
 }
 
 fn derive_hmac_key(dice_artifacts: &dyn DiceArtifacts) -> Result<Zeroizing<[u8; HMAC_KEY_LENGTH]>> {
@@ -152,4 +161,26 @@ fn sign_message(message: &[u8], private_key: &PrivateKey) -> Result<Vec<u8>> {
             RequestProcessingError::InternalError
         })?
         .to_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The keys of device info map should be in the length-first core deterministic encoding
+    /// order as per RFC8949.
+    /// The CBOR ordering rules are:
+    /// 1. If two keys have different lengths, the shorter one sorts earlier;
+    /// 2. If two keys have the same length, the one with the lower value in
+    ///  (bytewise) lexical order sorts earlier.
+    #[test]
+    fn device_info_is_in_length_first_deterministic_order() {
+        let device_info = cbor!(device_info()).unwrap();
+        let device_info_map = device_info.as_map().unwrap();
+        let device_info_keys: Vec<&str> =
+            device_info_map.iter().map(|k| k.0.as_text().unwrap()).collect();
+        let mut sorted_keys = device_info_keys.clone();
+        sorted_keys.sort_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)));
+        assert_eq!(device_info_keys, sorted_keys);
+    }
 }
