@@ -15,7 +15,7 @@
 //! High-level FDT functions.
 
 use crate::bootargs::BootArgsIterator;
-use crate::device_assignment::{DeviceAssignmentInfo, VmDtbo};
+use crate::device_assignment::{self, DeviceAssignmentInfo, VmDtbo};
 use crate::helpers::GUEST_PAGE_SIZE;
 use crate::Box;
 use crate::RebootReason;
@@ -1156,6 +1156,11 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         // then VM DTBO's underlying slice is allocated.
         device_assignment.patch(fdt).map_err(|e| {
             error!("Failed to patch device assignment info to DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    } else {
+        device_assignment::clean(fdt).map_err(|e| {
+            error!("Failed to clean pre-polulated DT nodes for device assignment: {e}");
             RebootReason::InvalidFdt
         })?;
     }
