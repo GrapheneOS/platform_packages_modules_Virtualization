@@ -27,6 +27,7 @@ use alloc::vec::Vec;
 use core::ffi::CStr;
 use core::iter::Iterator;
 use core::mem;
+use core::ops::Range;
 use hyp::DeviceAssigningHypervisor;
 use libfdt::{Fdt, FdtError, FdtNode, Phandle, Reg};
 use log::error;
@@ -55,8 +56,10 @@ pub enum DeviceAssignmentError {
     InvalidSymbols,
     /// Malformed <reg>. Can't parse.
     MalformedReg,
-    /// Invalid <reg>. Failed to validate with HVC.
-    InvalidReg,
+    /// Invalid physical <reg> of assigned device.
+    InvalidPhysReg(u64, u64),
+    /// Invalid virtual <reg> of assigned device.
+    InvalidReg(u64, u64),
     /// Invalid <interrupts>
     InvalidInterrupts,
     /// Malformed <iommus>
@@ -104,7 +107,12 @@ impl fmt::Display for DeviceAssignmentError {
                 "Invalid property in /__symbols__. Must point to valid assignable device node."
             ),
             Self::MalformedReg => write!(f, "Malformed <reg>. Can't parse"),
-            Self::InvalidReg => write!(f, "Invalid <reg>. Failed to validate with hypervisor"),
+            Self::InvalidReg(addr, size) => {
+                write!(f, "Invalid guest MMIO region (addr: {addr:#x}, size: {size:#x})")
+            }
+            Self::InvalidPhysReg(addr, size) => {
+                write!(f, "Invalid physical MMIO region (addr: {addr:#x}, size: {size:#x})")
+            }
             Self::InvalidInterrupts => write!(f, "Invalid <interrupts>"),
             Self::MalformedIommus => write!(f, "Malformed <iommus>. Can't parse."),
             Self::InvalidIommus => {
@@ -412,6 +420,12 @@ struct DeviceReg {
     size: u64,
 }
 
+impl DeviceReg {
+    pub fn overlaps(&self, range: &Range<u64>) -> bool {
+        self.addr < range.end && range.start < self.addr.checked_add(self.size).unwrap()
+    }
+}
+
 impl TryFrom<Reg<u64>> for DeviceReg {
     type Error = DeviceAssignmentError;
 
@@ -521,21 +535,35 @@ impl AssignedDeviceInfo {
         physical_device_reg: &[DeviceReg],
         hypervisor: &dyn DeviceAssigningHypervisor,
     ) -> Result<()> {
-        if device_reg.len() != physical_device_reg.len() {
-            return Err(DeviceAssignmentError::InvalidReg);
-        }
+        let mut virt_regs = device_reg.iter();
+        let mut phys_regs = physical_device_reg.iter();
+        // TODO(b/308694211): Move this constant to vmbase::layout once vmbase is std-compatible.
+        const PVMFW_RANGE: Range<u64> = 0x7fc0_0000..0x8000_0000;
         // PV reg and physical reg should have 1:1 match in order.
-        for (reg, phys_reg) in device_reg.iter().zip(physical_device_reg.iter()) {
+        for (reg, phys_reg) in virt_regs.by_ref().zip(phys_regs.by_ref()) {
+            if reg.overlaps(&PVMFW_RANGE) {
+                return Err(DeviceAssignmentError::InvalidReg(reg.addr, reg.size));
+            }
+            // If this call returns successfully, hyp has mapped the MMIO region at `reg`.
             let addr = hypervisor.get_phys_mmio_token(reg.addr, reg.size).map_err(|e| {
-                error!("Failed to validate device <reg>, error={e:?}, reg={reg:x?}");
-                DeviceAssignmentError::InvalidReg
+                error!("Hypervisor error while requesting MMIO token: {e}");
+                DeviceAssignmentError::InvalidReg(reg.addr, reg.size)
             })?;
-            // Only check address because hypervisor guaranatees size match when success.
+            // Only check address because hypervisor guarantees size match when success.
             if phys_reg.addr != addr {
-                error!("Failed to validate device <reg>. No matching phys reg for reg={reg:x?}");
-                return Err(DeviceAssignmentError::InvalidReg);
+                error!("Assigned device {reg:x?} has unexpected physical address");
+                return Err(DeviceAssignmentError::InvalidPhysReg(addr, reg.size));
             }
         }
+
+        if let Some(DeviceReg { addr, size }) = virt_regs.next() {
+            return Err(DeviceAssignmentError::InvalidReg(*addr, *size));
+        }
+
+        if let Some(DeviceReg { addr, size }) = phys_regs.next() {
+            return Err(DeviceAssignmentError::InvalidPhysReg(*addr, *size));
+        }
+
         Ok(())
     }
 
@@ -592,11 +620,11 @@ impl AssignedDeviceInfo {
         // So we need to mark what's matched or not.
         let mut physical_device_iommu = physical_device_iommu.to_vec();
         for (pviommu, vsid) in iommus {
-            let (id, sid) = hypervisor.get_phys_iommu_token(pviommu.id.into(), vsid.0.into())
-            .map_err(|e| {
-                error!("Failed to validate device <iommus>, error={e:?}, pviommu={pviommu:?}, vsid={vsid:?}");
-                DeviceAssignmentError::InvalidIommus
-            })?;
+            let (id, sid) =
+                hypervisor.get_phys_iommu_token(pviommu.id.into(), vsid.0.into()).map_err(|e| {
+                    error!("Hypervisor error while requesting IOMMU token ({pviommu:?}, {vsid:?}): {e}");
+                    DeviceAssignmentError::InvalidIommus
+                })?;
 
             let pos = physical_device_iommu
                 .iter()
@@ -842,6 +870,7 @@ mod tests {
     const FDT_WITHOUT_IOMMUS_FILE_PATH: &str = "test_pvmfw_devices_without_iommus.dtb";
     const FDT_WITHOUT_DEVICE_FILE_PATH: &str = "test_pvmfw_devices_without_device.dtb";
     const FDT_FILE_PATH: &str = "test_pvmfw_devices_with_rng.dtb";
+    const FDT_WITH_DEVICE_OVERLAPPING_PVMFW: &str = "test_pvmfw_devices_overlapping_pvmfw.dtb";
     const FDT_WITH_MULTIPLE_DEVICES_IOMMUS_FILE_PATH: &str =
         "test_pvmfw_devices_with_multiple_devices_iommus.dtb";
     const FDT_WITH_IOMMU_SHARING: &str = "test_pvmfw_devices_with_iommu_sharing.dtb";
@@ -1308,7 +1337,7 @@ mod tests {
         };
         let device_info = DeviceAssignmentInfo::parse(fdt, vm_dtbo, &hypervisor);
 
-        assert_eq!(device_info, Err(DeviceAssignmentError::InvalidReg));
+        assert_eq!(device_info, Err(DeviceAssignmentError::InvalidReg(0x9, 0xFF)));
     }
 
     #[test]
@@ -1324,7 +1353,7 @@ mod tests {
         };
         let device_info = DeviceAssignmentInfo::parse(fdt, vm_dtbo, &hypervisor);
 
-        assert_eq!(device_info, Err(DeviceAssignmentError::InvalidReg));
+        assert_eq!(device_info, Err(DeviceAssignmentError::InvalidPhysReg(0xF10000, 0x1000)));
     }
 
     #[test]
@@ -1389,6 +1418,22 @@ mod tests {
         let device_info = DeviceAssignmentInfo::parse(fdt, vm_dtbo, &hypervisor);
 
         assert_eq!(device_info, Err(DeviceAssignmentError::InvalidIommus));
+    }
+
+    #[test]
+    fn device_info_overlaps_pvmfw() {
+        let mut fdt_data = fs::read(FDT_WITH_DEVICE_OVERLAPPING_PVMFW).unwrap();
+        let mut vm_dtbo_data = fs::read(VM_DTBO_FILE_PATH).unwrap();
+        let fdt = Fdt::from_mut_slice(&mut fdt_data).unwrap();
+        let vm_dtbo = VmDtbo::from_mut_slice(&mut vm_dtbo_data).unwrap();
+
+        let hypervisor = MockHypervisor {
+            mmio_tokens: [((0x7fee0000, 0x1000), 0xF00000)].into(),
+            iommu_tokens: [((0xFF, 0xF), (0x40000, 0x4))].into(),
+        };
+        let device_info = DeviceAssignmentInfo::parse(fdt, vm_dtbo, &hypervisor);
+
+        assert_eq!(device_info, Err(DeviceAssignmentError::InvalidReg(0x7fee0000, 0x1000)));
     }
 
     #[test]

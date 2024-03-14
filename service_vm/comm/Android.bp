@@ -50,7 +50,7 @@ rust_library {
 rust_defaults {
     name: "libservice_vm_comm_test_defaults",
     crate_name: "diced_open_dice_test",
-    srcs: ["tests/*.rs"],
+    srcs: ["tests/api_test.rs"],
     test_suites: ["general-tests"],
     prefer_rlib: true,
     rustlibs: [

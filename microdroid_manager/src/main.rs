@@ -15,7 +15,6 @@
 //! Microdroid Manager
 
 mod dice;
-mod dice_driver;
 mod instance;
 mod ioutil;
 mod payload;
@@ -33,12 +32,12 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
 };
 
 use crate::dice::dice_derivation;
-use crate::dice_driver::DiceDriver;
 use crate::instance::{InstanceDisk, MicrodroidData};
 use crate::verify::verify_payload;
 use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binder::Strong;
+use dice_driver::DiceDriver;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
 use log::{error, info};
@@ -241,7 +240,8 @@ fn try_run_payload(
     vm_payload_service_fd: OwnedFd,
 ) -> Result<i32> {
     let metadata = load_metadata().context("Failed to load payload metadata")?;
-    let dice = DiceDriver::new(Path::new("/dev/open-dice0")).context("Failed to load DICE")?;
+    let dice = DiceDriver::new(Path::new("/dev/open-dice0"), is_strict_boot())
+        .context("Failed to load DICE")?;
 
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data =

@@ -83,6 +83,7 @@ rust_test {
         ":test_pvmfw_devices_vm_dtbo",
         ":test_pvmfw_devices_vm_dtbo_without_symbols",
         ":test_pvmfw_devices_vm_dtbo_with_duplicated_iommus",
+        ":test_pvmfw_devices_overlapping_pvmfw",
         ":test_pvmfw_devices_with_rng",
         ":test_pvmfw_devices_with_multiple_devices_iommus",
         ":test_pvmfw_devices_with_iommu_sharing",
@@ -139,6 +140,13 @@ genrule_defaults {
     name: "test_device_assignment_dts_to_dtb",
     defaults: ["dts_to_dtb"],
     srcs: ["testdata/test_crosvm_dt_base.dtsi"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_overlapping_pvmfw",
+    defaults: ["test_device_assignment_dts_to_dtb"],
+    srcs: ["testdata/test_pvmfw_devices_overlapping_pvmfw.dts"],
+    out: ["test_pvmfw_devices_overlapping_pvmfw.dtb"],
 }
 
 genrule {

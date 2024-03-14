@@ -1,0 +1,13 @@
+cc_library_static {
+    name: "libavf_cc_flags",
+    defaults: ["avf_build_flags_cc"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+
+    export_include_dirs: ["include"],
+    local_include_dirs: ["include"],
+    ramdisk_available: true,
+    recovery_available: true,
+}

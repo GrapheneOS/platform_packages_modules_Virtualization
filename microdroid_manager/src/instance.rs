@@ -33,11 +33,11 @@
 //! The payload of a partition is encrypted/signed by a key that is unique to the loader and to the
 //! VM as well. Failing to decrypt/authenticate a partition by a loader stops the boot process.
 
-use crate::dice_driver::DiceDriver;
 use crate::ioutil;
 
 use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use dice_driver::DiceDriver;
 use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};

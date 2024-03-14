@@ -25,12 +25,15 @@ use crate::error::{DiceError, Result};
 use crate::ops::generate_certificate;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+#[cfg(feature = "serde_derive")]
+use serde_derive::{Deserialize, Serialize};
 
 /// Artifacts stores a set of dice artifacts comprising CDI_ATTEST, CDI_SEAL,
 /// and the BCC formatted attestation certificate chain.
 /// As we align with the DICE standards today, this is the certificate chain
 /// is also called DICE certificate chain.
 #[derive(Debug)]
+#[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
 pub struct OwnedDiceArtifacts {
     /// CDI Values.
     cdi_values: CdiValues,

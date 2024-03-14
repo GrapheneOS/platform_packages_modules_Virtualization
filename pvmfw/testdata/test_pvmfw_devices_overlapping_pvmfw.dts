@@ -1,0 +1,16 @@
+/dts-v1/;
+
+/include/ "test_crosvm_dt_base.dtsi"
+
+/ {
+    light {
+        reg = <0x0 0x7fee0000 0x0 0x1000>;
+        iommus = <&pviommu_0 0xF>;
+    };
+
+    pviommu_0: pviommu0 {
+        compatible = "pkvm,pviommu";
+        id = <0xFF>;
+        #iommu-cells = <1>;
+    };
+};

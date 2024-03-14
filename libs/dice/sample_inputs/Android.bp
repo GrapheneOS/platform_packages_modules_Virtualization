@@ -54,7 +54,7 @@ rust_library_rlib {
 rust_defaults {
     name: "libdiced_sample_inputs_test_defaults",
     crate_name: "diced_sample_inputs_test",
-    srcs: ["tests/*.rs"],
+    srcs: ["tests/api_test.rs"],
     test_suites: ["general-tests"],
     rustlibs: [
         "libanyhow",

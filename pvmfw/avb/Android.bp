@@ -25,7 +25,7 @@ rust_test {
     name: "libpvmfw_avb.integration_test",
     crate_name: "pvmfw_avb_test",
     defaults: ["avf_build_flags_rust"],
-    srcs: ["tests/*.rs"],
+    srcs: ["tests/api_test.rs"],
     test_suites: ["general-tests"],
     data: [
         ":avb_testkey_rsa2048_pub_bin",

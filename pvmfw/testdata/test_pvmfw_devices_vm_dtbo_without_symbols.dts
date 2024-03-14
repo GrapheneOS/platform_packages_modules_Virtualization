@@ -1,4 +1,5 @@
 /dts-v1/;
+// /plugin/ omitted as this DTBO has been written by hand as a DTB in this DTS.
 
 / {
     host {

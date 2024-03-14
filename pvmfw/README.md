@@ -30,11 +30,11 @@ was set up as expected. For functional purposes, the interface with the
 hypervisor, although trusted, is also validated.
 
 Once it has been determined that the platform can be trusted, pvmfw derives
-unique secrets for the guest through the [_Boot Certificate Chain_][BCC]
-("BCC", see [Open Profile for DICE][open-dice]) that can be used to prove the
-identity of the pVM to local and remote actors. If any operation or check fails,
-or in case of a missing prerequisite, pvmfw will abort the boot process of the
-pVM, effectively preventing non-compliant pVMs and/or guests from running.
+unique secrets for the guest through the [_DICE Chain_][android-dice] (see
+[Open Profile for DICE][open-dice]) that can be used to prove the identity of
+the pVM to local and remote actors. If any operation or check fails, or in case
+of a missing prerequisite, pvmfw will abort the boot process of the pVM,
+effectively preventing non-compliant pVMs and/or guests from running.
 Otherwise, it hands over the pVM to the guest kernel by jumping to its first
 instruction, similarly to a bootloader.
 
@@ -42,7 +42,7 @@ pvmfw currently only supports AArch64.
 
 [AVF]: https://source.android.com/docs/core/virtualization
 [why-avf]: https://source.android.com/docs/core/virtualization/whyavf
-[BCC]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/android.md
+[android-dice]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/android.md
 [pKVM]: https://source.android.com/docs/core/virtualization/architecture#hypervisor
 [open-dice]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md
 
@@ -153,7 +153,7 @@ The configuration data is described using the following [header]:
 +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
 | (Padding to 8-byte alignment) |
 +===============================+ <-- FIRST
-|       {First blob: BCC}       |
+|   {First blob: DICE chain}    |
 +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+ <-- FIRST_END
 | (Padding to 8-byte alignment) |
 +===============================+ <-- SECOND
@@ -189,7 +189,7 @@ of the array. The header uses the endianness of the virtual machine.
 The header format itself is agnostic of the internal format of the individual
 blos it refers to. In version 1.0, it describes two blobs:
 
-- entry 0 must point to a valid BCC Handover (see below)
+- entry 0 must point to a valid DICE chain handover (see below)
 - entry 1 may point to a [DTBO] to be applied to the pVM device tree. See
   [debug policy][debug_policy] for an example.
 
@@ -230,39 +230,39 @@ In version 1.2, a fourth blob is added.
 [secretkeeper_key]: https://android.googlesource.com/platform/system/secretkeeper/+/refs/heads/main/README.md#secretkeeper-public-key
 [vendor_hashtree_digest]: ../microdroid/README.md#verification-of-vendor-image
 
-#### Virtual Platform Boot Certificate Chain Handover
+#### Virtual Platform DICE Chain Handover
 
-The format of the BCC entry mentioned above, compatible with the
-[`BccHandover`][BccHandover] defined by the Open Profile for DICE reference
-implementation, is described by the following [CDDL][CDDL]:
+The format of the DICE chain entry mentioned above, compatible with the
+[`AndroidDiceHandover`][AndroidDiceHandover] defined by the Open Profile for
+DICE reference implementation, is described by the following [CDDL][CDDL]:
 ```
-PvmfwBccHandover = {
+PvmfwDiceHandover = {
   1 : bstr .size 32,     ; CDI_Attest
   2 : bstr .size 32,     ; CDI_Seal
-  3 : Bcc,               ; Certificate chain
+  3 : DiceCertChain,     ; Android DICE chain
 }
 ```
 
 and contains the _Compound Device Identifiers_ ("CDIs"), used to derive the
 next-stage secret, and a certificate chain, intended for pVM attestation. Note
-that it differs from the `BccHandover` defined by the specification in that its
-`Bcc` field is mandatory (while optional in the original).
+that it differs from the `AndroidDiceHandover` defined by the specification in
+that its `DiceCertChain` field is mandatory (while optional in the original).
 
 Devices that fully implement DICE should provide a certificate rooted at the
 Unique Device Secret (UDS) in a boot stage preceding the pvmfw loader (typically
-ABL), in such a way that it would receive a valid `BccHandover`, that can be
-passed to [`BccHandoverMainFlow`][BccHandoverMainFlow] along with the inputs
-described below.
+ABL), in such a way that it would receive a valid `AndroidDiceHandover`, that
+can be passed to [`DiceAndroidHandoverMainFlow`][DiceAndroidHandoverMainFlow] along with
+the inputs described below.
 
 Otherwise, as an intermediate step towards supporting DICE throughout the
-software stack of the device, incomplete implementations may root the BCC at the
-pvmfw loader, using an arbitrary constant as initial CDI. The pvmfw loader can
-easily do so by:
+software stack of the device, incomplete implementations may root the DICE chain
+at the pvmfw loader, using an arbitrary constant as initial CDI. The pvmfw
+loader can easily do so by:
 
-1. Building a BCC-less `BccHandover` using CBOR operations
-   ([example][Trusty-BCC]) and containing the constant CDIs
-1. Passing the resulting `BccHandover` to `BccHandoverMainFlow` as described
-   above
+1. Building an "empty" `AndroidDiceHandover` using CBOR operations only
+   containing constant CDIs ([example][Trusty-BCC])
+1. Passing the resulting `AndroidDiceHandover` to `DiceAndroidHandoverMainFlow`
+   as described above
 
 The recommended DICE inputs at this stage are:
 
@@ -278,13 +278,14 @@ The recommended DICE inputs at this stage are:
   storage and changes during every factory reset) or similar that changes as
   part of the device lifecycle (_e.g._ reset)
 
-The resulting `BccHandover` is then used by pvmfw in a similar way to derive
-another [DICE layer][Layering], passed to the guest through a `/reserved-memory`
-device tree node marked as [`compatible=”google,open-dice”`][dice-dt].
+The resulting `AndroidDiceHandover` is then used by pvmfw in a similar way to
+derive another [DICE layer][Layering], passed to the guest through a
+`/reserved-memory` device tree node marked as
+[`compatible=”google,open-dice”`][dice-dt].
 
 [AVB]: https://source.android.com/docs/security/features/verifiedboot/boot-flow
-[BccHandover]: https://pigweed.googlesource.com/open-dice/+/825e3beb6c/src/android/bcc.c#260
-[BccHandoverMainFlow]: https://pigweed.googlesource.com/open-dice/+/825e3beb6c/src/android/bcc.c#199
+[AndroidDiceHandover]: https://pigweed.googlesource.com/open-dice/+/42ae7760023/src/android.c#212
+[DiceAndroidHandoverMainFlow]: https://pigweed.googlesource.com/open-dice/+/42ae7760023/src/android.c#221
 [CDDL]: https://datatracker.ietf.org/doc/rfc8610
 [dice-mode]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md#Mode-Value-Details
 [dice-dt]: https://www.kernel.org/doc/Documentation/devicetree/bindings/reserved-memory/google%2Copen-dice.yaml
@@ -383,7 +384,7 @@ to booting the VM, are described to pvmfw using the device tree (x0):
 After verifying the guest kernel, pvmfw boots it using the Linux ABI described
 above. It uses the device tree to pass the following:
 
-- a reserved memory node containing the produced BCC:
+- a reserved memory node containing the produced DICE chain:
 
     ```
     / {
@@ -462,15 +463,15 @@ partition. To do that, the binary image composition performed by ABL described
 above must be replicated to produce a single file containing the pvmfw binary
 and its configuration data.
 
-As a quick prototyping solution, a valid BCC (such as the [bcc.dat] test file)
-can be appended to the `pvmfw.bin` image with `pvmfw-tool`.
+As a quick prototyping solution, a valid DICE chain (such as this [test
+file][bcc.dat]) can be appended to the `pvmfw.bin` image with `pvmfw-tool`.
 
 ```shell
 m pvmfw-tool pvmfw_bin
 PVMFW_BIN=${ANDROID_PRODUCT_OUT}/system/etc/pvmfw.bin
-BCC_DAT=${ANDROID_BUILD_TOP}/packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
+DICE=${ANDROID_BUILD_TOP}/packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
 
-pvmfw-tool custom_pvmfw ${PVMFW_BIN} ${BCC_DAT}
+pvmfw-tool custom_pvmfw ${PVMFW_BIN} ${DICE}
 ```
 
 The result can then be pushed to the device. Pointing the system property

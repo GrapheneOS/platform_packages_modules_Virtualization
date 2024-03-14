@@ -15,11 +15,16 @@
  */
 package com.android.microdroid.test;
 
-import static com.google.common.truth.Truth.assertWithMessage;
+import static android.content.pm.PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK;
 
+import static com.google.common.truth.Truth.assertWithMessage;
+import static com.google.common.truth.TruthJUnit.assume;
+
+import android.os.SystemProperties;
 import android.system.virtualmachine.VirtualMachineManager;
 
 import com.android.compatibility.common.util.CddTest;
+import com.android.compatibility.common.util.VsrTest;
 import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 
 import org.junit.Ignore;
@@ -28,16 +33,16 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 /**
- * Test the advertised AVF capabilities include the ability to start some type of VM.
+ * Test the device's AVF capabilities.
  *
  * <p>Tests in MicrodroidTests run on either protected or non-protected VMs, provided they are
  * supported. If neither is they are all skipped. So we need a separate test (that doesn't call
- * {@link #prepareTestSetup}) to make sure that at least one of these is available.
+ * {@link #prepareTestSetup}) when we need to run on such devices.
  */
 @RunWith(JUnit4.class)
 public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
     @Test
-    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-1"})
+    @CddTest(requirements = "9.17/C-1-6")
     @Ignore("b/326092480")
     public void supportForProtectedOrNonProtectedVms() {
         assumeSupportedDevice();
@@ -56,5 +61,17 @@ public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
                                 + " one of protected or non-protected VMs")
                 .that(vmCapabilities)
                 .isNotEqualTo(0);
+    }
+
+    @Test
+    @VsrTest(requirements = "VSR-7.1-001.005")
+    public void avfIsRequired() {
+        int vendorApiLevel = SystemProperties.getInt("ro.vendor.api_level", 0);
+        assume().withMessage("Requirement doesn't apply due to vendor API level")
+                .that(vendorApiLevel)
+                .isAtLeast(202404);
+        boolean avfSupported =
+                getContext().getPackageManager().hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK);
+        assertWithMessage("Device doesn't support AVF").that(avfSupported).isTrue();
     }
 }

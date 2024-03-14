@@ -68,6 +68,7 @@ soong_config_module_type {
     module_type: "cc_defaults",
     config_namespace: "ANDROID",
     bool_variables: [
+        "release_avf_enable_dice_changes",
         "release_avf_enable_virt_cpufreq",
     ],
     properties: [
@@ -78,6 +79,9 @@ soong_config_module_type {
 avf_flag_aware_cc_defaults {
     name: "avf_build_flags_cc",
     soong_config_variables: {
+        release_avf_enable_dice_changes: {
+            cflags: ["-DAVF_OPEN_DICE_CHANGES=1"],
+        },
         release_avf_enable_virt_cpufreq: {
             cflags: ["-DAVF_ENABLE_VIRT_CPUFREQ=1"],
         },

@@ -49,10 +49,12 @@ soong_config_module_type {
     module_type: "android_system_image",
     config_namespace: "ANDROID",
     bool_variables: [
+        "release_avf_enable_dice_changes",
         "release_avf_enable_multi_tenant_microdroid_vm",
     ],
     properties: [
         "deps",
+        "dirs",
     ],
 }
 
@@ -154,6 +156,14 @@ flag_aware_microdroid_system_image {
 
     // Below are dependencies that are conditionally enabled depending on value of build flags.
     soong_config_variables: {
+        release_avf_enable_dice_changes: {
+            deps: [
+                "derive_microdroid_vendor_dice_node",
+            ],
+            dirs: [
+                "microdroid_resources",
+            ],
+        },
         release_avf_enable_multi_tenant_microdroid_vm: {
             deps: [
                 "microdroid_etc_passwd",
@@ -295,7 +305,19 @@ flag_aware_microdroid_super_partition {
     },
 }
 
-android_filesystem {
+soong_config_module_type {
+    name: "flag_aware_microdroid_filesystem",
+    module_type: "android_filesystem",
+    config_namespace: "ANDROID",
+    bool_variables: [
+        "release_avf_enable_dice_changes",
+    ],
+    properties: [
+        "dirs",
+    ],
+}
+
+flag_aware_microdroid_filesystem {
     name: "microdroid_ramdisk",
     deps: [
         "init_first_stage.microdroid",
@@ -305,14 +327,23 @@ android_filesystem {
         "proc",
         "sys",
 
-        // TODO(jiyong): remove these
         "mnt",
         "debug_ramdisk",
         "second_stage_resources",
     ],
     type: "compressed_cpio",
+
+    // Below are dependencies that are conditionally enabled depending on value of build flags.
+    soong_config_variables: {
+        release_avf_enable_dice_changes: {
+            dirs: [
+                "microdroid_resources",
+            ],
+        },
+    },
 }
 
+// TODO(ioffe): rename to microdroid_first_stage_ramdisk
 android_filesystem {
     name: "microdroid_fstab_ramdisk",
     deps: [

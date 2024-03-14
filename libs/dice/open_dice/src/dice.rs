@@ -23,6 +23,8 @@ use open_dice_cbor_bindgen::{
     DICE_INLINE_CONFIG_SIZE, DICE_PRIVATE_KEY_SEED_SIZE, DICE_PRIVATE_KEY_SIZE,
     DICE_PUBLIC_KEY_SIZE, DICE_SIGNATURE_SIZE,
 };
+#[cfg(feature = "serde_derive")]
+use serde_derive::{Deserialize, Serialize};
 use std::{marker::PhantomData, ptr};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -82,6 +84,7 @@ pub trait DiceArtifacts {
 /// for sensitive data like CDI values and private key.
 /// CDI Values.
 #[derive(Debug, Zeroize, ZeroizeOnDrop, Default)]
+#[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
 pub struct CdiValues {
     /// Attestation CDI.
     pub cdi_attest: [u8; CDI_SIZE],

@@ -31,12 +31,13 @@ import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
 import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.RunUtil;
 
 import org.json.JSONArray;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -143,15 +144,29 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     }
 
     public File findTestFile(String name) {
-        return findTestFile(getBuild(), name);
-    }
+        String moduleName = getInvocationContext().getConfigurationDescriptor().getModuleName();
+        IBuildInfo buildInfo = getBuild();
+        CompatibilityBuildHelper helper = new CompatibilityBuildHelper(buildInfo);
 
-    private static File findTestFile(IBuildInfo buildInfo, String name) {
+        // We're not using helper.getTestFile here because it sometimes picks a file
+        // from a different module, which may be old and/or wrong. See b/328779049.
         try {
-            return (new CompatibilityBuildHelper(buildInfo)).getTestFile(name);
-        } catch (FileNotFoundException e) {
-            throw new AssertionError("Missing test file: " + name, e);
+            File testsDir = helper.getTestsDir().getAbsoluteFile();
+
+            for (File subDir : FileUtil.findDirsUnder(testsDir, testsDir.getParentFile())) {
+                if (!subDir.getName().equals(moduleName)) {
+                    continue;
+                }
+                File testFile = FileUtil.findFile(subDir, name);
+                if (testFile != null) {
+                    return testFile;
+                }
+            }
+        } catch (IOException e) {
+            throw new AssertionError(
+                    "Failed to find test file " + name + " for module " + moduleName, e);
         }
+        throw new AssertionError("Failed to find test file " + name + " for module " + moduleName);
     }
 
     public String getPathForPackage(String packageName)
