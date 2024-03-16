@@ -631,7 +631,7 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
             collect_apex_infos(
                 &apex_info_list,
                 &apex_configs,
-                &DebugConfig::new(DebugLevel::FULL)
+                &DebugConfig::new_with_debug_level(DebugLevel::FULL)
             )?,
             vec![
                 // Pass active/required APEXes
@@ -660,8 +660,11 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
         };
         let apex_configs = vec![ApexConfig { name: "apex-vendor".to_string() }];
 
-        let ret =
-            collect_apex_infos(&apex_info_list, &apex_configs, &DebugConfig::new(DebugLevel::NONE));
+        let ret = collect_apex_infos(
+            &apex_info_list,
+            &apex_configs,
+            &DebugConfig::new_with_debug_level(DebugLevel::NONE),
+        );
         assert!(ret
             .is_err_and(|ret| ret.to_string()
                 == "Non-system APEX apex-vendor is not supported in Microdroid"));
@@ -687,7 +690,7 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
             collect_apex_infos(
                 &apex_info_list,
                 &apex_configs,
-                &DebugConfig::new(DebugLevel::NONE)
+                &DebugConfig::new_with_debug_level(DebugLevel::NONE)
             )?,
             vec![&apex_info_list.list[0]]
         );

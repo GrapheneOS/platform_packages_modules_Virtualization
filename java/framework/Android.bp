@@ -43,4 +43,7 @@ java_sdk_library {
     impl_library_visibility: [
         "//packages/modules/Virtualization:__subpackages__",
     ],
+    aconfig_declarations: [
+        "avf_aconfig_flags",
+    ],
 }

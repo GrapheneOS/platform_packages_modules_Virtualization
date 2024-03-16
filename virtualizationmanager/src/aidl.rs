@@ -434,11 +434,7 @@ impl VirtualizationService {
                 None
             };
 
-        let debug_level = match config {
-            VirtualMachineConfig::AppConfig(config) => config.debugLevel,
-            _ => DebugLevel::NONE,
-        };
-        let debug_config = DebugConfig::new(debug_level);
+        let debug_config = DebugConfig::new(config);
 
         let ramdump = if debug_config.is_ramdump_needed() {
             Some(prepare_ramdump_file(&temporary_directory)?)

@@ -16,28 +16,22 @@
 
 package com.android.pvmfw.test;
 
-import static com.android.tradefed.device.TestDevice.MicrodroidBuilder;
-
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
-import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertThrows;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.microdroid.test.host.CommandRunner;
-import com.android.microdroid.test.host.MicrodroidHostTestCaseBase;
 import com.android.pvmfw.test.host.Pvmfw;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.DeviceRuntimeException;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.util.CommandStatus;
 import com.android.tradefed.util.CommandResult;
-import com.android.tradefed.util.FileUtil;
 
 import org.junit.After;
 import org.junit.Before;
@@ -45,32 +39,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
-import java.util.Objects;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /** Tests debug policy */
 @RunWith(DeviceJUnit4ClassRunner.class)
-public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
-    @NonNull private static final String PVMFW_FILE_NAME = "pvmfw_test.bin";
-    @NonNull private static final String BCC_FILE_NAME = "bcc.dat";
-    @NonNull private static final String PACKAGE_FILE_NAME = "MicrodroidTestApp.apk";
-    @NonNull private static final String PACKAGE_NAME = "com.android.microdroid.test";
-    @NonNull private static final String MICRODROID_DEBUG_FULL = "full";
-    @NonNull private static final String MICRODROID_DEBUG_NONE = "none";
-
-    @NonNull
-    private static final String MICRODROID_CONFIG_PATH = "assets/microdroid/vm_config_apex.json";
-
-    @NonNull private static final String MICRODROID_LOG_PATH = TEST_ROOT + "log.txt";
-    private static final int BOOT_COMPLETE_TIMEOUT_MS = 30000; // 30 seconds
-    private static final int BOOT_FAILURE_WAIT_TIME_MS = 10000; // 10 seconds
-    private static final int CONSOLE_OUTPUT_WAIT_MS = 5000; // 5 seconds
-
-    @NonNull private static final String CUSTOM_PVMFW_FILE_PREFIX = "pvmfw";
-    @NonNull private static final String CUSTOM_PVMFW_FILE_SUFFIX = ".bin";
-    @NonNull private static final String CUSTOM_PVMFW_IMG_PATH = TEST_ROOT + PVMFW_FILE_NAME;
-    @NonNull private static final String CUSTOM_PVMFW_IMG_PATH_PROP = "hypervisor.pvmfw.path";
-
+public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     @NonNull private static final String CUSTOM_DEBUG_POLICY_FILE_NAME = "debug_policy.dtb";
 
     @NonNull
@@ -98,63 +73,22 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
     @NonNull private static final String HEX_STRING_ZERO = "00000000";
     @NonNull private static final String HEX_STRING_ONE = "00000001";
 
-    @Nullable private static File mPvmfwBinFileOnHost;
-    @Nullable private static File mBccFileOnHost;
-
-    @Nullable private TestDevice mAndroidDevice;
-    @Nullable private ITestDevice mMicrodroidDevice;
-    @Nullable private File mCustomPvmfwBinFileOnHost;
     @Nullable private File mCustomDebugPolicyFileOnHost;
 
     @Before
     public void setUp() throws Exception {
-        mAndroidDevice = (TestDevice) Objects.requireNonNull(getDevice());
+        super.setUp();
 
-        // Check device capabilities
-        assumeDeviceIsCapable(mAndroidDevice);
-        assumeTrue(
-                "Skip if protected VMs are not supported",
-                mAndroidDevice.supportsMicrodroid(/* protectedVm= */ true));
-
-        // tradefed copies the test artfacts under /tmp when running tests,
-        // so we should *find* the artifacts with the file name.
-        mPvmfwBinFileOnHost =
-                getTestInformation().getDependencyFile(PVMFW_FILE_NAME, /* targetFirst= */ false);
-        mBccFileOnHost =
-                getTestInformation().getDependencyFile(BCC_FILE_NAME, /* targetFirst= */ false);
-
-        // Prepare for system properties for custom debug policy.
-        // File will be prepared later in individual test by setupCustomDebugPolicy()
-        // and then pushed to device when launching with launchProtectedVmAndWaitForBootCompleted()
-        // or tryLaunchProtectedNonDebuggableVm().
-        mCustomPvmfwBinFileOnHost =
-                FileUtil.createTempFile(CUSTOM_PVMFW_FILE_PREFIX, CUSTOM_PVMFW_FILE_SUFFIX);
-        setPropertyOrThrow(mAndroidDevice, CUSTOM_PVMFW_IMG_PATH_PROP, CUSTOM_PVMFW_IMG_PATH);
-        setPropertyOrThrow(mAndroidDevice, CUSTOM_DEBUG_POLICY_PATH_PROP, CUSTOM_DEBUG_POLICY_PATH);
-
-        // Prepare for launching microdroid
-        mAndroidDevice.installPackage(findTestFile(PACKAGE_FILE_NAME), /* reinstall */ false);
-        prepareVirtualizationTestSetup(mAndroidDevice);
-        mMicrodroidDevice = null;
+        // Prepare system properties for custom debug policy.
+        setPropertyOrThrow(getDevice(), CUSTOM_DEBUG_POLICY_PATH_PROP, CUSTOM_DEBUG_POLICY_PATH);
     }
 
     @After
     public void shutdown() throws Exception {
-        if (!mAndroidDevice.supportsMicrodroid(/* protectedVm= */ true)) {
-            return;
-        }
-        if (mMicrodroidDevice != null) {
-            mAndroidDevice.shutdownMicrodroid(mMicrodroidDevice);
-            mMicrodroidDevice = null;
-        }
-        mAndroidDevice.uninstallPackage(PACKAGE_NAME);
+        super.shutdown();
 
         // Cleanup for custom debug policies
-        setPropertyOrThrow(mAndroidDevice, CUSTOM_DEBUG_POLICY_PATH_PROP, "");
-        setPropertyOrThrow(mAndroidDevice, CUSTOM_PVMFW_IMG_PATH_PROP, "");
-        FileUtil.deleteFile(mCustomPvmfwBinFileOnHost);
-
-        cleanUpVirtualizationTestSetup(mAndroidDevice);
+        setPropertyOrThrow(getDevice(), CUSTOM_DEBUG_POLICY_PATH_PROP, "");
     }
 
     @Test
@@ -198,43 +132,41 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
     @Test
     public void testRamdumpInDebugPolicy_withDebugLevelNone_hasRamdumpArgs() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_with_ramdump.dtbo");
-        mMicrodroidDevice = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
+        ITestDevice device = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
 
-        assertThat(readMicrodroidFileAsString(MICRODROID_CMDLINE_PATH)).contains("crashkernel=");
-        assertThat(readMicrodroidFileAsString(MICRODROID_DT_BOOTARGS_PATH))
-                .contains("crashkernel=");
-        assertThat(readMicrodroidFileAsHexString(MICRODROID_DT_RAMDUMP_PATH))
+        assertThat(readFileAsString(device, MICRODROID_CMDLINE_PATH)).contains("crashkernel=");
+        assertThat(readFileAsString(device, MICRODROID_DT_BOOTARGS_PATH)).contains("crashkernel=");
+        assertThat(readFileAsHexString(device, MICRODROID_DT_RAMDUMP_PATH))
                 .isEqualTo(HEX_STRING_ONE);
     }
 
     @Test
     public void testNoRamdumpInDebugPolicy_withDebugLevelNone_noRamdumpArgs() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_without_ramdump.dtbo");
-        mMicrodroidDevice = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
+        ITestDevice device = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
 
-        assertThat(readMicrodroidFileAsString(MICRODROID_CMDLINE_PATH))
+        assertThat(readFileAsString(device, MICRODROID_CMDLINE_PATH))
                 .doesNotContain("crashkernel=");
-        assertThat(readMicrodroidFileAsString(MICRODROID_DT_BOOTARGS_PATH))
+        assertThat(readFileAsString(device, MICRODROID_DT_BOOTARGS_PATH))
                 .doesNotContain("crashkernel=");
-        assertThat(readMicrodroidFileAsHexString(MICRODROID_DT_RAMDUMP_PATH))
+        assertThat(readFileAsHexString(device, MICRODROID_DT_RAMDUMP_PATH))
                 .isEqualTo(HEX_STRING_ZERO);
     }
 
     @Test
     public void testNoRamdumpInDebugPolicy_withDebugLevelFull_hasRamdumpArgs() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_without_ramdump.dtbo");
-        mMicrodroidDevice = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_FULL);
+        ITestDevice device = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_FULL);
 
-        assertThat(readMicrodroidFileAsString(MICRODROID_CMDLINE_PATH)).contains("crashkernel=");
-        assertThat(readMicrodroidFileAsString(MICRODROID_DT_BOOTARGS_PATH))
-                .contains("crashkernel=");
-        assertThat(readMicrodroidFileAsHexString(MICRODROID_DT_RAMDUMP_PATH))
+        assertThat(readFileAsString(device, MICRODROID_CMDLINE_PATH)).contains("crashkernel=");
+        assertThat(readFileAsString(device, MICRODROID_DT_BOOTARGS_PATH)).contains("crashkernel=");
+        assertThat(readFileAsHexString(device, MICRODROID_DT_RAMDUMP_PATH))
                 .isEqualTo(HEX_STRING_ZERO);
     }
 
     private boolean isDebugPolicyEnabled(@NonNull String dtPropertyPath)
             throws DeviceNotAvailableException {
-        CommandRunner runner = new CommandRunner(mAndroidDevice);
+        CommandRunner runner = new CommandRunner(getDevice());
         CommandResult result =
                 runner.runForResult("xxd", "-p", "/proc/device-tree" + dtPropertyPath);
         if (result.getStatus() == CommandStatus.SUCCESS) {
@@ -244,15 +176,15 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @NonNull
-    private String readMicrodroidFileAsString(@NonNull String path)
+    private String readFileAsString(@NonNull ITestDevice device, @NonNull String path)
             throws DeviceNotAvailableException {
-        return new CommandRunner(mMicrodroidDevice).run("cat", path);
+        return new CommandRunner(device).run("cat", path);
     }
 
     @NonNull
-    private String readMicrodroidFileAsHexString(@NonNull String path)
+    private String readFileAsHexString(@NonNull ITestDevice device, @NonNull String path)
             throws DeviceNotAvailableException {
-        return new CommandRunner(mMicrodroidDevice).run("xxd", "-p", path);
+        return new CommandRunner(device).run("xxd", "-p", path);
     }
 
     private void prepareCustomDebugPolicy(@NonNull String debugPolicyFileName) throws Exception {
@@ -261,10 +193,10 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
                         .getDependencyFile(debugPolicyFileName, /* targetFirst= */ false);
 
         Pvmfw pvmfw =
-                new Pvmfw.Builder(mPvmfwBinFileOnHost, mBccFileOnHost)
+                new Pvmfw.Builder(getPvmfwBinFile(), getBccFile())
                         .setDebugPolicyOverlay(mCustomDebugPolicyFileOnHost)
                         .build();
-        pvmfw.serialize(mCustomPvmfwBinFileOnHost);
+        pvmfw.serialize(getCustomPvmfwFile());
     }
 
     private boolean hasConsoleOutput(@NonNull CommandResult result)
@@ -274,29 +206,22 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
 
     private boolean hasMicrodroidLogcatOutput() throws DeviceNotAvailableException {
         CommandResult result =
-                new CommandRunner(mAndroidDevice).runForResult("test", "-s", MICRODROID_LOG_PATH);
+                new CommandRunner(getDevice()).runForResult("test", "-s", MICRODROID_LOG_PATH);
         return result.getExitCode() == 0;
     }
 
-    private ITestDevice launchProtectedVmAndWaitForBootCompleted(String debugLevel)
+    public ITestDevice launchProtectedVmAndWaitForBootCompleted(String debugLevel)
             throws DeviceNotAvailableException {
         return launchProtectedVmAndWaitForBootCompleted(debugLevel, BOOT_COMPLETE_TIMEOUT_MS);
     }
 
-    private ITestDevice launchProtectedVmAndWaitForBootCompleted(
+    public ITestDevice launchProtectedVmAndWaitForBootCompleted(
             String debugLevel, long adbTimeoutMs) throws DeviceNotAvailableException {
-        mMicrodroidDevice =
-                MicrodroidBuilder.fromDevicePath(
-                                getPathForPackage(PACKAGE_NAME), MICRODROID_CONFIG_PATH)
-                        .debugLevel(debugLevel)
-                        .protectedVm(/* protectedVm= */ true)
-                        .addBootFile(mCustomPvmfwBinFileOnHost, PVMFW_FILE_NAME)
-                        .addBootFile(mCustomDebugPolicyFileOnHost, CUSTOM_DEBUG_POLICY_FILE_NAME)
-                        .setAdbConnectTimeoutMs(adbTimeoutMs)
-                        .build(mAndroidDevice);
-        assertThat(mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT_MS)).isTrue();
-        assertThat(mMicrodroidDevice.enableAdbRoot()).isTrue();
-        return mMicrodroidDevice;
+        Map<String, File> bootFiles =
+                Collections.singletonMap(
+                        CUSTOM_DEBUG_POLICY_FILE_NAME, mCustomDebugPolicyFileOnHost);
+
+        return launchProtectedVmAndWaitForBootCompleted(debugLevel, adbTimeoutMs, bootFiles);
     }
 
     // Try to launch protected non-debuggable VM for a while and quit.
@@ -304,10 +229,10 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
     private CommandResult tryLaunchProtectedNonDebuggableVm() throws Exception {
         // Can't use MicrodroidBuilder because it expects adb connection
         // but non-debuggable VM may not enable adb.
-        CommandRunner runner = new CommandRunner(mAndroidDevice);
+        CommandRunner runner = new CommandRunner(getDevice());
         runner.run("mkdir", "-p", TEST_ROOT);
-        mAndroidDevice.pushFile(mCustomPvmfwBinFileOnHost, CUSTOM_PVMFW_IMG_PATH);
-        mAndroidDevice.pushFile(mCustomDebugPolicyFileOnHost, CUSTOM_DEBUG_POLICY_PATH);
+        getDevice().pushFile(getCustomPvmfwFile(), CUSTOM_PVMFW_IMG_PATH);
+        getDevice().pushFile(mCustomDebugPolicyFileOnHost, CUSTOM_DEBUG_POLICY_PATH);
 
         // This will fail because app wouldn't finish itself.
         // But let's run the app once and get logs.
@@ -327,7 +252,11 @@ public class DebugPolicyHostTests extends MicrodroidHostTestCaseBase {
         if (isFeatureEnabled("com.android.kvm.LLPVM_CHANGES")) {
             command = String.join(" ", command, "--instance-id-file", TEST_ROOT + "instance_id");
         }
-        return mAndroidDevice.executeShellV2Command(
-                command, CONSOLE_OUTPUT_WAIT_MS, TimeUnit.MILLISECONDS, /* retryAttempts= */ 0);
+        return getDevice()
+                .executeShellV2Command(
+                        command,
+                        CONSOLE_OUTPUT_WAIT_MS,
+                        TimeUnit.MILLISECONDS,
+                        /* retryAttempts= */ 0);
     }
 }
