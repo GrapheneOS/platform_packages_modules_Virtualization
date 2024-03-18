@@ -2,12 +2,11 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-android_test {
-    name: "VmAttestationTestApp",
+java_defaults {
+    name: "vm_attestation_testapp_defaults",
     test_suites: [
         "general-tests",
     ],
-    srcs: ["src/java/**/*.java"],
     static_libs: [
         "MicrodroidDeviceTestHelper",
         "androidx.test.runner",
@@ -19,7 +18,12 @@ android_test {
     jni_uses_platform_apis: true,
     use_embedded_native_libs: true,
     sdk_version: "test_current",
-    compile_multilib: "first",
+}
+
+android_test {
+    name: "VmAttestationTestApp",
+    srcs: ["src/java/com/android/virt/vm_attestation/testapp/*.java"],
+    defaults: ["vm_attestation_testapp_defaults"],
 }
 
 rust_defaults {
@@ -41,4 +45,21 @@ rust_defaults {
 rust_ffi {
     name: "libvm_attestation_test_payload",
     defaults: ["vm_attestation_test_payload_defaults"],
+    visibility: [":__subpackages__"],
+}
+
+android_test {
+    name: "AvfRkpdVmAttestationTestApp",
+    srcs: ["src/java/com/android/virt/rkpd/vm_attestation/testapp/*.java"],
+    defaults: ["vm_attestation_testapp_defaults"],
+    manifest: "AndroidManifest.rkpd.xml",
+    test_config: "AndroidTest.rkpd.xml",
+    static_libs: [
+        "RkpdAppTestUtil",
+        "androidx.work_work-testing",
+    ],
+    instrumentation_for: "rkpdapp",
+    // This app is a variation of rkpdapp, with additional permissions to run
+    // a VM. It is defined in packages/modules/RemoteKeyProvisioning.
+    data: [":avf-rkpdapp"],
 }

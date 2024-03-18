@@ -17,6 +17,7 @@ java_defaults {
     name: "MicrodroidTestAppsDefaults",
     test_suites: [
         "cts",
+        "vts",
         "general-tests",
     ],
     static_libs: [

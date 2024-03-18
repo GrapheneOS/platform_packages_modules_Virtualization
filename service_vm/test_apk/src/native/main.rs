@@ -18,7 +18,7 @@ use anyhow::{anyhow, ensure, Result};
 use avflog::LogResult;
 use com_android_virt_vm_attestation_testservice::{
     aidl::com::android::virt::vm_attestation::testservice::IAttestationService::{
-        BnAttestationService, IAttestationService, PORT,
+        BnAttestationService, IAttestationService, SigningResult::SigningResult, PORT,
     },
     binder::{self, unstable_api::AsNative, BinderFeatures, Interface, IntoBinderResult, Strong},
 };
@@ -34,7 +34,7 @@ use vm_payload_bindgen::{
     AIBinder, AVmAttestationResult, AVmAttestationResult_free,
     AVmAttestationResult_getCertificateAt, AVmAttestationResult_getCertificateCount,
     AVmAttestationResult_getPrivateKey, AVmAttestationResult_sign, AVmAttestationStatus,
-    AVmAttestationStatus_toString, AVmPayload_notifyPayloadReady,
+    AVmAttestationStatus_toString, AVmPayload_notifyPayloadReady, AVmPayload_requestAttestation,
     AVmPayload_requestAttestationForTesting, AVmPayload_runVsockRpcServer,
 };
 
@@ -89,18 +89,28 @@ impl AttestationService {
 
 impl IAttestationService for AttestationService {
     fn requestAttestationForTesting(&self) -> binder::Result<()> {
-        // The data below is only a placeholder generated randomly with urandom
-        let challenge = &[
-            0x6c, 0xad, 0x52, 0x50, 0x15, 0xe7, 0xf4, 0x1d, 0xa5, 0x60, 0x7e, 0xd2, 0x7d, 0xf1,
-            0x51, 0x67, 0xc3, 0x3e, 0x73, 0x9b, 0x30, 0xbd, 0x04, 0x20, 0x2e, 0xde, 0x3b, 0x1d,
-            0xc8, 0x07, 0x11, 0x7b,
-        ];
-        let res = AttestationResult::request_attestation(challenge)
+        const CHALLENGE: &[u8] = &[0xaa; 32];
+        let res = AttestationResult::request_attestation_for_testing(CHALLENGE)
             .map_err(|e| anyhow!("Unexpected status: {:?}", status_to_cstr(e)))
             .with_log()
             .or_service_specific_exception(-1)?;
         *self.res.lock().unwrap() = Some(res);
         Ok(())
+    }
+
+    fn signWithAttestationKey(
+        &self,
+        challenge: &[u8],
+        message: &[u8],
+    ) -> binder::Result<SigningResult> {
+        let res = AttestationResult::request_attestation(challenge)
+            .map_err(|e| anyhow!("Unexpected status: {:?}", status_to_cstr(e)))
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        let certificate_chain =
+            res.certificate_chain().with_log().or_service_specific_exception(-1)?;
+        let signature = res.sign(message).with_log().or_service_specific_exception(-1)?;
+        Ok(SigningResult { certificateChain: certificate_chain, signature })
     }
 
     fn validateAttestationResult(&self) -> binder::Result<()> {
@@ -116,7 +126,9 @@ struct AttestationResult(NonNull<AVmAttestationResult>);
 unsafe impl Send for AttestationResult {}
 
 impl AttestationResult {
-    fn request_attestation(challenge: &[u8]) -> result::Result<Self, AVmAttestationStatus> {
+    fn request_attestation_for_testing(
+        challenge: &[u8],
+    ) -> result::Result<Self, AVmAttestationStatus> {
         let mut res: *mut AVmAttestationResult = ptr::null_mut();
         // SAFETY: It is safe as we only read the challenge within its bounds and the
         // function does not retain any reference to it.
@@ -136,11 +148,31 @@ impl AttestationResult {
         }
     }
 
-    fn certificate_chain(&self) -> Result<Vec<Box<[u8]>>> {
+    fn request_attestation(challenge: &[u8]) -> result::Result<Self, AVmAttestationStatus> {
+        let mut res: *mut AVmAttestationResult = ptr::null_mut();
+        // SAFETY: It is safe as we only read the challenge within its bounds and the
+        // function does not retain any reference to it.
+        let status = unsafe {
+            AVmPayload_requestAttestation(
+                challenge.as_ptr() as *const c_void,
+                challenge.len(),
+                &mut res,
+            )
+        };
+        if status == AVmAttestationStatus::ATTESTATION_OK {
+            info!("Attestation succeeds. Status: {:?}", status_to_cstr(status));
+            let res = NonNull::new(res).expect("The attestation result is null");
+            Ok(Self(res))
+        } else {
+            Err(status)
+        }
+    }
+
+    fn certificate_chain(&self) -> Result<Vec<u8>> {
         let num_certs = get_certificate_count(self.as_ref());
-        let mut certs = Vec::with_capacity(num_certs);
+        let mut certs = Vec::new();
         for i in 0..num_certs {
-            certs.push(get_certificate_at(self.as_ref(), i)?);
+            certs.extend(get_certificate_at(self.as_ref(), i)?.iter());
         }
         Ok(certs)
     }
@@ -149,7 +181,7 @@ impl AttestationResult {
         get_private_key(self.as_ref())
     }
 
-    fn sign(&self, message: &[u8]) -> Result<Box<[u8]>> {
+    fn sign(&self, message: &[u8]) -> Result<Vec<u8>> {
         sign_with_attested_key(self.as_ref(), message)
     }
 
@@ -231,7 +263,7 @@ fn get_private_key(res: &AVmAttestationResult) -> Result<Box<[u8]>> {
     Ok(private_key.into_boxed_slice())
 }
 
-fn sign_with_attested_key(res: &AVmAttestationResult, message: &[u8]) -> Result<Box<[u8]>> {
+fn sign_with_attested_key(res: &AVmAttestationResult, message: &[u8]) -> Result<Vec<u8>> {
     // SAFETY: The result is returned by `AVmPayload_requestAttestation` and should be valid
     // before getting freed.
     let size = unsafe {
@@ -258,7 +290,7 @@ fn sign_with_attested_key(res: &AVmAttestationResult, message: &[u8]) -> Result<
     };
     ensure!(size <= signature.len());
     signature.truncate(size);
-    Ok(signature.into_boxed_slice())
+    Ok(signature)
 }
 
 fn status_to_cstr(status: AVmAttestationStatus) -> &'static CStr {

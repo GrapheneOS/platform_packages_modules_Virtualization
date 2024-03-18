@@ -15,6 +15,7 @@
 -->
 <configuration description="Runs Microdroid device-side tests.">
     <option name="test-suite-tag" value="cts" />
+    <option name="test-suite-tag" value="vts" />
     <option name="config-descriptor:metadata" key="component" value="security" />
     <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
