@@ -28,4 +28,11 @@
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="com.android.virt.rkpd.vm_attestation.testapp" />
     </test>
+
+    <!-- Only run if RKPD mainline module is installed -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+        <option name="enable" value="true" />
+        <option name="mainline-module-package-name" value="com.android.rkpd" />
+    </object>
 </configuration>

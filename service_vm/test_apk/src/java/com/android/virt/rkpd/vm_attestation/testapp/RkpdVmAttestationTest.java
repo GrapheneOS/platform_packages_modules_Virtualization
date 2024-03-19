@@ -44,6 +44,12 @@ import com.android.rkpdapp.utils.X509Utils;
 import com.android.virt.vm_attestation.testservice.IAttestationService;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 
+import org.bouncycastle.asn1.ASN1Boolean;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERUTF8String;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -215,28 +221,46 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         assertThat(sig.verify(signingResult.signature)).isTrue();
     }
 
-    private void checkAvfAttestationExtension(X509Certificate cert, byte[] challenge) {
-        byte[] extension = cert.getExtensionValue(AVF_ATTESTATION_EXTENSION_OID);
-        assertThat(extension).isNotNull();
-        // TODO(b/325610326): Use bouncycastle to parse the extension and check other fields.
-        assertWithMessage("The extension should contain the challenge")
-                .that(containsSubarray(extension, challenge))
-                .isTrue();
+    private void checkAvfAttestationExtension(X509Certificate cert, byte[] challenge)
+            throws Exception {
+        byte[] extensionValue = cert.getExtensionValue(AVF_ATTESTATION_EXTENSION_OID);
+        ASN1OctetString extString = ASN1OctetString.getInstance(extensionValue);
+        ASN1Sequence seq = ASN1Sequence.getInstance(extString.getOctets());
+        // AVF attestation extension should contain 3 elements in the following format:
+        //
+        //  AttestationExtension ::= SEQUENCE {
+        //     attestationChallenge       OCTET_STRING,
+        //     isVmSecure                 BOOLEAN,
+        //     vmComponents               SEQUENCE OF VmComponent,
+        //  }
+        //   VmComponent ::= SEQUENCE {
+        //     name               UTF8String,
+        //     securityVersion    INTEGER,
+        //     codeHash           OCTET STRING,
+        //     authorityHash      OCTET STRING,
+        //  }
+        assertThat(seq).hasSize(3);
+
+        ASN1OctetString expectedChallenge = new DEROctetString(challenge);
+        assertThat(seq.getObjectAt(0)).isEqualTo(expectedChallenge);
+        assertWithMessage("The VM should be unsecure as it is debuggable.")
+                .that(seq.getObjectAt(1))
+                .isEqualTo(ASN1Boolean.FALSE);
+        ASN1Sequence vmComponents = ASN1Sequence.getInstance(seq.getObjectAt(2));
+        assertExtensionContainsPayloadApk(vmComponents);
     }
 
-    private boolean containsSubarray(byte[] array, byte[] subarray) {
-        for (int i = 0; i < array.length - subarray.length + 1; i++) {
-            boolean found = true;
-            for (int j = 0; j < subarray.length; j++) {
-                if (array[i + j] != subarray[j]) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return true;
+    private void assertExtensionContainsPayloadApk(ASN1Sequence vmComponents) throws Exception {
+        DERUTF8String payloadApkName = new DERUTF8String("apk:" + TEST_APP_PACKAGE_NAME);
+        boolean found = false;
+        for (ASN1Encodable encodable : vmComponents) {
+            ASN1Sequence vmComponent = ASN1Sequence.getInstance(encodable);
+            assertThat(vmComponent).hasSize(4);
+            if (payloadApkName.equals(vmComponent.getObjectAt(0))) {
+                assertWithMessage("Payload APK should not be found twice.").that(found).isFalse();
+                found = true;
             }
         }
-        return false;
+        assertWithMessage("vmComponents should contain the payload APK.").that(found).isTrue();
     }
 }

@@ -57,6 +57,7 @@ android_test {
     static_libs: [
         "RkpdAppTestUtil",
         "androidx.work_work-testing",
+        "bouncycastle-unbundled",
     ],
     instrumentation_for: "rkpdapp",
     // This app is a variation of rkpdapp, with additional permissions to run

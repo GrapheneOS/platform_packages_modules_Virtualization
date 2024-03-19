@@ -1,0 +1,15 @@
+/dts-v1/;
+
+/include/ "test_crosvm_dt_base.dtsi"
+
+/ {
+    node_c: node_c {
+        reg = <0x0 0xFF200 0x0 0x1>;
+        interrupts = <0x0 0xF 0x4>;
+        loop_dep = <&node_c_loop>;
+    };
+
+    node_c_loop: node_c_loop {
+        loop_dep = <&node_c>;
+    };
+};

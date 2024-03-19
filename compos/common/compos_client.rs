@@ -35,6 +35,7 @@ use binder::{ParcelFileDescriptor, Strong};
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::ICompOsService;
 use glob::glob;
 use log::{info, warn};
+use platformproperties::hypervisorproperties;
 use rustutils::system_properties;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -232,7 +233,7 @@ fn prepare_idsig(
 
 fn want_protected_vm() -> Result<bool> {
     let have_protected_vm =
-        system_properties::read_bool("ro.boot.hypervisor.protected_vm.supported", false)?;
+        hypervisorproperties::hypervisor_protected_vm_supported()?.unwrap_or(false);
     if have_protected_vm {
         info!("Starting protected VM");
         return Ok(true);
@@ -243,8 +244,7 @@ fn want_protected_vm() -> Result<bool> {
         bail!("Protected VM not supported, unable to start VM");
     }
 
-    let have_non_protected_vm =
-        system_properties::read_bool("ro.boot.hypervisor.vm.supported", false)?;
+    let have_non_protected_vm = hypervisorproperties::hypervisor_vm_supported()?.unwrap_or(false);
     if have_non_protected_vm {
         warn!("Protected VM not supported, falling back to non-protected on debuggable build");
         return Ok(false);

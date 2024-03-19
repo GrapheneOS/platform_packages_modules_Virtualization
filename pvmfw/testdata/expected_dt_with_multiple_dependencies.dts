@@ -1,0 +1,70 @@
+/dts-v1/;
+
+// Note: We can't use label syntax here.
+// Implementation applies overlay after removing /__symbols__,
+// so using label syntax here wouldn't match with the actual reasult.
+
+/include/ "platform_preprocessed.dts"
+
+/ {
+    node_a: node_a {
+        phandle = <0x2E>;
+        val = <0x6>;
+        dep = <&node_a_dep &common>;
+        reg = <0x0 0xFF000 0x0 0x1>;
+        interrupts = <0x0 0xF 0x4>;
+        iommus;
+    };
+
+    node_a_dep: node_a_dep {
+        phandle = <0x31>;
+        val = <0xFF>;
+        dep = <&node_aa_nested_dep>;
+    };
+
+    node_aa {
+        should_be_preserved = <0xFF>;
+
+        node_aa_nested_dep: node_aa_nested_dep {
+            phandle = <0x33>;
+            tag = <0x9>;
+        };
+    };
+
+    node_b: node_b {
+        phandle = <0x2F>;
+        tag = <0x33>;
+        version = <0x1 0x2>;
+        dep = <&node_b_dep1 &node_b_dep2>;
+        reg = <0x00 0xFF100 0x00 0x01>;
+        interrupts = <0x00 0x0F 0x04>;
+        iommus;
+    };
+
+    node_b_dep1: node_b_dep1 {
+        phandle = <0x34>;
+        placeholder;
+    };
+
+    node_b_dep2: node_b_dep2 {
+        phandle = <0x35>;
+        placeholder;
+        dep = <&common>;
+    };
+
+    common: common {
+        phandle = <0x32>;
+        id = <0x9>;
+    };
+
+    /delete-node/ pviommu0;
+    /delete-node/ pviommu1;
+    /delete-node/ pviommu2;
+    /delete-node/ pviommu3;
+    /delete-node/ pviommu4;
+    /delete-node/ pviommu5;
+    /delete-node/ pviommu6;
+    /delete-node/ pviommu7;
+    /delete-node/ pviommu8;
+    /delete-node/ pviommu9;
+};

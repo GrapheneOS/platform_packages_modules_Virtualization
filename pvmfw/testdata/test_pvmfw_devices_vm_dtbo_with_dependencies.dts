@@ -1,0 +1,77 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    host {
+        #address-cells = <0x2>;
+        #size-cells = <0x1>;
+        node_a {
+            reg = <0x0 0xF000 0x1>;
+            android,pvmfw,target = <&node_a>;
+        };
+        node_b {
+            reg = <0x0 0xF100 0x1>;
+            android,pvmfw,target = <&node_b>;
+        };
+        node_c {
+            reg = <0x0 0xF200 0x1>;
+            android,pvmfw,target = <&node_c>;
+        };
+    };
+};
+
+&{/} {
+    node_a: node_a {
+        val = <0x6>;
+        dep = <&node_a_dep &common>;
+    };
+
+    node_a_dep: node_a_dep {
+        val = <0xFF>;
+        dep = <&node_aa_nested_dep>;
+
+        node_a_internal {
+            val;
+        };
+    };
+
+    node_aa {
+        should_be_preserved = <0xFF>;
+        node_aa_nested_dep: node_aa_nested_dep {
+            tag = <0x9>;
+        };
+    };
+};
+
+&{/} {
+    node_b: node_b {
+        tag = <0x33>;
+        version = <0x1 0x2>;
+        dep = <&node_b_dep1 &node_b_dep2>;
+    };
+
+    node_b_dep1: node_b_dep1 {
+        placeholder;
+    };
+
+    node_b_dep2: node_b_dep2 {
+        placeholder;
+        dep = <&common>;
+    };
+};
+
+&{/} {
+    node_c: node_c {
+        loop_dep = <&node_c_loop>;
+    };
+
+    node_c_loop: node_c_loop {
+        loop_dep = <&node_c>;
+    };
+};
+
+&{/} {
+    common: common {
+        id = <0x9>;
+    };
+};

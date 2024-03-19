@@ -14,18 +14,17 @@
 
 //! Access to hypervisor capabilities via system properties set by the bootloader.
 
-use anyhow::{Error, Result};
-use rustutils::system_properties;
+use anyhow::Result;
+use platformproperties::hypervisorproperties;
 
 /// Returns whether there is a hypervisor present that supports non-protected VMs.
 pub fn is_vm_supported() -> Result<bool> {
-    system_properties::read_bool("ro.boot.hypervisor.vm.supported", false).map_err(Error::new)
+    Ok(hypervisorproperties::hypervisor_vm_supported()?.unwrap_or(false))
 }
 
 /// Returns whether there is a hypervisor present that supports protected VMs.
 pub fn is_protected_vm_supported() -> Result<bool> {
-    system_properties::read_bool("ro.boot.hypervisor.protected_vm.supported", false)
-        .map_err(Error::new)
+    Ok(hypervisorproperties::hypervisor_protected_vm_supported()?.unwrap_or(false))
 }
 
 /// Returns whether there is a hypervisor present that supports any sort of VM, either protected
@@ -36,5 +35,5 @@ pub fn is_any_vm_supported() -> Result<bool> {
 
 /// Returns the version of the hypervisor, if there is one.
 pub fn version() -> Result<Option<String>> {
-    system_properties::read("ro.boot.hypervisor.version").map_err(Error::new)
+    Ok(hypervisorproperties::hypervisor_version()?)
 }

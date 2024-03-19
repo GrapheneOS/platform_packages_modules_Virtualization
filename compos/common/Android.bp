@@ -20,6 +20,7 @@ rust_library {
         "libnum_traits",
         "librustutils",
         "libvmclient",
+        "libplatformproperties_rust",
     ],
     proc_macros: ["libnum_derive"],
     apex_available: [

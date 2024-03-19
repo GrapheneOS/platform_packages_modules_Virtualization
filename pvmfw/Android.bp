@@ -74,16 +74,19 @@ rust_test {
     srcs: ["src/device_assignment.rs"],
     defaults: ["libpvmfw.test.defaults"],
     rustlibs: [
+        "libdts",
         "libhyp",
         "liblibfdt",
         "liblog_rust",
         "libpvmfw_fdt_template",
+        "libzerocopy",
     ],
     data: [
         ":test_pvmfw_devices_vm_dtbo",
         ":test_pvmfw_devices_vm_dtbo_without_symbols",
         ":test_pvmfw_devices_vm_dtbo_with_duplicated_iommus",
         ":test_pvmfw_devices_overlapping_pvmfw",
+        ":test_pvmfw_devices_vm_dtbo_with_dependencies",
         ":test_pvmfw_devices_with_rng",
         ":test_pvmfw_devices_with_multiple_devices_iommus",
         ":test_pvmfw_devices_with_iommu_sharing",
@@ -92,7 +95,13 @@ rust_test {
         ":test_pvmfw_devices_without_iommus",
         ":test_pvmfw_devices_with_duplicated_pviommus",
         ":test_pvmfw_devices_with_multiple_reg_iommus",
+        ":test_pvmfw_devices_with_dependency",
+        ":test_pvmfw_devices_with_dependency_loop",
+        ":test_pvmfw_devices_with_multiple_dependencies",
+        ":test_pvmfw_devices_expected_dt",
     ],
+    data_bins: ["dtc_static"],
+    compile_multilib: "first",
     // To use libpvmfw_fdt_template for testing
     enabled: false,
     target: {
@@ -134,6 +143,14 @@ genrule {
     defaults: ["dts_to_dtb"],
     srcs: ["testdata/test_pvmfw_devices_vm_dtbo_with_duplicated_iommus.dts"],
     out: ["test_pvmfw_devices_vm_dtbo_with_duplicated_iommus.dtbo"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_vm_dtbo_with_dependencies",
+    tools: ["dtc"],
+    cmd: "$(location dtc) -@ -I dts -O dtb $(in) -o $(out)",
+    srcs: ["testdata/test_pvmfw_devices_vm_dtbo_with_dependencies.dts"],
+    out: ["test_pvmfw_devices_vm_dtbo_with_dependencies.dtbo"],
 }
 
 genrule_defaults {
@@ -203,6 +220,53 @@ genrule {
     defaults: ["test_device_assignment_dts_to_dtb"],
     srcs: ["testdata/test_pvmfw_devices_with_multiple_reg_iommus.dts"],
     out: ["test_pvmfw_devices_with_multiple_reg_iommus.dtb"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_with_dependency",
+    defaults: ["test_device_assignment_dts_to_dtb"],
+    srcs: ["testdata/test_pvmfw_devices_with_dependency.dts"],
+    out: ["test_pvmfw_devices_with_dependency.dtb"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_with_multiple_dependencies",
+    defaults: ["test_device_assignment_dts_to_dtb"],
+    srcs: ["testdata/test_pvmfw_devices_with_multiple_dependencies.dts"],
+    out: ["test_pvmfw_devices_with_multiple_dependencies.dtb"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_with_dependency_loop",
+    defaults: ["test_device_assignment_dts_to_dtb"],
+    srcs: ["testdata/test_pvmfw_devices_with_dependency_loop.dts"],
+    out: ["test_pvmfw_devices_with_dependency_loop.dtb"],
+}
+
+// We can't use genrule because preprocessed platform DT is built with cc_object.
+// cc_genrule doesn't support default, so we'll build all expected DTs in
+// a single build rule.
+cc_genrule {
+    name: "test_pvmfw_devices_expected_dt",
+    srcs: [
+        ":pvmfw_platform.dts.preprocessed",
+        "testdata/expected_dt_with_dependency.dts",
+        "testdata/expected_dt_with_multiple_dependencies.dts",
+        "testdata/expected_dt_with_dependency_loop.dts",
+    ],
+    out: [
+        "expected_dt_with_dependency.dtb",
+        "expected_dt_with_multiple_dependencies.dtb",
+        "expected_dt_with_dependency_loop.dtb",
+    ],
+    tools: ["dtc"],
+    cmd: "FILES=($(in));" +
+        "cp $${FILES[0]} $(genDir)/platform_preprocessed.dts;" +
+        "for DTS in $${FILES[@]:1}; do" +
+        "  DTB=$$(basename -s .dts $${DTS}).dtb;" +
+        "  $(location dtc) -@ -i $(genDir) -I dts -O dtb $${DTS} -o $(genDir)/$${DTB};" +
+        "done",
+    visibility: ["//visibility:private"],
 }
 
 cc_binary {

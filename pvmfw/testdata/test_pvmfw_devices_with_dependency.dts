@@ -1,0 +1,36 @@
+/dts-v1/;
+
+/include/ "test_crosvm_dt_base.dtsi"
+
+/ {
+    node_a: node_a {
+        reg = <0x0 0xFF000 0x0 0x1>;
+        interrupts = <0x0 0xF 0x4>;
+        val = <0x6>;
+        dep = <&node_a_dep &common>;
+
+        node_a_internal {
+            parent = <&node_a>;
+        };
+    };
+
+    node_a_dep: node_a_dep {
+        val = <0xFF>;
+        dep = <&node_aa_nested_dep>;
+
+        node_a_dep_internal {
+            val;
+        };
+    };
+
+    node_aa {
+        should_be_preserved = <0xFF>;
+        node_aa_nested_dep: node_aa_nested_dep {
+            tag = <0x9>;
+        };
+    };
+
+    common: common {
+        id = <0x9>;
+    };
+};

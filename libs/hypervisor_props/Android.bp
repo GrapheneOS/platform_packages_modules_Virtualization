@@ -9,7 +9,7 @@ rust_library {
     edition: "2021",
     rustlibs: [
         "libanyhow",
-        "librustutils",
+        "libplatformproperties_rust",
     ],
     apex_available: [
         "com.android.compos",

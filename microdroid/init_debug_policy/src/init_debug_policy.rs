@@ -15,7 +15,7 @@
 //! Applies debug policies when booting microdroid
 
 use rustutils::system_properties;
-use rustutils::system_properties::PropertyWatcherError;
+use rustutils::system_properties::error::PropertyWatcherError;
 use std::fs::File;
 use std::io::Read;
 
