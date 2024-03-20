@@ -339,6 +339,8 @@ So an attacker should not be able to decrypt the data; however, a sufficiently
 powerful attacker could delete it, wholly or partially roll it back to an
 earlier version, or modify it, corrupting the data.
 
+For more info see [README](https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/java/framework/README.md)
+
 # Transferring a VM
 
 It is possible to make a copy of a VM instance. This can be used to transfer a

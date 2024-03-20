@@ -25,28 +25,41 @@ import java.io.IOException;
 public class PvmfwTool {
     public static void printUsage() {
         System.out.println("pvmfw-tool: Appends pvmfw.bin and config payloads.");
-        System.out.println("Requires BCC and optional debug policy dtbo files");
-        System.out.println("");
-        System.out.println("Usage: pvmfw-tool <out> <pvmfw.bin> <bcc.dat> [<dp.dtbo>]");
+        System.out.println("            Requires BCC and VM reference DT.");
+        System.out.println("            VM DTBO and Debug policy can optionally be specified");
+        System.out.println(
+                "Usage: pvmfw-tool <out> <pvmfw.bin> <bcc.dat> <VM reference DT> [VM DTBO] [debug"
+                        + " policy]");
     }
 
     public static void main(String[] args) {
-        if (args.length != 4 && args.length != 3) {
+        if (args.length < 3 || args.length > 6) {
             printUsage();
             System.exit(1);
         }
 
         File out = new File(args[0]);
-        File pvmfw_bin = new File(args[1]);
-        File bcc_dat = new File(args[2]);
+        File pvmfwBin = new File(args[1]);
+        File bccData = new File(args[2]);
+        File vmReferenceDt = new File(args[3]);
+
+        File vmDtbo = null;
+        File dp = null;
+        if (args.length > 4) {
+            vmDtbo = new File(args[4]);
+        }
+        if (args.length > 5) {
+            dp = new File(args[5]);
+        }
 
         try {
-            Pvmfw.Builder builder = new Pvmfw.Builder(pvmfw_bin, bcc_dat);
-            if (args.length == 4) {
-                File dtbo = new File(args[3]);
-                builder.setDebugPolicyOverlay(dtbo);
-            }
-            builder.build().serialize(out);
+            Pvmfw pvmfw =
+                    new Pvmfw.Builder(pvmfwBin, bccData)
+                            .setVmReferenceDt(vmReferenceDt)
+                            .setDebugPolicyOverlay(dp)
+                            .setVmDtbo(vmDtbo)
+                            .build();
+            pvmfw.serialize(out);
         } catch (IOException e) {
             e.printStackTrace();
             printUsage();

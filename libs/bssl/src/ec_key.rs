@@ -65,7 +65,7 @@ impl EcKey {
         };
         NonNull::new(ec_key)
             .map(Self)
-            .ok_or(to_call_failed_error(ApiName::EC_KEY_new_by_curve_name))
+            .ok_or_else(|| to_call_failed_error(ApiName::EC_KEY_new_by_curve_name))
     }
 
     /// Creates a new EC P-384 key pair.
@@ -76,7 +76,7 @@ impl EcKey {
         };
         NonNull::new(ec_key)
             .map(Self)
-            .ok_or(to_call_failed_error(ApiName::EC_KEY_new_by_curve_name))
+            .ok_or_else(|| to_call_failed_error(ApiName::EC_KEY_new_by_curve_name))
     }
 
     /// Constructs an `EcKey` instance from the provided COSE_Key encoded public key slice.
@@ -295,7 +295,7 @@ impl EcKey {
 
         let ec_key = NonNull::new(ec_key)
             .map(Self)
-            .ok_or(to_call_failed_error(ApiName::EC_KEY_parse_private_key))?;
+            .ok_or_else(|| to_call_failed_error(ApiName::EC_KEY_parse_private_key))?;
         ec_key.check_key()?;
         Ok(ec_key)
     }
@@ -320,7 +320,7 @@ impl EcKey {
         // SAFETY: This is safe because the CBB pointer is initialized with `CBB_init_fixed()`,
         // and it has been flushed, thus it has no active children.
         let len = unsafe { CBB_len(cbb.as_ref()) };
-        Ok(buf.get(0..len).ok_or(to_call_failed_error(ApiName::CBB_len))?.to_vec().into())
+        Ok(buf.get(0..len).ok_or_else(|| to_call_failed_error(ApiName::CBB_len))?.to_vec().into())
     }
 }
 
@@ -411,13 +411,13 @@ impl BigNum {
         // SAFETY: The function reads `x` within its bounds, and the returned
         // pointer is checked below.
         let bn = unsafe { BN_bin2bn(x.as_ptr(), x.len(), ptr::null_mut()) };
-        NonNull::new(bn).map(Self).ok_or(to_call_failed_error(ApiName::BN_bin2bn))
+        NonNull::new(bn).map(Self).ok_or_else(|| to_call_failed_error(ApiName::BN_bin2bn))
     }
 
     fn new() -> Result<Self> {
         // SAFETY: The returned pointer is checked below.
         let bn = unsafe { BN_new() };
-        NonNull::new(bn).map(Self).ok_or(to_call_failed_error(ApiName::BN_new))
+        NonNull::new(bn).map(Self).ok_or_else(|| to_call_failed_error(ApiName::BN_new))
     }
 
     /// Converts the `BigNum` to a big-endian integer. The integer is padded with leading zeros up

@@ -22,6 +22,24 @@
         <option name="force-root" value="true"/>
     </target_preparer>
 
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="throw-if-cmd-fail" value="true" />
+        <!-- Prepare test directories. -->
+        <option name="run-command" value="mkdir -p /data/local/tmp/pvmfw" />
+        <option name="teardown-command" value="rm -rf /data/local/tmp/pvmfw" />
+    </target_preparer>
+
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="cleanup" value="true" />
+        <option name="abort-on-push-failure" value="true" />
+        <option name="push-file" key="dtc_static" value="/data/local/tmp/pvmfw/dtc_static" />
+    </target_preparer>
+
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="throw-if-cmd-fail" value="true" />
+        <option name="run-command" value="[ ! -d /proc/device-tree/avf/reference ] || /data/local/tmp/pvmfw/dtc_static -f -qqq /proc/device-tree/avf/reference -o /data/local/tmp/pvmfw/reference_dt.dtb" />
+    </target_preparer>
+
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
         <option name="jar" value="CustomPvmfwHostTestCases.jar" />
     </test>

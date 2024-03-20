@@ -19,6 +19,7 @@ package com.android.pvmfw.test;
 import static com.android.tradefed.device.TestDevice.MicrodroidBuilder;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import static org.junit.Assume.assumeTrue;
 
@@ -26,16 +27,18 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.microdroid.test.host.MicrodroidHostTestCaseBase;
+import com.android.microdroid.test.host.CommandRunner;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.device.TestDevice;
+import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.CommandStatus;
 import com.android.tradefed.util.FileUtil;
 
 import org.junit.After;
 import org.junit.Before;
 
 import java.io.File;
-import java.util.Objects;
 import java.util.Map;
 
 /** Base class for testing custom pvmfw */
@@ -50,6 +53,9 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     @NonNull
     public static final String MICRODROID_CONFIG_PATH = "assets/microdroid/vm_config_apex.json";
 
+    @NonNull
+    public static final String VM_REFERENCE_DT_PATH = "/data/local/tmp/pvmfw/reference_dt.dtb";
+
     @NonNull public static final String MICRODROID_LOG_PATH = TEST_ROOT + "log.txt";
     public static final int BOOT_COMPLETE_TIMEOUT_MS = 30000; // 30 seconds
     public static final int BOOT_FAILURE_WAIT_TIME_MS = 10000; // 10 seconds
@@ -60,17 +66,28 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     @NonNull public static final String CUSTOM_PVMFW_IMG_PATH = TEST_ROOT + PVMFW_FILE_NAME;
     @NonNull public static final String CUSTOM_PVMFW_IMG_PATH_PROP = "hypervisor.pvmfw.path";
 
-    @Nullable private static File mPvmfwBinFileOnHost;
-    @Nullable private static File mBccFileOnHost;
+    @NonNull private static final String DUMPSYS = "dumpsys";
 
-    @Nullable private TestDevice mAndroidDevice;
+    @NonNull
+    private static final String DUMPSYS_MISSING_SERVICE_MSG_PREFIX = "Can't find service: ";
+
+    @NonNull
+    private static final String SECRET_KEEPER_AIDL =
+            "android.hardware.security.secretkeeper.ISecretkeeper/default";
+
+    @Nullable private File mPvmfwBinFileOnHost;
+    @Nullable private File mBccFileOnHost;
+    @Nullable private File mVmReferenceDtFile;
+    private boolean mSecretKeeperSupported;
+
+    @NonNull private TestDevice mAndroidDevice;
     @Nullable private ITestDevice mMicrodroidDevice;
 
     @Nullable private File mCustomPvmfwFileOnHost;
 
     @Before
     public void setUp() throws Exception {
-        mAndroidDevice = (TestDevice) Objects.requireNonNull(getDevice());
+        mAndroidDevice = (TestDevice) getDevice();
 
         // Check device capabilities
         assumeDeviceIsCapable(mAndroidDevice);
@@ -78,12 +95,29 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
                 "Skip if protected VMs are not supported",
                 mAndroidDevice.supportsMicrodroid(/* protectedVm= */ true));
 
-        // tradefed copies the test artifacts under /tmp when running tests,
-        // so we should *find* the artifacts with the file name.
-        mPvmfwBinFileOnHost =
-                getTestInformation().getDependencyFile(PVMFW_FILE_NAME, /* targetFirst= */ false);
-        mBccFileOnHost =
-                getTestInformation().getDependencyFile(BCC_FILE_NAME, /* targetFirst= */ false);
+        mPvmfwBinFileOnHost = findTestFile(PVMFW_FILE_NAME);
+        mBccFileOnHost = findTestFile(BCC_FILE_NAME);
+
+        // This is prepared by AndroidTest.xml
+        mVmReferenceDtFile = mAndroidDevice.pullFile(VM_REFERENCE_DT_PATH);
+
+        CommandRunner runner = new CommandRunner(mAndroidDevice);
+        CommandResult result = runner.runForResult(DUMPSYS, SECRET_KEEPER_AIDL);
+
+        // dumpsys prints 'Can't find service: ~' to stderr if secret keeper HAL is missing,
+        // but it doesn't return any error code for it.
+        // Read stderr to know whether secret keeper is supported, and stop test for any other case.
+        assertWithMessage("Failed to run " + DUMPSYS + ", result=" + result)
+                .that(result.getStatus() == CommandStatus.SUCCESS && result.getExitCode() == 0)
+                .isTrue();
+        if (result.getStderr() != null && !result.getStderr().trim().isEmpty()) {
+            assertWithMessage(
+                            "Unexpected stderr from " + DUMPSYS + ", stderr=" + result.getStderr())
+                    .that(result.getStderr().trim().startsWith(DUMPSYS_MISSING_SERVICE_MSG_PREFIX))
+                    .isTrue();
+        } else {
+            mSecretKeeperSupported = true;
+        }
 
         // Prepare for system properties for custom pvmfw.img.
         // File will be prepared later in individual test and then pushed to device
@@ -100,14 +134,11 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
 
     @After
     public void shutdown() throws Exception {
-        if (!mAndroidDevice.supportsMicrodroid(/* protectedVm= */ true)) {
-            return;
-        }
-        if (mMicrodroidDevice != null) {
-            mAndroidDevice.shutdownMicrodroid(mMicrodroidDevice);
-            mMicrodroidDevice = null;
-        }
+        shutdownMicrodroid();
+
         mAndroidDevice.uninstallPackage(PACKAGE_NAME);
+
+        FileUtil.deleteFile(mVmReferenceDtFile);
 
         // Cleanup for custom pvmfw.img
         setPropertyOrThrow(mAndroidDevice, CUSTOM_PVMFW_IMG_PATH_PROP, "");
@@ -116,14 +147,28 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
         cleanUpVirtualizationTestSetup(mAndroidDevice);
     }
 
+    /** Returns android device */
+    @NonNull
+    public TestDevice getAndroidDevice() {
+        return mAndroidDevice;
+    }
+
     /** Returns pvmfw.bin file on host for building custom pvmfw with */
+    @NonNull
     public File getPvmfwBinFile() {
         return mPvmfwBinFileOnHost;
     }
 
     /** Returns BCC file on host for building custom pvmfw with */
+    @NonNull
     public File getBccFile() {
         return mBccFileOnHost;
+    }
+
+    /** Returns VM reference DT, generated from DUT, on host for building custom pvmfw with. */
+    @Nullable
+    public File getVmReferenceDtFile() {
+        return mVmReferenceDtFile;
     }
 
     /**
@@ -133,8 +178,19 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
      * calling {@link #launchProtectedVmAndWaitForBootCompleted}, so virtualization manager can read
      * the file path from sysprop and boot pVM with it.
      */
+    @NonNull
     public File getCustomPvmfwFile() {
         return mCustomPvmfwFileOnHost;
+    }
+
+    /**
+     * Returns whether a secretkeeper is supported.
+     *
+     * <p>If {@code true}, then VM reference DT must exist. (i.e. {@link #getVmReferenceDtFile} must
+     * exist {@code null}).
+     */
+    public boolean isSecretKeeperSupported() {
+        return mSecretKeeperSupported;
     }
 
     /**
@@ -161,5 +217,13 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
         assertThat(mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT_MS)).isTrue();
         assertThat(mMicrodroidDevice.enableAdbRoot()).isTrue();
         return mMicrodroidDevice;
+    }
+
+    /** Shuts down microdroid if it's running */
+    public void shutdownMicrodroid() throws Exception {
+        if (mMicrodroidDevice != null) {
+            mAndroidDevice.shutdownMicrodroid(mMicrodroidDevice);
+            mMicrodroidDevice = null;
+        }
     }
 }

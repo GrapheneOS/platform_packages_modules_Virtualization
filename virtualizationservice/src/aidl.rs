@@ -39,7 +39,10 @@ use nix::unistd::{chown, Uid};
 use openssl::x509::X509;
 use rand::Fill;
 use rkpd_client::get_rkpd_attestation_key;
-use rustutils::system_properties;
+use rustutils::{
+    system_properties,
+    users::{multiuser_get_app_id, multiuser_get_user_id},
+};
 use serde::Deserialize;
 use service_vm_comm::Response;
 use std::collections::{HashMap, HashSet};
@@ -385,7 +388,6 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         Ok(ParcelFileDescriptor::new(file))
     }
 
-    // TODO(b/294177871) Persist this Id, along with client uuid.
     fn allocateInstanceId(&self) -> binder::Result<[u8; 64]> {
         let mut id = [0u8; 64];
         id.try_fill(&mut rand::thread_rng())
@@ -393,6 +395,16 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             .or_service_specific_exception(-1)?;
         let uid = get_calling_uid();
         info!("Allocated a VM's instance_id: {:?}, for uid: {:?}", hex::encode(id), uid);
+        let state = &mut *self.state.lock().unwrap();
+        if let Some(sk_state) = &mut state.sk_state {
+            let user_id = multiuser_get_user_id(uid);
+            let app_id = multiuser_get_app_id(uid);
+            info!("Recording potential existence of state for (user_id={user_id}, app_id={app_id}");
+            if let Err(e) = sk_state.add_id(&id, user_id, app_id) {
+                error!("Failed to record the instance_id: {e:?}");
+            }
+        }
+
         Ok(id)
     }
 

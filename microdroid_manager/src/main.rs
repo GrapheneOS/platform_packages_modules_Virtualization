@@ -41,7 +41,7 @@ use dice_driver::DiceDriver;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
 use log::{error, info};
-use microdroid_metadata::PayloadMetadata;
+use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
 use nix::sys::signal::Signal;
 use payload::load_metadata;
@@ -72,6 +72,7 @@ const DEBUG_MICRODROID_NO_VERIFIED_BOOT: &str =
     "/proc/device-tree/virtualization/guest/debug-microdroid,no-verified-boot";
 const SECRETKEEPER_KEY: &str = "/proc/device-tree/avf/secretkeeper_public_key";
 const INSTANCE_ID_PATH: &str = "/proc/device-tree/avf/untrusted/instance-id";
+const DEFER_ROLLBACK_PROTECTION: &str = "/proc/device-tree/avf/untrusted/defer-rollback-protection";
 
 const ENCRYPTEDSTORE_BIN: &str = "/system/bin/encryptedstore";
 const ZIPFUSE_BIN: &str = "/system/bin/zipfuse";
@@ -161,6 +162,10 @@ fn get_instance_id() -> Result<Option<[u8; ID_SIZE]>> {
     Ok(instance_id)
 }
 
+fn should_defer_rollback_protection() -> bool {
+    Path::new(DEFER_ROLLBACK_PROTECTION).exists()
+}
+
 fn main() -> Result<()> {
     // If debuggable, print full backtrace to console log with stdio_to_kmsg
     if is_debuggable()? {
@@ -235,17 +240,12 @@ fn try_main() -> Result<()> {
     }
 }
 
-fn try_run_payload(
-    service: &Strong<dyn IVirtualMachineService>,
-    vm_payload_service_fd: OwnedFd,
-) -> Result<i32> {
-    let metadata = load_metadata().context("Failed to load payload metadata")?;
-    let dice = DiceDriver::new(Path::new("/dev/open-dice0"), is_strict_boot())
-        .context("Failed to load DICE")?;
-
+fn verify_payload_with_instance_img(
+    metadata: &Metadata,
+    dice: &DiceDriver,
+) -> Result<MicrodroidData> {
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
-    let saved_data =
-        instance.read_microdroid_data(&dice).context("Failed to read identity data")?;
+    let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
     if is_strict_boot() {
         // Provisioning must happen on the first boot and never again.
@@ -265,7 +265,7 @@ fn try_run_payload(
     }
 
     // Verify the payload before using it.
-    let extracted_data = verify_payload(&metadata, saved_data.as_ref())
+    let extracted_data = verify_payload(metadata, saved_data.as_ref())
         .context("Payload verification failed")
         .map_err(|e| MicrodroidError::PayloadVerificationFailed(e.to_string()))?;
 
@@ -289,9 +289,28 @@ fn try_run_payload(
     } else {
         info!("Saving verified data.");
         instance
-            .write_microdroid_data(&extracted_data, &dice)
+            .write_microdroid_data(&extracted_data, dice)
             .context("Failed to write identity data")?;
         extracted_data
+    };
+    Ok(instance_data)
+}
+
+fn try_run_payload(
+    service: &Strong<dyn IVirtualMachineService>,
+    vm_payload_service_fd: OwnedFd,
+) -> Result<i32> {
+    let metadata = load_metadata().context("Failed to load payload metadata")?;
+    let dice = DiceDriver::new(Path::new("/dev/open-dice0"), is_strict_boot())
+        .context("Failed to load DICE")?;
+
+    // Microdroid skips checking payload against instance image iff the device supports
+    // secretkeeper. In that case Microdroid use VmSecret::V2, which provide protection against
+    // rollback of boot images and packages.
+    let instance_data = if should_defer_rollback_protection() {
+        verify_payload(&metadata, None)?
+    } else {
+        verify_payload_with_instance_img(&metadata, &dice)?
     };
 
     let payload_metadata = metadata.payload.ok_or_else(|| {

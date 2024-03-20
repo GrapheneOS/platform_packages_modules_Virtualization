@@ -91,28 +91,19 @@ impl VmSecret {
         vm_service: &Strong<dyn IVirtualMachineService>,
     ) -> Result<Self> {
         ensure!(dice_artifacts.bcc().is_some(), "Dice chain missing");
-
-        let Some(sk_service) =
-            is_sk_supported(vm_service).context("Failed to check if Secretkeeper is supported")?
-        else {
-            // Use V1 secrets if Secretkeeper is not supported.
+        if !crate::should_defer_rollback_protection() {
             return Ok(Self::V1 { dice_artifacts });
-        };
+        }
 
         let explicit_dice = OwnedDiceArtifactsWithExplicitKey::from_owned_artifacts(dice_artifacts)
             .context("Failed to get Dice artifacts in explicit key format")?;
         // For pVM, skp_secret are stored in Secretkeeper. For non-protected it is all 0s.
         let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
         if super::is_strict_boot() {
-            let mut session = SkSession::new(
-                sk_service,
-                &explicit_dice,
-                Some(get_secretkeeper_identity().context("Failed to get secretkeeper identity")?),
-            )
-            .context("Failed to setup a Secretkeeper session")?;
-            let id = super::get_instance_id()
-                .context("Failed to get instance-id")?
-                .ok_or(anyhow!("Missing instance-id"))?;
+            let sk_service = get_secretkeeper_service(vm_service)?;
+            let mut session =
+                SkSession::new(sk_service, &explicit_dice, Some(get_secretkeeper_identity()?))?;
+            let id = super::get_instance_id()?.ok_or(anyhow!("Missing instance_id"))?;
             let explicit_dice_chain = explicit_dice
                 .explicit_key_dice_chain()
                 .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
@@ -279,22 +270,15 @@ fn anyhow_err<E: core::fmt::Debug>(err: E) -> anyhow::Error {
     anyhow!("{:?}", err)
 }
 
-// Get the secretkeeper connection if supported. Host can be consulted whether the device supports
-// secretkeeper but that should be used with caution for protected VM.
-fn is_sk_supported(
+fn get_secretkeeper_service(
     host: &Strong<dyn IVirtualMachineService>,
-) -> Result<Option<Strong<dyn ISecretkeeper>>> {
-    let sk = if cfg!(llpvm_changes) {
-        host.getSecretkeeper()
-            // TODO rename this error!
-            .map_err(|e| {
-                super::MicrodroidError::FailedToConnectToVirtualizationService(format!(
-                    "Failed to get Secretkeeper: {e:?}"
-                ))
-            })?
-    } else {
-        // LLPVM flag is disabled
-        None
-    };
-    Ok(sk)
+) -> Result<Strong<dyn ISecretkeeper>> {
+    Ok(host
+        .getSecretkeeper()
+        // TODO rename this error!
+        .map_err(|e| {
+            super::MicrodroidError::FailedToConnectToVirtualizationService(format!(
+                "Failed to get Secretkeeper: {e:?}"
+            ))
+        })?)
 }

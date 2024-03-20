@@ -37,7 +37,9 @@ use crate::dice::PartialInputs;
 use crate::entry::RebootReason;
 use crate::fdt::modify_for_next_stage;
 use crate::helpers::GUEST_PAGE_SIZE;
-use crate::instance::get_or_generate_instance_salt;
+use crate::instance::EntryBody;
+use crate::instance::Error as InstanceError;
+use crate::instance::{get_recorded_entry, record_instance_entry};
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use core::ops::Range;
@@ -150,11 +152,43 @@ fn main(
         error!("Failed to compute partial DICE inputs: {e:?}");
         RebootReason::InternalError
     })?;
-    let (new_instance, salt) = get_or_generate_instance_salt(&mut pci_root, &dice_inputs, cdi_seal)
-        .map_err(|e| {
-            error!("Failed to get instance.img salt: {e}");
+
+    let (recorded_entry, mut instance_img, header_index) =
+        get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
+            error!("Failed to get entry from instance.img: {e}");
             RebootReason::InternalError
         })?;
+    let (new_instance, salt) = if let Some(entry) = recorded_entry {
+        // The RKP VM is allowed to run if it has passed the verified boot check and
+        // contains the expected version in its AVB footer.
+        // The comparison below with the previous boot information is skipped to enable the
+        // simultaneous update of the pvmfw and RKP VM.
+        // For instance, when both the pvmfw and RKP VM are updated, the code hash of the
+        // RKP VM will differ from the one stored in the instance image. In this case, the
+        // RKP VM is still allowed to run.
+        // This ensures that the updated RKP VM will retain the same CDIs in the next stage.
+        if !dice_inputs.rkp_vm_marker {
+            ensure_dice_measurements_match_entry(&dice_inputs, &entry).map_err(|e| {
+                error!(
+                    "Dice measurements do not match recorded entry.
+                This may be because of update: {e}"
+                );
+                RebootReason::InternalError
+            })?;
+        }
+        (false, entry.salt)
+    } else {
+        let salt = rand::random_array().map_err(|e| {
+            error!("Failed to generated instance.img salt: {e}");
+            RebootReason::InternalError
+        })?;
+        let entry = EntryBody::new(&dice_inputs, &salt);
+        record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(|e| {
+            error!("Failed to get recorded entry in instance.img: {e}");
+            RebootReason::InternalError
+        })?;
+        (true, salt)
+    };
     trace!("Got salt from instance.img: {salt:x?}");
 
     let new_bcc_handover = if cfg!(dice_changes) {
@@ -205,6 +239,21 @@ fn main(
     };
 
     Ok(bcc_range)
+}
+
+fn ensure_dice_measurements_match_entry(
+    dice_inputs: &PartialInputs,
+    entry: &EntryBody,
+) -> Result<(), InstanceError> {
+    if entry.code_hash != dice_inputs.code_hash {
+        Err(InstanceError::RecordedCodeHashMismatch)
+    } else if entry.auth_hash != dice_inputs.auth_hash {
+        Err(InstanceError::RecordedAuthHashMismatch)
+    } else if entry.mode() != dice_inputs.mode {
+        Err(InstanceError::RecordedDiceModeMismatch)
+    } else {
+        Ok(())
+    }
 }
 
 /// Logs the given PCI error and returns the appropriate `RebootReason`.

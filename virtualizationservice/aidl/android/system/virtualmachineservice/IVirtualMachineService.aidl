@@ -58,9 +58,9 @@ interface IVirtualMachineService {
     Certificate[] requestAttestation(in byte[] csr, in boolean testMode);
 
     /**
-     * Request connection to Secretkeeper. This is used by pVM to store Anti-Rollback protected
-     * secrets. Note that the return value is nullable to reflect that Secretkeeper HAL may not be
-     * present.
+     * Request connection to Secretkeeper. This is used by pVM to store rollback protected secrets.
+     * Note that this returns error if Secretkeeper is not supported on device. Guest should check
+     * that Secretkeeper is supported from Linux device tree before calling this.
      */
-    @nullable ISecretkeeper getSecretkeeper();
+    ISecretkeeper getSecretkeeper();
 }

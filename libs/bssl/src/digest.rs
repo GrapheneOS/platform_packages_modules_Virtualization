@@ -121,7 +121,7 @@ impl DigesterContext {
     pub fn new() -> Result<Self> {
         // SAFETY: The returned pointer is checked below.
         let ctx = unsafe { EVP_MD_CTX_new() };
-        NonNull::new(ctx).map(Self).ok_or(to_call_failed_error(ApiName::EVP_MD_CTX_new))
+        NonNull::new(ctx).map(Self).ok_or_else(|| to_call_failed_error(ApiName::EVP_MD_CTX_new))
     }
 
     pub(crate) fn as_mut_ptr(&mut self) -> *mut EVP_MD_CTX {

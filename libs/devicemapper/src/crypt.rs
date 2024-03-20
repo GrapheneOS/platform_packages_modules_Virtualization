@@ -15,8 +15,8 @@
  */
 
 /// `crypt` module implements the "crypt" target in the device mapper framework. Specifically,
-/// it provides `DmCryptTargetBuilder` struct which is used to construct a `DmCryptTarget` struct
-/// which is then given to `DeviceMapper` to create a mapper device.
+/// it provides `DmCryptTargetBuilder` struct which is used to construct a `DmCryptTarget`
+/// struct which is then given to `DeviceMapper` to create a mapper device.
 use crate::DmTargetSpec;
 
 use anyhow::{ensure, Context, Result};
@@ -33,9 +33,14 @@ const SECTOR_SIZE: u64 = 512;
 /// Supported ciphers
 #[derive(Clone, Copy, Debug)]
 pub enum CipherType {
-    // AES-256-HCTR2 takes a 32-byte key
+    /// AES256 with HCTR2 mode. HCTR2 is a tweakable super-pseudorandom permutation
+    /// length-preserving encryption mode. It is the preferred mode in absence of other
+    /// dedicated integrity primitives (such as for encryptedstore in pVM) since it is less
+    /// malleable than other modes.
     AES256HCTR2,
-    // XTS requires key of twice the length of the underlying block cipher i.e., 64B for AES256
+    /// AES with XTS mode. This has slight performance benefits over HCTR2. In particular, XTS is
+    /// supported by inline encryption hardware. Note that (status quo) `encryptedstore` in VMs
+    /// is the only user of this module & inline encryption is not supported by guest kernel.
     AES256XTS,
 }
 impl CipherType {
@@ -50,7 +55,10 @@ impl CipherType {
 
     fn get_required_key_size(&self) -> usize {
         match *self {
+            // AES-256-HCTR2 takes a 32-byte key
             CipherType::AES256HCTR2 => 32,
+            // XTS requires key of twice the length of the underlying block cipher
+            // i.e., 64B for AES256
             CipherType::AES256XTS => 64,
         }
     }

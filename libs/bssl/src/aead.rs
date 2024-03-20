@@ -98,7 +98,8 @@ impl AeadContext {
         // SAFETY: This function only reads the given data and the returned pointer is
         // checked below.
         let ctx = unsafe { EVP_AEAD_CTX_new(aead.0, key.as_ptr(), key.len(), tag_len) };
-        let ctx = NonNull::new(ctx).ok_or(to_call_failed_error(ApiName::EVP_AEAD_CTX_new))?;
+        let ctx =
+            NonNull::new(ctx).ok_or_else(|| to_call_failed_error(ApiName::EVP_AEAD_CTX_new))?;
         Ok(Self { ctx, aead })
     }
 
@@ -132,7 +133,7 @@ impl AeadContext {
             )
         };
         check_int_result(ret, ApiName::EVP_AEAD_CTX_seal)?;
-        out.get(0..out_len).ok_or(to_call_failed_error(ApiName::EVP_AEAD_CTX_seal))
+        out.get(0..out_len).ok_or_else(|| to_call_failed_error(ApiName::EVP_AEAD_CTX_seal))
     }
 
     /// Authenticates `data` and decrypts it to `out`.
@@ -166,7 +167,7 @@ impl AeadContext {
             )
         };
         check_int_result(ret, ApiName::EVP_AEAD_CTX_open)?;
-        out.get(0..out_len).ok_or(to_call_failed_error(ApiName::EVP_AEAD_CTX_open))
+        out.get(0..out_len).ok_or_else(|| to_call_failed_error(ApiName::EVP_AEAD_CTX_open))
     }
 
     /// Returns the `Aead` represented by this `AeadContext`.

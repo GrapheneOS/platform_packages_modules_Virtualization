@@ -14,7 +14,7 @@
 
 //! Database of VM IDs.
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use log::{debug, error, info, warn};
 use rusqlite::{params, params_from_iter, Connection, OpenFlags, Rows};
 use std::path::PathBuf;
@@ -29,6 +29,15 @@ const DB_FILENAME: &str = "vmids.sqlite";
 /// (Default value of `SQLITE_LIMIT_VARIABLE_NUMBER` for <= 3.32.0)
 const MAX_VARIABLES: usize = 999;
 
+/// Return the current time as milliseconds since epoch.
+fn db_now() -> u64 {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or(std::time::Duration::ZERO)
+        .as_millis();
+    now.try_into().unwrap_or(u64::MAX)
+}
+
 /// Identifier for a VM and its corresponding secret.
 pub type VmId = [u8; 64];
 
@@ -36,6 +45,8 @@ pub type VmId = [u8; 64];
 pub struct VmIdDb {
     conn: Connection,
 }
+
+struct RetryOnFailure(bool);
 
 impl VmIdDb {
     /// Connect to the VM ID database file held in the given directory, creating it if necessary.
@@ -49,8 +60,11 @@ impl VmIdDb {
             std::fs::create_dir(&db_path).context("failed to create {db_path:?}")?;
             info!("created persistent db dir {db_path:?}");
         }
-
         db_path.push(DB_FILENAME);
+        Self::new_at_path(db_path, RetryOnFailure(true))
+    }
+
+    fn new_at_path(db_path: PathBuf, retry: RetryOnFailure) -> Result<(Self, bool)> {
         let (flags, created) = if db_path.exists() {
             debug!("connecting to existing database {db_path:?}");
             (
@@ -69,15 +83,42 @@ impl VmIdDb {
                 true,
             )
         };
-        let mut result = Self {
-            conn: Connection::open_with_flags(db_path, flags)
+        let mut db = Self {
+            conn: Connection::open_with_flags(&db_path, flags)
                 .context(format!("failed to open/create DB with {flags:?}"))?,
         };
 
         if created {
-            result.init_tables().context("failed to create tables")?;
+            db.init_tables().context("failed to create tables")?;
+        } else {
+            // An existing .sqlite file may have an earlier schema.
+            match db.schema_version() {
+                Err(e) => {
+                    // Couldn't determine a schema version, so wipe and try again.
+                    error!("failed to determine VM DB schema: {e:?}");
+                    if retry.0 {
+                        // This is the first attempt, so wipe and retry.
+                        error!("resetting database file {db_path:?}");
+                        let _ = std::fs::remove_file(&db_path);
+                        return Self::new_at_path(db_path, RetryOnFailure(false));
+                    } else {
+                        // An earlier attempt at wiping/retrying has failed, so give up.
+                        return Err(anyhow!("failed to reset database file {db_path:?}"));
+                    }
+                }
+                Ok(0) => db.upgrade_tables_v0_v1().context("failed to upgrade schema v0 -> v1")?,
+                Ok(1) => {
+                    // Current version, no action needed.
+                }
+                Ok(version) => {
+                    // If the database looks like it's from a future version, leave it alone and
+                    // fail to connect to it.
+                    error!("database from the future (v{version})");
+                    return Err(anyhow!("database from the future (v{version})"));
+                }
+            }
         }
-        Ok((result, created))
+        Ok((db, created))
     }
 
     /// Delete the associated database file.
@@ -94,8 +135,63 @@ impl VmIdDb {
         }
     }
 
-    /// Create the database table and indices.
+    fn schema_version(&mut self) -> Result<i32> {
+        let version: i32 = self
+            .conn
+            .query_row("PRAGMA main.user_version", (), |row| row.get(0))
+            .context("failed to read pragma")?;
+        Ok(version)
+    }
+
+    /// Create the database table and indices using the current schema.
     fn init_tables(&mut self) -> Result<()> {
+        self.init_tables_v1()
+    }
+
+    /// Create the database table and indices using the v1 schema.
+    fn init_tables_v1(&mut self) -> Result<()> {
+        info!("creating v1 database schema");
+        self.conn
+            .execute(
+                "CREATE TABLE IF NOT EXISTS main.vmids (
+                     vm_id BLOB PRIMARY KEY,
+                     user_id INTEGER,
+                     app_id INTEGER,
+                     created INTEGER
+                 ) WITHOUT ROWID;",
+                (),
+            )
+            .context("failed to create table")?;
+        self.conn
+            .execute("CREATE INDEX IF NOT EXISTS main.vmids_user_index ON vmids(user_id);", [])
+            .context("Failed to create user index")?;
+        self.conn
+            .execute(
+                "CREATE INDEX IF NOT EXISTS main.vmids_app_index ON vmids(user_id, app_id);",
+                [],
+            )
+            .context("Failed to create app index")?;
+        self.conn
+            .execute("PRAGMA main.user_version = 1;", ())
+            .context("failed to declare version")?;
+        Ok(())
+    }
+
+    fn upgrade_tables_v0_v1(&mut self) -> Result<()> {
+        let _rows = self
+            .conn
+            .execute("ALTER TABLE main.vmids ADD COLUMN created INTEGER;", ())
+            .context("failed to alter table v0->v1")?;
+        self.conn
+            .execute("PRAGMA main.user_version = 1;", ())
+            .context("failed to set schema version")?;
+        Ok(())
+    }
+
+    /// Create the database table and indices using the v0 schema.
+    #[cfg(test)]
+    fn init_tables_v0(&mut self) -> Result<()> {
+        info!("creating v0 database schema");
         self.conn
             .execute(
                 "CREATE TABLE IF NOT EXISTS main.vmids (
@@ -119,13 +215,13 @@ impl VmIdDb {
     }
 
     /// Add the given VM ID into the database.
-    #[allow(dead_code)] // TODO(b/294177871): connect this up
     pub fn add_vm_id(&mut self, vm_id: &VmId, user_id: i32, app_id: i32) -> Result<()> {
+        let now = db_now();
         let _rows = self
             .conn
             .execute(
-                "REPLACE INTO main.vmids (vm_id, user_id, app_id) VALUES (?1, ?2, ?3);",
-                params![vm_id, &user_id, &app_id],
+                "REPLACE INTO main.vmids (vm_id, user_id, app_id, created) VALUES (?1, ?2, ?3, ?4);",
+                params![vm_id, &user_id, &app_id, &now],
             )
             .context("failed to add VM ID")?;
         Ok(())
@@ -177,16 +273,21 @@ impl VmIdDb {
     }
 }
 
+/// Current schema version.
+#[cfg(test)]
+const SCHEMA_VERSION: usize = 1;
+
+/// Create a new in-memory database for testing.
 #[cfg(test)]
 pub fn new_test_db() -> VmIdDb {
-    let mut db = VmIdDb { conn: Connection::open_in_memory().unwrap() };
-    db.init_tables().unwrap();
-    db
+    tests::new_test_db_version(SCHEMA_VERSION)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+
     const VM_ID1: VmId = [1u8; 64];
     const VM_ID2: VmId = [2u8; 64];
     const VM_ID3: VmId = [3u8; 64];
@@ -200,6 +301,113 @@ mod tests {
     const APP_B: i32 = 60;
     const APP_C: i32 = 70;
     const APP_UNKNOWN: i32 = 99;
+
+    pub fn new_test_db_version(version: usize) -> VmIdDb {
+        let mut db = VmIdDb { conn: Connection::open_in_memory().unwrap() };
+        match version {
+            0 => db.init_tables_v0().unwrap(),
+            1 => db.init_tables_v1().unwrap(),
+            _ => panic!("unexpected version {version}"),
+        }
+        db
+    }
+
+    fn show_contents(db: &VmIdDb) {
+        let mut stmt = db.conn.prepare("SELECT * FROM main.vmids;").unwrap();
+        let mut rows = stmt.query(()).unwrap();
+        while let Some(row) = rows.next().unwrap() {
+            println!("  {row:?}");
+        }
+    }
+
+    #[test]
+    fn test_schema_version0() {
+        let mut db0 = VmIdDb { conn: Connection::open_in_memory().unwrap() };
+        db0.init_tables_v0().unwrap();
+        let version = db0.schema_version().unwrap();
+        assert_eq!(0, version);
+    }
+
+    #[test]
+    fn test_schema_version1() {
+        let mut db1 = VmIdDb { conn: Connection::open_in_memory().unwrap() };
+        db1.init_tables_v1().unwrap();
+        let version = db1.schema_version().unwrap();
+        assert_eq!(1, version);
+    }
+
+    #[test]
+    fn test_schema_upgrade_v0_v1() {
+        let mut db = new_test_db_version(0);
+        let version = db.schema_version().unwrap();
+        assert_eq!(0, version);
+
+        // Manually insert a row before upgrade.
+        db.conn
+            .execute(
+                "REPLACE INTO main.vmids (vm_id, user_id, app_id) VALUES (?1, ?2, ?3);",
+                params![&VM_ID1, &USER1, APP_A],
+            )
+            .unwrap();
+
+        db.upgrade_tables_v0_v1().unwrap();
+        let version = db.schema_version().unwrap();
+        assert_eq!(1, version);
+
+        assert_eq!(vec![VM_ID1], db.vm_ids_for_user(USER1).unwrap());
+        show_contents(&db);
+    }
+
+    #[test]
+    fn test_corrupt_database_file() {
+        let db_dir = tempfile::Builder::new().prefix("vmdb-test-").tempdir().unwrap();
+        let mut db_path = db_dir.path().to_owned();
+        db_path.push(DB_FILENAME);
+        {
+            let mut file = std::fs::File::create(db_path).unwrap();
+            let _ = file.write_all(b"This is not an SQLite file!");
+        }
+
+        // Non-DB file should be wiped and start over.
+        let (mut db, created) =
+            VmIdDb::new(&db_dir.path().to_string_lossy()).expect("failed to replace bogus DB");
+        assert!(created);
+        db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        assert_eq!(vec![VM_ID1], db.vm_ids_for_user(USER1).unwrap());
+    }
+
+    #[test]
+    fn test_non_upgradable_database_file() {
+        let db_dir = tempfile::Builder::new().prefix("vmdb-test-").tempdir().unwrap();
+        let mut db_path = db_dir.path().to_owned();
+        db_path.push(DB_FILENAME);
+        {
+            // Create an unrelated database that happens to apparently have a schema version of 0.
+            let (db, created) = VmIdDb::new(&db_dir.path().to_string_lossy()).unwrap();
+            assert!(created);
+            db.conn.execute("DROP TABLE main.vmids", ()).unwrap();
+            db.conn.execute("PRAGMA main.user_version = 0;", ()).unwrap();
+        }
+
+        // Should fail to open a database because the upgrade fails.
+        let result = VmIdDb::new(&db_dir.path().to_string_lossy());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_database_from_the_future() {
+        let db_dir = tempfile::Builder::new().prefix("vmdb-test-").tempdir().unwrap();
+        {
+            let (mut db, created) = VmIdDb::new(&db_dir.path().to_string_lossy()).unwrap();
+            assert!(created);
+            db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+            // Make the database look like it's from a future version.
+            db.conn.execute("PRAGMA main.user_version = 99;", ()).unwrap();
+        }
+        // Should fail to open a database from the future.
+        let result = VmIdDb::new(&db_dir.path().to_string_lossy());
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_add_remove() {
@@ -239,6 +447,7 @@ mod tests {
         assert_eq!(vec![VM_ID5], db.vm_ids_for_user(USER3).unwrap());
         assert_eq!(empty, db.vm_ids_for_user(USER_UNKNOWN).unwrap());
         assert_eq!(empty, db.vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
+        show_contents(&db);
     }
 
     #[test]
@@ -254,12 +463,13 @@ mod tests {
         // Manually insert a row with a VM ID that's the wrong size.
         db.conn
             .execute(
-                "REPLACE INTO main.vmids (vm_id, user_id, app_id) VALUES (?1, ?2, ?3);",
-                params![&[99u8; 60], &USER1, APP_A],
+                "REPLACE INTO main.vmids (vm_id, user_id, app_id, created) VALUES (?1, ?2, ?3, ?4);",
+                params![&[99u8; 60], &USER1, APP_A, &db_now()],
             )
             .unwrap();
 
         // Invalid row is skipped and remainder returned.
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_user(USER1).unwrap());
+        show_contents(&db);
     }
 }

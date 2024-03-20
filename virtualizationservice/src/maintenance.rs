@@ -15,7 +15,7 @@
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
     ISecretkeeper::ISecretkeeper, SecretId::SecretId,
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use log::{error, info, warn};
 
 mod vmdb;
@@ -86,6 +86,13 @@ impl State {
             info!("instance {SECRETKEEPER_SERVICE} not declared");
             None
         }
+    }
+
+    /// Record a new VM ID.
+    pub fn add_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<()> {
+        let user_id: i32 = user_id.try_into().context(format!("user_id {user_id} out of range"))?;
+        let app_id: i32 = app_id.try_into().context(format!("app_id {app_id} out of range"))?;
+        self.vm_id_db.add_vm_id(vm_id, user_id, app_id)
     }
 
     /// Delete the VM IDs associated with Android user ID `user_id`.

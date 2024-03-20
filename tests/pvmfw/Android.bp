@@ -53,4 +53,5 @@ java_test_host {
         ":test_avf_debug_policy_without_adb",
         "assets/bcc.dat",
     ],
+    data_device_bins_first: ["dtc_static"],
 }

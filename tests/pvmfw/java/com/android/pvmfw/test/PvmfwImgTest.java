@@ -35,19 +35,31 @@ import java.util.List;
 @RunWith(DeviceJUnit4ClassRunner.class)
 public class PvmfwImgTest extends CustomPvmfwHostTestCaseBase {
     @Test
-    public void testConfigVersion1_0_boots() throws Exception {
-        Pvmfw pvmfw = new Pvmfw.Builder(getPvmfwBinFile(), getBccFile()).setVersion(1, 0).build();
-        pvmfw.serialize(getCustomPvmfwFile());
+    public void testPvmfw_beforeVmReferenceDt_whenSecretKeeperExists() throws Exception {
+        // VM reference DT is added since version 1.2
+        List<int[]> earlyVersions = Arrays.asList(new int[] {1, 0}, new int[] {1, 1});
+        Pvmfw.Builder builder = new Pvmfw.Builder(getPvmfwBinFile(), getBccFile());
 
-        launchProtectedVmAndWaitForBootCompleted(BOOT_COMPLETE_TIMEOUT_MS);
-    }
+        for (int[] pair : earlyVersions) {
+            int major = pair[0];
+            int minor = pair[1];
+            String version = "v" + major + "." + minor;
 
-    @Test
-    public void testConfigVersion1_1_boots() throws Exception {
-        Pvmfw pvmfw = new Pvmfw.Builder(getPvmfwBinFile(), getBccFile()).setVersion(1, 1).build();
-        pvmfw.serialize(getCustomPvmfwFile());
+            // Pvmfw config before v1.2 can't have secret keeper key in VM reference DT.
+            Pvmfw pvmfw = builder.setVersion(major, minor).build();
+            pvmfw.serialize(getCustomPvmfwFile());
 
-        launchProtectedVmAndWaitForBootCompleted(BOOT_COMPLETE_TIMEOUT_MS);
+            if (isSecretKeeperSupported()) {
+                // If secret keeper is supported, we can't boot with early version
+                assertThrows(
+                        "pvmfw shouldn't boot without VM reference DT, version=" + version,
+                        DeviceRuntimeException.class,
+                        () -> launchProtectedVmAndWaitForBootCompleted(BOOT_FAILURE_WAIT_TIME_MS));
+            } else {
+                launchProtectedVmAndWaitForBootCompleted(BOOT_COMPLETE_TIMEOUT_MS);
+                shutdownMicrodroid();
+            }
+        }
     }
 
     @Test
@@ -65,12 +77,20 @@ public class PvmfwImgTest extends CustomPvmfwHostTestCaseBase {
                         new int[] {0xFFFF, 1},
                         new int[] {0xFFFF, 0xFFFF});
 
-        Pvmfw.Builder builder = new Pvmfw.Builder(getPvmfwBinFile(), getBccFile());
+        Pvmfw.Builder builder =
+                new Pvmfw.Builder(getPvmfwBinFile(), getBccFile())
+                        .setVmReferenceDt(getVmReferenceDtFile());
 
         for (int[] pair : invalid_versions) {
             int major = pair[0];
             int minor = pair[1];
             String version = "v" + major + "." + minor;
+
+            if (Pvmfw.makeVersion(major, minor) >= Pvmfw.makeVersion(1, 2)
+                    && getVmReferenceDtFile() == null) {
+                // VM reference DT is unavailable, so we can't even build Pvmfw.
+                continue;
+            }
 
             Pvmfw pvmfw = builder.setVersion(major, minor).build();
             pvmfw.serialize(getCustomPvmfwFile());

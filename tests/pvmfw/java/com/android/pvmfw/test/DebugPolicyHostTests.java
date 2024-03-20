@@ -192,10 +192,15 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
                 getTestInformation()
                         .getDependencyFile(debugPolicyFileName, /* targetFirst= */ false);
 
-        Pvmfw pvmfw =
+        Pvmfw.Builder builder =
                 new Pvmfw.Builder(getPvmfwBinFile(), getBccFile())
-                        .setDebugPolicyOverlay(mCustomDebugPolicyFileOnHost)
-                        .build();
+                        .setDebugPolicyOverlay(mCustomDebugPolicyFileOnHost);
+        if (isSecretKeeperSupported()) {
+            builder.setVmReferenceDt(getVmReferenceDtFile());
+        } else {
+            builder.setVersion(1, 1);
+        }
+        Pvmfw pvmfw = builder.build();
         pvmfw.serialize(getCustomPvmfwFile());
     }
 

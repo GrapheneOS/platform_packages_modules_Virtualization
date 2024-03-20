@@ -54,7 +54,7 @@ impl Drop for PKey {
 fn new_pkey() -> Result<NonNull<EVP_PKEY>> {
     // SAFETY: The returned pointer is checked below.
     let key = unsafe { EVP_PKEY_new() };
-    NonNull::new(key).ok_or(to_call_failed_error(ApiName::EVP_PKEY_new))
+    NonNull::new(key).ok_or_else(|| to_call_failed_error(ApiName::EVP_PKEY_new))
 }
 
 impl TryFrom<EcKey> for PKey {
@@ -94,7 +94,7 @@ impl PKey {
         // SAFETY: This is safe because the CBB pointer is initialized with `CBB_init_fixed()`,
         // and it has been flushed, thus it has no active children.
         let len = unsafe { CBB_len(cbb.as_ref()) };
-        Ok(buf.get(0..len).ok_or(to_call_failed_error(ApiName::CBB_len))?.to_vec())
+        Ok(buf.get(0..len).ok_or_else(|| to_call_failed_error(ApiName::CBB_len))?.to_vec())
     }
 
     /// This function takes a raw public key data slice and creates a `PKey` instance wrapping
@@ -118,8 +118,8 @@ impl PKey {
                     raw_public_key.len(),
                 )
             };
-        let pkey =
-            NonNull::new(pkey).ok_or(to_call_failed_error(ApiName::EVP_PKEY_new_raw_public_key))?;
+        let pkey = NonNull::new(pkey)
+            .ok_or_else(|| to_call_failed_error(ApiName::EVP_PKEY_new_raw_public_key))?;
         Ok(Self { pkey, _inner_ec_key: None })
     }
 

@@ -16,6 +16,8 @@
 
 package com.android.pvmfw.test.host;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 import androidx.annotation.NonNull;
@@ -34,22 +36,52 @@ public final class Pvmfw {
     private static final int SIZE_4K = 4 << 10; // 4 KiB, PAGE_SIZE
     private static final int BUFFER_SIZE = 1024;
     private static final int HEADER_MAGIC = 0x666d7670;
-    private static final int HEADER_DEFAULT_VERSION = getVersion(1, 0);
+    private static final int HEADER_DEFAULT_VERSION = makeVersion(1, 2);
     private static final int HEADER_FLAGS = 0;
 
+    private static final int PVMFW_ENTRY_BCC = 0;
+    private static final int PVMFW_ENTRY_DP = 1;
+    private static final int PVMFW_ENTRY_VM_DTBO = 2;
+    private static final int PVMFW_ENTRY_VM_REFERENCE_DT = 3;
+    private static final int PVMFW_ENTRY_MAX = 4;
+
     @NonNull private final File mPvmfwBinFile;
-    @NonNull private final File mBccFile;
-    @Nullable private final File mDebugPolicyFile;
+    private final File[] mEntries;
+    private final int mEntryCnt;
     private final int mVersion;
+
+    public static int makeVersion(int major, int minor) {
+        return ((major & 0xFFFF) << 16) | (minor & 0xFFFF);
+    }
 
     private Pvmfw(
             @NonNull File pvmfwBinFile,
             @NonNull File bccFile,
             @Nullable File debugPolicyFile,
+            @Nullable File vmDtboFile,
+            @Nullable File vmReferenceDtFile,
             int version) {
         mPvmfwBinFile = Objects.requireNonNull(pvmfwBinFile);
-        mBccFile = Objects.requireNonNull(bccFile);
-        mDebugPolicyFile = debugPolicyFile;
+
+        if (version >= makeVersion(1, 2)) {
+            mEntryCnt = PVMFW_ENTRY_VM_REFERENCE_DT + 1;
+        } else if (version >= makeVersion(1, 1)) {
+            mEntryCnt = PVMFW_ENTRY_VM_DTBO + 1;
+        } else {
+            mEntryCnt = PVMFW_ENTRY_DP + 1;
+        }
+
+        mEntries = new File[PVMFW_ENTRY_MAX];
+        mEntries[PVMFW_ENTRY_BCC] = Objects.requireNonNull(bccFile);
+        mEntries[PVMFW_ENTRY_DP] = debugPolicyFile;
+
+        if (PVMFW_ENTRY_VM_DTBO < mEntryCnt) {
+            mEntries[PVMFW_ENTRY_VM_DTBO] = vmDtboFile;
+        }
+        if (PVMFW_ENTRY_VM_REFERENCE_DT < mEntryCnt) {
+            mEntries[PVMFW_ENTRY_VM_REFERENCE_DT] = Objects.requireNonNull(vmReferenceDtFile);
+        }
+
         mVersion = version;
     }
 
@@ -60,62 +92,54 @@ public final class Pvmfw {
     public void serialize(@NonNull File outFile) throws IOException {
         Objects.requireNonNull(outFile);
 
-        int headerSize = alignTo(getHeaderSize(mVersion), SIZE_8B);
-        int bccOffset = headerSize;
-        int bccSize = (int) mBccFile.length();
+        int headerSize = alignTo(getHeaderSize(), SIZE_8B);
+        int[] entryOffsets = new int[mEntryCnt];
+        int[] entrySizes = new int[mEntryCnt];
 
-        int debugPolicyOffset = alignTo(bccOffset + bccSize, SIZE_8B);
-        int debugPolicySize = mDebugPolicyFile == null ? 0 : (int) mDebugPolicyFile.length();
+        entryOffsets[PVMFW_ENTRY_BCC] = headerSize;
+        entrySizes[PVMFW_ENTRY_BCC] = (int) mEntries[PVMFW_ENTRY_BCC].length();
 
-        int totalSize = debugPolicyOffset + debugPolicySize;
-        if (hasVmDtbo(mVersion)) {
-            // Add VM DTBO size as well.
-            totalSize += Integer.BYTES * 2;
+        for (int i = 1; i < mEntryCnt; i++) {
+            entryOffsets[i] = alignTo(entryOffsets[i - 1] + entrySizes[i - 1], SIZE_8B);
+            entrySizes[i] = mEntries[i] == null ? 0 : (int) mEntries[i].length();
         }
+
+        int totalSize = alignTo(entryOffsets[mEntryCnt - 1] + entrySizes[mEntryCnt - 1], SIZE_8B);
 
         ByteBuffer header = ByteBuffer.allocate(headerSize).order(LITTLE_ENDIAN);
         header.putInt(HEADER_MAGIC);
         header.putInt(mVersion);
         header.putInt(totalSize);
         header.putInt(HEADER_FLAGS);
-        header.putInt(bccOffset);
-        header.putInt(bccSize);
-        header.putInt(debugPolicyOffset);
-        header.putInt(debugPolicySize);
-
-        if (hasVmDtbo(mVersion)) {
-            // Add placeholder entry for VM DTBO.
-            // TODO(b/291191157): Add a real DTBO and test.
-            header.putInt(0);
-            header.putInt(0);
+        for (int i = 0; i < mEntryCnt; i++) {
+            header.putInt(entryOffsets[i]);
+            header.putInt(entrySizes[i]);
         }
 
         try (FileOutputStream pvmfw = new FileOutputStream(outFile)) {
             appendFile(pvmfw, mPvmfwBinFile);
             padTo(pvmfw, SIZE_4K);
+
+            int baseOffset = (int) pvmfw.getChannel().size();
             pvmfw.write(header.array());
-            padTo(pvmfw, SIZE_8B);
-            appendFile(pvmfw, mBccFile);
-            if (mDebugPolicyFile != null) {
+
+            for (int i = 0; i < mEntryCnt; i++) {
                 padTo(pvmfw, SIZE_8B);
-                appendFile(pvmfw, mDebugPolicyFile);
+                if (mEntries[i] != null) {
+                    assertThat((int) pvmfw.getChannel().size() - baseOffset)
+                            .isEqualTo(entryOffsets[i]);
+                    appendFile(pvmfw, mEntries[i]);
+                }
             }
+
             padTo(pvmfw, SIZE_4K);
         }
     }
 
     private void appendFile(@NonNull FileOutputStream out, @NonNull File inFile)
             throws IOException {
-        byte buffer[] = new byte[BUFFER_SIZE];
         try (FileInputStream in = new FileInputStream(inFile)) {
-            int size;
-            while (true) {
-                size = in.read(buffer);
-                if (size < 0) {
-                    return;
-                }
-                out.write(buffer, /* offset= */ 0, size);
-            }
+            in.transferTo(out);
         }
     }
 
@@ -126,25 +150,13 @@ public final class Pvmfw {
         }
     }
 
-    private static int getHeaderSize(int version) {
-        if (version == getVersion(1, 0)) {
-            return Integer.BYTES * 8; // Header has 8 integers.
-        }
-        return Integer.BYTES * 10; // Default + VM DTBO (offset, size)
-    }
-
-    private static boolean hasVmDtbo(int version) {
-        int major = getMajorVersion(version);
-        int minor = getMinorVersion(version);
-        return major > 1 || (major == 1 && minor >= 1);
+    private int getHeaderSize() {
+        // Header + (entry offset, entry, size) * mEntryCnt
+        return Integer.BYTES * (4 + mEntryCnt * 2);
     }
 
     private static int alignTo(int x, int size) {
         return (x + size - 1) & ~(size - 1);
-    }
-
-    private static int getVersion(int major, int minor) {
-        return ((major & 0xFFFF) << 16) | (minor & 0xFFFF);
     }
 
     private static int getMajorVersion(int version) {
@@ -160,6 +172,8 @@ public final class Pvmfw {
         @NonNull private final File mPvmfwBinFile;
         @NonNull private final File mBccFile;
         @Nullable private File mDebugPolicyFile;
+        @Nullable private File mVmDtboFile;
+        @Nullable private File mVmReferenceDtFile;
         private int mVersion;
 
         public Builder(@NonNull File pvmfwBinFile, @NonNull File bccFile) {
@@ -175,14 +189,32 @@ public final class Pvmfw {
         }
 
         @NonNull
+        public Builder setVmDtbo(@Nullable File vmDtboFile) {
+            mVmDtboFile = vmDtboFile;
+            return this;
+        }
+
+        @NonNull
+        public Builder setVmReferenceDt(@Nullable File vmReferenceDtFile) {
+            mVmReferenceDtFile = vmReferenceDtFile;
+            return this;
+        }
+
+        @NonNull
         public Builder setVersion(int major, int minor) {
-            mVersion = getVersion(major, minor);
+            mVersion = makeVersion(major, minor);
             return this;
         }
 
         @NonNull
         public Pvmfw build() {
-            return new Pvmfw(mPvmfwBinFile, mBccFile, mDebugPolicyFile, mVersion);
+            return new Pvmfw(
+                    mPvmfwBinFile,
+                    mBccFile,
+                    mDebugPolicyFile,
+                    mVmDtboFile,
+                    mVmReferenceDtFile,
+                    mVersion);
         }
     }
 }

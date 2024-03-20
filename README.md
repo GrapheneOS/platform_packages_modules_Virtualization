@@ -20,6 +20,7 @@ AVF components:
 * [Microdroid kernel](microdroid/kernel/README.md)
 * [Microdroid payload](microdroid/payload/README.md)
 * [vmbase](vmbase/README.md)
+* [Encrypted Storage](encryptedstore/README.md)
 
 AVF APIs:
 * [Java API](java/framework/README.md)

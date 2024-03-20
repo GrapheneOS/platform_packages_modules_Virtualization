@@ -77,6 +77,9 @@ rust_test {
         "virtualizationservice_defaults",
     ],
     test_suites: ["general-tests"],
+    rustlibs: [
+        "libtempfile",
+    ],
     data: [
         ":test_rkp_cert_chain",
     ],
