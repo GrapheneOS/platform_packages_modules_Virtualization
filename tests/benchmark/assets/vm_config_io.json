@@ -1,7 +1,4 @@
 {
-  "os": {
-    "name": "microdroid_gki-android14-6.1"
-  },
   "task": {
     "type": "microdroid_launcher",
     "command": "MicrodroidBenchmarkNativeLib.so"

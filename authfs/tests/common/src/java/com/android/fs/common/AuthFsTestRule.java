@@ -52,7 +52,7 @@ public class AuthFsTestRule extends TestLogData {
     public static final String FUSE_SUPER_MAGIC_HEX = "65735546";
 
     /** VM config entry path in the test APK */
-    private static final String VM_CONFIG_PATH_IN_APK = "assets/microdroid/vm_config.json";
+    private static final String VM_CONFIG_PATH_IN_APK = "assets/vm_config.json";
 
     /** Test directory on Android where data are located */
     public static final String TEST_DIR = "/data/local/tmp/authfs";

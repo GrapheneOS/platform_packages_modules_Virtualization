@@ -15,11 +15,19 @@
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
     ISecretkeeper::ISecretkeeper, SecretId::SecretId,
 };
-use anyhow::{Context, Result};
+use android_system_virtualizationmaintenance::aidl::android::system::virtualizationmaintenance;
+use anyhow::{anyhow, Context, Result};
+use binder::Strong;
 use log::{error, info, warn};
+use virtualizationmaintenance::IVirtualizationReconciliationCallback::IVirtualizationReconciliationCallback;
 
 mod vmdb;
 use vmdb::{VmId, VmIdDb};
+
+/// Indicate whether an app ID belongs to a system core component.
+fn core_app_id(app_id: i32) -> bool {
+    app_id < 10000
+}
 
 /// Interface name for the Secretkeeper HAL.
 const SECRETKEEPER_SERVICE: &str = "android.hardware.security.secretkeeper.ISecretkeeper/default";
@@ -140,6 +148,79 @@ impl State {
             error!("failed to remove secret IDs from database: {e:?}");
         }
     }
+
+    /// Perform reconciliation to allow for possibly missed notifications of user or app removal.
+    pub fn reconcile(
+        &mut self,
+        callback: &Strong<dyn IVirtualizationReconciliationCallback>,
+    ) -> Result<()> {
+        // First, retrieve all (user_id, app_id) pairs that own a VM.
+        let owners = self.vm_id_db.get_all_owners().context("failed to retrieve owners from DB")?;
+        if owners.is_empty() {
+            info!("no VM owners, nothing to do");
+            return Ok(());
+        }
+
+        // Look for absent users.
+        let mut users: Vec<i32> = owners.iter().map(|(u, _a)| *u).collect();
+        users.sort();
+        users.dedup();
+        let users_exist = callback
+            .doUsersExist(&users)
+            .context(format!("failed to determine if {} users exist", users.len()))?;
+        if users_exist.len() != users.len() {
+            error!("callback returned {} bools for {} inputs!", users_exist.len(), users.len());
+            return Err(anyhow!("unexpected number of results from callback"));
+        }
+
+        for (user_id, present) in users.into_iter().zip(users_exist.into_iter()) {
+            if present {
+                // User is still present, but are all of the associated apps?
+                let mut apps: Vec<i32> = owners
+                    .iter()
+                    .filter_map(|(u, a)| if *u == user_id { Some(*a) } else { None })
+                    .collect();
+                apps.sort();
+                apps.dedup();
+
+                let apps_exist = callback
+                    .doAppsExist(user_id, &apps)
+                    .context(format!("failed to check apps for user {user_id}"))?;
+                if apps_exist.len() != apps.len() {
+                    error!(
+                        "callback returned {} bools for {} inputs!",
+                        apps_exist.len(),
+                        apps.len()
+                    );
+                    return Err(anyhow!("unexpected number of results from callback"));
+                }
+
+                let missing_apps: Vec<i32> = apps
+                    .iter()
+                    .zip(apps_exist.into_iter())
+                    .filter_map(|(app_id, present)| if present { None } else { Some(*app_id) })
+                    .collect();
+
+                for app_id in missing_apps {
+                    if core_app_id(app_id) {
+                        info!("Skipping deletion for core app {app_id} for user {user_id}");
+                        continue;
+                    }
+                    info!("App {app_id} for user {user_id} absent, deleting associated VM IDs");
+                    if let Err(err) = self.delete_ids_for_app(user_id, app_id) {
+                        error!("Failed to delete VM ID for user {user_id} app {app_id}: {err:?}");
+                    }
+                }
+            } else {
+                info!("user {user_id} no longer present, deleting associated VM IDs");
+                if let Err(err) = self.delete_ids_for_user(user_id) {
+                    error!("Failed to delete VM IDs for user {user_id} : {err:?}");
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -151,6 +232,9 @@ mod tests {
     };
     use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
         ISecretkeeper::BnSecretkeeper
+    };
+    use virtualizationmaintenance::IVirtualizationReconciliationCallback::{
+        BnVirtualizationReconciliationCallback
     };
 
     /// Fake implementation of Secretkeeper that keeps a history of what operations were invoked.
@@ -195,11 +279,34 @@ mod tests {
         State { sk, vm_id_db, batch_size }
     }
 
+    struct Reconciliation {
+        gone_users: Vec<i32>,
+        gone_apps: Vec<i32>,
+    }
+
+    impl IVirtualizationReconciliationCallback for Reconciliation {
+        fn doUsersExist(&self, user_ids: &[i32]) -> binder::Result<Vec<bool>> {
+            Ok(user_ids.iter().map(|user_id| !self.gone_users.contains(user_id)).collect())
+        }
+        fn doAppsExist(&self, _user_id: i32, app_ids: &[i32]) -> binder::Result<Vec<bool>> {
+            Ok(app_ids.iter().map(|app_id| !self.gone_apps.contains(app_id)).collect())
+        }
+    }
+    impl binder::Interface for Reconciliation {}
+
     const VM_ID1: VmId = [1u8; 64];
     const VM_ID2: VmId = [2u8; 64];
     const VM_ID3: VmId = [3u8; 64];
     const VM_ID4: VmId = [4u8; 64];
     const VM_ID5: VmId = [5u8; 64];
+
+    const USER1: i32 = 1;
+    const USER2: i32 = 2;
+    const USER3: i32 = 3;
+    const APP_A: i32 = 10050;
+    const APP_B: i32 = 10060;
+    const APP_C: i32 = 10070;
+    const CORE_APP_A: i32 = 45;
 
     #[test]
     fn test_sk_state_batching() {
@@ -228,13 +335,6 @@ mod tests {
 
     #[test]
     fn test_sk_state() {
-        const USER1: i32 = 1;
-        const USER2: i32 = 2;
-        const USER3: i32 = 3;
-        const APP_A: i32 = 50;
-        const APP_B: i32 = 60;
-        const APP_C: i32 = 70;
-
         let history = Arc::new(Mutex::new(Vec::new()));
         let mut sk_state = new_test_state(history.clone(), 2);
 
@@ -242,7 +342,7 @@ mod tests {
         sk_state.vm_id_db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
         sk_state.vm_id_db.add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
         sk_state.vm_id_db.add_vm_id(&VM_ID4, USER3, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap(); // Overwrites APP_A
         assert_eq!((*history.lock().unwrap()).clone(), vec![]);
 
         sk_state.delete_ids_for_app(USER2, APP_B).unwrap();
@@ -259,5 +359,72 @@ mod tests {
         let empty: Vec<VmId> = Vec::new();
         assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
         assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+    }
+
+    #[test]
+    fn test_sk_state_reconcile() {
+        let history = Arc::new(Mutex::new(Vec::new()));
+        let mut sk_state = new_test_state(history.clone(), 20);
+
+        sk_state.vm_id_db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID4, USER2, CORE_APP_A).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
+
+        assert_eq!(vec![VM_ID1, VM_ID2], sk_state.vm_id_db.vm_ids_for_user(USER1).unwrap());
+        assert_eq!(vec![VM_ID1, VM_ID2], sk_state.vm_id_db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(vec![VM_ID3], sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(vec![VM_ID5], sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+
+        // Perform a reconciliation and pretend that USER1 and [CORE_APP_A, APP_B] are gone.
+        let reconciliation =
+            Reconciliation { gone_users: vec![USER1], gone_apps: vec![CORE_APP_A, APP_B] };
+        let callback = BnVirtualizationReconciliationCallback::new_binder(
+            reconciliation,
+            binder::BinderFeatures::default(),
+        );
+        sk_state.reconcile(&callback).unwrap();
+
+        let empty: Vec<VmId> = Vec::new();
+        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_user(USER1).unwrap());
+        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER1, APP_A).unwrap());
+        // VM for core app stays even though it's reported as absent.
+        assert_eq!(vec![VM_ID4], sk_state.vm_id_db.vm_ids_for_user(USER2).unwrap());
+        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(vec![VM_ID5], sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+    }
+
+    struct Irreconcilable;
+
+    impl IVirtualizationReconciliationCallback for Irreconcilable {
+        fn doUsersExist(&self, user_ids: &[i32]) -> binder::Result<Vec<bool>> {
+            panic!("doUsersExist called with {user_ids:?}");
+        }
+        fn doAppsExist(&self, user_id: i32, app_ids: &[i32]) -> binder::Result<Vec<bool>> {
+            panic!("doAppsExist called with {user_id:?}, {app_ids:?}");
+        }
+    }
+    impl binder::Interface for Irreconcilable {}
+
+    #[test]
+    fn test_sk_state_reconcile_not_needed() {
+        let history = Arc::new(Mutex::new(Vec::new()));
+        let mut sk_state = new_test_state(history.clone(), 20);
+
+        sk_state.vm_id_db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
+        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
+        sk_state.delete_ids_for_user(USER1).unwrap();
+        sk_state.delete_ids_for_user(USER2).unwrap();
+        sk_state.delete_ids_for_user(USER3).unwrap();
+
+        // No extant secrets, so reconciliation should not trigger the callback.
+        let callback = BnVirtualizationReconciliationCallback::new_binder(
+            Irreconcilable,
+            binder::BinderFeatures::default(),
+        );
+        sk_state.reconcile(&callback).unwrap();
     }
 }

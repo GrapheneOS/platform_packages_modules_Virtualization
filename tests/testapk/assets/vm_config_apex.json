@@ -1,14 +1,17 @@
 {
-  "os": {
-    "name": "microdroid"
-  },
   "task": {
     "type": "microdroid_launcher",
     "command": "MicrodroidTestNativeLib.so"
   },
-  "extra_apks": [
+  "apexes": [
     {
-      "path": "/system/etc/security/fsverity/BuildManifest.apk"
+      "name": "com.android.art"
+    },
+    {
+      "name": "com.android.compos"
+    },
+    {
+      "name": "com.android.sdkext"
     }
   ],
   "export_tombstones": true

@@ -265,11 +265,40 @@ impl VmIdDb {
         while let Some(row) = rows.next().context("failed row unpack")? {
             match row.get(0) {
                 Ok(vm_id) => vm_ids.push(vm_id),
-                Err(e) => log::error!("failed to parse row: {e:?}"),
+                Err(e) => error!("failed to parse row: {e:?}"),
             }
         }
 
         Ok(vm_ids)
+    }
+
+    /// Return all of the `(user_id, app_id)` pairs present in the database.
+    pub fn get_all_owners(&mut self) -> Result<Vec<(i32, i32)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT DISTINCT user_id, app_id FROM main.vmids;")
+            .context("failed to prepare SELECT stmt")?;
+        let mut rows = stmt.query(()).context("query failed")?;
+        let mut owners: Vec<(i32, i32)> = Vec::new();
+        while let Some(row) = rows.next().context("failed row unpack")? {
+            let user_id = match row.get(0) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("failed to parse row: {e:?}");
+                    continue;
+                }
+            };
+            let app_id = match row.get(1) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("failed to parse row: {e:?}");
+                    continue;
+                }
+            };
+            owners.push((user_id, app_id));
+        }
+
+        Ok(owners)
     }
 }
 
@@ -417,7 +446,13 @@ mod tests {
         db.add_vm_id(&VM_ID3, USER1, APP_A).unwrap();
         db.add_vm_id(&VM_ID4, USER2, APP_B).unwrap();
         db.add_vm_id(&VM_ID5, USER3, APP_A).unwrap();
-        db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
+        db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap(); // Overwrites APP_A
+
+        assert_eq!(
+            vec![(USER1, APP_A), (USER2, APP_B), (USER3, APP_C)],
+            db.get_all_owners().unwrap()
+        );
+
         let empty: Vec<VmId> = Vec::new();
 
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_user(USER1).unwrap());
@@ -447,6 +482,12 @@ mod tests {
         assert_eq!(vec![VM_ID5], db.vm_ids_for_user(USER3).unwrap());
         assert_eq!(empty, db.vm_ids_for_user(USER_UNKNOWN).unwrap());
         assert_eq!(empty, db.vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
+
+        assert_eq!(
+            vec![(USER1, APP_A), (USER2, APP_B), (USER3, APP_C)],
+            db.get_all_owners().unwrap()
+        );
+
         show_contents(&db);
     }
 

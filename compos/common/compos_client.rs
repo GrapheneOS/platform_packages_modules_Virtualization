@@ -24,10 +24,7 @@ use crate::{
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     CpuTopology::CpuTopology,
     IVirtualizationService::IVirtualizationService,
-    VirtualMachineAppConfig::{
-        CustomConfig::CustomConfig, DebugLevel::DebugLevel, Payload::Payload,
-        VirtualMachineAppConfig,
-    },
+    VirtualMachineAppConfig::{DebugLevel::DebugLevel, Payload::Payload, VirtualMachineAppConfig},
     VirtualMachineConfig::VirtualMachineConfig,
 };
 use anyhow::{anyhow, bail, Context, Result};
@@ -125,14 +122,13 @@ impl ComposClient {
             idsig: Some(idsig_fd),
             instanceId: instance_id,
             instanceImage: Some(instance_fd),
-            encryptedStorageImage: None,
             payload: Payload::ConfigPath(config_path),
             debugLevel: debug_level,
             extraIdsigs: extra_idsigs,
             protectedVm: protected_vm,
             memoryMib: parameters.memory_mib.unwrap_or(0), // 0 means use the default
             cpuTopology: cpu_topology,
-            customConfig: Some(CustomConfig { ..Default::default() }),
+            ..Default::default()
         });
 
         // Let logs go to logcat.

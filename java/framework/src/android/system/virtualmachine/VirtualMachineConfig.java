@@ -27,6 +27,7 @@ import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
+import android.annotation.StringDef;
 import android.annotation.SystemApi;
 import android.annotation.TestApi;
 import android.content.Context;
@@ -183,8 +184,25 @@ public final class VirtualMachineConfig {
 
     @Nullable private final File mVendorDiskImage;
 
-    /** OS name of the VM using payload binaries. null if the VM uses a payload config file. */
-    @Nullable private final String mOs;
+    /** OS name of the VM using payload binaries. */
+    @NonNull @OsName private final String mOs;
+
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef(
+            prefix = "MICRODROID",
+            value = {MICRODROID})
+    private @interface OsName {}
+
+    /**
+     * OS name of microdroid using microdroid kernel.
+     *
+     * @see Builder#setOs
+     * @hide
+     */
+    @TestApi
+    @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
+    @OsName
+    public static final String MICRODROID = "microdroid";
 
     private VirtualMachineConfig(
             @Nullable String packageName,
@@ -200,7 +218,7 @@ public final class VirtualMachineConfig {
             boolean vmOutputCaptured,
             boolean vmConsoleInputSupported,
             @Nullable File vendorDiskImage,
-            @Nullable String os) {
+            @NonNull @OsName String os) {
         // This is only called from Builder.build(); the builder handles parameter validation.
         mPackageName = packageName;
         mApkPath = apkPath;
@@ -301,10 +319,7 @@ public final class VirtualMachineConfig {
             builder.setVendorDiskImage(new File(vendorDiskImagePath));
         }
 
-        String os = b.getString(KEY_OS);
-        if (os != null) {
-            builder.setOs(os);
-        }
+        builder.setOs(b.getString(KEY_OS));
 
         String[] extraApks = b.getStringArray(KEY_EXTRA_APKS);
         if (extraApks != null) {
@@ -498,14 +513,15 @@ public final class VirtualMachineConfig {
     }
 
     /**
-     * Returns the OS of the VM using a payload binary. Returns null if the VM uses payload config.
+     * Returns the OS of the VM.
      *
      * @see Builder#setOs
      * @hide
      */
     @TestApi
     @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
-    @Nullable
+    @NonNull
+    @OsName
     public String getOs() {
         return mOs;
     }
@@ -559,7 +575,6 @@ public final class VirtualMachineConfig {
         if (mPayloadBinaryName != null) {
             VirtualMachinePayloadConfig payloadConfig = new VirtualMachinePayloadConfig();
             payloadConfig.payloadBinaryName = mPayloadBinaryName;
-            payloadConfig.osName = mOs;
             payloadConfig.extraApks = Collections.emptyList();
             vsConfig.payload =
                     VirtualMachineAppConfig.Payload.payloadConfig(payloadConfig);
@@ -567,6 +582,7 @@ public final class VirtualMachineConfig {
             vsConfig.payload =
                     VirtualMachineAppConfig.Payload.configPath(mPayloadConfigPath);
         }
+        vsConfig.osName = mOs;
         switch (mDebugLevel) {
             case DEBUG_LEVEL_FULL:
                 vsConfig.debugLevel = VirtualMachineAppConfig.DebugLevel.FULL;
@@ -658,7 +674,7 @@ public final class VirtualMachineConfig {
      */
     @SystemApi
     public static final class Builder {
-        private final String DEFAULT_OS = "microdroid";
+        @OsName private final String DEFAULT_OS = MICRODROID;
 
         @Nullable private final String mPackageName;
         @Nullable private String mApkPath;
@@ -674,7 +690,7 @@ public final class VirtualMachineConfig {
         private boolean mVmOutputCaptured = false;
         private boolean mVmConsoleInputSupported = false;
         @Nullable private File mVendorDiskImage;
-        @Nullable private String mOs;
+        @NonNull @OsName private String mOs = DEFAULT_OS;
 
         /**
          * Creates a builder for the given context.
@@ -714,14 +730,9 @@ public final class VirtualMachineConfig {
                 throw new IllegalStateException("apkPath or packageName must be specified");
             }
 
-            String os = null;
             if (mPayloadBinaryName == null) {
                 if (mPayloadConfigPath == null) {
                     throw new IllegalStateException("setPayloadBinaryName must be called");
-                }
-                if (mOs != null) {
-                    throw new IllegalStateException(
-                            "setPayloadConfigPath and setOs may not both be called");
                 }
                 if (!mExtraApks.isEmpty()) {
                     throw new IllegalStateException(
@@ -731,11 +742,6 @@ public final class VirtualMachineConfig {
                 if (mPayloadConfigPath != null) {
                     throw new IllegalStateException(
                             "setPayloadBinaryName and setPayloadConfigPath may not both be called");
-                }
-                if (mOs != null) {
-                    os = mOs;
-                } else {
-                    os = DEFAULT_OS;
                 }
             }
 
@@ -765,7 +771,7 @@ public final class VirtualMachineConfig {
                     mVmOutputCaptured,
                     mVmConsoleInputSupported,
                     mVendorDiskImage,
-                    os);
+                    mOs);
         }
 
         /**
@@ -1025,7 +1031,7 @@ public final class VirtualMachineConfig {
         @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
         @RequiresPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
         @NonNull
-        public Builder setOs(@NonNull String os) {
+        public Builder setOs(@NonNull @OsName String os) {
             mOs = requireNonNull(os, "os must not be null");
             return this;
         }

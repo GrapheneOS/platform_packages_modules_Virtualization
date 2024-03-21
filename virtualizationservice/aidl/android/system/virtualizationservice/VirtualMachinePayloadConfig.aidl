@@ -24,11 +24,6 @@ parcelable VirtualMachinePayloadConfig {
      */
     @utf8InCpp String payloadBinaryName;
 
-    /**
-     * Name of the OS to run the payload. Currently "microdroid" and "microdroid_gki" is supported.
-     */
-    @utf8InCpp String osName = "microdroid";
-
     /** Any extra APKs. */
     List<ParcelFileDescriptor> extraApks;
 }

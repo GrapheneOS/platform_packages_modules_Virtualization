@@ -1,7 +1,4 @@
 {
-  "os": {
-    "name": "microdroid"
-  },
   "task": {
     "type": "microdroid_launcher",
     "command": "MicrodroidIdleNativeLib.so"

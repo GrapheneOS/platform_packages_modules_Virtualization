@@ -9,9 +9,10 @@ package android.system.virtualmachine {
 
   public final class VirtualMachineConfig {
     method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public java.util.List<java.lang.String> getExtraApks();
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @Nullable public String getOs();
+    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public String getOs();
     method @Nullable public String getPayloadConfigPath();
     method public boolean isVmConsoleInputSupported();
+    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String MICRODROID = "microdroid";
   }
 
   public static final class VirtualMachineConfig.Builder {

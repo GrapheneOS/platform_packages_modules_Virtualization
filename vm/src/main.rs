@@ -33,9 +33,6 @@ use run::{command_run, command_run_app, command_run_microdroid};
 use std::num::NonZeroU16;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
-struct Idsigs(Vec<PathBuf>);
-
 #[derive(Args, Default)]
 /// Collection of flags that are at VM level and therefore applicable to all subcommands
 pub struct CommonConfig {

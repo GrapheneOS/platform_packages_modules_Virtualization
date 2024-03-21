@@ -21,28 +21,25 @@ use anyhow::{bail, Context, Result};
 use service_vm_comm::{
     ClientVmAttestationParams, GenerateCertificateRequestParams, Request, Response,
 };
-use service_vm_manager::ServiceVm;
+use service_vm_manager::process_request;
 
 pub(crate) fn request_attestation(
     csr: Vec<u8>,
     remotely_provisioned_key_blob: Vec<u8>,
     remotely_provisioned_cert: Vec<u8>,
 ) -> Result<Vec<u8>> {
-    let mut vm = ServiceVm::start()?;
-
     let params =
         ClientVmAttestationParams { csr, remotely_provisioned_key_blob, remotely_provisioned_cert };
     let request = Request::RequestClientVmAttestation(params);
-    match vm.process_request(request).context("Failed to process request")? {
+    match process_request(request).context("Failed to process request")? {
         Response::RequestClientVmAttestation(cert) => Ok(cert),
         other => bail!("Incorrect response type {other:?}"),
     }
 }
 
 pub(crate) fn generate_ecdsa_p256_key_pair() -> Result<Response> {
-    let mut vm = ServiceVm::start()?;
     let request = Request::GenerateEcdsaP256KeyPair;
-    vm.process_request(request).context("Failed to process request")
+    process_request(request).context("Failed to process request")
 }
 
 pub(crate) fn generate_certificate_request(
@@ -55,6 +52,5 @@ pub(crate) fn generate_certificate_request(
     };
     let request = Request::GenerateCertificateRequest(params);
 
-    let mut vm = ServiceVm::start()?;
-    vm.process_request(request).context("Failed to process request")
+    process_request(request).context("Failed to process request")
 }

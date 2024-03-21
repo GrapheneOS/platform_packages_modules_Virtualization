@@ -127,27 +127,23 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         if config.payload_binary_name.is_some() {
             bail!("Only one of --config-path or --payload-binary-name can be defined")
         }
-        if config.microdroid.gki().is_some() {
-            bail!("--gki cannot be defined with --config-path. Use 'os' field in the config file")
-        }
         Payload::ConfigPath(config_path)
     } else if let Some(payload_binary_name) = config.payload_binary_name {
-        let os_name = if let Some(ver) = config.microdroid.gki() {
-            format!("microdroid_gki-{ver}")
-        } else {
-            "microdroid".to_owned()
-        };
-
         let extra_apk_files: Result<Vec<_>, _> = extra_apks.iter().map(File::open).collect();
         let extra_apk_fds = extra_apk_files?.into_iter().map(ParcelFileDescriptor::new).collect();
 
         Payload::PayloadConfig(VirtualMachinePayloadConfig {
             payloadBinaryName: payload_binary_name,
-            osName: os_name,
             extraApks: extra_apk_fds,
         })
     } else {
         bail!("Either --config-path or --payload-binary-name must be defined")
+    };
+
+    let os_name = if let Some(ver) = config.microdroid.gki() {
+        format!("microdroid_gki-{ver}")
+    } else {
+        "microdroid".to_owned()
     };
 
     let payload_config_str = format!("{:?}!{:?}", config.apk, payload);
@@ -180,6 +176,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         memoryMib: config.common.mem.unwrap_or(0) as i32, // 0 means use the VM default
         cpuTopology: config.common.cpu_topology,
         customConfig: Some(custom_config),
+        osName: os_name,
     });
     run(
         service.as_ref(),

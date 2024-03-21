@@ -41,7 +41,6 @@ import com.android.rkpdapp.provisioner.PeriodicProvisioner;
 import com.android.rkpdapp.testutil.SystemInterfaceSelector;
 import com.android.rkpdapp.utils.Settings;
 import com.android.rkpdapp.utils.X509Utils;
-import com.android.virt.vm_attestation.testservice.IAttestationService;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 
 import org.bouncycastle.asn1.ASN1Boolean;
@@ -62,7 +61,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
 /**
@@ -171,35 +169,10 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         Arrays.fill(challenge, (byte) 0xab);
 
         // Act.
-        CompletableFuture<Exception> exception = new CompletableFuture<>();
-        CompletableFuture<Boolean> payloadReady = new CompletableFuture<>();
-        CompletableFuture<SigningResult> signingResultFuture = new CompletableFuture<>();
-        VmEventListener listener =
-                new VmEventListener() {
-                    @Override
-                    public void onPayloadReady(VirtualMachine vm) {
-                        payloadReady.complete(true);
-                        try {
-                            IAttestationService service =
-                                    IAttestationService.Stub.asInterface(
-                                            vm.connectToVsockServer(IAttestationService.PORT));
-                            signingResultFuture.complete(
-                                    service.signWithAttestationKey(challenge, MESSAGE.getBytes()));
-                        } catch (Exception e) {
-                            exception.complete(e);
-                        } finally {
-                            forceStop(vm);
-                        }
-                    }
-                };
-        listener.runToFinish(TAG, vm);
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, MESSAGE.getBytes());
 
         // Assert.
-        assertThat(payloadReady.getNow(false)).isTrue();
-        assertThat(exception.getNow(null)).isNull();
-        SigningResult signingResult = signingResultFuture.getNow(null);
-        assertThat(signingResult).isNotNull();
-
         // Parsing the certificate chain successfully indicates that the certificate
         // chain is valid, that each certificate is signed by the next one and the last
         // one is self-signed.

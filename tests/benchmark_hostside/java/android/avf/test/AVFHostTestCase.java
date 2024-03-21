@@ -231,7 +231,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         android.tryRun("rm", "-rf", MicrodroidHostTestCaseBase.TEST_ROOT);
 
         // Donate 80% of the available device memory to the VM
-        final String configPath = "assets/microdroid/vm_config.json";
+        final String configPath = "assets/vm_config.json";
         final int vm_mem_mb = getFreeMemoryInfoMb(android) * 80 / 100;
         ITestDevice microdroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)

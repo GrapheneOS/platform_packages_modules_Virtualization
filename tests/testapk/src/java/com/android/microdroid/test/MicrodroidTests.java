@@ -469,7 +469,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(minimal.isEncryptedStorageEnabled()).isFalse();
         assertThat(minimal.getEncryptedStorageBytes()).isEqualTo(0);
         assertThat(minimal.isVmOutputCaptured()).isEqualTo(false);
-        assertThat(minimal.getOs()).isNull();
+        assertThat(minimal.getOs()).isEqualTo("microdroid");
 
         // Maximal has everything that can be set to some non-default value. (And has different
         // values than minimal for the required fields.)
@@ -484,7 +484,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(42)
                         .setCpuTopology(CPU_TOPOLOGY_MATCH_HOST)
                         .setEncryptedStorageBytes(1_000_000)
-                        .setVmOutputCaptured(true);
+                        .setVmOutputCaptured(true)
+                        .setOs("microdroid_gki-android14-6.1");
         VirtualMachineConfig maximal = maximalBuilder.build();
 
         assertThat(maximal.getApkPath()).isEqualTo("/apk/path");
@@ -500,16 +501,11 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(maximal.isEncryptedStorageEnabled()).isTrue();
         assertThat(maximal.getEncryptedStorageBytes()).isEqualTo(1_000_000);
         assertThat(maximal.isVmOutputCaptured()).isEqualTo(true);
-        assertThat(maximal.getOs()).isEqualTo("microdroid");
+        assertThat(maximal.getOs()).isEqualTo("microdroid_gki-android14-6.1");
 
         assertThat(minimal.isCompatibleWith(maximal)).isFalse();
         assertThat(minimal.isCompatibleWith(minimal)).isTrue();
         assertThat(maximal.isCompatibleWith(maximal)).isTrue();
-
-        VirtualMachineConfig os = maximalBuilder.setOs("microdroid_gki-android14-6.1").build();
-        assertThat(os.getPayloadBinaryName()).isEqualTo("binary.so");
-        assertThat(os.getOs()).isEqualTo("microdroid_gki-android14-6.1");
-        assertThat(os.isCompatibleWith(maximal)).isFalse();
     }
 
     @Test
@@ -560,16 +556,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setVmConsoleInputSupported(true);
         e = assertThrows(IllegalStateException.class, () -> captureInputOnNonDebuggable.build());
         assertThat(e).hasMessageThat().contains("debug level must be FULL to use console input");
-
-        VirtualMachineConfig.Builder specifyBothOsAndConfig =
-                new VirtualMachineConfig.Builder(getContext())
-                        .setPayloadConfigPath("config/path")
-                        .setProtectedVm(mProtectedVm)
-                        .setOs("microdroid");
-        e = assertThrows(IllegalStateException.class, () -> specifyBothOsAndConfig.build());
-        assertThat(e)
-                .hasMessageThat()
-                .contains("setPayloadConfigPath and setOs may not both be called");
     }
 
     @Test
@@ -787,7 +773,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
                         .setMemoryBytes(minMemoryRequired())
                         .build();
 
@@ -905,7 +891,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config_extra_apk.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_extra_apk.json")
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
@@ -1077,7 +1063,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig normalConfig =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         forceCreateNewVirtualMachine("test_vm_a", normalConfig);
@@ -1103,7 +1089,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig normalConfig =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         forceCreateNewVirtualMachine("test_vm", normalConfig);
@@ -1123,7 +1109,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig normalConfig =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine("bcc_vm", normalConfig);
@@ -1266,7 +1252,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void bootFailsWhenConfigIsInvalid() throws Exception {
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config_no_task.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_no_task.json")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
 
@@ -1391,7 +1377,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // Arrange
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/" + os() + "/vm_config.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         String vmNameOrig = "test_vm_orig";
@@ -1680,9 +1666,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeSupportedDevice();
 
         final VirtualMachineConfig vmConfig =
-                new VirtualMachineConfig.Builder(getContext())
-                        .setProtectedVm(mProtectedVm)
-                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setVmConsoleInputSupported(true) // even if console input is supported
                         .build();
@@ -1704,9 +1688,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeSupportedDevice();
 
         final VirtualMachineConfig vmConfig =
-                new VirtualMachineConfig.Builder(getContext())
-                        .setProtectedVm(mProtectedVm)
-                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setVmOutputCaptured(true) // even if output is captured
                         .build();
@@ -1730,6 +1712,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setPayloadBinaryName("MicrodroidTestNativeLib.so")
                         .setDebugLevel(debuggable ? DEBUG_LEVEL_FULL : DEBUG_LEVEL_NONE)
                         .setVmOutputCaptured(false)
+                        .setOs(os())
                         .build();
         final VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_logcat", vmConfig);
 
@@ -1824,6 +1807,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setProtectedVm(isProtectedVm())
                         .setPayloadBinaryName("MicrodroidPayloadInOtherAppNativeLib.so")
+                        .setOs(os())
                         .build();
 
         try (VirtualMachine vm = forceCreateNewVirtualMachine("vm_from_another_app", config)) {
@@ -1938,6 +1922,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setProtectedVm(isProtectedVm())
                         .setPayloadBinaryName("MicrodroidPayloadInOtherAppNativeLib.so")
+                        .setOs(os())
                         .build();
 
         VirtualMachine vm = forceCreateNewVirtualMachine("vm_to_share", config);
@@ -1987,6 +1972,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setProtectedVm(isProtectedVm())
                         .setEncryptedStorageBytes(3_000_000)
                         .setPayloadBinaryName("MicrodroidPayloadInOtherAppNativeLib.so")
+                        .setOs(os())
                         .build();
 
         VirtualMachine vm = forceCreateNewVirtualMachine("vm_to_share", config);

@@ -50,8 +50,7 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     @NonNull public static final String MICRODROID_DEBUG_FULL = "full";
     @NonNull public static final String MICRODROID_DEBUG_NONE = "none";
 
-    @NonNull
-    public static final String MICRODROID_CONFIG_PATH = "assets/microdroid/vm_config_apex.json";
+    @NonNull public static final String MICRODROID_CONFIG_PATH = "assets/vm_config_apex.json";
 
     @NonNull
     public static final String VM_REFERENCE_DT_PATH = "/data/local/tmp/pvmfw/reference_dt.dtb";
