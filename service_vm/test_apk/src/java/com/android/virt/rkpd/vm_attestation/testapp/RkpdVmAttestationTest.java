@@ -19,7 +19,6 @@ package com.android.virt.rkpd.vm_attestation.testapp;
 import static android.system.virtualmachine.VirtualMachineConfig.DEBUG_LEVEL_FULL;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
 import android.content.Context;
@@ -40,22 +39,15 @@ import com.android.rkpdapp.interfaces.SystemInterface;
 import com.android.rkpdapp.provisioner.PeriodicProvisioner;
 import com.android.rkpdapp.testutil.SystemInterfaceSelector;
 import com.android.rkpdapp.utils.Settings;
-import com.android.rkpdapp.utils.X509Utils;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
+import com.android.virt.vm_attestation.util.X509Utils;
 
-import org.bouncycastle.asn1.ASN1Boolean;
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.DEROctetString;
-import org.bouncycastle.asn1.DERUTF8String;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,7 +78,7 @@ import java.util.concurrent.Executors;
 @RunWith(Parameterized.class)
 public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
     private static final String TAG = "RkpdVmAttestationTest";
-    private static final String AVF_ATTESTATION_EXTENSION_OID = "1.3.6.1.4.1.11129.2.1.29.1";
+
     private static final String SERVICE_NAME = IRemotelyProvisionedComponent.DESCRIPTOR + "/avf";
     private static final String VM_PAYLOAD_PATH = "libvm_attestation_test_payload.so";
     private static final String MESSAGE = "Hello RKP from AVF!";
@@ -173,67 +165,9 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
                 runVmAttestationService(TAG, vm, challenge, MESSAGE.getBytes());
 
         // Assert.
-        // Parsing the certificate chain successfully indicates that the certificate
-        // chain is valid, that each certificate is signed by the next one and the last
-        // one is self-signed.
-        X509Certificate[] certs = X509Utils.formatX509Certs(signingResult.certificateChain);
-        assertThat(certs.length).isGreaterThan(2);
-        assertWithMessage("The first certificate should be generated in the RKP VM")
-                .that(certs[0].getSubjectX500Principal().getName())
-                .isEqualTo("CN=Android Protected Virtual Machine Key");
-        checkAvfAttestationExtension(certs[0], challenge);
-        assertWithMessage("The second certificate should contain AVF in the subject")
-                .that(certs[1].getSubjectX500Principal().getName())
-                .contains("O=AVF");
-
-        // Verify the signature using the public key from the leaf certificate generated
-        // in the RKP VM.
-        Signature sig = Signature.getInstance("SHA256withECDSA");
-        sig.initVerify(certs[0].getPublicKey());
-        sig.update(MESSAGE.getBytes());
-        assertThat(sig.verify(signingResult.signature)).isTrue();
-    }
-
-    private void checkAvfAttestationExtension(X509Certificate cert, byte[] challenge)
-            throws Exception {
-        byte[] extensionValue = cert.getExtensionValue(AVF_ATTESTATION_EXTENSION_OID);
-        ASN1OctetString extString = ASN1OctetString.getInstance(extensionValue);
-        ASN1Sequence seq = ASN1Sequence.getInstance(extString.getOctets());
-        // AVF attestation extension should contain 3 elements in the following format:
-        //
-        //  AttestationExtension ::= SEQUENCE {
-        //     attestationChallenge       OCTET_STRING,
-        //     isVmSecure                 BOOLEAN,
-        //     vmComponents               SEQUENCE OF VmComponent,
-        //  }
-        //   VmComponent ::= SEQUENCE {
-        //     name               UTF8String,
-        //     securityVersion    INTEGER,
-        //     codeHash           OCTET STRING,
-        //     authorityHash      OCTET STRING,
-        //  }
-        assertThat(seq).hasSize(3);
-
-        ASN1OctetString expectedChallenge = new DEROctetString(challenge);
-        assertThat(seq.getObjectAt(0)).isEqualTo(expectedChallenge);
-        assertWithMessage("The VM should be unsecure as it is debuggable.")
-                .that(seq.getObjectAt(1))
-                .isEqualTo(ASN1Boolean.FALSE);
-        ASN1Sequence vmComponents = ASN1Sequence.getInstance(seq.getObjectAt(2));
-        assertExtensionContainsPayloadApk(vmComponents);
-    }
-
-    private void assertExtensionContainsPayloadApk(ASN1Sequence vmComponents) throws Exception {
-        DERUTF8String payloadApkName = new DERUTF8String("apk:" + TEST_APP_PACKAGE_NAME);
-        boolean found = false;
-        for (ASN1Encodable encodable : vmComponents) {
-            ASN1Sequence vmComponent = ASN1Sequence.getInstance(encodable);
-            assertThat(vmComponent).hasSize(4);
-            if (payloadApkName.equals(vmComponent.getObjectAt(0))) {
-                assertWithMessage("Payload APK should not be found twice.").that(found).isFalse();
-                found = true;
-            }
-        }
-        assertWithMessage("vmComponents should contain the payload APK.").that(found).isTrue();
+        X509Certificate[] certs =
+                X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+        X509Utils.verifyAvfRelatedCerts(certs, challenge, TEST_APP_PACKAGE_NAME);
+        X509Utils.verifySignature(certs[0], MESSAGE.getBytes(), signingResult.signature);
     }
 }

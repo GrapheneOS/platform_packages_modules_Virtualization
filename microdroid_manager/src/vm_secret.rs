@@ -109,15 +109,14 @@ impl VmSecret {
                 .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
             let policy = sealing_policy(explicit_dice_chain)
                 .map_err(|e| anyhow!("Failed to build a sealing_policy: {e}"))?;
-            if super::is_new_instance() {
-                // New instance -> create a secret & store in Secretkeeper.
-                *skp_secret = rand::random();
-                store_secret(&mut session, id, skp_secret.clone(), policy)
-                    .context("Failed to store secret in Secretkeeper")?;
+            if let Some(secret) = get_secret(&mut session, id, Some(policy.clone()))? {
+                *skp_secret = secret;
             } else {
-                // Subsequent run of the pVM -> get the secret stored in Secretkeeper.
-                *skp_secret = get_secret(&mut session, id, Some(policy))
-                    .context("Failed to get secret from Secretkeeper")?;
+                log::warn!(
+                    "No entry found in Secretkeeper for this VM instance, creating new secret."
+                );
+                *skp_secret = rand::random();
+                store_secret(&mut session, id, skp_secret.clone(), policy)?;
             }
         }
         Ok(Self::V2 {
@@ -248,21 +247,24 @@ fn get_secret(
     session: &mut SkSession,
     id: [u8; ID_SIZE],
     updated_sealing_policy: Option<Vec<u8>>,
-) -> Result<[u8; SECRET_SIZE]> {
+) -> Result<Option<[u8; SECRET_SIZE]>> {
     let get_request = GetSecretRequest { id: Id(id), updated_sealing_policy };
     log::info!("Secretkeeper operation: {:?}", get_request);
     let get_request = get_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
     let get_response = session.secret_management_request(&get_request)?;
     let get_response = ResponsePacket::from_slice(&get_response).map_err(anyhow_err)?;
     let response_type = get_response.response_type().map_err(anyhow_err)?;
-    ensure!(
-        response_type == ResponseType::Success,
-        "Secretkeeper get failed with error: {:?}",
-        *SecretkeeperError::deserialize_from_packet(get_response).map_err(anyhow_err)?
-    );
-    let get_response =
-        *GetSecretResponse::deserialize_from_packet(get_response).map_err(anyhow_err)?;
-    Ok(get_response.secret.0)
+    if response_type == ResponseType::Success {
+        let get_response =
+            *GetSecretResponse::deserialize_from_packet(get_response).map_err(anyhow_err)?;
+        Ok(Some(get_response.secret.0))
+    } else {
+        let error = SecretkeeperError::deserialize_from_packet(get_response).map_err(anyhow_err)?;
+        if *error == SecretkeeperError::EntryNotFound {
+            return Ok(None);
+        }
+        Err(anyhow!("Secretkeeper get failed: {error:?}"))
+    }
 }
 
 #[inline]

@@ -15,6 +15,7 @@
 //! Struct for VM configuration with JSON (de)serialization and AIDL parcelables
 
 use android_system_virtualizationservice::{
+    aidl::android::system::virtualizationservice::CpuTopology::CpuTopology,
     aidl::android::system::virtualizationservice::DiskImage::DiskImage as AidlDiskImage,
     aidl::android::system::virtualizationservice::Partition::Partition as AidlPartition,
     aidl::android::system::virtualizationservice::VirtualMachineRawConfig::VirtualMachineRawConfig,
@@ -54,6 +55,8 @@ pub struct VmConfig {
     /// The amount of RAM to give the VM, in MiB.
     #[serde(default)]
     pub memory_mib: Option<NonZeroU32>,
+    /// The CPU topology: either "one_cpu"(default) or "match_host"
+    pub cpu_topology: Option<String>,
     /// Version or range of versions of the virtual platform that this config is compatible with.
     /// The format follows SemVer (https://semver.org).
     pub platform_version: VersionReq,
@@ -96,7 +99,12 @@ impl VmConfig {
         } else {
             0
         };
-
+        let cpu_topology = match self.cpu_topology.as_deref() {
+            None => CpuTopology::ONE_CPU,
+            Some("one_cpu") => CpuTopology::ONE_CPU,
+            Some("match_host") => CpuTopology::MATCH_HOST,
+            Some(cpu_topology) => bail!("Invalid cpu topology {}", cpu_topology),
+        };
         Ok(VirtualMachineRawConfig {
             kernel: maybe_open_parcel_file(&self.kernel, false)?,
             initrd: maybe_open_parcel_file(&self.initrd, false)?,
@@ -105,6 +113,7 @@ impl VmConfig {
             disks: self.disks.iter().map(DiskImage::to_parcelable).collect::<Result<_, Error>>()?,
             protectedVm: self.protected,
             memoryMib: memory_mib,
+            cpuTopology: cpu_topology,
             platformVersion: self.platform_version.to_string(),
             devices: self
                 .devices

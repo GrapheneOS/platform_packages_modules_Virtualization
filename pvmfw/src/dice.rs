@@ -93,7 +93,8 @@ impl PartialInputs {
             rkp_vm_marker: bool,
             salt: [u8; HIDDEN_SIZE],
         }
-
+        // TODO(b/291213394): Include `defer_rollback_protection` flag in the Hidden Input to
+        // differentiate the secrets in both cases.
         hash(HiddenInput { rkp_vm_marker: self.rkp_vm_marker, salt: *salt }.as_bytes())
     }
 

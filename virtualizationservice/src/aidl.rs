@@ -362,6 +362,10 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         Ok(certificate_chain)
     }
 
+    fn isRemoteAttestationSupported(&self) -> binder::Result<bool> {
+        remotely_provisioned_component_service_exists()
+    }
+
     fn getAssignableDevices(&self) -> binder::Result<Vec<AssignableDevice>> {
         check_use_custom_virtual_machine()?;
 

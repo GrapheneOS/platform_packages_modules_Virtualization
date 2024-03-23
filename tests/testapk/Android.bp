@@ -23,6 +23,7 @@ java_defaults {
     static_libs: [
         "com.android.microdroid.testservice-java",
         "com.android.microdroid.test.vmshare_service-java",
+        "com.android.virt.vm_attestation.testservice-java",
     ],
     certificate: ":MicrodroidTestAppCert",
     sdk_version: "test_current",
@@ -38,6 +39,7 @@ android_test {
     srcs: ["src/java/**/*.java"],
     static_libs: [
         "MicrodroidDeviceTestHelper",
+        "VmAttestationTestUtil",
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "authfs_test_apk_assets",
@@ -53,6 +55,7 @@ android_test {
         "MicrodroidExitNativeLib",
         "MicrodroidPrivateLinkingNativeLib",
         "MicrodroidCrashNativeLib",
+        "libvm_attestation_test_payload",
     ],
     min_sdk_version: "33",
     // Defined in ../vmshareapp/Android.bp

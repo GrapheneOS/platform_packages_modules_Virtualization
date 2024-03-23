@@ -26,6 +26,8 @@ package android.system.virtualmachine {
   public class VirtualMachineManager {
     method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public java.util.List<java.lang.String> getSupportedOSList() throws android.system.virtualmachine.VirtualMachineException;
     method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isFeatureEnabled(String) throws android.system.virtualmachine.VirtualMachineException;
+    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isRemoteAttestationSupported() throws android.system.virtualmachine.VirtualMachineException;
+    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isUpdatableVmSupported() throws android.system.virtualmachine.VirtualMachineException;
     field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
     field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
     field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_MULTI_TENANT = "com.android.kvm.MULTI_TENANT";

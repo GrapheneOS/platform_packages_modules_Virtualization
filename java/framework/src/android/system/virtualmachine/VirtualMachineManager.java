@@ -393,4 +393,45 @@ public class VirtualMachineManager {
             }
         }
     }
+
+    /**
+     * Returns {@code true} if the pVM remote attestation feature is supported. Remote attestation
+     * allows a protected VM to attest its authenticity to a remote server.
+     *
+     * @hide
+     */
+    @TestApi
+    @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
+    @RequiresPermission(VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION)
+    public boolean isRemoteAttestationSupported() throws VirtualMachineException {
+        synchronized (sCreateLock) {
+            VirtualizationService service = VirtualizationService.getInstance();
+            try {
+                return service.getBinder().isRemoteAttestationSupported();
+            } catch (RemoteException e) {
+                throw e.rethrowAsRuntimeException();
+            }
+        }
+    }
+
+    /**
+     * Returns {@code true} if Updatable VM feature is supported by AVF. Updatable VM allow secrets
+     * and data to be accessible even after updates of boot images and apks. For more info see
+     * packages/modules/Virtualization/docs/updatable_vm.md
+     *
+     * @hide
+     */
+    @TestApi
+    @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
+    @RequiresPermission(VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION)
+    public boolean isUpdatableVmSupported() throws VirtualMachineException {
+        synchronized (sCreateLock) {
+            VirtualizationService service = VirtualizationService.getInstance();
+            try {
+                return service.getBinder().isUpdatableVmSupported();
+            } catch (RemoteException e) {
+                throw e.rethrowAsRuntimeException();
+            }
+        }
+    }
 }

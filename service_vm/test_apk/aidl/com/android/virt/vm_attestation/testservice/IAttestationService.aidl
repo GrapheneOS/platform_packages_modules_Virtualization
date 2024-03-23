@@ -21,6 +21,27 @@ interface IAttestationService {
     const int PORT = 5679;
 
     /**
+     * The status of the attestation.
+     *
+     * The status here maps to the status defined in
+     * vm_payload/include/vm_payload.h
+     */
+    @Backing(type="int")
+    enum AttestationStatus {
+        /** The remote attestation completes successfully. */
+        ATTESTATION_OK = 0,
+
+        /** The challenge size is not between 0 and 64. */
+        ATTESTATION_ERROR_INVALID_CHALLENGE = 1,
+
+        /** Failed to attest the VM. Please retry at a later time. */
+        ATTESTATION_ERROR_ATTESTATION_FAILED = 2,
+
+        /** Remote attestation is not supported in the current environment. */
+        ATTESTATION_ERROR_UNSUPPORTED = 3,
+    }
+
+    /**
      * The result of signing a message with the attested key.
      */
     parcelable SigningResult {
@@ -29,6 +50,9 @@ interface IAttestationService {
 
         /** The DER-encoded attestation X509 certificate chain. */
         byte[] certificateChain;
+
+        /** The status of the attestation. */
+        AttestationStatus status;
     }
 
     /**

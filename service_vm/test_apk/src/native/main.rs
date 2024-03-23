@@ -18,7 +18,8 @@ use anyhow::{anyhow, ensure, Result};
 use avflog::LogResult;
 use com_android_virt_vm_attestation_testservice::{
     aidl::com::android::virt::vm_attestation::testservice::IAttestationService::{
-        BnAttestationService, IAttestationService, SigningResult::SigningResult, PORT,
+        AttestationStatus::AttestationStatus, BnAttestationService, IAttestationService,
+        SigningResult::SigningResult, PORT,
     },
     binder::{self, unstable_api::AsNative, BinderFeatures, Interface, IntoBinderResult, Strong},
 };
@@ -103,19 +104,38 @@ impl IAttestationService for AttestationService {
         challenge: &[u8],
         message: &[u8],
     ) -> binder::Result<SigningResult> {
-        let res = AttestationResult::request_attestation(challenge)
-            .map_err(|e| anyhow!("Unexpected status: {:?}", status_to_cstr(e)))
-            .with_log()
-            .or_service_specific_exception(-1)?;
+        let res = match AttestationResult::request_attestation(challenge) {
+            Ok(res) => res,
+            Err(status) => {
+                let status = to_attestation_status(status);
+                return Ok(SigningResult { certificateChain: vec![], signature: vec![], status });
+            }
+        };
         let certificate_chain =
             res.certificate_chain().with_log().or_service_specific_exception(-1)?;
+        let status = AttestationStatus::ATTESTATION_OK;
         let signature = res.sign(message).with_log().or_service_specific_exception(-1)?;
-        Ok(SigningResult { certificateChain: certificate_chain, signature })
+        Ok(SigningResult { certificateChain: certificate_chain, signature, status })
     }
 
     fn validateAttestationResult(&self) -> binder::Result<()> {
         // TODO(b/191073073): Returns the attestation result to the host for validation.
         self.res.lock().unwrap().as_ref().unwrap().log().or_service_specific_exception(-1)
+    }
+}
+
+fn to_attestation_status(status: AVmAttestationStatus) -> AttestationStatus {
+    match status {
+        AVmAttestationStatus::ATTESTATION_OK => AttestationStatus::ATTESTATION_OK,
+        AVmAttestationStatus::ATTESTATION_ERROR_INVALID_CHALLENGE => {
+            AttestationStatus::ATTESTATION_ERROR_INVALID_CHALLENGE
+        }
+        AVmAttestationStatus::ATTESTATION_ERROR_ATTESTATION_FAILED => {
+            AttestationStatus::ATTESTATION_ERROR_ATTESTATION_FAILED
+        }
+        AVmAttestationStatus::ATTESTATION_ERROR_UNSUPPORTED => {
+            AttestationStatus::ATTESTATION_ERROR_UNSUPPORTED
+        }
     }
 }
 

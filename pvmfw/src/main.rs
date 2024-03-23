@@ -42,10 +42,12 @@ use crate::instance::Error as InstanceError;
 use crate::instance::{get_recorded_entry, record_instance_entry};
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
+use bssl_avf::Digester;
 use core::ops::Range;
-use diced_open_dice::{bcc_handover_parse, DiceArtifacts};
+use cstr::cstr;
+use diced_open_dice::{bcc_handover_parse, DiceArtifacts, Hidden};
 use fdtpci::{PciError, PciInfo};
-use libfdt::Fdt;
+use libfdt::{Fdt, FdtNode};
 use log::{debug, error, info, trace, warn};
 use pvmfw_avb::verify_payload;
 use pvmfw_avb::Capability;
@@ -129,18 +131,6 @@ fn main(
         }
     }
 
-    if verified_boot_data.has_capability(Capability::SecretkeeperProtection) {
-        info!("Guest OS is capable of Secretkeeper protection");
-        // For Secretkeeper based Antirollback protection, rollback_index of the image > 0
-        if verified_boot_data.rollback_index == 0 {
-            error!(
-                "Expected positive rollback_index, found {:?}",
-                verified_boot_data.rollback_index
-            );
-            return Err(RebootReason::InvalidPayload);
-        };
-    }
-
     let next_bcc = heap::aligned_boxed_slice(NEXT_BCC_SIZE, GUEST_PAGE_SIZE).ok_or_else(|| {
         error!("Failed to allocate the next-stage BCC");
         RebootReason::InternalError
@@ -153,43 +143,51 @@ fn main(
         RebootReason::InternalError
     })?;
 
-    let (recorded_entry, mut instance_img, header_index) =
-        get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
-            error!("Failed to get entry from instance.img: {e}");
-            RebootReason::InternalError
-        })?;
-    let (new_instance, salt) = if let Some(entry) = recorded_entry {
-        // The RKP VM is allowed to run if it has passed the verified boot check and
-        // contains the expected version in its AVB footer.
-        // The comparison below with the previous boot information is skipped to enable the
-        // simultaneous update of the pvmfw and RKP VM.
-        // For instance, when both the pvmfw and RKP VM are updated, the code hash of the
-        // RKP VM will differ from the one stored in the instance image. In this case, the
-        // RKP VM is still allowed to run.
-        // This ensures that the updated RKP VM will retain the same CDIs in the next stage.
-        if !dice_inputs.rkp_vm_marker {
-            ensure_dice_measurements_match_entry(&dice_inputs, &entry).map_err(|e| {
-                error!(
-                    "Dice measurements do not match recorded entry.
-                This may be because of update: {e}"
-                );
+    let (new_instance, salt) = if cfg!(llpvm_changes)
+        && should_defer_rollback_protection(fdt)?
+        && verified_boot_data.has_capability(Capability::SecretkeeperProtection)
+    {
+        info!("Guest OS is capable of Secretkeeper protection, deferring rollback protection");
+        // rollback_index of the image is used as security_version and is expected to be > 0 to
+        // discourage implicit allocation.
+        if verified_boot_data.rollback_index == 0 {
+            error!("Expected positive rollback_index, found 0");
+            return Err(RebootReason::InvalidPayload);
+        };
+        // `new_instance` cannot be known to pvmfw
+        (false, salt_from_instance_id(fdt)?)
+    } else {
+        let (recorded_entry, mut instance_img, header_index) =
+            get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
+                error!("Failed to get entry from instance.img: {e}");
                 RebootReason::InternalError
             })?;
-        }
-        (false, entry.salt)
-    } else {
-        let salt = rand::random_array().map_err(|e| {
-            error!("Failed to generated instance.img salt: {e}");
-            RebootReason::InternalError
-        })?;
-        let entry = EntryBody::new(&dice_inputs, &salt);
-        record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(|e| {
-            error!("Failed to get recorded entry in instance.img: {e}");
-            RebootReason::InternalError
-        })?;
-        (true, salt)
+        let (new_instance, salt) = if let Some(entry) = recorded_entry {
+            maybe_check_dice_measurements_match_entry(&dice_inputs, &entry)?;
+            let salt = if cfg!(llpvm_changes) { salt_from_instance_id(fdt)? } else { entry.salt };
+            (false, salt)
+        } else {
+            // New instance!
+            let salt = if cfg!(llpvm_changes) {
+                salt_from_instance_id(fdt)?
+            } else {
+                rand::random_array().map_err(|e| {
+                    error!("Failed to generated instance.img salt: {e}");
+                    RebootReason::InternalError
+                })?
+            };
+            let entry = EntryBody::new(&dice_inputs, &salt);
+            record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(
+                |e| {
+                    error!("Failed to get recorded entry in instance.img: {e}");
+                    RebootReason::InternalError
+                },
+            )?;
+            (true, salt)
+        };
+        (new_instance, salt)
     };
-    trace!("Got salt from instance.img: {salt:x?}");
+    trace!("Got salt for instance: {salt:x?}");
 
     let new_bcc_handover = if cfg!(dice_changes) {
         Cow::Borrowed(current_bcc_handover)
@@ -241,6 +239,32 @@ fn main(
     Ok(bcc_range)
 }
 
+fn maybe_check_dice_measurements_match_entry(
+    dice_inputs: &PartialInputs,
+    entry: &EntryBody,
+) -> Result<(), RebootReason> {
+    // The RKP VM is allowed to run if it has passed the verified boot check and
+    // contains the expected version in its AVB footer.
+    // The comparison below with the previous boot information is skipped to enable the
+    // simultaneous update of the pvmfw and RKP VM.
+    // For instance, when both the pvmfw and RKP VM are updated, the code hash of the
+    // RKP VM will differ from the one stored in the instance image. In this case, the
+    // RKP VM is still allowed to run.
+    // This ensures that the updated RKP VM will retain the same CDIs in the next stage.
+    if dice_inputs.rkp_vm_marker {
+        return Ok(());
+    }
+    ensure_dice_measurements_match_entry(dice_inputs, entry).map_err(|e| {
+        error!(
+            "Dice measurements do not match recorded entry. \
+        This may be because of update: {e}"
+        );
+        RebootReason::InternalError
+    })?;
+
+    Ok(())
+}
+
 fn ensure_dice_measurements_match_entry(
     dice_inputs: &PartialInputs,
     entry: &EntryBody,
@@ -254,6 +278,56 @@ fn ensure_dice_measurements_match_entry(
     } else {
         Ok(())
     }
+}
+
+// Get the "salt" which is one of the input for DICE derivation.
+// This provides differentiation of secrets for different VM instances with same payloads.
+fn salt_from_instance_id(fdt: &Fdt) -> Result<Hidden, RebootReason> {
+    let id = instance_id(fdt)?;
+    let salt = Digester::sha512()
+        .digest(&[&b"InstanceId:"[..], id].concat())
+        .map_err(|e| {
+            error!("Failed to get digest of instance-id: {e}");
+            RebootReason::InternalError
+        })?
+        .try_into()
+        .map_err(|_| RebootReason::InternalError)?;
+    Ok(salt)
+}
+
+fn instance_id(fdt: &Fdt) -> Result<&[u8], RebootReason> {
+    let node = avf_untrusted_node(fdt)?;
+    let id = node.getprop(cstr!("instance-id")).map_err(|e| {
+        error!("Failed to get instance-id in DT: {e}");
+        RebootReason::InvalidFdt
+    })?;
+    id.ok_or_else(|| {
+        error!("Missing instance-id");
+        RebootReason::InvalidFdt
+    })
+}
+
+fn should_defer_rollback_protection(fdt: &Fdt) -> Result<bool, RebootReason> {
+    let node = avf_untrusted_node(fdt)?;
+    let defer_rbp = node
+        .getprop(cstr!("defer-rollback-protection"))
+        .map_err(|e| {
+            error!("Failed to get defer-rollback-protection property in DT: {e}");
+            RebootReason::InvalidFdt
+        })?
+        .is_some();
+    Ok(defer_rbp)
+}
+
+fn avf_untrusted_node(fdt: &Fdt) -> Result<FdtNode, RebootReason> {
+    let node = fdt.node(cstr!("/avf/untrusted")).map_err(|e| {
+        error!("Failed to get /avf/untrusted node: {e}");
+        RebootReason::InvalidFdt
+    })?;
+    node.ok_or_else(|| {
+        error!("/avf/untrusted node is missing in DT");
+        RebootReason::InvalidFdt
+    })
 }
 
 /// Logs the given PCI error and returns the appropriate `RebootReason`.

@@ -77,6 +77,11 @@ interface IVirtualizationServiceInternal {
     void enableTestAttestation();
 
     /**
+     * Returns {@code true} if the pVM remote attestation feature is supported
+     */
+    boolean isRemoteAttestationSupported();
+
+    /**
      * Get a list of assignable devices.
      */
     AssignableDevice[] getAssignableDevices();

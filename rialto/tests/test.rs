@@ -52,8 +52,12 @@ const UNSIGNED_RIALTO_PATH: &str = "/data/local/tmp/rialto_test/arm64/rialto_uns
 const INSTANCE_IMG_PATH: &str = "/data/local/tmp/rialto_test/arm64/instance.img";
 const TEST_CERT_CHAIN_PATH: &str = "testdata/rkp_cert_chain.der";
 
+#[cfg(dice_changes)]
 #[test]
 fn process_requests_in_protected_vm() -> Result<()> {
+    // The test is skipped if the feature flag |dice_changes| is not enabled, because when
+    // the flag is off, the DICE chain is truncated in the pvmfw, and the service VM cannot
+    // verify the chain due to the missing entries in the chain.
     check_processing_requests(VmType::ProtectedVm)
 }
 
