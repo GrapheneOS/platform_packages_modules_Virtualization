@@ -71,6 +71,7 @@ import android.system.virtualizationservice.IVirtualizationService;
 import android.system.virtualizationservice.MemoryTrimLevel;
 import android.system.virtualizationservice.PartitionType;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
+import android.system.virtualizationservice.VirtualMachineRawConfig;
 import android.system.virtualizationservice.VirtualMachineState;
 import android.util.JsonReader;
 import android.util.Log;
@@ -810,6 +811,58 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
+    private android.system.virtualizationservice.VirtualMachineConfig
+            createVirtualMachineConfigForRawFrom(VirtualMachineConfig vmConfig)
+                    throws IllegalStateException {
+        VirtualMachineRawConfig rawConfig = vmConfig.toVsRawConfig();
+        return android.system.virtualizationservice.VirtualMachineConfig.rawConfig(rawConfig);
+    }
+
+    private android.system.virtualizationservice.VirtualMachineConfig
+            createVirtualMachineConfigForAppFrom(
+                    VirtualMachineConfig vmConfig, IVirtualizationService service)
+                    throws RemoteException, IOException, VirtualMachineException {
+        VirtualMachineAppConfig appConfig = vmConfig.toVsConfig(mContext.getPackageManager());
+        appConfig.instanceImage = ParcelFileDescriptor.open(mInstanceFilePath, MODE_READ_WRITE);
+        appConfig.name = mName;
+        if (mInstanceIdPath != null) {
+            appConfig.instanceId = Files.readAllBytes(mInstanceIdPath.toPath());
+        } else {
+            // FEATURE_LLPVM_CHANGES is disabled, instance_id is not used.
+            appConfig.instanceId = new byte[64];
+        }
+        if (mEncryptedStoreFilePath != null) {
+            appConfig.encryptedStorageImage =
+                    ParcelFileDescriptor.open(mEncryptedStoreFilePath, MODE_READ_WRITE);
+        }
+
+        if (!vmConfig.getExtraApks().isEmpty()) {
+            // Extra APKs were specified directly, rather than via config file.
+            // We've already populated the file names for the extra APKs and IDSigs
+            // (via setupExtraApks). But we also need to open the APK files and add
+            // fds for them to the payload config.
+            // This isn't needed when the extra APKs are specified in a config file -
+            // then
+            // Virtualization Manager opens them itself.
+            List<ParcelFileDescriptor> extraApkFiles = new ArrayList<>(mExtraApks.size());
+            for (ExtraApkSpec extraApk : mExtraApks) {
+                try {
+                    extraApkFiles.add(ParcelFileDescriptor.open(extraApk.apk, MODE_READ_ONLY));
+                } catch (FileNotFoundException e) {
+                    throw new VirtualMachineException("Failed to open extra APK", e);
+                }
+            }
+            appConfig.payload.getPayloadConfig().extraApks = extraApkFiles;
+        }
+
+        try {
+            createIdSigsAndUpdateConfig(service, appConfig);
+        } catch (FileNotFoundException e) {
+            throw new VirtualMachineException("Failed to generate APK signature", e);
+        }
+        return android.system.virtualizationservice.VirtualMachineConfig.appConfig(appConfig);
+    }
+
     /**
      * Runs this virtual machine. The returning of this method however doesn't mean that the VM has
      * actually started running or the OS has booted there. Such events can be notified by
@@ -850,50 +903,10 @@ public class VirtualMachine implements AutoCloseable {
                 }
 
                 VirtualMachineConfig vmConfig = getConfig();
-                VirtualMachineAppConfig appConfig =
-                        vmConfig.toVsConfig(mContext.getPackageManager());
-                appConfig.instanceImage =
-                        ParcelFileDescriptor.open(mInstanceFilePath, MODE_READ_WRITE);
-                appConfig.name = mName;
-                if (mInstanceIdPath != null) {
-                    appConfig.instanceId = Files.readAllBytes(mInstanceIdPath.toPath());
-                } else {
-                    // FEATURE_LLPVM_CHANGES is disabled, instance_id is not used.
-                    appConfig.instanceId = new byte[64];
-                }
-                if (mEncryptedStoreFilePath != null) {
-                    appConfig.encryptedStorageImage =
-                            ParcelFileDescriptor.open(mEncryptedStoreFilePath, MODE_READ_WRITE);
-                }
-
-                if (!vmConfig.getExtraApks().isEmpty()) {
-                    // Extra APKs were specified directly, rather than via config file.
-                    // We've already populated the file names for the extra APKs and IDSigs
-                    // (via setupExtraApks). But we also need to open the APK files and add
-                    // fds for them to the payload config.
-                    // This isn't needed when the extra APKs are specified in a config file - then
-                    // Virtualization Manager opens them itself.
-                    List<ParcelFileDescriptor> extraApkFiles = new ArrayList<>(mExtraApks.size());
-                    for (ExtraApkSpec extraApk : mExtraApks) {
-                        try {
-                            extraApkFiles.add(
-                                    ParcelFileDescriptor.open(extraApk.apk, MODE_READ_ONLY));
-                        } catch (FileNotFoundException e) {
-                            throw new VirtualMachineException("Failed to open extra APK", e);
-                        }
-                    }
-                    appConfig.payload.getPayloadConfig().extraApks = extraApkFiles;
-                }
-
-                try {
-                    createIdSigsAndUpdateConfig(service, appConfig);
-                } catch (FileNotFoundException e) {
-                    throw new VirtualMachineException("Failed to generate APK signature", e);
-                }
-
                 android.system.virtualizationservice.VirtualMachineConfig vmConfigParcel =
-                        android.system.virtualizationservice.VirtualMachineConfig.appConfig(
-                                appConfig);
+                        vmConfig.getRawConfigPath() != null
+                                ? createVirtualMachineConfigForRawFrom(vmConfig)
+                                : createVirtualMachineConfigForAppFrom(vmConfig, service);
 
                 mVirtualMachine =
                         service.createVm(

@@ -15,6 +15,7 @@
 //! Safe wrappers around the BoringSSL API.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(clippy::or_fun_call)]
 
 extern crate alloc;
 
