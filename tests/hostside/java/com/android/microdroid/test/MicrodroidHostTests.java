@@ -82,6 +82,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.Objects;
 
 @RunWith(DeviceJUnit4Parameterized.class)
 @UseParametersRunnerFactory(DeviceJUnit4ClassRunnerWithParameters.RunnerFactory.class)
@@ -1041,66 +1042,48 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Check for preconditions
         assumeVfioPlatformSupported();
 
-        List<String> devices = getAssignableDevices();
+        List<AssignableDevice> devices = getAssignableDevices();
         assumeFalse("no assignable devices", devices.isEmpty());
 
-        String vmFdtPath = "/sys/firmware/fdt";
-        File testDir = FileUtil.createTempDir("device_assignment_test");
-        File baseFdtFile = new File(testDir, "base_fdt.dtb");
-        File fdtFile = new File(testDir, "fdt.dtb");
-
-        // Generates baseline DT
-        launchWithDeviceAssignment(/* device= */ null);
-        assertThat(mMicrodroidDevice.pullFile(vmFdtPath, baseFdtFile)).isTrue();
-        getAndroidDevice().shutdownMicrodroid(mMicrodroidDevice);
-
-        // Prepares to run dtdiff. It requires dtc.
-        File dtdiff = findTestFile("dtdiff");
-        RunUtil runner = new RunUtil();
-        String separator = System.getProperty("path.separator");
-        String path = dtdiff.getParent() + separator + System.getenv("PATH");
-        runner.setEnvVariable("PATH", path);
+        String dtSysfsPath = "/proc/device-tree/";
 
         // Try assign devices one by one
-        for (String device : devices) {
-            assertThat(device).isNotNull();
-            launchWithDeviceAssignment(device);
-            assertThat(mMicrodroidDevice.pullFile(vmFdtPath, fdtFile)).isTrue();
+        for (AssignableDevice device : devices) {
+            launchWithDeviceAssignment(device.node);
+
+            String dtPath =
+                    new CommandRunner(mMicrodroidDevice)
+                            .run("cat", dtSysfsPath + "__symbols__/" + device.dtbo_label);
+            assertThat(dtPath).isNotEmpty();
+
+            String resolvedDtPath =
+                    new CommandRunner(mMicrodroidDevice)
+                            .run("readlink", "-e", dtSysfsPath + dtPath);
+            assertThat(resolvedDtPath).isNotEmpty();
+
+            String allDevices =
+                    new CommandRunner(mMicrodroidDevice)
+                            .run("readlink", "-e", "/sys/bus/platform/devices/*/of_node");
+            assertThat(allDevices.split("\n")).asList().contains(resolvedDtPath);
+
             getAndroidDevice().shutdownMicrodroid(mMicrodroidDevice);
-
-            CommandResult result =
-                    runner.runTimedCmd(
-                            500,
-                            dtdiff.getAbsolutePath(),
-                            baseFdtFile.getPath(),
-                            fdtFile.getPath());
-
-            assertWithMessage(
-                            "VM's device tree hasn't changed when assigning "
-                                    + device
-                                    + ", result="
-                                    + result)
-                    .that(result.getStatus())
-                    .isNotEqualTo(CommandStatus.SUCCESS);
+            mMicrodroidDevice = null;
         }
-
-        mMicrodroidDevice = null;
     }
 
     private void launchWithDeviceAssignment(String device) throws Exception {
+        Objects.requireNonNull(device);
         final String configPath = "assets/vm_config.json";
 
-        MicrodroidBuilder builder =
+        mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel("full")
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(mProtectedVm)
-                        .gki(mGki);
-        if (device != null) {
-            builder.addAssignableDevice(device);
-        }
-        mMicrodroidDevice = builder.build(getAndroidDevice());
+                        .gki(mGki)
+                        .addAssignableDevice(device)
+                        .build(getAndroidDevice());
 
         assertThat(mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT)).isTrue();
         assertThat(mMicrodroidDevice.enableAdbRoot()).isTrue();

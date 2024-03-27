@@ -22,7 +22,7 @@ use android_system_virtualizationservice::{
     binder::{ParcelFileDescriptor, ProcessState},
 };
 use anyhow::{bail, Context, Result};
-use bssl_avf::{sha256, EcKey, PKey};
+use bssl_avf::{rand_bytes, sha256, EcKey, PKey};
 use client_vm_csr::generate_attestation_key_and_csr;
 use coset::{CborSerializable, CoseMac0, CoseSign};
 use hwtrust::{rkp, session::Session};
@@ -306,12 +306,18 @@ fn vm_instance(vm_type: VmType) -> Result<VmInstance> {
 
 fn nonprotected_vm_instance() -> Result<VmInstance> {
     let rialto = File::open(UNSIGNED_RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
+    // Do not use `#allocateInstanceId` to generate the instance ID because the method
+    // also adds an instance ID to the database it manages.
+    // This is not necessary for this test.
+    let mut instance_id = [0u8; 64];
+    rand_bytes(&mut instance_id).unwrap();
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: String::from("Non protected rialto"),
         bootloader: Some(ParcelFileDescriptor::new(rialto)),
         protectedVm: false,
         memoryMib: 300,
         platformVersion: "~1.0".to_string(),
+        instanceId: instance_id,
         ..Default::default()
     });
     let console = Some(service_vm_manager::android_log_fd()?);

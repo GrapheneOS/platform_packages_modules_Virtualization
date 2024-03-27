@@ -28,8 +28,8 @@ use anyhow::{anyhow, ensure, Context, Result};
 use lazy_static::lazy_static;
 use log::{info, warn};
 use service_vm_comm::{Request, Response, ServiceVmRequest, VmType};
-use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, BufWriter, Write};
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::os::unix::io::FromRawFd;
 use std::path::{Path, PathBuf};
 use std::sync::{Condvar, Mutex};
@@ -41,12 +41,12 @@ use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 const VIRT_DATA_DIR: &str = "/data/misc/apexdata/com.android.virt";
 const RIALTO_PATH: &str = "/apex/com.android.virt/etc/rialto.bin";
 const INSTANCE_IMG_NAME: &str = "service_vm_instance.img";
+const INSTANCE_ID_FILENAME: &str = "service_vm_instance_id";
 const INSTANCE_IMG_SIZE_BYTES: i64 = 1 << 20; // 1MB
 const MEMORY_MB: i32 = 300;
 const WRITE_BUFFER_CAPACITY: usize = 512;
 const READ_TIMEOUT: Duration = Duration::from_secs(10);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
-
 lazy_static! {
     static ref PENDING_REQUESTS: AtomicCounter = AtomicCounter::default();
     static ref SERVICE_VM: Mutex<Option<ServiceVm>> = Mutex::new(None);
@@ -223,10 +223,13 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
         writable: true,
     }];
     let rialto = File::open(RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
+    let instance_id_file = Path::new(VIRT_DATA_DIR).join(INSTANCE_ID_FILENAME);
+    let instance_id = get_or_allocate_instance_id(service.as_ref(), instance_id_file)?;
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: String::from("Service VM"),
         bootloader: Some(ParcelFileDescriptor::new(rialto)),
         disks: vec![DiskImage { image: None, partitions: writable_partitions, writable: true }],
+        instanceId: instance_id,
         protectedVm: true,
         memoryMib: MEMORY_MB,
         cpuTopology: CpuTopology::ONE_CPU,
@@ -240,6 +243,23 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
     let callback = None;
     VmInstance::create(service.as_ref(), &config, console_out, console_in, log, callback)
         .context("Failed to create service VM")
+}
+
+/// TODO(b/291213394): Reuse this method in other places such as vm and compos.
+fn get_or_allocate_instance_id(
+    service: &dyn IVirtualizationService,
+    instance_id_file: PathBuf,
+) -> Result<[u8; 64]> {
+    let mut instance_id = [0; 64];
+    if instance_id_file.exists() {
+        let mut file = File::open(&instance_id_file)?;
+        file.read_exact(&mut instance_id)?;
+    } else {
+        info!("Allocating a new instance ID for the Service VM");
+        instance_id = service.allocateInstanceId()?;
+        fs::write(instance_id_file, instance_id)?;
+    }
+    Ok(instance_id)
 }
 
 /// Returns the file descriptor of the instance image at the given path.

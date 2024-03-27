@@ -96,7 +96,8 @@ impl State {
         }
     }
 
-    /// Record a new VM ID.
+    /// Record a new VM ID.  If there is an existing owner (user_id, app_id) for the VM ID,
+    /// it will be replaced.
     pub fn add_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<()> {
         let user_id: i32 = user_id.try_into().context(format!("user_id {user_id} out of range"))?;
         let app_id: i32 = app_id.try_into().context(format!("app_id {app_id} out of range"))?;

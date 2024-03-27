@@ -372,7 +372,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         Ok(get_assignable_devices()?
             .device
             .into_iter()
-            .map(|x| AssignableDevice { node: x.sysfs_path, kind: x.kind })
+            .map(|x| AssignableDevice { node: x.sysfs_path, dtbo_label: x.dtbo_label })
             .collect::<Vec<_>>())
     }
 
@@ -436,6 +436,28 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         }
         Ok(())
     }
+
+    fn claimVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
+        let state = &mut *self.state.lock().unwrap();
+        if let Some(sk_state) = &mut state.sk_state {
+            let uid = get_calling_uid();
+            info!(
+                "Claiming a VM's instance_id: {:?}, for uid: {:?}",
+                hex::encode(instance_id),
+                uid
+            );
+
+            let user_id = multiuser_get_user_id(uid);
+            let app_id = multiuser_get_app_id(uid);
+            info!("Recording possible new owner of state for (user_id={user_id}, app_id={app_id})");
+            if let Err(e) = sk_state.add_id(instance_id, user_id, app_id) {
+                error!("Failed to update the instance_id owner: {e:?}");
+            }
+        } else {
+            info!("ignoring claimVmInstance() as no ISecretkeeper");
+        }
+        Ok(())
+    }
 }
 
 impl IVirtualizationMaintenance for VirtualizationServiceInternal {
@@ -476,10 +498,8 @@ impl IVirtualizationMaintenance for VirtualizationServiceInternal {
     }
 }
 
-// KEEP IN SYNC WITH assignable_devices.xsd
 #[derive(Debug, Deserialize)]
 struct Device {
-    kind: String,
     dtbo_label: String,
     sysfs_path: String,
 }

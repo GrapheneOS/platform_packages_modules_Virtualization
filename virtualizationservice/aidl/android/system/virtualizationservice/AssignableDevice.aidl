@@ -21,6 +21,6 @@ parcelable AssignableDevice {
     /** Path to SysFS node of the device. */
     String node;
 
-    /** Kind of the device. */
-    String kind;
+    /** DTBO label. */
+    String dtbo_label;
 }

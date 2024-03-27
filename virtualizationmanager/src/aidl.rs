@@ -1521,11 +1521,8 @@ impl IVirtualMachineService for VirtualMachineService {
 }
 
 fn is_secretkeeper_supported() -> bool {
-    // TODO(b/327526008): Session establishment wth secretkeeper is failing.
-    // Re-enable this when fixed.
-    let _sk_supported = binder::is_declared(SECRETKEEPER_IDENTIFIER)
-        .expect("Could not check for declared Secretkeeper interface");
-    false
+    binder::is_declared(SECRETKEEPER_IDENTIFIER)
+        .expect("Could not check for declared Secretkeeper interface")
 }
 
 impl VirtualMachineService {

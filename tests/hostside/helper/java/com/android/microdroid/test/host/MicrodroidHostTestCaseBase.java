@@ -35,6 +35,7 @@ import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.RunUtil;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,6 +65,17 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
 
     protected static final Set<String> SUPPORTED_GKI_VERSIONS =
             Collections.unmodifiableSet(new HashSet(Arrays.asList("android14-6.1")));
+
+    /* Keep this sync with AssignableDevice.aidl */
+    public static final class AssignableDevice {
+        public final String node;
+        public final String dtbo_label;
+
+        public AssignableDevice(String node, String dtbo_label) {
+            this.node = node;
+            this.dtbo_label = dtbo_label;
+        }
+    }
 
     public static void prepareVirtualizationTestSetup(ITestDevice androidDevice)
             throws DeviceNotAvailableException {
@@ -186,18 +198,26 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         return pathLine.substring("package:".length());
     }
 
-    public List<String> parseStringArrayFieldsFromVmInfo(String header) throws Exception {
+    public String parseFieldFromVmInfo(String header) throws Exception {
         CommandRunner android = new CommandRunner(getDevice());
         String result = android.run("/apex/com.android.virt/bin/vm", "info");
-        List<String> ret = new ArrayList<>();
         for (String line : result.split("\n")) {
             if (!line.startsWith(header)) continue;
 
-            JSONArray jsonArray = new JSONArray(line.substring(header.length()));
+            return line.substring(header.length());
+        }
+        return "";
+    }
+
+    public List<String> parseStringArrayFieldsFromVmInfo(String header) throws Exception {
+        String field = parseFieldFromVmInfo(header);
+
+        List<String> ret = new ArrayList<>();
+        if (!field.isEmpty()) {
+            JSONArray jsonArray = new JSONArray(field);
             for (int i = 0; i < jsonArray.length(); i++) {
                 ret.add(jsonArray.getString(i));
             }
-            break;
         }
         return ret;
     }
@@ -208,8 +228,20 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         return result.contains("enabled");
     }
 
-    public List<String> getAssignableDevices() throws Exception {
-        return parseStringArrayFieldsFromVmInfo("Assignable devices: ");
+    public List<AssignableDevice> getAssignableDevices() throws Exception {
+        String field = parseFieldFromVmInfo("Assignable devices: ");
+
+        List<AssignableDevice> ret = new ArrayList<>();
+        if (!field.isEmpty()) {
+            JSONArray jsonArray = new JSONArray(field);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                ret.add(
+                        new AssignableDevice(
+                                jsonObject.getString("node"), jsonObject.getString("dtbo_label")));
+            }
+        }
+        return ret;
     }
 
     public List<String> getSupportedOSList() throws Exception {

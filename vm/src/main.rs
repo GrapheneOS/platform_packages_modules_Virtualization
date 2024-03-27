@@ -30,6 +30,7 @@ use clap::{Args, Parser};
 use create_idsig::command_create_idsig;
 use create_partition::command_create_partition;
 use run::{command_run, command_run_app, command_run_microdroid};
+use serde::Serialize;
 use std::num::NonZeroU16;
 use std::path::{Path, PathBuf};
 
@@ -402,8 +403,17 @@ fn command_info() -> Result<(), Error> {
         println!("VFIO-platform is not supported.");
     }
 
+    #[derive(Serialize)]
+    struct AssignableDevice {
+        node: String,
+        dtbo_label: String,
+    }
+
     let devices = get_service()?.getAssignableDevices()?;
-    let devices = devices.into_iter().map(|x| x.node).collect::<Vec<_>>();
+    let devices: Vec<_> = devices
+        .into_iter()
+        .map(|device| AssignableDevice { node: device.node, dtbo_label: device.dtbo_label })
+        .collect();
     println!("Assignable devices: {}", serde_json::to_string(&devices)?);
 
     let os_list = get_service()?.getSupportedOSList()?;
