@@ -16,8 +16,11 @@
 
 package com.android.virtualization.vmlauncher;
 
+import static android.system.virtualmachine.VirtualMachineConfig.CPU_TOPOLOGY_MATCH_HOST;
+
 import android.app.Activity;
 import android.os.Bundle;
+import android.system.virtualmachine.VirtualMachineCustomImageConfig;
 import android.util.Log;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineCallback;
@@ -25,10 +28,17 @@ import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -38,6 +48,62 @@ public class MainActivity extends Activity {
     private static final boolean DEBUG = true;
     private final ExecutorService mExecutorService = Executors.newFixedThreadPool(4);
     private VirtualMachine mVirtualMachine;
+
+    private VirtualMachineConfig createVirtualMachineConfig(String jsonPath) {
+        VirtualMachineConfig.Builder configBuilder =
+                new VirtualMachineConfig.Builder(getApplication());
+        configBuilder.setCpuTopology(CPU_TOPOLOGY_MATCH_HOST);
+
+        configBuilder.setProtectedVm(false);
+        if (DEBUG) {
+            configBuilder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
+            configBuilder.setVmOutputCaptured(true);
+        }
+        VirtualMachineCustomImageConfig.Builder customImageConfigBuilder =
+                new VirtualMachineCustomImageConfig.Builder();
+        try {
+            String rawJson = new String(Files.readAllBytes(Path.of(jsonPath)));
+            JSONObject json = new JSONObject(rawJson);
+            customImageConfigBuilder.setName(json.optString("name", ""));
+            if (json.has("kernel")) {
+                customImageConfigBuilder.setKernelPath(json.getString("kernel"));
+            }
+            if (json.has("initrd")) {
+                customImageConfigBuilder.setInitrdPath(json.getString("initrd"));
+            }
+            if (json.has("params")) {
+                Arrays.stream(json.getString("params").split(" "))
+                        .forEach(customImageConfigBuilder::addParam);
+            }
+            if (json.has("bootloader")) {
+                customImageConfigBuilder.setInitrdPath(json.getString("bootloader"));
+            }
+            if (json.has("disks")) {
+                JSONArray diskArr = json.getJSONArray("disks");
+                for (int i = 0; i < diskArr.length(); i++) {
+                    JSONObject item = diskArr.getJSONObject(i);
+                    if (item.has("image")) {
+                        if (item.optBoolean("writable", false)) {
+                            customImageConfigBuilder.addDisk(
+                                    VirtualMachineCustomImageConfig.Disk.RWDisk(
+                                            item.getString("image")));
+                        } else {
+                            customImageConfigBuilder.addDisk(
+                                    VirtualMachineCustomImageConfig.Disk.RODisk(
+                                            item.getString("image")));
+                        }
+                    }
+                }
+            }
+
+            configBuilder.setMemoryBytes(8L * 1024 * 1024 * 1024 /* 8 GB */);
+            configBuilder.setCustomImageConfig(customImageConfigBuilder.build());
+
+        } catch (JSONException | IOException e) {
+            throw new IllegalStateException("malformed input", e);
+        }
+        return configBuilder.build();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,15 +155,8 @@ public class MainActivity extends Activity {
                 };
 
         try {
-            VirtualMachineConfig.Builder builder =
-                    new VirtualMachineConfig.Builder(getApplication());
-            builder.setRawConfigPath("/data/local/tmp/vm_config.json");
-            builder.setProtectedVm(false);
-            if (DEBUG) {
-                builder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
-                builder.setVmOutputCaptured(true);
-            }
-            VirtualMachineConfig config = builder.build();
+            VirtualMachineConfig config =
+                    createVirtualMachineConfig("/data/local/tmp/vm_config.json");
             VirtualMachineManager vmm =
                     getApplication().getSystemService(VirtualMachineManager.class);
             if (vmm == null) {

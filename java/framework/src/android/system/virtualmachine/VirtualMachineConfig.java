@@ -43,13 +43,11 @@ import android.system.virtualizationservice.Partition;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
 import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 import android.system.virtualizationservice.VirtualMachineRawConfig;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.system.virtualmachine.flags.Flags;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,13 +58,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.zip.ZipFile;
 
 /**
@@ -88,7 +85,7 @@ public final class VirtualMachineConfig {
     private static final String KEY_PACKAGENAME = "packageName";
     private static final String KEY_APKPATH = "apkPath";
     private static final String KEY_PAYLOADCONFIGPATH = "payloadConfigPath";
-    private static final String KEY_RAWCONFIGPATH = "rawConfigPath";
+    private static final String KEY_CUSTOMIMAGECONFIG = "customImageConfig";
     private static final String KEY_PAYLOADBINARYNAME = "payloadBinaryPath";
     private static final String KEY_DEBUGLEVEL = "debugLevel";
     private static final String KEY_PROTECTED_VM = "protectedVm";
@@ -184,8 +181,8 @@ public final class VirtualMachineConfig {
     /** Name of the payload binary file within the APK that will be executed within the VM. */
     @Nullable private final String mPayloadBinaryName;
 
-    /** Path within the raw config file to launch the VM. */
-    @Nullable private final String mRawConfigPath;
+    /** The custom image config file to launch the custom VM. */
+    @Nullable private final VirtualMachineCustomImageConfig mCustomImageConfig;
 
     /** The size of storage in bytes. 0 indicates that encryptedStorage is not required */
     private final long mEncryptedStorageBytes;
@@ -224,7 +221,7 @@ public final class VirtualMachineConfig {
             List<String> extraApks,
             @Nullable String payloadConfigPath,
             @Nullable String payloadBinaryName,
-            @Nullable String rawConfigPath,
+            @Nullable VirtualMachineCustomImageConfig customImageConfig,
             @DebugLevel int debugLevel,
             boolean protectedVm,
             long memoryBytes,
@@ -244,7 +241,7 @@ public final class VirtualMachineConfig {
                                 Arrays.asList(extraApks.toArray(new String[0])));
         mPayloadConfigPath = payloadConfigPath;
         mPayloadBinaryName = payloadBinaryName;
-        mRawConfigPath = rawConfigPath;
+        mCustomImageConfig = customImageConfig;
         mDebugLevel = debugLevel;
         mProtectedVm = protectedVm;
         mMemoryBytes = memoryBytes;
@@ -307,9 +304,10 @@ public final class VirtualMachineConfig {
 
         String payloadConfigPath = b.getString(KEY_PAYLOADCONFIGPATH);
         String payloadBinaryName = b.getString(KEY_PAYLOADBINARYNAME);
-        String rawConfigPath = b.getString(KEY_RAWCONFIGPATH);
-        if (rawConfigPath != null) {
-            builder.setRawConfigPath(rawConfigPath);
+        PersistableBundle customImageConfigBundle = b.getPersistableBundle(KEY_CUSTOMIMAGECONFIG);
+        if (customImageConfigBundle != null) {
+            builder.setCustomImageConfig(
+                    VirtualMachineCustomImageConfig.from(customImageConfigBundle));
         } else if (payloadConfigPath != null) {
             builder.setPayloadConfigPath(payloadConfigPath);
         } else {
@@ -372,7 +370,9 @@ public final class VirtualMachineConfig {
         }
         b.putString(KEY_PAYLOADCONFIGPATH, mPayloadConfigPath);
         b.putString(KEY_PAYLOADBINARYNAME, mPayloadBinaryName);
-        b.putString(KEY_RAWCONFIGPATH, mRawConfigPath);
+        if (mCustomImageConfig != null) {
+            b.putPersistableBundle(KEY_CUSTOMIMAGECONFIG, mCustomImageConfig.toPersistableBundle());
+        }
         b.putInt(KEY_DEBUGLEVEL, mDebugLevel);
         b.putBoolean(KEY_PROTECTED_VM, mProtectedVm);
         b.putInt(KEY_CPU_TOPOLOGY, mCpuTopology);
@@ -433,13 +433,13 @@ public final class VirtualMachineConfig {
     }
 
     /**
-     * Returns the path within the raw config file to launch the VM.
+     * Returns the custom image config to launch the custom VM.
      *
      * @hide
      */
     @Nullable
-    public String getRawConfigPath() {
-        return mRawConfigPath;
+    public VirtualMachineCustomImageConfig getCustomImageConfig() {
+        return mCustomImageConfig;
     }
 
     /**
@@ -585,96 +585,67 @@ public final class VirtualMachineConfig {
                 && Objects.equals(this.mExtraApks, other.mExtraApks);
     }
 
-    // Needs to sync with packages/modules/Virtualization/libs/vmconfig/src/lib.rs
-    VirtualMachineRawConfig toVsRawConfig() throws IllegalStateException {
-        VirtualMachineRawConfig config = new VirtualMachineRawConfig();
-
+    private ParcelFileDescriptor openOrNull(File file, int mode) {
         try {
-            String rawJson = new String(Files.readAllBytes(Path.of(mRawConfigPath)));
-            JSONObject json = new JSONObject(rawJson);
-            config.name = json.optString("name", "");
-            config.instanceId = new byte[64];
-            if (json.has("kernel")) {
-                config.kernel =
-                        ParcelFileDescriptor.open(
-                                new File(json.getString("kernel")), MODE_READ_ONLY);
-            }
-            if (json.has("initrd")) {
-                config.initrd =
-                        ParcelFileDescriptor.open(
-                                new File(json.getString("initrd")), MODE_READ_ONLY);
-            }
-            if (json.has("params")) {
-                config.params = json.getString("params");
-            }
-            if (json.has("bootloader")) {
-                config.bootloader =
-                        ParcelFileDescriptor.open(
-                                new File(json.getString("bootloader")), MODE_READ_ONLY);
-            }
-            if (json.has("disks")) {
-                JSONArray diskArr = json.getJSONArray("disks");
-                config.disks = new DiskImage[diskArr.length()];
-                for (int i = 0; i < diskArr.length(); i++) {
-                    config.disks[i] = new DiskImage();
-                    JSONObject item = diskArr.getJSONObject(i);
-                    config.disks[i].writable = item.optBoolean("writable", false);
-                    if (item.has("image")) {
-                        config.disks[i].image =
-                                ParcelFileDescriptor.open(
-                                        new File(item.getString("image")),
-                                        config.disks[i].writable
-                                                ? MODE_READ_WRITE
-                                                : MODE_READ_ONLY);
-                    }
-                    if (item.has("partition")) {
-                        JSONArray partitionArr = json.getJSONArray("partition");
-                        config.disks[i].partitions = new Partition[partitionArr.length()];
-                        for (int j = 0; j < partitionArr.length(); j++) {
-                            config.disks[i].partitions[j] = new Partition();
-                            JSONObject partitionItem = partitionArr.getJSONObject(j);
-                            config.disks[i].partitions[j].writable =
-                                    partitionItem.optBoolean("writable", false);
-                            config.disks[i].partitions[j].label = partitionItem.getString("label");
-                            config.disks[i].partitions[j].image =
-                                    ParcelFileDescriptor.open(
-                                            new File(partitionItem.getString("image")),
-                                            config.disks[i].partitions[j].writable
-                                                    ? MODE_READ_WRITE
-                                                    : MODE_READ_ONLY);
-                        }
-                    } else {
-                        config.disks[i].partitions = new Partition[0];
-                    }
-                }
-            } else {
-                config.disks = new DiskImage[0];
-            }
-            // The value which is set by setProtectedVm is used.
-            if (json.has("protected")) {
-                Log.d(TAG, "'protected' field is ignored, the value from setProtectedVm is used");
-            }
-            config.protectedVm = this.mProtectedVm;
-            config.memoryMib = json.optInt("memory_mib", 0);
-            if (json.optString("cpu_topology", "one_cpu").equals("match_host")) {
-                config.cpuTopology = CPU_TOPOLOGY_MATCH_HOST;
-            } else {
-                config.cpuTopology = CPU_TOPOLOGY_ONE_CPU;
-            }
-            config.platformVersion = json.getString("platform_version");
-            if (json.has("devices")) {
-                JSONArray arr = json.getJSONArray("devices");
-                config.devices = new String[arr.length()];
-                for (int i = 0; i < arr.length(); i++) {
-                    config.devices[i] = arr.getString(i);
-                }
-            } else {
-                config.devices = new String[0];
-            }
-
-        } catch (JSONException | IOException e) {
-            throw new IllegalStateException("malformed input", e);
+            return ParcelFileDescriptor.open(file, mode);
+        } catch (FileNotFoundException e) {
+            Log.d(TAG, "cannot open", e);
+            return null;
         }
+    }
+
+    VirtualMachineRawConfig toVsRawConfig() throws IllegalStateException, IOException {
+        VirtualMachineRawConfig config = new VirtualMachineRawConfig();
+        VirtualMachineCustomImageConfig customImageConfig = getCustomImageConfig();
+        requireNonNull(customImageConfig);
+        config.name = Optional.ofNullable(customImageConfig.getName()).orElse("");
+        config.instanceId = new byte[64];
+        config.kernel =
+                Optional.of(customImageConfig.getKernelPath())
+                        .map(
+                                (path) -> {
+                                    try {
+                                        return ParcelFileDescriptor.open(
+                                                new File(path), MODE_READ_ONLY);
+                                    } catch (FileNotFoundException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                })
+                        .orElse(null);
+
+        config.initrd =
+                Optional.ofNullable(customImageConfig.getInitrdPath())
+                        .map((path) -> openOrNull(new File(path), MODE_READ_ONLY))
+                        .orElse(null);
+        config.bootloader =
+                Optional.ofNullable(customImageConfig.getBootloaderPath())
+                        .map((path) -> openOrNull(new File(path), MODE_READ_ONLY))
+                        .orElse(null);
+        config.params =
+                Optional.ofNullable(customImageConfig.getParams())
+                        .map((params) -> TextUtils.join(" ", params))
+                        .orElse("");
+        config.disks =
+                new DiskImage
+                        [Optional.ofNullable(customImageConfig.getDisks())
+                                .map(arr -> arr.length)
+                                .orElse(0)];
+        for (int i = 0; i < config.disks.length; i++) {
+            config.disks[i] = new DiskImage();
+            config.disks[i].writable = customImageConfig.getDisks()[i].isWritable();
+
+            config.disks[i].image =
+                    ParcelFileDescriptor.open(
+                            new File(customImageConfig.getDisks()[i].getImagePath()),
+                            config.disks[i].writable ? MODE_READ_WRITE : MODE_READ_ONLY);
+            config.disks[i].partitions = new Partition[0];
+        }
+
+        config.protectedVm = this.mProtectedVm;
+        config.memoryMib = bytesToMebiBytes(mMemoryBytes);
+        config.cpuTopology = (byte) this.mCpuTopology;
+        config.devices = EMPTY_STRING_ARRAY;
+        config.platformVersion = "~1.0";
         return config;
     }
 
@@ -804,7 +775,7 @@ public final class VirtualMachineConfig {
         @Nullable private String mApkPath;
         private final List<String> mExtraApks = new ArrayList<>();
         @Nullable private String mPayloadConfigPath;
-        @Nullable private String mRawConfigPath;
+        @Nullable private VirtualMachineCustomImageConfig mCustomImageConfig;
         @Nullable private String mPayloadBinaryName;
         @DebugLevel private int mDebugLevel = DEBUG_LEVEL_NONE;
         private boolean mProtectedVm;
@@ -854,11 +825,11 @@ public final class VirtualMachineConfig {
                 // This should never happen, unless we're deserializing a bad config
                 throw new IllegalStateException("apkPath or packageName must be specified");
             }
-            if (mRawConfigPath != null) {
+            if (mCustomImageConfig != null) {
                 if (mPayloadBinaryName != null || mPayloadConfigPath != null) {
                     throw new IllegalStateException(
-                            "setRawConfigPath and (setPayloadBinaryName or setPayloadConfigPath)"
-                                    + " may not both be called");
+                            "setCustomImageConfig and (setPayloadBinaryName or"
+                                    + " setPayloadConfigPath) may not both be called");
                 }
             } else if (mPayloadBinaryName == null) {
                 if (mPayloadConfigPath == null) {
@@ -893,7 +864,7 @@ public final class VirtualMachineConfig {
                     mExtraApks,
                     mPayloadConfigPath,
                     mPayloadBinaryName,
-                    mRawConfigPath,
+                    mCustomImageConfig,
                     mDebugLevel,
                     mProtectedVm,
                     mMemoryBytes,
@@ -955,25 +926,15 @@ public final class VirtualMachineConfig {
         }
 
         /**
-         * Sets the path within the raw config file to launch the VM. The file is a JSON file; see
-         * packages/modules/Virtualization/libs/vmconfig/src/lib.rs for the format.
+         * Sets the custom config file to launch the custom VM.
          *
          * @hide
          */
         @RequiresPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
         @NonNull
-        public Builder setRawConfigPath(@NonNull String rawConfigPath) {
-            // TODO: This method will be removed when the builder support more structured methods
-            // for that like below.
-            //    builder
-            //      .setLinuxKernelConfig(new LinuxKernelConfig()
-            //        .setKernelPath(...)
-            //        .setInitRamdiskPath(...)
-            //        .setKernelCommandLine(...))
-            //      .setDiskConfig(new DiskConfig()
-            //        .addDisk(...)
-            //        .addDisk(...))
-            mRawConfigPath = requireNonNull(rawConfigPath, "rawConfigPath must not be null");
+        public Builder setCustomImageConfig(
+                @NonNull VirtualMachineCustomImageConfig customImageConfig) {
+            this.mCustomImageConfig = customImageConfig;
             return this;
         }
 

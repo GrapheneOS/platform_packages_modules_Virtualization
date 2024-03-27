@@ -40,10 +40,10 @@ soong_config_module_type {
 
 soong_config_string_variable {
     name: "release_avf_microdroid_kernel_version",
-    // TODO(b/298011555): add 15-6.6
     values: [
         "android14_61",
         "android15_61",
+        "android15_66",
     ],
 }
 
@@ -57,6 +57,9 @@ avf_microdroid_kernel_prebuilt {
             },
             android15_61: {
                 srcs: ["android15-6.1/arm64/kernel-6.1"],
+            },
+            android15_66: {
+                srcs: ["android15-6.6/arm64/kernel-6.6"],
             },
             // In case release configuration doesn't specify value of the
             // RELEASE_AVF_MICRODROID_KERNEL_VERSION fallback to the kernel we
@@ -79,6 +82,9 @@ avf_microdroid_kernel_prebuilt {
             },
             android15_61: {
                 srcs: ["android15-6.1/x86_64/kernel-6.1"],
+            },
+            android15_66: {
+                srcs: ["android15-6.6/x86_64/kernel-6.6"],
             },
             // In case release configuration doesn't specify value of the
             // RELEASE_AVF_MICRODROID_KERNEL_VERSION fallback to the kernel we

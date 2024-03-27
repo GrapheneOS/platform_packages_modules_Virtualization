@@ -813,7 +813,7 @@ public class VirtualMachine implements AutoCloseable {
 
     private android.system.virtualizationservice.VirtualMachineConfig
             createVirtualMachineConfigForRawFrom(VirtualMachineConfig vmConfig)
-                    throws IllegalStateException {
+                    throws IllegalStateException, IOException {
         VirtualMachineRawConfig rawConfig = vmConfig.toVsRawConfig();
         return android.system.virtualizationservice.VirtualMachineConfig.rawConfig(rawConfig);
     }
@@ -904,7 +904,7 @@ public class VirtualMachine implements AutoCloseable {
 
                 VirtualMachineConfig vmConfig = getConfig();
                 android.system.virtualizationservice.VirtualMachineConfig vmConfigParcel =
-                        vmConfig.getRawConfigPath() != null
+                        vmConfig.getCustomImageConfig() != null
                                 ? createVirtualMachineConfigForRawFrom(vmConfig)
                                 : createVirtualMachineConfigForAppFrom(vmConfig, service);
 
