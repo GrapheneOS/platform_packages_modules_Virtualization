@@ -34,7 +34,7 @@ genrule {
     name: "microdroid_initrd_gen",
     srcs: [
         ":microdroid_ramdisk",
-        ":microdroid_fstab_ramdisk",
+        ":microdroid_first_stage_ramdisk",
     ],
     out: ["microdroid_initrd.img"],
     cmd: "cat $(in) > $(out)",
@@ -44,7 +44,7 @@ genrule {
     name: "microdroid_gki-android14-6.1_initrd_gen_arm64",
     srcs: [
         ":microdroid_ramdisk",
-        ":microdroid_fstab_ramdisk",
+        ":microdroid_first_stage_ramdisk",
         ":microdroid_gki_modules-6.1-arm64",
     ],
     out: ["microdroid_initrd.img"],
@@ -55,7 +55,7 @@ genrule {
     name: "microdroid_gki-android14-6.1_initrd_gen_x86_64",
     srcs: [
         ":microdroid_ramdisk",
-        ":microdroid_fstab_ramdisk",
+        ":microdroid_first_stage_ramdisk",
         ":microdroid_gki_modules-6.1-x86_64",
     ],
     out: ["microdroid_initrd.img"],

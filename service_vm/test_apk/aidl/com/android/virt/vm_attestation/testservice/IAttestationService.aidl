@@ -29,16 +29,16 @@ interface IAttestationService {
     @Backing(type="int")
     enum AttestationStatus {
         /** The remote attestation completes successfully. */
-        ATTESTATION_OK = 0,
+        OK = 0,
 
         /** The challenge size is not between 0 and 64. */
-        ATTESTATION_ERROR_INVALID_CHALLENGE = 1,
+        ERROR_INVALID_CHALLENGE = 1,
 
         /** Failed to attest the VM. Please retry at a later time. */
-        ATTESTATION_ERROR_ATTESTATION_FAILED = 2,
+        ERROR_ATTESTATION_FAILED = 2,
 
         /** Remote attestation is not supported in the current environment. */
-        ATTESTATION_ERROR_UNSUPPORTED = 3,
+        ERROR_UNSUPPORTED = 3,
     }
 
     /**

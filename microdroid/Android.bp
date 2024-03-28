@@ -343,9 +343,8 @@ flag_aware_microdroid_filesystem {
     },
 }
 
-// TODO(ioffe): rename to microdroid_first_stage_ramdisk
 android_filesystem {
-    name: "microdroid_fstab_ramdisk",
+    name: "microdroid_first_stage_ramdisk",
     deps: [
         "microdroid_fstab",
     ],

@@ -113,7 +113,7 @@ impl IAttestationService for AttestationService {
         };
         let certificate_chain =
             res.certificate_chain().with_log().or_service_specific_exception(-1)?;
-        let status = AttestationStatus::ATTESTATION_OK;
+        let status = AttestationStatus::OK;
         let signature = res.sign(message).with_log().or_service_specific_exception(-1)?;
         Ok(SigningResult { certificateChain: certificate_chain, signature, status })
     }
@@ -126,16 +126,14 @@ impl IAttestationService for AttestationService {
 
 fn to_attestation_status(status: AVmAttestationStatus) -> AttestationStatus {
     match status {
-        AVmAttestationStatus::ATTESTATION_OK => AttestationStatus::ATTESTATION_OK,
+        AVmAttestationStatus::ATTESTATION_OK => AttestationStatus::OK,
         AVmAttestationStatus::ATTESTATION_ERROR_INVALID_CHALLENGE => {
-            AttestationStatus::ATTESTATION_ERROR_INVALID_CHALLENGE
+            AttestationStatus::ERROR_INVALID_CHALLENGE
         }
         AVmAttestationStatus::ATTESTATION_ERROR_ATTESTATION_FAILED => {
-            AttestationStatus::ATTESTATION_ERROR_ATTESTATION_FAILED
+            AttestationStatus::ERROR_ATTESTATION_FAILED
         }
-        AVmAttestationStatus::ATTESTATION_ERROR_UNSUPPORTED => {
-            AttestationStatus::ATTESTATION_ERROR_UNSUPPORTED
-        }
+        AVmAttestationStatus::ATTESTATION_ERROR_UNSUPPORTED => AttestationStatus::ERROR_UNSUPPORTED,
     }
 }
 

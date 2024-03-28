@@ -280,11 +280,10 @@ pub fn verify_payload<'a>(
     }
 
     let initrd = initrd.unwrap();
-    let mut initrd_ops = Ops::new(&payload);
     let (debug_level, initrd_descriptor) =
-        if verify_initrd(&mut initrd_ops, PartitionName::InitrdNormal, initrd).is_ok() {
+        if verify_initrd(&mut ops, PartitionName::InitrdNormal, initrd).is_ok() {
             (DebugLevel::None, hash_descriptors.initrd_normal)
-        } else if verify_initrd(&mut initrd_ops, PartitionName::InitrdDebug, initrd).is_ok() {
+        } else if verify_initrd(&mut ops, PartitionName::InitrdDebug, initrd).is_ok() {
             (DebugLevel::Full, hash_descriptors.initrd_debug)
         } else {
             return Err(SlotVerifyError::Verification(None).into());

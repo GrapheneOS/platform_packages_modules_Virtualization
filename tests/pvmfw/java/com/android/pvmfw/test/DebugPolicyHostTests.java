@@ -50,7 +50,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
 
     @NonNull
     private static final String CUSTOM_DEBUG_POLICY_PATH =
-            TEST_ROOT + CUSTOM_DEBUG_POLICY_FILE_NAME;
+            TRADEFED_TEST_ROOT + CUSTOM_DEBUG_POLICY_FILE_NAME;
 
     @NonNull
     private static final String CUSTOM_DEBUG_POLICY_PATH_PROP =

@@ -320,6 +320,7 @@ impl fuse::filesystem::FileSystem for ZipFuse {
         }
     }
 
+    #[allow(clippy::unused_io_amount)]
     fn read<W: io::Write + ZeroCopyWriter>(
         &self,
         _ctx: Context,

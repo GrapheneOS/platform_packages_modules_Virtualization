@@ -23,6 +23,7 @@ java_test_host {
     per_testcase_directory: true,
     data: [
         ":MicrodroidTestApp",
+        ":MicrodroidTestAppUpdated",
         ":microdroid_general_sepolicy.conf",
         ":test.com.android.virt.pem",
         ":test2.com.android.virt.pem",

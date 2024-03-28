@@ -43,6 +43,9 @@
     },
     {
       "name": "libsecretkeeper_comm.test"
+    },
+    {
+      "name": "libdice_driver_test"
     }
   ],
   "avf-postsubmit": [

@@ -57,8 +57,6 @@ cc_defaults {
         hwaddress: false,
     },
     native_coverage: false,
-    // Use --lto-O0 to reduce binary size.
-    lto_O0: true,
 }
 
 // Used by cc_binary when producing the ELF of a vmbase-based binary.

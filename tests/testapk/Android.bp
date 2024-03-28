@@ -33,10 +33,10 @@ java_defaults {
     compile_multilib: "both",
 }
 
-android_test {
-    name: "MicrodroidTestApp",
-    defaults: ["MicrodroidTestAppsDefaults"],
+java_defaults {
+    name: "MicrodroidVersionsTestAppDefaults",
     srcs: ["src/java/**/*.java"],
+    defaults: ["MicrodroidTestAppsDefaults"],
     static_libs: [
         "MicrodroidDeviceTestHelper",
         "VmAttestationTestUtil",
@@ -58,12 +58,25 @@ android_test {
         "libvm_attestation_test_payload",
     ],
     min_sdk_version: "33",
+}
+
+android_test {
+    name: "MicrodroidTestApp",
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
+    manifest: "AndroidManifestV5.xml",
     // Defined in ../vmshareapp/Android.bp
     data: [
+        ":MicrodroidTestAppUpdated",
         ":MicrodroidVmShareApp",
         ":test_microdroid_vendor_image",
         ":test_microdroid_vendor_image_unsigned",
     ],
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestAppUpdated",
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
+    manifest: "AndroidManifestV6.xml",
 }
 
 // Defaults shared between MicrodroidTestNativeLib and MicrodroidPayloadInOtherAppNativeLib shared

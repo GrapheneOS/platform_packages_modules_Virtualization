@@ -59,7 +59,7 @@ impl<'a> Ops<'a> {
     pub(crate) fn verify_partition(
         &mut self,
         partition_name: &CStr,
-    ) -> SlotVerifyResult<SlotVerifyData> {
+    ) -> SlotVerifyResult<SlotVerifyData<'a>> {
         slot_verify(
             self,
             &[partition_name],
@@ -70,7 +70,7 @@ impl<'a> Ops<'a> {
     }
 }
 
-impl<'a> avb::Ops for Ops<'a> {
+impl<'a> avb::Ops<'a> for Ops<'a> {
     fn read_from_partition(
         &mut self,
         partition: &CStr,
@@ -82,7 +82,7 @@ impl<'a> avb::Ops for Ops<'a> {
         Ok(buffer.len())
     }
 
-    fn get_preloaded_partition(&mut self, partition: &CStr) -> IoResult<&[u8]> {
+    fn get_preloaded_partition(&mut self, partition: &CStr) -> IoResult<&'a [u8]> {
         self.payload.get_partition(partition)
     }
 

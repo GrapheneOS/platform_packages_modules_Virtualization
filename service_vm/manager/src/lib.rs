@@ -277,6 +277,7 @@ fn instance_img(
     }
     let instance_img = OpenOptions::new()
         .create(true)
+        .truncate(true)
         .read(true)
         .write(true)
         .open(instance_img_path)

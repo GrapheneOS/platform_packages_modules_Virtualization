@@ -19,7 +19,6 @@ package com.android.pvmfw.test;
 import static com.android.tradefed.device.TestDevice.MicrodroidBuilder;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth.assertWithMessage;
 
 import static org.junit.Assume.assumeTrue;
 
@@ -27,12 +26,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.microdroid.test.host.MicrodroidHostTestCaseBase;
-import com.android.microdroid.test.host.CommandRunner;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.device.TestDevice;
-import com.android.tradefed.util.CommandResult;
-import com.android.tradefed.util.CommandStatus;
 import com.android.tradefed.util.FileUtil;
 
 import org.junit.After;
@@ -62,17 +58,11 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
 
     @NonNull public static final String CUSTOM_PVMFW_FILE_PREFIX = "pvmfw";
     @NonNull public static final String CUSTOM_PVMFW_FILE_SUFFIX = ".bin";
-    @NonNull public static final String CUSTOM_PVMFW_IMG_PATH = TEST_ROOT + PVMFW_FILE_NAME;
+
+    @NonNull
+    public static final String CUSTOM_PVMFW_IMG_PATH = TRADEFED_TEST_ROOT + PVMFW_FILE_NAME;
+
     @NonNull public static final String CUSTOM_PVMFW_IMG_PATH_PROP = "hypervisor.pvmfw.path";
-
-    @NonNull private static final String DUMPSYS = "dumpsys";
-
-    @NonNull
-    private static final String DUMPSYS_MISSING_SERVICE_MSG_PREFIX = "Can't find service: ";
-
-    @NonNull
-    private static final String SECRET_KEEPER_AIDL =
-            "android.hardware.security.secretkeeper.ISecretkeeper/default";
 
     @Nullable private File mPvmfwBinFileOnHost;
     @Nullable private File mBccFileOnHost;
@@ -100,23 +90,7 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
         // This is prepared by AndroidTest.xml
         mVmReferenceDtFile = mAndroidDevice.pullFile(VM_REFERENCE_DT_PATH);
 
-        CommandRunner runner = new CommandRunner(mAndroidDevice);
-        CommandResult result = runner.runForResult(DUMPSYS, SECRET_KEEPER_AIDL);
-
-        // dumpsys prints 'Can't find service: ~' to stderr if secret keeper HAL is missing,
-        // but it doesn't return any error code for it.
-        // Read stderr to know whether secret keeper is supported, and stop test for any other case.
-        assertWithMessage("Failed to run " + DUMPSYS + ", result=" + result)
-                .that(result.getStatus() == CommandStatus.SUCCESS && result.getExitCode() == 0)
-                .isTrue();
-        if (result.getStderr() != null && !result.getStderr().trim().isEmpty()) {
-            assertWithMessage(
-                            "Unexpected stderr from " + DUMPSYS + ", stderr=" + result.getStderr())
-                    .that(result.getStderr().trim().startsWith(DUMPSYS_MISSING_SERVICE_MSG_PREFIX))
-                    .isTrue();
-        } else {
-            mSecretKeeperSupported = true;
-        }
+        mSecretKeeperSupported = isUpdatableVmSupported();
 
         // Prepare for system properties for custom pvmfw.img.
         // File will be prepared later in individual test and then pushed to device

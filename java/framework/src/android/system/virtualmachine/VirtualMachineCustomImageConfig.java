@@ -107,7 +107,7 @@ public class VirtualMachineCustomImageConfig {
                 }
             }
         }
-        return null;
+        return builder.build();
     }
 
     PersistableBundle toPersistableBundle() {

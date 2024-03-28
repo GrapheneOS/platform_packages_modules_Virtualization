@@ -240,7 +240,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
 
         // Assert.
-        assertThat(signingResult.status).isEqualTo(AttestationStatus.ATTESTATION_ERROR_UNSUPPORTED);
+        assertThat(signingResult.status).isEqualTo(AttestationStatus.ERROR_UNSUPPORTED);
     }
 
     @Test
@@ -267,7 +267,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 runVmAttestationService(
                         TAG, vm, invalidChallenge, VM_ATTESTATION_MESSAGE.getBytes());
         assertThat(signingResultInvalidChallenge.status)
-                .isEqualTo(AttestationStatus.ATTESTATION_ERROR_INVALID_CHALLENGE);
+                .isEqualTo(AttestationStatus.ERROR_INVALID_CHALLENGE);
 
         // Check with a valid challenge.
         byte[] challenge = new byte[32];
@@ -277,10 +277,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertWithMessage(
                         "VM attestation should either succeed or fail when the network is unstable")
                 .that(signingResult.status)
-                .isAnyOf(
-                        AttestationStatus.ATTESTATION_OK,
-                        AttestationStatus.ATTESTATION_ERROR_ATTESTATION_FAILED);
-        if (signingResult.status == AttestationStatus.ATTESTATION_OK) {
+                .isAnyOf(AttestationStatus.OK, AttestationStatus.ERROR_ATTESTATION_FAILED);
+        if (signingResult.status == AttestationStatus.OK) {
             X509Certificate[] certs =
                     X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
             X509Utils.verifyAvfRelatedCerts(certs, challenge, TEST_APP_PACKAGE_NAME);
