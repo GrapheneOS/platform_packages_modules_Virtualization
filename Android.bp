@@ -98,6 +98,7 @@ genrule_defaults {
 aconfig_declarations {
     name: "avf_aconfig_flags",
     package: "com.android.system.virtualmachine.flags",
+    container: "com.android.virt",
     srcs: [
         "avf_flags.aconfig",
     ],

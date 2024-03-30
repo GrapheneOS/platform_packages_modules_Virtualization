@@ -1,4 +1,5 @@
 package: "com.android.system.virtualmachine.flags"
+container: "com.android.virt"
 
 flag {
   name: "avf_v_test_apis"
