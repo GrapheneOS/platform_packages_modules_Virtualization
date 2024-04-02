@@ -5,3 +5,11 @@ void AVmPayload_getDiceAttestationChain() {}
 void AVmPayload_getDiceAttestationCdi() {}
 void AVmPayload_getApkContentsPath() {}
 void AVmPayload_getEncryptedStoragePath() {}
+void AVmPayload_requestAttestation() {}
+void AVmPayload_requestAttestationForTesting() {}
+void AVmAttestationResult_getPrivateKey() {}
+void AVmAttestationResult_sign() {}
+void AVmAttestationResult_free() {}
+void AVmAttestationStatus_toString() {}
+void AVmAttestationResult_getCertificateCount() {}
+void AVmAttestationResult_getCertificateAt() {}

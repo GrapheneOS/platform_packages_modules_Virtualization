@@ -1,4 +1,8 @@
 {
   "name": "com.android.virt",
-  "version": 2
+  "version": 2,
+  "requireNativeLibs": [
+    "libEGL.so",
+    "libGLESv2.so"
+  ]
 }

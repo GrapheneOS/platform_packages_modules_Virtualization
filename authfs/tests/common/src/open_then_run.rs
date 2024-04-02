@@ -118,6 +118,7 @@ fn parse_args() -> Result<Args> {
                 .read(true)
                 .write(true)
                 .create(true)
+                .truncate(true)
                 .open(path)
                 .with_context(|| format!("Open {} read-write", path))?,
         ))
