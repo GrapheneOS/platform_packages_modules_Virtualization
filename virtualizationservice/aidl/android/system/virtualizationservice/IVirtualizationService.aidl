@@ -98,4 +98,19 @@ interface IVirtualizationService {
      * For more info see packages/modules/Virtualization/docs/updatable_vm.md
      */
     boolean isUpdatableVmSupported();
+
+    /**
+     * Notification that state associated with a VM should be removed.
+     *
+     * @param instanceId The ID for the VM.
+     */
+    void removeVmInstance(in byte[64] instanceId);
+
+    /**
+     * Notification that ownership of a VM has been claimed by the caller.  Note that no permission
+     * checks (with respect to the previous owner) are performed.
+     *
+     * @param instanceId The ID for the VM.
+     */
+    void claimVmInstance(in byte[64] instanceId);
 }

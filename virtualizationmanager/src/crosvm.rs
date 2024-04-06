@@ -44,7 +44,8 @@ use std::thread::{self, JoinHandle};
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     MemoryTrimLevel::MemoryTrimLevel,
-    VirtualMachineAppConfig::DebugLevel::DebugLevel
+    VirtualMachineAppConfig::DebugLevel::DebugLevel,
+    DisplayConfig::DisplayConfig as DisplayConfigParcelable,
 };
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
@@ -118,6 +119,32 @@ pub struct CrosvmConfig {
     pub vfio_devices: Vec<VfioDevice>,
     pub dtbo: Option<File>,
     pub device_tree_overlay: Option<File>,
+    pub display_config: Option<DisplayConfig>,
+}
+
+#[derive(Debug)]
+pub struct DisplayConfig {
+    pub width: NonZeroU32,
+    pub height: NonZeroU32,
+    pub horizontal_dpi: NonZeroU32,
+    pub vertical_dpi: NonZeroU32,
+    pub refresh_rate: NonZeroU32,
+}
+
+impl DisplayConfig {
+    pub fn new(raw_config: &DisplayConfigParcelable) -> Result<DisplayConfig> {
+        let width = try_into_non_zero_u32(raw_config.width)?;
+        let height = try_into_non_zero_u32(raw_config.height)?;
+        let horizontal_dpi = try_into_non_zero_u32(raw_config.horizontalDpi)?;
+        let vertical_dpi = try_into_non_zero_u32(raw_config.verticalDpi)?;
+        let refresh_rate = try_into_non_zero_u32(raw_config.refreshRate)?;
+        Ok(DisplayConfig { width, height, horizontal_dpi, vertical_dpi, refresh_rate })
+    }
+}
+
+fn try_into_non_zero_u32(value: i32) -> Result<NonZeroU32> {
+    let u32_value = value.try_into()?;
+    NonZeroU32::new(u32_value).ok_or(anyhow!("value should be greater than 0"))
 }
 
 /// A disk image to pass to crosvm for a VM.
@@ -926,6 +953,13 @@ fn run_vm(
 
     if let Some(dt_overlay) = &config.device_tree_overlay {
         command.arg("--device-tree-overlay").arg(add_preserved_fd(&mut preserved_fds, dt_overlay));
+    }
+    if let Some(display_config) = &config.display_config {
+        command.arg("--gpu")
+        // TODO(b/331708504): support backend config as well
+        .arg("backend=virglrenderer,context-types=virgl2,egl=true,surfaceless=true,glx=false,gles=true")
+        .arg(format!("--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}", display_config.width, display_config.height, display_config.horizontal_dpi, display_config.vertical_dpi, display_config.refresh_rate))
+        .arg(format!("--android-display-service={}", config.name));
     }
 
     append_platform_devices(&mut command, &mut preserved_fds, &config)?;

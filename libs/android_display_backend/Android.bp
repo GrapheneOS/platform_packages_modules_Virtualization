@@ -1,0 +1,55 @@
+aidl_interface {
+    name: "libcrosvm_android_display_service",
+    srcs: [
+        "aidl/android/crosvm/ICrosvmAndroidDisplayService.aidl",
+    ],
+    include_dirs: [
+        "frameworks/native/aidl/gui",
+    ],
+    local_include_dir: "aidl",
+    unstable: true,
+    backend: {
+        java: {
+            enabled: true,
+        },
+        cpp: {
+            enabled: false,
+        },
+        rust: {
+            enabled: false,
+        },
+        ndk: {
+            enabled: true,
+            // To use Surface
+            additional_shared_libraries: [
+                "libnativewindow",
+            ],
+            apex_available: [
+                "//apex_available:platform",
+                "com.android.virt",
+            ],
+        },
+    },
+}
+
+cc_library_static {
+    name: "libcrosvm_android_display_client",
+    srcs: [
+        "crosvm_android_display_client.cpp",
+    ],
+    whole_static_libs: [
+        "libcrosvm_android_display_service-ndk",
+        "android.system.virtualizationservice_internal-ndk",
+        "android.system.virtualizationcommon-ndk",
+        "android.system.virtualizationservice-ndk",
+        "libyuv",
+    ],
+    shared_libs: [
+        "libbinder_ndk",
+        "libnativewindow",
+    ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+}

@@ -7,7 +7,11 @@
     <uses-feature android:name="android.software.virtualization_framework" android:required="true" />
     <application
         android:label="VmLauncherApp">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity"
+                  android:screenOrientation="landscape"
+                  android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode"
+                  android:theme="@style/MyTheme"
+                  android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

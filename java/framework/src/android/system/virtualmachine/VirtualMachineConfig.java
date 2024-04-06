@@ -641,6 +641,10 @@ public final class VirtualMachineConfig {
             config.disks[i].partitions = new Partition[0];
         }
 
+        config.displayConfig =
+                Optional.ofNullable(customImageConfig.getDisplayConfig())
+                        .map(dc -> dc.toParcelable())
+                        .orElse(null);
         config.protectedVm = this.mProtectedVm;
         config.memoryMib = bytesToMebiBytes(mMemoryBytes);
         config.cpuTopology = (byte) this.mCpuTopology;

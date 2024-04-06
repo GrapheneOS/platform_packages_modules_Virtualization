@@ -11,12 +11,16 @@ the [VM Payload API](../vm_payload/README.md)
 The API classes are all in the
 [`android.system.virtualmachine`](src/android/system/virtualmachine) package.
 
-Note that these APIs are all `@SystemApi` and require the restricted
-`android.permission.MANAGE_VIRTUAL_MACHINE` permission, so they are not
-available to third party apps.
-
 All of these APIs were introduced in API level 34 (Android 14). The classes may
 not exist in devices running an earlier version.
+
+Note that they are all `@SystemApi` and require the restricted
+`android.permission.MANAGE_VIRTUAL_MACHINE` permission, so they are not
+available to third party apps. In Android 14 the permission was available only to
+privileged apps; in Android 15 it is available to all preinstalled apps. On both
+versions it can also be granted to other apps via `adb shell pm grant` for
+development purposes.
+
 
 ## Detecting AVF Support
 
