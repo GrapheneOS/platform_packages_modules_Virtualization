@@ -431,11 +431,6 @@ public class VirtualMachine implements AutoCloseable {
                 VirtualMachineConfig config = VirtualMachineConfig.from(vmDescriptor.getConfigFd());
                 vm = new VirtualMachine(context, name, config, VirtualizationService.getInstance());
                 config.serialize(vm.mConfigFilePath);
-                if (vm.mInstanceIdPath != null) {
-                    vm.importInstanceIdFrom(vmDescriptor.getInstanceIdFd());
-                    vm.claimInstance();
-                }
-
                 try {
                     vm.mInstanceFilePath.createNewFile();
                 } catch (IOException e) {
@@ -452,12 +447,16 @@ public class VirtualMachine implements AutoCloseable {
                     }
                     vm.importEncryptedStoreFrom(vmDescriptor.getEncryptedStoreFd());
                 }
+                if (vm.mInstanceIdPath != null) {
+                    vm.importInstanceIdFrom(vmDescriptor.getInstanceIdFd());
+                    vm.claimInstance();
+                }
             }
             return vm;
         } catch (VirtualMachineException | RuntimeException e) {
             // If anything goes wrong, delete any files created so far and the VM's directory
             try {
-                vmInstanceCleanup(context, name);
+                deleteRecursively(vmDir);
             } catch (Exception innerException) {
                 e.addSuppressed(innerException);
             }

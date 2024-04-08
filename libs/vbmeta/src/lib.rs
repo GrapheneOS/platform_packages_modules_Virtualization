@@ -148,6 +148,11 @@ impl VbMetaImage {
         Descriptors::from_image(&self.data)
     }
 
+    /// Returns the rollback_index of the VBMeta image.
+    pub fn rollback_index(&self) -> u64 {
+        self.header.rollback_index
+    }
+
     /// Get the raw VBMeta image.
     pub fn data(&self) -> &[u8] {
         &self.data
@@ -282,5 +287,20 @@ mod tests {
     #[test]
     fn test_rsa8192_signed_image() -> Result<()> {
         signed_image_has_valid_vbmeta("SHA256_RSA8192", "data/testkey_rsa8192.pem")
+    }
+
+    #[test]
+    fn test_rollback_index() -> Result<()> {
+        let vbmeta = VbMetaImage::verify_path("test_microdroid_vendor_image.img")?;
+        assert_eq!(5, vbmeta.rollback_index());
+        Ok(())
+    }
+
+    #[test]
+    fn test_rollback_index_default_zero() -> Result<()> {
+        let vbmeta =
+            VbMetaImage::verify_path("test_microdroid_vendor_image_no_rollback_index.img")?;
+        assert_eq!(0, vbmeta.rollback_index());
+        Ok(())
     }
 }

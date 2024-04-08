@@ -43,7 +43,7 @@ const AVF_ATTESTATION_EXTENSION_V1: ObjectIdentifier =
 /// Attestation extension contents
 ///
 /// ```asn1
-/// AttestationDescription ::= SEQUENCE {
+/// AttestationExtension ::= SEQUENCE {
 ///     attestationChallenge       OCTET_STRING,
 ///     isVmSecure                 BOOLEAN,
 ///     vmComponents               SEQUENCE OF VmComponent,

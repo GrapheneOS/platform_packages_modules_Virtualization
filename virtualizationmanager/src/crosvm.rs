@@ -440,15 +440,15 @@ impl VmInstance {
 
     /// Waits until payload is started, or timeout expires. When timeout occurs, kill
     /// the VM to prevent indefinite hangup and update the payload_state accordingly.
-    #[allow(let_underscore_lock)]
     fn monitor_payload_hangup(&self, child: Arc<SharedChild>) {
         debug!("Starting to monitor hangup for Microdroid({})", child.id());
-        let (_, result) = self
+        let (state, result) = self
             .payload_state_updated
             .wait_timeout_while(self.payload_state.lock().unwrap(), *BOOT_HANGUP_TIMEOUT, |s| {
                 *s < PayloadState::Started
             })
             .unwrap();
+        drop(state); // we are not interested in state
         let child_still_running = child.try_wait().ok() == Some(None);
         if result.timed_out() && child_still_running {
             error!(

@@ -55,6 +55,7 @@ soong_config_module_type {
     properties: [
         "deps",
         "dirs",
+        "multilib",
     ],
 }
 
@@ -157,9 +158,11 @@ flag_aware_microdroid_system_image {
     // Below are dependencies that are conditionally enabled depending on value of build flags.
     soong_config_variables: {
         release_avf_enable_dice_changes: {
-            deps: [
-                "derive_microdroid_vendor_dice_node",
-            ],
+            multilib: {
+                lib64: {
+                    deps: ["derive_microdroid_vendor_dice_node"],
+                },
+            },
             dirs: [
                 "microdroid_resources",
             ],

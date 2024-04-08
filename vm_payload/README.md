@@ -2,7 +2,7 @@
 
 This directory contains the definition of the VM Payload API. This is a native
 API, exposed as a set of C functions, available to payload code running inside a
-[Microdroid](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/master/microdroid/README.md)
+[Microdroid](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/main/microdroid/README.md)
 VM.
 
 Note that only native code is supported in Microdroid, so no Java APIs are
@@ -17,7 +17,7 @@ The payload should be packaged as one (or more) .so files inside the app's APK -
 under the `lib/<ABI>` directory, like other JNI code.
 
 The primary .so, which is specified as part of the VM configuration via
-[VirtualMachineConfig.Builder#setPayloadBinaryPath](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/master/javalib/src/android/system/virtualmachine/VirtualMachineConfig.java),
+[VirtualMachineConfig.Builder#setPayloadBinaryPath](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/main/java/framework/src/android/system/virtualmachine/VirtualMachineConfig.java),
 must define the entry point for the payload.
 
 This entry point is a C function called `AVmPayload_main()`, as declared in
@@ -36,7 +36,7 @@ against a stub `libvm_payload.so`, where the dependencies will be satisfied at
 runtime from the real `libvm_payload.so` hosted within the Microdroid VM.
 
 See `MicrodroidTestNativeLib` in the [test
-APK](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/master/tests/testapk/Android.bp)
+APK](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/main/tests/testapk/Android.bp)
 for an example.
 
 In other build systems a similar stub `libvm_payload.so` can be built using

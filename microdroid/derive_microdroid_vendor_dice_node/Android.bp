@@ -10,9 +10,20 @@ rust_defaults {
     rustlibs: [
         "libanyhow",
         "libclap",
+        "libcstr",
+        "libdice_driver",
+        "libdiced_open_dice",
+        "libdm_rust",
+        "libserde_cbor",
+        "libvbmeta_rust",
     ],
     bootstrap: true,
     prefer_rlib: true,
+    multilib: {
+        lib32: {
+            enabled: false,
+        },
+    },
 }
 
 rust_binary {

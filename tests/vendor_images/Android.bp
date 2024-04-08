@@ -15,6 +15,16 @@ android_filesystem {
     file_contexts: ":microdroid_vendor_file_contexts.gen",
     use_avb: true,
     avb_private_key: ":vendor_sign_key",
+    rollback_index: 5,
+}
+
+android_filesystem {
+    name: "test_microdroid_vendor_image_no_rollback_index",
+    partition_name: "microdroid-vendor",
+    type: "ext4",
+    file_contexts: ":microdroid_vendor_file_contexts.gen",
+    use_avb: true,
+    avb_private_key: ":vendor_sign_key",
 }
 
 android_filesystem {

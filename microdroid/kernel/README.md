@@ -29,7 +29,7 @@ tools/bazel run --config=fast //common:kernel_x86_64_microdroid_dist -- --dist_d
 ```
 
 Note that
-[`--config=fast`](https://android.googlesource.com/kernel/build/+/refs/heads/master/kleaf/docs/fast.md)
+[`--config=fast`](https://android.googlesource.com/kernel/build/+/refs/heads/main/kleaf/docs/fast.md)
 is not mandatory, but will make your build much faster.
 
 The build may fail in case you are doing an incremental build and the config has changed (b/257288175). Until that issue

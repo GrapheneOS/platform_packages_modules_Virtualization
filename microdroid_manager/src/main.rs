@@ -43,6 +43,7 @@ use libc::VMADDR_CID_HOST;
 use log::{error, info};
 use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
+use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::Signal;
 use payload::load_metadata;
 use rpcbinder::RpcSession;
@@ -85,6 +86,8 @@ const FAILURE_SERIAL_DEVICE: &str = "/dev/ttyS1";
 
 const ENCRYPTEDSTORE_BACKING_DEVICE: &str = "/dev/block/by-name/encryptedstore";
 const ENCRYPTEDSTORE_KEYSIZE: usize = 32;
+
+const DICE_CHAIN_FILE: &str = "/microdroid_resources/dice_chain.raw";
 
 #[derive(thiserror::Error, Debug)]
 enum MicrodroidError {
@@ -301,8 +304,13 @@ fn try_run_payload(
     vm_payload_service_fd: OwnedFd,
 ) -> Result<i32> {
     let metadata = load_metadata().context("Failed to load payload metadata")?;
-    let dice = DiceDriver::new(Path::new("/dev/open-dice0"), is_strict_boot())
-        .context("Failed to load DICE")?;
+    let dice = if Path::new(DICE_CHAIN_FILE).exists() {
+        DiceDriver::from_file(Path::new(DICE_CHAIN_FILE))
+            .context("Failed to load DICE from file")?
+    } else {
+        DiceDriver::new(Path::new("/dev/open-dice0"), is_strict_boot())
+            .context("Failed to load DICE from driver")?
+    };
 
     // Microdroid skips checking payload against instance image iff the device supports
     // secretkeeper. In that case Microdroid use VmSecret::V2, which provide protection against
@@ -328,6 +336,10 @@ fn try_run_payload(
 
         // Start apexd to activate APEXes. This may allow code within them to run.
         system_properties::write("ctl.start", "apexd-vm")?;
+
+        // Unmounting /microdroid_resources is a defence-in-depth effort to ensure that payload
+        // can't get hold of dice chain stored there.
+        umount2("/microdroid_resources", MntFlags::MNT_DETACH)?;
     }
 
     // Run encryptedstore binary to prepare the storage

@@ -14,17 +14,17 @@
 
 //! Low-level compatibility layer between baremetal Rust and Bionic C functions.
 
-use core::ffi::c_char;
-use core::ffi::c_int;
-use core::ffi::c_void;
-use core::ffi::CStr;
-use core::slice;
-use core::str;
-
 use crate::console;
 use crate::eprintln;
 use crate::rand::fill_with_entropy;
 use crate::read_sysreg;
+use core::ffi::c_char;
+use core::ffi::c_int;
+use core::ffi::c_void;
+use core::ffi::CStr;
+use core::ptr::addr_of_mut;
+use core::slice;
+use core::str;
 
 use cstr::cstr;
 
@@ -75,7 +75,7 @@ pub static mut ERRNO: c_int = 0;
 unsafe extern "C" fn __errno() -> *mut c_int {
     // SAFETY: C functions which call this are only called from the main thread, not from exception
     // handlers.
-    unsafe { &mut ERRNO as *mut _ }
+    unsafe { addr_of_mut!(ERRNO) as *mut _ }
 }
 
 fn set_errno(value: c_int) {

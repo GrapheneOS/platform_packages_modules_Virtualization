@@ -41,7 +41,7 @@ with `aosp_x86_64`.
 ## Building an app
 
 A [vm
-payload](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/master/vm_payload/)
+payload](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/main/vm_payload/)
 is a shared library file that gets executed in microdroid. It is packaged as
 part of an Android application.  The library should have an entry point
 `AVmPayload_main` as shown below:
@@ -132,12 +132,12 @@ Stopping the VM can be done by pressing `Ctrl+C`.
 ### Using the APIs
 
 Use the [Android Virtualization Framework Java
-APIs](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/master/javalib/api/system-current.txt)
+APIs](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/main/java/framework/README.md)
 in your app to create a microdroid VM and run payload in it. The APIs are currently
 @SystemApi, and only available to preinstalled apps.
 
 If you are looking for an example usage of the APIs, you may refer to the [demo
-app](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/master/demo/).
+app](https://android.googlesource.com/platform/packages/modules/Virtualization/+/refs/heads/main/demo/).
 
 
 ## Running Microdroid with vendor image
