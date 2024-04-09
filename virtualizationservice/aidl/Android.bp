@@ -48,7 +48,7 @@ aidl_interface {
         java: {
             sdk_version: "module_current",
             apex_available: [
-                "//apex_available:platform",
+                "com.android.virt",
             ],
         },
         rust: {

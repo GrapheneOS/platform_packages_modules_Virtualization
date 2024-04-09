@@ -42,6 +42,7 @@ soong_config_module_type {
         "release_avf_enable_remote_attestation",
         "release_avf_enable_vendor_modules",
         "release_avf_enable_virt_cpufreq",
+        "release_avf_support_custom_vm_with_paravirtualized_devices",
     ],
     properties: [
         "androidManifest",
@@ -50,6 +51,7 @@ soong_config_module_type {
         "prebuilts",
         "systemserverclasspath_fragments",
         "vintf_fragments",
+        "apps",
     ],
 }
 
@@ -95,6 +97,11 @@ avf_flag_aware_apex_defaults {
             conditions_default: {
                 canned_fs_config: "canned_fs_config",
             },
+        },
+        release_avf_support_custom_vm_with_paravirtualized_devices: {
+            apps: [
+                "VmLauncherApp",
+            ],
         },
     },
 }

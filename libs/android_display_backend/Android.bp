@@ -11,6 +11,9 @@ aidl_interface {
     backend: {
         java: {
             enabled: true,
+            apex_available: [
+                "com.android.virt",
+            ],
         },
         cpp: {
             enabled: false,

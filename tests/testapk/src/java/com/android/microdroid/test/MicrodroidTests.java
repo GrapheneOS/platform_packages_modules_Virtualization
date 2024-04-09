@@ -37,6 +37,7 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.stream.Collectors.toList;
 
 import android.app.Instrumentation;
 import android.app.UiAutomation;
@@ -110,6 +111,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import co.nstant.in.cbor.CborDecoder;
 import co.nstant.in.cbor.model.Array;
@@ -1055,6 +1057,51 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         changeDebugLevel(DEBUG_LEVEL_NONE, DEBUG_LEVEL_FULL);
     }
 
+    // Copy the Vm directory, creating the target Vm directory if it does not already exist.
+    private void copyVmDirectory(String sourceVmName, String targetVmName) throws IOException {
+        Path sourceVm = getVmDirectory(sourceVmName);
+        Path targetVm = getVmDirectory(targetVmName);
+        if (!Files.exists(targetVm)) {
+            Files.createDirectories(targetVm);
+        }
+
+        try (Stream<Path> stream = Files.list(sourceVm)) {
+            for (Path f : stream.collect(toList())) {
+                Files.copy(f, targetVm.resolve(f.getFileName()), REPLACE_EXISTING);
+            }
+        }
+    }
+
+    private Path getVmDirectory(String vmName) {
+        Context context = getContext();
+        Path filePath = Paths.get(context.getDataDir().getPath(), "vm", vmName);
+        return filePath;
+    }
+
+    // Create a fresh VM with the given `vmName`, instance_id & instance.img. This function creates
+    // a Vm with a different temporary name & copies it to target VM directory. This ensures this
+    // VM is not in cache of `VirtualMachineManager` which makes it possible to modify underlying
+    // files.
+    private void createUncachedVmWithName(
+            String vmName, VirtualMachineConfig config, File vmIdBackup, File vmInstanceBackup)
+            throws Exception {
+        deleteVirtualMachineIfExists(vmName);
+        forceCreateNewVirtualMachine("test_vm_tmp", config);
+        copyVmDirectory("test_vm_tmp", vmName);
+        if (vmInstanceBackup != null) {
+            Files.copy(
+                    vmInstanceBackup.toPath(),
+                    getVmFile(vmName, "instance.img").toPath(),
+                    REPLACE_EXISTING);
+        }
+        if (vmIdBackup != null) {
+            Files.copy(
+                    vmIdBackup.toPath(),
+                    getVmFile(vmName, "instance_id").toPath(),
+                    REPLACE_EXISTING);
+        }
+    }
+
     @Test
     @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
     public void changingDebuggableVmNonDebuggableInvalidatesVmIdentity() throws Exception {
@@ -1089,29 +1136,17 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             Files.copy(vmId.toPath(), vmIdBackup.toPath(), REPLACE_EXISTING);
         }
 
-        forceCreateNewVirtualMachine("test_vm", normalConfig);
-
-        if (vmInstanceBackup != null) {
-            Files.copy(vmInstanceBackup.toPath(), vmInstance.toPath(), REPLACE_EXISTING);
-        }
-        if (vmIdBackup != null) {
-            Files.copy(vmIdBackup.toPath(), vmId.toPath(), REPLACE_EXISTING);
-        }
-        assertThat(tryBootVm(TAG, "test_vm").payloadStarted).isTrue();
+        createUncachedVmWithName("test_vm_rerun", normalConfig, vmIdBackup, vmInstanceBackup);
+        assertThat(tryBootVm(TAG, "test_vm_rerun").payloadStarted).isTrue();
 
         // Launch the same VM with a different debug level. The Java API prohibits this
         // (thankfully).
         // For testing, we do that by creating a new VM with debug level, and overwriting the old
         // instance data to the new VM instance data.
         VirtualMachineConfig debugConfig = builder.setDebugLevel(toLevel).build();
-        forceCreateNewVirtualMachine("test_vm", debugConfig);
-        if (vmInstanceBackup != null) {
-            Files.copy(vmInstanceBackup.toPath(), vmInstance.toPath(), REPLACE_EXISTING);
-        }
-        if (vmIdBackup != null) {
-            Files.copy(vmIdBackup.toPath(), vmId.toPath(), REPLACE_EXISTING);
-        }
-        assertThat(tryBootVm(TAG, "test_vm").payloadStarted).isFalse();
+        createUncachedVmWithName(
+                "test_vm_changed_debug_level", debugConfig, vmIdBackup, vmInstanceBackup);
+        assertThat(tryBootVm(TAG, "test_vm_changed_debug_level").payloadStarted).isFalse();
     }
 
     private static class VmCdis {
@@ -1555,7 +1590,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             assertFileContentsAreEqualInTwoVms("storage.img", vmNameOrig, vmNameImport);
         }
         assertThat(vmImport).isNotEqualTo(vmOrig);
-        vmm.delete(vmNameOrig);
         assertThat(vmImport).isEqualTo(vmm.get(vmNameImport));
         TestResults testResults =
                 runVmTestService(

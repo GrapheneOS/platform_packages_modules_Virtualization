@@ -272,6 +272,34 @@ impl VmIdDb {
         Ok(vm_ids)
     }
 
+    /// Determine the number of VM IDs associated with `(user_id, app_id)`.
+    pub fn count_vm_ids_for_app(&mut self, user_id: i32, app_id: i32) -> Result<usize> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT COUNT(vm_id) FROM main.vmids WHERE user_id = ? AND app_id = ?;")
+            .context("failed to prepare SELECT stmt")?;
+        stmt.query_row(params![user_id, app_id], |row| row.get(0)).context("query failed")
+    }
+
+    /// Return the `count` oldest VM IDs associated with `(user_id, app_id)`.
+    pub fn oldest_vm_ids_for_app(
+        &mut self,
+        user_id: i32,
+        app_id: i32,
+        count: usize,
+    ) -> Result<Vec<VmId>> {
+        // SQLite considers NULL columns to be smaller than values, so rows left over from a v0
+        // database will be listed first.
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT vm_id FROM main.vmids WHERE user_id = ? AND app_id = ? ORDER BY created LIMIT ?;",
+            )
+            .context("failed to prepare SELECT stmt")?;
+        let rows = stmt.query(params![user_id, app_id, count]).context("query failed")?;
+        Self::vm_ids_from_rows(rows)
+    }
+
     /// Return all of the `(user_id, app_id)` pairs present in the database.
     pub fn get_all_owners(&mut self) -> Result<Vec<(i32, i32)>> {
         let mut stmt = self
@@ -344,6 +372,19 @@ mod tests {
     fn show_contents(db: &VmIdDb) {
         let mut stmt = db.conn.prepare("SELECT * FROM main.vmids;").unwrap();
         let mut rows = stmt.query(()).unwrap();
+        println!("DB contents:");
+        while let Some(row) = rows.next().unwrap() {
+            println!("  {row:?}");
+        }
+    }
+
+    fn show_contents_for_app(db: &VmIdDb, user_id: i32, app_id: i32, count: usize) {
+        let mut stmt = db
+            .conn
+            .prepare("SELECT vm_id, created FROM main.vmids WHERE user_id = ? AND app_id = ? ORDER BY created LIMIT ?;")
+            .unwrap();
+        let mut rows = stmt.query(params![user_id, app_id, count]).unwrap();
+        println!("First (by created) {count} rows for app_id={app_id}");
         while let Some(row) = rows.next().unwrap() {
             println!("  {row:?}");
         }
@@ -457,31 +498,39 @@ mod tests {
 
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_user(USER1).unwrap());
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(3, db.count_vm_ids_for_app(USER1, APP_A).unwrap());
         assert_eq!(vec![VM_ID4], db.vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(1, db.count_vm_ids_for_app(USER2, APP_B).unwrap());
         assert_eq!(vec![VM_ID5], db.vm_ids_for_user(USER3).unwrap());
         assert_eq!(empty, db.vm_ids_for_user(USER_UNKNOWN).unwrap());
         assert_eq!(empty, db.vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
+        assert_eq!(0, db.count_vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
 
         db.delete_vm_ids(&[VM_ID2, VM_ID3]).unwrap();
 
         assert_eq!(vec![VM_ID1], db.vm_ids_for_user(USER1).unwrap());
         assert_eq!(vec![VM_ID1], db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(1, db.count_vm_ids_for_app(USER1, APP_A).unwrap());
 
         // OK to delete things that don't exist.
         db.delete_vm_ids(&[VM_ID2, VM_ID3]).unwrap();
 
         assert_eq!(vec![VM_ID1], db.vm_ids_for_user(USER1).unwrap());
         assert_eq!(vec![VM_ID1], db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(1, db.count_vm_ids_for_app(USER1, APP_A).unwrap());
 
         db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
         db.add_vm_id(&VM_ID3, USER1, APP_A).unwrap();
 
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_user(USER1).unwrap());
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(3, db.count_vm_ids_for_app(USER1, APP_A).unwrap());
         assert_eq!(vec![VM_ID4], db.vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(1, db.count_vm_ids_for_app(USER2, APP_B).unwrap());
         assert_eq!(vec![VM_ID5], db.vm_ids_for_user(USER3).unwrap());
         assert_eq!(empty, db.vm_ids_for_user(USER_UNKNOWN).unwrap());
         assert_eq!(empty, db.vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
+        assert_eq!(0, db.count_vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
 
         assert_eq!(
             vec![(USER1, APP_A), (USER2, APP_B), (USER3, APP_C)],
@@ -512,5 +561,48 @@ mod tests {
         // Invalid row is skipped and remainder returned.
         assert_eq!(vec![VM_ID1, VM_ID2, VM_ID3], db.vm_ids_for_user(USER1).unwrap());
         show_contents(&db);
+    }
+
+    #[test]
+    fn test_remove_oldest_with_upgrade() {
+        let mut db = new_test_db_version(0);
+        let version = db.schema_version().unwrap();
+        assert_eq!(0, version);
+
+        let remove_count = 10;
+        let mut want = vec![];
+
+        // Manually insert rows before upgrade.
+        const V0_COUNT: usize = 5;
+        for idx in 0..V0_COUNT {
+            let mut vm_id = [0u8; 64];
+            vm_id[0..8].copy_from_slice(&(idx as u64).to_be_bytes());
+            if want.len() < remove_count {
+                want.push(vm_id);
+            }
+            db.conn
+                .execute(
+                    "REPLACE INTO main.vmids (vm_id, user_id, app_id) VALUES (?1, ?2, ?3);",
+                    params![&vm_id, &USER1, APP_A],
+                )
+                .unwrap();
+        }
+
+        // Now move to v1.
+        db.upgrade_tables_v0_v1().unwrap();
+        let version = db.schema_version().unwrap();
+        assert_eq!(1, version);
+
+        for idx in V0_COUNT..40 {
+            let mut vm_id = [0u8; 64];
+            vm_id[0..8].copy_from_slice(&(idx as u64).to_be_bytes());
+            if want.len() < remove_count {
+                want.push(vm_id);
+            }
+            db.add_vm_id(&vm_id, USER1, APP_A).unwrap();
+        }
+        show_contents_for_app(&db, USER1, APP_A, 10);
+        let got = db.oldest_vm_ids_for_app(USER1, APP_A, 10).unwrap();
+        assert_eq!(got, want);
     }
 }

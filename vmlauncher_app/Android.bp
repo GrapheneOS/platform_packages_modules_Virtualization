@@ -21,4 +21,7 @@ android_app {
     ],
     platform_apis: true,
     privileged: true,
+    apex_available: [
+        "com.android.virt",
+    ],
 }

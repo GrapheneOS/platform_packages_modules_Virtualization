@@ -8,6 +8,7 @@
     <application
         android:label="VmLauncherApp">
         <activity android:name=".MainActivity"
+                  android:enabled="false"
                   android:screenOrientation="landscape"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode"
                   android:theme="@style/MyTheme"

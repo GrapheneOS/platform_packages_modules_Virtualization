@@ -40,6 +40,9 @@ const PERSISTENT_DIRECTORY: &str = "/data/misc/apexdata/com.android.virt";
 /// parcel fits within max AIDL message size.
 const DELETE_MAX_BATCH_SIZE: usize = 100;
 
+/// Maximum number of VM IDs that a single app can have.
+const MAX_VM_IDS_PER_APP: usize = 400;
+
 /// State related to VM secrets.
 pub struct State {
     sk: binder::Strong<dyn ISecretkeeper>,
@@ -101,6 +104,24 @@ impl State {
     pub fn add_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<()> {
         let user_id: i32 = user_id.try_into().context(format!("user_id {user_id} out of range"))?;
         let app_id: i32 = app_id.try_into().context(format!("app_id {app_id} out of range"))?;
+
+        // To prevent unbounded growth of VM IDs (and the associated state) for an app, limit the
+        // number of VM IDs per app.
+        let count = self
+            .vm_id_db
+            .count_vm_ids_for_app(user_id, app_id)
+            .context("failed to determine VM count")?;
+        if count >= MAX_VM_IDS_PER_APP {
+            // The owner has too many VM IDs, so delete the oldest IDs so that the new VM ID
+            // creation can progress/succeed.
+            let purge = 1 + count - MAX_VM_IDS_PER_APP;
+            let old_vm_ids = self
+                .vm_id_db
+                .oldest_vm_ids_for_app(user_id, app_id, purge)
+                .context("failed to find oldest VM IDs")?;
+            error!("Deleting {purge} of {count} VM IDs for user_id={user_id}, app_id={app_id}");
+            self.delete_ids(&old_vm_ids);
+        }
         self.vm_id_db.add_vm_id(vm_id, user_id, app_id)
     }
 
@@ -394,6 +415,39 @@ mod tests {
         assert_eq!(vec![VM_ID4], sk_state.vm_id_db.vm_ids_for_user(USER2).unwrap());
         assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
         assert_eq!(vec![VM_ID5], sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+    }
+
+    #[test]
+    fn test_sk_state_too_many_vms() {
+        let history = Arc::new(Mutex::new(Vec::new()));
+        let mut sk_state = new_test_state(history.clone(), 20);
+
+        // Every VM ID added up to the limit is kept.
+        for idx in 0..MAX_VM_IDS_PER_APP {
+            let mut vm_id = [0u8; 64];
+            vm_id[0..8].copy_from_slice(&(idx as u64).to_be_bytes());
+            sk_state.add_id(&vm_id, USER1 as u32, APP_A as u32).unwrap();
+            assert_eq!(idx + 1, sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap());
+        }
+        assert_eq!(
+            MAX_VM_IDS_PER_APP,
+            sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap()
+        );
+
+        // Beyond the limit it's one in, one out.
+        for idx in MAX_VM_IDS_PER_APP..MAX_VM_IDS_PER_APP + 10 {
+            let mut vm_id = [0u8; 64];
+            vm_id[0..8].copy_from_slice(&(idx as u64).to_be_bytes());
+            sk_state.add_id(&vm_id, USER1 as u32, APP_A as u32).unwrap();
+            assert_eq!(
+                MAX_VM_IDS_PER_APP,
+                sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap()
+            );
+        }
+        assert_eq!(
+            MAX_VM_IDS_PER_APP,
+            sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap()
+        );
     }
 
     struct Irreconcilable;
