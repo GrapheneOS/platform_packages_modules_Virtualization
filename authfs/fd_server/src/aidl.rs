@@ -289,7 +289,7 @@ impl IVirtFdService for FdService {
             FdConfig::OutputDir(dir) => {
                 let mode = validate_file_mode(mode)?;
                 let new_fd = openat(
-                    dir.as_raw_fd(),
+                    Some(dir.as_raw_fd()),
                     basename,
                     // This function is supposed to be only called when FUSE/authfs thinks the file
                     // does not exist. However, if the file does exist from the view of fd_server
@@ -319,10 +319,14 @@ impl IVirtFdService for FdService {
             FdConfig::InputDir(_) => Err(new_errno_error(Errno::EACCES)),
             FdConfig::OutputDir(_) => {
                 let mode = validate_file_mode(mode)?;
-                mkdirat(dir_fd, basename, mode).map_err(new_errno_error)?;
-                let new_dir_fd =
-                    openat(dir_fd, basename, OFlag::O_DIRECTORY | OFlag::O_RDONLY, Mode::empty())
-                        .map_err(new_errno_error)?;
+                mkdirat(Some(dir_fd), basename, mode).map_err(new_errno_error)?;
+                let new_dir_fd = openat(
+                    Some(dir_fd),
+                    basename,
+                    OFlag::O_DIRECTORY | OFlag::O_RDONLY,
+                    Mode::empty(),
+                )
+                .map_err(new_errno_error)?;
                 // SAFETY: new_dir_fd is just created and not an error.
                 let fd_owner = unsafe { OwnedFd::from_raw_fd(new_dir_fd) };
                 Ok((new_dir_fd, FdConfig::OutputDir(fd_owner)))
@@ -403,7 +407,7 @@ fn new_errno_error(errno: Errno) -> Status {
 }
 
 fn open_readonly_at(dir_fd: BorrowedFd, path: &Path) -> nix::Result<File> {
-    let new_fd = openat(dir_fd.as_raw_fd(), path, OFlag::O_RDONLY, Mode::empty())?;
+    let new_fd = openat(Some(dir_fd.as_raw_fd()), path, OFlag::O_RDONLY, Mode::empty())?;
     // SAFETY: new_fd is just created successfully and not owned.
     let new_file = unsafe { File::from_raw_fd(new_fd) };
     Ok(new_file)

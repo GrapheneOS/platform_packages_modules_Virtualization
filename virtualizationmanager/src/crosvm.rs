@@ -34,7 +34,7 @@ use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::unix::io::{AsRawFd, RawFd, FromRawFd};
+use std::os::unix::io::{AsRawFd, RawFd};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
@@ -120,6 +120,7 @@ pub struct CrosvmConfig {
     pub dtbo: Option<File>,
     pub device_tree_overlay: Option<File>,
     pub display_config: Option<DisplayConfig>,
+    pub input_device_options: Vec<InputDeviceOption>,
 }
 
 #[derive(Debug)]
@@ -152,6 +153,14 @@ fn try_into_non_zero_u32(value: i32) -> Result<NonZeroU32> {
 pub struct DiskFile {
     pub image: File,
     pub writable: bool,
+}
+
+/// virtio-input device configuration from `external/crosvm/src/crosvm/config.rs`
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum InputDeviceOption {
+    EvDev(File),
+    SingleTouch { file: File, width: u32, height: u32, name: Option<String> },
 }
 
 type VfioDevice = Strong<dyn IBoundDevice>;
@@ -955,14 +964,34 @@ fn run_vm(
     if let Some(dt_overlay) = &config.device_tree_overlay {
         command.arg("--device-tree-overlay").arg(add_preserved_fd(&mut preserved_fds, dt_overlay));
     }
-    if let Some(display_config) = &config.display_config {
-        command.arg("--gpu")
-        // TODO(b/331708504): support backend config as well
-        .arg("backend=virglrenderer,context-types=virgl2,egl=true,surfaceless=true,glx=false,gles=true")
-        .arg(format!("--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}", display_config.width, display_config.height, display_config.horizontal_dpi, display_config.vertical_dpi, display_config.refresh_rate))
-        .arg(format!("--android-display-service={}", config.name));
+
+    if cfg!(paravirtualized_devices) {
+        if let Some(display_config) = &config.display_config {
+            command.arg("--gpu")
+            // TODO(b/331708504): support backend config as well
+            .arg("backend=virglrenderer,context-types=virgl2,egl=true,surfaceless=true,glx=false,gles=true")
+            .arg(format!("--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}", display_config.width, display_config.height, display_config.horizontal_dpi, display_config.vertical_dpi, display_config.refresh_rate))
+            .arg(format!("--android-display-service={}", config.name));
+        }
     }
 
+    if cfg!(paravirtualized_devices) {
+        for input_device_option in config.input_device_options.iter() {
+            command.arg("--input");
+            command.arg(match input_device_option {
+                InputDeviceOption::EvDev(file) => {
+                    format!("evdev[path={}]", add_preserved_fd(&mut preserved_fds, file))
+                }
+                InputDeviceOption::SingleTouch { file, width, height, name } => format!(
+                    "single-touch[path={},width={},height={}{}]",
+                    add_preserved_fd(&mut preserved_fds, file),
+                    width,
+                    height,
+                    name.as_ref().map_or("".into(), |n| format!(",name={}", n))
+                ),
+            });
+        }
+    }
     append_platform_devices(&mut command, &mut preserved_fds, &config)?;
 
     debug!("Preserving FDs {:?}", preserved_fds);
@@ -1041,10 +1070,6 @@ fn format_serial_out_arg(preserved_fds: &mut Vec<RawFd>, file: &Option<File>) ->
 
 /// Creates a new pipe with the `O_CLOEXEC` flag set, and returns the read side and write side.
 fn create_pipe() -> Result<(File, File), Error> {
-    let (raw_read, raw_write) = pipe2(OFlag::O_CLOEXEC)?;
-    // SAFETY: We are the sole owner of this FD as we just created it, and it is valid and open.
-    let read_fd = unsafe { File::from_raw_fd(raw_read) };
-    // SAFETY: We are the sole owner of this FD as we just created it, and it is valid and open.
-    let write_fd = unsafe { File::from_raw_fd(raw_write) };
-    Ok((read_fd, write_fd))
+    let (read_fd, write_fd) = pipe2(OFlag::O_CLOEXEC)?;
+    Ok((read_fd.into(), write_fd.into()))
 }

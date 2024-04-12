@@ -23,7 +23,7 @@ use nix::fcntl::OFlag;
 use nix::unistd::pipe2;
 use std::fs::File;
 use std::io::Read;
-use std::os::unix::io::{AsRawFd, FromRawFd, OwnedFd};
+use std::os::unix::io::{AsRawFd, OwnedFd};
 use std::path::Path;
 
 const FD_SERVER_BIN: &str = "/apex/com.android.virt/bin/fd_server";
@@ -106,12 +106,8 @@ impl Drop for FdServer {
 }
 
 fn create_pipe() -> Result<(File, File)> {
-    let (raw_read, raw_write) = pipe2(OFlag::O_CLOEXEC)?;
-    // SAFETY: We are the sole owner of raw_read and it is valid as it was just created.
-    let read_fd = unsafe { File::from_raw_fd(raw_read) };
-    // SAFETY: We are the sole owner of raw_write and it is valid as it was just created.
-    let write_fd = unsafe { File::from_raw_fd(raw_write) };
-    Ok((read_fd, write_fd))
+    let (read_fd, write_fd) = pipe2(OFlag::O_CLOEXEC)?;
+    Ok((read_fd.into(), write_fd.into()))
 }
 
 fn wait_for_fd_server_ready(mut ready_fd: File) -> Result<()> {

@@ -30,7 +30,6 @@ use log::{info, warn};
 use service_vm_comm::{Request, Response, ServiceVmRequest, VmType};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
-use std::os::unix::io::FromRawFd;
 use std::path::{Path, PathBuf};
 use std::sync::{Condvar, Mutex};
 use std::thread;
@@ -294,10 +293,8 @@ fn instance_img(
 pub fn android_log_fd() -> io::Result<File> {
     let (reader_fd, writer_fd) = nix::unistd::pipe()?;
 
-    // SAFETY: These are new FDs with no previous owner.
-    let reader = unsafe { File::from_raw_fd(reader_fd) };
-    // SAFETY: These are new FDs with no previous owner.
-    let writer = unsafe { File::from_raw_fd(writer_fd) };
+    let reader = File::from(reader_fd);
+    let writer = File::from(writer_fd);
 
     thread::spawn(|| {
         for line in BufReader::new(reader).lines() {

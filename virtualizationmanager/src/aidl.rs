@@ -17,7 +17,7 @@
 use crate::{get_calling_pid, get_calling_uid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
-use crate::crosvm::{CrosvmConfig, DiskFile, DisplayConfig, PayloadState, VmContext, VmInstance, VmState};
+use crate::crosvm::{CrosvmConfig, DiskFile, DisplayConfig, InputDeviceOption, PayloadState, VmContext, VmInstance, VmState};
 use crate::debug_config::DebugConfig;
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
@@ -32,6 +32,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     AssignableDevice::AssignableDevice,
     CpuTopology::CpuTopology,
     DiskImage::DiskImage,
+    InputDevice::InputDevice,
     IVirtualMachine::{BnVirtualMachine, IVirtualMachine},
     IVirtualMachineCallback::IVirtualMachineCallback,
     IVirtualizationService::IVirtualizationService,
@@ -581,13 +582,27 @@ impl VirtualizationService {
         } else {
             (vec![], None)
         };
+        let display_config = if cfg!(paravirtualized_devices) {
+            config
+                .displayConfig
+                .as_ref()
+                .map(DisplayConfig::new)
+                .transpose()
+                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
+        } else {
+            None
+        };
 
-        let display_config = config
-            .displayConfig
-            .as_ref()
-            .map(DisplayConfig::new)
-            .transpose()
-            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?;
+        let input_device_options = if cfg!(paravirtualized_devices) {
+            config
+                .inputDevices
+                .iter()
+                .map(to_input_device_option_from)
+                .collect::<Result<Vec<InputDeviceOption>, _>>()
+                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
+        } else {
+            vec![]
+        };
 
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
@@ -615,6 +630,7 @@ impl VirtualizationService {
             dtbo,
             device_tree_overlay,
             display_config,
+            input_device_options,
         };
         let instance = Arc::new(
             VmInstance::new(
@@ -720,6 +736,23 @@ fn round_up(input: u64, granularity: u64) -> u64 {
     (result / granularity) * granularity
 }
 
+fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDeviceOption> {
+    Ok(match input_device {
+        InputDevice::SingleTouch(single_touch) => InputDeviceOption::SingleTouch {
+            file: clone_file(single_touch.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
+            height: u32::try_from(single_touch.height)?,
+            width: u32::try_from(single_touch.width)?,
+            name: if !single_touch.name.is_empty() {
+                Some(single_touch.name.clone())
+            } else {
+                None
+            },
+        },
+        InputDevice::EvDev(evdev) => InputDeviceOption::EvDev(clone_file(
+            evdev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
+    })
+}
 /// Given the configuration for a disk image, assembles the `DiskFile` to pass to crosvm.
 ///
 /// This may involve assembling a composite disk from a set of partition images.
@@ -1410,13 +1443,11 @@ fn clone_or_prepare_logger_fd(
         return Ok(None);
     };
 
-    let (raw_read_fd, raw_write_fd) =
+    let (read_fd, write_fd) =
         pipe().context("Failed to create pipe").or_service_specific_exception(-1)?;
 
-    // SAFETY: We are the sole owner of this FD as we just created it, and it is valid and open.
-    let mut reader = BufReader::new(unsafe { File::from_raw_fd(raw_read_fd) });
-    // SAFETY: We are the sole owner of this FD as we just created it, and it is valid and open.
-    let write_fd = unsafe { File::from_raw_fd(raw_write_fd) };
+    let mut reader = BufReader::new(File::from(read_fd));
+    let write_fd = File::from(write_fd);
 
     std::thread::spawn(move || loop {
         let mut buf = vec![];

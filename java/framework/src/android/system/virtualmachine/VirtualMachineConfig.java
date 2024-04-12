@@ -40,6 +40,7 @@ import android.os.PersistableBundle;
 import android.sysprop.HypervisorProperties;
 import android.system.virtualizationservice.DiskImage;
 import android.system.virtualizationservice.Partition;
+import android.system.virtualizationservice.InputDevice;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
 import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 import android.system.virtualizationservice.VirtualMachineRawConfig;
@@ -650,6 +651,7 @@ public final class VirtualMachineConfig {
         config.cpuTopology = (byte) this.mCpuTopology;
         config.devices = EMPTY_STRING_ARRAY;
         config.platformVersion = "~1.0";
+        config.inputDevices = new InputDevice[0];
         return config;
     }
 

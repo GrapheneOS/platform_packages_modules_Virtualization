@@ -48,7 +48,7 @@ use std::process::Command;
 use std::{
     fmt::{self, Debug, Formatter},
     fs::File,
-    os::unix::io::{AsFd, AsRawFd, FromRawFd, IntoRawFd, OwnedFd},
+    os::unix::io::{AsFd, AsRawFd, IntoRawFd, OwnedFd},
     sync::Arc,
     time::Duration,
 };
@@ -62,10 +62,7 @@ fn posix_pipe() -> Result<(OwnedFd, OwnedFd), io::Error> {
 
     // Create new POSIX pipe. Make it O_CLOEXEC to align with how Rust creates
     // file descriptors (expected by SharedChild).
-    let (raw1, raw2) = pipe2(OFlag::O_CLOEXEC)?;
-
-    // SAFETY: Taking ownership of brand new FDs.
-    unsafe { Ok((OwnedFd::from_raw_fd(raw1), OwnedFd::from_raw_fd(raw2))) }
+    Ok(pipe2(OFlag::O_CLOEXEC)?)
 }
 
 fn posix_socketpair() -> Result<(OwnedFd, OwnedFd), io::Error> {

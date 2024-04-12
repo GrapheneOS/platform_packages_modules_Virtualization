@@ -27,7 +27,6 @@ use std::{
     collections::{HashSet, VecDeque},
     fs::File,
     io::{self, BufRead, BufReader, Read, Write},
-    os::unix::io::FromRawFd,
     panic, thread,
 };
 use vmclient::{DeathReason, VmInstance};
@@ -142,13 +141,7 @@ fn android_log_fd() -> Result<(thread::JoinHandle<()>, File), io::Error> {
 
 fn pipe() -> io::Result<(File, File)> {
     let (reader_fd, writer_fd) = nix::unistd::pipe()?;
-
-    // SAFETY: These are new FDs with no previous owner.
-    let reader = unsafe { File::from_raw_fd(reader_fd) };
-    // SAFETY: These are new FDs with no previous owner.
-    let writer = unsafe { File::from_raw_fd(writer_fd) };
-
-    Ok((reader, writer))
+    Ok((reader_fd.into(), writer_fd.into()))
 }
 
 struct VmLogProcessor {

@@ -28,6 +28,7 @@ use crate::pci::{check_pci, get_bar_region};
 use aarch64_paging::paging::MemoryRegion;
 use aarch64_paging::MapError;
 use alloc::{vec, vec::Vec};
+use core::ptr::addr_of_mut;
 use cstr::cstr;
 use fdtpci::PciInfo;
 use libfdt::Fdt;
@@ -138,14 +139,15 @@ fn check_data() {
 
     // SAFETY: Nowhere else in the program accesses this static mutable variable, so there is no
     // chance of concurrent access.
-    let zeroed_data = unsafe { &mut ZEROED_DATA };
+    let zeroed_data = unsafe { &mut *addr_of_mut!(ZEROED_DATA) };
     // SAFETY: Nowhere else in the program accesses this static mutable variable, so there is no
     // chance of concurrent access.
-    let mutable_data = unsafe { &mut MUTABLE_DATA };
+    let mutable_data = unsafe {&mut *addr_of_mut!(MUTABLE_DATA) };
 
     for element in zeroed_data.iter() {
         assert_eq!(*element, 0);
     }
+
     zeroed_data[0] = 13;
     assert_eq!(zeroed_data[0], 13);
     zeroed_data[0] = 0;
@@ -161,6 +163,7 @@ fn check_data() {
     assert_eq!(mutable_data[0], 1);
 
     info!("Data looks good");
+
 }
 
 fn check_fdt(reader: &Fdt) {
