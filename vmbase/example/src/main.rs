@@ -142,7 +142,7 @@ fn check_data() {
     let zeroed_data = unsafe { &mut *addr_of_mut!(ZEROED_DATA) };
     // SAFETY: Nowhere else in the program accesses this static mutable variable, so there is no
     // chance of concurrent access.
-    let mutable_data = unsafe {&mut *addr_of_mut!(MUTABLE_DATA) };
+    let mutable_data = unsafe { &mut *addr_of_mut!(MUTABLE_DATA) };
 
     for element in zeroed_data.iter() {
         assert_eq!(*element, 0);
@@ -163,7 +163,6 @@ fn check_data() {
     assert_eq!(mutable_data[0], 1);
 
     info!("Data looks good");
-
 }
 
 fn check_fdt(reader: &Fdt) {

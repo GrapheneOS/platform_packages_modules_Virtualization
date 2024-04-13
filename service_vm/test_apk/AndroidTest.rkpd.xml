@@ -17,22 +17,18 @@
     <option name="test-suite-tag" value="apct" />
     <option name="test-suite-tag" value="apct-instrumentation" />
 
-    <!-- Need to disable SELinux policy to allow com.android.rkpdapp to run a VM. -->
-    <target_preparer class="com.android.tradefed.targetprep.DisableSELinuxTargetPreparer"/>
+    <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
+        <!-- The host name is needed for RKPD key provisioning -->
+        <option name="set-property" key="remote_provisioning.hostname"
+         value="remoteprovisioning.googleapis.com" />
+        <option name="restore-properties" value="true"/>
+    </target_preparer>
 
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="AvfRkpdVmAttestationTestApp.apk" />
-        <option name="test-file-name" value="avf-rkpdapp.apk" />
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="com.android.virt.rkpd.vm_attestation.testapp" />
     </test>
-
-    <!-- Only run if RKPD mainline module is installed -->
-    <object type="module_controller"
-            class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
-        <option name="enable" value="true" />
-        <option name="mainline-module-package-name" value="com.android.rkpd" />
-    </object>
 </configuration>

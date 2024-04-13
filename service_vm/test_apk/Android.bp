@@ -58,14 +58,8 @@ android_test {
     manifest: "AndroidManifest.rkpd.xml",
     test_config: "AndroidTest.rkpd.xml",
     static_libs: [
-        "RkpdAppTestUtil",
         "VmAttestationTestUtil",
-        "androidx.work_work-testing",
     ],
-    instrumentation_for: "rkpdapp",
-    // This app is a variation of rkpdapp, with additional permissions to run
-    // a VM. It is defined in packages/modules/RemoteKeyProvisioning.
-    data: [":avf-rkpdapp"],
 }
 
 java_library {
