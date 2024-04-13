@@ -27,5 +27,13 @@ inline bool IsOpenDiceChangesFlagEnabled() {
 #endif
 }
 
+inline bool IsVendorModulesFlagEnabled() {
+#ifdef AVF_ENABLE_VENDOR_MODULES
+    return AVF_ENABLE_VENDOR_MODULES;
+#else
+    return false;
+#endif
+}
+
 } // namespace virtualization
 } // namespace android

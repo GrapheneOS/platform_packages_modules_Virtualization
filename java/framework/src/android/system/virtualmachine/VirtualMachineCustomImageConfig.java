@@ -34,6 +34,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_DISK_WRITABLES = "disk_writables";
     private static final String KEY_DISK_IMAGES = "disk_images";
     private static final String KEY_DISPLAY_CONFIG = "display_config";
+    private static final String KEY_TOUCH = "touch";
 
     @Nullable private final String name;
     @NonNull private final String kernelPath;
@@ -42,6 +43,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final String[] params;
     @Nullable private final Disk[] disks;
     @Nullable private final DisplayConfig displayConfig;
+    private final boolean touch;
 
     @Nullable
     public Disk[] getDisks() {
@@ -73,6 +75,10 @@ public class VirtualMachineCustomImageConfig {
         return params;
     }
 
+    public boolean useTouch() {
+        return touch;
+    }
+
     /** @hide */
     public VirtualMachineCustomImageConfig(
             String name,
@@ -81,7 +87,8 @@ public class VirtualMachineCustomImageConfig {
             String bootloaderPath,
             String[] params,
             Disk[] disks,
-            DisplayConfig displayConfig) {
+            DisplayConfig displayConfig,
+            boolean touch) {
         this.name = name;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
@@ -89,6 +96,7 @@ public class VirtualMachineCustomImageConfig {
         this.params = params;
         this.disks = disks;
         this.displayConfig = displayConfig;
+        this.touch = touch;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -116,7 +124,7 @@ public class VirtualMachineCustomImageConfig {
         PersistableBundle displayConfigPb =
                 customImageConfigBundle.getPersistableBundle(KEY_DISPLAY_CONFIG);
         builder.setDisplayConfig(DisplayConfig.from(displayConfigPb));
-
+        builder.useTouch(customImageConfigBundle.getBoolean(KEY_TOUCH));
         return builder.build();
     }
 
@@ -145,6 +153,7 @@ public class VirtualMachineCustomImageConfig {
                 Optional.ofNullable(displayConfig)
                         .map(dc -> dc.toPersistableBundle())
                         .orElse(null));
+        pb.putBoolean(KEY_TOUCH, touch);
         return pb;
     }
 
@@ -193,6 +202,7 @@ public class VirtualMachineCustomImageConfig {
         private List<String> params = new ArrayList<>();
         private List<Disk> disks = new ArrayList<>();
         private DisplayConfig displayConfig;
+        private boolean touch;
 
         /** @hide */
         public Builder() {}
@@ -240,6 +250,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder useTouch(boolean touch) {
+            this.touch = touch;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -248,7 +264,8 @@ public class VirtualMachineCustomImageConfig {
                     this.bootloaderPath,
                     this.params.toArray(new String[0]),
                     this.disks.toArray(new Disk[0]),
-                    displayConfig);
+                    displayConfig,
+                    touch);
         }
     }
 

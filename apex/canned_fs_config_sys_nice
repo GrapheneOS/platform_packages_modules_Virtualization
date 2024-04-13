@@ -1,2 +1,3 @@
 /bin/virtualizationservice 0 2000 0755 capabilities=0x1000001  # CAP_CHOWN, CAP_SYS_RESOURCE
-/bin/crosvm 0 3013 0755 capabilities=0x800000  # SYS_NICE
+/bin/crosvm 0 3013 0755 capabilities=0x800000  # CAP_SYS_NICE
+/bin/virtmgr 0 3013 0755 capabilities=0x800000 # CAP_SYS_NICE

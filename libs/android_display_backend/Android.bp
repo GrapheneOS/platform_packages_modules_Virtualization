@@ -45,7 +45,6 @@ cc_library_static {
         "android.system.virtualizationservice_internal-ndk",
         "android.system.virtualizationcommon-ndk",
         "android.system.virtualizationservice-ndk",
-        "libyuv",
     ],
     shared_libs: [
         "libbinder_ndk",

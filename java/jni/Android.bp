@@ -16,6 +16,7 @@ cc_library_shared {
         "liblog",
         "libnativehelper",
     ],
+    static_libs: ["libavf_cc_flags"],
 }
 
 cc_library_shared {

@@ -828,6 +828,11 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         AtomsProto.VmExited atomVmExited = data.get(2).getAtom().getVmExited();
         assertThat(atomVmExited.getVmIdentifier()).isEqualTo("VmRunApp");
         assertThat(atomVmExited.getDeathReason()).isEqualTo(AtomsProto.VmExited.DeathReason.KILLED);
+        assertThat(atomVmExited.getExitSignal()).isEqualTo(9);
+        // In CPU & memory related fields, check whether positive values are collected or not.
+        assertThat(atomVmExited.getGuestTimeMillis()).isGreaterThan(0);
+        assertThat(atomVmExited.getRssVmKb()).isGreaterThan(0);
+        assertThat(atomVmExited.getRssCrosvmKb()).isGreaterThan(0);
 
         // Check UID and elapsed_time by comparing each other.
         assertThat(atomVmBooted.getUid()).isEqualTo(atomVmCreationRequested.getUid());

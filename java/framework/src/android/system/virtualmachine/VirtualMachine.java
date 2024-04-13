@@ -63,11 +63,13 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.view.MotionEvent;
 import android.system.virtualizationcommon.DeathReason;
 import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.IVirtualizationService;
+import android.system.virtualizationservice.InputDevice;
 import android.system.virtualizationservice.MemoryTrimLevel;
 import android.system.virtualizationservice.PartitionType;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
@@ -79,6 +81,8 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.system.virtualmachine.flags.Flags;
 
+import libcore.io.IoBridge;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -89,6 +93,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
@@ -153,6 +159,8 @@ public class VirtualMachine implements AutoCloseable {
      */
     @SuppressLint("MinMaxConstant") // Won't change: see man 7 vsock.
     public static final long MAX_VSOCK_PORT = (1L << 32) - 1;
+
+    private ParcelFileDescriptor mTouchSock;
 
     /**
      * Status of a virtual machine
@@ -849,7 +857,71 @@ public class VirtualMachine implements AutoCloseable {
             createVirtualMachineConfigForRawFrom(VirtualMachineConfig vmConfig)
                     throws IllegalStateException, IOException {
         VirtualMachineRawConfig rawConfig = vmConfig.toVsRawConfig();
+
+        // Handle input devices here
+        List<InputDevice> inputDevices = new ArrayList<>();
+        if (vmConfig.getCustomImageConfig() != null
+                && vmConfig.getCustomImageConfig().useTouch()
+                && rawConfig.displayConfig != null) {
+            ParcelFileDescriptor[] pfds = ParcelFileDescriptor.createSocketPair();
+            mTouchSock = pfds[0];
+            InputDevice.SingleTouch t = new InputDevice.SingleTouch();
+            t.width = rawConfig.displayConfig.width;
+            t.height = rawConfig.displayConfig.height;
+            t.pfd = pfds[1];
+            inputDevices.add(InputDevice.singleTouch(t));
+        }
+        rawConfig.inputDevices = inputDevices.toArray(new InputDevice[0]);
+
         return android.system.virtualizationservice.VirtualMachineConfig.rawConfig(rawConfig);
+    }
+
+    private void addInputEvent(ByteBuffer buffer, short type, short code, int value) {
+        buffer.putShort(type);
+        buffer.putShort(code);
+        buffer.putInt(value);
+    }
+
+    /** @hide */
+    public boolean sendSingleTouchEvent(MotionEvent event) {
+        if (mTouchSock == null) {
+            Log.d(TAG, "mTouchSock == null");
+            return false;
+        }
+        // from include/uapi/linux/input-event-codes.h in the kernel.
+        short EV_SYN = 0x00;
+        short EV_ABS = 0x03;
+        short EV_KEY = 0x01;
+        short BTN_TOUCH = 0x14a;
+        short ABS_X = 0x00;
+        short ABS_Y = 0x01;
+        short SYN_REPORT = 0x00;
+
+        int x = (int) event.getX();
+        int y = (int) event.getY();
+        boolean down = event.getAction() != MotionEvent.ACTION_UP;
+
+        ByteBuffer byteBuffer =
+                ByteBuffer.allocate(32 /* (type: u16 + code: u16 + value: i32) * 4 */);
+        byteBuffer.clear();
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+
+        addInputEvent(byteBuffer, EV_ABS, ABS_X, x);
+        addInputEvent(byteBuffer, EV_ABS, ABS_Y, y);
+        addInputEvent(byteBuffer, EV_KEY, BTN_TOUCH, down ? 1 : 0);
+        addInputEvent(byteBuffer, EV_SYN, SYN_REPORT, 0);
+
+        try {
+            IoBridge.write(
+                    mTouchSock.getFileDescriptor(),
+                    byteBuffer.array(),
+                    0,
+                    byteBuffer.array().length);
+        } catch (IOException e) {
+            Log.d(TAG, "cannot send touch evt", e);
+            return false;
+        }
+        return true;
     }
 
     private android.system.virtualizationservice.VirtualMachineConfig

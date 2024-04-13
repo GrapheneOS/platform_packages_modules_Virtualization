@@ -17,6 +17,7 @@
 #define LOG_TAG "VirtualizationService"
 
 #include <android-base/unique_fd.h>
+#include <android/avf_cc_flags.h>
 #include <android/binder_ibinder_jni.h>
 #include <jni.h>
 #include <log/log.h>
@@ -100,4 +101,10 @@ Java_android_system_virtualmachine_VirtualizationService_nativeIsOk(JNIEnv* env,
         return false;
     }
     return pfds[0].revents == 0;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_android_system_virtualmachine_VirtualizationService_nativeIsVendorModulesFlagEnabled(
+        [[maybe_unused]] JNIEnv* env, [[maybe_unused]] jobject obj) {
+    return android::virtualization::IsVendorModulesFlagEnabled();
 }
