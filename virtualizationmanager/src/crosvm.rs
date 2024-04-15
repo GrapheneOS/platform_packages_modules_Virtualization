@@ -161,6 +161,7 @@ pub struct DiskFile {
 pub enum InputDeviceOption {
     EvDev(File),
     SingleTouch { file: File, width: u32, height: u32, name: Option<String> },
+    Keyboard(File),
 }
 
 type VfioDevice = Strong<dyn IBoundDevice>;
@@ -976,11 +977,23 @@ fn run_vm(
     }
 
     if cfg!(paravirtualized_devices) {
+        // TODO(b/325929096): Need to set up network from the config
+        if rustutils::system_properties::read_bool("ro.crosvm.network.setup.done", false)
+            .unwrap_or(false)
+        {
+            command.arg("--net").arg("tap-name=crosvm_tap");
+        }
+    }
+
+    if cfg!(paravirtualized_devices) {
         for input_device_option in config.input_device_options.iter() {
             command.arg("--input");
             command.arg(match input_device_option {
                 InputDeviceOption::EvDev(file) => {
                     format!("evdev[path={}]", add_preserved_fd(&mut preserved_fds, file))
+                }
+                InputDeviceOption::Keyboard(file) => {
+                    format!("keyboard[path={}]", add_preserved_fd(&mut preserved_fds, file))
                 }
                 InputDeviceOption::SingleTouch { file, width, height, name } => format!(
                     "single-touch[path={},width={},height={}{}]",

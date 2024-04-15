@@ -8,7 +8,7 @@
             @android:color/transparent
         </item>
         <item name="android:windowLayoutInDisplayCutoutMode">
-            shortEdges
+            always
         </item>
     </style>
 </resources>

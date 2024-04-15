@@ -95,6 +95,11 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         if (mGki == null) {
             // We don't need this permission to use the microdroid kernel.
             revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        } else {
+            // The permission is needed to use the GKI kernel.
+            // Granting the permission is needed as the microdroid kernel test setup
+            // can revoke the permission before the GKI kernel test.
+            grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         }
         prepareTestSetup(true /* protectedVm */, mGki);
         setMaxPerformanceTaskProfile();

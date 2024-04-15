@@ -30,7 +30,11 @@ union InputDevice {
     parcelable EvDev {
         ParcelFileDescriptor pfd;
     }
-
+    // Keyboard input
+    parcelable Keyboard {
+        ParcelFileDescriptor pfd;
+    }
     SingleTouch singleTouch;
     EvDev evDev;
+    Keyboard keyboard;
 }
