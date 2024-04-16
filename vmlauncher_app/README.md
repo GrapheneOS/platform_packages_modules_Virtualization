@@ -1,13 +1,16 @@
 # VM launcher app
 
-## Building & Installing
+## Building
 
-Add `VmLauncherApp` into `PRODUCT_PACKAGES` and then `m`
+This app is now part of the virt APEX.
 
-You can also explicitly grant or revoke the permission, e.g.
+## Enabling
+
+This app is disabled by default. To re-enable it, execute the following command.
+
 ```
-adb shell pm grant com.android.virtualization.vmlauncher android.permission.USE_CUSTOM_VIRTUAL_MACHINE
-adb shell pm grant com.android.virtualization.vmlauncher android.permission.MANAGE_VIRTUAL_MACHINE
+adb root
+adb shell pm enable com.android.virtualization.vmlauncher/.MainActivity
 ```
 
 ## Running

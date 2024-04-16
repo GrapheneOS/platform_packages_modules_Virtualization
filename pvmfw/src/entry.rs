@@ -403,12 +403,6 @@ unsafe fn get_appended_data_slice() -> &'static mut [u8] {
     unsafe { slice::from_raw_parts_mut(range.start.0 as *mut u8, range.end - range.start) }
 }
 
-enum AppendedConfigType {
-    Valid,
-    Invalid,
-    NotFound,
-}
-
 enum AppendedPayload<'a> {
     /// Configuration data.
     Config(config::Config<'a>),
@@ -418,35 +412,29 @@ enum AppendedPayload<'a> {
 
 impl<'a> AppendedPayload<'a> {
     fn new(data: &'a mut [u8]) -> Option<Self> {
-        match Self::guess_config_type(data) {
-            AppendedConfigType::Valid => {
-                let config = config::Config::new(data);
-                Some(Self::Config(config.unwrap()))
-            }
-            AppendedConfigType::NotFound if cfg!(feature = "legacy") => {
+        // The borrow checker gets confused about the ownership of data (see inline comments) so we
+        // intentionally obfuscate it using a raw pointer; see a similar issue (still not addressed
+        // in v1.77) in https://users.rust-lang.org/t/78467.
+        let data_ptr = data as *mut [u8];
+
+        // Config::new() borrows data as mutable ...
+        match config::Config::new(data) {
+            // ... so this branch has a mutable reference to data, from the Ok(Config<'a>). But ...
+            Ok(valid) => Some(Self::Config(valid)),
+            // ... if Config::new(data).is_err(), the Err holds no ref to data. However ...
+            Err(config::Error::InvalidMagic) if cfg!(feature = "legacy") => {
+                // ... the borrow checker still complains about a second mutable ref without this.
+                // SAFETY: Pointer to a valid mut (not accessed elsewhere), 'a lifetime re-used.
+                let data: &'a mut _ = unsafe { &mut *data_ptr };
+
                 const BCC_SIZE: usize = SIZE_4KB;
                 warn!("Assuming the appended data at {:?} to be a raw BCC", data.as_ptr());
                 Some(Self::LegacyBcc(&mut data[..BCC_SIZE]))
             }
-            _ => None,
-        }
-    }
-
-    fn guess_config_type(data: &mut [u8]) -> AppendedConfigType {
-        // This function is necessary to prevent the borrow checker from getting confused
-        // about the ownership of data in new(); see https://users.rust-lang.org/t/78467.
-        let addr = data.as_ptr();
-
-        match config::Config::new(data) {
-            Err(config::Error::InvalidMagic) => {
-                warn!("No configuration data found at {addr:?}");
-                AppendedConfigType::NotFound
-            }
             Err(e) => {
-                error!("Invalid configuration data at {addr:?}: {e}");
-                AppendedConfigType::Invalid
+                error!("Invalid configuration data at {data_ptr:?}: {e}");
+                None
             }
-            Ok(_) => AppendedConfigType::Valid,
         }
     }
 

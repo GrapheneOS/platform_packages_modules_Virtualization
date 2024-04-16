@@ -51,6 +51,13 @@ apex {
         "compsvc",
     ],
 
+    native_shared_libs: [
+        // b/334192594: compsvc has a transitive dependency to libminijail.
+        // Adding it explicitly here is required because the existence of
+        // it in Microdroid cannot be guaranteed.
+        "libminijail",
+    ],
+
     systemserverclasspath_fragments: ["com.android.compos-systemserverclasspath-fragment"],
 
     apps: [

@@ -199,9 +199,14 @@ fn read_opp_info_from(
     opp_node: FdtNode,
 ) -> libfdt::Result<ArrayVec<[u64; CpuInfo::MAX_OPPTABLES]>> {
     let mut table = ArrayVec::new();
-    for subnode in opp_node.subnodes()? {
+    let mut opp_nodes = opp_node.subnodes()?;
+    for subnode in opp_nodes.by_ref().take(table.capacity()) {
         let prop = subnode.getprop_u64(cstr!("opp-hz"))?.ok_or(FdtError::NotFound)?;
         table.push(prop);
+    }
+
+    if opp_nodes.next().is_some() {
+        warn!("OPP table has more than {} entries: discarding extra nodes.", table.capacity());
     }
 
     Ok(table)
