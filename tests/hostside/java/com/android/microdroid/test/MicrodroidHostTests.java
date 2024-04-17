@@ -174,7 +174,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
             boolean updateBootconfigs) {
         File signVirtApex = findTestFile("sign_virt_apex");
 
-        RunUtil runUtil = new RunUtil();
+        RunUtil runUtil = createRunUtil();
         // Set the parent dir on the PATH (e.g. <workdir>/bin)
         String separator = System.getProperty("path.separator");
         String path = signVirtApex.getParentFile().getPath() + separator + System.getenv("PATH");
@@ -409,7 +409,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                         configPath);
 
         PipedInputStream pis = new PipedInputStream();
-        Process process = RunUtil.getDefault().runCmdInBackground(args, new PipedOutputStream(pis));
+        Process process = createRunUtil().runCmdInBackground(args, new PipedOutputStream(pis));
         return new VmInfo(process);
     }
 
@@ -890,7 +890,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
             File sepolicyAnalyzeBin = findTestFile("sepolicy-analyze");
 
             CommandResult result =
-                    RunUtil.getDefault()
+                    createRunUtil()
                             .runTimedCmd(
                                     10000,
                                     sepolicyAnalyzeBin.getPath(),
@@ -1034,14 +1034,14 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     private boolean isLz4(String path) throws Exception {
         File lz4tool = findTestFile("lz4");
         CommandResult result =
-                new RunUtil().runTimedCmd(5000, lz4tool.getAbsolutePath(), "-t", path);
+                createRunUtil().runTimedCmd(5000, lz4tool.getAbsolutePath(), "-t", path);
         return result.getStatus() == CommandStatus.SUCCESS;
     }
 
     private void decompressLz4(String inputPath, String outputPath) throws Exception {
         File lz4tool = findTestFile("lz4");
         CommandResult result =
-                new RunUtil()
+                createRunUtil()
                         .runTimedCmd(
                                 5000, lz4tool.getAbsolutePath(), "-d", "-f", inputPath, outputPath);
         String out = result.getStdout();
@@ -1072,7 +1072,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         List<String> command =
                 Arrays.asList(avbtool.getAbsolutePath(), "info_image", "--image", image_path);
         CommandResult result =
-                new RunUtil().runTimedCmd(5000, "/bin/bash", "-c", String.join(" ", command));
+                createRunUtil().runTimedCmd(5000, "/bin/bash", "-c", String.join(" ", command));
         String out = result.getStdout();
         String err = result.getStderr();
         assertWithMessage(
@@ -1240,5 +1240,15 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         TestDevice androidDevice = (TestDevice) getDevice();
         assertThat(androidDevice).isNotNull();
         return androidDevice;
+    }
+
+    // The TradeFed Dockerfile sets LD_LIBRARY_PATH to a directory with an older libc++.so, which
+    // breaks binaries that are linked against a newer libc++.so. Binaries commonly use DT_RUNPATH
+    // to find an adjacent libc++.so (e.g. `$ORIGIN/../lib64`), but LD_LIBRARY_PATH overrides
+    // DT_RUNPATH, so clear LD_LIBRARY_PATH. See b/332593805 and b/333782216.
+    private static RunUtil createRunUtil() {
+        RunUtil runUtil = new RunUtil();
+        runUtil.unsetEnvVariable("LD_LIBRARY_PATH");
+        return runUtil;
     }
 }
