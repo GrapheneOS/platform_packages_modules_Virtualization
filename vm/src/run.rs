@@ -39,7 +39,7 @@ use std::io::{Read, Write};
 use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::path::{Path, PathBuf};
 use vmclient::{ErrorCode, VmInstance};
-use vmconfig::{open_parcel_file, VmConfig};
+use vmconfig::{get_debug_level, open_parcel_file, VmConfig};
 use zip::ZipArchive;
 
 /// Run a VM from the given APK, idsig, and config.
@@ -315,10 +315,8 @@ fn run(
         .context("Failed to create VM")?;
     vm.start().context("Failed to start VM")?;
 
-    let debug_level = match config {
-        VirtualMachineConfig::AppConfig(config) => config.debugLevel,
-        _ => DebugLevel::NONE,
-    };
+    let debug_level = get_debug_level(config).unwrap_or(DebugLevel::NONE);
+
     println!(
         "Created {} from {} with CID {}, state is {}.",
         if debug_level == DebugLevel::FULL { "debuggable VM" } else { "VM" },

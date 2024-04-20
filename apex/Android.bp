@@ -32,6 +32,13 @@ virt_apex {
     },
 }
 
+soong_config_string_variable {
+    name: "avf_microdroid_guest_gki_version",
+    values: [
+        "android14_61_pkvm_experimental",
+    ],
+}
+
 soong_config_module_type {
     name: "avf_flag_aware_apex_defaults",
     module_type: "apex_defaults",
@@ -43,6 +50,9 @@ soong_config_module_type {
         "release_avf_enable_vendor_modules",
         "release_avf_enable_virt_cpufreq",
         "release_avf_support_custom_vm_with_paravirtualized_devices",
+    ],
+    variables: [
+        "avf_microdroid_guest_gki_version",
     ],
     properties: [
         "androidManifest",
@@ -154,6 +164,16 @@ avf_flag_aware_apex_defaults {
         "EmptyPayloadApp",
     ],
     soong_config_variables: {
+        avf_microdroid_guest_gki_version: {
+            android14_61_pkvm_experimental: {
+                prebuilts: [
+                    "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable",
+                    "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal",
+                    "microdroid_gki-android14-6.1-pkvm_experimental_kernel",
+                    "microdroid_gki-android14-6.1-pkvm_experimental.json",
+                ],
+            },
+        },
         release_avf_enable_device_assignment: {
             prebuilts: [
                 "com.android.virt.vfio_handler.rc",
@@ -169,14 +189,6 @@ avf_flag_aware_apex_defaults {
         },
         release_avf_enable_llpvm_changes: {
             androidManifest: "AndroidManifest.xml",
-        },
-        release_avf_enable_vendor_modules: {
-            prebuilts: [
-                "microdroid_gki-android14-6.1_initrd_debuggable",
-                "microdroid_gki-android14-6.1_initrd_normal",
-                "microdroid_gki-android14-6.1_kernel",
-                "microdroid_gki-android14-6.1.json",
-            ],
         },
         release_avf_enable_remote_attestation: {
             vintf_fragments: [

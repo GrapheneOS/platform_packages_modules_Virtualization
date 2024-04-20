@@ -69,7 +69,8 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
                 / MICRODROID_COMMAND_RETRY_INTERVAL_MILLIS);
 
     protected static final Set<String> SUPPORTED_GKI_VERSIONS =
-            Collections.unmodifiableSet(new HashSet(Arrays.asList("android14-6.1")));
+            Collections.unmodifiableSet(
+                    new HashSet(Arrays.asList("android14-6.1-pkvm_experimental")));
 
     /* Keep this sync with AssignableDevice.aidl */
     public static final class AssignableDevice {

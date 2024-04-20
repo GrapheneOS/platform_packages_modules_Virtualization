@@ -41,22 +41,22 @@ genrule {
 }
 
 genrule {
-    name: "microdroid_gki-android14-6.1_initrd_gen_arm64",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_gen_arm64",
     srcs: [
         ":microdroid_ramdisk",
         ":microdroid_first_stage_ramdisk",
-        ":microdroid_gki_modules-6.1-arm64",
+        ":microdroid_gki_modules-6.1-pkvm_experimental-arm64",
     ],
     out: ["microdroid_initrd.img"],
     cmd: "cat $(in) > $(out)",
 }
 
 genrule {
-    name: "microdroid_gki-android14-6.1_initrd_gen_x86_64",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_gen_x86_64",
     srcs: [
         ":microdroid_ramdisk",
         ":microdroid_first_stage_ramdisk",
-        ":microdroid_gki_modules-6.1-x86_64",
+        ":microdroid_gki_modules-6.1-pkvm_experimental-x86_64",
     ],
     out: ["microdroid_initrd.img"],
     cmd: "cat $(in) > $(out)",
@@ -96,13 +96,13 @@ genrule {
 }
 
 genrule {
-    name: "microdroid_gki-android14-6.1_initrd_debuggable_arm64",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable_arm64",
     tools: ["initrd_bootconfig"],
     srcs: [
-        ":microdroid_gki-android14-6.1_initrd_gen_arm64",
+        ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_gen_arm64",
         ":microdroid_bootconfig_debuggable_src",
     ] + bootconfigs_arm64,
-    out: ["microdroid_gki-android14-6.1_initrd_debuggable_arm64"],
+    out: ["microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable_arm64"],
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
@@ -118,13 +118,13 @@ genrule {
 }
 
 genrule {
-    name: "microdroid_gki-android14-6.1_initrd_debuggable_x86_64",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [
-        ":microdroid_gki-android14-6.1_initrd_gen_x86_64",
+        ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_gen_x86_64",
         ":microdroid_bootconfig_debuggable_src",
     ] + bootconfigs_x86_64,
-    out: ["microdroid_gki-android14-6.1_initrd_debuggable_x86_64"],
+    out: ["microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable_x86_64"],
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
@@ -140,13 +140,13 @@ genrule {
 }
 
 genrule {
-    name: "microdroid_gki-android14-6.1_initrd_normal_arm64",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_arm64",
     tools: ["initrd_bootconfig"],
     srcs: [
-        ":microdroid_gki-android14-6.1_initrd_gen_arm64",
+        ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_gen_arm64",
         ":microdroid_bootconfig_normal_src",
     ] + bootconfigs_arm64,
-    out: ["microdroid_gki-android14-6.1_initrd_normal_arm64"],
+    out: ["microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_arm64"],
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
@@ -162,13 +162,13 @@ genrule {
 }
 
 genrule {
-    name: "microdroid_gki-android14-6.1_initrd_normal_x86_64",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [
-        ":microdroid_gki-android14-6.1_initrd_gen_x86_64",
+        ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_gen_x86_64",
         ":microdroid_bootconfig_normal_src",
     ] + bootconfigs_x86_64,
-    out: ["microdroid_gki-android14-6.1_initrd_normal_x86_64"],
+    out: ["microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_x86_64"],
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
@@ -188,18 +188,18 @@ prebuilt_etc {
 }
 
 prebuilt_etc {
-    name: "microdroid_gki-android14-6.1_initrd_debuggable",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable",
     // We don't have ramdisk for architectures other than x86_64 & arm64
     src: ":empty_file",
     arch: {
         x86_64: {
-            src: ":microdroid_gki-android14-6.1_initrd_debuggable_x86_64",
+            src: ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable_x86_64",
         },
         arm64: {
-            src: ":microdroid_gki-android14-6.1_initrd_debuggable_arm64",
+            src: ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable_arm64",
         },
     },
-    filename: "microdroid_gki-android14-6.1_initrd_debuggable.img",
+    filename: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable.img",
 }
 
 prebuilt_etc {
@@ -218,16 +218,16 @@ prebuilt_etc {
 }
 
 prebuilt_etc {
-    name: "microdroid_gki-android14-6.1_initrd_normal",
+    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal",
     // We don't have ramdisk for architectures other than x86_64 & arm64
     src: ":empty_file",
     arch: {
         x86_64: {
-            src: ":microdroid_gki-android14-6.1_initrd_normal_x86_64",
+            src: ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_x86_64",
         },
         arm64: {
-            src: ":microdroid_gki-android14-6.1_initrd_normal_arm64",
+            src: ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_arm64",
         },
     },
-    filename: "microdroid_gki-android14-6.1_initrd_normal.img",
+    filename: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal.img",
 }

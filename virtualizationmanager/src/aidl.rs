@@ -89,7 +89,7 @@ use std::os::unix::raw::pid_t;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak};
 use vbmeta::VbMetaImage;
-use vmconfig::VmConfig;
+use vmconfig::{VmConfig, get_debug_level};
 use vsock::VsockStream;
 use zip::ZipArchive;
 
@@ -1359,17 +1359,12 @@ fn check_gdb_allowed(config: &VirtualMachineConfig) -> binder::Result<()> {
             .or_binder_exception(ExceptionCode::SECURITY);
     }
 
-    match config {
-        VirtualMachineConfig::RawConfig(_) => Ok(()),
-        VirtualMachineConfig::AppConfig(config) => {
-            if config.debugLevel != DebugLevel::FULL {
-                Err(anyhow!("Can't use gdb with non-debuggable VMs"))
-                    .or_binder_exception(ExceptionCode::SECURITY)
-            } else {
-                Ok(())
-            }
-        }
+    if get_debug_level(config) == Some(DebugLevel::NONE) {
+        return Err(anyhow!("Can't use gdb with non-debuggable VMs"))
+            .or_binder_exception(ExceptionCode::SECURITY);
     }
+
+    Ok(())
 }
 
 fn extract_instance_id(config: &VirtualMachineConfig) -> [u8; 64] {

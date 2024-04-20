@@ -82,7 +82,7 @@
 
 		cpu0: cpu@0 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x0>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -114,7 +114,7 @@
 		};
 		cpu1: cpu@1 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x1>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -146,7 +146,7 @@
 		};
 		cpu2: cpu@2 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x2>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -178,7 +178,7 @@
 		};
 		cpu3: cpu@3 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x3>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -210,7 +210,7 @@
 		};
 		cpu4: cpu@4 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x4>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -242,7 +242,7 @@
 		};
 		cpu5: cpu@5 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x5>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -274,7 +274,7 @@
 		};
 		cpu6: cpu@6 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x6>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -306,7 +306,7 @@
 		};
 		cpu7: cpu@7 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x7>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -338,7 +338,7 @@
 		};
 		cpu8: cpu@8 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x8>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -370,7 +370,7 @@
 		};
 		cpu9: cpu@9 {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0x9>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -402,7 +402,7 @@
 		};
 		cpu10: cpu@a {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0xa>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -434,7 +434,7 @@
 		};
 		cpu11: cpu@b {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0xb>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -466,7 +466,7 @@
 		};
 		cpu12: cpu@c {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0xc>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -498,7 +498,7 @@
 		};
 		cpu13: cpu@d {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0xd>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -530,7 +530,7 @@
 		};
 		cpu14: cpu@e {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0xe>;
 			capacity-dmips-mhz = <PLACEHOLDER>;
@@ -562,7 +562,7 @@
 		};
 		cpu15: cpu@f {
 			device_type = "cpu";
-			compatible = "arm,arm-v8";
+			compatible = "arm,armv8";
 			enable-method = "psci";
 			reg = <0xf>;
 			capacity-dmips-mhz = <PLACEHOLDER>;

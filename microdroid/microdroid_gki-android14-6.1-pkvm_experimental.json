@@ -1,5 +1,5 @@
 {
-  "kernel": "/apex/com.android.virt/etc/fs/microdroid_gki-android14-6.1_kernel",
+  "kernel": "/apex/com.android.virt/etc/fs/microdroid_gki-android14-6.1-pkvm_experimental_kernel",
   "disks": [
     {
       "partitions": [
