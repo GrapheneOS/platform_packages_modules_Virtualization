@@ -7,9 +7,6 @@ android_app {
     srcs: ["java/**/*.java"],
     resource_dirs: ["res"],
     static_libs: [
-        "androidx-constraintlayout_constraintlayout",
-        "androidx.appcompat_appcompat",
-        "com.google.android.material_material",
         // TODO(b/330257000): will be removed when binder RPC is used
         "android.system.virtualizationservice_internal-java",
         // TODO(b/331708504): will be removed when AVF framework handles surface
@@ -24,4 +21,8 @@ android_app {
     apex_available: [
         "com.android.virt",
     ],
+    optimize: {
+        optimize: true,
+        shrink_resources: true,
+    },
 }
