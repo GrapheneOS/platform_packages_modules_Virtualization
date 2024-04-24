@@ -2445,16 +2445,16 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     private long minMemoryRequired() {
-        if (Build.SUPPORTED_ABIS.length > 0) {
-            String primaryAbi = Build.SUPPORTED_ABIS[0];
-            switch (primaryAbi) {
-                case "x86_64":
-                    return MIN_MEM_X86_64;
-                case "arm64-v8a":
-                    return MIN_MEM_ARM64;
-            }
-        }
-        return 0;
+      assertThat(Build.SUPPORTED_ABIS).isNotEmpty();
+      String primaryAbi = Build.SUPPORTED_ABIS[0];
+      switch (primaryAbi) {
+        case "x86_64":
+          return MIN_MEM_X86_64;
+        case "arm64-v8a":
+        case "arm64-v8a-hwasan":
+          return MIN_MEM_ARM64;
+      }
+      throw new AssertionError("Unsupported ABI: " + primaryAbi);
     }
 
 }
