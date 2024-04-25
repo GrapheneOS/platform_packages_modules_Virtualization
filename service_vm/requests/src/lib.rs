@@ -26,4 +26,4 @@ mod keyblob;
 mod pub_key;
 mod rkp;
 
-pub use api::process_request;
+pub use api::{process_request, RequestContext};

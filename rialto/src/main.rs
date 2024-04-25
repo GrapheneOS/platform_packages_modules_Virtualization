@@ -26,7 +26,7 @@ extern crate alloc;
 
 use crate::communication::VsockStream;
 use crate::error::{Error, Result};
-use crate::fdt::read_dice_range_from;
+use crate::fdt::{read_dice_range_from, read_vendor_hashtree_root_digest};
 use alloc::boxed::Box;
 use bssl_sys::CRYPTO_library_init;
 use ciborium_io::Write;
@@ -39,7 +39,7 @@ use libfdt::FdtError;
 use log::{debug, error, info};
 use service_vm_comm::{ServiceVmRequest, VmType};
 use service_vm_fake_chain::service_vm;
-use service_vm_requests::process_request;
+use service_vm_requests::{process_request, RequestContext};
 use virtio_drivers::{
     device::socket::{VsockAddr, VMADDR_CID_HOST},
     transport::{pci::bus::PciRoot, DeviceType, Transport},
@@ -174,11 +174,14 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     debug!("PCI root: {pci_root:#x?}");
     let socket_device = find_socket_device::<HalImpl>(&mut pci_root)?;
     debug!("Found socket device: guest cid = {:?}", socket_device.guest_cid());
+    let vendor_hashtree_root_digest = read_vendor_hashtree_root_digest(fdt)?;
+    let request_context =
+        RequestContext { dice_artifacts: bcc_handover.as_ref(), vendor_hashtree_root_digest };
 
     let mut vsock_stream = VsockStream::new(socket_device, host_addr())?;
     while let ServiceVmRequest::Process(req) = vsock_stream.read_request()? {
         info!("Received request: {}", req.name());
-        let response = process_request(req, bcc_handover.as_ref());
+        let response = process_request(req, &request_context);
         info!("Sending response: {}", response.name());
         vsock_stream.write_response(&response)?;
         vsock_stream.flush()?;

@@ -24,3 +24,8 @@ pub fn read_dice_range_from(fdt: &Fdt) -> libfdt::Result<Range<usize>> {
     let node = node.next_compatible(cstr!("google,open-dice"))?.ok_or(FdtError::NotFound)?;
     node.first_reg()?.try_into()
 }
+
+pub(crate) fn read_vendor_hashtree_root_digest(fdt: &Fdt) -> libfdt::Result<Option<&[u8]>> {
+    let node = fdt.node(cstr!("/avf"))?.ok_or(FdtError::NotFound)?;
+    node.getprop(cstr!("vendor_hashtree_descriptor_root_digest"))
+}

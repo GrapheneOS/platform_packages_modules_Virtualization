@@ -36,7 +36,7 @@ pub fn appended_payload_range() -> Range<VirtualAddress> {
 
 /// Region allocated for the stack.
 pub fn stack_range() -> Range<VirtualAddress> {
-    const STACK_PAGES: usize = 8;
+    const STACK_PAGES: usize = 12;
 
     layout::stack_range(STACK_PAGES * PVMFW_PAGE_SIZE)
 }

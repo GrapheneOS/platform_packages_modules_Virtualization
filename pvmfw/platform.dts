@@ -61,6 +61,10 @@
 				core3 { cpu = <PLACEHOLDER>; };
 				core4 { cpu = <PLACEHOLDER>; };
 				core5 { cpu = <PLACEHOLDER>; };
+				core6 { cpu = <PLACEHOLDER>; };
+				core7 { cpu = <PLACEHOLDER>; };
+				core8 { cpu = <PLACEHOLDER>; };
+				core9 { cpu = <PLACEHOLDER>; };
 			};
 			cluster1 {
 				core0 { cpu = <PLACEHOLDER>; };
@@ -69,6 +73,10 @@
 				core3 { cpu = <PLACEHOLDER>; };
 				core4 { cpu = <PLACEHOLDER>; };
 				core5 { cpu = <PLACEHOLDER>; };
+				core6 { cpu = <PLACEHOLDER>; };
+				core7 { cpu = <PLACEHOLDER>; };
+				core8 { cpu = <PLACEHOLDER>; };
+				core9 { cpu = <PLACEHOLDER>; };
 			};
 			cluster2 {
 				core0 { cpu = <PLACEHOLDER>; };
@@ -77,6 +85,10 @@
 				core3 { cpu = <PLACEHOLDER>; };
 				core4 { cpu = <PLACEHOLDER>; };
 				core5 { cpu = <PLACEHOLDER>; };
+				core6 { cpu = <PLACEHOLDER>; };
+				core7 { cpu = <PLACEHOLDER>; };
+				core8 { cpu = <PLACEHOLDER>; };
+				core9 { cpu = <PLACEHOLDER>; };
 			};
 		};
 

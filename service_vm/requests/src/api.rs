@@ -21,20 +21,36 @@ use diced_open_dice::DiceArtifacts;
 use service_vm_comm::{Request, Response};
 
 /// Processes a request and returns the corresponding response.
-/// This function serves as the entry point for the request processing
-/// module.
-pub fn process_request(request: Request, dice_artifacts: &dyn DiceArtifacts) -> Response {
+/// This function serves as the entry point for the request processing module.
+pub fn process_request(request: Request, context: &RequestContext) -> Response {
     match request {
         Request::Reverse(v) => Response::Reverse(reverse(v)),
-        Request::GenerateEcdsaP256KeyPair => rkp::generate_ecdsa_p256_key_pair(dice_artifacts)
-            .map_or_else(Response::Err, Response::GenerateEcdsaP256KeyPair),
+        Request::GenerateEcdsaP256KeyPair => {
+            rkp::generate_ecdsa_p256_key_pair(context.dice_artifacts)
+                .map_or_else(Response::Err, Response::GenerateEcdsaP256KeyPair)
+        }
         Request::GenerateCertificateRequest(p) => {
-            rkp::generate_certificate_request(p, dice_artifacts)
+            rkp::generate_certificate_request(p, context.dice_artifacts)
                 .map_or_else(Response::Err, Response::GenerateCertificateRequest)
         }
-        Request::RequestClientVmAttestation(p) => client_vm::request_attestation(p, dice_artifacts)
-            .map_or_else(Response::Err, Response::RequestClientVmAttestation),
+        Request::RequestClientVmAttestation(p) => client_vm::request_attestation(
+            p,
+            context.dice_artifacts,
+            context.vendor_hashtree_root_digest,
+        )
+        .map_or_else(Response::Err, Response::RequestClientVmAttestation),
     }
+}
+
+/// The context for the request processing.
+///
+/// This struct contains the reference data used during the request processing.
+pub struct RequestContext<'a> {
+    /// The reference DICE artifacts.
+    pub dice_artifacts: &'a dyn DiceArtifacts,
+
+    /// The reference hash tree root digest of the vendor partition if exists.
+    pub vendor_hashtree_root_digest: Option<&'a [u8]>,
 }
 
 fn reverse(payload: Vec<u8>) -> Vec<u8> {

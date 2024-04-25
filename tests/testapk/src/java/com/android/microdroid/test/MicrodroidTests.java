@@ -247,6 +247,24 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-1"})
+    public void vmAttestationWithVendorPartitionWhenSupported() throws Exception {
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        assumeFeatureEnabled(VirtualMachineManager.FEATURE_REMOTE_ATTESTATION);
+        assume().withMessage("Test needs Remote Attestation support")
+                .that(getVirtualMachineManager().isRemoteAttestationSupported())
+                .isTrue();
+        File vendorDiskImage = new File("/vendor/etc/avf/microdroid/microdroid_vendor.img");
+        assumeTrue("Microdroid vendor image doesn't exist, skip", vendorDiskImage.exists());
+        VirtualMachineConfig config =
+                buildVmConfigWithVendor(vendorDiskImage, VM_ATTESTATION_PAYLOAD_PATH);
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("cts_attestation_with_vendor_module", config);
+        checkVmAttestationWithValidChallenge(vm);
+    }
+
+    @Test
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-1"})
     public void vmAttestationWhenRemoteAttestationIsSupported() throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
@@ -272,6 +290,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isEqualTo(AttestationStatus.ERROR_INVALID_CHALLENGE);
 
         // Check with a valid challenge.
+        checkVmAttestationWithValidChallenge(vm);
+    }
+
+    private void checkVmAttestationWithValidChallenge(VirtualMachine vm) throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
         SigningResult signingResult =
@@ -2265,6 +2287,11 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     private VirtualMachineConfig buildVmConfigWithVendor(File vendorDiskImage) throws Exception {
+        return buildVmConfigWithVendor(vendorDiskImage, "MicrodroidTestNativeLib.so");
+    }
+
+    private VirtualMachineConfig buildVmConfigWithVendor(File vendorDiskImage, String binaryPath)
+            throws Exception {
         assumeSupportedDevice();
         // TODO(b/325094712): Boot fails with vendor partition in Cuttlefish.
         assumeFalse(
@@ -2275,7 +2302,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 "boot with vendor partition is failing in HWASAN enabled Microdroid.", isHwasan());
         assumeFeatureEnabled(VirtualMachineManager.FEATURE_VENDOR_MODULES);
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                newVmConfigBuilderWithPayloadBinary(binaryPath)
                         .setVendorDiskImage(vendorDiskImage)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
