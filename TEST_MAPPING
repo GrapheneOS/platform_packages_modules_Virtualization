@@ -61,6 +61,10 @@
       "name": "AvfRkpdAppIntegrationTests"
     },
     {
+      "name": "AvfRkpdAppGoogleIntegrationTests",
+      "keywords": ["internal"]
+    },
+    {
       "name": "AvfRkpdVmAttestationTestApp"
     }
   ],
