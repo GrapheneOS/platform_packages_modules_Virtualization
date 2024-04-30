@@ -37,7 +37,17 @@ verification ensures that the RKP VM is operating on a genuine device.
 Additionally, the RKP VM is validated by the pVM Firmware, as part of the
 verified boot process.
 
+During the validation process, the RKP server compares the root public key of the
+DICE chain with the ones registered in the RKP database. Additionally, the server
+examines the presence of the [RKP VM marker][rkpvm-marker] within the DICE
+certificates to determine the origin of the chain, confirming that it indeed
+originates from the RKP VM. For more detailed information about the RKP VM
+DICE chain validation, please refer to the [Remote Provisioning HAL][rkp-hal]
+spec.
+
 [open-dice]: https://android.googlesource.com/platform/external/open-dice/+/main/docs/android.md
+[rkpvm-marker]: https://android.googlesource.com/platform/external/open-dice/+/main/docs/android.md#Configuration-descriptor
+[rkp-hal]: https://android.googlesource.com/platform/hardware/interfaces/+/main/security/rkp/README.md
 
 ### pVM attestation
 
