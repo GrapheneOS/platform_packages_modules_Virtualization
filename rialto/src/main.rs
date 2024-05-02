@@ -234,4 +234,4 @@ pub fn main(fdt_addr: u64, _a1: u64, _a2: u64, _a3: u64) {
 }
 
 main!(main);
-configure_heap!(SIZE_128KB);
+configure_heap!(SIZE_128KB * 2);

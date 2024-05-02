@@ -28,7 +28,7 @@ use ciborium::{
 use core::result;
 use coset::{iana, AsCborValue, CoseSign1, CoseSign1Builder, HeaderBuilder};
 use diced_open_dice::{derive_cdi_leaf_priv, kdf, sign, DiceArtifacts, PrivateKey};
-use log::error;
+use log::{debug, error};
 use service_vm_comm::{EcdsaP256KeyPair, GenerateCertificateRequestParams, RequestProcessingError};
 use zeroize::Zeroizing;
 
@@ -78,6 +78,8 @@ pub(super) fn generate_certificate_request(
         let public_key = validate_public_key(&key_to_sign, hmac_key.as_ref())?;
         public_keys.push(public_key.to_cbor_value()?);
     }
+    debug!("Successfully validated all '{}' public keys.", public_keys.len());
+
     // Builds `CsrPayload`.
     let csr_payload = cbor!([
         Value::Integer(CSR_PAYLOAD_SCHEMA_V3.into()),
@@ -91,6 +93,7 @@ pub(super) fn generate_certificate_request(
     let signed_data_payload =
         cbor!([Value::Bytes(params.challenge.to_vec()), Value::Bytes(csr_payload)])?;
     let signed_data = build_signed_data(&signed_data_payload, dice_artifacts)?.to_cbor_value()?;
+    debug!("Successfully signed the CSR payload.");
 
     // Builds `AuthenticatedRequest<CsrPayload>`.
     // Currently `UdsCerts` is left empty because it is only needed for Samsung devices.
@@ -104,6 +107,7 @@ pub(super) fn generate_certificate_request(
         dice_cert_chain,
         signed_data,
     ])?;
+    debug!("Successfully built the CBOR authenticated request.");
     Ok(cbor_util::serialize(&auth_req)?)
 }
 
