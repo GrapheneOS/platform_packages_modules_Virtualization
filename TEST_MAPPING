@@ -3,6 +3,12 @@
 {
   "avf-presubmit": [
     {
+      "name": "AvfRkpdAppIntegrationTests"
+    },
+    {
+      "name": "AvfRkpdVmAttestationTestApp"
+    },
+    {
       "name": "MicrodroidHostTestCases"
     },
     {
@@ -56,16 +62,8 @@
       "name": "AVFHostTestCases"
     },
     {
-      // TODO(b/325610326): Add this target to presubmit once there is enough
-      // SLO data for it.
-      "name": "AvfRkpdAppIntegrationTests"
-    },
-    {
       "name": "AvfRkpdAppGoogleIntegrationTests",
       "keywords": ["internal"]
-    },
-    {
-      "name": "AvfRkpdVmAttestationTestApp"
     }
   ],
   "postsubmit": [

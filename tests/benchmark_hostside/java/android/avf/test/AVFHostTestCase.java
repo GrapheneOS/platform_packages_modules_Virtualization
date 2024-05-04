@@ -30,6 +30,7 @@ import android.platform.test.annotations.RootPermissionTest;
 
 import com.android.microdroid.test.common.MetricsProcessor;
 import com.android.microdroid.test.host.CommandRunner;
+import com.android.microdroid.test.host.KvmHypTracer;
 import com.android.microdroid.test.host.MicrodroidHostTestCaseBase;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
@@ -37,6 +38,7 @@ import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.SimpleStats;
 
 import org.junit.After;
 import org.junit.Before;
@@ -115,6 +117,20 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     @Test
     public void testBootWithoutCompOS() throws Exception {
         composTestHelper(false);
+    }
+
+    @Test
+    public void testNoLongHypSections() throws Exception {
+        assumeTrue("Skip without hypervisor tracing", KvmHypTracer.isSupported(getDevice()));
+
+        KvmHypTracer tracer = new KvmHypTracer(getDevice());
+        String result = tracer.run(COMPOSD_CMD_BIN + " test-compile");
+        assertWithMessage("Failed to test compilation VM.")
+                .that(result).ignoringCase().contains("all ok");
+
+        SimpleStats stats = tracer.getDurationStats();
+        reportMetric(stats.getData(), "hyp_sections", "s");
+        CLog.i("Hypervisor traces parsed successfully.");
     }
 
     @Test
