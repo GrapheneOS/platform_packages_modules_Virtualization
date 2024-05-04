@@ -72,7 +72,7 @@ cc_library_shared {
     ],
     whole_static_libs: ["libvm_payload_impl"],
     export_static_lib_headers: ["libvm_payload_impl"],
-    installable: false,
+    no_full_install: true,
     version_script: "libvm_payload.map.txt",
     stubs: {
         symbol_file: "libvm_payload.map.txt",

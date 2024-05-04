@@ -7,7 +7,7 @@ cc_binary {
     defaults: ["avf_build_flags_cc"],
     stem: "kexec_load",
     srcs: ["kexec.c"],
-    installable: false,
+    no_full_install: true,
     static_executable: true, // required because this runs before linkerconfig
     compile_multilib: "64",
 }
@@ -18,7 +18,7 @@ cc_binary {
     stem: "crashdump",
     srcs: ["crashdump.c"],
     static_executable: true,
-    installable: false,
+    no_full_install: true,
     compile_multilib: "64",
     sanitize: {
         hwaddress: false, // HWASAN setup fails when run as init process

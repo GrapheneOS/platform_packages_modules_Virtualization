@@ -181,28 +181,28 @@ prebuilt_etc {
     filename: "init.rc",
     src: "init.rc",
     relative_install_path: "init/hw",
-    installable: false, // avoid collision with system partition's init.rc
+    no_full_install: true, // avoid collision with system partition's init.rc
 }
 
 prebuilt_etc {
     name: "microdroid_ueventd_rc",
     filename: "ueventd.rc",
     src: "ueventd.rc",
-    installable: false, // avoid collision with system partition's ueventd.rc
+    no_full_install: true, // avoid collision with system partition's ueventd.rc
 }
 
 prebuilt_etc {
     name: "microdroid_etc_passwd",
     src: "microdroid_passwd",
     filename: "passwd",
-    installable: false,
+    no_full_install: true,
 }
 
 prebuilt_etc {
     name: "microdroid_etc_group",
     src: "microdroid_group",
     filename: "group",
-    installable: false,
+    no_full_install: true,
 }
 
 prebuilt_root {
@@ -217,7 +217,7 @@ prebuilt_root {
             src: ":microdroid_build_prop_gen_arm64",
         },
     },
-    installable: false,
+    no_full_install: true,
 }
 
 genrule {
@@ -389,7 +389,7 @@ prebuilt_etc {
     name: "microdroid_fstab",
     src: "fstab.microdroid",
     filename: "fstab.microdroid",
-    installable: false,
+    no_full_install: true,
 }
 
 // python -c "import hashlib; print(hashlib.sha256(b'bootloader').hexdigest())"
@@ -441,14 +441,14 @@ prebuilt_etc {
     src: "microdroid_manifest.xml",
     filename: "manifest.xml",
     relative_install_path: "vintf",
-    installable: false,
+    no_full_install: true,
 }
 
 prebuilt_etc {
     name: "microdroid_event-log-tags",
     src: "microdroid_event-log-tags",
     filename: "event-log-tags",
-    installable: false,
+    no_full_install: true,
 }
 
 filegroup {
