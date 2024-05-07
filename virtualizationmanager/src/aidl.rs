@@ -67,7 +67,6 @@ use binder::{
     IntoBinderResult,
 };
 use cstr::cstr;
-use disk::QcowFile;
 use glob::glob;
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
@@ -256,15 +255,17 @@ impl IVirtualizationService for VirtualizationService {
             .context("failed to move cursor to start")
             .or_service_specific_exception(-1)?;
         image.set_len(0).context("Failed to reset a file").or_service_specific_exception(-1)?;
-
-        let mut part = QcowFile::new(image, size_bytes)
-            .context("Failed to create QCOW2 image")
+        // Set the file length. In most filesystems, this will not allocate any physical disk
+        // space, it will only change the logical size.
+        image
+            .set_len(size_bytes)
+            .context("Failed to extend file")
             .or_service_specific_exception(-1)?;
 
         match partition_type {
             PartitionType::RAW => Ok(()),
-            PartitionType::ANDROID_VM_INSTANCE => format_as_android_vm_instance(&mut part),
-            PartitionType::ENCRYPTEDSTORE => format_as_encryptedstore(&mut part),
+            PartitionType::ANDROID_VM_INSTANCE => format_as_android_vm_instance(&mut image),
+            PartitionType::ENCRYPTEDSTORE => format_as_encryptedstore(&mut image),
             _ => Err(Error::new(
                 ErrorKind::Unsupported,
                 format!("Unsupported partition type {:?}", partition_type),
@@ -434,7 +435,8 @@ impl VirtualizationService {
         if cfg!(llpvm_changes) {
             instance_id = extract_instance_id(config);
             untrusted_props.push((cstr!("instance-id"), &instance_id[..]));
-            if is_secretkeeper_supported() {
+            let want_updatable = extract_want_updatable(config);
+            if want_updatable && is_secretkeeper_supported() {
                 // Let guest know that it can defer rollback protection to Secretkeeper by setting
                 // an empty property in untrusted node in DT. This enables Updatable VMs.
                 untrusted_props.push((cstr!("defer-rollback-protection"), &[]))
@@ -1371,6 +1373,16 @@ fn extract_instance_id(config: &VirtualMachineConfig) -> [u8; 64] {
     match config {
         VirtualMachineConfig::RawConfig(config) => config.instanceId,
         VirtualMachineConfig::AppConfig(config) => config.instanceId,
+    }
+}
+
+fn extract_want_updatable(config: &VirtualMachineConfig) -> bool {
+    match config {
+        VirtualMachineConfig::RawConfig(_) => true,
+        VirtualMachineConfig::AppConfig(config) => {
+            let Some(custom) = &config.customConfig else { return true };
+            custom.wantUpdatable
+        }
     }
 }
 

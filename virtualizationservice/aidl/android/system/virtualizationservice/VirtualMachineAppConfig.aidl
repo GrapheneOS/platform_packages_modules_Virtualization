@@ -118,6 +118,12 @@ parcelable VirtualMachineAppConfig {
 
         /** List of SysFS nodes of devices to be assigned */
         String[] devices;
+
+        /**
+         * Whether the VM should be able to keep its secret when updated, if possible. This
+         * should rarely need to be set false.
+         */
+        boolean wantUpdatable = true;
     }
 
     /** Configuration parameters guarded by android.permission.USE_CUSTOM_VIRTUAL_MACHINE */

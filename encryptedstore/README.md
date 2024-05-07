@@ -5,7 +5,7 @@ in a VM. Within a VM, this is mounted at a path that can be retrieved via the [`
 Any data written in encrypted storage is persisted and is available next time the VM is run.
 
 Encrypted Storage is backed by a para-virtualized block device on the guest which is further
-backed by a qcow2 disk image in the host. The block device is formatted with an ext4 filesystem.
+backed by a disk image file in the host. The block device is formatted with an ext4 filesystem.
 
 ## Security
 

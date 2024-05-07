@@ -149,7 +149,6 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
     let payload_config_str = format!("{:?}!{:?}", config.apk, payload);
 
     let custom_config = CustomConfig {
-        customKernelImage: None,
         gdbPort: config.debug.gdb.map(u16::from).unwrap_or(0) as i32, // 0 means no gdb
         vendorImage: vendor,
         devices: config
@@ -160,6 +159,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
                 x.to_str().map(String::from).ok_or(anyhow!("Failed to convert {x:?} to String"))
             })
             .collect::<Result<_, _>>()?,
+        ..Default::default()
     };
 
     let vm_config = VirtualMachineConfig::AppConfig(VirtualMachineAppConfig {
