@@ -88,7 +88,7 @@ fn ecdsa_p256_signing_and_verification_succeed() -> Result<()> {
     assert_eq!(digest, sha256(MESSAGE1)?);
 
     let signature = ec_key.ecdsa_sign(&digest)?;
-    ec_key.ecdsa_verify(&signature, &digest)?;
+    ec_key.ecdsa_verify_der(&signature, &digest)?;
     // Building a `PKey` from a temporary `CoseKey` should work as the lifetime
     // of the `PKey` is not tied to the lifetime of the `CoseKey`.
     let pkey = PKey::from_cose_public_key(&ec_key.cose_public_key()?)?;
@@ -103,7 +103,7 @@ fn ecdsa_p384_signing_and_verification_succeed() -> Result<()> {
     let digest = digester.digest(MESSAGE1)?;
 
     let signature = ec_key.ecdsa_sign(&digest)?;
-    ec_key.ecdsa_verify(&signature, &digest)?;
+    ec_key.ecdsa_verify_der(&signature, &digest)?;
     let pkey = PKey::from_cose_public_key(&ec_key.cose_public_key()?)?;
     pkey.verify(&signature, MESSAGE1, Some(digester))
 }
@@ -117,7 +117,7 @@ fn verifying_ecdsa_p256_signed_with_a_different_key_fails() -> Result<()> {
 
     let mut ec_key2 = EcKey::new_p256()?;
     ec_key2.generate_key()?;
-    let err = ec_key2.ecdsa_verify(&signature, &digest).unwrap_err();
+    let err = ec_key2.ecdsa_verify_der(&signature, &digest).unwrap_err();
     let expected_err = Error::CallFailed(ApiName::ECDSA_verify, EcdsaError::BadSignature.into());
     assert_eq!(expected_err, err);
 
@@ -137,7 +137,7 @@ fn verifying_ecdsa_p256_signed_with_a_different_message_fails() -> Result<()> {
     let signature = ec_key.ecdsa_sign(&digest1)?;
     let digest2 = sha256(MESSAGE2)?;
 
-    let err = ec_key.ecdsa_verify(&signature, &digest2).unwrap_err();
+    let err = ec_key.ecdsa_verify_der(&signature, &digest2).unwrap_err();
     let expected_err = Error::CallFailed(ApiName::ECDSA_verify, EcdsaError::BadSignature.into());
     assert_eq!(expected_err, err);
     Ok(())

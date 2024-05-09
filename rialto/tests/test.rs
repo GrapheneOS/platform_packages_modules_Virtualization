@@ -228,7 +228,7 @@ fn check_certificate_for_client_vm(
     let tbs_cert = cert.tbs_certificate;
     let digest = sha256(&tbs_cert.to_der().unwrap()).unwrap();
     authority_public_key
-        .ecdsa_verify(cert.signature.raw_bytes(), &digest)
+        .ecdsa_verify_der(cert.signature.raw_bytes(), &digest)
         .expect("Failed to verify the certificate signature with the authority public key");
 
     // Checks that the certificate's subject public key is equal to the key in the CSR.

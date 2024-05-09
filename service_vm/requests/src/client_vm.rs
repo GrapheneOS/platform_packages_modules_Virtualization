@@ -68,6 +68,7 @@ pub(super) fn request_attestation(
     cose_sign.verify_signature(ATTESTATION_KEY_SIGNATURE_INDEX, aad, |signature, message| {
         ecdsa_verify(&ec_public_key, signature, message)
     })?;
+
     let subject_public_key_info = PKey::try_from(ec_public_key)?.subject_public_key_info()?;
 
     // Builds the TBSCertificate.
@@ -80,12 +81,9 @@ pub(super) fn request_attestation(
     rand_bytes(&mut serial_number)?;
     let subject = Name::encode_from_string("CN=Android Protected Virtual Machine Key")?;
     let rkp_cert = Certificate::from_der(&params.remotely_provisioned_cert)?;
+    let vm_components = client_vm_dice_chain.microdroid_payload_components()?;
     let vm_components =
-        if let Some(components) = client_vm_dice_chain.microdroid_payload_components() {
-            components.iter().map(cert::VmComponent::new).collect::<der::Result<Vec<_>>>()?
-        } else {
-            Vec::new()
-        };
+        vm_components.iter().map(cert::VmComponent::new).collect::<der::Result<Vec<_>>>()?;
 
     info!("The client VM DICE chain validation succeeded. Beginning to generate the certificate.");
     let attestation_ext = cert::AttestationExtension::new(
@@ -120,7 +118,7 @@ pub(super) fn request_attestation(
 fn ecdsa_verify(key: &EcKey, signature: &[u8], message: &[u8]) -> bssl_avf::Result<()> {
     // The message was signed with ECDSA with curve P-256 and SHA-256 at the signature generation.
     let digest = sha256(message)?;
-    key.ecdsa_verify(signature, &digest)
+    key.ecdsa_verify_der(signature, &digest)
 }
 
 fn ecdsa_sign(key: &EcKey, message: &[u8]) -> bssl_avf::Result<Vec<u8>> {

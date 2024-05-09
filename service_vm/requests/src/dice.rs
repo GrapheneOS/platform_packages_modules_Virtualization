@@ -15,6 +15,7 @@
 //! This module contains functions related to DICE.
 
 use alloc::string::String;
+use alloc::vec;
 use alloc::vec::Vec;
 use bssl_avf::{ed25519_verify, Digester, EcKey};
 use cbor_util::{
@@ -112,11 +113,10 @@ impl ClientVmDiceChain {
     ) -> Result<Self> {
         let microdroid_payload_name =
             &dice_entry_payloads[dice_entry_payloads.len() - 1].config_descriptor.component_name;
-        if MICRODROID_PAYLOAD_COMPONENT_NAME != microdroid_payload_name {
+        if Some(MICRODROID_PAYLOAD_COMPONENT_NAME) != microdroid_payload_name.as_deref() {
             error!(
                 "The last entry in the client VM DICE chain must describe the Microdroid \
-                 payload. Got '{}'",
-                microdroid_payload_name
+                 payload. Got '{microdroid_payload_name:?}'"
             );
             return Err(RequestProcessingError::InvalidDiceChain);
         }
@@ -125,11 +125,10 @@ impl ClientVmDiceChain {
             let index = dice_entry_payloads.len() - 2;
             let vendor_partition_name =
                 &dice_entry_payloads[index].config_descriptor.component_name;
-            if VENDOR_PARTITION_COMPONENT_NAME != vendor_partition_name {
+            if Some(VENDOR_PARTITION_COMPONENT_NAME) != vendor_partition_name.as_deref() {
                 error!(
                     "The vendor partition entry in the client VM DICE chain must describe the \
-                        vendor partition. Got '{}'",
-                    vendor_partition_name,
+                    vendor partition. Got '{vendor_partition_name:?}'"
                 );
                 return Err(RequestProcessingError::InvalidDiceChain);
             }
@@ -139,11 +138,10 @@ impl ClientVmDiceChain {
         };
 
         let kernel_name = &dice_entry_payloads[kernel_index].config_descriptor.component_name;
-        if KERNEL_COMPONENT_NAME != kernel_name {
+        if Some(KERNEL_COMPONENT_NAME) != kernel_name.as_deref() {
             error!(
                 "The microdroid kernel entry in the client VM DICE chain must describe the \
-                 Microdroid kernel. Got '{}'",
-                kernel_name,
+                 Microdroid kernel. Got '{kernel_name:?}'"
             );
             return Err(RequestProcessingError::InvalidDiceChain);
         }
@@ -164,8 +162,8 @@ impl ClientVmDiceChain {
         &self.payloads[self.payloads.len() - 1]
     }
 
-    pub(crate) fn microdroid_payload_components(&self) -> Option<&Vec<SubComponent>> {
-        self.microdroid_payload().config_descriptor.sub_components.as_ref()
+    pub(crate) fn microdroid_payload_components(&self) -> Result<Vec<SubComponent>> {
+        self.microdroid_payload().config_descriptor.sub_components()
     }
 
     /// Returns true if all payloads in the DICE chain are in normal mode.
@@ -210,7 +208,12 @@ impl TryFrom<CoseKey> for PublicKey {
     type Error = RequestProcessingError;
 
     fn try_from(key: CoseKey) -> Result<Self> {
-        if !key.key_ops.contains(&KeyOperation::Assigned(iana::KeyOperation::Verify)) {
+        // The public key must allow use for verification.
+        // Note that an empty key_ops set implicitly allows everything.
+        let key_ops = &key.key_ops;
+        if !key_ops.is_empty()
+            && !key_ops.contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
+        {
             error!("Public key does not support verification");
             return Err(RequestProcessingError::InvalidDiceChain);
         }
@@ -226,6 +229,9 @@ impl PublicKey {
     /// generateCertificateRequestV2.cddl:
     ///
     /// PubKeyEd25519 / PubKeyECDSA256 / PubKeyECDSA384
+    ///
+    /// The signature should be in the format defined by COSE in RFC 9053 section 2 for the
+    /// specifric algorithm.
     pub(crate) fn verify(&self, signature: &[u8], message: &[u8]) -> Result<()> {
         match &self.0.kty {
             KeyType::Assigned(iana::KeyType::EC2) => {
@@ -243,7 +249,7 @@ impl PublicKey {
                     }
                 };
                 let digest = digester.digest(message)?;
-                Ok(public_key.ecdsa_verify(signature, &digest)?)
+                Ok(public_key.ecdsa_verify_nist(signature, &digest)?)
             }
             KeyType::Assigned(iana::KeyType::OKP) => {
                 let curve_type =
@@ -346,15 +352,21 @@ impl DiceChainEntryPayload {
 ///
 /// hardware/interfaces/security/rkp/aidl/android/hardware/security/keymint/
 /// generateCertificateRequestV2.cddl
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct ConfigDescriptor {
-    component_name: String,
-    sub_components: Option<Vec<SubComponent>>,
+    component_name: Option<String>,
+    sub_components: Option<Value>,
 }
 
 impl ConfigDescriptor {
     fn from_slice(data: &[u8]) -> Result<Self> {
-        let value = Value::from_slice(data)?;
+        let value = Value::from_slice(data);
+        let Ok(value) = value else {
+            // Some DICE implementations store a hash in the config descriptor. So we just
+            // skip anything that doesn't parse correctly.
+            info!("Ignoring malformed config descriptor");
+            return Ok(Default::default());
+        };
         let entries = value_to_map(value, "ConfigDescriptor")?;
         let mut builder = ConfigDescriptorBuilder::default();
         for (key, value) in entries.into_iter() {
@@ -365,24 +377,31 @@ impl ConfigDescriptor {
                     builder.component_name(name)?;
                 }
                 CONFIG_DESC_SUB_COMPONENTS => {
-                    let sub_components = value_to_array(value, "ConfigDescriptor sub_components")?;
-                    let sub_components = sub_components
-                        .into_iter()
-                        .map(SubComponent::try_from)
-                        .collect::<Result<Vec<_>>>()?;
-                    builder.sub_components(sub_components)?
+                    // If this is the Microdroid payload node then these are the subcomponents. But
+                    // for any other node it could be anything - this isn't a reserved key. So defer
+                    // decoding until we know which node is which.
+                    builder.sub_components(value)?
                 }
                 _ => {}
             }
         }
         builder.build()
     }
+
+    /// Attempt to decode any Microdroid sub-components that were present in this config descriptor.
+    fn sub_components(&self) -> Result<Vec<SubComponent>> {
+        let Some(value) = &self.sub_components else {
+            return Ok(vec![]);
+        };
+        let sub_components = value_to_array(value.clone(), "ConfigDescriptor sub_components")?;
+        sub_components.into_iter().map(SubComponent::try_from).collect()
+    }
 }
 
 #[derive(Debug, Clone, Default)]
 struct ConfigDescriptorBuilder {
     component_name: OnceCell<String>,
-    sub_components: OnceCell<Vec<SubComponent>>,
+    sub_components: OnceCell<Value>,
 }
 
 impl ConfigDescriptorBuilder {
@@ -390,13 +409,12 @@ impl ConfigDescriptorBuilder {
         set_once(&self.component_name, component_name, "ConfigDescriptor component_name")
     }
 
-    fn sub_components(&mut self, sub_components: Vec<SubComponent>) -> Result<()> {
+    fn sub_components(&mut self, sub_components: Value) -> Result<()> {
         set_once(&self.sub_components, sub_components, "ConfigDescriptor sub_components")
     }
 
     fn build(mut self) -> Result<ConfigDescriptor> {
-        let component_name =
-            take_value(&mut self.component_name, "ConfigDescriptor component_name")?;
+        let component_name = self.component_name.take();
         let sub_components = self.sub_components.take();
         Ok(ConfigDescriptor { component_name, sub_components })
     }

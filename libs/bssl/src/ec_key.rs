@@ -22,15 +22,17 @@ use alloc::vec;
 use alloc::vec::Vec;
 use bssl_avf_error::{ApiName, Error, Result};
 use bssl_sys::{
-    BN_bin2bn, BN_bn2bin_padded, BN_clear_free, BN_new, CBB_flush, CBB_len, ECDSA_sign, ECDSA_size,
-    ECDSA_verify, EC_GROUP_get_curve_name, EC_GROUP_new_by_curve_name, EC_KEY_check_key,
-    EC_KEY_free, EC_KEY_generate_key, EC_KEY_get0_group, EC_KEY_get0_public_key,
-    EC_KEY_marshal_private_key, EC_KEY_new_by_curve_name, EC_KEY_parse_private_key,
-    EC_KEY_set_public_key_affine_coordinates, EC_POINT_get_affine_coordinates,
-    NID_X9_62_prime256v1, NID_secp384r1, BIGNUM, EC_GROUP, EC_KEY, EC_POINT,
+    i2d_ECDSA_SIG, BN_bin2bn, BN_bn2bin_padded, BN_clear_free, BN_new, CBB_flush, CBB_len,
+    ECDSA_SIG_free, ECDSA_SIG_new, ECDSA_SIG_set0, ECDSA_sign, ECDSA_size, ECDSA_verify,
+    EC_GROUP_get_curve_name, EC_GROUP_new_by_curve_name, EC_KEY_check_key, EC_KEY_free,
+    EC_KEY_generate_key, EC_KEY_get0_group, EC_KEY_get0_public_key, EC_KEY_marshal_private_key,
+    EC_KEY_new_by_curve_name, EC_KEY_parse_private_key, EC_KEY_set_public_key_affine_coordinates,
+    EC_POINT_get_affine_coordinates, NID_X9_62_prime256v1, NID_secp384r1, BIGNUM, ECDSA_SIG,
+    EC_GROUP, EC_KEY, EC_POINT,
 };
 use cbor_util::{get_label_value, get_label_value_as_bytes};
 use ciborium::Value;
+use core::mem;
 use core::ptr::{self, NonNull};
 use coset::{
     iana::{self, EnumI64},
@@ -144,7 +146,7 @@ impl EcKey {
     /// Verifies the DER-encoded ECDSA `signature` of the `digest` with the current `EcKey`.
     ///
     /// Returns Ok(()) if the verification succeeds, otherwise an error will be returned.
-    pub fn ecdsa_verify(&self, signature: &[u8], digest: &[u8]) -> Result<()> {
+    pub fn ecdsa_verify_der(&self, signature: &[u8], digest: &[u8]) -> Result<()> {
         // The `type` argument should be 0 as required in the BoringSSL spec.
         const TYPE: i32 = 0;
 
@@ -161,6 +163,15 @@ impl EcKey {
             )
         };
         check_int_result(ret, ApiName::ECDSA_verify)
+    }
+
+    /// Verifies the NIST-encoded (R | S) ECDSA `signature` of the `digest` with the current
+    /// `EcKey`.
+    ///
+    /// Returns Ok(()) if the verification succeeds, otherwise an error will be returned.
+    pub fn ecdsa_verify_nist(&self, signature: &[u8], digest: &[u8]) -> Result<()> {
+        let signature = ec_cose_signature_to_der(signature)?;
+        self.ecdsa_verify_der(&signature, digest)
     }
 
     /// Signs the `digest` with the current `EcKey` using ECDSA.
@@ -321,6 +332,85 @@ impl EcKey {
         // and it has been flushed, thus it has no active children.
         let len = unsafe { CBB_len(cbb.as_ref()) };
         Ok(buf.get(0..len).ok_or_else(|| to_call_failed_error(ApiName::CBB_len))?.to_vec().into())
+    }
+}
+
+/// Convert a R | S format NIST signature to a DER-encoded form.
+fn ec_cose_signature_to_der(signature: &[u8]) -> Result<Vec<u8>> {
+    let mut ec_sig = EcSignature::new()?;
+    ec_sig.load_from_nist(signature)?;
+    ec_sig.to_der()
+}
+
+/// Wrapper for an `ECDSA_SIG` object representing an EC signature.
+struct EcSignature(NonNull<ECDSA_SIG>);
+
+impl EcSignature {
+    /// Allocate a signature object.
+    fn new() -> Result<Self> {
+        // SAFETY: We take ownership of the returned pointer if it is non-null.
+        let signature = unsafe { ECDSA_SIG_new() };
+
+        let signature =
+            NonNull::new(signature).ok_or_else(|| to_call_failed_error(ApiName::ECDSA_SIG_new))?;
+        Ok(Self(signature))
+    }
+
+    /// Populate the signature parameters from a NIST encoding (R | S).
+    fn load_from_nist(&mut self, signature: &[u8]) -> Result<()> {
+        let coord_bytes = signature.len() / 2;
+        if signature.len() != 2 * coord_bytes {
+            return Err(Error::InternalError);
+        }
+        let mut r = BigNum::from_slice(&signature[..coord_bytes])?;
+        let mut s = BigNum::from_slice(&signature[coord_bytes..])?;
+
+        check_int_result(
+            // SAFETY: The ECDSA_SIG was properly allocated and not yet freed. We have ownership
+            // of the two BigNums and they are not null.
+            unsafe { ECDSA_SIG_set0(self.0.as_mut(), r.as_mut_ptr(), s.as_mut_ptr()) },
+            ApiName::ECDSA_SIG_set0,
+        )?;
+
+        // On success, the ECDSA_SIG has taken ownership of the BigNums.
+        mem::forget(r);
+        mem::forget(s);
+
+        Ok(())
+    }
+
+    /// Return the signature encoded as DER.
+    fn to_der(&self) -> Result<Vec<u8>> {
+        // SAFETY: The ECDSA_SIG was properly allocated and not yet freed. Null is a valid
+        // value for `outp`; no output is written.
+        let len = unsafe { i2d_ECDSA_SIG(self.0.as_ptr(), ptr::null_mut()) };
+        if len < 0 {
+            return Err(to_call_failed_error(ApiName::i2d_ECDSA_SIG));
+        }
+
+        let mut buf = vec![0; len.try_into().map_err(|_| Error::InternalError)?];
+        let outp = &mut buf.as_mut_ptr();
+        // SAFETY: The ECDSA_SIG was properly allocated and not yet freed. `outp` is a non-null
+        // pointer to a mutable buffer of the right size to which the result will be written.
+        let final_len = unsafe { i2d_ECDSA_SIG(self.0.as_ptr(), outp) };
+        if final_len < 0 {
+            return Err(to_call_failed_error(ApiName::i2d_ECDSA_SIG));
+        }
+        // The input hasn't changed, so the length of the output shouldn't have. If it has we
+        // already have potentially undefined behavior so panic.
+        assert_eq!(
+            len, final_len,
+            "i2d_ECDSA_SIG returned inconsistent lengths: {len}, {final_len}"
+        );
+
+        Ok(buf)
+    }
+}
+
+impl Drop for EcSignature {
+    fn drop(&mut self) {
+        // SAFETY: The pointer was allocated by `ECDSA_SIG_new`.
+        unsafe { ECDSA_SIG_free(self.0.as_mut()) };
     }
 }
 

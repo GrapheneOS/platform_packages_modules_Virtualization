@@ -88,6 +88,8 @@ pub enum ApiName {
     EC_KEY_new_by_curve_name,
     EC_KEY_set_public_key_affine_coordinates,
     EC_POINT_get_affine_coordinates,
+    ECDSA_SIG_new,
+    ECDSA_SIG_set0,
     ECDSA_sign,
     ECDSA_size,
     ECDSA_verify,
@@ -105,6 +107,7 @@ pub enum ApiName {
     EVP_DigestVerifyInit,
     HKDF,
     HMAC,
+    i2d_ECDSA_SIG,
     RAND_bytes,
     SHA256,
 }
