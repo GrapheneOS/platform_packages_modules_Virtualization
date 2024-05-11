@@ -601,7 +601,7 @@ public final class VirtualMachineConfig {
         config.name = Optional.ofNullable(customImageConfig.getName()).orElse("");
         config.instanceId = new byte[64];
         config.kernel =
-                Optional.of(customImageConfig.getKernelPath())
+                Optional.ofNullable(customImageConfig.getKernelPath())
                         .map(
                                 (path) -> {
                                     try {

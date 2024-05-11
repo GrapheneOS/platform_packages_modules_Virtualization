@@ -311,6 +311,7 @@ pub(crate) unsafe trait Libfdt {
     }
 
     /// Safe wrapper around `fdt_open_into()` (C function).
+    #[allow(dead_code)]
     fn open_into(&self, dest: &mut [u8]) -> Result<()> {
         let fdt = self.as_fdt_slice().as_ptr().cast();
 

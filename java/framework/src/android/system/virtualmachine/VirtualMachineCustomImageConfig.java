@@ -16,7 +16,6 @@
 
 package android.system.virtualmachine;
 
-import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.PersistableBundle;
 
@@ -38,7 +37,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_KEYBOARD = "keyboard";
 
     @Nullable private final String name;
-    @NonNull private final String kernelPath;
+    @Nullable private final String kernelPath;
     @Nullable private final String initrdPath;
     @Nullable private final String bootloaderPath;
     @Nullable private final String[] params;
@@ -62,7 +61,7 @@ public class VirtualMachineCustomImageConfig {
         return initrdPath;
     }
 
-    @NonNull
+    @Nullable
     public String getKernelPath() {
         return kernelPath;
     }

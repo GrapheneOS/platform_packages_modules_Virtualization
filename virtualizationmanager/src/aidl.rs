@@ -908,14 +908,14 @@ fn load_app_config(
             append_kernel_param("androidboot.microdroid.mount_vendor=1", &mut vm_config)
         }
 
-        vm_config.devices = custom_config.devices.clone();
+        vm_config.devices.clone_from(&custom_config.devices);
     }
 
     if config.memoryMib > 0 {
         vm_config.memoryMib = config.memoryMib;
     }
 
-    vm_config.name = config.name.clone();
+    vm_config.name.clone_from(&config.name);
     vm_config.protectedVm = config.protectedVm;
     vm_config.cpuTopology = config.cpuTopology;
 

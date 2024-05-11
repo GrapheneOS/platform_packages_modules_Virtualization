@@ -91,7 +91,7 @@ public class MainActivity extends Activity {
                         .forEach(customImageConfigBuilder::addParam);
             }
             if (json.has("bootloader")) {
-                customImageConfigBuilder.setInitrdPath(json.getString("bootloader"));
+                customImageConfigBuilder.setBootloaderPath(json.getString("bootloader"));
             }
             if (json.has("disks")) {
                 JSONArray diskArr = json.getJSONArray("disks");

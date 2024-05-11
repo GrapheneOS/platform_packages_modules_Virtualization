@@ -76,8 +76,10 @@ public class MainActivity extends AppCompatActivity {
                         model.stop();
                     } else {
                         CheckBox debugModeCheckBox = findViewById(R.id.debugMode);
+                        CheckBox protectedModeCheckBox = findViewById(R.id.protectedMode);
                         final boolean debug = debugModeCheckBox.isChecked();
-                        model.run(debug);
+                        final boolean protectedVm = protectedModeCheckBox.isChecked();
+                        model.run(debug, protectedVm);
                     }
                 });
 
@@ -157,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         /** Runs a VM */
-        public void run(boolean debug) {
+        public void run(boolean debug, boolean protectedVm) {
             // Create a VM and run it.
             mExecutorService = Executors.newFixedThreadPool(4);
 
@@ -243,7 +245,8 @@ public class MainActivity extends AppCompatActivity {
                 VirtualMachineConfig.Builder builder =
                         new VirtualMachineConfig.Builder(getApplication());
                 builder.setPayloadBinaryName("MicrodroidTestNativeLib.so");
-                builder.setProtectedVm(true);
+                builder.setProtectedVm(protectedVm);
+
                 if (debug) {
                     builder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
                     builder.setVmOutputCaptured(true);
