@@ -66,7 +66,7 @@ pub(super) fn request_attestation(
     // Verifies the second signature with the public key in the CSR payload.
     let ec_public_key = EcKey::from_cose_public_key_slice(&csr_payload.public_key)?;
     cose_sign.verify_signature(ATTESTATION_KEY_SIGNATURE_INDEX, aad, |signature, message| {
-        ecdsa_verify(&ec_public_key, signature, message)
+        ecdsa_verify_cose(&ec_public_key, signature, message)
     })?;
 
     let subject_public_key_info = PKey::try_from(ec_public_key)?.subject_public_key_info()?;
@@ -110,20 +110,20 @@ pub(super) fn request_attestation(
                 RequestProcessingError::FailedToDecryptKeyBlob
             })?;
     let ec_private_key = EcKey::from_ec_private_key(private_key.as_slice())?;
-    let signature = ecdsa_sign(&ec_private_key, &tbs_cert.to_der()?)?;
+    let signature = ecdsa_sign_der(&ec_private_key, &tbs_cert.to_der()?)?;
     let certificate = cert::build_certificate(tbs_cert, &signature)?;
     Ok(certificate.to_der()?)
 }
 
-fn ecdsa_verify(key: &EcKey, signature: &[u8], message: &[u8]) -> bssl_avf::Result<()> {
+fn ecdsa_verify_cose(key: &EcKey, signature: &[u8], message: &[u8]) -> bssl_avf::Result<()> {
     // The message was signed with ECDSA with curve P-256 and SHA-256 at the signature generation.
     let digest = sha256(message)?;
-    key.ecdsa_verify_der(signature, &digest)
+    key.ecdsa_verify_cose(signature, &digest)
 }
 
-fn ecdsa_sign(key: &EcKey, message: &[u8]) -> bssl_avf::Result<Vec<u8>> {
+fn ecdsa_sign_der(key: &EcKey, message: &[u8]) -> bssl_avf::Result<Vec<u8>> {
     let digest = sha256(message)?;
-    key.ecdsa_sign(&digest)
+    key.ecdsa_sign_der(&digest)
 }
 
 fn validate_service_vm_dice_chain_length(service_vm_dice_chain: &[Value]) -> Result<()> {

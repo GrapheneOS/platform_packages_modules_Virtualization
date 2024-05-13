@@ -214,7 +214,7 @@ impl TryFrom<CoseKey> for PublicKey {
         if !key_ops.is_empty()
             && !key_ops.contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
         {
-            error!("Public key does not support verification");
+            error!("Public key does not support verification - key_ops: {key_ops:?}");
             return Err(RequestProcessingError::InvalidDiceChain);
         }
         Ok(Self(key))
@@ -231,7 +231,7 @@ impl PublicKey {
     /// PubKeyEd25519 / PubKeyECDSA256 / PubKeyECDSA384
     ///
     /// The signature should be in the format defined by COSE in RFC 9053 section 2 for the
-    /// specifric algorithm.
+    /// specific algorithm.
     pub(crate) fn verify(&self, signature: &[u8], message: &[u8]) -> Result<()> {
         match &self.0.kty {
             KeyType::Assigned(iana::KeyType::EC2) => {
@@ -249,7 +249,7 @@ impl PublicKey {
                     }
                 };
                 let digest = digester.digest(message)?;
-                Ok(public_key.ecdsa_verify_nist(signature, &digest)?)
+                Ok(public_key.ecdsa_verify_cose(signature, &digest)?)
             }
             KeyType::Assigned(iana::KeyType::OKP) => {
                 let curve_type =

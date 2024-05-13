@@ -48,6 +48,7 @@ import com.android.virt.vm_attestation.testservice.IAttestationService.SigningRe
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -206,6 +207,11 @@ public abstract class MicrodroidDeviceTestBase {
         assume().withMessage("Device doesn't support AVF")
                 .that(mCtx.getPackageManager().hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK))
                 .isTrue();
+        int vendorApiLevel = SystemProperties.getInt("ro.vendor.api_level", 0);
+        boolean isGsi = new File("/system/system_ext/etc/init/init.gsi.rc").exists();
+        assume().withMessage("GSI with vendor API level < 202404 may not support AVF")
+                .that(isGsi && vendorApiLevel < 202404)
+                .isFalse();
     }
 
     protected void assumeSupportedDevice() {

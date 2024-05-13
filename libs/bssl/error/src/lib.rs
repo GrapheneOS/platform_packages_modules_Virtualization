@@ -88,6 +88,7 @@ pub enum ApiName {
     EC_KEY_new_by_curve_name,
     EC_KEY_set_public_key_affine_coordinates,
     EC_POINT_get_affine_coordinates,
+    ECDSA_SIG_from_bytes,
     ECDSA_SIG_new,
     ECDSA_SIG_set0,
     ECDSA_sign,

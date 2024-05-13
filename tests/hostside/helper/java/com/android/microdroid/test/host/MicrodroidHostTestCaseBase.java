@@ -20,6 +20,7 @@ import static com.android.tradefed.testtype.DeviceJUnit4ClassRunner.TestLogData;
 
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
@@ -136,6 +137,15 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
                 "Requires VM support",
                 testDevice.hasFeature("android.software.virtualization_framework"));
         assumeTrue("Requires VM support", testDevice.supportsMicrodroid());
+
+        CommandRunner android = new CommandRunner(androidDevice);
+        long vendorApiLevel = androidDevice.getIntProperty("ro.vendor.api_level", 0);
+        boolean isGsi =
+                android.runForResult("[ -e /system/system_ext/etc/init/init.gsi.rc ]").getStatus()
+                        == CommandStatus.SUCCESS;
+        assumeFalse(
+                "GSI with vendor API level < 202404 may not support AVF",
+                isGsi && vendorApiLevel < 202404);
     }
 
     public static void archiveLogThenDelete(TestLogData logs, ITestDevice device, String remotePath,

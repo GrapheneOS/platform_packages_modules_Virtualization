@@ -6,6 +6,7 @@ java_defaults {
     name: "vm_attestation_testapp_defaults",
     test_suites: [
         "general-tests",
+        "pts",
     ],
     static_libs: [
         "MicrodroidDeviceTestHelper",

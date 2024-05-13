@@ -100,7 +100,7 @@ fn build_signed_data(
             sign(message, cdi_leaf_priv.as_array()).map(|v| v.to_vec())
         })?
         .try_add_created_signature(attestation_key_sig_headers, aad, |message| {
-            ecdsa_sign(message, attestation_key)
+            ecdsa_sign_cose(message, attestation_key)
         })?
         .build();
     Ok(signed_data)
@@ -113,12 +113,18 @@ fn build_signature_headers(alg: iana::Algorithm) -> CoseSignature {
     CoseSignatureBuilder::new().protected(protected).build()
 }
 
-fn ecdsa_sign(message: &[u8], key: &EcKeyRef<Private>) -> Result<Vec<u8>> {
+fn ecdsa_sign_cose(message: &[u8], key: &EcKeyRef<Private>) -> Result<Vec<u8>> {
     let digest = sha256(message);
     // Passes the digest to `ECDSA_do_sign` as recommended in the spec:
     // https://commondatastorage.googleapis.com/chromium-boringssl-docs/ecdsa.h.html#ECDSA_do_sign
     let sig = EcdsaSig::sign::<Private>(&digest, key)?;
-    Ok(sig.to_der()?)
+    ecdsa_sig_to_cose(&sig)
+}
+
+fn ecdsa_sig_to_cose(signature: &EcdsaSig) -> Result<Vec<u8>> {
+    let mut result = signature.r().to_vec_padded(ATTESTATION_KEY_AFFINE_COORDINATE_SIZE)?;
+    result.extend_from_slice(&signature.s().to_vec_padded(ATTESTATION_KEY_AFFINE_COORDINATE_SIZE)?);
+    Ok(result)
 }
 
 fn get_affine_coordinates(key: &EcKeyRef<Private>) -> Result<(Vec<u8>, Vec<u8>)> {
@@ -175,29 +181,38 @@ mod tests {
         let chain = dice::Chain::from_cbor(&session, &csr.dice_cert_chain)?;
         let public_key = chain.leaf().subject_public_key();
         cose_sign
-            .verify_signature(0, aad, |signature, message| public_key.verify(signature, message))?;
+            .verify_signature(0, aad, |signature, message| public_key.verify(signature, message))
+            .context("Verifying CDI_Leaf_Priv signature")?;
 
         // Checks the second signature is signed with attestation key.
         let attestation_public_key = CoseKey::from_slice(&csr_payload.public_key).unwrap();
         let ec_public_key = to_ec_public_key(&attestation_public_key)?;
-        cose_sign.verify_signature(1, aad, |signature, message| {
-            ecdsa_verify(signature, message, &ec_public_key)
-        })?;
+        cose_sign
+            .verify_signature(1, aad, |signature, message| {
+                ecdsa_verify_cose(signature, message, &ec_public_key)
+            })
+            .context("Verifying attestation key signature")?;
 
         // Verifies that private key and the public key form a valid key pair.
         let message = b"test message";
-        let signature = ecdsa_sign(message, &ec_private_key)?;
-        ecdsa_verify(&signature, message, &ec_public_key)?;
+        let signature = ecdsa_sign_cose(message, &ec_private_key)?;
+        ecdsa_verify_cose(&signature, message, &ec_public_key)
+            .context("Verifying signature with attested key")?;
 
         Ok(())
     }
 
-    fn ecdsa_verify(
+    fn ecdsa_verify_cose(
         signature: &[u8],
         message: &[u8],
         ec_public_key: &EcKeyRef<Public>,
     ) -> Result<()> {
-        let sig = EcdsaSig::from_der(signature)?;
+        let coord_bytes = signature.len() / 2;
+        assert_eq!(signature.len(), coord_bytes * 2);
+
+        let r = BigNum::from_slice(&signature[..coord_bytes])?;
+        let s = BigNum::from_slice(&signature[coord_bytes..])?;
+        let sig = EcdsaSig::from_private_components(r, s)?;
         let digest = sha256(message);
         if sig.verify(&digest, ec_public_key)? {
             Ok(())
