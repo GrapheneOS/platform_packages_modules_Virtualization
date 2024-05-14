@@ -24,11 +24,6 @@ use virtualizationmaintenance::IVirtualizationReconciliationCallback::IVirtualiz
 mod vmdb;
 use vmdb::{VmId, VmIdDb};
 
-/// Indicate whether an app ID belongs to a system core component.
-fn core_app_id(app_id: i32) -> bool {
-    app_id < 10000
-}
-
 /// Interface name for the Secretkeeper HAL.
 const SECRETKEEPER_SERVICE: &str = "android.hardware.security.secretkeeper.ISecretkeeper/default";
 
@@ -45,6 +40,11 @@ const MAX_VM_IDS_PER_APP: usize = 400;
 
 /// State related to VM secrets.
 pub struct State {
+    /// The real state, lazily created when we first need it.
+    inner: Option<InnerState>,
+}
+
+struct InnerState {
     sk: binder::Strong<dyn ISecretkeeper>,
     /// Database of VM IDs,
     vm_id_db: VmIdDb,
@@ -53,20 +53,69 @@ pub struct State {
 
 impl State {
     pub fn new() -> Option<Self> {
-        let sk = match Self::find_sk() {
-            Some(sk) => sk,
-            None => {
-                warn!("failed to find a Secretkeeper instance; skipping secret management");
-                return None;
-            }
+        if is_sk_present() {
+            // Don't instantiate the inner state yet, that will happen when it is needed.
+            Some(Self { inner: None })
+        } else {
+            // If the Secretkeeper HAL doesn't exist, there's never any point in trying to
+            // handle maintenance for it.
+            info!("Failed to find a Secretkeeper instance; skipping secret management");
+            None
+        }
+    }
+
+    /// Return the existing inner state, or create one if there isn't one.
+    /// This is done on demand as in early boot (before we need Secretkeeper) it may not be
+    /// available to connect to. See b/331417880.
+    fn get_inner(&mut self) -> Result<&mut InnerState> {
+        if self.inner.is_none() {
+            self.inner = Some(InnerState::new()?);
+        }
+        Ok(self.inner.as_mut().unwrap())
+    }
+
+    /// Record a new VM ID.  If there is an existing owner (user_id, app_id) for the VM ID,
+    /// it will be replaced.
+    pub fn add_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<()> {
+        self.get_inner()?.add_id(vm_id, user_id, app_id)
+    }
+
+    /// Delete the VM IDs associated with Android user ID `user_id`.
+    pub fn delete_ids_for_user(&mut self, user_id: i32) -> Result<()> {
+        self.get_inner()?.delete_ids_for_user(user_id)
+    }
+
+    /// Delete the VM IDs associated with `(user_id, app_id)`.
+    pub fn delete_ids_for_app(&mut self, user_id: i32, app_id: i32) -> Result<()> {
+        self.get_inner()?.delete_ids_for_app(user_id, app_id)
+    }
+
+    /// Delete the provided VM IDs from both Secretkeeper and the database.
+    pub fn delete_ids(&mut self, vm_ids: &[VmId]) {
+        let Ok(inner) = self.get_inner() else {
+            warn!("No Secretkeeper available, not deleting secrets");
+            return;
         };
-        let (vm_id_db, created) = match VmIdDb::new(PERSISTENT_DIRECTORY) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("skipping secret management, failed to connect to database: {e:?}");
-                return None;
-            }
-        };
+
+        inner.delete_ids(vm_ids)
+    }
+
+    /// Perform reconciliation to allow for possibly missed notifications of user or app removal.
+    pub fn reconcile(
+        &mut self,
+        callback: &Strong<dyn IVirtualizationReconciliationCallback>,
+    ) -> Result<()> {
+        self.get_inner()?.reconcile(callback)
+    }
+}
+
+impl InnerState {
+    fn new() -> Result<Self> {
+        info!("Connecting to {SECRETKEEPER_SERVICE}");
+        let sk = binder::wait_for_interface::<dyn ISecretkeeper>(SECRETKEEPER_SERVICE)
+            .context("Connecting to {SECRETKEEPER_SERVICE}")?;
+        let (vm_id_db, created) = VmIdDb::new(PERSISTENT_DIRECTORY)
+            .context("Connecting to secret management database")?;
         if created {
             // If the database did not previously exist, then this appears to be the first run of
             // `virtualizationservice` since device setup or factory reset.  In case of the latter,
@@ -76,32 +125,15 @@ impl State {
             if let Err(e) = sk.deleteAll() {
                 error!("failed to delete previous secrets, dropping database: {e:?}");
                 vm_id_db.delete_db_file(PERSISTENT_DIRECTORY);
-                return None;
+                return Err(e.into());
             }
         } else {
             info!("re-using existing VM ID DB");
         }
-        Some(Self { sk, vm_id_db, batch_size: DELETE_MAX_BATCH_SIZE })
+        Ok(Self { sk, vm_id_db, batch_size: DELETE_MAX_BATCH_SIZE })
     }
 
-    fn find_sk() -> Option<binder::Strong<dyn ISecretkeeper>> {
-        if let Ok(true) = binder::is_declared(SECRETKEEPER_SERVICE) {
-            match binder::get_interface(SECRETKEEPER_SERVICE) {
-                Ok(sk) => Some(sk),
-                Err(e) => {
-                    error!("failed to connect to {SECRETKEEPER_SERVICE}: {e:?}");
-                    None
-                }
-            }
-        } else {
-            info!("instance {SECRETKEEPER_SERVICE} not declared");
-            None
-        }
-    }
-
-    /// Record a new VM ID.  If there is an existing owner (user_id, app_id) for the VM ID,
-    /// it will be replaced.
-    pub fn add_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<()> {
+    fn add_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<()> {
         let user_id: i32 = user_id.try_into().context(format!("user_id {user_id} out of range"))?;
         let app_id: i32 = app_id.try_into().context(format!("app_id {app_id} out of range"))?;
 
@@ -125,8 +157,7 @@ impl State {
         self.vm_id_db.add_vm_id(vm_id, user_id, app_id)
     }
 
-    /// Delete the VM IDs associated with Android user ID `user_id`.
-    pub fn delete_ids_for_user(&mut self, user_id: i32) -> Result<()> {
+    fn delete_ids_for_user(&mut self, user_id: i32) -> Result<()> {
         let vm_ids = self.vm_id_db.vm_ids_for_user(user_id)?;
         info!(
             "delete_ids_for_user(user_id={user_id}) triggers deletion of {} secrets",
@@ -136,8 +167,7 @@ impl State {
         Ok(())
     }
 
-    /// Delete the VM IDs associated with `(user_id, app_id)`.
-    pub fn delete_ids_for_app(&mut self, user_id: i32, app_id: i32) -> Result<()> {
+    fn delete_ids_for_app(&mut self, user_id: i32, app_id: i32) -> Result<()> {
         let vm_ids = self.vm_id_db.vm_ids_for_app(user_id, app_id)?;
         info!(
             "delete_ids_for_app(user_id={user_id}, app_id={app_id}) removes {} secrets",
@@ -147,8 +177,7 @@ impl State {
         Ok(())
     }
 
-    /// Delete the provided VM IDs from both Secretkeeper and the database.
-    pub fn delete_ids(&mut self, mut vm_ids: &[VmId]) {
+    fn delete_ids(&mut self, mut vm_ids: &[VmId]) {
         while !vm_ids.is_empty() {
             let len = std::cmp::min(vm_ids.len(), self.batch_size);
             let batch = &vm_ids[..len];
@@ -171,8 +200,7 @@ impl State {
         }
     }
 
-    /// Perform reconciliation to allow for possibly missed notifications of user or app removal.
-    pub fn reconcile(
+    fn reconcile(
         &mut self,
         callback: &Strong<dyn IVirtualizationReconciliationCallback>,
     ) -> Result<()> {
@@ -245,19 +273,24 @@ impl State {
     }
 }
 
+/// Indicate whether an app ID belongs to a system core component.
+fn core_app_id(app_id: i32) -> bool {
+    app_id < 10000
+}
+
+fn is_sk_present() -> bool {
+    matches!(binder::is_declared(SECRETKEEPER_SERVICE), Ok(true))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use android_hardware_security_authgraph::aidl::android::hardware::security::authgraph;
+    use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper;
+    use authgraph::IAuthGraphKeyExchange::IAuthGraphKeyExchange;
+    use secretkeeper::ISecretkeeper::BnSecretkeeper;
     use std::sync::{Arc, Mutex};
-    use android_hardware_security_authgraph::aidl::android::hardware::security::authgraph::{
-        IAuthGraphKeyExchange::IAuthGraphKeyExchange,
-    };
-    use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
-        ISecretkeeper::BnSecretkeeper
-    };
-    use virtualizationmaintenance::IVirtualizationReconciliationCallback::{
-        BnVirtualizationReconciliationCallback
-    };
+    use virtualizationmaintenance::IVirtualizationReconciliationCallback::BnVirtualizationReconciliationCallback;
 
     /// Fake implementation of Secretkeeper that keeps a history of what operations were invoked.
     #[derive(Default)]
@@ -298,7 +331,12 @@ mod tests {
         let vm_id_db = vmdb::new_test_db();
         let sk = FakeSk { history };
         let sk = BnSecretkeeper::new_binder(sk, binder::BinderFeatures::default());
-        State { sk, vm_id_db, batch_size }
+        let inner = InnerState { sk, vm_id_db, batch_size };
+        State { inner: Some(inner) }
+    }
+
+    fn get_db(state: &mut State) -> &mut VmIdDb {
+        &mut state.inner.as_mut().unwrap().vm_id_db
     }
 
     struct Reconciliation {
@@ -360,11 +398,11 @@ mod tests {
         let history = Arc::new(Mutex::new(Vec::new()));
         let mut sk_state = new_test_state(history.clone(), 2);
 
-        sk_state.vm_id_db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID4, USER3, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap(); // Overwrites APP_A
+        get_db(&mut sk_state).add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID4, USER3, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID5, USER3, APP_C).unwrap(); // Overwrites APP_A
         assert_eq!((*history.lock().unwrap()).clone(), vec![]);
 
         sk_state.delete_ids_for_app(USER2, APP_B).unwrap();
@@ -376,11 +414,14 @@ mod tests {
             vec![SkOp::DeleteIds(vec![VM_ID3]), SkOp::DeleteIds(vec![VM_ID4, VM_ID5]),]
         );
 
-        assert_eq!(vec![VM_ID1, VM_ID2], sk_state.vm_id_db.vm_ids_for_user(USER1).unwrap());
-        assert_eq!(vec![VM_ID1, VM_ID2], sk_state.vm_id_db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(vec![VM_ID1, VM_ID2], get_db(&mut sk_state).vm_ids_for_user(USER1).unwrap());
+        assert_eq!(
+            vec![VM_ID1, VM_ID2],
+            get_db(&mut sk_state).vm_ids_for_app(USER1, APP_A).unwrap()
+        );
         let empty: Vec<VmId> = Vec::new();
-        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
-        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+        assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_user(USER3).unwrap());
     }
 
     #[test]
@@ -388,16 +429,19 @@ mod tests {
         let history = Arc::new(Mutex::new(Vec::new()));
         let mut sk_state = new_test_state(history.clone(), 20);
 
-        sk_state.vm_id_db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID4, USER2, CORE_APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID4, USER2, CORE_APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
 
-        assert_eq!(vec![VM_ID1, VM_ID2], sk_state.vm_id_db.vm_ids_for_user(USER1).unwrap());
-        assert_eq!(vec![VM_ID1, VM_ID2], sk_state.vm_id_db.vm_ids_for_app(USER1, APP_A).unwrap());
-        assert_eq!(vec![VM_ID3], sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
-        assert_eq!(vec![VM_ID5], sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+        assert_eq!(vec![VM_ID1, VM_ID2], get_db(&mut sk_state).vm_ids_for_user(USER1).unwrap());
+        assert_eq!(
+            vec![VM_ID1, VM_ID2],
+            get_db(&mut sk_state).vm_ids_for_app(USER1, APP_A).unwrap()
+        );
+        assert_eq!(vec![VM_ID3], get_db(&mut sk_state).vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(vec![VM_ID5], get_db(&mut sk_state).vm_ids_for_user(USER3).unwrap());
 
         // Perform a reconciliation and pretend that USER1 and [CORE_APP_A, APP_B] are gone.
         let reconciliation =
@@ -409,12 +453,12 @@ mod tests {
         sk_state.reconcile(&callback).unwrap();
 
         let empty: Vec<VmId> = Vec::new();
-        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_user(USER1).unwrap());
-        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER1, APP_A).unwrap());
+        assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_user(USER1).unwrap());
+        assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_app(USER1, APP_A).unwrap());
         // VM for core app stays even though it's reported as absent.
-        assert_eq!(vec![VM_ID4], sk_state.vm_id_db.vm_ids_for_user(USER2).unwrap());
-        assert_eq!(empty, sk_state.vm_id_db.vm_ids_for_app(USER2, APP_B).unwrap());
-        assert_eq!(vec![VM_ID5], sk_state.vm_id_db.vm_ids_for_user(USER3).unwrap());
+        assert_eq!(vec![VM_ID4], get_db(&mut sk_state).vm_ids_for_user(USER2).unwrap());
+        assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_app(USER2, APP_B).unwrap());
+        assert_eq!(vec![VM_ID5], get_db(&mut sk_state).vm_ids_for_user(USER3).unwrap());
     }
 
     #[test]
@@ -427,11 +471,11 @@ mod tests {
             let mut vm_id = [0u8; 64];
             vm_id[0..8].copy_from_slice(&(idx as u64).to_be_bytes());
             sk_state.add_id(&vm_id, USER1 as u32, APP_A as u32).unwrap();
-            assert_eq!(idx + 1, sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap());
+            assert_eq!(idx + 1, get_db(&mut sk_state).count_vm_ids_for_app(USER1, APP_A).unwrap());
         }
         assert_eq!(
             MAX_VM_IDS_PER_APP,
-            sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap()
+            get_db(&mut sk_state).count_vm_ids_for_app(USER1, APP_A).unwrap()
         );
 
         // Beyond the limit it's one in, one out.
@@ -441,12 +485,12 @@ mod tests {
             sk_state.add_id(&vm_id, USER1 as u32, APP_A as u32).unwrap();
             assert_eq!(
                 MAX_VM_IDS_PER_APP,
-                sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap()
+                get_db(&mut sk_state).count_vm_ids_for_app(USER1, APP_A).unwrap()
             );
         }
         assert_eq!(
             MAX_VM_IDS_PER_APP,
-            sk_state.vm_id_db.count_vm_ids_for_app(USER1, APP_A).unwrap()
+            get_db(&mut sk_state).count_vm_ids_for_app(USER1, APP_A).unwrap()
         );
     }
 
@@ -467,10 +511,10 @@ mod tests {
         let history = Arc::new(Mutex::new(Vec::new()));
         let mut sk_state = new_test_state(history.clone(), 20);
 
-        sk_state.vm_id_db.add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
-        sk_state.vm_id_db.add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
         sk_state.delete_ids_for_user(USER1).unwrap();
         sk_state.delete_ids_for_user(USER2).unwrap();
         sk_state.delete_ids_for_user(USER3).unwrap();

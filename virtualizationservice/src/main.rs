@@ -20,20 +20,18 @@ mod maintenance;
 mod remote_provisioning;
 mod rkpvm;
 
-use crate::aidl::{remove_temporary_dir, TEMPORARY_DIRECTORY, VirtualizationServiceInternal};
+use crate::aidl::{remove_temporary_dir, VirtualizationServiceInternal, TEMPORARY_DIRECTORY};
 use android_logger::{Config, FilterBuilder};
-use android_system_virtualizationservice_internal::aidl::android::system::{
-    virtualizationservice_internal::IVirtualizationServiceInternal::BnVirtualizationServiceInternal
-};
-use android_system_virtualizationmaintenance::aidl::android::system::virtualizationmaintenance::{
-    IVirtualizationMaintenance::BnVirtualizationMaintenance
-};
+use android_system_virtualizationmaintenance::aidl::android::system::virtualizationmaintenance;
+use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal;
 use anyhow::{bail, Context, Error, Result};
 use binder::{register_lazy_service, BinderFeatures, ProcessState, ThreadState};
 use log::{error, info, LevelFilter};
 use std::fs::{create_dir, read_dir};
 use std::os::unix::raw::{pid_t, uid_t};
 use std::path::Path;
+use virtualizationmaintenance::IVirtualizationMaintenance::BnVirtualizationMaintenance;
+use virtualizationservice_internal::IVirtualizationServiceInternal::BnVirtualizationServiceInternal;
 
 const LOG_TAG: &str = "VirtualizationService";
 pub(crate) const REMOTELY_PROVISIONED_COMPONENT_SERVICE_NAME: &str =

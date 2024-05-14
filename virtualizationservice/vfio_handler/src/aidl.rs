@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Implementation of the AIDL interface of the VirtualizationService.
+//! Implementation of the AIDL interface of VfioHandler.
 
 use anyhow::{anyhow, Context};
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::{IBoundDevice, BnBoundDevice};
