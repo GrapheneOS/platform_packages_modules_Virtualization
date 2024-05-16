@@ -49,6 +49,13 @@ pub struct VmPayloadConfig {
     /// files with integrity checking, but not confidentiality.
     #[serde(default)]
     pub enable_authfs: bool,
+
+    /// Ask the kernel for transparent huge-pages (THP). This is only a hint and
+    /// the kernel will allocate THP-backed memory only if globally enabled by
+    /// the system and if any can be found. See
+    /// https://docs.kernel.org/admin-guide/mm/transhuge.html
+    #[serde(default)]
+    pub hugepages: bool,
 }
 
 /// OS config

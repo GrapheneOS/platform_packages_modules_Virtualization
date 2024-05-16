@@ -121,6 +121,7 @@ pub struct CrosvmConfig {
     pub device_tree_overlay: Option<File>,
     pub display_config: Option<DisplayConfig>,
     pub input_device_options: Vec<InputDeviceOption>,
+    pub hugepages: bool,
 }
 
 #[derive(Debug)]
@@ -1005,6 +1006,11 @@ fn run_vm(
             });
         }
     }
+
+    if config.hugepages {
+        command.arg("--hugepages");
+    }
+
     append_platform_devices(&mut command, &mut preserved_fds, &config)?;
 
     debug!("Preserving FDs {:?}", preserved_fds);
