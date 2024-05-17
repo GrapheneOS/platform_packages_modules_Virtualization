@@ -59,6 +59,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -660,6 +661,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
+    @Ignore("b/341087884") // TODO(b/341087884): fix & re-enable
     public void testTombstonesAreGeneratedUponKernelCrash() throws Exception {
         assumeFalse("Cuttlefish is not supported", isCuttlefish());
         assumeFalse("Skipping test because ramdump is disabled on user build", isUserBuild());

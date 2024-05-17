@@ -34,6 +34,21 @@ To run OSes with graphics support, follow the instruction below.
 As of today (April 2024), ChromiumOS is the only officially supported guest
 payload. We will be adding more OSes in the future.
 
+#### Download from build server
+
+  - Step 1) Go to the link https://ci.chromium.org/ui/p/chromeos/builders/chromiumos/ferrochrome-public-main/
+    - Note: I 'searched' the ferrochrome target with builder search.
+  - Step 2) Click a build number
+  - Step 3) Expand steps and find `48. upload artifacts`.
+  - Step 4) Click `gs upload dir`. You'll see Cloud storage with comprehensive artifacts (e.g. [Here](https://pantheon.corp.google.com/storage/browser/chromiumos-image-archive/ferrochrome-public/R126-15883.0.0) is the initial build of ferrochrome)
+  - Step 5) Download `image.zip`, which contains working vmlinuz.
+    - Note: DO NOT DOWNLOAD `vmlinuz.tar.xz` from the CI.
+  - Step 6) Uncompress `image.zip`, and boot with `chromiumos_test_image.bin` and `boot_images/vmlinuz`.
+    - Note: DO NOT USE `vmlinuz.bin`.
+
+IMPORTANT: DO NOT USE `vmlinuz.bin` for passing to crosvm. It doesn't pick-up the correct `init` process (picks `/init` instead of `/sbin/init`, and `cfg80211` keeps crashing (i.e. no network)
+
+
 #### Build ChromiumOS for VM
 
 First, check out source code from the ChromiumOS and Chromium projects.
@@ -122,7 +137,7 @@ Don’t forget to call `build-image` afterwards.
 You need two outputs:
 
 * ChromiumOS disk image: ~/chromiumos/src/build/images/ferrochrome/latest/chromiumos_test_image.bin
-* The kernel: ~/chromiumos/out/build/ferrochrome/boot/vmlinuz
+* The kernel: ~/chromiumos/src/build/images/ferrochrome/latest/boot_images/vmlinuz
 
 ### Create a guest VM configuration
 
