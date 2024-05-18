@@ -46,6 +46,7 @@ soong_config_module_type {
     bool_variables: [
         "release_avf_enable_device_assignment",
         "release_avf_enable_llpvm_changes",
+        "release_avf_enable_network",
         "release_avf_enable_remote_attestation",
         "release_avf_enable_vendor_modules",
         "release_avf_enable_virt_cpufreq",
@@ -189,6 +190,16 @@ avf_flag_aware_apex_defaults {
         },
         release_avf_enable_llpvm_changes: {
             androidManifest: "AndroidManifest.xml",
+        },
+        release_avf_enable_network: {
+            arch: {
+                arm64: {
+                    binaries: ["vmnic"],
+                },
+                x86_64: {
+                    binaries: ["vmnic"],
+                },
+            },
         },
         release_avf_enable_remote_attestation: {
             vintf_fragments: [

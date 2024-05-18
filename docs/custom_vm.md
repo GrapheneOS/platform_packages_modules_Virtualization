@@ -104,7 +104,6 @@ local checkout and also with your local modifications instead of prebuilts.
 (cr) cros workon -b ferrochrome start \
 chromeos-base/chromeos-chrome \
 chromeos-base/chrome-icu
-(cr) cros_workon_make --board ferrochrome chromeos-chrome
 ```
 
 Optionally, if you have touched the kernel source code (which is under

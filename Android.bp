@@ -27,6 +27,7 @@ soong_config_module_type {
         "release_avf_enable_dice_changes",
         "release_avf_enable_llpvm_changes",
         "release_avf_enable_multi_tenant_microdroid_vm",
+        "release_avf_enable_network",
         "release_avf_enable_remote_attestation",
         "release_avf_enable_vendor_modules",
         "release_avf_enable_virt_cpufreq",
@@ -51,6 +52,9 @@ avf_flag_aware_rust_defaults {
         },
         release_avf_enable_multi_tenant_microdroid_vm: {
             cfgs: ["multi_tenant"],
+        },
+        release_avf_enable_network: {
+            cfgs: ["network"],
         },
         release_avf_enable_remote_attestation: {
             cfgs: ["remote_attestation"],

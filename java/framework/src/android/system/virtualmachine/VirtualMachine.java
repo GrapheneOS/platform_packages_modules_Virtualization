@@ -164,6 +164,7 @@ public class VirtualMachine implements AutoCloseable {
 
     private ParcelFileDescriptor mTouchSock;
     private ParcelFileDescriptor mKeySock;
+    private ParcelFileDescriptor mMouseSock;
 
     /**
      * Status of a virtual machine
@@ -881,6 +882,13 @@ public class VirtualMachine implements AutoCloseable {
                 k.pfd = pfds[1];
                 inputDevices.add(InputDevice.keyboard(k));
             }
+            if (vmConfig.getCustomImageConfig().useMouse()) {
+                ParcelFileDescriptor[] pfds = ParcelFileDescriptor.createSocketPair();
+                mMouseSock = pfds[0];
+                InputDevice.Mouse m = new InputDevice.Mouse();
+                m.pfd = pfds[1];
+                inputDevices.add(InputDevice.mouse(m));
+            }
         }
         rawConfig.inputDevices = inputDevices.toArray(new InputDevice[0]);
 
@@ -906,6 +914,94 @@ public class VirtualMachine implements AutoCloseable {
                 Arrays.asList(
                         new InputEvent(EV_KEY, (short) event.getScanCode(), down ? 1 : 0),
                         new InputEvent(EV_SYN, SYN_REPORT, 0)));
+    }
+
+    /** @hide */
+    public boolean sendMouseEvent(MotionEvent event) {
+        if (mMouseSock == null) {
+            Log.d(TAG, "mMouseSock == null");
+            return false;
+        }
+        // from include/uapi/linux/input-event-codes.h in the kernel.
+        short EV_SYN = 0x00;
+        short EV_REL = 0x02;
+        short EV_KEY = 0x01;
+        short REL_X = 0x00;
+        short REL_Y = 0x01;
+        short SYN_REPORT = 0x00;
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_MOVE:
+                int x = (int) event.getX();
+                int y = (int) event.getY();
+                return writeEventsToSock(
+                        mMouseSock,
+                        Arrays.asList(
+                                new InputEvent(EV_REL, REL_X, x),
+                                new InputEvent(EV_REL, REL_Y, y),
+                                new InputEvent(EV_SYN, SYN_REPORT, 0)));
+            case MotionEvent.ACTION_BUTTON_PRESS:
+            case MotionEvent.ACTION_BUTTON_RELEASE:
+                short BTN_LEFT = 0x110;
+                short BTN_RIGHT = 0x111;
+                short BTN_MIDDLE = 0x112;
+                short keyCode;
+                switch (event.getActionButton()) {
+                    case MotionEvent.BUTTON_PRIMARY:
+                        keyCode = BTN_LEFT;
+                        break;
+                    case MotionEvent.BUTTON_SECONDARY:
+                        keyCode = BTN_RIGHT;
+                        break;
+                    case MotionEvent.BUTTON_TERTIARY:
+                        keyCode = BTN_MIDDLE;
+                        break;
+                    default:
+                        Log.d(TAG, event.toString());
+                        return false;
+                }
+                return writeEventsToSock(
+                        mMouseSock,
+                        Arrays.asList(
+                                new InputEvent(
+                                        EV_KEY,
+                                        keyCode,
+                                        event.getAction() == MotionEvent.ACTION_BUTTON_PRESS
+                                                ? 1
+                                                : 0),
+                                new InputEvent(EV_SYN, SYN_REPORT, 0)));
+            case MotionEvent.ACTION_SCROLL:
+                short REL_HWHEEL = 0x06;
+                short REL_WHEEL = 0x08;
+                int scrollX = (int) event.getAxisValue(MotionEvent.AXIS_HSCROLL);
+                int scrollY = (int) event.getAxisValue(MotionEvent.AXIS_VSCROLL);
+                boolean status = true;
+                if (scrollX != 0) {
+                    status &=
+                            writeEventsToSock(
+                                    mMouseSock,
+                                    Arrays.asList(
+                                            new InputEvent(EV_REL, REL_HWHEEL, scrollX),
+                                            new InputEvent(EV_SYN, SYN_REPORT, 0)));
+                } else if (scrollY != 0) {
+                    status &=
+                            writeEventsToSock(
+                                    mMouseSock,
+                                    Arrays.asList(
+                                            new InputEvent(EV_REL, REL_WHEEL, scrollY),
+                                            new InputEvent(EV_SYN, SYN_REPORT, 0)));
+                } else {
+                    Log.d(TAG, event.toString());
+                    return false;
+                }
+                return status;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_DOWN:
+                // Ignored because it's handled by ACTION_BUTTON_PRESS and ACTION_BUTTON_RELEASE
+                return true;
+            default:
+                Log.d(TAG, event.toString());
+                return false;
+        }
     }
 
     /** @hide */

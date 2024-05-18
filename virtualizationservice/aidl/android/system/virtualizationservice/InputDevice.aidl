@@ -34,7 +34,12 @@ union InputDevice {
     parcelable Keyboard {
         ParcelFileDescriptor pfd;
     }
+    // Mouse input
+    parcelable Mouse {
+        ParcelFileDescriptor pfd;
+    }
     SingleTouch singleTouch;
     EvDev evDev;
     Keyboard keyboard;
+    Mouse mouse;
 }

@@ -35,9 +35,11 @@ import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
 import android.view.Display;
+import android.view.InputDevice;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -129,6 +131,7 @@ public class MainActivity extends Activity {
             customImageConfigBuilder.setDisplayConfig(displayConfigBuilder.build());
             customImageConfigBuilder.useTouch(true);
             customImageConfigBuilder.useKeyboard(true);
+            customImageConfigBuilder.useMouse(true);
 
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build());
 
@@ -244,12 +247,21 @@ public class MainActivity extends Activity {
         }
 
         SurfaceView surfaceView = findViewById(R.id.surface_view);
-        surfaceView.setOnTouchListener(
+        View backgroundTouchView = findViewById(R.id.background_touch_view);
+        backgroundTouchView.setOnTouchListener(
                 (v, event) -> {
                     if (mVirtualMachine == null) {
                         return false;
                     }
                     return mVirtualMachine.sendSingleTouchEvent(event);
+                });
+        surfaceView.requestUnbufferedDispatch(InputDevice.SOURCE_ANY);
+        surfaceView.setOnCapturedPointerListener(
+                (v, event) -> {
+                    if (mVirtualMachine == null) {
+                        return false;
+                    }
+                    return mVirtualMachine.sendMouseEvent(event);
                 });
         surfaceView
                 .getHolder()
@@ -290,6 +302,16 @@ public class MainActivity extends Activity {
         windowInsetsController.setSystemBarsBehavior(
                 WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsets.Type.systemBars());
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            SurfaceView surfaceView = findViewById(R.id.surface_view);
+            Log.d(TAG, "requestPointerCapture()");
+            surfaceView.requestPointerCapture();
+        }
     }
 
     @FunctionalInterface

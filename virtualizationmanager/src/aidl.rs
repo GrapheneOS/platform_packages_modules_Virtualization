@@ -757,6 +757,9 @@ fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDevice
         InputDevice::Keyboard(keyboard) => InputDeviceOption::Keyboard(clone_file(
             keyboard.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
         )?),
+        InputDevice::Mouse(mouse) => InputDeviceOption::Mouse(clone_file(
+            mouse.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
     })
 }
 /// Given the configuration for a disk image, assembles the `DiskFile` to pass to crosvm.

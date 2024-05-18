@@ -35,6 +35,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_DISPLAY_CONFIG = "display_config";
     private static final String KEY_TOUCH = "touch";
     private static final String KEY_KEYBOARD = "keyboard";
+    private static final String KEY_MOUSE = "mouse";
 
     @Nullable private final String name;
     @Nullable private final String kernelPath;
@@ -45,6 +46,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final DisplayConfig displayConfig;
     private final boolean touch;
     private final boolean keyboard;
+    private final boolean mouse;
 
     @Nullable
     public Disk[] getDisks() {
@@ -84,6 +86,10 @@ public class VirtualMachineCustomImageConfig {
         return keyboard;
     }
 
+    public boolean useMouse() {
+        return mouse;
+    }
+
     /** @hide */
     public VirtualMachineCustomImageConfig(
             String name,
@@ -94,7 +100,8 @@ public class VirtualMachineCustomImageConfig {
             Disk[] disks,
             DisplayConfig displayConfig,
             boolean touch,
-            boolean keyboard) {
+            boolean keyboard,
+            boolean mouse) {
         this.name = name;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
@@ -104,6 +111,7 @@ public class VirtualMachineCustomImageConfig {
         this.displayConfig = displayConfig;
         this.touch = touch;
         this.keyboard = keyboard;
+        this.mouse = mouse;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -133,6 +141,7 @@ public class VirtualMachineCustomImageConfig {
         builder.setDisplayConfig(DisplayConfig.from(displayConfigPb));
         builder.useTouch(customImageConfigBundle.getBoolean(KEY_TOUCH));
         builder.useKeyboard(customImageConfigBundle.getBoolean(KEY_KEYBOARD));
+        builder.useMouse(customImageConfigBundle.getBoolean(KEY_MOUSE));
         return builder.build();
     }
 
@@ -163,6 +172,7 @@ public class VirtualMachineCustomImageConfig {
                         .orElse(null));
         pb.putBoolean(KEY_TOUCH, touch);
         pb.putBoolean(KEY_KEYBOARD, keyboard);
+        pb.putBoolean(KEY_MOUSE, mouse);
         return pb;
     }
 
@@ -213,6 +223,7 @@ public class VirtualMachineCustomImageConfig {
         private DisplayConfig displayConfig;
         private boolean touch;
         private boolean keyboard;
+        private boolean mouse;
 
         /** @hide */
         public Builder() {}
@@ -272,6 +283,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder useMouse(boolean mouse) {
+            this.mouse = mouse;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -282,7 +299,8 @@ public class VirtualMachineCustomImageConfig {
                     this.disks.toArray(new Disk[0]),
                     displayConfig,
                     touch,
-                    keyboard);
+                    keyboard,
+                    mouse);
         }
     }
 

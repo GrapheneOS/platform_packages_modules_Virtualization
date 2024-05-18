@@ -1,0 +1,21 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_binary {
+    name: "vmnic",
+    crate_name: "vmnic",
+    defaults: ["avf_build_flags_rust"],
+    edition: "2021",
+    srcs: ["src/main.rs"],
+    prefer_rlib: true,
+    rustlibs: [
+        "android.system.virtualizationservice_internal-rust",
+        "libandroid_logger",
+        "libanyhow",
+        "libbinder_rs",
+        "liblog_rust",
+    ],
+    apex_available: ["com.android.virt"],
+    init_rc: ["vmnic.rc"],
+}

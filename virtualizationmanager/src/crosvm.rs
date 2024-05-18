@@ -163,6 +163,7 @@ pub enum InputDeviceOption {
     EvDev(File),
     SingleTouch { file: File, width: u32, height: u32, name: Option<String> },
     Keyboard(File),
+    Mouse(File),
 }
 
 type VfioDevice = Strong<dyn IBoundDevice>;
@@ -995,6 +996,9 @@ fn run_vm(
                 }
                 InputDeviceOption::Keyboard(file) => {
                     format!("keyboard[path={}]", add_preserved_fd(&mut preserved_fds, file))
+                }
+                InputDeviceOption::Mouse(file) => {
+                    format!("mouse[path={}]", add_preserved_fd(&mut preserved_fds, file))
                 }
                 InputDeviceOption::SingleTouch { file, width, height, name } => format!(
                     "single-touch[path={},width={},height={}{}]",
