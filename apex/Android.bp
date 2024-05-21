@@ -192,6 +192,9 @@ avf_flag_aware_apex_defaults {
             androidManifest: "AndroidManifest.xml",
         },
         release_avf_enable_network: {
+            prebuilts: [
+                "com.android.virt.vmnic.rc",
+            ],
             arch: {
                 arm64: {
                     binaries: ["vmnic"],
@@ -256,14 +259,21 @@ prebuilt_etc {
     name: "com.android.virt.init.rc",
     src: ":virtualizationservice_rc_combined",
     filename: "virtualizationservice.rc",
-    installable: false,
+    no_full_install: true,
 }
 
 prebuilt_etc {
     name: "com.android.virt.vfio_handler.rc",
     src: "vfio_handler.rc",
     filename: "vfio_handler.rc",
-    installable: false,
+    no_full_install: true,
+}
+
+prebuilt_etc {
+    name: "com.android.virt.vmnic.rc",
+    src: "vmnic.rc",
+    filename: "vmnic.rc",
+    no_full_install: true,
 }
 
 // Virt apex needs a custom signer for its payload

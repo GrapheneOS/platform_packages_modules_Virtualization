@@ -17,6 +17,7 @@
 use anyhow::anyhow;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVmnic::IVmnic;
 use binder::{self, ExceptionCode, Interface, IntoBinderResult, ParcelFileDescriptor};
+use log::info;
 
 #[derive(Debug, Default)]
 pub struct Vmnic {}
@@ -30,7 +31,10 @@ impl Vmnic {
 impl Interface for Vmnic {}
 
 impl IVmnic for Vmnic {
-    fn createTapInterface(&self, _cid: i32) -> binder::Result<ParcelFileDescriptor> {
+    fn createTapInterface(&self, iface_name_suffix: &str) -> binder::Result<ParcelFileDescriptor> {
+        let ifname = format!("avf_tap_{iface_name_suffix}");
+        info!("Creating TAP interface {}", ifname);
+
         Err(anyhow!("Creating TAP network interface is not supported yet"))
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
     }

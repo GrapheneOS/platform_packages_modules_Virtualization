@@ -70,6 +70,7 @@ use virtualizationservice_internal::{
     IVfioHandler::VfioDev::VfioDev,
     IVfioHandler::{BpVfioHandler, IVfioHandler},
     IVirtualizationServiceInternal::IVirtualizationServiceInternal,
+    IVmnic::{BpVmnic, IVmnic},
 };
 use virtualmachineservice::IVirtualMachineService::VM_TOMBSTONES_SERVICE_PORT;
 use vsock::{VsockListener, VsockStream};
@@ -159,6 +160,9 @@ lazy_static! {
     static ref VFIO_SERVICE: Strong<dyn IVfioHandler> =
         wait_for_interface(<BpVfioHandler as IVfioHandler>::get_descriptor())
             .expect("Could not connect to VfioHandler");
+    static ref NETWORK_SERVICE: Strong<dyn IVmnic> =
+        wait_for_interface(<BpVmnic as IVmnic>::get_descriptor())
+            .expect("Could not connect to Vmnic");
 }
 
 fn is_valid_guest_cid(cid: Cid) -> bool {
@@ -493,6 +497,18 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             info!("ignoring claimVmInstance() as no ISecretkeeper");
         }
         Ok(())
+    }
+
+    fn createTapInterface(&self, iface_name_suffix: &str) -> binder::Result<ParcelFileDescriptor> {
+        check_use_custom_virtual_machine()?;
+        if !cfg!(network) {
+            return Err(Status::new_exception_str(
+                ExceptionCode::UNSUPPORTED_OPERATION,
+                Some("createTapInterface is not supported with the network feature disabled"),
+            ))
+            .with_log();
+        }
+        NETWORK_SERVICE.createTapInterface(iface_name_suffix)
     }
 }
 
@@ -859,7 +875,7 @@ fn check_permission(perm: &str) -> binder::Result<()> {
         return Ok(());
     }
     let perm_svc: Strong<dyn IPermissionController::IPermissionController> =
-        binder::get_interface("permission")?;
+        binder::wait_for_interface("permission")?;
     if perm_svc.checkPermission(perm, calling_pid, calling_uid as i32)? {
         Ok(())
     } else {

@@ -39,8 +39,14 @@ use std::os::unix::raw::{pid_t, uid_t};
 const LOG_TAG: &str = "virtmgr";
 
 lazy_static! {
+    static ref PID_CURRENT: Pid = Pid::this();
     static ref PID_PARENT: Pid = Pid::parent();
     static ref UID_CURRENT: Uid = Uid::current();
+}
+
+fn get_this_pid() -> pid_t {
+    // Return the process ID of this process.
+    PID_CURRENT.as_raw()
 }
 
 fn get_calling_pid() -> pid_t {

@@ -18,8 +18,8 @@ package android.system.virtualizationservice_internal;
 interface IVmnic {
     /**
      * Create TAP network interface for a VM.
-     * @param CID of VM.
+     * @param suffix of network interface name.
      * @return file descriptor of the TAP network interface.
      */
-    ParcelFileDescriptor createTapInterface(int cid);
+    ParcelFileDescriptor createTapInterface(String ifaceNameSuffix);
 }

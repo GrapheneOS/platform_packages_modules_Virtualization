@@ -25,6 +25,35 @@ adb shell "/apex/com.android.virt/bin/vm run /data/local/tmp/vm_config.json"
 The `vm` command also has other subcommands for debugging; run
 `/apex/com.android.virt/bin/vm help` for details.
 
+### Running Debian with u-boot
+1. Prepare u-boot binary from `u-boot_crosvm_aarch64` in https://ci.android.com/builds/branches/aosp_u-boot-mainline/grid
+or build it by https://source.android.com/docs/devices/cuttlefish/bootloader-dev#develop-bootloader
+2. Prepare Debian image from https://cloud.debian.org/images/cloud/ (We tested nocloud image)
+3. Copy `u-boot.bin`, Debian image file(like `debian-12-nocloud-arm64.raw`) and `vm_config.json` to `/data/local/tmp`
+```shell
+cat > vm_config.json <<EOF
+{
+    "name": "debian",
+    "bootloader": "/data/local/tmp/u-boot.bin",
+    "disks": [
+        {
+            "image": "/data/local/tmp/debian-12-nocloud-arm64.raw",
+            "partitions": [],
+            "writable": true
+        }
+    ],
+    "protected": false,
+    "cpu_topology": "match_host",
+    "platform_version": "~1.0",
+    "memory_mib" : 8096
+}
+EOF
+adb push `u-boot.bin` /data/local/tmp
+adb push `debian-12-nocloud-arm64.raw` /data/local/tmp
+adb push vm_config.json /data/local/tmp/vm_config.json
+```
+4. Launch VmLauncherApp(the detail will be explain below)
+
 ## Graphical VMs
 
 To run OSes with graphics support, follow the instruction below.

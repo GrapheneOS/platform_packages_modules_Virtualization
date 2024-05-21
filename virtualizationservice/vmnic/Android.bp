@@ -17,5 +17,4 @@ rust_binary {
         "liblog_rust",
     ],
     apex_available: ["com.android.virt"],
-    init_rc: ["vmnic.rc"],
 }

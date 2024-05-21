@@ -14,7 +14,7 @@
 
 //! Implementation of the AIDL interface of the VirtualizationService.
 
-use crate::{get_calling_pid, get_calling_uid};
+use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{CrosvmConfig, DiskFile, DisplayConfig, InputDeviceOption, PayloadState, VmContext, VmInstance, VmState};
@@ -606,6 +606,18 @@ impl VirtualizationService {
             vec![]
         };
 
+        // Create TAP network interface if the VM supports network.
+        let _tap_fd = if cfg!(network) && config.networkSupported {
+            if *is_protected {
+                return Err(anyhow!("Network feature is not supported for pVM yet"))
+                    .with_log()
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)?;
+            }
+            Some(GLOBAL_SERVICE.createTapInterface(&get_this_pid().to_string())?)
+        } else {
+            None
+        };
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -913,6 +925,7 @@ fn load_app_config(
         }
 
         vm_config.devices.clone_from(&custom_config.devices);
+        vm_config.networkSupported = custom_config.networkSupported;
     }
 
     if config.memoryMib > 0 {
@@ -1036,7 +1049,7 @@ fn check_permission(perm: &str) -> binder::Result<()> {
         return Ok(());
     }
     let perm_svc: Strong<dyn IPermissionController::IPermissionController> =
-        binder::get_interface("permission")?;
+        binder::wait_for_interface("permission")?;
     if perm_svc.checkPermission(perm, calling_pid, calling_uid as i32)? {
         Ok(())
     } else {

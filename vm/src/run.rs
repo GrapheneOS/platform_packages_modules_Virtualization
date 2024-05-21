@@ -159,6 +159,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
                 x.to_str().map(String::from).ok_or(anyhow!("Failed to convert {x:?} to String"))
             })
             .collect::<Result<_, _>>()?,
+        networkSupported: config.common.network_supported(),
         ..Default::default()
     };
 
