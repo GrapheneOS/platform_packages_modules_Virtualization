@@ -43,7 +43,6 @@ import org.junit.runners.JUnit4;
 public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
     @Test
     @CddTest(requirements = "9.17/C-1-6")
-    @Ignore("b/326092480")
     public void supportForProtectedOrNonProtectedVms() {
         assumeSupportedDevice();
 
