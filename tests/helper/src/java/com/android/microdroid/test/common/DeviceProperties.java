@@ -32,6 +32,7 @@ public final class DeviceProperties {
     private static final String KEY_METRICS_TAG = "debug.hypervisor.metrics_tag";
 
     private static final String CUTTLEFISH_DEVICE_PREFIX = "vsoc_";
+    private static final String CUTTLEFISH_ARM64_DEVICE_PREFIX = "vsoc_arm64";
     private static final String USER_BUILD_TYPE = "user";
     private static final String HWASAN_SUFFIX = "_hwasan";
 
@@ -52,6 +53,15 @@ public final class DeviceProperties {
     public boolean isCuttlefish() {
         String vendorDeviceName = getProperty(KEY_VENDOR_DEVICE);
         return vendorDeviceName != null && vendorDeviceName.startsWith(CUTTLEFISH_DEVICE_PREFIX);
+    }
+
+    /**
+     * @return whether the device is a cuttlefish device running on 64 bit Arm.
+     */
+    public boolean isCuttlefishArm64() {
+        String vendorDeviceName = getProperty(KEY_VENDOR_DEVICE);
+        return vendorDeviceName != null
+                && vendorDeviceName.startsWith(CUTTLEFISH_ARM64_DEVICE_PREFIX);
     }
 
     /**

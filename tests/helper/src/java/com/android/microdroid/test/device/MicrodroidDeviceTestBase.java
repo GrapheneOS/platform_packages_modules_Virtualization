@@ -75,6 +75,10 @@ public abstract class MicrodroidDeviceTestBase {
         return getDeviceProperties().isCuttlefish();
     }
 
+    private static boolean isCuttlefishArm64() {
+        return getDeviceProperties().isCuttlefishArm64();
+    }
+
     public static boolean isHwasan() {
         return getDeviceProperties().isHwasan();
     }
@@ -207,17 +211,27 @@ public abstract class MicrodroidDeviceTestBase {
         assume().withMessage("Device doesn't support AVF")
                 .that(mCtx.getPackageManager().hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK))
                 .isTrue();
-        int vendorApiLevel = SystemProperties.getInt("ro.vendor.api_level", 0);
+        int vendorApiLevel = getVendorApiLevel();
         boolean isGsi = new File("/system/system_ext/etc/init/init.gsi.rc").exists();
         assume().withMessage("GSI with vendor API level < 202404 may not support AVF")
                 .that(isGsi && vendorApiLevel < 202404)
                 .isFalse();
     }
 
+    protected static int getVendorApiLevel() {
+        return SystemProperties.getInt("ro.vendor.api_level", 0);
+    }
+
     protected void assumeSupportedDevice() {
         assume().withMessage("Skip on 5.4 kernel. b/218303240")
                 .that(KERNEL_VERSION)
                 .isNotEqualTo("5.4");
+
+        // Cuttlefish on Arm 64 doesn't and cannot support any form of virtualization, so there's
+        // no point running any of these tests.
+        assume().withMessage("Virtualization not supported on Arm64 Cuttlefish. b/341889915")
+                .that(isCuttlefishArm64())
+                .isFalse();
     }
 
     protected void assumeNoUpdatableVmSupport() throws VirtualMachineException {

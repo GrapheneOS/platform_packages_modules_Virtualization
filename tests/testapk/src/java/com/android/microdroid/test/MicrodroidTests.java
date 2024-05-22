@@ -1285,17 +1285,20 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(dataItems.size()).isEqualTo(1);
         assertThat(dataItems.get(0).getMajorType()).isEqualTo(MajorType.ARRAY);
         List<DataItem> rootArrayItems = ((Array) dataItems.get(0)).getDataItems();
-        assertThat(rootArrayItems.size()).isAtLeast(2); // Root public key and one certificate
+        int diceChainSize = rootArrayItems.size();
+        assertThat(diceChainSize).isAtLeast(2); // Root public key and one certificate
         if (mProtectedVm) {
             if (isFeatureEnabled(VirtualMachineManager.FEATURE_DICE_CHANGES)) {
-                // When a true DICE chain is created, we expect the root public key, at least one
-                // entry for the boot before pvmfw, then pvmfw, vm_entry (Microdroid kernel) and
-                // Microdroid payload entries.
-                assertThat(rootArrayItems.size()).isAtLeast(5);
+                // We expect the root public key, at least one entry for the boot before pvmfw,
+                // then pvmfw, vm_entry (Microdroid kernel) and Microdroid payload entries.
+                // Before Android V we did not require that vendor code contain any DICE entries
+                // preceding pvmfw, so the minimum is one less.
+                int minDiceChainSize = getVendorApiLevel() >= 202404 ? 5 : 4;
+                assertThat(diceChainSize).isAtLeast(minDiceChainSize);
             } else {
                 // pvmfw truncates the DICE chain it gets, so we expect exactly entries for
                 // public key, vm_entry (Microdroid kernel) and Microdroid payload.
-                assertThat(rootArrayItems.size()).isEqualTo(3);
+                assertThat(diceChainSize).isEqualTo(3);
             }
         }
     }

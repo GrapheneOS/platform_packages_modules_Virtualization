@@ -28,6 +28,8 @@ use core::ffi::CStr;
 use core::iter::Iterator;
 use core::mem;
 use core::ops::Range;
+// TODO(ptosi): Remove the need for this workaround.
+#[cfg(not(test))]
 use hyp::DeviceAssigningHypervisor;
 use libfdt::{Fdt, FdtError, FdtNode, FdtNodeMut, Phandle, Reg};
 use log::error;
@@ -936,10 +938,30 @@ impl DeviceAssignmentInfo {
         Ok(())
     }
 
+    // TODO(b/308694211): Remove this workaround for visibility once using
+    // vmbase::hyp::DeviceAssigningHypervisor for tests.
+    #[cfg(test)]
+    fn parse(
+        fdt: &Fdt,
+        vm_dtbo: &VmDtbo,
+        hypervisor: &dyn DeviceAssigningHypervisor,
+    ) -> Result<Option<Self>> {
+        Self::internal_parse(fdt, vm_dtbo, hypervisor)
+    }
+
+    #[cfg(not(test))]
     /// Parses fdt and vm_dtbo, and creates new DeviceAssignmentInfo
     // TODO(b/277993056): Parse __local_fixups__
     // TODO(b/277993056): Parse __fixups__
     pub fn parse(
+        fdt: &Fdt,
+        vm_dtbo: &VmDtbo,
+        hypervisor: &dyn DeviceAssigningHypervisor,
+    ) -> Result<Option<Self>> {
+        Self::internal_parse(fdt, vm_dtbo, hypervisor)
+    }
+
+    fn internal_parse(
         fdt: &Fdt,
         vm_dtbo: &VmDtbo,
         hypervisor: &dyn DeviceAssigningHypervisor,
@@ -1061,6 +1083,39 @@ pub fn clean(fdt: &mut Fdt) -> Result<()> {
 }
 
 #[cfg(test)]
+#[derive(Clone, Copy, Debug)]
+enum MockHypervisorError {
+    FailedGetPhysMmioToken,
+    FailedGetPhysIommuToken,
+}
+
+#[cfg(test)]
+type MockHypervisorResult<T> = core::result::Result<T, MockHypervisorError>;
+
+#[cfg(test)]
+impl fmt::Display for MockHypervisorError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MockHypervisorError::FailedGetPhysMmioToken => {
+                write!(f, "Failed to get physical MMIO token")
+            }
+            MockHypervisorError::FailedGetPhysIommuToken => {
+                write!(f, "Failed to get physical IOMMU token")
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+trait DeviceAssigningHypervisor {
+    /// Returns MMIO token.
+    fn get_phys_mmio_token(&self, base_ipa: u64, size: u64) -> MockHypervisorResult<u64>;
+
+    /// Returns DMA token as a tuple of (phys_iommu_id, phys_sid).
+    fn get_phys_iommu_token(&self, pviommu_id: u64, vsid: u64) -> MockHypervisorResult<(u64, u64)>;
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloc::collections::{BTreeMap, BTreeSet};
@@ -1105,18 +1160,20 @@ mod tests {
     }
 
     impl DeviceAssigningHypervisor for MockHypervisor {
-        fn get_phys_mmio_token(&self, base_ipa: u64, size: u64) -> hyp::Result<u64> {
-            Ok(*self.mmio_tokens.get(&(base_ipa, size)).ok_or(hyp::Error::KvmError(
-                hyp::KvmError::InvalidParameter,
-                0xc6000012, /* VENDOR_HYP_KVM_DEV_REQ_MMIO_FUNC_ID */
-            ))?)
+        fn get_phys_mmio_token(&self, base_ipa: u64, size: u64) -> MockHypervisorResult<u64> {
+            let token = self.mmio_tokens.get(&(base_ipa, size));
+
+            Ok(*token.ok_or(MockHypervisorError::FailedGetPhysMmioToken)?)
         }
 
-        fn get_phys_iommu_token(&self, pviommu_id: u64, vsid: u64) -> hyp::Result<(u64, u64)> {
-            Ok(*self.iommu_tokens.get(&(pviommu_id, vsid)).ok_or(hyp::Error::KvmError(
-                hyp::KvmError::InvalidParameter,
-                0xc6000013, /* VENDOR_HYP_KVM_DEV_REQ_DMA_FUNC_ID */
-            ))?)
+        fn get_phys_iommu_token(
+            &self,
+            pviommu_id: u64,
+            vsid: u64,
+        ) -> MockHypervisorResult<(u64, u64)> {
+            let token = self.iommu_tokens.get(&(pviommu_id, vsid));
+
+            Ok(*token.ok_or(MockHypervisorError::FailedGetPhysIommuToken)?)
         }
     }
 

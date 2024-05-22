@@ -8,6 +8,42 @@
 #define PLACEHOLDER2	PLACEHOLDER PLACEHOLDER
 #define PLACEHOLDER4	PLACEHOLDER2 PLACEHOLDER2
 
+#define PLACEHOLDER_CPU_MAP_CORE(n) core##n { cpu = <PLACEHOLDER>; };
+#define PLACEHOLDER_CPU_MAP_CLUSTER \
+	PLACEHOLDER_CPU_MAP_CORE(0) \
+	PLACEHOLDER_CPU_MAP_CORE(1) \
+	PLACEHOLDER_CPU_MAP_CORE(2) \
+	PLACEHOLDER_CPU_MAP_CORE(3) \
+	PLACEHOLDER_CPU_MAP_CORE(4) \
+	PLACEHOLDER_CPU_MAP_CORE(5) \
+	PLACEHOLDER_CPU_MAP_CORE(6) \
+	PLACEHOLDER_CPU_MAP_CORE(7) \
+	PLACEHOLDER_CPU_MAP_CORE(8) \
+	PLACEHOLDER_CPU_MAP_CORE(9)
+
+#define PLACEHOLDER_OPP_TABLE_ENTRY(n) opp##n { opp-hz = <PLACEHOLDER2>; };
+#define PLACEHOLDER_OPP_TABLE \
+	PLACEHOLDER_OPP_TABLE_ENTRY(1) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(2) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(3) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(4) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(5) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(6) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(7) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(8) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(9) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(10) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(11) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(12) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(13) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(14) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(15) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(16) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(17) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(18) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(19) \
+	PLACEHOLDER_OPP_TABLE_ENTRY(20)
+
 #define IRQ_BASE 4
 
 /dts-v1/;
@@ -54,42 +90,9 @@
 		#size-cells = <0>;
 
 		cpu-map {
-			cluster0 {
-				core0 { cpu = <PLACEHOLDER>; };
-				core1 { cpu = <PLACEHOLDER>; };
-				core2 { cpu = <PLACEHOLDER>; };
-				core3 { cpu = <PLACEHOLDER>; };
-				core4 { cpu = <PLACEHOLDER>; };
-				core5 { cpu = <PLACEHOLDER>; };
-				core6 { cpu = <PLACEHOLDER>; };
-				core7 { cpu = <PLACEHOLDER>; };
-				core8 { cpu = <PLACEHOLDER>; };
-				core9 { cpu = <PLACEHOLDER>; };
-			};
-			cluster1 {
-				core0 { cpu = <PLACEHOLDER>; };
-				core1 { cpu = <PLACEHOLDER>; };
-				core2 { cpu = <PLACEHOLDER>; };
-				core3 { cpu = <PLACEHOLDER>; };
-				core4 { cpu = <PLACEHOLDER>; };
-				core5 { cpu = <PLACEHOLDER>; };
-				core6 { cpu = <PLACEHOLDER>; };
-				core7 { cpu = <PLACEHOLDER>; };
-				core8 { cpu = <PLACEHOLDER>; };
-				core9 { cpu = <PLACEHOLDER>; };
-			};
-			cluster2 {
-				core0 { cpu = <PLACEHOLDER>; };
-				core1 { cpu = <PLACEHOLDER>; };
-				core2 { cpu = <PLACEHOLDER>; };
-				core3 { cpu = <PLACEHOLDER>; };
-				core4 { cpu = <PLACEHOLDER>; };
-				core5 { cpu = <PLACEHOLDER>; };
-				core6 { cpu = <PLACEHOLDER>; };
-				core7 { cpu = <PLACEHOLDER>; };
-				core8 { cpu = <PLACEHOLDER>; };
-				core9 { cpu = <PLACEHOLDER>; };
-			};
+			cluster0 { PLACEHOLDER_CPU_MAP_CLUSTER };
+			cluster1 { PLACEHOLDER_CPU_MAP_CLUSTER };
+			cluster2 { PLACEHOLDER_CPU_MAP_CLUSTER };
 		};
 
 		cpu0: cpu@0 {
@@ -101,27 +104,7 @@
 			operating-points-v2 = <&opp_table0>;
 			opp_table0: opp-table-0 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu1: cpu@1 {
@@ -133,27 +116,7 @@
 			operating-points-v2 = <&opp_table1>;
 			opp_table1: opp-table-1 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu2: cpu@2 {
@@ -165,27 +128,7 @@
 			operating-points-v2 = <&opp_table2>;
 			opp_table2: opp-table-2 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu3: cpu@3 {
@@ -197,27 +140,7 @@
 			operating-points-v2 = <&opp_table3>;
 			opp_table3: opp-table-3 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu4: cpu@4 {
@@ -229,27 +152,7 @@
 			operating-points-v2 = <&opp_table4>;
 			opp_table4: opp-table-4 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu5: cpu@5 {
@@ -261,27 +164,7 @@
 			operating-points-v2 = <&opp_table5>;
 			opp_table5: opp-table-5 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu6: cpu@6 {
@@ -293,27 +176,7 @@
 			operating-points-v2 = <&opp_table6>;
 			opp_table6: opp-table-6 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu7: cpu@7 {
@@ -325,27 +188,7 @@
 			operating-points-v2 = <&opp_table7>;
 			opp_table7: opp-table-7 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu8: cpu@8 {
@@ -357,27 +200,7 @@
 			operating-points-v2 = <&opp_table8>;
 			opp_table8: opp-table-8 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu9: cpu@9 {
@@ -389,27 +212,7 @@
 			operating-points-v2 = <&opp_table9>;
 			opp_table9: opp-table-9 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu10: cpu@a {
@@ -421,27 +224,7 @@
 			operating-points-v2 = <&opp_table10>;
 			opp_table10: opp-table-10 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu11: cpu@b {
@@ -453,27 +236,7 @@
 			operating-points-v2 = <&opp_table11>;
 			opp_table11: opp-table-11 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu12: cpu@c {
@@ -485,27 +248,7 @@
 			operating-points-v2 = <&opp_table12>;
 			opp_table12: opp-table-12 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu13: cpu@d {
@@ -517,27 +260,7 @@
 			operating-points-v2 = <&opp_table13>;
 			opp_table13: opp-table-13 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu14: cpu@e {
@@ -549,27 +272,7 @@
 			operating-points-v2 = <&opp_table14>;
 			opp_table14: opp-table-14 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 		cpu15: cpu@f {
@@ -581,27 +284,7 @@
 			operating-points-v2 = <&opp_table15>;
 			opp_table15: opp-table-15 {
 				compatible = "operating-points-v2";
-
-				opp1 { opp-hz = <PLACEHOLDER2>; };
-				opp2 { opp-hz = <PLACEHOLDER2>; };
-				opp3 { opp-hz = <PLACEHOLDER2>; };
-				opp4 { opp-hz = <PLACEHOLDER2>; };
-				opp5 { opp-hz = <PLACEHOLDER2>; };
-				opp6 { opp-hz = <PLACEHOLDER2>; };
-				opp7 { opp-hz = <PLACEHOLDER2>; };
-				opp8 { opp-hz = <PLACEHOLDER2>; };
-				opp9 { opp-hz = <PLACEHOLDER2>; };
-				opp10 { opp-hz = <PLACEHOLDER2>; };
-				opp11 { opp-hz = <PLACEHOLDER2>; };
-				opp12 { opp-hz = <PLACEHOLDER2>; };
-				opp13 { opp-hz = <PLACEHOLDER2>; };
-				opp14 { opp-hz = <PLACEHOLDER2>; };
-				opp15 { opp-hz = <PLACEHOLDER2>; };
-				opp16 { opp-hz = <PLACEHOLDER2>; };
-				opp17 { opp-hz = <PLACEHOLDER2>; };
-				opp18 { opp-hz = <PLACEHOLDER2>; };
-				opp19 { opp-hz = <PLACEHOLDER2>; };
-				opp20 { opp-hz = <PLACEHOLDER2>; };
+				PLACEHOLDER_OPP_TABLE
 			};
 		};
 	};
