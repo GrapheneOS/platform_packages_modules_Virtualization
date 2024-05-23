@@ -79,13 +79,14 @@ rust_library_rlib {
         "libbuddy_system_allocator",
         "libcstr",
         "libfdtpci",
-        "libhyp",
         "liblibfdt",
         "liblog_rust_nostd",
         "libonce_cell_nostd",
         "libsmccc",
         "libspin_nostd",
+        "libstatic_assertions",
         "libtinyvec_nostd",
+        "libuuid_nostd",
         "libvirtio_drivers",
         "libzerocopy_nostd",
         "libzeroize_nostd",
@@ -93,7 +94,9 @@ rust_library_rlib {
     whole_static_libs: [
         "librust_baremetal",
     ],
+    // TODO(b/277859415, b/277860860): Drop "compat_android_13".
     features: [
+        "compat_android_13",
         "cpu_feat_hafdbs",
     ],
 }

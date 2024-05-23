@@ -18,10 +18,9 @@ use aarch64_paging::MapError;
 use core::{fmt, result};
 use diced_open_dice::DiceError;
 use fdtpci::PciError;
-use hyp::Error as HypervisorError;
 use libfdt::FdtError;
 use service_vm_comm::RequestProcessingError;
-use vmbase::{memory::MemoryTrackerError, virtio::pci};
+use vmbase::{hyp::Error as HypervisorError, memory::MemoryTrackerError, virtio::pci};
 
 pub type Result<T> = result::Result<T, Error>;
 

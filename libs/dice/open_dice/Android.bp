@@ -161,6 +161,7 @@ rust_defaults {
         "--allowlist-var=DICE_PUBLIC_KEY_SIZE",
         "--allowlist-var=DICE_PRIVATE_KEY_SIZE",
         "--allowlist-var=DICE_SIGNATURE_SIZE",
+        "--allowlist-var=DICE_COSE_KEY_ALG_VALUE",
     ],
 }
 

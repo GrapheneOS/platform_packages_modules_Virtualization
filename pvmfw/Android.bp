@@ -19,7 +19,6 @@ rust_ffi_static {
         "libcstr",
         "libdiced_open_dice_nostd",
         "libfdtpci",
-        "libhyp",
         "liblibfdt",
         "liblog_rust_nostd",
         "libonce_cell_nostd",
@@ -75,7 +74,6 @@ rust_test {
     defaults: ["libpvmfw.test.defaults"],
     rustlibs: [
         "libdts",
-        "libhyp",
         "liblibfdt",
         "liblog_rust",
         "libpvmfw_fdt_template",

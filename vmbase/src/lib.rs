@@ -26,6 +26,7 @@ pub mod exceptions;
 pub mod fdt;
 pub mod heap;
 mod hvc;
+pub mod hyp;
 pub mod layout;
 pub mod linker;
 pub mod logger;

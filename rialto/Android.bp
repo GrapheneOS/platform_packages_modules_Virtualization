@@ -15,7 +15,6 @@ rust_ffi_static {
         "libciborium_nostd",
         "libcstr",
         "libdiced_open_dice_nostd",
-        "libhyp",
         "libfdtpci",
         "liblibfdt",
         "liblog_rust_nostd",

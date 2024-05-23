@@ -28,11 +28,11 @@ use core::ffi::CStr;
 use core::iter::Iterator;
 use core::mem;
 use core::ops::Range;
-// TODO(ptosi): Remove the need for this workaround.
-#[cfg(not(test))]
-use hyp::DeviceAssigningHypervisor;
 use libfdt::{Fdt, FdtError, FdtNode, FdtNodeMut, Phandle, Reg};
 use log::error;
+// TODO(b/308694211): Use vmbase::hyp::{DeviceAssigningHypervisor, Error} proper for tests.
+#[cfg(not(test))]
+use vmbase::hyp::DeviceAssigningHypervisor;
 use zerocopy::byteorder::big_endian::U32;
 use zerocopy::FromBytes as _;
 

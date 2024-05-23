@@ -14,9 +14,9 @@
 
 //! Error and Result types for hypervisor.
 
-use crate::GeniezoneError;
-use crate::KvmError;
 use core::{fmt, result};
+
+use super::hypervisor::{GeniezoneError, KvmError};
 use uuid::Uuid;
 
 /// Result type with hypervisor error.
@@ -33,8 +33,6 @@ pub enum Error {
     GeniezoneError(GeniezoneError, u32),
     /// Unsupported Hypervisor
     UnsupportedHypervisorUuid(Uuid),
-    /// The MMIO_GUARD granule used by the hypervisor is not supported.
-    UnsupportedMmioGuardGranule(usize),
 }
 
 impl fmt::Display for Error {
@@ -52,9 +50,6 @@ impl fmt::Display for Error {
             }
             Self::UnsupportedHypervisorUuid(u) => {
                 write!(f, "Unsupported Hypervisor UUID {u}")
-            }
-            Self::UnsupportedMmioGuardGranule(g) => {
-                write!(f, "Unsupported MMIO guard granule: {g}")
             }
         }
     }

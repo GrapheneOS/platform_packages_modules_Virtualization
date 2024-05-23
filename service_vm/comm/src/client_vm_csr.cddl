@@ -33,9 +33,10 @@ Signatures = [
 
 ; COSE_Signature [RFC9052 s4.1]
 COSE_Signature_Dice_Cdi_Leaf = [
-    protected: bstr .cbor { 1: AlgorithmEdDSA },
+    protected: bstr .cbor { 1: AlgorithmEdDSA / AlgorithmES256 / AlgorithmES384 },
     unprotected: {},
-    signature: bstr,                         ; Ed25519(CDI_Leaf_Priv, SigStruct)
+    signature: bstr,                         ; PureEd25519(CDI_Leaf_Priv, SigStruct)
+                                             ; ECDSA(CDI_Leaf_Priv, SigStruct)
 ]
 
 ; COSE_Signature [RFC9052 s4.1]

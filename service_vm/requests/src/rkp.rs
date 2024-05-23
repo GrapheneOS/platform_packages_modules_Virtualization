@@ -26,8 +26,10 @@ use ciborium::{
     value::{CanonicalValue, Value},
 };
 use core::result;
-use coset::{iana, AsCborValue, CoseSign1, CoseSign1Builder, HeaderBuilder};
-use diced_open_dice::{derive_cdi_leaf_priv, kdf, sign, DiceArtifacts, PrivateKey};
+use coset::{AsCborValue, CoseSign1, CoseSign1Builder, HeaderBuilder};
+use diced_open_dice::{
+    derive_cdi_leaf_priv, kdf, sign, DiceArtifacts, PrivateKey, DICE_COSE_KEY_ALG_VALUE,
+};
 use log::{debug, error};
 use service_vm_comm::{EcdsaP256KeyPair, GenerateCertificateRequestParams, RequestProcessingError};
 use zeroize::Zeroizing;
@@ -151,8 +153,8 @@ fn build_signed_data(payload: &Value, dice_artifacts: &dyn DiceArtifacts) -> Res
         error!("Failed to derive the CDI_Leaf_Priv: {e}");
         RequestProcessingError::InternalError
     })?;
-    let signing_algorithm = iana::Algorithm::EdDSA;
-    let protected = HeaderBuilder::new().algorithm(signing_algorithm).build();
+    let dice_key_alg = cbor_util::dice_cose_key_alg(DICE_COSE_KEY_ALG_VALUE)?;
+    let protected = HeaderBuilder::new().algorithm(dice_key_alg).build();
     let signed_data = CoseSign1Builder::new()
         .protected(protected)
         .payload(cbor_util::serialize(payload)?)

@@ -16,6 +16,8 @@
 
 use core::fmt;
 
+use crate::hyp;
+
 /// Errors for MemoryTracker operations.
 #[derive(Debug, Clone)]
 pub enum MemoryTrackerError {
@@ -47,6 +49,10 @@ pub enum MemoryTrackerError {
     FlushRegionFailed,
     /// Failed to set PTE dirty state.
     SetPteDirtyFailed,
+    /// Attempting to MMIO_GUARD_MAP more than once the same region.
+    DuplicateMmioShare(usize),
+    /// The MMIO_GUARD granule used by the hypervisor is not supported.
+    UnsupportedMmioGuardGranule(usize),
 }
 
 impl fmt::Display for MemoryTrackerError {
@@ -66,6 +72,12 @@ impl fmt::Display for MemoryTrackerError {
             Self::InvalidPte => write!(f, "Page table entry is not valid"),
             Self::FlushRegionFailed => write!(f, "Failed to flush memory region"),
             Self::SetPteDirtyFailed => write!(f, "Failed to set PTE dirty state"),
+            Self::DuplicateMmioShare(addr) => {
+                write!(f, "Attempted to share the same MMIO region at {addr:#x} twice")
+            }
+            Self::UnsupportedMmioGuardGranule(g) => {
+                write!(f, "Unsupported MMIO guard granule: {g}")
+            }
         }
     }
 }

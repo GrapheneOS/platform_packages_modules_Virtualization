@@ -14,12 +14,14 @@
 
 //! Wrappers around calls to the KVM hypervisor.
 
-use super::common::{
-    DeviceAssigningHypervisor, Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor,
-};
-use crate::error::{Error, Result};
-use crate::util::page_address;
 use core::fmt::{self, Display, Formatter};
+
+use super::{DeviceAssigningHypervisor, Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
+use crate::{
+    hyp::{Error, Result},
+    memory::page_4kb_of,
+};
+
 use smccc::{
     error::{positive_or_error_64, success_or_error_32, success_or_error_64},
     hvc64,
@@ -113,24 +115,32 @@ impl MmioGuardedHypervisor for ProtectedKvmHypervisor {
 
     fn map(&self, addr: usize) -> Result<()> {
         let mut args = [0u64; 17];
-        args[0] = page_address(addr);
+        args[0] = page_4kb_of(addr).try_into().unwrap();
 
-        // TODO(b/277859415): pKVM returns a i32 instead of a i64 in T.
-        // Drop this hack once T reaches EoL.
-        success_or_error_32(hvc64(VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID, args)[0] as u32)
-            .map_err(|e| Error::KvmError(e, VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID))
+        if cfg!(feature = "compat_android_13") {
+            let res = hvc64(VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID, args)[0];
+            // pKVM returns i32 instead of the intended i64 in Android 13.
+            return success_or_error_32(res as u32)
+                .map_err(|e| Error::KvmError(e, VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID));
+        }
+
+        checked_hvc64_expect_zero(VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID, args)
     }
 
     fn unmap(&self, addr: usize) -> Result<()> {
         let mut args = [0u64; 17];
-        args[0] = page_address(addr);
+        args[0] = page_4kb_of(addr).try_into().unwrap();
 
-        // TODO(b/277860860): pKVM returns NOT_SUPPORTED for SUCCESS in T.
-        // Drop this hack once T reaches EoL.
-        match success_or_error_64(hvc64(VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID, args)[0]) {
-            Err(KvmError::NotSupported) | Ok(_) => Ok(()),
-            Err(e) => Err(Error::KvmError(e, VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID)),
+        if cfg!(feature = "compat_android_13") {
+            let res = hvc64(VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID, args)[0];
+            // pKVM returns NOT_SUPPORTED for SUCCESS in Android 13.
+            return match success_or_error_64(res) {
+                Err(KvmError::NotSupported) | Ok(_) => Ok(()),
+                Err(e) => Err(Error::KvmError(e, VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID)),
+            };
         }
+
+        checked_hvc64_expect_zero(VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID, args)
     }
 
     fn granule(&self) -> Result<usize> {

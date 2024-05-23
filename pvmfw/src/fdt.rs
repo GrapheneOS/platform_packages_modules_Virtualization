@@ -46,6 +46,7 @@ use log::warn;
 use static_assertions::const_assert;
 use tinyvec::ArrayVec;
 use vmbase::fdt::SwiotlbInfo;
+use vmbase::hyp;
 use vmbase::layout::{crosvm::MEM_START, MAX_VIRT_ADDR};
 use vmbase::memory::SIZE_4KB;
 use vmbase::util::flatten;

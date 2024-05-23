@@ -14,10 +14,14 @@
 
 //! Wrappers around calls to the GenieZone hypervisor.
 
-use super::common::{Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
-use crate::error::{Error, Result};
-use crate::util::page_address;
 use core::fmt::{self, Display, Formatter};
+
+use super::{Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
+use crate::{
+    hyp::{Error, Result},
+    memory::page_4kb_of,
+};
+
 use smccc::{
     error::{positive_or_error_64, success_or_error_64},
     hvc64,
@@ -107,14 +111,14 @@ impl MmioGuardedHypervisor for GeniezoneHypervisor {
 
     fn map(&self, addr: usize) -> Result<()> {
         let mut args = [0u64; 17];
-        args[0] = page_address(addr);
+        args[0] = page_4kb_of(addr).try_into().unwrap();
 
         checked_hvc64_expect_zero(VENDOR_HYP_GZVM_MMIO_GUARD_MAP_FUNC_ID, args)
     }
 
     fn unmap(&self, addr: usize) -> Result<()> {
         let mut args = [0u64; 17];
-        args[0] = page_address(addr);
+        args[0] = page_4kb_of(addr).try_into().unwrap();
 
         checked_hvc64_expect_zero(VENDOR_HYP_GZVM_MMIO_GUARD_UNMAP_FUNC_ID, args)
     }

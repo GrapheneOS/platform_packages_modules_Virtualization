@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Utility functions.
+//! This library provides wrappers around various hypervisor backends.
 
-pub(crate) const SIZE_4KB: usize = 4 << 10;
+mod error;
+mod hypervisor;
 
-/// Computes the low memory page address of the 4KiB page containing a given address.
-pub(crate) fn page_address(addr: usize) -> u64 {
-    (addr & !(SIZE_4KB - 1)).try_into().unwrap()
-}
+pub use error::{Error, Result};
+pub use hypervisor::{
+    get_device_assigner, get_mem_sharer, get_mmio_guard, DeviceAssigningHypervisor, KvmError,
+};
