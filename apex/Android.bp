@@ -47,7 +47,7 @@ soong_config_module_type {
         "release_avf_enable_device_assignment",
         "release_avf_enable_llpvm_changes",
         "release_avf_enable_network",
-        "release_avf_enable_remote_attestation",
+        "avf_remote_attestation_enabled",
         "release_avf_enable_vendor_modules",
         "release_avf_enable_virt_cpufreq",
         "release_avf_support_custom_vm_with_paravirtualized_devices",
@@ -204,7 +204,7 @@ avf_flag_aware_apex_defaults {
                 },
             },
         },
-        release_avf_enable_remote_attestation: {
+        avf_remote_attestation_enabled: {
             vintf_fragments: [
                 "virtualizationservice.xml",
             ],
@@ -235,7 +235,7 @@ soong_config_module_type {
     config_namespace: "ANDROID",
     bool_variables: [
         "release_avf_enable_llpvm_changes",
-        "release_avf_enable_remote_attestation",
+        "avf_remote_attestation_enabled",
     ],
     properties: ["srcs"],
 }
@@ -247,7 +247,7 @@ avf_flag_aware_genrule {
         release_avf_enable_llpvm_changes: {
             srcs: ["virtualizationservice.rc.llpvm"],
         },
-        release_avf_enable_remote_attestation: {
+        avf_remote_attestation_enabled: {
             srcs: ["virtualizationservice.rc.ra"],
         },
     },

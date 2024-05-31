@@ -55,6 +55,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     protected static final String LOG_PATH = TEST_ROOT + "log.txt";
     protected static final String CONSOLE_PATH = TEST_ROOT + "console.txt";
     protected static final String TRADEFED_CONSOLE_PATH = TRADEFED_TEST_ROOT + "console.txt";
+    protected static final String TRADEFED_LOG_PATH = TRADEFED_TEST_ROOT + "log.txt";
     private static final int TEST_VM_ADB_PORT = 8000;
     private static final String MICRODROID_SERIAL = "localhost:" + TEST_VM_ADB_PORT;
     private static final String INSTANCE_IMG = "instance.img";

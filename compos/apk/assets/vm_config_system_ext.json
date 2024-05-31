@@ -30,5 +30,6 @@
     }
   ],
   "export_tombstones": true,
-  "enable_authfs": true
+  "enable_authfs": true,
+  "hugepages": true
 }

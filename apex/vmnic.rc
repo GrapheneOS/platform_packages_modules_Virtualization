@@ -13,8 +13,8 @@
 # limitations under the License.
 
 service vmnic /apex/com.android.virt/bin/vmnic
-    user system
-    group system
+    user root
+    group vpn
     interface aidl android.system.virtualizationservice_internal.IVmnic
     disabled
     oneshot

@@ -19,40 +19,49 @@ package com.android.virtualization.vmlauncher;
 import static android.system.virtualmachine.VirtualMachineConfig.CPU_TOPOLOGY_MATCH_HOST;
 
 import android.app.Activity;
+import android.crosvm.ICrosvmAndroidDisplayService;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.ServiceManager;
-import android.crosvm.ICrosvmAndroidDisplayService;
 import android.system.virtualizationservice_internal.IVirtualizationServiceInternal;
-import android.system.virtualmachine.VirtualMachineCustomImageConfig;
-import android.system.virtualmachine.VirtualMachineCustomImageConfig.DisplayConfig;
-import android.util.DisplayMetrics;
-import android.util.Log;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineCallback;
 import android.system.virtualmachine.VirtualMachineConfig;
+import android.system.virtualmachine.VirtualMachineCustomImageConfig;
+import android.system.virtualmachine.VirtualMachineCustomImageConfig.DisplayConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Display;
 import android.view.InputDevice;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.WindowManager;
 import android.view.WindowMetrics;
+
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import libcore.io.IoBridge;
+
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -63,8 +72,9 @@ public class MainActivity extends Activity {
     private static final String TAG = "VmLauncherApp";
     private static final String VM_NAME = "my_custom_vm";
     private static final boolean DEBUG = true;
-    private final ExecutorService mExecutorService = Executors.newFixedThreadPool(4);
+    private ExecutorService mExecutorService;
     private VirtualMachine mVirtualMachine;
+    private ParcelFileDescriptor mCursorStream;
 
     private VirtualMachineConfig createVirtualMachineConfig(String jsonPath) {
         VirtualMachineConfig.Builder configBuilder =
@@ -75,6 +85,7 @@ public class MainActivity extends Activity {
         if (DEBUG) {
             configBuilder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
             configBuilder.setVmOutputCaptured(true);
+            configBuilder.setConnectVmConsole(true);
         }
         VirtualMachineCustomImageConfig.Builder customImageConfigBuilder =
                 new VirtualMachineCustomImageConfig.Builder();
@@ -160,6 +171,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mExecutorService = Executors.newCachedThreadPool();
         try {
             // To ensure that the previous display service is removed.
             IVirtualizationServiceInternal.Stub.asInterface(
@@ -239,14 +251,19 @@ public class MainActivity extends Activity {
             if (DEBUG) {
                 InputStream console = mVirtualMachine.getConsoleOutput();
                 InputStream log = mVirtualMachine.getLogOutput();
-                mExecutorService.execute(new Reader("console", console));
+                OutputStream consoleLogFile =
+                        new LineBufferedOutputStream(
+                                getApplicationContext().openFileOutput("console.log", 0));
+                mExecutorService.execute(new CopyStreamTask("console", console, consoleLogFile));
                 mExecutorService.execute(new Reader("log", log));
             }
-        } catch (VirtualMachineException e) {
+        } catch (VirtualMachineException | IOException e) {
             throw new RuntimeException(e);
         }
 
         SurfaceView surfaceView = findViewById(R.id.surface_view);
+        SurfaceView cursorSurfaceView = findViewById(R.id.cursor_surface_view);
+        cursorSurfaceView.setZOrderMediaOverlay(true);
         View backgroundTouchView = findViewById(R.id.background_touch_view);
         backgroundTouchView.setOnTouchListener(
                 (v, event) -> {
@@ -280,7 +297,10 @@ public class MainActivity extends Activity {
                                                 + holder.getSurface()
                                                 + ")");
                                 runWithDisplayService(
-                                        (service) -> service.setSurface(holder.getSurface()));
+                                        (service) ->
+                                                service.setSurface(
+                                                        holder.getSurface(),
+                                                        false /* forCursor */));
                             }
 
                             @Override
@@ -292,7 +312,52 @@ public class MainActivity extends Activity {
                             @Override
                             public void surfaceDestroyed(SurfaceHolder holder) {
                                 Log.d(TAG, "ICrosvmAndroidDisplayService.removeSurface()");
-                                runWithDisplayService((service) -> service.removeSurface());
+                                runWithDisplayService(
+                                        (service) -> service.removeSurface(false /* forCursor */));
+                            }
+                        });
+        cursorSurfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
+        cursorSurfaceView
+                .getHolder()
+                .addCallback(
+                        new SurfaceHolder.Callback() {
+                            @Override
+                            public void surfaceCreated(SurfaceHolder holder) {
+                                try {
+                                    ParcelFileDescriptor[] pfds =
+                                            ParcelFileDescriptor.createSocketPair();
+                                    mExecutorService.execute(
+                                            new CursorHandler(cursorSurfaceView, pfds[0]));
+                                    mCursorStream = pfds[0];
+                                    runWithDisplayService(
+                                            (service) -> service.setCursorStream(pfds[1]));
+                                } catch (Exception e) {
+                                    Log.d("TAG", "failed to run cursor stream handler", e);
+                                }
+                                runWithDisplayService(
+                                        (service) ->
+                                                service.setSurface(
+                                                        holder.getSurface(), true /* forCursor */));
+                            }
+
+                            @Override
+                            public void surfaceChanged(
+                                    SurfaceHolder holder, int format, int width, int height) {
+                                Log.d(TAG, "width: " + width + ", height: " + height);
+                            }
+
+                            @Override
+                            public void surfaceDestroyed(SurfaceHolder holder) {
+                                Log.d(TAG, "ICrosvmAndroidDisplayService.removeSurface()");
+                                runWithDisplayService(
+                                        (service) -> service.removeSurface(true /* forCursor */));
+                                if (mCursorStream != null) {
+                                    try {
+                                        mCursorStream.close();
+                                    } catch (IOException e) {
+                                        Log.d(TAG, "failed to close fd", e);
+                                    }
+                                }
                             }
                         });
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -302,6 +367,15 @@ public class MainActivity extends Activity {
         windowInsetsController.setSystemBarsBehavior(
                 WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsets.Type.systemBars());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mExecutorService != null) {
+            mExecutorService.shutdownNow();
+        }
+        Log.d(TAG, "destroyed");
     }
 
     @Override
@@ -336,6 +410,43 @@ public class MainActivity extends Activity {
         }
     }
 
+    static class CursorHandler implements Runnable {
+        private final SurfaceView mSurfaceView;
+        private final ParcelFileDescriptor mStream;
+
+        CursorHandler(SurfaceView s, ParcelFileDescriptor stream) {
+            mSurfaceView = s;
+            mStream = stream;
+        }
+
+        @Override
+        public void run() {
+            Log.d(TAG, "CursorHandler");
+            try {
+                ByteBuffer byteBuffer = ByteBuffer.allocate(8 /* (x: u32, y: u32) */);
+                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                while (true) {
+                    byteBuffer.clear();
+                    int bytes =
+                            IoBridge.read(
+                                    mStream.getFileDescriptor(),
+                                    byteBuffer.array(),
+                                    0,
+                                    byteBuffer.array().length);
+                    float x = (float) (byteBuffer.getInt() & 0xFFFFFFFF);
+                    float y = (float) (byteBuffer.getInt() & 0xFFFFFFFF);
+                    mSurfaceView.post(
+                            () -> {
+                                mSurfaceView.setTranslationX(x);
+                                mSurfaceView.setTranslationY(y);
+                            });
+                }
+            } catch (IOException e) {
+                Log.e(TAG, e.getMessage());
+            }
+        }
+    }
+
     /** Reads data from an input stream and posts it to the output data */
     static class Reader implements Runnable {
         private final String mName;
@@ -356,6 +467,51 @@ public class MainActivity extends Activity {
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Exception while posting " + mName + " output: " + e.getMessage());
+            }
+        }
+    }
+
+    private static class CopyStreamTask implements Runnable {
+        private final String mName;
+        private final InputStream mIn;
+        private final OutputStream mOut;
+
+        CopyStreamTask(String name, InputStream in, OutputStream out) {
+            mName = name;
+            mIn = in;
+            mOut = out;
+        }
+
+        @Override
+        public void run() {
+            try {
+                byte[] buffer = new byte[2048];
+                while (!Thread.interrupted()) {
+                    int len = mIn.read(buffer);
+                    if (len < 0) {
+                        break;
+                    }
+                    mOut.write(buffer, 0, len);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Exception while posting " + mName, e);
+            }
+        }
+    }
+
+    private static class LineBufferedOutputStream extends BufferedOutputStream {
+        LineBufferedOutputStream(OutputStream out) {
+            super(out);
+        }
+
+        @Override
+        public void write(byte[] buf, int off, int len) throws IOException {
+            super.write(buf, off, len);
+            for (int i = 0; i < len; ++i) {
+                if (buf[off + i] == '\n') {
+                    flush();
+                    break;
+                }
             }
         }
     }

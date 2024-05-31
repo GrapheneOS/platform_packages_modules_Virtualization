@@ -127,7 +127,7 @@ fn device_info() -> CanonicalValue {
         "product" => "avf",
         "vb_state" => "avf",
         "manufacturer" => "aosp-avf",
-        "vbmeta_digest" => Value::Bytes(vec![1u8; 0]),
+        "vbmeta_digest" => Value::Bytes(vec![1u8; 1]),
         "security_level" => "avf",
         "boot_patch_level" => 20240202,
         "bootloader_state" => "avf",

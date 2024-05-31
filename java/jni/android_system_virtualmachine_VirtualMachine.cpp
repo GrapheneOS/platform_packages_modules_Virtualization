@@ -17,15 +17,35 @@
 #define LOG_TAG "VirtualMachine"
 
 #include <aidl/android/system/virtualizationservice/IVirtualMachine.h>
+#include <android-base/scopeguard.h>
+#include <android-base/strings.h>
 #include <android/binder_auto_utils.h>
 #include <android/binder_ibinder_jni.h>
+#include <fcntl.h>
 #include <jni.h>
 #include <log/log.h>
+#include <nativehelper/JNIHelp.h>
+#include <nativehelper/JNIPlatformHelp.h>
+#include <nativehelper/ScopedLocalRef.h>
+#include <pty.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include <binder_rpc_unstable.hpp>
+#include <string>
 #include <tuple>
 
 #include "common.h"
+
+namespace {
+
+void throwIOException(JNIEnv *env, const std::string &msg) {
+    jniThrowException(env, "java/io/IOException", msg.c_str());
+}
+
+} // namespace
 
 extern "C" JNIEXPORT jobject JNICALL
 Java_android_system_virtualmachine_VirtualMachine_nativeConnectToVsockServer(
@@ -64,4 +84,73 @@ Java_android_system_virtualmachine_VirtualMachine_nativeConnectToVsockServer(
     ARpcSession_setMaxIncomingThreads(session.get(), 1);
     auto client = ARpcSession_setupPreconnectedClient(session.get(), requestFunc, &args);
     return AIBinder_toJavaBinder(env, client);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_android_system_virtualmachine_VirtualMachine_nativeOpenPtyRawNonblock(
+        JNIEnv *env, [[maybe_unused]] jclass clazz, jobject resultCallback) {
+    int pm, ps;
+    // man openpty says: "Nobody knows how much space should be reserved for name."
+    // but on modern Linux the format of the pts name is always `/dev/pts/[0-9]+`
+    // Realistically speaking, a buffer of 32 bytes leaves us with 22 digits for the pts number,
+    // which should be more than enough.
+    // NOTE: bionic implements openpty() with internal name buffer of size 32, musl 20.
+    char name[32];
+    if (openpty(&pm, &ps, name, nullptr, nullptr)) {
+        throwIOException(env, "openpty(): " + android::base::ErrnoNumberAsString(errno));
+        return;
+    }
+    fcntl(pm, F_SETFD, FD_CLOEXEC);
+    fcntl(ps, F_SETFD, FD_CLOEXEC);
+    name[sizeof(name) - 1] = '\0';
+    // Set world RW so adb shell can talk to the pts.
+    chmod(name, 0666);
+
+    if (int flags = fcntl(pm, F_GETFL, 0); flags < 0) {
+        throwIOException(env, "fcntl(F_GETFL): " + android::base::ErrnoNumberAsString(errno));
+        return;
+    } else if (fcntl(pm, F_SETFL, flags | O_NONBLOCK) < 0) {
+        throwIOException(env, "fcntl(F_SETFL): " + android::base::ErrnoNumberAsString(errno));
+        return;
+    }
+
+    android::base::ScopeGuard cleanup_handler([=] {
+        close(ps);
+        close(pm);
+    });
+
+    struct termios tio;
+    if (tcgetattr(pm, &tio)) {
+        throwIOException(env, "tcgetattr(): " + android::base::ErrnoNumberAsString(errno));
+        return;
+    }
+    cfmakeraw(&tio);
+    if (tcsetattr(pm, TCSANOW, &tio)) {
+        throwIOException(env, "tcsetattr(): " + android::base::ErrnoNumberAsString(errno));
+        return;
+    }
+
+    jobject mfd = jniCreateFileDescriptor(env, pm);
+    if (mfd == nullptr) {
+        return;
+    }
+    jobject sfd = jniCreateFileDescriptor(env, ps);
+    if (sfd == nullptr) {
+        return;
+    }
+    size_t len = strlen(name);
+    ScopedLocalRef<jbyteArray> ptsName(env, env->NewByteArray(len));
+    if (ptsName.get() != nullptr) {
+        env->SetByteArrayRegion(ptsName.get(), 0, len, (jbyte *)name);
+    }
+    ScopedLocalRef<jclass> callback_class(env, env->GetObjectClass(resultCallback));
+    jmethodID mid = env->GetMethodID(callback_class.get(), "apply",
+                                     "(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[B)V");
+    if (mid == nullptr) {
+        return;
+    }
+
+    env->CallVoidMethod(resultCallback, mid, mfd, sfd, ptsName.get());
+    // FD ownership is transferred to the callback, reset the auto-close hander.
+    cleanup_handler.Disable();
 }

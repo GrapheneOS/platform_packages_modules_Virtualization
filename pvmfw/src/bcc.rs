@@ -27,10 +27,9 @@ use log::trace;
 type Result<T> = core::result::Result<T, BccError>;
 
 pub enum BccError {
-    CborDecodeError(ciborium::de::Error<ciborium_io::EndOfFile>),
-    CborEncodeError(ciborium::ser::Error<core::convert::Infallible>),
+    CborDecodeError,
+    CborEncodeError,
     DiceError(diced_open_dice::DiceError),
-    ExtraneousBytes,
     MalformedBcc(&'static str),
     MissingBcc,
 }
@@ -38,10 +37,9 @@ pub enum BccError {
 impl fmt::Display for BccError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::CborDecodeError(e) => write!(f, "Error parsing BCC CBOR: {e:?}"),
-            Self::CborEncodeError(e) => write!(f, "Error encoding BCC CBOR: {e:?}"),
+            Self::CborDecodeError => write!(f, "Error parsing BCC CBOR"),
+            Self::CborEncodeError => write!(f, "Error encoding BCC CBOR"),
             Self::DiceError(e) => write!(f, "Dice error: {e:?}"),
-            Self::ExtraneousBytes => write!(f, "Unexpected trailing data in BCC"),
             Self::MalformedBcc(s) => {
                 write!(f, "BCC does not have the expected CBOR structure: {s}")
             }
@@ -65,7 +63,7 @@ pub fn truncate(bcc_handover: BccHandover) -> Result<Vec<u8>> {
     // }
     let bcc_handover: Vec<(Value, Value)> =
         vec![(1.into(), cdi_attest.as_slice().into()), (2.into(), cdi_seal.as_slice().into())];
-    value_to_bytes(&bcc_handover.into())
+    cbor_util::serialize(&bcc_handover).map_err(|_| BccError::CborEncodeError)
 }
 
 fn taint_cdi(cdi: &Cdi, info: &str) -> Result<Cdi> {
@@ -100,7 +98,8 @@ impl Bcc {
         // We don't attempt to fully validate the BCC (e.g. we don't check the signatures) - we
         // have to trust our loader. But if it's invalid CBOR or otherwise clearly ill-formed,
         // something is very wrong, so we fail.
-        let bcc_cbor = value_from_bytes(received_bcc)?;
+        let bcc_cbor =
+            cbor_util::deserialize(received_bcc).map_err(|_| BccError::CborDecodeError)?;
 
         // Bcc = [
         //   PubKeyEd25519 / PubKeyECDSA256, // DK_pub
@@ -159,7 +158,7 @@ impl BccEntry {
         // ]
         let payload =
             self.payload_bytes().ok_or(BccError::MalformedBcc("Invalid payload in BccEntry"))?;
-        let payload = value_from_bytes(payload)?;
+        let payload = cbor_util::deserialize(payload).map_err(|_| BccError::CborDecodeError)?;
         trace!("Bcc payload: {payload:?}");
         Ok(BccPayload(payload))
     }
@@ -214,22 +213,4 @@ impl BccPayload {
         }
         None
     }
-}
-
-/// Decodes the provided binary CBOR-encoded value and returns a
-/// ciborium::Value struct wrapped in Result.
-fn value_from_bytes(mut bytes: &[u8]) -> Result<Value> {
-    let value = ciborium::de::from_reader(&mut bytes).map_err(BccError::CborDecodeError)?;
-    // Ciborium tries to read one Value, but doesn't care if there is trailing data after it. We do.
-    if !bytes.is_empty() {
-        return Err(BccError::ExtraneousBytes);
-    }
-    Ok(value)
-}
-
-/// Encodes a ciborium::Value into bytes.
-fn value_to_bytes(value: &Value) -> Result<Vec<u8>> {
-    let mut bytes: Vec<u8> = Vec::new();
-    ciborium::ser::into_writer(&value, &mut bytes).map_err(BccError::CborEncodeError)?;
-    Ok(bytes)
 }

@@ -25,10 +25,10 @@ import java.io.IOException;
 public class PvmfwTool {
     public static void printUsage() {
         System.out.println("pvmfw-tool: Appends pvmfw.bin and config payloads.");
-        System.out.println("            Requires BCC and VM reference DT.");
-        System.out.println("            VM DTBO and Debug policy can optionally be specified");
+        System.out.println("            Requires BCC. VM Reference DT, VM DTBO, and Debug policy");
+        System.out.println("            can optionally be specified");
         System.out.println(
-                "Usage: pvmfw-tool <out> <pvmfw.bin> <bcc.dat> <VM reference DT> [VM DTBO] [debug"
+                "Usage: pvmfw-tool <out> <pvmfw.bin> <bcc.dat> [VM reference DT] [VM DTBO] [debug"
                         + " policy]");
     }
 
@@ -41,10 +41,13 @@ public class PvmfwTool {
         File out = new File(args[0]);
         File pvmfwBin = new File(args[1]);
         File bccData = new File(args[2]);
-        File vmReferenceDt = new File(args[3]);
 
+        File vmReferenceDt = null;
         File vmDtbo = null;
         File dp = null;
+        if (args.length > 3) {
+            vmReferenceDt = new File(args[3]);
+        }
         if (args.length > 4) {
             vmDtbo = new File(args[4]);
         }
@@ -53,12 +56,18 @@ public class PvmfwTool {
         }
 
         try {
-            Pvmfw pvmfw =
+            Pvmfw.Builder builder =
                     new Pvmfw.Builder(pvmfwBin, bccData)
                             .setVmReferenceDt(vmReferenceDt)
                             .setDebugPolicyOverlay(dp)
-                            .setVmDtbo(vmDtbo)
-                            .build();
+                            .setVmDtbo(vmDtbo);
+            if (vmReferenceDt == null) {
+                builder.setVersion(1, 1);
+            } else {
+                builder.setVersion(1, 2);
+            }
+
+            Pvmfw pvmfw = builder.build();
             pvmfw.serialize(out);
         } catch (IOException e) {
             e.printStackTrace();

@@ -209,6 +209,14 @@ $ adb shell pm enable com.android.virtualization.vmlauncher/.MainActivity
 $ adb unroot
 ```
 
+If virt apex is Google-signed, you need to enable the app and grant the
+permission to the app.
+```
+$ adb root
+$ adb shell pm enable com.google.android.virtualization.vmlauncher/com.android.virtualization.vmlauncher.MainActivity
+$ adb shell pm grant com.google.android.virtualization.vmlauncher android.permission.USE_CUSTOM_VIRTUAL_MACHINE
+$ adb unroot
+```
 Then execute the below to set up the network. In the future, this step won't be necessary.
 
 ```

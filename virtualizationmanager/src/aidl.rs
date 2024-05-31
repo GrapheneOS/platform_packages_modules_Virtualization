@@ -607,13 +607,20 @@ impl VirtualizationService {
         };
 
         // Create TAP network interface if the VM supports network.
-        let _tap_fd = if cfg!(network) && config.networkSupported {
+        let tap = if cfg!(network) && config.networkSupported {
             if *is_protected {
                 return Err(anyhow!("Network feature is not supported for pVM yet"))
                     .with_log()
                     .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)?;
             }
-            Some(GLOBAL_SERVICE.createTapInterface(&get_this_pid().to_string())?)
+            Some(File::from(
+                GLOBAL_SERVICE
+                    .createTapInterface(&get_this_pid().to_string())?
+                    .as_ref()
+                    .try_clone()
+                    .context("Failed to get TAP interface from ParcelFileDescriptor")
+                    .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
+            ))
         } else {
             None
         };
@@ -646,6 +653,7 @@ impl VirtualizationService {
             display_config,
             input_device_options,
             hugepages: config.hugePages,
+            tap,
         };
         let instance = Arc::new(
             VmInstance::new(

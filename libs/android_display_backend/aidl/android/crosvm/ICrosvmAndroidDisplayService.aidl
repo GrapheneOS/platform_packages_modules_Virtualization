@@ -16,6 +16,7 @@
 
 package android.crosvm;
 
+import android.os.ParcelFileDescriptor;
 import android.view.Surface;
 
 /**
@@ -23,7 +24,7 @@ import android.view.Surface;
  * display.
  */
 interface ICrosvmAndroidDisplayService {
-    void setSurface(inout Surface surface);
-
-    void removeSurface();
+    void setSurface(inout Surface surface, boolean forCursor);
+    void setCursorStream(in ParcelFileDescriptor stream);
+    void removeSurface(boolean forCursor);
 }

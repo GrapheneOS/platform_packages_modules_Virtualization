@@ -5,7 +5,7 @@ package {
 java_library_host {
     name: "PvmfwHostTestHelper",
     srcs: ["java/**/*.java"],
-    libs: [
+    static_libs: [
         "androidx.annotation_annotation",
         "truth",
     ],

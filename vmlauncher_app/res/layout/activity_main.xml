@@ -11,7 +11,7 @@
       android:layout_height="match_parent"
     />
   <SurfaceView
-        android:id="@+id/surface_view"
+      android:id="@+id/surface_view"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
       android:focusable="true"
@@ -19,6 +19,12 @@
       android:focusedByDefault="true"
       android:defaultFocusHighlightEnabled="true">
     <requestFocus />
+  </SurfaceView>
+  <!-- A cursor size in virtio-gpu spec is always 64x64 -->
+  <SurfaceView
+      android:id="@+id/cursor_surface_view"
+      android:layout_width="64px"
+      android:layout_height="64px">
   </SurfaceView>
 
 </merge>

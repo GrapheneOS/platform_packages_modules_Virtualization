@@ -35,34 +35,54 @@ public:
     DisplayService() = default;
     virtual ~DisplayService() = default;
 
-    ndk::ScopedAStatus setSurface(Surface* surface) override {
+    ndk::ScopedAStatus setSurface(Surface* surface, bool forCursor) override {
         {
             std::lock_guard lk(mSurfaceReadyMutex);
-            mSurface = std::make_unique<Surface>(surface->release());
+            if (forCursor) {
+                mCursorSurface = std::make_unique<Surface>(surface->release());
+            } else {
+                mSurface = std::make_unique<Surface>(surface->release());
+            }
         }
-        mSurfaceReady.notify_one();
+        mSurfaceReady.notify_all();
         return ::ndk::ScopedAStatus::ok();
     }
 
-    ndk::ScopedAStatus removeSurface() override {
+    ndk::ScopedAStatus removeSurface(bool forCursor) override {
         {
             std::lock_guard lk(mSurfaceReadyMutex);
-            mSurface = nullptr;
+            if (forCursor) {
+                mCursorSurface = nullptr;
+            } else {
+                mSurface = nullptr;
+            }
         }
-        mSurfaceReady.notify_one();
+        mSurfaceReady.notify_all();
         return ::ndk::ScopedAStatus::ok();
     }
 
-    Surface* getSurface() {
+    Surface* getSurface(bool forCursor) {
         std::unique_lock lk(mSurfaceReadyMutex);
-        mSurfaceReady.wait(lk, [this] { return mSurface != nullptr; });
-        return mSurface.get();
+        if (forCursor) {
+            mSurfaceReady.wait(lk, [this] { return mCursorSurface != nullptr; });
+            return mCursorSurface.get();
+        } else {
+            mSurfaceReady.wait(lk, [this] { return mSurface != nullptr; });
+            return mSurface.get();
+        }
+    }
+    ndk::ScopedFileDescriptor& getCursorStream() { return mCursorStream; }
+    ndk::ScopedAStatus setCursorStream(const ndk::ScopedFileDescriptor& in_stream) {
+        mCursorStream = ndk::ScopedFileDescriptor(dup(in_stream.get()));
+        return ::ndk::ScopedAStatus::ok();
     }
 
 private:
     std::condition_variable mSurfaceReady;
     std::mutex mSurfaceReadyMutex;
     std::unique_ptr<Surface> mSurface;
+    std::unique_ptr<Surface> mCursorSurface;
+    ndk::ScopedFileDescriptor mCursorStream;
 };
 
 } // namespace
@@ -130,7 +150,7 @@ extern "C" void destroy_android_display_context(struct AndroidDisplayContext* ct
 }
 
 extern "C" ANativeWindow* create_android_surface(struct AndroidDisplayContext* ctx, uint32_t width,
-                                                 uint32_t height) {
+                                                 uint32_t height, bool for_cursor) {
     if (ctx->disp_service == nullptr) {
         ctx->errorf("Display service was not created");
         return nullptr;
@@ -139,7 +159,7 @@ extern "C" ANativeWindow* create_android_surface(struct AndroidDisplayContext* c
     // where the SetScanoutBlob command is handled. Let's use BGRA not BGRX with a hope that we will
     // need alpha blending for the cursor surface.
     int format = HAL_PIXEL_FORMAT_BGRA_8888;
-    ANativeWindow* surface = ctx->disp_service->getSurface()->get(); // this can block
+    ANativeWindow* surface = ctx->disp_service->getSurface(for_cursor)->get(); // this can block
     if (ANativeWindow_setBuffersGeometry(surface, width, height, format) != 0) {
         ctx->errorf("Failed to set buffer gemoetry");
         return nullptr;
@@ -166,6 +186,21 @@ extern "C" bool get_android_surface_buffer(struct AndroidDisplayContext* ctx,
         return false;
     }
     return true;
+}
+
+extern "C" void set_android_surface_position(struct AndroidDisplayContext* ctx, uint32_t x,
+                                             uint32_t y) {
+    if (ctx->disp_service == nullptr) {
+        ctx->errorf("Display service was not created");
+        return;
+    }
+    auto fd = ctx->disp_service->getCursorStream().get();
+    if (fd == -1) {
+        ctx->errorf("Invalid fd");
+        return;
+    }
+    uint32_t pos[] = {x, y};
+    write(fd, pos, sizeof(pos));
 }
 
 extern "C" void post_android_surface_buffer(struct AndroidDisplayContext* ctx,

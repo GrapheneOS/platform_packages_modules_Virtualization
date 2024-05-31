@@ -308,11 +308,11 @@
 			      GIC_PPI 0xa IRQ_TYPE_LEVEL_LOW>;
 	};
 
-	uart@2e8 {
+	uart@3f8 {
 		compatible = "ns16550a";
-		reg = <0x00 0x2e8 0x00 0x8>;
+		reg = <0x00 0x3f8 0x00 0x8>;
 		clock-frequency = <0x1c2000>;
-		interrupts = <GIC_SPI 2 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 0 IRQ_TYPE_EDGE_RISING>;
 	};
 
 	uart@2f8 {
@@ -329,11 +329,11 @@
 		interrupts = <GIC_SPI 0 IRQ_TYPE_EDGE_RISING>;
 	};
 
-	uart@3f8 {
+	uart@2e8 {
 		compatible = "ns16550a";
-		reg = <0x00 0x3f8 0x00 0x8>;
+		reg = <0x00 0x2e8 0x00 0x8>;
 		clock-frequency = <0x1c2000>;
-		interrupts = <GIC_SPI 0 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 2 IRQ_TYPE_EDGE_RISING>;
 	};
 
 	psci {

@@ -42,8 +42,8 @@ import static android.system.virtualmachine.VirtualMachineCallback.STOP_REASON_V
 
 import static java.util.Objects.requireNonNull;
 
-import android.annotation.FlaggedApi;
 import android.annotation.CallbackExecutor;
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
@@ -63,8 +63,8 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
+import android.system.ErrnoException;
+import android.system.OsConstants;
 import android.system.virtualizationcommon.DeathReason;
 import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationservice.IVirtualMachine;
@@ -78,13 +78,17 @@ import android.system.virtualizationservice.VirtualMachineRawConfig;
 import android.system.virtualizationservice.VirtualMachineState;
 import android.util.JsonReader;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.system.virtualmachine.flags.Flags;
 
 import libcore.io.IoBridge;
+import libcore.io.IoUtils;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -97,17 +101,20 @@ import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.zip.ZipFile;
@@ -320,6 +327,10 @@ public class VirtualMachine implements AutoCloseable {
 
     private final boolean mVmConsoleInputSupported;
 
+    private final boolean mConnectVmConsole;
+
+    private final Executor mConsoleExecutor = Executors.newSingleThreadExecutor();
+
     /** The configuration that is currently associated with this VM. */
     @GuardedBy("mLock")
     @NonNull
@@ -345,6 +356,26 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("mLock")
     @Nullable
     private ParcelFileDescriptor mConsoleInWriter;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private ParcelFileDescriptor mTeeConsoleOutReader;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private ParcelFileDescriptor mTeeConsoleOutWriter;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private ParcelFileDescriptor mPtyFd;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private ParcelFileDescriptor mPtsFd;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private String mPtsName;
 
     @GuardedBy("mLock")
     @Nullable
@@ -417,6 +448,7 @@ public class VirtualMachine implements AutoCloseable {
 
         mVmOutputCaptured = config.isVmOutputCaptured();
         mVmConsoleInputSupported = config.isVmConsoleInputSupported();
+        mConnectVmConsole = config.isConnectVmConsole();
     }
 
     /**
@@ -1128,12 +1160,48 @@ public class VirtualMachine implements AutoCloseable {
             IVirtualizationService service = mVirtualizationService.getBinder();
 
             try {
+                if (mConnectVmConsole) {
+                    createPtyConsole();
+                }
+
                 if (mVmOutputCaptured) {
                     createVmOutputPipes();
                 }
 
                 if (mVmConsoleInputSupported) {
                     createVmInputPipes();
+                }
+
+                ParcelFileDescriptor consoleOutFd = null;
+                if (mConnectVmConsole && mVmOutputCaptured) {
+                    // If we are enabling output pipes AND the host console, then we tee the console
+                    // output to both.
+                    ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+                    mTeeConsoleOutReader = pipe[0];
+                    mTeeConsoleOutWriter = pipe[1];
+                    consoleOutFd = mTeeConsoleOutWriter;
+                    TeeWorker tee =
+                            new TeeWorker(
+                                    mName + " console",
+                                    new FileInputStream(mTeeConsoleOutReader.getFileDescriptor()),
+                                    List.of(
+                                            new FileOutputStream(mPtyFd.getFileDescriptor()),
+                                            new FileOutputStream(
+                                                    mConsoleOutWriter.getFileDescriptor())));
+                    // If the VM is stopped then the tee worker thread would get an EOF or read()
+                    // error which would tear down itself.
+                    mConsoleExecutor.execute(tee);
+                } else if (mConnectVmConsole) {
+                    consoleOutFd = mPtyFd;
+                } else if (mVmOutputCaptured) {
+                    consoleOutFd = mConsoleOutWriter;
+                }
+
+                ParcelFileDescriptor consoleInFd = null;
+                if (mConnectVmConsole) {
+                    consoleInFd = mPtyFd;
+                } else if (mVmConsoleInputSupported) {
+                    consoleInFd = mConsoleInReader;
                 }
 
                 VirtualMachineConfig vmConfig = getConfig();
@@ -1143,8 +1211,7 @@ public class VirtualMachine implements AutoCloseable {
                                 : createVirtualMachineConfigForAppFrom(vmConfig, service);
 
                 mVirtualMachine =
-                        service.createVm(
-                                vmConfigParcel, mConsoleOutWriter, mConsoleInReader, mLogWriter);
+                        service.createVm(vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter);
                 mVirtualMachine.registerCallback(new CallbackTranslator(service));
                 mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 mVirtualMachine.start();
@@ -1203,12 +1270,78 @@ public class VirtualMachine implements AutoCloseable {
     private void createVmInputPipes() throws VirtualMachineException {
         try {
             if (mConsoleInReader == null || mConsoleInWriter == null) {
-                ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
-                mConsoleInReader = pipe[0];
-                mConsoleInWriter = pipe[1];
+                if (mConnectVmConsole) {
+                    // If we are enabling input pipes AND the host console, then we should just use
+                    // the host pty peer end as the console write end.
+                    createPtyConsole();
+                    mConsoleInReader = mPtyFd.dup();
+                    mConsoleInWriter = mPtsFd.dup();
+                } else {
+                    ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+                    mConsoleInReader = pipe[0];
+                    mConsoleInWriter = pipe[1];
+                }
             }
         } catch (IOException e) {
             throw new VirtualMachineException("Failed to create input stream for VM", e);
+        }
+    }
+
+    @FunctionalInterface
+    private static interface OpenPtyCallback {
+        public void apply(FileDescriptor mfd, FileDescriptor sfd, byte[] name);
+    }
+
+    // Opens a pty and set the master end to raw mode and O_NONBLOCK.
+    private static native void nativeOpenPtyRawNonblock(OpenPtyCallback resultCallback)
+            throws IOException;
+
+    @GuardedBy("mLock")
+    private void createPtyConsole() throws VirtualMachineException {
+        if (mPtyFd != null && mPtsFd != null) {
+            return;
+        }
+        List<FileDescriptor> fd = new ArrayList<>(2);
+        StringBuilder nameBuilder = new StringBuilder();
+        try {
+            try {
+                nativeOpenPtyRawNonblock(
+                        (FileDescriptor mfd, FileDescriptor sfd, byte[] ptsName) -> {
+                            fd.add(mfd);
+                            fd.add(sfd);
+                            nameBuilder.append(new String(ptsName, StandardCharsets.UTF_8));
+                        });
+            } catch (Exception e) {
+                fd.forEach(IoUtils::closeQuietly);
+                throw e;
+            }
+        } catch (IOException e) {
+            throw new VirtualMachineException(
+                    "Failed to create host console to connect to the VM console", e);
+        }
+        mPtyFd = new ParcelFileDescriptor(fd.get(0));
+        mPtsFd = new ParcelFileDescriptor(fd.get(1));
+        mPtsName = nameBuilder.toString();
+        Log.d(TAG, "Serial console device: " + mPtsName);
+    }
+
+    /**
+     * Returns the name of the peer end (ptsname) of the host console. The host console is only
+     * available if the {@link VirtualMachineConfig} specifies that a host console should
+     * {@linkplain VirtualMachineConfig#isConnectVmConsole connect} to the VM console.
+     *
+     * @throws VirtualMachineException if the host pseudoterminal could not be created, or
+     *     connecting to the VM console is not enabled.
+     * @hide
+     */
+    @NonNull
+    public String getHostConsoleName() throws VirtualMachineException {
+        if (!mConnectVmConsole) {
+            throw new VirtualMachineException("Host console is not enabled");
+        }
+        synchronized (mLock) {
+            createPtyConsole();
+            return mPtsName;
         }
     }
 
@@ -1809,6 +1942,63 @@ public class VirtualMachine implements AutoCloseable {
                 default:
                     return STOP_REASON_UNKNOWN;
             }
+        }
+    }
+
+    /**
+     * Duplicates {@code InputStream} data to multiple {@code OutputStream}. Like the "tee" command.
+     *
+     * <p>Supports non-blocking writes to the output streams by ignoring EAGAIN error.
+     */
+    private static class TeeWorker implements Runnable {
+        private final String mName;
+        private final InputStream mIn;
+        private final List<OutputStream> mOuts;
+
+        TeeWorker(String name, InputStream in, Collection<OutputStream> outs) {
+            mName = name;
+            mIn = in;
+            mOuts = new ArrayList<>(outs);
+        }
+
+        @Override
+        public void run() {
+            byte[] buffer = new byte[2048];
+            try {
+                while (!Thread.interrupted()) {
+                    int len = mIn.read(buffer);
+                    if (len < 0) {
+                        break;
+                    }
+                    for (OutputStream out : mOuts) {
+                        try {
+                            out.write(buffer, 0, len);
+                        } catch (IOException e) {
+                            // EAGAIN is expected because the file description has O_NONBLOCK flag.
+                            if (!isErrnoError(e, OsConstants.EAGAIN)) {
+                                throw e;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Tee " + mName, e);
+            }
+        }
+
+        private static ErrnoException asErrnoException(Throwable e) {
+            if (e instanceof ErrnoException) {
+                return (ErrnoException) e;
+            } else if (e instanceof IOException) {
+                // Try to unwrap ErrnoException#rethrowAsIOException()
+                return asErrnoException(e.getCause());
+            }
+            return null;
+        }
+
+        private static boolean isErrnoError(Exception e, int expectedValue) {
+            ErrnoException errno = asErrnoException(e);
+            return errno != null && errno.errno == expectedValue;
         }
     }
 }

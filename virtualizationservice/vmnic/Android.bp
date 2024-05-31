@@ -14,7 +14,9 @@ rust_binary {
         "libandroid_logger",
         "libanyhow",
         "libbinder_rs",
+        "liblibc",
         "liblog_rust",
+        "libnix",
     ],
     apex_available: ["com.android.virt"],
 }

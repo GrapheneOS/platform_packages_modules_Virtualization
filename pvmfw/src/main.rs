@@ -143,8 +143,8 @@ fn main(
         RebootReason::InternalError
     })?;
 
-    let (new_instance, salt) = if cfg!(llpvm_changes)
-        && should_defer_rollback_protection(fdt)?
+    let instance_hash = if cfg!(llpvm_changes) { Some(salt_from_instance_id(fdt)?) } else { None };
+    let (new_instance, salt) = if should_defer_rollback_protection(fdt)?
         && verified_boot_data.has_capability(Capability::SecretkeeperProtection)
     {
         info!("Guest OS is capable of Secretkeeper protection, deferring rollback protection");
@@ -155,7 +155,7 @@ fn main(
             return Err(RebootReason::InvalidPayload);
         };
         // `new_instance` cannot be known to pvmfw
-        (false, salt_from_instance_id(fdt)?)
+        (false, instance_hash.unwrap())
     } else {
         let (recorded_entry, mut instance_img, header_index) =
             get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
@@ -164,18 +164,15 @@ fn main(
             })?;
         let (new_instance, salt) = if let Some(entry) = recorded_entry {
             maybe_check_dice_measurements_match_entry(&dice_inputs, &entry)?;
-            let salt = if cfg!(llpvm_changes) { salt_from_instance_id(fdt)? } else { entry.salt };
+            let salt = instance_hash.unwrap_or(entry.salt);
             (false, salt)
         } else {
             // New instance!
-            let salt = if cfg!(llpvm_changes) {
-                salt_from_instance_id(fdt)?
-            } else {
-                rand::random_array().map_err(|e| {
-                    error!("Failed to generated instance.img salt: {e}");
-                    RebootReason::InternalError
-                })?
-            };
+            let salt = instance_hash.map_or_else(rand::random_array, Ok).map_err(|e| {
+                error!("Failed to generated instance.img salt: {e}");
+                RebootReason::InternalError
+            })?;
+
             let entry = EntryBody::new(&dice_inputs, &salt);
             record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(
                 |e| {
@@ -204,10 +201,12 @@ fn main(
         Cow::Owned(truncated_bcc_handover)
     };
 
-    dice_inputs.write_next_bcc(new_bcc_handover.as_ref(), &salt, next_bcc).map_err(|e| {
-        error!("Failed to derive next-stage DICE secrets: {e:?}");
-        RebootReason::SecretDerivationError
-    })?;
+    dice_inputs.write_next_bcc(new_bcc_handover.as_ref(), &salt, instance_hash, next_bcc).map_err(
+        |e| {
+            error!("Failed to derive next-stage DICE secrets: {e:?}");
+            RebootReason::SecretDerivationError
+        },
+    )?;
     flush(next_bcc);
 
     let kaslr_seed = u64::from_ne_bytes(rand::random_array().map_err(|e| {

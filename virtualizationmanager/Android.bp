@@ -100,3 +100,21 @@ rust_test {
     ],
     test_suites: ["general-tests"],
 }
+
+cc_fuzz {
+    name: "virtualizationmanager_fuzzer",
+    defaults: ["service_fuzzer_defaults"],
+    srcs: ["fuzzer.cpp"],
+    static_libs: [
+        "android.system.virtualizationservice-ndk",
+        "libbase",
+    ],
+    shared_libs: [
+        "libbinder_ndk",
+        "libbinder_rpc_unstable",
+        "liblog",
+    ],
+    fuzz_config: {
+        cc: ["android-kvm@google.com"],
+    },
+}
