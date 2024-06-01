@@ -117,9 +117,10 @@ rust_test {
     rustlibs: [
         "libcbor_util",
         "libciborium",
-        "libdiced_open_dice_nostd",
+        "libdiced_open_dice",
         "libpvmfw_avb_nostd",
         "libzerocopy_nostd",
+        "libhex",
     ],
 }
 
@@ -320,15 +321,22 @@ prebuilt_etc {
     installable: false,
 }
 
-prebuilt_etc {
+filegroup {
     name: "pvmfw_embedded_key",
-    src: ":avb_testkey_rsa4096_pub_bin",
-    installable: false,
+    srcs: [":avb_testkey_rsa4096"],
+}
+
+genrule {
+    name: "pvmfw_embedded_key_pub_bin",
+    tools: ["avbtool"],
+    srcs: [":pvmfw_embedded_key"],
+    out: ["pvmfw_embedded_key_pub.bin"],
+    cmd: "$(location avbtool) extract_public_key --key $(in) --output $(out)",
 }
 
 genrule {
     name: "pvmfw_embedded_key_rs",
-    srcs: [":pvmfw_embedded_key"],
+    srcs: [":pvmfw_embedded_key_pub_bin"],
     out: ["lib.rs"],
     cmd: "(" +
         "    echo '#![no_std]';" +

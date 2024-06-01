@@ -144,9 +144,9 @@ fn main(
     })?;
 
     let instance_hash = if cfg!(llpvm_changes) { Some(salt_from_instance_id(fdt)?) } else { None };
-    let (new_instance, salt) = if should_defer_rollback_protection(fdt)?
-        && verified_boot_data.has_capability(Capability::SecretkeeperProtection)
-    {
+    let defer_rollback_protection = should_defer_rollback_protection(fdt)?
+        && verified_boot_data.has_capability(Capability::SecretkeeperProtection);
+    let (new_instance, salt) = if defer_rollback_protection {
         info!("Guest OS is capable of Secretkeeper protection, deferring rollback protection");
         // rollback_index of the image is used as security_version and is expected to be > 0 to
         // discourage implicit allocation.
@@ -201,12 +201,18 @@ fn main(
         Cow::Owned(truncated_bcc_handover)
     };
 
-    dice_inputs.write_next_bcc(new_bcc_handover.as_ref(), &salt, instance_hash, next_bcc).map_err(
-        |e| {
+    dice_inputs
+        .write_next_bcc(
+            new_bcc_handover.as_ref(),
+            &salt,
+            instance_hash,
+            defer_rollback_protection,
+            next_bcc,
+        )
+        .map_err(|e| {
             error!("Failed to derive next-stage DICE secrets: {e:?}");
             RebootReason::SecretDerivationError
-        },
-    )?;
+        })?;
     flush(next_bcc);
 
     let kaslr_seed = u64::from_ne_bytes(rand::random_array().map_err(|e| {

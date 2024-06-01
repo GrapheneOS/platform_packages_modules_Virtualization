@@ -20,7 +20,10 @@ mod maintenance;
 mod remote_provisioning;
 mod rkpvm;
 
-use crate::aidl::{remove_temporary_dir, VirtualizationServiceInternal, TEMPORARY_DIRECTORY};
+use crate::aidl::{
+    is_remote_provisioning_hal_declared, remove_temporary_dir, VirtualizationServiceInternal,
+    TEMPORARY_DIRECTORY,
+};
 use android_logger::{Config, FilterBuilder};
 use android_system_virtualizationmaintenance::aidl::android::system::virtualizationmaintenance;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal;
@@ -81,7 +84,7 @@ fn try_main() -> Result<()> {
         BnVirtualizationServiceInternal::new_binder(service.clone(), BinderFeatures::default());
     register(INTERNAL_SERVICE_NAME, internal_service)?;
 
-    if cfg!(remote_attestation) {
+    if is_remote_provisioning_hal_declared().unwrap_or(false) {
         // The IRemotelyProvisionedComponent service is only supposed to be triggered by rkpd for
         // RKP VM attestation.
         let remote_provisioning_service = remote_provisioning::new_binder();
