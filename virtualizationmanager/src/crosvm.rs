@@ -123,6 +123,7 @@ pub struct CrosvmConfig {
     pub input_device_options: Vec<InputDeviceOption>,
     pub hugepages: bool,
     pub tap: Option<File>,
+    pub virtio_snd_backend: Option<String>,
 }
 
 #[derive(Debug)]
@@ -1028,6 +1029,12 @@ fn run_vm(
 
     debug!("Preserving FDs {:?}", preserved_fds);
     command.preserved_fds(preserved_fds);
+
+    if cfg!(paravirtualized_devices) {
+        if let Some(virtio_snd_backend) = &config.virtio_snd_backend {
+            command.arg("--virtio-snd").arg(format!("backend={}", virtio_snd_backend));
+        }
+    }
 
     print_crosvm_args(&command);
 
