@@ -36,7 +36,6 @@ use compos_aidl_interface::aidl::com::android::compos::ICompOsService::ICompOsSe
 use glob::glob;
 use log::{info, warn};
 use platformproperties::hypervisorproperties;
-use rustutils::system_properties;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use vmclient::{DeathReason, ErrorCode, VmInstance, VmWaitError};
@@ -80,7 +79,11 @@ impl ComposClient {
         idsig_manifest_ext_apk: &Path,
         parameters: &VmParameters,
     ) -> Result<Self> {
-        let protected_vm = want_protected_vm()?;
+        let have_protected_vm =
+            hypervisorproperties::hypervisor_protected_vm_supported()?.unwrap_or(false);
+        if !have_protected_vm {
+            bail!("Protected VM not supported, unable to start VM");
+        }
 
         let instance_fd = ParcelFileDescriptor::new(instance_image);
 
@@ -133,7 +136,7 @@ impl ComposClient {
             payload: Payload::ConfigPath(config_path),
             debugLevel: debug_level,
             extraIdsigs: extra_idsigs,
-            protectedVm: protected_vm,
+            protectedVm: true,
             memoryMib: parameters.memory_mib.unwrap_or(0), // 0 means use the default
             cpuTopology: cpu_topology,
             customConfig: custom_config,
@@ -234,28 +237,6 @@ fn prepare_idsig(
     let idsig_file = File::open(idsig_path).context("Failed to open idsig file")?;
     let idsig_fd = ParcelFileDescriptor::new(idsig_file);
     Ok(idsig_fd)
-}
-
-fn want_protected_vm() -> Result<bool> {
-    let have_protected_vm =
-        hypervisorproperties::hypervisor_protected_vm_supported()?.unwrap_or(false);
-    if have_protected_vm {
-        info!("Starting protected VM");
-        return Ok(true);
-    }
-
-    let is_debug_build = system_properties::read("ro.debuggable")?.as_deref().unwrap_or("0") == "1";
-    if !is_debug_build {
-        bail!("Protected VM not supported, unable to start VM");
-    }
-
-    let have_non_protected_vm = hypervisorproperties::hypervisor_vm_supported()?.unwrap_or(false);
-    if have_non_protected_vm {
-        warn!("Protected VM not supported, falling back to non-protected on debuggable build");
-        return Ok(false);
-    }
-
-    bail!("No VM support available")
 }
 
 struct Callback {}

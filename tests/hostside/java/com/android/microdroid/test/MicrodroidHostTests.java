@@ -809,8 +809,10 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Check VmCreationRequested atom
         AtomsProto.VmCreationRequested atomVmCreationRequested =
                 data.get(0).getAtom().getVmCreationRequested();
-        assertThat(atomVmCreationRequested.getHypervisor())
-                .isEqualTo(AtomsProto.VmCreationRequested.Hypervisor.PKVM);
+        if (isPkvmHypervisor()) {
+            assertThat(atomVmCreationRequested.getHypervisor())
+                    .isEqualTo(AtomsProto.VmCreationRequested.Hypervisor.PKVM);
+        }
         assertThat(atomVmCreationRequested.getIsProtected()).isEqualTo(mProtectedVm);
         assertThat(atomVmCreationRequested.getCreationSucceeded()).isTrue();
         assertThat(atomVmCreationRequested.getBinderExceptionCode()).isEqualTo(0);
@@ -832,7 +834,11 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         assertThat(atomVmExited.getDeathReason()).isEqualTo(AtomsProto.VmExited.DeathReason.KILLED);
         assertThat(atomVmExited.getExitSignal()).isEqualTo(9);
         // In CPU & memory related fields, check whether positive values are collected or not.
-        assertThat(atomVmExited.getGuestTimeMillis()).isGreaterThan(0);
+        if (isPkvmHypervisor()) {
+            // Guest Time may not be updated on other hypervisors.
+            // Checking only if the hypervisor is PKVM.
+            assertThat(atomVmExited.getGuestTimeMillis()).isGreaterThan(0);
+        }
         assertThat(atomVmExited.getRssVmKb()).isGreaterThan(0);
         assertThat(atomVmExited.getRssCrosvmKb()).isGreaterThan(0);
 

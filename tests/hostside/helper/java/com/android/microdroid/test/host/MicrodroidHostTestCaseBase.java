@@ -282,4 +282,8 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
                 .map(os -> os.replaceFirst("^microdroid_gki-", ""))
                 .collect(Collectors.toList());
     }
+
+    protected boolean isPkvmHypervisor() throws DeviceNotAvailableException {
+        return getDevice().getProperty("ro.boot.hypervisor.version").equals("kvm.arm-protected");
+    }
 }
