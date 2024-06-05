@@ -657,6 +657,7 @@ impl VirtualizationService {
             hugepages: config.hugePages,
             tap,
             virtio_snd_backend,
+            console_input_device: config.consoleInputDevice.clone(),
         };
         let instance = Arc::new(
             VmInstance::new(

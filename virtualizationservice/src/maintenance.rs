@@ -90,14 +90,15 @@ impl State {
         self.get_inner()?.delete_ids_for_app(user_id, app_id)
     }
 
-    /// Delete the provided VM IDs from both Secretkeeper and the database.
-    pub fn delete_ids(&mut self, vm_ids: &[VmId]) {
+    /// Delete the provided VM ID associated with `(user_id, app_id)` from both Secretkeeper and
+    /// the database.
+    pub fn delete_id(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) {
         let Ok(inner) = self.get_inner() else {
             warn!("No Secretkeeper available, not deleting secrets");
             return;
         };
 
-        inner.delete_ids(vm_ids)
+        inner.delete_id_for_app(vm_id, user_id, app_id)
     }
 
     /// Perform reconciliation to allow for possibly missed notifications of user or app removal.
@@ -155,6 +156,16 @@ impl InnerState {
             self.delete_ids(&old_vm_ids);
         }
         self.vm_id_db.add_vm_id(vm_id, user_id, app_id)
+    }
+
+    fn delete_id_for_app(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) {
+        if !self.vm_id_db.is_vm_id_for_app(vm_id, user_id, app_id).unwrap_or(false) {
+            info!(
+                "delete_id_for_app - VM id not associated with user_id={user_id}, app_id={app_id}"
+            );
+            return;
+        }
+        self.delete_ids(&[*vm_id])
     }
 
     fn delete_ids_for_user(&mut self, user_id: i32) -> Result<()> {
@@ -371,8 +382,8 @@ mod tests {
     #[test]
     fn test_sk_state_batching() {
         let history = Arc::new(Mutex::new(Vec::new()));
-        let mut sk_state = new_test_state(history.clone(), 2);
-        sk_state.delete_ids(&[VM_ID1, VM_ID2, VM_ID3, VM_ID4, VM_ID5]);
+        let sk_state = new_test_state(history.clone(), 2);
+        sk_state.inner.unwrap().delete_ids(&[VM_ID1, VM_ID2, VM_ID3, VM_ID4, VM_ID5]);
         let got = (*history.lock().unwrap()).clone();
         assert_eq!(
             got,
@@ -387,8 +398,8 @@ mod tests {
     #[test]
     fn test_sk_state_no_batching() {
         let history = Arc::new(Mutex::new(Vec::new()));
-        let mut sk_state = new_test_state(history.clone(), 6);
-        sk_state.delete_ids(&[VM_ID1, VM_ID2, VM_ID3, VM_ID4, VM_ID5]);
+        let sk_state = new_test_state(history.clone(), 6);
+        sk_state.inner.unwrap().delete_ids(&[VM_ID1, VM_ID2, VM_ID3, VM_ID4, VM_ID5]);
         let got = (*history.lock().unwrap()).clone();
         assert_eq!(got, vec![SkOp::DeleteIds(vec![VM_ID1, VM_ID2, VM_ID3, VM_ID4, VM_ID5])]);
     }
@@ -402,7 +413,7 @@ mod tests {
         get_db(&mut sk_state).add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
         get_db(&mut sk_state).add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
         get_db(&mut sk_state).add_vm_id(&VM_ID4, USER3, APP_A).unwrap();
-        get_db(&mut sk_state).add_vm_id(&VM_ID5, USER3, APP_C).unwrap(); // Overwrites APP_A
+        get_db(&mut sk_state).add_vm_id(&VM_ID5, USER3, APP_C).unwrap();
         assert_eq!((*history.lock().unwrap()).clone(), vec![]);
 
         sk_state.delete_ids_for_app(USER2, APP_B).unwrap();
@@ -422,6 +433,36 @@ mod tests {
         let empty: Vec<VmId> = Vec::new();
         assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_app(USER2, APP_B).unwrap());
         assert_eq!(empty, get_db(&mut sk_state).vm_ids_for_user(USER3).unwrap());
+    }
+
+    #[test]
+    fn test_sk_state_delete_id() {
+        let history = Arc::new(Mutex::new(Vec::new()));
+        let mut sk_state = new_test_state(history.clone(), 2);
+
+        get_db(&mut sk_state).add_vm_id(&VM_ID1, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID2, USER1, APP_A).unwrap();
+        get_db(&mut sk_state).add_vm_id(&VM_ID3, USER2, APP_B).unwrap();
+        assert_eq!((*history.lock().unwrap()).clone(), vec![]);
+
+        // A VM ID that doesn't exist anywhere - no delete
+        sk_state.delete_id(&VM_ID4, USER1 as u32, APP_A as u32);
+        assert_eq!((*history.lock().unwrap()).clone(), vec![]);
+
+        // Wrong app ID - no delete
+        sk_state.delete_id(&VM_ID1, USER1 as u32, APP_B as u32);
+        assert_eq!((*history.lock().unwrap()).clone(), vec![]);
+
+        // Wrong user ID - no delete
+        sk_state.delete_id(&VM_ID1, USER2 as u32, APP_A as u32);
+        assert_eq!((*history.lock().unwrap()).clone(), vec![]);
+
+        // This porridge is just right.
+        sk_state.delete_id(&VM_ID1, USER1 as u32, APP_A as u32);
+        assert_eq!((*history.lock().unwrap()).clone(), vec![SkOp::DeleteIds(vec![VM_ID1])]);
+
+        assert_eq!(vec![VM_ID2], get_db(&mut sk_state).vm_ids_for_user(USER1).unwrap());
+        assert_eq!(vec![VM_ID3], get_db(&mut sk_state).vm_ids_for_user(USER2).unwrap());
     }
 
     #[test]

@@ -90,6 +90,7 @@ public final class VirtualMachineConfig {
     private static final String KEY_PROTECTED_VM = "protectedVm";
     private static final String KEY_MEMORY_BYTES = "memoryBytes";
     private static final String KEY_CPU_TOPOLOGY = "cpuTopology";
+    private static final String KEY_CONSOLE_INPUT_DEVICE = "consoleInputDevice";
     private static final String KEY_ENCRYPTED_STORAGE_BYTES = "encryptedStorageBytes";
     private static final String KEY_VM_OUTPUT_CAPTURED = "vmOutputCaptured";
     private static final String KEY_VM_CONSOLE_INPUT_SUPPORTED = "vmConsoleInputSupported";
@@ -173,6 +174,9 @@ public final class VirtualMachineConfig {
     /** CPU topology configuration of the VM. */
     @CpuTopology private final int mCpuTopology;
 
+    /** The serial device for VM console input. */
+    @Nullable private final String mConsoleInputDevice;
+
     /**
      * Path within the APK to the payload config file that defines software aspects of the VM.
      */
@@ -229,6 +233,7 @@ public final class VirtualMachineConfig {
             boolean protectedVm,
             long memoryBytes,
             @CpuTopology int cpuTopology,
+            @Nullable String consoleInputDevice,
             long encryptedStorageBytes,
             boolean vmOutputCaptured,
             boolean vmConsoleInputSupported,
@@ -250,6 +255,7 @@ public final class VirtualMachineConfig {
         mProtectedVm = protectedVm;
         mMemoryBytes = memoryBytes;
         mCpuTopology = cpuTopology;
+        mConsoleInputDevice = consoleInputDevice;
         mEncryptedStorageBytes = encryptedStorageBytes;
         mVmOutputCaptured = vmOutputCaptured;
         mVmConsoleInputSupported = vmConsoleInputSupported;
@@ -330,6 +336,10 @@ public final class VirtualMachineConfig {
             builder.setMemoryBytes(memoryBytes);
         }
         builder.setCpuTopology(b.getInt(KEY_CPU_TOPOLOGY));
+        String consoleInputDevice = b.getString(KEY_CONSOLE_INPUT_DEVICE);
+        if (consoleInputDevice != null) {
+            builder.setConsoleInputDevice(consoleInputDevice);
+        }
         long encryptedStorageBytes = b.getLong(KEY_ENCRYPTED_STORAGE_BYTES);
         if (encryptedStorageBytes != 0) {
             builder.setEncryptedStorageBytes(encryptedStorageBytes);
@@ -382,6 +392,9 @@ public final class VirtualMachineConfig {
         b.putInt(KEY_DEBUGLEVEL, mDebugLevel);
         b.putBoolean(KEY_PROTECTED_VM, mProtectedVm);
         b.putInt(KEY_CPU_TOPOLOGY, mCpuTopology);
+        if (mConsoleInputDevice != null) {
+            b.putString(KEY_CONSOLE_INPUT_DEVICE, mConsoleInputDevice);
+        }
         if (mMemoryBytes > 0) {
             b.putLong(KEY_MEMORY_BYTES, mMemoryBytes);
         }
@@ -595,6 +608,7 @@ public final class VirtualMachineConfig {
                 && this.mVmOutputCaptured == other.mVmOutputCaptured
                 && this.mVmConsoleInputSupported == other.mVmConsoleInputSupported
                 && this.mConnectVmConsole == other.mConnectVmConsole
+                && this.mConsoleInputDevice == other.mConsoleInputDevice
                 && (this.mVendorDiskImage == null) == (other.mVendorDiskImage == null)
                 && Objects.equals(this.mPayloadConfigPath, other.mPayloadConfigPath)
                 && Objects.equals(this.mPayloadBinaryName, other.mPayloadBinaryName)
@@ -666,6 +680,7 @@ public final class VirtualMachineConfig {
         config.protectedVm = this.mProtectedVm;
         config.memoryMib = bytesToMebiBytes(mMemoryBytes);
         config.cpuTopology = (byte) this.mCpuTopology;
+        config.consoleInputDevice = mConsoleInputDevice;
         config.devices = EMPTY_STRING_ARRAY;
         config.platformVersion = "~1.0";
         return config;
@@ -804,6 +819,7 @@ public final class VirtualMachineConfig {
         private boolean mProtectedVmSet;
         private long mMemoryBytes;
         @CpuTopology private int mCpuTopology = CPU_TOPOLOGY_ONE_CPU;
+        @Nullable private String mConsoleInputDevice;
         private long mEncryptedStorageBytes;
         private boolean mVmOutputCaptured = false;
         private boolean mVmConsoleInputSupported = false;
@@ -897,6 +913,7 @@ public final class VirtualMachineConfig {
                     mProtectedVm,
                     mMemoryBytes,
                     mCpuTopology,
+                    mConsoleInputDevice,
                     mEncryptedStorageBytes,
                     mVmOutputCaptured,
                     mVmConsoleInputSupported,
@@ -1076,6 +1093,17 @@ public final class VirtualMachineConfig {
                 throw new IllegalArgumentException("Invalid cpuTopology: " + cpuTopology);
             }
             mCpuTopology = cpuTopology;
+            return this;
+        }
+
+        /**
+         * Sets the serial device for VM console input.
+         *
+         * @see android.system.virtualizationservice.ConsoleInputDevice
+         * @hide
+         */
+        public Builder setConsoleInputDevice(@Nullable String consoleInputDevice) {
+            mConsoleInputDevice = consoleInputDevice;
             return this;
         }
 

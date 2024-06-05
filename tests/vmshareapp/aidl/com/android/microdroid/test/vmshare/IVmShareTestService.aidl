@@ -20,5 +20,7 @@ import com.android.microdroid.testservice.ITestService;
 
 /** {@hide} */
 interface IVmShareTestService {
-    ITestService startVm(in VirtualMachineDescriptor vmDesc);
+    void importVm(in VirtualMachineDescriptor vmDesc);
+
+    ITestService startVm();
 }

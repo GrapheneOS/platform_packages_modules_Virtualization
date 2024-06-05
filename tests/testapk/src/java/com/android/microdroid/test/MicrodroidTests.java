@@ -2107,12 +2107,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         IVmShareTestService service = connection.waitForService();
         assertWithMessage("Timed out connecting to " + serviceIntent).that(service).isNotNull();
 
+
         try {
-            // Send the VM descriptor to the other app. When received, it will reconstruct the VM
-            // from the descriptor, start it, connect to the ITestService in it, creates a "proxy"
-            // ITestService binder that delegates all the calls to the VM, and share it with this
-            // app. It will allow us to verify assertions on the running VM in the other app.
-            ITestService testServiceProxy = service.startVm(vmDesc);
+            ITestService testServiceProxy = transferAndStartVm(service, vmDesc, "vm_to_share");
 
             int result = testServiceProxy.addInteger(37, 73);
             assertThat(result).isEqualTo(110);
@@ -2163,17 +2160,31 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertWithMessage("Timed out connecting to " + serviceIntent).that(service).isNotNull();
 
         try {
-            // Send the VM descriptor to the other app. When received, it will reconstruct the VM
-            // from the descriptor, start it, connect to the ITestService in it, creates a "proxy"
-            // ITestService binder that delegates all the calls to the VM, and share it with this
-            // app. It will allow us to verify assertions on the running VM in the other app.
-            ITestService testServiceProxy = service.startVm(vmDesc);
-
+            ITestService testServiceProxy = transferAndStartVm(service, vmDesc, "vm_to_share");
             String result = testServiceProxy.readFromFile("/mnt/encryptedstore/private.key");
             assertThat(result).isEqualTo(EXAMPLE_STRING);
         } finally {
             ctx.unbindService(connection);
         }
+    }
+
+    private ITestService transferAndStartVm(
+            IVmShareTestService service, VirtualMachineDescriptor vmDesc, String vmName)
+            throws Exception {
+        // Send the VM descriptor to the other app. When received, it will reconstruct the VM
+        // from the descriptor.
+        service.importVm(vmDesc);
+
+        // Now that the VM has been imported, we should be free to delete our copy (this is
+        // what we recommend for VM transfer).
+        getVirtualMachineManager().delete(vmName);
+
+        // Ask the other app to start the imported VM, connect to the ITestService in it, create
+        // a "proxy" ITestService binder that delegates all the calls to the VM, and share it
+        // with this app. It will allow us to verify assertions on the running VM in the other
+        // app.
+        ITestService testServiceProxy = service.startVm();
+        return testServiceProxy;
     }
 
     @Test

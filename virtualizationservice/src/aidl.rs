@@ -469,8 +469,16 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     fn removeVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
         let state = &mut *self.state.lock().unwrap();
         if let Some(sk_state) = &mut state.sk_state {
-            info!("removeVmInstance(): delete secret");
-            sk_state.delete_ids(&[*instance_id]);
+            let uid = get_calling_uid();
+            info!(
+                "Removing a VM's instance_id: {:?}, for uid: {:?}",
+                hex::encode(instance_id),
+                uid
+            );
+
+            let user_id = multiuser_get_user_id(uid);
+            let app_id = multiuser_get_app_id(uid);
+            sk_state.delete_id(instance_id, user_id, app_id);
         } else {
             info!("ignoring removeVmInstance() as no ISecretkeeper");
         }

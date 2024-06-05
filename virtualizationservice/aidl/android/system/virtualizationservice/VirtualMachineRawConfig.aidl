@@ -88,4 +88,7 @@ parcelable VirtualMachineRawConfig {
 
     /** Whether the VM should have network feature. */
     boolean networkSupported;
+
+    /** The serial device for VM console input. */
+    @nullable @utf8InCpp String consoleInputDevice;
 }

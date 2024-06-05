@@ -272,6 +272,21 @@ impl VmIdDb {
         Ok(vm_ids)
     }
 
+    /// Determine whether the specified VM ID is associated with `(user_id, app_id)`. Returns false
+    /// if there is no such VM ID, or it exists but is not associated.
+    pub fn is_vm_id_for_app(&mut self, vm_id: &VmId, user_id: u32, app_id: u32) -> Result<bool> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT COUNT(*) FROM main.vmids \
+                        WHERE vm_id = ? AND user_id = ? AND app_id = ?;",
+            )
+            .context("failed to prepare SELECT stmt")?;
+        stmt.query_row(params![vm_id, user_id, app_id], |row| row.get(0))
+            .context("query failed")
+            .map(|n: usize| n != 0)
+    }
+
     /// Determine the number of VM IDs associated with `(user_id, app_id)`.
     pub fn count_vm_ids_for_app(&mut self, user_id: i32, app_id: i32) -> Result<usize> {
         let mut stmt = self
@@ -350,6 +365,7 @@ mod tests {
     const VM_ID3: VmId = [3u8; 64];
     const VM_ID4: VmId = [4u8; 64];
     const VM_ID5: VmId = [5u8; 64];
+    const VM_ID_UNKNOWN: VmId = [6u8; 64];
     const USER1: i32 = 1;
     const USER2: i32 = 2;
     const USER3: i32 = 3;
@@ -505,6 +521,13 @@ mod tests {
         assert_eq!(empty, db.vm_ids_for_user(USER_UNKNOWN).unwrap());
         assert_eq!(empty, db.vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
         assert_eq!(0, db.count_vm_ids_for_app(USER1, APP_UNKNOWN).unwrap());
+
+        assert!(db.is_vm_id_for_app(&VM_ID1, USER1 as u32, APP_A as u32).unwrap());
+        assert!(!db.is_vm_id_for_app(&VM_ID1, USER2 as u32, APP_A as u32).unwrap());
+        assert!(!db.is_vm_id_for_app(&VM_ID1, USER1 as u32, APP_B as u32).unwrap());
+        assert!(!db.is_vm_id_for_app(&VM_ID_UNKNOWN, USER1 as u32, APP_A as u32).unwrap());
+        assert!(!db.is_vm_id_for_app(&VM_ID5, USER3 as u32, APP_A as u32).unwrap());
+        assert!(db.is_vm_id_for_app(&VM_ID5, USER3 as u32, APP_C as u32).unwrap());
 
         db.delete_vm_ids(&[VM_ID2, VM_ID3]).unwrap();
 

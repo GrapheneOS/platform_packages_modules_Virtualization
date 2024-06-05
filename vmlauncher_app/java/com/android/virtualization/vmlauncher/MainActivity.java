@@ -47,12 +47,11 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 
+import libcore.io.IoBridge;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import libcore.io.IoBridge;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -122,6 +121,9 @@ public class MainActivity extends Activity {
                         }
                     }
                 }
+            }
+            if (json.has("console_input_device")) {
+                configBuilder.setConsoleInputDevice(json.getString("console_input_device"));
             }
 
             configBuilder.setMemoryBytes(8L * 1024 * 1024 * 1024 /* 8 GB */);

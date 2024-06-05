@@ -65,6 +65,8 @@ pub struct VmConfig {
     /// SysFS paths of devices assigned to the VM.
     #[serde(default)]
     pub devices: Vec<PathBuf>,
+    /// The serial device for VM console input.
+    pub console_input_device: Option<String>,
 }
 
 impl VmConfig {
@@ -124,6 +126,7 @@ impl VmConfig {
                     x.to_str().map(String::from).ok_or(anyhow!("Failed to convert {x:?} to String"))
                 })
                 .collect::<Result<_>>()?,
+            consoleInputDevice: self.console_input_device.clone(),
             ..Default::default()
         })
     }

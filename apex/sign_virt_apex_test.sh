@@ -25,12 +25,16 @@ PATH=$TEST_DIR:$PATH
 DEBUGFS=$TEST_DIR/debugfs_static
 FSCKEROFS=$TEST_DIR/fsck.erofs
 
+echo "Extracting the virt apex ..."
 deapexer --debugfs_path $DEBUGFS --fsckerofs_path $FSCKEROFS \
   extract $TEST_DIR/com.android.virt.apex $TMP_ROOT
 
 if [ "$(ls -A $TMP_ROOT/etc/fs/)" ]; then
-  sign_virt_apex $TEST_DIR/test.com.android.virt.pem $TMP_ROOT
-  sign_virt_apex --verify $TEST_DIR/test.com.android.virt.pem $TMP_ROOT
+  echo "Re-signing the contents ..."
+  sign_virt_apex -v $TEST_DIR/test.com.android.virt.pem $TMP_ROOT
+  echo "Verifying the contents ..."
+  sign_virt_apex -v --verify $TEST_DIR/test.com.android.virt.pem $TMP_ROOT
+  echo "Done."
 else
   echo "No filesystem images. Skip."
 fi
