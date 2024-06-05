@@ -140,7 +140,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         assumeTrue("Requires VM support", testDevice.supportsMicrodroid());
 
         CommandRunner android = new CommandRunner(androidDevice);
-        long vendorApiLevel = androidDevice.getIntProperty("ro.vendor.api_level", 0);
+        long vendorApiLevel = androidDevice.getIntProperty("ro.board.api_level", 0);
         boolean isGsi =
                 android.runForResult("[ -e /system/system_ext/etc/init/init.gsi.rc ]").getStatus()
                         == CommandStatus.SUCCESS;

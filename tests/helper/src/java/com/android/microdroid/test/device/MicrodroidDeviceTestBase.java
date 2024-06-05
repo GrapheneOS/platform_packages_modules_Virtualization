@@ -219,7 +219,7 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     protected static int getVendorApiLevel() {
-        return SystemProperties.getInt("ro.vendor.api_level", 0);
+        return SystemProperties.getInt("ro.board.api_level", 0);
     }
 
     protected void assumeSupportedDevice() {

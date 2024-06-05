@@ -91,7 +91,7 @@ unsafe impl Hal for HalImpl {
         let bounce = alloc_shared(bb_layout(size))
             .expect("Failed to allocate and share VirtIO bounce buffer with host");
         let paddr = virt_to_phys(bounce);
-        if direction == BufferDirection::DriverToDevice {
+        if direction != BufferDirection::DeviceToDriver {
             let src = buffer.cast::<u8>().as_ptr().cast_const();
             trace!("VirtIO bounce buffer at {bounce:?} (PA:{paddr:#x}) initialized from {src:?}");
             // SAFETY: Both regions are valid, properly aligned, and don't overlap.
@@ -104,7 +104,7 @@ unsafe impl Hal for HalImpl {
     unsafe fn unshare(paddr: PhysAddr, buffer: NonNull<[u8]>, direction: BufferDirection) {
         let bounce = phys_to_virt(paddr);
         let size = buffer.len();
-        if direction == BufferDirection::DeviceToDriver {
+        if direction != BufferDirection::DriverToDevice {
             let dest = buffer.cast::<u8>().as_ptr();
             trace!("VirtIO bounce buffer at {bounce:?} (PA:{paddr:#x}) copied back to {dest:?}");
             // SAFETY: Both regions are valid, properly aligned, and don't overlap.
