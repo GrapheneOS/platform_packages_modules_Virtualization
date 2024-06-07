@@ -116,21 +116,6 @@ fn main(
         info!("Please disregard any previous libavb ERROR about initrd_normal.");
     }
 
-    if verified_boot_data.has_capability(Capability::RemoteAttest) {
-        info!("Service VM capable of remote attestation detected");
-        if service_vm_version::VERSION != verified_boot_data.rollback_index {
-            // For RKP VM, we only boot if the version in the AVB footer of its kernel matches
-            // the one embedded in pvmfw at build time.
-            // This prevents the pvmfw from booting a roll backed RKP VM.
-            error!(
-                "Service VM version mismatch: expected {}, found {}",
-                service_vm_version::VERSION,
-                verified_boot_data.rollback_index
-            );
-            return Err(RebootReason::InvalidPayload);
-        }
-    }
-
     let next_bcc = heap::aligned_boxed_slice(NEXT_BCC_SIZE, GUEST_PAGE_SIZE).ok_or_else(|| {
         error!("Failed to allocate the next-stage BCC");
         RebootReason::InternalError
@@ -154,16 +139,30 @@ fn main(
             error!("Expected positive rollback_index, found 0");
             return Err(RebootReason::InvalidPayload);
         };
-        // `new_instance` cannot be known to pvmfw
+        (false, instance_hash.unwrap())
+    } else if verified_boot_data.has_capability(Capability::RemoteAttest) {
+        info!("Service VM capable of remote attestation detected, performing version checks");
+        if service_vm_version::VERSION != verified_boot_data.rollback_index {
+            // For RKP VM, we only boot if the version in the AVB footer of its kernel matches
+            // the one embedded in pvmfw at build time.
+            // This prevents the pvmfw from booting a roll backed RKP VM.
+            error!(
+                "Service VM version mismatch: expected {}, found {}",
+                service_vm_version::VERSION,
+                verified_boot_data.rollback_index
+            );
+            return Err(RebootReason::InvalidPayload);
+        }
         (false, instance_hash.unwrap())
     } else {
+        info!("Fallback to instance.img based rollback checks");
         let (recorded_entry, mut instance_img, header_index) =
             get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
                 error!("Failed to get entry from instance.img: {e}");
                 RebootReason::InternalError
             })?;
         let (new_instance, salt) = if let Some(entry) = recorded_entry {
-            maybe_check_dice_measurements_match_entry(&dice_inputs, &entry)?;
+            check_dice_measurements_match_entry(&dice_inputs, &entry)?;
             let salt = instance_hash.unwrap_or(entry.salt);
             (false, salt)
         } else {
@@ -244,21 +243,10 @@ fn main(
     Ok(bcc_range)
 }
 
-fn maybe_check_dice_measurements_match_entry(
+fn check_dice_measurements_match_entry(
     dice_inputs: &PartialInputs,
     entry: &EntryBody,
 ) -> Result<(), RebootReason> {
-    // The RKP VM is allowed to run if it has passed the verified boot check and
-    // contains the expected version in its AVB footer.
-    // The comparison below with the previous boot information is skipped to enable the
-    // simultaneous update of the pvmfw and RKP VM.
-    // For instance, when both the pvmfw and RKP VM are updated, the code hash of the
-    // RKP VM will differ from the one stored in the instance image. In this case, the
-    // RKP VM is still allowed to run.
-    // This ensures that the updated RKP VM will retain the same CDIs in the next stage.
-    if dice_inputs.rkp_vm_marker {
-        return Ok(());
-    }
     ensure_dice_measurements_match_entry(dice_inputs, entry).map_err(|e| {
         error!(
             "Dice measurements do not match recorded entry. \

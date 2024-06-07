@@ -515,7 +515,7 @@ struct PciInfo {
 impl PciInfo {
     const IRQ_MASK_CELLS: usize = 4;
     const IRQ_MAP_CELLS: usize = 10;
-    const MAX_IRQS: usize = 10;
+    const MAX_IRQS: usize = 16;
 }
 
 type PciAddrRange = AddressRange<(u32, u64), u64, u64>;
