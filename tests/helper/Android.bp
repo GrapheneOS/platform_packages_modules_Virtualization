@@ -33,4 +33,5 @@ java_test_helper_library {
     ],
     host_supported: true,
     device_supported: false,
+    sdk_version: "test_current",
 }
