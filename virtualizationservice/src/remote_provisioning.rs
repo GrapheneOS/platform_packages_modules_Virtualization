@@ -32,6 +32,7 @@ use binder::{
     Strong,
 };
 use hypervisor_props::is_protected_vm_supported;
+use rustutils::system_properties;
 use service_vm_comm::{RequestProcessingError, Response};
 
 /// Constructs a binder object that implements `IRemotelyProvisionedComponent`.
@@ -49,7 +50,7 @@ impl Interface for AvfRemotelyProvisionedComponent {}
 #[allow(non_snake_case)]
 impl IRemotelyProvisionedComponent for AvfRemotelyProvisionedComponent {
     fn getHardwareInfo(&self) -> BinderResult<RpcHardwareInfo> {
-        check_protected_vm_is_supported()?;
+        check_remote_attestation_is_supported()?;
 
         Ok(RpcHardwareInfo {
             versionNumber: 3,
@@ -65,7 +66,7 @@ impl IRemotelyProvisionedComponent for AvfRemotelyProvisionedComponent {
         testMode: bool,
         macedPublicKey: &mut MacedPublicKey,
     ) -> BinderResult<Vec<u8>> {
-        check_protected_vm_is_supported()?;
+        check_remote_attestation_is_supported()?;
 
         if testMode {
             return Err(Status::new_service_specific_error_str(
@@ -109,7 +110,7 @@ impl IRemotelyProvisionedComponent for AvfRemotelyProvisionedComponent {
         keysToSign: &[MacedPublicKey],
         challenge: &[u8],
     ) -> BinderResult<Vec<u8>> {
-        check_protected_vm_is_supported()?;
+        check_remote_attestation_is_supported()?;
 
         const MAX_CHALLENGE_SIZE: usize = 64;
         if challenge.len() > MAX_CHALLENGE_SIZE {
@@ -133,16 +134,27 @@ impl IRemotelyProvisionedComponent for AvfRemotelyProvisionedComponent {
     }
 }
 
-fn check_protected_vm_is_supported() -> BinderResult<()> {
-    if is_protected_vm_supported().unwrap_or(false) {
-        Ok(())
-    } else {
-        Err(Status::new_exception_str(
+pub(crate) fn check_remote_attestation_is_supported() -> BinderResult<()> {
+    if !is_protected_vm_supported().unwrap_or(false) {
+        return Err(Status::new_exception_str(
             ExceptionCode::UNSUPPORTED_OPERATION,
             Some("Protected VM support is missing for this operation"),
         ))
-        .with_log()
+        .with_log();
     }
+    if !is_remote_attestation_supported() {
+        return Err(Status::new_exception_str(
+            ExceptionCode::UNSUPPORTED_OPERATION,
+            Some("Remote attestation is disabled"),
+        ))
+        .with_log();
+    }
+    Ok(())
+}
+
+pub(crate) fn is_remote_attestation_supported() -> bool {
+    // Remote attestation is enabled by default.
+    system_properties::read_bool("avf.remote_attestation.enabled", true).unwrap_or(true)
 }
 
 pub(crate) fn to_service_specific_error(response: Response) -> Status {

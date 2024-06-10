@@ -353,6 +353,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             ))
             .with_log();
         }
+        remote_provisioning::check_remote_attestation_is_supported()?;
         info!("Received csr. Requestting attestation...");
         let (key_blob, certificate_chain) = if test_mode {
             check_use_custom_virtual_machine()?;
@@ -403,7 +404,8 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     }
 
     fn isRemoteAttestationSupported(&self) -> binder::Result<bool> {
-        is_remote_provisioning_hal_declared()
+        Ok(is_remote_provisioning_hal_declared()?
+            && remote_provisioning::is_remote_attestation_supported())
     }
 
     fn getAssignableDevices(&self) -> binder::Result<Vec<AssignableDevice>> {

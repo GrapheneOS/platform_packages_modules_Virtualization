@@ -69,6 +69,9 @@ public class VmAttestationTests extends MicrodroidDeviceTestBase {
                 .that(isCuttlefish())
                 .isFalse();
         assumeFeatureEnabled(VirtualMachineManager.FEATURE_REMOTE_ATTESTATION);
+        assume().withMessage("Test needs Remote Attestation support")
+                .that(getVirtualMachineManager().isRemoteAttestationSupported())
+                .isTrue();
 
         VirtualMachineConfig.Builder builder =
                 newVmConfigBuilderWithPayloadBinary(VM_PAYLOAD_PATH)
