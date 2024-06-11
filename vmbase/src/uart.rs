@@ -16,7 +16,6 @@
 //! provided by crosvm, and won't work with real hardware.
 
 use core::fmt::{self, Write};
-use core::ptr::write_volatile;
 
 /// Minimal driver for an 8250 UART. This only implements enough to work with the emulated 8250
 /// provided by crosvm, and won't work with real hardware.
@@ -41,7 +40,11 @@ impl Uart {
         // SAFETY: We know that the base address points to the control registers of a UART device
         // which is appropriately mapped.
         unsafe {
-            write_volatile(self.base_address, byte);
+            core::arch::asm!(
+                "strb {value:w}, [{ptr}]",
+                value = in(reg) byte,
+                ptr = in(reg) self.base_address,
+            );
         }
     }
 }

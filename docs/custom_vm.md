@@ -194,7 +194,8 @@ $ cat > vm_config.json; adb push vm_config.json /data/local/tmp
     "protected": false,
     "cpu_topology": "match_host",
     "platform_version": "~1.0",
-    "memory_mib" : 8096
+    "memory_mib" : 8096,
+    "console_input_device": "ttyS0"
 }
 ```
 
@@ -296,4 +297,16 @@ Go to the network setting and configure as below.
 * DNS: 8.8.8.8 (or any DNS server you know)
 
 These settings are persistent; stored in chromiumos_test_image.bin. So you
-don’t have to repeat this next time.`
+don’t have to repeat this next time.
+
+### Debugging
+
+To see console log, check
+`/data/data/com.android.virtualization.vmlauncher/files/console.log`
+
+For ChromiumOS, you can ssh-in. Use following commands after network setup.
+
+```shell
+$ adb kill-server ; adb start-server; adb forward tcp:9222 tcp:9222
+$ ssh -oProxyCommand=none -o UserKnownHostsFile=/dev/null root@localhost -p 9222
+```

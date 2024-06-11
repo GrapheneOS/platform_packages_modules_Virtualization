@@ -24,11 +24,13 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 import android.platform.test.annotations.RootPermissionTest;
 
 import com.android.microdroid.test.host.CommandRunner;
 import com.android.microdroid.test.host.MicrodroidHostTestCaseBase;
+import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.LogDataType;
@@ -85,6 +87,8 @@ public final class ComposTestCase extends MicrodroidHostTestCaseBase {
         assumeDeviceIsCapable(getDevice());
         // Test takes too long to run on Cuttlefish (b/292824951).
         assumeFalse("Skipping test on Cuttlefish", isCuttlefish());
+        // CompOS requires a protected VM
+        assumeTrue(((TestDevice) getDevice()).supportsMicrodroid(/*protectedVm*/ true));
 
         String value = getDevice().getProperty(SYSTEM_SERVER_COMPILER_FILTER_PROP_NAME);
         if (value == null) {
