@@ -18,6 +18,9 @@
       "name": "MicrodroidTestApp"
     },
     {
+      "name": "MicrodroidTestAppNoInternetPerm"
+    },
+    {
       "name": "MicrodroidTestAppNoPerm"
     },
     {

@@ -22,19 +22,19 @@ use log::info;
 use nix::{ioctl_write_int_bad, ioctl_write_ptr_bad};
 use nix::sys::ioctl::ioctl_num_type;
 use nix::sys::socket::{socket, AddressFamily, SockFlag, SockType};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::os::fd::{AsRawFd, RawFd};
 use std::slice::from_raw_parts;
 
+const TUNGETIFF: ioctl_num_type = 0x800454d2u32 as c_int;
 const TUNSETIFF: ioctl_num_type = 0x400454ca;
 const TUNSETPERSIST: ioctl_num_type = 0x400454cb;
-const SIOCGIFFLAGS: ioctl_num_type = 0x00008913;
 const SIOCSIFFLAGS: ioctl_num_type = 0x00008914;
 
+ioctl_write_ptr_bad!(ioctl_tungetiff, TUNGETIFF, ifreq);
 ioctl_write_ptr_bad!(ioctl_tunsetiff, TUNSETIFF, ifreq);
 ioctl_write_int_bad!(ioctl_tunsetpersist, TUNSETPERSIST);
-ioctl_write_ptr_bad!(ioctl_siocgifflags, SIOCGIFFLAGS, ifreq);
 ioctl_write_ptr_bad!(ioctl_siocsifflags, SIOCSIFFLAGS, ifreq);
 
 fn validate_ifname(ifname: &[c_char]) -> Result<()> {
@@ -44,32 +44,38 @@ fn validate_ifname(ifname: &[c_char]) -> Result<()> {
     Ok(())
 }
 
-fn create_tap_interface(fd: RawFd, ifname: &[c_char]) -> Result<()> {
+fn create_tap_interface(fd: RawFd, sockfd: c_int, ifname: &[c_char]) -> Result<()> {
     // SAFETY: All-zero is a valid value for the ifreq type.
     let mut ifr: ifreq = unsafe { std::mem::zeroed() };
     ifr.ifr_ifru.ifru_flags = (IFF_TAP | IFF_NO_PI | IFF_VNET_HDR) as c_short;
     ifr.ifr_name[..ifname.len()].copy_from_slice(ifname);
-    // SAFETY: `ioctl` is copied into the kernel. It modifies the state in the kernel, not the
-    // state of this process in any way.
+    // SAFETY: It modifies the state in the kernel, not the state of this process in any way.
     unsafe { ioctl_tunsetiff(fd, &ifr) }.context("Failed to ioctl TUNSETIFF")?;
-    // SAFETY: `ioctl` is copied into the kernel. It modifies the state in the kernel, not the
-    // state of this process in any way.
+    // SAFETY: It modifies the state in the kernel, not the state of this process in any way.
     unsafe { ioctl_tunsetpersist(fd, 1) }.context("Failed to ioctl TUNSETPERSIST")?;
+    // SAFETY: ifr_ifru holds ifru_flags in its union field.
+    unsafe { ifr.ifr_ifru.ifru_flags |= IFF_UP as c_short };
+    // SAFETY: It modifies the state in the kernel, not the state of this process in any way.
+    unsafe { ioctl_siocsifflags(sockfd, &ifr) }.context("Failed to ioctl SIOCSIFFLAGS")?;
     Ok(())
 }
 
-fn bring_up_interface(sockfd: c_int, ifname: &[c_char]) -> Result<()> {
+fn get_tap_ifreq(fd: RawFd) -> Result<ifreq> {
     // SAFETY: All-zero is a valid value for the ifreq type.
-    let mut ifr: ifreq = unsafe { std::mem::zeroed() };
-    ifr.ifr_name[..ifname.len()].copy_from_slice(ifname);
-    // SAFETY: `ioctl` is copied into the kernel. It modifies the state in the kernel, not the
-    // state of this process in any way.
-    unsafe { ioctl_siocgifflags(sockfd, &ifr) }.context("Failed to ioctl SIOCGIFFLAGS")?;
-    // SAFETY: After calling SIOCGIFFLAGS, ifr_ifru holds ifru_flags in its union field.
-    unsafe { ifr.ifr_ifru.ifru_flags |= IFF_UP as c_short };
-    // SAFETY: `ioctl` is copied into the kernel. It modifies the state in the kernel, not the
-    // state of this process in any way.
-    unsafe { ioctl_siocsifflags(sockfd, &ifr) }.context("Failed to ioctl SIOCGIFFLAGS")?;
+    let ifr: ifreq = unsafe { std::mem::zeroed() };
+    // SAFETY: Returned `ifr` of given file descriptor is set from TUNSETIFF ioctl while executing
+    // create_tap_interface(fd, sockfd, ifname). So the variable `ifr` should be safe.
+    unsafe { ioctl_tungetiff(fd, &ifr) }.context("Failed to ioctl TUNGETIFF")?;
+    Ok(ifr)
+}
+
+fn delete_tap_interface(fd: RawFd, sockfd: c_int, ifr: &mut ifreq) -> Result<()> {
+    // SAFETY: After calling TUNGETIFF, ifr_ifru holds ifru_flags in its union field.
+    unsafe { ifr.ifr_ifru.ifru_flags &= !IFF_UP as c_short };
+    // SAFETY: It modifies the state in the kernel, not the state of this process in any way.
+    unsafe { ioctl_siocsifflags(sockfd, ifr) }.context("Failed to ioctl SIOCSIFFLAGS")?;
+    // SAFETY: It modifies the state in the kernel, not the state of this process in any way.
+    unsafe { ioctl_tunsetpersist(fd, 0) }.context("Failed to ioctl TUNSETPERSIST")?;
     Ok(())
 }
 
@@ -102,18 +108,34 @@ impl IVmnic for Vmnic {
         let tunfd = File::open("/dev/tun")
             .context("Failed to open /dev/tun")
             .or_service_specific_exception(-1)?;
-        create_tap_interface(tunfd.as_raw_fd(), ifname_bytes)
-            .context(format!("Failed to create TAP interface: {ifname:#?}"))
-            .or_service_specific_exception(-1)?;
-
         let sock = socket(AddressFamily::Inet, SockType::Datagram, SockFlag::empty(), None)
             .context("Failed to create socket")
             .or_service_specific_exception(-1)?;
-        bring_up_interface(sock.as_raw_fd(), ifname_bytes)
-            .context(format!("Failed to bring up TAP interface: {ifname:#?}"))
+        create_tap_interface(tunfd.as_raw_fd(), sock.as_raw_fd(), ifname_bytes)
+            .context(format!("Failed to create TAP interface: {ifname:#?}"))
             .or_service_specific_exception(-1)?;
 
         info!("Created TAP network interface: {ifname:#?}");
         Ok(ParcelFileDescriptor::new(tunfd))
+    }
+
+    fn deleteTapInterface(&self, tapfd: &ParcelFileDescriptor) -> binder::Result<()> {
+        let tap = tapfd.as_raw_fd();
+        let mut tap_ifreq = get_tap_ifreq(tap)
+            .context("Failed to get ifreq of TAP interface")
+            .or_service_specific_exception(-1)?;
+        // SAFETY: tap_ifreq.ifr_name is null-terminated within IFNAMSIZ, validated when creating
+        // TAP interface.
+        let ifname = unsafe { CStr::from_ptr(tap_ifreq.ifr_name.as_ptr()) };
+
+        let sock = socket(AddressFamily::Inet, SockType::Datagram, SockFlag::empty(), None)
+            .context("Failed to create socket")
+            .or_service_specific_exception(-1)?;
+        delete_tap_interface(tap, sock.as_raw_fd(), &mut tap_ifreq)
+            .context(format!("Failed to create TAP interface: {ifname:#?}"))
+            .or_service_specific_exception(-1)?;
+
+        info!("Deleted TAP network interface: {ifname:#?}");
+        Ok(())
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2021 The Android Open Source Project
+<!-- Copyright (C) 2024 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -13,19 +13,15 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="com.android.microdroid.test"
-      android:versionCode="5">
+      package="com.android.microdroid.test_no_internet_perm">
     <uses-permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_CUSTOM_VIRTUAL_MACHINE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33" />
+    <uses-sdk android:minSdkVersion="34" android:targetSdkVersion="34" />
     <uses-feature android:name="android.software.virtualization_framework" android:required="false" />
-    <queries>
-        <package android:name="com.android.microdroid.vmshare_app" />
-    </queries>
     <application />
     <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
-        android:targetPackage="com.android.microdroid.test"
-        android:label="Microdroid Test" />
+        android:targetPackage="com.android.microdroid.test_no_internet_perm"
+        android:label="No Internet Permission Microdroid Test" />
 </manifest>

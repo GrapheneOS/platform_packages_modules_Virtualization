@@ -401,68 +401,9 @@ impl VirtualizationService {
             check_gdb_allowed(config)?;
         }
 
-        // Currently, VirtMgr adds the host copy of reference DT & untrusted properties
-        // (e.g. instance-id)
-        let host_ref_dt = Path::new(VM_REFERENCE_DT_ON_HOST_PATH);
-        let host_ref_dt = if host_ref_dt.exists()
-            && read_dir(host_ref_dt).or_service_specific_exception(-1)?.next().is_some()
-        {
-            Some(host_ref_dt)
-        } else {
-            warn!("VM reference DT doesn't exist in host DT");
-            None
-        };
-
-        let vendor_hashtree_digest = extract_vendor_hashtree_digest(config)
-            .context("Failed to extract vendor hashtree digest")
-            .or_service_specific_exception(-1)?;
-
-        let trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
-            info!(
-                "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
-                match the trusted digest in the pvmfw config, causing the VM to fail to start."
-            );
-            vec![(
-                cstr!("vendor_hashtree_descriptor_root_digest"),
-                vendor_hashtree_digest.as_slice(),
-            )]
-        } else {
-            vec![]
-        };
-
-        let instance_id;
-        let mut untrusted_props = Vec::with_capacity(2);
-        if cfg!(llpvm_changes) {
-            instance_id = extract_instance_id(config);
-            untrusted_props.push((cstr!("instance-id"), &instance_id[..]));
-            let want_updatable = extract_want_updatable(config);
-            if want_updatable && is_secretkeeper_supported() {
-                // Let guest know that it can defer rollback protection to Secretkeeper by setting
-                // an empty property in untrusted node in DT. This enables Updatable VMs.
-                untrusted_props.push((cstr!("defer-rollback-protection"), &[]))
-            }
-        }
-
-        let device_tree_overlay =
-            if host_ref_dt.is_some() || !untrusted_props.is_empty() || !trusted_props.is_empty() {
-                let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
-                let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
-                let fdt = create_device_tree_overlay(
-                    &mut data,
-                    host_ref_dt,
-                    &untrusted_props,
-                    &trusted_props,
-                )
-                .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
-                .or_service_specific_exception(-1)?;
-                fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
-                Some(File::open(dt_output).or_service_specific_exception(-1)?)
-            } else {
-                None
-            };
+        let device_tree_overlay = maybe_create_device_tree_overlay(config, &temporary_directory)?;
 
         let debug_config = DebugConfig::new(config);
-
         let ramdump = if !uses_gki_kernel(config) && debug_config.is_ramdump_needed() {
             Some(prepare_ramdump_file(&temporary_directory)?)
         } else {
@@ -730,6 +671,67 @@ fn extract_vendor_hashtree_digest(config: &VirtualMachineConfig) -> Result<Optio
         }
     }
     Err(anyhow!("No hashtree digest is extracted from microdroid vendor image"))
+}
+
+fn maybe_create_device_tree_overlay(
+    config: &VirtualMachineConfig,
+    temporary_directory: &Path,
+) -> binder::Result<Option<File>> {
+    // Currently, VirtMgr adds the host copy of reference DT & untrusted properties
+    // (e.g. instance-id)
+    let host_ref_dt = Path::new(VM_REFERENCE_DT_ON_HOST_PATH);
+    let host_ref_dt = if host_ref_dt.exists()
+        && read_dir(host_ref_dt).or_service_specific_exception(-1)?.next().is_some()
+    {
+        Some(host_ref_dt)
+    } else {
+        warn!("VM reference DT doesn't exist in host DT");
+        None
+    };
+
+    let vendor_hashtree_digest = extract_vendor_hashtree_digest(config)
+        .context("Failed to extract vendor hashtree digest")
+        .or_service_specific_exception(-1)?;
+
+    let trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
+        info!(
+            "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
+                match the trusted digest in the pvmfw config, causing the VM to fail to start."
+        );
+        vec![(cstr!("vendor_hashtree_descriptor_root_digest"), vendor_hashtree_digest.as_slice())]
+    } else {
+        vec![]
+    };
+
+    let instance_id;
+    let mut untrusted_props = Vec::with_capacity(2);
+    if cfg!(llpvm_changes) {
+        instance_id = extract_instance_id(config);
+        untrusted_props.push((cstr!("instance-id"), &instance_id[..]));
+        let want_updatable = extract_want_updatable(config);
+        if want_updatable && is_secretkeeper_supported() {
+            // Let guest know that it can defer rollback protection to Secretkeeper by setting
+            // an empty property in untrusted node in DT. This enables Updatable VMs.
+            untrusted_props.push((cstr!("defer-rollback-protection"), &[]))
+        }
+    }
+
+    let device_tree_overlay = if host_ref_dt.is_some()
+        || !untrusted_props.is_empty()
+        || !trusted_props.is_empty()
+    {
+        let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
+        let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let fdt =
+            create_device_tree_overlay(&mut data, host_ref_dt, &untrusted_props, &trusted_props)
+                .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
+                .or_service_specific_exception(-1)?;
+        fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
+        Some(File::open(dt_output).or_service_specific_exception(-1)?)
+    } else {
+        None
+    };
+    Ok(device_tree_overlay)
 }
 
 fn write_zero_filler(zero_filler_path: &Path) -> Result<()> {

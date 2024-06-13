@@ -128,4 +128,10 @@ interface IVirtualizationServiceInternal {
      * @return file descriptor of the TAP network interface.
      */
     ParcelFileDescriptor createTapInterface(String ifaceNameSuffix);
+
+    /**
+     * Delete TAP network interface created for a VM.
+     * @param file descriptor of the TAP network interface.
+     */
+    void deleteTapInterface(in ParcelFileDescriptor tapFd);
 }

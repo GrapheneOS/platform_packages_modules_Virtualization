@@ -14,10 +14,11 @@
 
 //! Functions for running instances of `crosvm`.
 
-use crate::aidl::{remove_temporary_files, Cid, VirtualMachineCallbacks};
+use crate::aidl::{remove_temporary_files, Cid, GLOBAL_SERVICE, VirtualMachineCallbacks};
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
+use binder::ParcelFileDescriptor;
 use command_fds::CommandFdExt;
 use lazy_static::lazy_static;
 use libc::{sysconf, _SC_CLK_TCK};
@@ -34,7 +35,7 @@ use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::unix::io::{AsRawFd, RawFd};
+use std::os::unix::io::{AsRawFd, OwnedFd, RawFd};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
@@ -241,6 +242,8 @@ impl VmState {
             let detect_hangup = config.detect_hangup;
             let (failure_pipe_read, failure_pipe_write) = create_pipe()?;
             let vfio_devices = config.vfio_devices.clone();
+            let tap =
+                if let Some(tap_file) = &config.tap { Some(tap_file.try_clone()?) } else { None };
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child =
@@ -255,7 +258,7 @@ impl VmState {
             let child_clone = child.clone();
             let instance_clone = instance.clone();
             let monitor_vm_exit_thread = Some(thread::spawn(move || {
-                instance_clone.monitor_vm_exit(child_clone, failure_pipe_read, vfio_devices);
+                instance_clone.monitor_vm_exit(child_clone, failure_pipe_read, vfio_devices, tap);
             }));
 
             if detect_hangup {
@@ -397,6 +400,7 @@ impl VmInstance {
         child: Arc<SharedChild>,
         mut failure_pipe_read: File,
         vfio_devices: Vec<VfioDevice>,
+        tap: Option<File>,
     ) {
         let result = child.wait();
         match &result {
@@ -455,6 +459,14 @@ impl VmInstance {
         remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
             error!("Error removing temporary files from {:?}: {}", self.temporary_directory, e);
         });
+
+        if let Some(tap_file) = tap {
+            GLOBAL_SERVICE
+                .deleteTapInterface(&ParcelFileDescriptor::new(OwnedFd::from(tap_file)))
+                .unwrap_or_else(|e| {
+                    error!("Error deleting TAP interface: {e:?}");
+                });
+        }
 
         drop(vfio_devices); // Cleanup devices.
     }

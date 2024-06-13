@@ -25,6 +25,7 @@ interface IVirtualizationService {
     const String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
     const String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
     const String FEATURE_MULTI_TENANT = "com.android.kvm.MULTI_TENANT";
+    const String FEATURE_NETWORK = "com.android.kvm.NETWORK";
     const String FEATURE_REMOTE_ATTESTATION = "com.android.kvm.REMOTE_ATTESTATION";
     const String FEATURE_VENDOR_MODULES = "com.android.kvm.VENDOR_MODULES";
 
