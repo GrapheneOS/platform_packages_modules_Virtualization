@@ -1,0 +1,18 @@
+{
+    "name": "cros",
+    "kernel": "/data/local/tmp/ferrochrome/vmlinuz",
+    "disks": [
+        {
+            "image": "/data/local/tmp/ferrochrome/chromiumos_test_image.bin",
+            "partitions": [],
+            "writable": true
+        }
+    ],
+    "params": "root=/dev/vda3 rootwait noinitrd ro enforcing=0 cros_debug cros_secure",
+    "protected": false,
+    "cpu_topology": "match_host",
+    "platform_version": "~1.0",
+    "memory_mib" : 8096,
+    "console_input_device": "ttyS0"
+}
+

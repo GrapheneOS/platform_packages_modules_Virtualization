@@ -77,6 +77,7 @@ public final class VirtualMachineConfig {
     private static final String TAG = "VirtualMachineConfig";
 
     private static String[] EMPTY_STRING_ARRAY = {};
+    private static final String U_BOOT_PREBUILT_PATH = "/apex/com.android.virt/etc/u-boot.bin";
 
     // These define the schema of the config file persisted on disk.
     private static final int VERSION = 8;
@@ -653,6 +654,11 @@ public final class VirtualMachineConfig {
                 Optional.ofNullable(customImageConfig.getBootloaderPath())
                         .map((path) -> openOrNull(new File(path), MODE_READ_ONLY))
                         .orElse(null);
+
+        if (config.kernel == null && config.bootloader == null) {
+            config.bootloader = openOrNull(new File(U_BOOT_PREBUILT_PATH), MODE_READ_ONLY);
+        }
+
         config.params =
                 Optional.ofNullable(customImageConfig.getParams())
                         .map((params) -> TextUtils.join(" ", params))

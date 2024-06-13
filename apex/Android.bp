@@ -157,6 +157,7 @@ avf_flag_aware_apex_defaults {
         "microdroid.json",
         "microdroid_kernel",
         "com.android.virt.init.rc",
+        "android_bootloader_crosvm_aarch64",
     ],
     host_required: [
         "vm_shell",
