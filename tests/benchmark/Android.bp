@@ -22,8 +22,10 @@ android_test {
         "MicrodroidTestNativeLib",
         "libiovsock_host_jni",
     ],
-    jni_uses_platform_apis: true,
-    sdk_version: "test_current",
+    libs: [
+        "framework-virtualization.impl",
+    ],
+    platform_apis: true,
     use_embedded_native_libs: true,
     compile_multilib: "64",
     required: ["perf-setup"],

@@ -233,6 +233,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         for (int i = 0; i < trialCount; i++) {
             VirtualMachineConfig.Builder builder =
                     newVmConfigBuilderWithPayloadBinary("MicrodroidIdleNativeLib.so")
+                            .setShouldBoostUclamp(true)
                             .setMemoryBytes(256 * ONE_MEBI)
                             .setDebugLevel(DEBUG_LEVEL_NONE);
             if (fullDebug) {

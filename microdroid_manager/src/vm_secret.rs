@@ -20,7 +20,7 @@ use android_hardware_security_secretkeeper::aidl::android::hardware::security::s
 use secretkeeper_comm::data_types::request::Request;
 use binder::{Strong};
 use coset::{CoseKey, CborSerializable, CborOrdering};
-use dice_policy_builder::{CertIndex, ConstraintSpec, ConstraintType, policy_for_dice_chain, MissingAction, WILDCARD_FULL_ARRAY};
+use dice_policy_builder::{TargetEntry, ConstraintSpec, ConstraintType, policy_for_dice_chain, MissingAction, WILDCARD_FULL_ARRAY};
 use diced_open_dice::{DiceArtifacts, OwnedDiceArtifacts};
 use keystore2_crypto::ZVec;
 use openssl::hkdf::hkdf;
@@ -45,9 +45,10 @@ const SECURITY_VERSION: i64 = -70005;
 const SUBCOMPONENT_DESCRIPTORS: i64 = -71002;
 const SUBCOMPONENT_SECURITY_VERSION: i64 = 2;
 const SUBCOMPONENT_AUTHORITY_HASH: i64 = 4;
-// Index of DiceChainEntry corresponding to Payload (relative to the end considering DICE Chain
-// as an array)
-const PAYLOAD_INDEX_FROM_END: usize = 0;
+// See dice_for_avf_guest.cddl for the `component_name` used by different boot stages in guest VM.
+const MICRODROID_PAYLOAD_COMPONENT_NAME: &str = "Microdroid Payload";
+const GUEST_OS_COMPONENT_NAME: &str = "vm_entry";
+const INSTANCE_HASH_KEY: i64 = -71003;
 
 // Generated using hexdump -vn32 -e'14/1 "0x%02X, " 1 "\n"' /dev/urandom
 const SALT_ENCRYPTED_STORE: &[u8] = &[
@@ -173,25 +174,27 @@ impl VmSecret {
 //     microdroid_manager/src/vm_config.cddl):
 //       - GreaterOrEqual on SECURITY_VERSION (Required)
 //       - ExactMatch on AUTHORITY_HASH (Required).
+//  5. ExactMatch on Instance Hash (Required) - This uniquely identifies one VM instance from
+//     another even if they are running the exact same images.
 fn sealing_policy(dice: &[u8]) -> Result<Vec<u8>, String> {
-    let constraint_spec = [
+    let constraint_spec = vec![
         ConstraintSpec::new(
             ConstraintType::ExactMatch,
             vec![AUTHORITY_HASH],
             MissingAction::Fail,
-            CertIndex::All,
+            TargetEntry::All,
         ),
         ConstraintSpec::new(
             ConstraintType::ExactMatch,
             vec![MODE],
             MissingAction::Fail,
-            CertIndex::All,
+            TargetEntry::All,
         ),
         ConstraintSpec::new(
             ConstraintType::GreaterOrEqual,
             vec![CONFIG_DESC, SECURITY_VERSION],
             MissingAction::Ignore,
-            CertIndex::All,
+            TargetEntry::All,
         ),
         ConstraintSpec::new(
             ConstraintType::GreaterOrEqual,
@@ -202,7 +205,7 @@ fn sealing_policy(dice: &[u8]) -> Result<Vec<u8>, String> {
                 SUBCOMPONENT_SECURITY_VERSION,
             ],
             MissingAction::Fail,
-            CertIndex::FromEnd(PAYLOAD_INDEX_FROM_END),
+            TargetEntry::ByName(MICRODROID_PAYLOAD_COMPONENT_NAME.to_string()),
         ),
         ConstraintSpec::new(
             ConstraintType::ExactMatch,
@@ -213,11 +216,17 @@ fn sealing_policy(dice: &[u8]) -> Result<Vec<u8>, String> {
                 SUBCOMPONENT_AUTHORITY_HASH,
             ],
             MissingAction::Fail,
-            CertIndex::FromEnd(PAYLOAD_INDEX_FROM_END),
+            TargetEntry::ByName(MICRODROID_PAYLOAD_COMPONENT_NAME.to_string()),
+        ),
+        ConstraintSpec::new(
+            ConstraintType::ExactMatch,
+            vec![CONFIG_DESC, INSTANCE_HASH_KEY],
+            MissingAction::Fail,
+            TargetEntry::ByName(GUEST_OS_COMPONENT_NAME.to_string()),
         ),
     ];
 
-    policy_for_dice_chain(dice, &constraint_spec)?
+    policy_for_dice_chain(dice, constraint_spec)?
         .to_vec()
         .map_err(|e| format!("DicePolicy construction failed {e:?}"))
 }

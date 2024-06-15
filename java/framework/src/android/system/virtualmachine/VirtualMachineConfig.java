@@ -102,6 +102,7 @@ public final class VirtualMachineConfig {
     private static final String KEY_OS = "os";
     private static final String KEY_EXTRA_APKS = "extraApks";
     private static final String KEY_NETWORK_SUPPORTED = "networkSupported";
+    private static final String KEY_SHOULD_BOOST_UCLAMP = "shouldBoostUclamp";
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -212,6 +213,8 @@ public final class VirtualMachineConfig {
     /** Whether to run the VM with supporting network feature or not. */
     private final boolean mNetworkSupported;
 
+    private final boolean mShouldBoostUclamp;
+
     @Retention(RetentionPolicy.SOURCE)
     @StringDef(
             prefix = "MICRODROID",
@@ -247,7 +250,8 @@ public final class VirtualMachineConfig {
             boolean connectVmConsole,
             @Nullable File vendorDiskImage,
             @NonNull @OsName String os,
-            boolean networkSupported) {
+            boolean networkSupported,
+            boolean shouldBoostUclamp) {
         // This is only called from Builder.build(); the builder handles parameter validation.
         mPackageName = packageName;
         mApkPath = apkPath;
@@ -271,6 +275,7 @@ public final class VirtualMachineConfig {
         mVendorDiskImage = vendorDiskImage;
         mOs = os;
         mNetworkSupported = networkSupported;
+        mShouldBoostUclamp = shouldBoostUclamp;
     }
 
     /** Loads a config from a file. */
@@ -373,6 +378,7 @@ public final class VirtualMachineConfig {
 
         builder.setNetworkSupported(b.getBoolean(KEY_NETWORK_SUPPORTED));
 
+        builder.setShouldBoostUclamp(b.getBoolean(KEY_SHOULD_BOOST_UCLAMP));
         return builder.build();
     }
 
@@ -424,6 +430,7 @@ public final class VirtualMachineConfig {
             b.putStringArray(KEY_EXTRA_APKS, extraApks);
         }
         b.putBoolean(KEY_NETWORK_SUPPORTED, mNetworkSupported);
+        b.putBoolean(KEY_SHOULD_BOOST_UCLAMP, mShouldBoostUclamp);
         b.writeToStream(output);
     }
 
@@ -780,6 +787,8 @@ public final class VirtualMachineConfig {
             customConfig.networkSupported = mNetworkSupported;
             vsConfig.customConfig = customConfig;
         }
+
+        vsConfig.boostUclamp = mShouldBoostUclamp;
         return vsConfig;
     }
 
@@ -860,6 +869,7 @@ public final class VirtualMachineConfig {
         @Nullable private File mVendorDiskImage;
         @NonNull @OsName private String mOs = DEFAULT_OS;
         private boolean mNetworkSupported;
+        private boolean mShouldBoostUclamp = false;
 
         /**
          * Creates a builder for the given context.
@@ -958,7 +968,8 @@ public final class VirtualMachineConfig {
                     mConnectVmConsole,
                     mVendorDiskImage,
                     mOs,
-                    mNetworkSupported);
+                    mNetworkSupported,
+                    mShouldBoostUclamp);
         }
 
         /**
@@ -1278,6 +1289,12 @@ public final class VirtualMachineConfig {
         @NonNull
         public Builder setNetworkSupported(boolean networkSupported) {
             mNetworkSupported = networkSupported;
+            return this;
+        }
+
+        /** @hide */
+        public Builder setShouldBoostUclamp(boolean shouldBoostUclamp) {
+            mShouldBoostUclamp = shouldBoostUclamp;
             return this;
         }
     }

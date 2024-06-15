@@ -65,6 +65,10 @@ pub struct CommonConfig {
     #[cfg(network)]
     #[arg(short, long)]
     network_supported: bool,
+
+    /// Boost uclamp to stablise results for benchmarks.
+    #[arg(short, long)]
+    boost_uclamp: bool,
 }
 
 impl CommonConfig {

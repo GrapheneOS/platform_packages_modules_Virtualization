@@ -139,4 +139,7 @@ parcelable VirtualMachineAppConfig {
      *  https://docs.kernel.org/admin-guide/mm/transhuge.html
      */
     boolean hugePages;
+
+    /** Enable boost UClamp for less variance during testing/benchmarking */
+    boolean boostUclamp;
 }

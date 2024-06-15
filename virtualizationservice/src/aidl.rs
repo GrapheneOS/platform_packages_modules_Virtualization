@@ -454,7 +454,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             .context("Failed to allocate instance_id")
             .or_service_specific_exception(-1)?;
         let uid = get_calling_uid();
-        info!("Allocated a VM's instance_id: {:?}, for uid: {:?}", hex::encode(id), uid);
+        info!("Allocated a VM's instance_id: {:?}..., for uid: {:?}", &hex::encode(id)[..8], uid);
         let state = &mut *self.state.lock().unwrap();
         if let Some(sk_state) = &mut state.sk_state {
             let user_id = multiuser_get_user_id(uid);
