@@ -57,6 +57,8 @@ cc_defaults {
         hwaddress: false,
     },
     native_coverage: false,
+    // TODO(b/346974429): Workaround pvmfw failure when enabling full LTO
+    lto_O0: true,
 }
 
 // Used by cc_binary when producing the ELF of a vmbase-based binary.

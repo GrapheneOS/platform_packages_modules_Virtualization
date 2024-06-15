@@ -32,6 +32,7 @@ import android.system.virtualmachine.VirtualMachineCallback;
 import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.DisplayConfig;
+import android.system.virtualmachine.VirtualMachineCustomImageConfig.GpuConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
 import android.util.DisplayMetrics;
@@ -63,6 +64,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -124,6 +126,47 @@ public class MainActivity extends Activity {
             }
             if (json.has("console_input_device")) {
                 configBuilder.setConsoleInputDevice(json.getString("console_input_device"));
+            }
+            if (json.has("gpu")) {
+                JSONObject gpuJson = json.getJSONObject("gpu");
+
+                GpuConfig.Builder gpuConfigBuilder = new GpuConfig.Builder();
+
+                if (gpuJson.has("backend")) {
+                    gpuConfigBuilder.setBackend(gpuJson.getString("backend"));
+                }
+                if (gpuJson.has("context_types")) {
+                    ArrayList<String> contextTypes = new ArrayList<String>();
+                    JSONArray contextTypesJson = gpuJson.getJSONArray("context_types");
+                    for (int i = 0; i < contextTypesJson.length(); i++) {
+                        contextTypes.add(contextTypesJson.getString(i));
+                    }
+                    gpuConfigBuilder.setContextTypes(contextTypes.toArray(new String[0]));
+                }
+                if (gpuJson.has("pci_address")) {
+                    gpuConfigBuilder.setPciAddress(gpuJson.getString("pci_address"));
+                }
+                if (gpuJson.has("renderer_features")) {
+                    gpuConfigBuilder.setRendererFeatures(gpuJson.getString("renderer_features"));
+                }
+                if (gpuJson.has("renderer_use_egl")) {
+                    gpuConfigBuilder.setRendererUseEgl(gpuJson.getBoolean("renderer_use_egl"));
+                }
+                if (gpuJson.has("renderer_use_gles")) {
+                    gpuConfigBuilder.setRendererUseGles(gpuJson.getBoolean("renderer_use_gles"));
+                }
+                if (gpuJson.has("renderer_use_glx")) {
+                    gpuConfigBuilder.setRendererUseGlx(gpuJson.getBoolean("renderer_use_glx"));
+                }
+                if (gpuJson.has("renderer_use_surfaceless")) {
+                    gpuConfigBuilder.setRendererUseSurfaceless(
+                            gpuJson.getBoolean("renderer_use_surfaceless"));
+                }
+                if (gpuJson.has("renderer_use_vulkan")) {
+                    gpuConfigBuilder.setRendererUseVulkan(
+                            gpuJson.getBoolean("renderer_use_vulkan"));
+                }
+                customImageConfigBuilder.setGpuConfig(gpuConfigBuilder.build());
             }
 
             configBuilder.setMemoryBytes(8L * 1024 * 1024 * 1024 /* 8 GB */);

@@ -190,6 +190,10 @@ $ cat > vm_config.json; adb push vm_config.json /data/local/tmp
             "writable": true
         }
     ],
+    "gpu": {
+        "backend": "virglrenderer",
+        "context_types": ["virgl2"]
+    },
     "params": "root=/dev/vda3 rootwait noinitrd ro enforcing=0 cros_debug cros_secure",
     "protected": false,
     "cpu_topology": "match_host",

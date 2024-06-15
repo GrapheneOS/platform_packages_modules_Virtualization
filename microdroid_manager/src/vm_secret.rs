@@ -46,7 +46,7 @@ const SUBCOMPONENT_DESCRIPTORS: i64 = -71002;
 const SUBCOMPONENT_SECURITY_VERSION: i64 = 2;
 const SUBCOMPONENT_AUTHORITY_HASH: i64 = 4;
 // See dice_for_avf_guest.cddl for the `component_name` used by different boot stages in guest VM.
-const MICRODROID_PAYLOAD_COMPONENT_NAME: &str = "Microdroid Payload";
+const MICRODROID_PAYLOAD_COMPONENT_NAME: &str = "Microdroid payload";
 const GUEST_OS_COMPONENT_NAME: &str = "vm_entry";
 const INSTANCE_HASH_KEY: i64 = -71003;
 

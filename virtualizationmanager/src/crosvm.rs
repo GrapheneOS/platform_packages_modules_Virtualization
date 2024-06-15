@@ -47,6 +47,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     MemoryTrimLevel::MemoryTrimLevel,
     VirtualMachineAppConfig::DebugLevel::DebugLevel,
     DisplayConfig::DisplayConfig as DisplayConfigParcelable,
+    GpuConfig::GpuConfig as GpuConfigParcelable,
 };
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
@@ -133,6 +134,7 @@ pub struct CrosvmConfig {
     pub virtio_snd_backend: Option<String>,
     pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
+    pub gpu_config: Option<GpuConfig>,
 }
 
 #[derive(Debug)]
@@ -152,6 +154,37 @@ impl DisplayConfig {
         let vertical_dpi = try_into_non_zero_u32(raw_config.verticalDpi)?;
         let refresh_rate = try_into_non_zero_u32(raw_config.refreshRate)?;
         Ok(DisplayConfig { width, height, horizontal_dpi, vertical_dpi, refresh_rate })
+    }
+}
+
+#[derive(Debug)]
+pub struct GpuConfig {
+    pub backend: Option<String>,
+    pub context_types: Option<Vec<String>>,
+    pub pci_address: Option<String>,
+    pub renderer_features: Option<String>,
+    pub renderer_use_egl: Option<bool>,
+    pub renderer_use_gles: Option<bool>,
+    pub renderer_use_glx: Option<bool>,
+    pub renderer_use_surfaceless: Option<bool>,
+    pub renderer_use_vulkan: Option<bool>,
+}
+
+impl GpuConfig {
+    pub fn new(raw_config: &GpuConfigParcelable) -> Result<GpuConfig> {
+        Ok(GpuConfig {
+            backend: raw_config.backend.clone(),
+            context_types: raw_config.contextTypes.clone().map(|context_types| {
+                context_types.iter().filter_map(|context_type| context_type.clone()).collect()
+            }),
+            pci_address: raw_config.pciAddress.clone(),
+            renderer_features: raw_config.rendererFeatures.clone(),
+            renderer_use_egl: Some(raw_config.rendererUseEgl),
+            renderer_use_gles: Some(raw_config.rendererUseGles),
+            renderer_use_glx: Some(raw_config.rendererUseGlx),
+            renderer_use_surfaceless: Some(raw_config.rendererUseSurfaceless),
+            renderer_use_vulkan: Some(raw_config.rendererUseVulkan),
+        })
     }
 }
 
@@ -1009,12 +1042,48 @@ fn run_vm(
     }
 
     if cfg!(paravirtualized_devices) {
+        if let Some(gpu_config) = &config.gpu_config {
+            let mut gpu_args = Vec::new();
+            if let Some(backend) = &gpu_config.backend {
+                gpu_args.push(format!("backend={}", backend));
+            }
+            if let Some(context_types) = &gpu_config.context_types {
+                gpu_args.push(format!("context-types={}", context_types.join(":")));
+            }
+            if let Some(pci_address) = &gpu_config.pci_address {
+                gpu_args.push(format!("pci-address={}", pci_address));
+            }
+            if let Some(renderer_features) = &gpu_config.renderer_features {
+                gpu_args.push(format!("renderer-features={}", renderer_features));
+            }
+            if gpu_config.renderer_use_egl.unwrap_or(false) {
+                gpu_args.push("egl=true".to_string());
+            }
+            if gpu_config.renderer_use_gles.unwrap_or(false) {
+                gpu_args.push("gles=true".to_string());
+            }
+            if gpu_config.renderer_use_glx.unwrap_or(false) {
+                gpu_args.push("glx=true".to_string());
+            }
+            if gpu_config.renderer_use_surfaceless.unwrap_or(false) {
+                gpu_args.push("surfaceless=true".to_string());
+            }
+            if gpu_config.renderer_use_vulkan.unwrap_or(false) {
+                gpu_args.push("vulkan=true".to_string());
+            }
+            command.arg(format!("--gpu={}", gpu_args.join(",")));
+        }
         if let Some(display_config) = &config.display_config {
-            command.arg("--gpu")
-            // TODO(b/331708504): support backend config as well
-            .arg("backend=virglrenderer,context-types=virgl2,egl=true,surfaceless=true,glx=false,gles=true")
-            .arg(format!("--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}", display_config.width, display_config.height, display_config.horizontal_dpi, display_config.vertical_dpi, display_config.refresh_rate))
-            .arg(format!("--android-display-service={}", config.name));
+            command
+                .arg(format!(
+                    "--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}",
+                    display_config.width,
+                    display_config.height,
+                    display_config.horizontal_dpi,
+                    display_config.vertical_dpi,
+                    display_config.refresh_rate
+                ))
+                .arg(format!("--android-display-service={}", config.name));
         }
     }
 

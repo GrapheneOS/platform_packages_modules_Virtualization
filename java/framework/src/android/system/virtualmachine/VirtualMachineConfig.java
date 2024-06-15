@@ -711,6 +711,10 @@ public final class VirtualMachineConfig {
                 Optional.ofNullable(customImageConfig.getDisplayConfig())
                         .map(dc -> dc.toParcelable())
                         .orElse(null);
+        config.gpuConfig =
+                Optional.ofNullable(customImageConfig.getGpuConfig())
+                        .map(dc -> dc.toParcelable())
+                        .orElse(null);
         config.protectedVm = this.mProtectedVm;
         config.memoryMib = bytesToMebiBytes(mMemoryBytes);
         config.cpuTopology = (byte) this.mCpuTopology;
