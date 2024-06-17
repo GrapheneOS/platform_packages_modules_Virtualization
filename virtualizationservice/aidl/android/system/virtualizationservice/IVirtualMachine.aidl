@@ -47,4 +47,7 @@ interface IVirtualMachine {
 
     /** Open a vsock connection to the CID of the VM on the given port. */
     ParcelFileDescriptor connectVsock(int port);
+
+    /** Set the name of the peer end (ptsname) of the host console. */
+    void setHostConsoleName(in @utf8InCpp String pathname);
 }

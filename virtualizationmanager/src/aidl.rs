@@ -1240,6 +1240,10 @@ impl IVirtualMachine for VirtualMachine {
             .or_service_specific_exception(-1)?;
         Ok(vsock_stream_to_pfd(stream))
     }
+
+    fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
+        self.instance.vm_context.global_context.setHostConsoleName(ptsname)
+    }
 }
 
 impl Drop for VirtualMachine {

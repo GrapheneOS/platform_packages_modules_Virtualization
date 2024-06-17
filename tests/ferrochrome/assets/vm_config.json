@@ -1,6 +1,5 @@
 {
     "name": "cros",
-    "kernel": "/data/local/tmp/ferrochrome/vmlinuz",
     "disks": [
         {
             "image": "/data/local/tmp/ferrochrome/chromiumos_test_image.bin",

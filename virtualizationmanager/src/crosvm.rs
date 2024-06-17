@@ -316,7 +316,7 @@ impl VmState {
 #[derive(Debug)]
 pub struct VmContext {
     #[allow(dead_code)] // Keeps the global context alive
-    global_context: Strong<dyn IGlobalVmContext>,
+    pub(crate) global_context: Strong<dyn IGlobalVmContext>,
     #[allow(dead_code)] // Keeps the server alive
     vm_server: RpcServer,
 }
@@ -335,7 +335,7 @@ pub struct VmInstance {
     pub vm_state: Mutex<VmState>,
     /// Global resources allocated for this VM.
     #[allow(dead_code)] // Keeps the context alive
-    vm_context: VmContext,
+    pub(crate) vm_context: VmContext,
     /// The CID assigned to the VM for vsock communication.
     pub cid: Cid,
     /// Path to crosvm control socket

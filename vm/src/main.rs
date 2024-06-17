@@ -24,15 +24,18 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 };
 #[cfg(not(llpvm_changes))]
 use anyhow::anyhow;
-use anyhow::{Context, Error};
+use anyhow::{bail, Context, Error};
 use binder::{ProcessState, Strong};
 use clap::{Args, Parser};
 use create_idsig::command_create_idsig;
 use create_partition::command_create_partition;
 use run::{command_run, command_run_app, command_run_microdroid};
 use serde::Serialize;
+use std::io::{self, IsTerminal};
 use std::num::NonZeroU16;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Args, Default)]
 /// Collection of flags that are at VM level and therefore applicable to all subcommands
@@ -324,6 +327,11 @@ enum Opt {
         /// Path to idsig of the APK
         path: PathBuf,
     },
+    /// Connect to the serial console of a VM
+    Console {
+        /// CID of the VM
+        cid: Option<i32>,
+    },
 }
 
 fn parse_debug_level(s: &str) -> Result<DebugLevel, String> {
@@ -386,6 +394,7 @@ fn main() -> Result<(), Error> {
         Opt::CreateIdsig { apk, path } => {
             command_create_idsig(get_service()?.as_ref(), &apk, &path)
         }
+        Opt::Console { cid } => command_console(cid),
     }
 }
 
@@ -448,6 +457,21 @@ fn command_info() -> Result<(), Error> {
     println!("Available OS list: {}", serde_json::to_string(&os_list)?);
 
     Ok(())
+}
+
+fn command_console(cid: Option<i32>) -> Result<(), Error> {
+    if !io::stdin().is_terminal() {
+        bail!("Stdin must be a terminal (tty). Use 'adb shell -t' to force allocate tty.");
+    }
+    let mut vms = get_service()?.debugListVms().context("Failed to get list of VMs")?;
+    if let Some(cid) = cid {
+        vms.retain(|vm_info| vm_info.cid == cid);
+    }
+    let host_console_name = vms
+        .into_iter()
+        .find_map(|vm_info| vm_info.hostConsoleName)
+        .context("Failed to get VM with console")?;
+    Err(Command::new("microcom").arg(host_console_name).exec().into())
 }
 
 #[cfg(test)]

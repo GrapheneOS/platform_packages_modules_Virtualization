@@ -1214,6 +1214,9 @@ public class VirtualMachine implements AutoCloseable {
                         service.createVm(vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter);
                 mVirtualMachine.registerCallback(new CallbackTranslator(service));
                 mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
+                if (mConnectVmConsole) {
+                    mVirtualMachine.setHostConsoleName(getHostConsoleName());
+                }
                 mVirtualMachine.start();
             } catch (IOException e) {
                 throw new VirtualMachineException("failed to persist files", e);
@@ -1335,7 +1338,7 @@ public class VirtualMachine implements AutoCloseable {
      * @hide
      */
     @NonNull
-    public String getHostConsoleName() throws VirtualMachineException {
+    private String getHostConsoleName() throws VirtualMachineException {
         if (!mConnectVmConsole) {
             throw new VirtualMachineException("Host console is not enabled");
         }

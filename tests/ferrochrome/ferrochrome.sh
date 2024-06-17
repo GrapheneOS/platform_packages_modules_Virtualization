@@ -102,16 +102,16 @@ if [[ -z "${fecr_skip}" ]]; then
 
     echo "Downloading ferrochrome image to ${fecr_dir}"
     fecr_version=${fecr_version:-${FECR_DEFAULT_VERSION}}
-    curl --output-dir ${fecr_dir} -O ${FECR_GS_URL}/${fecr_version}/image.zip
+    curl --output-dir ${fecr_dir} -O ${FECR_GS_URL}/${fecr_version}/chromiumos_test_image.tar.xz
   fi
   if [[ ! -f "${fecr_dir}/chromiumos_test_image.bin" ]]; then
-    unzip ${fecr_dir}/image.zip chromiumos_test_image.bin boot_images/vmlinuz* -d ${fecr_dir} > /dev/null
+    echo "Extrating ferrochrome image"
+    tar xvf ${fecr_dir}/chromiumos_test_image.tar.xz -C ${fecr_dir} > /dev/null
   fi
 
   echo "Pushing ferrochrome image to ${FECR_DEVICE_DIR}"
   adb shell mkdir -p ${FECR_DEVICE_DIR} > /dev/null || true
   adb push ${fecr_dir}/chromiumos_test_image.bin ${FECR_DEVICE_DIR}
-  adb push ${fecr_dir}/boot_images/vmlinuz ${FECR_DEVICE_DIR}
   adb push ${fecr_script_path}/assets/vm_config.json ${FECR_CONFIG_PATH}
 fi
 

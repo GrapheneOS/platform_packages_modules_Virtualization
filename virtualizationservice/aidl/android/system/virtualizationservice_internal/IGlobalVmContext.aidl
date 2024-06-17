@@ -21,4 +21,7 @@ interface IGlobalVmContext {
 
     /** Get the path to the temporary folder of the VM. */
     String getTemporaryDirectory();
+
+    /** Set the name of the peer end (ptsname) of the host console. */
+    void setHostConsoleName(@utf8InCpp String pathname);
 }

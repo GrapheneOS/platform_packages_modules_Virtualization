@@ -33,4 +33,7 @@ parcelable VirtualMachineDebugInfo {
      * the PID may have been reused for a different process, so this should not be trusted.
      */
     int requesterPid;
+
+    /** The peer end (ptsname) of the host console. */
+    @nullable @utf8InCpp String hostConsoleName;
 }
