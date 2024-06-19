@@ -21,15 +21,22 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.TetheringManager;
+import android.net.TetheringManager.StartTetheringCallback;
+import android.net.TetheringManager.TetheringRequest;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ServiceManager;
 import android.os.UserHandle;
 import android.system.virtualizationmaintenance.IVirtualizationMaintenance;
+import android.system.vmtethering.IVmTethering;
 import android.util.Log;
 
 import com.android.internal.os.BackgroundThread;
 import com.android.server.SystemService;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /**
  * This class exists to notify virtualization service of relevant things happening in the Android
@@ -40,17 +47,25 @@ import com.android.server.SystemService;
  */
 public class VirtualizationSystemService extends SystemService {
     private static final String TAG = VirtualizationSystemService.class.getName();
-    private static final String SERVICE_NAME = "android.system.virtualizationmaintenance";
+    private static final String MAINTENANCE_SERVICE_NAME =
+            "android.system.virtualizationmaintenance";
     private Handler mHandler;
+    private final TetheringService mTetheringService;
 
     public VirtualizationSystemService(Context context) {
         super(context);
+        if (Files.exists(Paths.get("/apex/com.android.virt/bin/vmnic"))) {
+            mTetheringService = new TetheringService();
+        } else {
+            mTetheringService = null;
+        }
     }
 
     @Override
     public void onStart() {
-        // Nothing needed here - we don't expose any binder service. The binder service we use is
-        // exposed as a lazy service by the virtualizationservice native binary.
+        if (mTetheringService != null) {
+            publishBinderService(IVmTethering.DESCRIPTOR, mTetheringService);
+        }
     }
 
     @Override
@@ -82,11 +97,11 @@ public class VirtualizationSystemService extends SystemService {
     }
 
     static IVirtualizationMaintenance connectToMaintenanceService() {
-        IBinder binder = ServiceManager.waitForService(SERVICE_NAME);
+        IBinder binder = ServiceManager.waitForService(MAINTENANCE_SERVICE_NAME);
         IVirtualizationMaintenance maintenance =
                 IVirtualizationMaintenance.Stub.asInterface(binder);
         if (maintenance == null) {
-            throw new IllegalStateException("Failed to connect to " + SERVICE_NAME);
+            throw new IllegalStateException("Failed to connect to " + MAINTENANCE_SERVICE_NAME);
         }
         return maintenance;
     }
@@ -134,6 +149,40 @@ public class VirtualizationSystemService extends SystemService {
             if (uid != -1) {
                 mHandler.post(() -> notifyAppRemoved(uid));
             }
+        }
+    }
+
+    private final class TetheringService extends IVmTethering.Stub {
+        private final TetheringManager tm = getContext().getSystemService(TetheringManager.class);
+
+        @Override
+        public void enableVmTethering() {
+            final TetheringRequest tr =
+                    new TetheringRequest.Builder(TetheringManager.TETHERING_VIRTUAL)
+                            .setConnectivityScope(TetheringManager.CONNECTIVITY_SCOPE_GLOBAL)
+                            .build();
+
+            StartTetheringCallback startTetheringCallback =
+                    new StartTetheringCallback() {
+                        @Override
+                        public void onTetheringStarted() {
+                            Log.i(TAG, "VM tethering started successfully");
+                        }
+
+                        @Override
+                        public void onTetheringFailed(int resultCode) {
+                            Log.e(
+                                    TAG,
+                                    "VM tethering failed. Result Code: "
+                                            + Integer.toString(resultCode));
+                        }
+                    };
+            tm.startTethering(tr, c -> c.run() /* executor */, startTetheringCallback);
+        }
+
+        @Override
+        public void disableVmTethering() {
+            tm.stopTethering(TetheringManager.TETHERING_VIRTUAL);
         }
     }
 }

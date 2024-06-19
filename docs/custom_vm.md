@@ -222,67 +222,10 @@ $ adb shell pm enable com.google.android.virtualization.vmlauncher/com.android.v
 $ adb shell pm grant com.google.android.virtualization.vmlauncher android.permission.USE_CUSTOM_VIRTUAL_MACHINE
 $ adb unroot
 ```
-Then execute the below to set up the network. In the future, this step won't be necessary.
 
-```
-$ cat > setup_network.sh; adb push setup_network.sh /data/local/tmp
-#!/system/bin/sh
+Second, ensure your device is connected to the Internet.
 
-set -e
-
-TAP_IFACE=crosvm_tap
-TAP_ADDR=192.168.1.1
-TAP_NET=192.168.1.0
-
-function setup_network() {
-  local WAN_IFACE=$(ip route get 8.8.8.8 2> /dev/null | awk -- '{printf $5}')
-  if [ "${WAN_IFACE}" == "" ]; then
-    echo "No network. Connect to a WiFi network and start again"
-    return 1
-  fi
-
-  if ip link show ${TAP_IFACE} &> /dev/null ; then
-    echo "TAP interface ${TAP_IFACE} already exists"
-    return 1
-  fi
-
-  ip tuntap add mode tap group virtualmachine vnet_hdr ${TAP_IFACE}
-  ip addr add ${TAP_ADDR}/24 dev ${TAP_IFACE}
-  ip link set ${TAP_IFACE} up
-  ip rule flush
-  ip rule add from all lookup ${WAN_IFACE}
-  ip route add ${TAP_NET}/24 dev ${TAP_IFACE} table ${WAN_IFACE}
-  sysctl net.ipv4.ip_forward=1
-  iptables -t filter -F
-  iptables -t nat -A POSTROUTING -s ${TAP_NET}/24 -j MASQUERADE
-}
-
-function setup_if_necessary() {
-  if [ "$(getprop ro.crosvm.network.setup.done)" == 1 ]; then
-    return
-  fi
-  echo "Setting up..."
-  check_privilege
-  setup_network
-  setenforce 0
-  chmod 666 /dev/tun
-  setprop ro.crosvm.network.setup.done 1
-}
-
-function check_privilege() {
-  if [ "$(id -u)" -ne 0 ]; then
-    echo "Run 'adb root' first"
-    return 1
-  fi
-}
-
-setup_if_necessary
-^D
-
-adb root; adb shell /data/local/tmp/setup_network.sh
-```
-
-Then, finally tap the VmLauncherApp app from the launcher UI. You will see
+Finally, tap the VmLauncherApp app from the launcher UI. You will see
 Ferrochrome booting!
 
 If it doesn’t work well, try

@@ -1087,15 +1087,6 @@ fn run_vm(
         }
     }
 
-    if cfg!(paravirtualized_devices) {
-        // TODO(b/340376951): Remove this after tap in CrosvmConfig is connected to tethering.
-        if rustutils::system_properties::read_bool("ro.crosvm.network.setup.done", false)
-            .unwrap_or(false)
-        {
-            command.arg("--net").arg("tap-name=crosvm_tap");
-        }
-    }
-
     if cfg!(network) {
         if let Some(tap) = &config.tap {
             let tap_fd = tap.as_raw_fd();

@@ -56,3 +56,9 @@ ifdef RELEASE_AVF_ENABLE_REMOTE_ATTESTATION
     $(error RELEASE_AVF_ENABLE_DICE_CHANGES must also be enabled)
   endif
 endif
+
+ifdef RELEASE_AVF_ENABLE_NETWORK
+  ifndef RELEASE_AVF_ENABLE_LLPVM_CHANGES
+    $(error RELEASE_AVF_ENABLE_LLPVM_CHANGES must also be enabled)
+  endif
+endif

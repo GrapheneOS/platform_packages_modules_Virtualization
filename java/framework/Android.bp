@@ -46,4 +46,7 @@ java_sdk_library {
     aconfig_declarations: [
         "avf_aconfig_flags",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }

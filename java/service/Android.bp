@@ -31,6 +31,7 @@ java_library {
     ],
     static_libs: [
         "android.system.virtualizationmaintenance-java",
+        "android.system.vmtethering-java",
     ],
     sdk_version: "core_platform",
     apex_available: ["com.android.virt"],

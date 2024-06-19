@@ -1,0 +1,23 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_app {
+    name: "FerrochromeApp",
+    srcs: ["java/**/*.java"],
+    resource_dirs: ["res"],
+    platform_apis: true,
+    // TODO(b/348113995): move this app to product partition
+    system_ext_specific: true,
+    privileged: true,
+    init_rc: ["custom_vm_setup.rc"],
+    required: ["custom_vm_setup"],
+    certificate: "platform",
+}
+
+sh_binary {
+    name: "custom_vm_setup",
+    src: "custom_vm_setup.sh",
+    system_ext_specific: true,
+    host_supported: false,
+}

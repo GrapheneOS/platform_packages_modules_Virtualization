@@ -30,6 +30,7 @@ rust_defaults {
         "android.system.virtualizationservice-rust",
         "android.system.virtualizationservice_internal-rust",
         "android.system.virtualmachineservice-rust",
+        "android.system.vmtethering-rust",
         "android.os.permissions_aidl-rust",
         "libandroid_logger",
         "libanyhow",
