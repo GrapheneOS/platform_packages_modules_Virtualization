@@ -197,6 +197,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                             tr.mSublibRunProp = ts.readProperty("debug.microdroid.app.sublib.run");
                             tr.mApkContentsPath = ts.getApkContentsPath();
                             tr.mEncryptedStoragePath = ts.getEncryptedStoragePath();
+                            tr.mInstanceSecret = ts.insecurelyExposeVmInstanceSecret();
                         });
         testResults.assertNoException();
         assertThat(testResults.mAddInteger).isEqualTo(123 + 456);
@@ -204,6 +205,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mSublibRunProp).isEqualTo("true");
         assertThat(testResults.mApkContentsPath).isEqualTo("/mnt/apk");
         assertThat(testResults.mEncryptedStoragePath).isEqualTo("");
+        assertThat(testResults.mInstanceSecret).hasLength(32);
     }
 
     @Test
@@ -2361,6 +2363,63 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("test_boot_with_network_supported", config);
         runVmTestService(TAG, vm, (ts, tr) -> {}).assertNoException();
+    }
+
+    @Test
+    public void createAndRunRustVm() throws Exception {
+        // This test is here mostly to exercise the Rust wrapper around the VM Payload API.
+        // We're testing the same functionality as in other tests, the only difference is
+        // that the payload is written in Rust.
+
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("libmicrodroid_testlib_rust.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("rust_vm", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mAddInteger = ts.addInteger(37, 73);
+                            tr.mApkContentsPath = ts.getApkContentsPath();
+                            tr.mEncryptedStoragePath = ts.getEncryptedStoragePath();
+                            tr.mInstanceSecret = ts.insecurelyExposeVmInstanceSecret();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mAddInteger).isEqualTo(37 + 73);
+        assertThat(testResults.mApkContentsPath).isEqualTo("/mnt/apk");
+        assertThat(testResults.mEncryptedStoragePath).isEqualTo("");
+        assertThat(testResults.mInstanceSecret).hasLength(32);
+    }
+
+    @Test
+    public void createAndRunRustVmWithEncryptedStorage() throws Exception {
+        // This test is here mostly to exercise the Rust wrapper around the VM Payload API.
+        // We're testing the same functionality as in other tests, the only difference is
+        // that the payload is written in Rust.
+
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("libmicrodroid_testlib_rust.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("rust_vm", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> tr.mEncryptedStoragePath = ts.getEncryptedStoragePath());
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStoragePath).isEqualTo("/mnt/encryptedstore");
     }
 
     private VirtualMachineConfig buildVmConfigWithVendor(File vendorDiskImage) throws Exception {

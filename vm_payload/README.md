@@ -70,3 +70,16 @@ The same is true for other languages such as Rust.
 See [AIDL
 backends](https://source.android.com/docs/core/architecture/aidl/aidl-backends)
 for information on using AIDL with the NDK Binder from C++.
+
+## Rust
+
+A Rust wrapper library for the VM Payload API is available (as an rlib) for VM
+payloads written in Rust.
+
+This wrapper is not guaranteed to be stable; we may change it in future
+versions. But payload code built using it will depend only on the C VM Payload
+API and the NDK APIs that are available to the payload, so should run unchanged
+on future versions.
+
+See [wrapper/lib.rs](wrapper/lib.rs) and `libvm_payload_rs` in
+[Android.bp](Android.bp).

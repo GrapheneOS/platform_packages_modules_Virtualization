@@ -191,6 +191,9 @@ public abstract class MicrodroidDeviceTestBase {
             assume().withMessage("Skip where protected VMs aren't supported")
                     .that(capabilities & VirtualMachineManager.CAPABILITY_PROTECTED_VM)
                     .isNotEqualTo(0);
+            assume().withMessage("Testing protected VMs on GSI isn't supported. b/272443823")
+                    .that(isGsi())
+                    .isFalse();
         } else {
             assume().withMessage("Skip where VMs aren't supported")
                     .that(capabilities & VirtualMachineManager.CAPABILITY_NON_PROTECTED_VM)
@@ -212,11 +215,15 @@ public abstract class MicrodroidDeviceTestBase {
                 .that(mCtx.getPackageManager().hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK))
                 .isTrue();
         int vendorApiLevel = getVendorApiLevel();
-        boolean isGsi = new File("/system/system_ext/etc/init/init.gsi.rc").exists();
+        boolean isGsi = isGsi();
         Log.i(TAG, "isGsi = " + isGsi + ", vendor api level = " + vendorApiLevel);
         assume().withMessage("GSI with vendor API level < 202404 may not support AVF")
                 .that(isGsi && vendorApiLevel < 202404)
                 .isFalse();
+    }
+
+    protected boolean isGsi() {
+        return new File("/system/system_ext/etc/init/init.gsi.rc").exists();
     }
 
     protected static int getVendorApiLevel() {
@@ -549,6 +556,7 @@ public abstract class MicrodroidDeviceTestBase {
         public int mFileMode;
         public int mMountFlags;
         public String mConsoleInput;
+        public byte[] mInstanceSecret;
 
         public void assertNoException() {
             if (mException != null) {

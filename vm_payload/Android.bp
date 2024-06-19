@@ -39,8 +39,8 @@ rust_bindgen {
     visibility: [":__subpackages__"],
 }
 
-// Rust wrappers round the C API for Rust clients.
-// (Yes, this involves going Rust -> C -> Rust.)
+// Access to the C API for Rust code.
+// This shouldn't be used directly - prefer libvm_payload_rs (below)
 rust_bindgen {
     name: "libvm_payload_bindgen",
     wrapper_src: "include-restricted/vm_payload_restricted.h",
@@ -51,13 +51,29 @@ rust_bindgen {
     bindgen_flags: [
         "--default-enum-style rust",
     ],
-    visibility: [
-        "//packages/modules/Virtualization/compos",
-        "//packages/modules/Virtualization/service_vm:__subpackages__",
-    ],
     shared_libs: [
         "libvm_payload#current",
     ],
+}
+
+// Wrapper library for the raw C API for use by Rust clients.
+// (Yes, this involves going Rust -> C -> Rust.)
+// This is not a stable API - we may change it in subsequent versions.
+// But it is made available as an rlib so it is linked into any
+// code using it, leaving only dependencies on stable APIs.
+// So code built with it should run unchanged on future versions.
+rust_library_rlib {
+    name: "libvm_payload_rs",
+    crate_name: "vm_payload",
+    defaults: ["avf_build_flags_rust"],
+    srcs: ["wrapper/lib.rs"],
+    rustlibs: [
+        "libbinder_rs",
+        "libstatic_assertions",
+        "libvm_payload_bindgen",
+    ],
+    apex_available: ["com.android.compos"],
+    visibility: ["//visibility:public"],
 }
 
 // Shared library for clients to link against.

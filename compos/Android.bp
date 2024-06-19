@@ -25,7 +25,7 @@ rust_defaults {
         "librpcbinder_rs",
         "librustutils",
         "libscopeguard",
-        "libvm_payload_bindgen",
+        "libvm_payload_rs",
     ],
     prefer_rlib: true,
     shared_libs: [

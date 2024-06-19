@@ -55,6 +55,7 @@ java_defaults {
         "MicrodroidExitNativeLib",
         "MicrodroidPrivateLinkingNativeLib",
         "MicrodroidCrashNativeLib",
+        "libmicrodroid_testlib_rust",
         "libvm_attestation_test_payload",
     ],
     min_sdk_version: "33",
@@ -165,4 +166,23 @@ cc_library_shared {
     srcs: ["src/native/crashbinary.cpp"],
     header_libs: ["vm_payload_headers"],
     stl: "libc++_static",
+}
+
+// A payload written in Rust, using the Rust wrapper for the VM payload API.
+rust_ffi_shared {
+    name: "libmicrodroid_testlib_rust",
+    crate_name: "microdroid_testlib_rust",
+    defaults: ["avf_build_flags_rust"],
+    prefer_rlib: true,
+    srcs: ["src/native/testbinary.rs"],
+    compile_multilib: "both",
+    rustlibs: [
+        "com.android.microdroid.testservice-rust",
+        "libandroid_logger",
+        "libanyhow",
+        "libavflog",
+        "libcstr",
+        "liblog_rust",
+        "libvm_payload_rs",
+    ],
 }

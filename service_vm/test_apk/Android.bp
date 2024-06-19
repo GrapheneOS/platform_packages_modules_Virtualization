@@ -39,7 +39,7 @@ rust_defaults {
         "libanyhow",
         "libavflog",
         "liblog_rust",
-        "libvm_payload_bindgen",
+        "libvm_payload_rs",
     ],
 }
 
