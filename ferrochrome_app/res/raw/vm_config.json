@@ -1,6 +1,5 @@
 {
     "name": "cros",
-    "kernel": "/data/local/tmp/vmlinuz",
     "disks": [
         {
             "image": "/data/local/tmp/chromiumos_test_image.bin",

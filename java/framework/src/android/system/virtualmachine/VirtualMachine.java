@@ -924,6 +924,11 @@ public class VirtualMachine implements AutoCloseable {
         }
         rawConfig.inputDevices = inputDevices.toArray(new InputDevice[0]);
 
+        // Handle network support
+        if (vmConfig.getCustomImageConfig() != null) {
+            rawConfig.networkSupported = vmConfig.getCustomImageConfig().useNetwork();
+        }
+
         return android.system.virtualizationservice.VirtualMachineConfig.rawConfig(rawConfig);
     }
 

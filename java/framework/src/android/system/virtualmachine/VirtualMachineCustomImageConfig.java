@@ -36,6 +36,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_TOUCH = "touch";
     private static final String KEY_KEYBOARD = "keyboard";
     private static final String KEY_MOUSE = "mouse";
+    private static final String KEY_NETWORK = "network";
     private static final String KEY_GPU = "gpu";
 
     @Nullable private final String name;
@@ -48,6 +49,7 @@ public class VirtualMachineCustomImageConfig {
     private final boolean touch;
     private final boolean keyboard;
     private final boolean mouse;
+    private final boolean network;
     @Nullable private final GpuConfig gpuConfig;
 
     @Nullable
@@ -92,6 +94,10 @@ public class VirtualMachineCustomImageConfig {
         return mouse;
     }
 
+    public boolean useNetwork() {
+        return network;
+    }
+
     /** @hide */
     public VirtualMachineCustomImageConfig(
             String name,
@@ -104,6 +110,7 @@ public class VirtualMachineCustomImageConfig {
             boolean touch,
             boolean keyboard,
             boolean mouse,
+            boolean network,
             GpuConfig gpuConfig) {
         this.name = name;
         this.kernelPath = kernelPath;
@@ -115,6 +122,7 @@ public class VirtualMachineCustomImageConfig {
         this.touch = touch;
         this.keyboard = keyboard;
         this.mouse = mouse;
+        this.network = network;
         this.gpuConfig = gpuConfig;
     }
 
@@ -146,6 +154,7 @@ public class VirtualMachineCustomImageConfig {
         builder.useTouch(customImageConfigBundle.getBoolean(KEY_TOUCH));
         builder.useKeyboard(customImageConfigBundle.getBoolean(KEY_KEYBOARD));
         builder.useMouse(customImageConfigBundle.getBoolean(KEY_MOUSE));
+        builder.useNetwork(customImageConfigBundle.getBoolean(KEY_NETWORK));
         builder.setGpuConfig(GpuConfig.from(customImageConfigBundle.getPersistableBundle(KEY_GPU)));
         return builder.build();
     }
@@ -178,6 +187,7 @@ public class VirtualMachineCustomImageConfig {
         pb.putBoolean(KEY_TOUCH, touch);
         pb.putBoolean(KEY_KEYBOARD, keyboard);
         pb.putBoolean(KEY_MOUSE, mouse);
+        pb.putBoolean(KEY_NETWORK, network);
         pb.putPersistableBundle(
                 KEY_GPU,
                 Optional.ofNullable(gpuConfig).map(gc -> gc.toPersistableBundle()).orElse(null));
@@ -237,6 +247,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean touch;
         private boolean keyboard;
         private boolean mouse;
+        private boolean network;
         private GpuConfig gpuConfig;
 
         /** @hide */
@@ -309,6 +320,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder useNetwork(boolean network) {
+            this.network = network;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -321,6 +338,7 @@ public class VirtualMachineCustomImageConfig {
                     touch,
                     keyboard,
                     mouse,
+                    network,
                     gpuConfig);
         }
     }

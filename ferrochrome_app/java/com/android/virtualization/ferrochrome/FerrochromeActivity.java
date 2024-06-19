@@ -48,7 +48,6 @@ public class FerrochromeActivity extends Activity {
             Environment.getExternalStorageDirectory().getPath() + File.separator;
     private static final Path IMAGE_PATH =
             Path.of(EXTERNAL_STORAGE_DIR + "chromiumos_test_image.bin");
-    private static final Path KERNEL_PATH = Path.of(EXTERNAL_STORAGE_DIR + "vmlinuz.bin");
     private static final Path IMAGE_VERSION_INFO =
             Path.of(EXTERNAL_STORAGE_DIR + "ferrochrome_image_version");
     private static final Path VM_CONFIG_PATH = Path.of(EXTERNAL_STORAGE_DIR + "vm_config.json");
@@ -66,9 +65,7 @@ public class FerrochromeActivity extends Activity {
         executorService.execute(
                 () -> {
                     if (Files.notExists(IMAGE_PATH)
-                            || Files.notExists(KERNEL_PATH)
                             || !FERROCHROME_VERSION.equals(getVersionInfo())) {
-
                         updateStatus("image doesn't exist");
                         updateStatus("download image");
                         if (download(FERROCHROME_VERSION)) {
@@ -132,9 +129,6 @@ public class FerrochromeActivity extends Activity {
     }
 
     private void copyVmConfigJson() {
-        if (Files.exists(VM_CONFIG_PATH)) {
-            return;
-        }
         try (InputStream is = getResources().openRawResource(R.raw.vm_config)) {
             Files.copy(is, VM_CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
@@ -164,29 +158,18 @@ public class FerrochromeActivity extends Activity {
                 "https://storage.googleapis.com/chromiumos-image-archive/ferrochrome-public/"
                         + version
                         + "/image.zip";
-        boolean hasKernel = false;
-        boolean hasImage = false;
         try (InputStream is = (new URL(urlString)).openStream();
                 ZipInputStream zis = new ZipInputStream(is)) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                Path dest;
-                if (entry.getName().contains("chromiumos_test_image.bin")) {
-                    dest = IMAGE_PATH;
-                    hasImage = true;
-                } else if (entry.getName().contains("boot_images/vmlinuz-")) {
-                    dest = KERNEL_PATH;
-                    hasKernel = true;
-                } else {
+                if (!entry.getName().contains("chromiumos_test_image.bin")) {
                     continue;
                 }
                 updateStatus("copy " + entry.getName() + " start");
-                Files.copy(zis, dest, StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(zis, IMAGE_PATH, StandardCopyOption.REPLACE_EXISTING);
                 updateStatus("copy " + entry.getName() + " done");
-                if (hasImage && hasKernel) {
-                    updateVersionInfo(version);
-                    break;
-                }
+                updateVersionInfo(version);
+                break;
             }
         } catch (Exception e) {
             updateStatus(e.toString());

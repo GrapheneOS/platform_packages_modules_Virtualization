@@ -210,7 +210,7 @@ future, this step won't be necesssary.
 
 ```
 $ adb root
-$ adb shell pm enable com.android.virtualization.vmlauncher/.MainActivity
+$ adb shell pm enable com.android.virtualization.vmlauncher/.MainActivityAlias
 $ adb unroot
 ```
 
@@ -218,7 +218,7 @@ If virt apex is Google-signed, you need to enable the app and grant the
 permission to the app.
 ```
 $ adb root
-$ adb shell pm enable com.google.android.virtualization.vmlauncher/com.android.virtualization.vmlauncher.MainActivity
+$ adb shell pm enable com.google.android.virtualization.vmlauncher/com.android.virtualization.vmlauncher.MainActivityAlias
 $ adb shell pm grant com.google.android.virtualization.vmlauncher android.permission.USE_CUSTOM_VIRTUAL_MACHINE
 $ adb unroot
 ```

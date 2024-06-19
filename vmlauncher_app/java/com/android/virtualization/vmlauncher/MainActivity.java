@@ -83,7 +83,6 @@ public class MainActivity extends Activity {
         configBuilder.setCpuTopology(CPU_TOPOLOGY_MATCH_HOST);
 
         configBuilder.setProtectedVm(false);
-        configBuilder.setNetworkSupported(true);
         if (DEBUG) {
             configBuilder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
             configBuilder.setVmOutputCaptured(true);
@@ -189,6 +188,7 @@ public class MainActivity extends Activity {
             customImageConfigBuilder.useTouch(true);
             customImageConfigBuilder.useKeyboard(true);
             customImageConfigBuilder.useMouse(true);
+            customImageConfigBuilder.useNetwork(true);
 
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build());
 

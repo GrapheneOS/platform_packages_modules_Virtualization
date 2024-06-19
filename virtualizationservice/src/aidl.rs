@@ -34,7 +34,7 @@ use binder::{
     LazyServiceGuard, ParcelFileDescriptor, Status, Strong,
 };
 use lazy_static::lazy_static;
-use libc::VMADDR_CID_HOST;
+use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
 use nix::unistd::{chown, Uid};
 use openssl::x509::X509;
@@ -878,11 +878,21 @@ fn handle_stream_connection_tombstoned() -> Result<()> {
     for incoming_stream in listener.incoming() {
         let mut incoming_stream = match incoming_stream {
             Err(e) => {
-                warn!("invalid incoming connection: {:?}", e);
+                warn!("invalid incoming connection: {e:?}");
                 continue;
             }
             Ok(s) => s,
         };
+        if let Ok(addr) = incoming_stream.peer_addr() {
+            let cid = addr.cid();
+            match cid {
+                VMADDR_CID_LOCAL | VMADDR_CID_HOST | VMADDR_CID_HYPERVISOR => {
+                    warn!("Rejecting non-guest tombstone vsock connection from cid={cid}");
+                    continue;
+                }
+                _ => info!("Vsock Stream connected to cid={cid} for tombstones"),
+            }
+        }
         std::thread::spawn(move || {
             if let Err(e) = handle_tombstone(&mut incoming_stream) {
                 error!("Failed to write tombstone- {:?}", e);
@@ -893,9 +903,6 @@ fn handle_stream_connection_tombstoned() -> Result<()> {
 }
 
 fn handle_tombstone(stream: &mut VsockStream) -> Result<()> {
-    if let Ok(addr) = stream.peer_addr() {
-        info!("Vsock Stream connected to cid={} for tombstones", addr.cid());
-    }
     let tb_connection =
         TombstonedConnection::connect(std::process::id() as i32, DebuggerdDumpType::Tombstone)
             .context("Failed to connect to tombstoned")?;
