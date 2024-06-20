@@ -1137,7 +1137,9 @@ public class VirtualMachine implements AutoCloseable {
     /**
      * Runs this virtual machine. The returning of this method however doesn't mean that the VM has
      * actually started running or the OS has booted there. Such events can be notified by
-     * registering a callback using {@link #setCallback} before calling {@code run()}.
+     * registering a callback using {@link #setCallback} before calling {@code run()}. There is no
+     * limit other than available memory that limits the number of virtual machines that can run at
+     * the same time.
      *
      * <p>NOTE: This method may block and should not be called on the main thread.
      *

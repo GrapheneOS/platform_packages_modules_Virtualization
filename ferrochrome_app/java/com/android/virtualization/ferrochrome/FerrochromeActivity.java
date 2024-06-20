@@ -43,7 +43,7 @@ import java.util.zip.ZipInputStream;
 public class FerrochromeActivity extends Activity {
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     private static final String TAG = "FerrochromeActivity";
-    private static final String FERROCHROME_VERSION = "R127-15916.0.0";
+    private static final String FERROCHROME_VERSION = "R128-15926.0.0";
     private static final String EXTERNAL_STORAGE_DIR =
             Environment.getExternalStorageDirectory().getPath() + File.separator;
     private static final Path IMAGE_PATH =
@@ -66,20 +66,23 @@ public class FerrochromeActivity extends Activity {
                 () -> {
                     if (Files.notExists(IMAGE_PATH)
                             || !FERROCHROME_VERSION.equals(getVersionInfo())) {
-                        updateStatus("image doesn't exist");
-                        updateStatus("download image");
+                        updateStatus("Starting first-time setup.");
+                        updateStatus(
+                                "Downloading Ferrochrome image. This can take about 5 to 10"
+                                        + " minutes, depending on your network speed.");
                         if (download(FERROCHROME_VERSION)) {
-                            updateStatus("download done");
+                            updateStatus("Done.");
                         } else {
-                            updateStatus("download failed, check internet connection and retry");
+                            updateStatus(
+                                    "Download failed. Check the internet connection and retry.");
                             return;
                         }
                     } else {
-                        updateStatus("there are already downloaded images");
+                        updateStatus("Ferrochrome is already downloaded.");
                     }
-                    updateStatus("write down vm config");
+                    updateStatus("Updating VM config.");
                     copyVmConfigJson();
-                    updateStatus("custom_vm_setup: copy files to /data/local/tmp");
+                    updateStatus("Updating VM images. This may take a few minutes.");
                     SystemProperties.set("debug.custom_vm_setup.start", "true");
                     while (!SystemProperties.getBoolean("debug.custom_vm_setup.done", false)) {
                         // Wait for custom_vm_setup
@@ -88,10 +91,9 @@ public class FerrochromeActivity extends Activity {
                         } catch (Exception e) {
                             Log.d(TAG, e.toString());
                         }
-                        updateStatus("wait for custom_vm_setup");
                     }
-                    updateStatus("enable vmlauncher");
-                    updateStatus("ready for ferrochrome");
+                    updateStatus("Done.");
+                    updateStatus("Starting Ferrochrome...");
                     runOnUiThread(
                             () ->
                                     startActivity(

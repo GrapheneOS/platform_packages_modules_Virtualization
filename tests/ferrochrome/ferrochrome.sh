@@ -100,13 +100,9 @@ if [[ -z "${fecr_skip}" ]]; then
     # DISCLAIMER: Image is too large (1.5G+ for compressed, 6.5G+ for uncompressed), so can't submit.
     fecr_dir=$(mktemp -d)
 
-    echo "Downloading ferrochrome image to ${fecr_dir}"
+    echo "Downloading & extracting ferrochrome image to ${fecr_dir}"
     fecr_version=${fecr_version:-${FECR_DEFAULT_VERSION}}
-    curl --output-dir ${fecr_dir} -O ${FECR_GS_URL}/${fecr_version}/chromiumos_test_image.tar.xz
-  fi
-  if [[ ! -f "${fecr_dir}/chromiumos_test_image.bin" ]]; then
-    echo "Extrating ferrochrome image"
-    tar xvf ${fecr_dir}/chromiumos_test_image.tar.xz -C ${fecr_dir} > /dev/null
+    curl ${FECR_GS_URL}/${fecr_version}/chromiumos_test_image.tar.xz | tar xfJ - -C ${fecr_dir}
   fi
 
   echo "Pushing ferrochrome image to ${FECR_DEVICE_DIR}"
