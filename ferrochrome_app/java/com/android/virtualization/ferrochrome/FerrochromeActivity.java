@@ -20,12 +20,17 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemProperties;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.TextView;
+
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,14 +40,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class FerrochromeActivity extends Activity {
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     private static final String TAG = "FerrochromeActivity";
+    private static final String ACTION_VM_LAUNCHER = "android.virtualization.VM_LAUNCHER";
     private static final String FERROCHROME_VERSION = "R128-15926.0.0";
     private static final String EXTERNAL_STORAGE_DIR =
             Environment.getExternalStorageDirectory().getPath() + File.separator;
@@ -58,9 +63,19 @@ public class FerrochromeActivity extends Activity {
         setContentView(R.layout.activity_ferrochrome);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // Find VM Launcher
+        Intent intent = new Intent(ACTION_VM_LAUNCHER);
+        PackageManager pm = getPackageManager();
+        List<ResolveInfo> resolveInfos =
+                pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        if (resolveInfos == null || resolveInfos.size() != 1) {
+            updateStatus("Failed to resolve VM Launcher");
+            return;
+        }
+
         // Clean up the existing vm launcher process if there is
         ActivityManager am = getSystemService(ActivityManager.class);
-        am.killBackgroundProcesses(getVmLauncherAppPackageName());
+        am.killBackgroundProcesses(resolveInfos.get(0).activityInfo.packageName);
 
         executorService.execute(
                 () -> {
@@ -94,31 +109,8 @@ public class FerrochromeActivity extends Activity {
                     }
                     updateStatus("Done.");
                     updateStatus("Starting Ferrochrome...");
-                    runOnUiThread(
-                            () ->
-                                    startActivity(
-                                            new Intent()
-                                                    .setClassName(
-                                                            getVmLauncherAppPackageName(),
-                                                            "com.android.virtualization.vmlauncher.MainActivity")));
+                    runOnUiThread(() -> startActivity(intent));
                 });
-    }
-
-    private String getVmLauncherAppPackageName() {
-        PackageManager pm = getPackageManager();
-        for (String packageName :
-                new String[] {
-                    "com.android.virtualization.vmlauncher",
-                    "com.google.android.virtualization.vmlauncher"
-                }) {
-            try {
-                pm.getPackageInfo(packageName, 0);
-                return packageName;
-            } catch (PackageManager.NameNotFoundException e) {
-                continue;
-            }
-        }
-        return null;
     }
 
     private void updateStatus(String line) {
@@ -159,16 +151,17 @@ public class FerrochromeActivity extends Activity {
         String urlString =
                 "https://storage.googleapis.com/chromiumos-image-archive/ferrochrome-public/"
                         + version
-                        + "/image.zip";
+                        + "/chromiumos_test_image.tar.xz";
         try (InputStream is = (new URL(urlString)).openStream();
-                ZipInputStream zis = new ZipInputStream(is)) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
+                XZCompressorInputStream xz = new XZCompressorInputStream(is);
+                TarArchiveInputStream tar = new TarArchiveInputStream(xz)) {
+            TarArchiveEntry entry;
+            while ((entry = tar.getNextTarEntry()) != null) {
                 if (!entry.getName().contains("chromiumos_test_image.bin")) {
                     continue;
                 }
                 updateStatus("copy " + entry.getName() + " start");
-                Files.copy(zis, IMAGE_PATH, StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(tar, IMAGE_PATH, StandardCopyOption.REPLACE_EXISTING);
                 updateStatus("copy " + entry.getName() + " done");
                 updateVersionInfo(version);
                 break;

@@ -2525,19 +2525,30 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isTrue();
 
         VirtualMachine[] vms = new VirtualMachine[numVMs];
-        for (int i = 0; i < numVMs; i++) {
-            VirtualMachineConfig config =
-                    newVmConfigBuilderWithPayloadBinary("MicrodroidIdleNativeLib.so")
-                            .setDebugLevel(DEBUG_LEVEL_NONE)
-                            .setMemoryBytes(vmSize)
-                            .build();
+        try {
+            for (int i = 0; i < numVMs; i++) {
+                VirtualMachineConfig config =
+                        newVmConfigBuilderWithPayloadBinary("MicrodroidIdleNativeLib.so")
+                                .setDebugLevel(DEBUG_LEVEL_NONE)
+                                .setMemoryBytes(vmSize)
+                                .build();
 
-            vms[i] = forceCreateNewVirtualMachine("test_concurrent_vms_" + i, config);
-            vms[i].run();
-        }
+                vms[i] = forceCreateNewVirtualMachine("test_concurrent_vms_" + i, config);
+                vms[i].run();
+            }
 
-        for (VirtualMachine vm : vms) {
-            assertThat(vm.getStatus()).isEqualTo(VirtualMachine.STATUS_RUNNING);
+            for (VirtualMachine vm : vms) {
+                assertThat(vm.getStatus()).isEqualTo(VirtualMachine.STATUS_RUNNING);
+            }
+
+        } finally {
+            // Ensure that VMs are all stopped. Otherwise we may try to reuse some of these for
+            // another run of this test with different parameters.
+            for (VirtualMachine vm : vms) {
+                if (vm != null) {
+                    vm.close();
+                }
+            }
         }
     }
 
