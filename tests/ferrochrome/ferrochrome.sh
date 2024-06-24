@@ -26,8 +26,7 @@ FECR_CONFIG_PATH="/data/local/tmp/vm_config.json"  # hardcoded at VmLauncherApp
 FECR_CONSOLE_LOG_PATH="/data/data/\${pkg_name}/files/console.log"
 FECR_BOOT_COMPLETED_LOG="Have fun and send patches!"
 FECR_BOOT_TIMEOUT="300" # 5 minutes (300 seconds)
-AOSP_PKG_NAME="com.android.virtualization.vmlauncher"
-SIGNED_PKG_NAME="com.google.android.virtualization.vmlauncher"
+ACTION_NAME="android.virtualization.VM_LAUNCHER"
 
 fecr_clean_up() {
   trap - INT
@@ -38,32 +37,36 @@ fecr_clean_up() {
 }
 
 print_usage() {
-  echo "ferochrome.sh: Launches ferrochrome image"
+  echo "ferochrome: Launches ferrochrome image"
   echo ""
   echo "By default, this downloads ferrochrome image with version ${FECR_DEFAULT_VERSION},"
   echo "launches, and waits for boot completed."
-  echo "When done, removes downloaded image."
+  echo "When done, removes downloaded image on host while keeping pushed image on device."
   echo ""
-  echo "Usage: ferrochrome.sh [options]"
+  echo "Usage: ferrochrome [options]"
   echo ""
   echo "Options"
   echo "  --help or -h: This message"
-  echo "  --dir \${dir}: Use ferrochrome images at the dir instead of downloading"
+  echo "  --dir DIR: Use ferrochrome images at the dir instead of downloading"
+  echo "  --verbose: Verbose log message (set -x)"
   echo "  --skip: Skipping downloading and/or pushing images"
   echo "  --version \${version}: ferrochrome version to be downloaded"
   echo "  --keep: Keep downloaded ferrochrome image"
 }
-
 
 fecr_version=""
 fecr_dir=""
 fecr_keep=""
 fecr_skip=""
 fecr_script_path=$(dirname ${0})
+fecr_verbose=""
 
 # Parse parameters
 while (( "${#}" )); do
   case "${1}" in
+    --verbose)
+      fecr_verbose="true"
+      ;;
     --version)
       shift
       fecr_version="${1}"
@@ -94,6 +97,24 @@ done
 trap fecr_clean_up INT
 trap fecr_clean_up EXIT
 
+if [[ -n "${fecr_verbose}" ]]; then
+  set -x
+fi
+
+. "${fecr_script_path}/ferrochrome-precondition-checker.sh"
+
+resolved_activities=$(adb shell pm query-activities --components -a ${ACTION_NAME})
+
+if [[ "$(echo ${resolved_activities} | wc -l)" != "1" ]]; then
+  >&2 echo "Multiple VM launchers exists"
+  exit 1
+fi
+
+pkg_name=$(dirname ${resolved_activities})
+
+adb shell pm grant ${pkg_name} android.permission.USE_CUSTOM_VIRTUAL_MACHINE > /dev/null
+adb shell pm clear ${pkg_name} > /dev/null
+
 if [[ -z "${fecr_skip}" ]]; then
   if [[ -z "${fecr_dir}" ]]; then
     # Download fecr image archive, and extract necessary files
@@ -111,20 +132,8 @@ if [[ -z "${fecr_skip}" ]]; then
   adb push ${fecr_script_path}/assets/vm_config.json ${FECR_CONFIG_PATH}
 fi
 
-adb root > /dev/null
-adb shell pm list packages | grep ${AOSP_PKG_NAME} > /dev/null
-if [[ "${?}" == "0" ]]; then
-  pkg_name=${AOSP_PKG_NAME}
-else
-  pkg_name=${SIGNED_PKG_NAME}
-fi
-
-adb shell pm enable ${pkg_name}/${AOSP_PKG_NAME}.MainActivity > /dev/null
-adb shell pm grant ${pkg_name} android.permission.USE_CUSTOM_VIRTUAL_MACHINE > /dev/null
-adb shell pm clear ${pkg_name} > /dev/null
-
 echo "Starting ferrochrome"
-adb shell am start-activity ${pkg_name}/${AOSP_PKG_NAME}.MainActivity > /dev/null
+adb shell am start-activity -a ${ACTION_NAME} > /dev/null
 
 log_path="/data/data/${pkg_name}/files/console.log"
 fecr_start_time=${EPOCHSECONDS}
@@ -134,5 +143,7 @@ while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do
   sleep 10
 done
 
-echo "Ferrochrome failed to boot"
+>&2 echo "Ferrochrome failed to boot. Dumping console log"
+>&2 adb shell cat ${log_path}
+
 exit 1

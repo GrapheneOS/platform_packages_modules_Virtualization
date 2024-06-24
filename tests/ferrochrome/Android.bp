@@ -4,10 +4,26 @@ package {
 
 sh_test_host {
     name: "ferrochrome-tests",
-    src: "ferrochrome.sh",
+    src: ":ferrochrome-tests.sh",
+    test_suites: ["general-tests"],
     test_options: {
         unit_test: false,
     },
     per_testcase_directory: true,
     data: ["assets/vm_config.json"],
+    data_bins: ["ferrochrome-precondition-checker.sh"],
+}
+
+// Workaround for enabling verbose logging only on CI
+genrule {
+    name: "ferrochrome-tests.sh",
+    srcs: ["ferrochrome.sh"],
+    out: ["ferrochrome-tests"],
+    // This breaks shebang, but test will execute the script with bash
+    cmd: "echo \"set -x\" > $(out); cat $(in) >> $(out)",
+}
+
+sh_binary_host {
+    name: "ferrochrome-precondition-checker.sh",
+    src: "ferrochrome-precondition-checker.sh",
 }

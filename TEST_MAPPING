@@ -66,6 +66,11 @@
       "keywords": ["internal"]
     }
   ],
+  "ferrochrome-postsubmit": [
+    {
+      "name": "ferrochrome-tests"
+    }
+  ],
   "postsubmit": [
     {
       "name": "CtsMicrodroidDisabledTestCases"

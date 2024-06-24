@@ -23,14 +23,23 @@
         <option name="force-root" value="true"/>
     </target_preparer>
 
-    <!-- Check presence of vmlauncher here, because we can't skip tests in shell test -->
+    <!-- Check assumptions here, because we can't skip tests in shell test -->
+    <target_preparer class="com.android.tradefed.targetprep.RunHostScriptTargetPreparer">
+        <option name="script-file" value="ferrochrome-precondition-checker.sh" />
+    </target_preparer>
+
+    <!-- Explicitly clean up ferrochrome image when done.
+         It's too large (6.5G+), so this may break further tests. -->
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
-        <option name="throw-if-cmd-fail" value="true" />
-        <option name="run-command" value="pm list packages | grep vmlauncher" />
+        <option name="throw-if-cmd-fail" value="false" />
+        <option name="run-command" value="mkdir /data/local/tmp/ferrochrome" />
+        <option name="teardown-command" value="pkill vmlauncher" />
+        <option name="teardown-command" value="rm -rf /data/local/tmp/ferrochrome" />
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.binary.ExecutableHostTest" >
         <option name="binary" value="ferrochrome-tests" />
+        <option name="relative-path-execution" value="true" />
         <option name="runtime-hint" value="10m" />
         <option name="per-binary-timeout" value="20m" />
     </test>
