@@ -395,12 +395,9 @@ prebuilt_etc {
 // python -c "import hashlib; print(hashlib.sha256(b'bootloader').hexdigest())"
 bootloader_salt = "3b4a12881d11f33cff968a24d7c53723a8232cde9a8d91e29fdbd6a95ae6adf0"
 
-// Note that keys can be different for filesystem images even though we're using the same key
-// for microdroid. However, the key signing VBmeta should match with the pubkey embedded in
-// bootloader.
 filegroup {
     name: "microdroid_sign_key",
-    srcs: [":avb_testkey_rsa4096"],
+    srcs: [":pvmfw_embedded_key"],
 }
 
 soong_config_module_type {
