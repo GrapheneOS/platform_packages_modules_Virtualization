@@ -785,6 +785,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_NONE)
+                        .setShouldBoostUclamp(true)
                         .setShouldUseHugepages(true)
                         .build();
 

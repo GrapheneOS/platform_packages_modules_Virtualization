@@ -71,7 +71,7 @@ fn check_processing_requests(vm_type: VmType) -> Result<()> {
 
     check_processing_reverse_request(&mut vm)?;
     let key_pair = check_processing_generating_key_pair_request(&mut vm)?;
-    check_processing_generating_certificate_request(&mut vm, &key_pair.maced_public_key)?;
+    check_processing_generating_certificate_request(&mut vm, &key_pair.maced_public_key, vm_type)?;
     check_attestation_request(&mut vm, &key_pair, vm_type)?;
     Ok(())
 }
@@ -111,6 +111,7 @@ fn assert_array_has_nonzero(v: &[u8]) {
 fn check_processing_generating_certificate_request(
     vm: &mut ServiceVm,
     maced_public_key: &[u8],
+    vm_type: VmType,
 ) -> Result<()> {
     let params = GenerateCertificateRequestParams {
         keys_to_sign: vec![maced_public_key.to_vec()],
@@ -122,7 +123,7 @@ fn check_processing_generating_certificate_request(
     info!("Received response: {response:?}.");
 
     match response {
-        Response::GenerateCertificateRequest(csr) => check_csr(csr),
+        Response::GenerateCertificateRequest(csr) => check_csr(csr, vm_type),
         _ => bail!("Incorrect response type: {response:?}"),
     }
 }
@@ -275,8 +276,14 @@ fn check_certificate_for_client_vm(
     Ok(())
 }
 
-fn check_csr(csr: Vec<u8>) -> Result<()> {
-    let _csr = rkp::Csr::from_cbor(&Session::default(), &csr[..]).context("Failed to parse CSR")?;
+fn check_csr(csr: Vec<u8>, vm_type: VmType) -> Result<()> {
+    let mut session = Session::default();
+
+    // Allow any mode for non-protected VMs because they use a fake DICE chain with the mode set to
+    // debug.
+    session.set_allow_any_mode(vm_type == VmType::NonProtectedVm);
+
+    let _csr = rkp::Csr::from_cbor(&session, &csr[..]).context("Failed to parse CSR")?;
     Ok(())
 }
 

@@ -14,7 +14,7 @@
 
 service custom_vm_setup /system_ext/bin/custom_vm_setup
     user shell
-    group shell
+    group shell media_rw
     disabled
     oneshot
     seclabel u:r:shell:s0
