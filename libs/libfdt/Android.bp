@@ -39,7 +39,6 @@ rust_library_rlib {
     rustlibs: [
         "libcstr",
         "liblibfdt_bindgen",
-        "libmemoffset_nostd",
         "libstatic_assertions",
         "libzerocopy_nostd",
     ],

@@ -188,8 +188,7 @@ extern "C" fn perror(s: *const c_char) {
     } else {
         // SAFETY: Just like libc, we need to assume that `s` is a valid NULL-terminated string.
         let c_str = unsafe { CStr::from_ptr(s) };
-        // TODO(Rust 1.71): if c_str.is_empty() {
-        if c_str.to_bytes().is_empty() {
+        if c_str.is_empty() {
             None
         } else {
             Some(c_str.to_str().unwrap())

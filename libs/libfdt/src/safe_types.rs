@@ -15,6 +15,7 @@
 //! Safe zero-cost wrappers around integer values used by libfdt.
 
 use core::ffi::c_int;
+use core::mem::offset_of;
 
 use crate::result::FdtRawResult;
 use crate::{FdtError, Result};
@@ -23,13 +24,9 @@ use zerocopy::byteorder::big_endian;
 use zerocopy::{FromBytes, FromZeroes};
 
 macro_rules! assert_offset_eq {
-    // TODO(stable_feature(offset_of)): mem::offset_of
     // TODO(const_feature(assert_eq)): assert_eq!()
     ($t:ty, $u:ty, $id:ident) => {
-        static_assertions::const_assert_eq!(
-            memoffset::offset_of!($t, $id),
-            memoffset::offset_of!($u, $id),
-        );
+        static_assertions::const_assert_eq!(offset_of!($t, $id), offset_of!($u, $id));
     };
 }
 

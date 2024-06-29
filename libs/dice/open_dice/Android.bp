@@ -27,7 +27,6 @@ rust_library_rlib {
     ],
     visibility: [
         "//packages/modules/Virtualization:__subpackages__",
-        "//system/authgraph/tests:__subpackages__",
     ],
 }
 
@@ -50,12 +49,6 @@ rust_library {
     proc_macros: ["libserde_derive"],
     shared_libs: [
         "libcrypto",
-    ],
-    static_libs: [
-        "libopen_dice_cbor",
-    ],
-    whole_static_libs: [
-        "libopen_dice_android",
     ],
     visibility: [
         "//hardware/interfaces/security/secretkeeper/aidl/vts",
