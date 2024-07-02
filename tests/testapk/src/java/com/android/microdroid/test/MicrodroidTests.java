@@ -2288,6 +2288,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     @VsrTest(requirements = {"VSR-7.1-001.003"})
     public void kernelVersionRequirement() throws Exception {
+        assumeVsrCompliant();
         int firstApiLevel = SystemProperties.getInt("ro.product.first_api_level", 0);
         assume().withMessage("Skip on devices launched before Android 14 (API level 34)")
                 .that(firstApiLevel)

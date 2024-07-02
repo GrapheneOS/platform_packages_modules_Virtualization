@@ -63,6 +63,7 @@ public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
     @Test
     @VsrTest(requirements = "VSR-7.1-001.005")
     public void avfIsRequired() {
+        assumeVsrCompliant();
         assume().withMessage("Requirement doesn't apply due to vendor API level")
                 .that(getVendorApiLevel())
                 .isAtLeast(202404);

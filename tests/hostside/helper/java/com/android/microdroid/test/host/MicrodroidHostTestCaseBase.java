@@ -72,7 +72,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
 
     protected static final Set<String> SUPPORTED_GKI_VERSIONS =
             Collections.unmodifiableSet(
-                    new HashSet(Arrays.asList("android14-6.1-pkvm_experimental")));
+                    new HashSet(Arrays.asList("android14-6.1-pkvm_experimental", "android15-6.6")));
 
     /* Keep this sync with AssignableDevice.aidl */
     public static final class AssignableDevice {
@@ -284,6 +284,6 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     }
 
     protected boolean isPkvmHypervisor() throws DeviceNotAvailableException {
-        return getDevice().getProperty("ro.boot.hypervisor.version").equals("kvm.arm-protected");
+        return "kvm.arm-protected".equals(getDevice().getProperty("ro.boot.hypervisor.version"));
     }
 }
