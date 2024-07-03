@@ -252,12 +252,15 @@ $ adb shell -t /apex/com.android.virt/bin/vm console
 ```
 
 To see console logs only, check
-`/data/data/com.android.virtualization.vmlauncher/files/console.log`
-Or
-`/data/data/com.google.android.virtualization.vmlauncher/files/console.log`
+`/data/data/com{,.google}.android.virtualization.vmlauncher/files/console.log`
+
+For HSUM enabled devices,
+`/data/user/${current_user_id}/com{,.google}.android.virtualization.vmlauncher/files/console.log`
+
+You can monitor console out as follows
 
 ```shell
-$ adb shell su root tail +0 -F /data/data/com{,.google}.android.virtualization.vmlauncher/files/console.log
+$ adb shell 'su root tail +0 -F /data/user/$(am get-current-user)/com{,.google}.android.virtualization.vmlauncher/files/console.log'
 ```
 
 For ChromiumOS, you can ssh-in. Use following commands after network setup.

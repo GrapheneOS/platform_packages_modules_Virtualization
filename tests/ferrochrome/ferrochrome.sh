@@ -135,7 +135,12 @@ fi
 echo "Starting ferrochrome"
 adb shell am start-activity -a ${ACTION_NAME} > /dev/null
 
-log_path="/data/data/${pkg_name}/files/console.log"
+if [[ $(adb shell getprop ro.fw.mu.headless_system_user) == "true" ]]; then
+  current_user=$(adb shell am get-current-user)
+  log_path="/data/user/${current_user}/${pkg_name}/files/console.log"
+else
+  log_path="/data/data/${pkg_name}/files/console.log"
+fi
 fecr_start_time=${EPOCHSECONDS}
 
 while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do

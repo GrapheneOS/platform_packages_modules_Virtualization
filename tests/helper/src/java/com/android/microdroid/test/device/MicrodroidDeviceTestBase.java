@@ -17,6 +17,7 @@ package com.android.microdroid.test.device;
 
 import static android.content.pm.PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
+import static android.content.pm.PackageManager.FEATURE_AUTOMOTIVE;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.TruthJUnit.assume;
@@ -224,8 +225,10 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     protected void assumeVsrCompliant() {
-        assume().withMessage("Watches are not VSR compliant")
-                .that(mCtx.getPackageManager().hasSystemFeature(FEATURE_WATCH))
+        boolean featureCheck = mCtx.getPackageManager().hasSystemFeature(FEATURE_WATCH) ||
+                               mCtx.getPackageManager().hasSystemFeature(FEATURE_AUTOMOTIVE);
+        assume().withMessage("This device is not VSR compliant")
+                .that(featureCheck)
                 .isFalse();
     }
 
