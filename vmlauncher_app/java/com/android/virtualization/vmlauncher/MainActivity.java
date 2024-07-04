@@ -198,12 +198,18 @@ public class MainActivity extends Activity {
         return configBuilder.build();
     }
 
+    private static boolean isVolumeKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+                || keyCode == KeyEvent.KEYCODE_VOLUME_MUTE;
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (mVirtualMachine == null) {
             return false;
         }
-        return mVirtualMachine.sendKeyEvent(event);
+        return !isVolumeKey(keyCode) && mVirtualMachine.sendKeyEvent(event);
     }
 
     @Override
@@ -211,7 +217,7 @@ public class MainActivity extends Activity {
         if (mVirtualMachine == null) {
             return false;
         }
-        return mVirtualMachine.sendKeyEvent(event);
+        return !isVolumeKey(keyCode) && mVirtualMachine.sendKeyEvent(event);
     }
 
     @Override

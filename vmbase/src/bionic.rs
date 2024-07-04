@@ -111,7 +111,7 @@ extern "C" fn getentropy(buffer: *mut c_void, length: usize) -> c_int {
 ///
 /// # Note
 ///
-/// This Rust functions is missing the last argument of its C/C++ counterpart, a va_list.
+/// This Rust function is missing the last argument of its C/C++ counterpart, a va_list.
 #[no_mangle]
 unsafe extern "C" fn async_safe_fatal_va_list(prefix: *const c_char, format: *const c_char) {
     // SAFETY: The caller guaranteed that both strings were valid and NUL-terminated.
