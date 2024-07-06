@@ -56,7 +56,13 @@ adb push vm_config.json /data/local/tmp/vm_config.json
 
 ## Graphical VMs
 
-To run OSes with graphics support, follow the instruction below.
+To run OSes with graphics support, simply
+`packages/modules/Virtualization/tests/ferrochrome/ferrochrome.sh`. It prepares
+and launches the ChromiumOS, which is the only officially supported guest
+payload. We will be adding more OSes in the future.
+
+If you want to do so by yourself (e.g. boot with your build), follow the
+instruction below.
 
 ### Prepare a guest image
 

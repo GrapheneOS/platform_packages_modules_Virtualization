@@ -56,6 +56,7 @@ public class FerrochromeActivity extends Activity {
     private static final Path IMAGE_VERSION_INFO =
             Path.of(EXTERNAL_STORAGE_DIR + "ferrochrome_image_version");
     private static final Path VM_CONFIG_PATH = Path.of(EXTERNAL_STORAGE_DIR + "vm_config.json");
+    private static final int REQUEST_CODE_VMLAUNCHER = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,8 +110,15 @@ public class FerrochromeActivity extends Activity {
                     }
                     updateStatus("Done.");
                     updateStatus("Starting Ferrochrome...");
-                    runOnUiThread(() -> startActivity(intent));
+                    runOnUiThread(() -> startActivityForResult(intent, REQUEST_CODE_VMLAUNCHER));
                 });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CODE_VMLAUNCHER) {
+            finishAndRemoveTask();
+        }
     }
 
     private void updateStatus(String line) {

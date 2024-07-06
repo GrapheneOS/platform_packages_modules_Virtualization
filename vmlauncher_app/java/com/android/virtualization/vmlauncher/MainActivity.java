@@ -241,41 +241,34 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onPayloadStarted(VirtualMachine vm) {
-                        Log.e(TAG, "payload start");
+                        // This event is only from Microdroid-based VM. Custom VM shouldn't emit
+                        // this.
                     }
 
                     @Override
                     public void onPayloadReady(VirtualMachine vm) {
-                        // This check doesn't 100% prevent race condition or UI hang.
-                        // However, it's fine for demo.
-                        if (mService.isShutdown()) {
-                            return;
-                        }
-                        Log.d(TAG, "(Payload is ready. Testing VM service...)");
+                        // This event is only from Microdroid-based VM. Custom VM shouldn't emit
+                        // this.
                     }
 
                     @Override
                     public void onPayloadFinished(VirtualMachine vm, int exitCode) {
-                        // This check doesn't 100% prevent race condition, but is fine for demo.
-                        if (!mService.isShutdown()) {
-                            Log.d(
-                                    TAG,
-                                    String.format("(Payload finished. exit code: %d)", exitCode));
-                        }
+                        // This event is only from Microdroid-based VM. Custom VM shouldn't emit
+                        // this.
                     }
 
                     @Override
                     public void onError(VirtualMachine vm, int errorCode, String message) {
-                        Log.d(
-                                TAG,
-                                String.format(
-                                        "(Error occurred. code: %d, message: %s)",
-                                        errorCode, message));
+                        Log.e(TAG, "Error from VM. code: " + errorCode + " (" + message + ")");
+                        setResult(RESULT_CANCELED);
+                        finish();
                     }
 
                     @Override
                     public void onStopped(VirtualMachine vm, int reason) {
-                        Log.e(TAG, "vm stop");
+                        Log.d(TAG, "VM stopped. Reason: " + reason);
+                        setResult(RESULT_OK);
+                        finish();
                     }
                 };
 
@@ -419,6 +412,30 @@ public class MainActivity extends Activity {
         windowInsetsController.setSystemBarsBehavior(
                 WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsets.Type.systemBars());
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mVirtualMachine != null) {
+            try {
+                mVirtualMachine.suspend();
+            } catch (VirtualMachineException e) {
+                Log.e(TAG, "Failed to suspend VM" + e);
+            }
+        }
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        if (mVirtualMachine != null) {
+            try {
+                mVirtualMachine.resume();
+            } catch (VirtualMachineException e) {
+                Log.e(TAG, "Failed to resume VM" + e);
+            }
+        }
     }
 
     @Override

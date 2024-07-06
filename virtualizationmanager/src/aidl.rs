@@ -1244,6 +1244,22 @@ impl IVirtualMachine for VirtualMachine {
     fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
         self.instance.vm_context.global_context.setHostConsoleName(ptsname)
     }
+
+    fn suspend(&self) -> binder::Result<()> {
+        self.instance
+            .suspend()
+            .with_context(|| format!("Error suspending VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn resume(&self) -> binder::Result<()> {
+        self.instance
+            .resume()
+            .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
 }
 
 impl Drop for VirtualMachine {

@@ -1471,6 +1471,38 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
+    /** @hide */
+    public void suspend() throws VirtualMachineException {
+        synchronized (mLock) {
+            if (mVirtualMachine == null) {
+                throw new VirtualMachineException("VM is not running");
+            }
+            try {
+                mVirtualMachine.suspend();
+            } catch (RemoteException e) {
+                throw e.rethrowAsRuntimeException();
+            } catch (ServiceSpecificException e) {
+                throw new VirtualMachineException(e);
+            }
+        }
+    }
+
+    /** @hide */
+    public void resume() throws VirtualMachineException {
+        synchronized (mLock) {
+            if (mVirtualMachine == null) {
+                throw new VirtualMachineException("VM is not running");
+            }
+            try {
+                mVirtualMachine.resume();
+            } catch (RemoteException e) {
+                throw e.rethrowAsRuntimeException();
+            } catch (ServiceSpecificException e) {
+                throw new VirtualMachineException(e);
+            }
+        }
+    }
+
     /**
      * Stops this virtual machine, if it is running.
      *
