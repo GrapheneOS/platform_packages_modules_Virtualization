@@ -21,7 +21,7 @@ set -e
 
 FECR_GS_URL="https://storage.googleapis.com/chromiumos-image-archive/ferrochrome-public"
 FECR_DEFAULT_VERSION="R127-15916.0.0"
-FECR_DEVICE_DIR="/data/local/tmp/ferrochrome"
+FECR_DEVICE_DIR="/data/local/tmp"
 FECR_CONFIG_PATH="/data/local/tmp/vm_config.json"  # hardcoded at VmLauncherApp
 FECR_CONSOLE_LOG_PATH="/data/data/\${pkg_name}/files/console.log"
 FECR_BOOT_COMPLETED_LOG="Have fun and send patches!"

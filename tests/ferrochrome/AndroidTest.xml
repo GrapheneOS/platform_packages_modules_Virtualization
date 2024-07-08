@@ -32,9 +32,9 @@
          It's too large (6.5G+), so this may break further tests. -->
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="throw-if-cmd-fail" value="false" />
-        <option name="run-command" value="mkdir /data/local/tmp/ferrochrome" />
+        <option name="run-command" value="mkdir /data/local/tmp" />
         <option name="teardown-command" value="pkill vmlauncher" />
-        <option name="teardown-command" value="rm -rf /data/local/tmp/ferrochrome" />
+        <option name="teardown-command" value="rm /data/local/tmp/chromiumos_test_image.bin" />
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.binary.ExecutableHostTest" >

@@ -137,6 +137,7 @@ rust_test {
         "liblibc",
         "liblog_rust",
         "libhwtrust",
+        "libhypervisor_props",
         "libservice_vm_comm",
         "libservice_vm_fake_chain",
         "libservice_vm_manager",

@@ -208,6 +208,7 @@ pub enum InputDeviceOption {
     SingleTouch { file: File, width: u32, height: u32, name: Option<String> },
     Keyboard(File),
     Mouse(File),
+    Switches(File),
 }
 
 type VfioDevice = Strong<dyn IBoundDevice>;
@@ -1137,6 +1138,9 @@ fn run_vm(
                     height,
                     name.as_ref().map_or("".into(), |n| format!(",name={}", n))
                 ),
+                InputDeviceOption::Switches(file) => {
+                    format!("switches[path={}]", add_preserved_fd(&mut preserved_fds, file))
+                }
             });
         }
     }

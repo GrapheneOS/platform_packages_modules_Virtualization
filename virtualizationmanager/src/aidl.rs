@@ -465,9 +465,12 @@ impl VirtualizationService {
         let kernel = maybe_clone_file(&config.kernel)?;
         let initrd = maybe_clone_file(&config.initrd)?;
 
-        // In a protected VM, we require custom kernels to come from a trusted source (b/237054515).
         if config.protectedVm {
+            // In a protected VM, we require custom kernels to come from a trusted source
+            // (b/237054515).
             check_label_for_kernel_files(&kernel, &initrd).or_service_specific_exception(-1)?;
+            // Fail fast with a meaningful error message in case device doesn't support pVMs.
+            check_protected_vm_is_supported()?;
         }
 
         let zero_filler_path = temporary_directory.join("zero.img");
@@ -797,6 +800,9 @@ fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDevice
         )?),
         InputDevice::Mouse(mouse) => InputDeviceOption::Mouse(clone_file(
             mouse.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
+        InputDevice::Switches(switches) => InputDeviceOption::Switches(clone_file(
+            switches.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
         )?),
     })
 }
@@ -1500,6 +1506,17 @@ fn check_no_extra_apks(config: &VirtualMachineConfig) -> binder::Result<()> {
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
     }
     Ok(())
+}
+
+fn check_protected_vm_is_supported() -> binder::Result<()> {
+    let is_pvm_supported =
+        hypervisor_props::is_protected_vm_supported().or_service_specific_exception(-1)?;
+    if is_pvm_supported {
+        Ok(())
+    } else {
+        Err(anyhow!("pVM is not supported"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+    }
 }
 
 fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {

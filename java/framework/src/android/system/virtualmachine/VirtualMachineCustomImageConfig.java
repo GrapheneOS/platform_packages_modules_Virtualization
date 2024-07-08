@@ -36,6 +36,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_TOUCH = "touch";
     private static final String KEY_KEYBOARD = "keyboard";
     private static final String KEY_MOUSE = "mouse";
+    private static final String KEY_SWITCHES = "switches";
     private static final String KEY_NETWORK = "network";
     private static final String KEY_GPU = "gpu";
 
@@ -49,6 +50,7 @@ public class VirtualMachineCustomImageConfig {
     private final boolean touch;
     private final boolean keyboard;
     private final boolean mouse;
+    private final boolean switches;
     private final boolean network;
     @Nullable private final GpuConfig gpuConfig;
 
@@ -94,6 +96,10 @@ public class VirtualMachineCustomImageConfig {
         return mouse;
     }
 
+    public boolean useSwitches() {
+        return switches;
+    }
+
     public boolean useNetwork() {
         return network;
     }
@@ -110,6 +116,7 @@ public class VirtualMachineCustomImageConfig {
             boolean touch,
             boolean keyboard,
             boolean mouse,
+            boolean switches,
             boolean network,
             GpuConfig gpuConfig) {
         this.name = name;
@@ -122,6 +129,7 @@ public class VirtualMachineCustomImageConfig {
         this.touch = touch;
         this.keyboard = keyboard;
         this.mouse = mouse;
+        this.switches = switches;
         this.network = network;
         this.gpuConfig = gpuConfig;
     }
@@ -187,6 +195,7 @@ public class VirtualMachineCustomImageConfig {
         pb.putBoolean(KEY_TOUCH, touch);
         pb.putBoolean(KEY_KEYBOARD, keyboard);
         pb.putBoolean(KEY_MOUSE, mouse);
+        pb.putBoolean(KEY_SWITCHES, switches);
         pb.putBoolean(KEY_NETWORK, network);
         pb.putPersistableBundle(
                 KEY_GPU,
@@ -247,6 +256,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean touch;
         private boolean keyboard;
         private boolean mouse;
+        private boolean switches;
         private boolean network;
         private GpuConfig gpuConfig;
 
@@ -320,6 +330,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder useSwitches(boolean switches) {
+            this.switches = switches;
+            return this;
+        }
+
+        /** @hide */
         public Builder useNetwork(boolean network) {
             this.network = network;
             return this;
@@ -338,6 +354,7 @@ public class VirtualMachineCustomImageConfig {
                     touch,
                     keyboard,
                     mouse,
+                    switches,
                     network,
                     gpuConfig);
         }

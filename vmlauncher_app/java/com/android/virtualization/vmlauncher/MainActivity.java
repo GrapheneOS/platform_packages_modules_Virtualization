@@ -188,6 +188,7 @@ public class MainActivity extends Activity {
             customImageConfigBuilder.useTouch(true);
             customImageConfigBuilder.useKeyboard(true);
             customImageConfigBuilder.useMouse(true);
+            customImageConfigBuilder.useSwitches(true);
             customImageConfigBuilder.useNetwork(true);
 
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build());
@@ -419,6 +420,7 @@ public class MainActivity extends Activity {
         super.onStop();
         if (mVirtualMachine != null) {
             try {
+                mVirtualMachine.sendLidEvent(/* close */ true);
                 mVirtualMachine.suspend();
             } catch (VirtualMachineException e) {
                 Log.e(TAG, "Failed to suspend VM" + e);
@@ -432,6 +434,7 @@ public class MainActivity extends Activity {
         if (mVirtualMachine != null) {
             try {
                 mVirtualMachine.resume();
+                mVirtualMachine.sendLidEvent(/* close */ false);
             } catch (VirtualMachineException e) {
                 Log.e(TAG, "Failed to resume VM" + e);
             }

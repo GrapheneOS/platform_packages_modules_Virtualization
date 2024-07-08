@@ -172,6 +172,7 @@ public class VirtualMachine implements AutoCloseable {
     private ParcelFileDescriptor mTouchSock;
     private ParcelFileDescriptor mKeySock;
     private ParcelFileDescriptor mMouseSock;
+    private ParcelFileDescriptor mSwitchesSock;
 
     /**
      * Status of a virtual machine
@@ -921,6 +922,13 @@ public class VirtualMachine implements AutoCloseable {
                 m.pfd = pfds[1];
                 inputDevices.add(InputDevice.mouse(m));
             }
+            if (vmConfig.getCustomImageConfig().useSwitches()) {
+                ParcelFileDescriptor[] pfds = ParcelFileDescriptor.createSocketPair();
+                mSwitchesSock = pfds[0];
+                InputDevice.Switches s = new InputDevice.Switches();
+                s.pfd = pfds[1];
+                inputDevices.add(InputDevice.switches(s));
+            }
         }
         rawConfig.inputDevices = inputDevices.toArray(new InputDevice[0]);
 
@@ -1066,6 +1074,25 @@ public class VirtualMachine implements AutoCloseable {
                         new InputEvent(EV_ABS, ABS_X, x),
                         new InputEvent(EV_ABS, ABS_Y, y),
                         new InputEvent(EV_KEY, BTN_TOUCH, down ? 1 : 0),
+                        new InputEvent(EV_SYN, SYN_REPORT, 0)));
+    }
+
+    /** @hide */
+    public boolean sendLidEvent(boolean close) {
+        if (mSwitchesSock == null) {
+            Log.d(TAG, "mSwitcheSock == null");
+            return false;
+        }
+
+        // from include/uapi/linux/input-event-codes.h in the kernel.
+        short EV_SYN = 0x00;
+        short EV_SW = 0x05;
+        short SW_LID = 0x00;
+        short SYN_REPORT = 0x00;
+        return writeEventsToSock(
+                mSwitchesSock,
+                Arrays.asList(
+                        new InputEvent(EV_SW, SW_LID, close ? 1 : 0),
                         new InputEvent(EV_SYN, SYN_REPORT, 0)));
     }
 
