@@ -187,17 +187,25 @@ size. It is therefore not allowed to trim missing optional entries from the end
 of the array. The header uses the endianness of the virtual machine.
 
 The header format itself is agnostic of the internal format of the individual
-blos it refers to. In version 1.0, it describes two blobs:
+blos it refers to.
+
+##### Version 1.0 {#pvmfw-data-v1-0}
+
+In version 1.0, it describes two blobs:
 
 - entry 0 must point to a valid DICE chain handover (see below)
 - entry 1 may point to a [DTBO] to be applied to the pVM device tree. See
   [debug policy][debug_policy] for an example.
+
+##### Version 1.1 {#pvmfw-data-v1-1}
 
 In version 1.1, a third blob is added.
 
 - entry 2 may point to a [DTBO] that describes VM DA DTBO for
   [device assignment][device_assignment].
   pvmfw will provision assigned devices with the VM DTBO.
+
+#### Version 1.2 {#pvmfw-data-v1-2}
 
 In version 1.2, a fourth blob is added.
 

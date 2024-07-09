@@ -48,7 +48,7 @@ use vmbase::{
     configure_heap,
     fdt::SwiotlbInfo,
     hyp::{get_mem_sharer, get_mmio_guard},
-    layout::{self, crosvm},
+    layout::{self, crosvm, UART_PAGE_ADDR},
     main,
     memory::{MemoryTracker, PageTable, MEMORY, PAGE_SIZE, SIZE_128KB},
     power::reboot,
@@ -78,7 +78,7 @@ fn new_page_table() -> Result<PageTable> {
     page_table.map_data(&layout::stack_range(40 * PAGE_SIZE).into())?;
     page_table.map_code(&layout::text_range().into())?;
     page_table.map_rodata(&layout::rodata_range().into())?;
-    page_table.map_device(&layout::console_uart_range().into())?;
+    page_table.map_device(&layout::console_uart_page().into())?;
 
     Ok(page_table)
 }
@@ -205,7 +205,7 @@ fn try_unshare_all_memory() -> Result<()> {
 
     // No logging after unmapping UART.
     if let Some(mmio_guard) = get_mmio_guard() {
-        mmio_guard.unmap(vmbase::console::BASE_ADDRESS)?;
+        mmio_guard.unmap(UART_PAGE_ADDR)?;
     }
     // Unshares all memory and deactivates page table.
     drop(MEMORY.lock().take());

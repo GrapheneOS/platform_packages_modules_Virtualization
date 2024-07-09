@@ -22,7 +22,9 @@ following info:
 * DICE chain (also known as BCC Handover)
 * DTBO describing [debug policy](debug/README.md#debug-policy) (if available)
 * DTBO describing [assignable devices](device_assignment.md) (if available)
-* Reference DT carrying extra information that needs to be passed to the guest VM
+* Reference DT carrying extra information that needs to be passed to the guest VM, e.g.:
+    * Hashtree digest of the
+      [microdroid-vendor.img](microdroid_vendor_modules.md#changes-in-abl).
 
 See [Configuration Data](../pvmfw/README.md#configuration-data) for more detail.
 

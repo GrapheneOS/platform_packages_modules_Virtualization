@@ -76,10 +76,10 @@ You must provide handlers for each of the 8 types of exceptions which can occur 
 must use the C ABI, and have the expected names. For example, to log sync exceptions and reboot:
 
 ```rust
-use vmbase::{console::emergency_write_str, power::reboot};
+use vmbase::power::reboot;
 
 extern "C" fn sync_exception_current() {
-    emergency_write_str("sync_exception_current\n");
+    eprintln!("sync_exception_current");
 
     let mut esr: u64;
     unsafe {
@@ -93,14 +93,9 @@ extern "C" fn sync_exception_current() {
 
 The `println!` macro shouldn't be used in exception handlers, because it relies on a global instance
 of the UART driver which might be locked when the exception happens, which would result in deadlock.
-Instead you can use `emergency_write_str` and `eprintln!`, which will re-initialize the UART every
-time to ensure that it can be used. This should still be used with care, as it may interfere with
-whatever the rest of the program is doing with the UART.
-
-Note also that in some cases when the system is in a bad state resulting in the stack not working
-properly, `eprintln!` may hang. `emergency_write_str` may be more reliable as it seems to avoid
-any stack allocation. This is why the example above uses `emergency_write_str` first to ensure that
-at least something is logged, before trying `eprintln!` to print more details.
+Instead you can use `eprintln!`, which will re-initialize the UART every time to ensure that it can
+be used. This should still be used with care, as it may interfere with whatever the rest of the
+program is doing with the UART.
 
 See [example/src/exceptions.rs](examples/src/exceptions.rs) for a complete example.
 

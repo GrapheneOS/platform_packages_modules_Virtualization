@@ -15,14 +15,13 @@
 //! Helper functions and structs for exception handlers.
 
 use crate::{
-    console, eprintln,
+    eprintln,
+    layout::UART_PAGE_ADDR,
     memory::{page_4kb_of, MemoryTrackerError},
     read_sysreg,
 };
 use aarch64_paging::paging::VirtualAddress;
 use core::fmt;
-
-const UART_PAGE: usize = page_4kb_of(console::BASE_ADDRESS);
 
 /// Represents an error that can occur while handling an exception.
 #[derive(Debug)]
@@ -134,6 +133,6 @@ impl ArmException {
     }
 
     fn is_uart_exception(&self) -> bool {
-        self.esr == Esr::DataAbortSyncExternalAbort && page_4kb_of(self.far.0) == UART_PAGE
+        self.esr == Esr::DataAbortSyncExternalAbort && page_4kb_of(self.far.0) == UART_PAGE_ADDR
     }
 }

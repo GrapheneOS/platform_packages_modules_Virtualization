@@ -20,7 +20,11 @@ use anyhow::{anyhow, Result};
 use avb::{DescriptorError, SlotVerifyError};
 use avb_bindgen::{AvbFooter, AvbVBMetaImageHeader};
 use pvmfw_avb::{verify_payload, Capability, DebugLevel, PvmfwVerifyError, VerifiedBootData};
-use std::{fs, mem::size_of, ptr};
+use std::{
+    fs,
+    mem::{offset_of, size_of},
+    ptr,
+};
 use utils::*;
 
 const TEST_IMG_WITH_ONE_HASHDESC_PATH: &str = "test_image_with_one_hashdesc.img";
@@ -243,32 +247,20 @@ fn tampered_kernel_fails_verification() -> Result<()> {
 fn kernel_footer_with_vbmeta_offset_overwritten_fails_verification() -> Result<()> {
     // Arrange.
     let mut kernel = load_latest_signed_kernel()?;
-    let total_len = kernel.len() as u64;
-    let footer = extract_avb_footer(&kernel)?;
-    assert!(footer.vbmeta_offset < total_len);
-    // TODO: use core::mem::offset_of once stable.
-    let footer_addr = ptr::addr_of!(footer) as *const u8;
-    let vbmeta_offset_addr = ptr::addr_of!(footer.vbmeta_offset) as *const u8;
-    let vbmeta_offset_start =
-        // SAFETY:
-        // - both raw pointers `vbmeta_offset_addr` and `footer_addr` are not null;
-        // - they are both derived from the `footer` object;
-        // - the offset is known from the struct definition to be a small positive number of bytes.
-        unsafe { vbmeta_offset_addr.offset_from(footer_addr) };
-    let footer_start = kernel.len() - size_of::<AvbFooter>();
-    let vbmeta_offset_start = footer_start + usize::try_from(vbmeta_offset_start)?;
+    let footer_offset = get_avb_footer_offset(&kernel)?;
+    let vbmeta_offset_offset = footer_offset + offset_of!(AvbFooter, vbmeta_offset);
+    let vbmeta_offset_bytes = vbmeta_offset_offset..(vbmeta_offset_offset + size_of::<u64>());
 
-    let wrong_offsets = [total_len, u64::MAX];
-    for &wrong_offset in wrong_offsets.iter() {
+    let test_values = [kernel.len(), usize::MAX];
+    for value in test_values {
+        let value = u64::try_from(value).unwrap();
         // Act.
-        kernel[vbmeta_offset_start..(vbmeta_offset_start + size_of::<u64>())]
-            .copy_from_slice(&wrong_offset.to_be_bytes());
+        kernel[vbmeta_offset_bytes.clone()].copy_from_slice(&value.to_be_bytes());
+        // footer is unaligned; copy vbmeta_offset to local variable
+        let vbmeta_offset = extract_avb_footer(&kernel)?.vbmeta_offset;
+        assert_eq!(vbmeta_offset, value);
 
         // Assert.
-        let footer = extract_avb_footer(&kernel)?;
-        // footer is unaligned; copy vbmeta_offset to local variable
-        let vbmeta_offset = footer.vbmeta_offset;
-        assert_eq!(wrong_offset, vbmeta_offset);
         assert_payload_verification_with_initrd_fails(
             &kernel,
             &load_latest_initrd_normal()?,

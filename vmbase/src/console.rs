@@ -15,81 +15,103 @@
 //! Console driver for 8250 UART.
 
 use crate::uart::Uart;
-use core::fmt::{write, Arguments, Write};
+use core::{
+    cell::OnceCell,
+    fmt::{write, Arguments, Write},
+};
 use spin::mutex::SpinMutex;
 
-/// Base memory-mapped address of the primary UART device.
-pub const BASE_ADDRESS: usize = 0x3f8;
+// Arbitrary limit on the number of consoles that can be registered.
+//
+// Matches the UART count in crosvm.
+const MAX_CONSOLES: usize = 4;
 
-static CONSOLE: SpinMutex<Option<Uart>> = SpinMutex::new(None);
+static CONSOLES: [SpinMutex<Option<Uart>>; MAX_CONSOLES] =
+    [SpinMutex::new(None), SpinMutex::new(None), SpinMutex::new(None), SpinMutex::new(None)];
+static ADDRESSES: [SpinMutex<OnceCell<usize>>; MAX_CONSOLES] = [
+    SpinMutex::new(OnceCell::new()),
+    SpinMutex::new(OnceCell::new()),
+    SpinMutex::new(OnceCell::new()),
+    SpinMutex::new(OnceCell::new()),
+];
 
-/// Initialises a new instance of the UART driver and returns it.
-fn create() -> Uart {
-    // SAFETY: BASE_ADDRESS is the base of the MMIO region for a UART and is mapped as device
-    // memory.
-    unsafe { Uart::new(BASE_ADDRESS) }
-}
+/// Index of the console used by default for logging.
+pub const DEFAULT_CONSOLE_INDEX: usize = 0;
 
-/// Initialises the global instance of the UART driver. This must be called before using
-/// the `print!` and `println!` macros.
-pub fn init() {
-    let uart = create();
-    CONSOLE.lock().replace(uart);
-}
+/// Index of the console used by default for emergency logging.
+pub const DEFAULT_EMERGENCY_CONSOLE_INDEX: usize = DEFAULT_CONSOLE_INDEX;
 
-/// Writes a string to the console.
+/// Initialises the global instance(s) of the UART driver.
 ///
-/// Panics if [`init`] was not called first.
-pub(crate) fn write_str(s: &str) {
-    CONSOLE.lock().as_mut().unwrap().write_str(s).unwrap();
-}
-
-/// Writes a formatted string to the console.
+/// This must be called before using the `print!` and `println!` macros.
 ///
-/// Panics if [`init`] was not called first.
-pub(crate) fn write_args(format_args: Arguments) {
-    write(CONSOLE.lock().as_mut().unwrap(), format_args).unwrap();
+/// # Safety
+///
+/// This must be called once with the bases of UARTs, mapped as device memory and (if necessary)
+/// shared with the host as MMIO, to which no other references must be held.
+pub unsafe fn init(base_addresses: &[usize]) {
+    for (i, &base_address) in base_addresses.iter().enumerate() {
+        // Remember the valid address, for emergency console accesses.
+        ADDRESSES[i].lock().set(base_address).expect("console::init() called more than once");
+
+        // Initialize the console driver, for normal console accesses.
+        let mut console = CONSOLES[i].lock();
+        assert!(console.is_none(), "console::init() called more than once");
+        // SAFETY: base_address must be the base of a mapped UART.
+        console.replace(unsafe { Uart::new(base_address) });
+    }
 }
 
-/// Reinitializes the UART driver and writes a string to it.
+/// Writes a formatted string followed by a newline to the n-th console.
+///
+/// Panics if the n-th console was not initialized by calling [`init`] first.
+pub fn writeln(n: usize, format_args: Arguments) {
+    let mut guard = CONSOLES[n].lock();
+    let uart = guard.as_mut().unwrap();
+
+    write(uart, format_args).unwrap();
+    let _ = uart.write_str("\n");
+}
+
+/// Reinitializes the n-th UART driver and writes a formatted string followed by a newline to it.
 ///
 /// This is intended for use in situations where the UART may be in an unknown state or the global
 /// instance may be locked, such as in an exception handler or panic handler.
-pub fn emergency_write_str(s: &str) {
-    let mut uart = create();
-    let _ = uart.write_str(s);
-}
+pub fn ewriteln(n: usize, format_args: Arguments) {
+    let Some(cell) = ADDRESSES[n].try_lock() else { return };
+    let Some(addr) = cell.get() else { return };
 
-/// Reinitializes the UART driver and writes a formatted string to it.
-///
-/// This is intended for use in situations where the UART may be in an unknown state or the global
-/// instance may be locked, such as in an exception handler or panic handler.
-pub fn emergency_write_args(format_args: Arguments) {
-    let mut uart = create();
+    // SAFETY: addr contains the base of a mapped UART, passed in init().
+    let mut uart = unsafe { Uart::new(*addr) };
+
     let _ = write(&mut uart, format_args);
+    let _ = uart.write_str("\n");
 }
+
+/// Prints the given formatted string to the n-th console, followed by a newline.
+///
+/// Panics if the console has not yet been initialized. May hang if used in an exception context;
+/// use `eprintln!` instead.
+#[macro_export]
+macro_rules! console_writeln {
+    ($n:expr, $($arg:tt)*) => ({
+        $crate::console::writeln($n, format_args!($($arg)*))
+    })
+}
+
+pub(crate) use console_writeln;
 
 /// Prints the given formatted string to the console, followed by a newline.
 ///
 /// Panics if the console has not yet been initialized. May hang if used in an exception context;
 /// use `eprintln!` instead.
 macro_rules! println {
-    () => ($crate::console::write_str("\n"));
     ($($arg:tt)*) => ({
-        $crate::console::write_args(format_args!($($arg)*))};
-        $crate::console::write_str("\n");
-    );
+        $crate::console::console_writeln!($crate::console::DEFAULT_CONSOLE_INDEX, $($arg)*)
+    })
 }
 
 pub(crate) use println; // Make it available in this crate.
-
-/// Prints the given string to the console in an emergency, such as an exception handler.
-///
-/// Never panics.
-#[macro_export]
-macro_rules! eprint {
-    ($($arg:tt)*) => ($crate::console::emergency_write_args(format_args!($($arg)*)));
-}
 
 /// Prints the given string followed by a newline to the console in an emergency, such as an
 /// exception handler.
@@ -97,9 +119,7 @@ macro_rules! eprint {
 /// Never panics.
 #[macro_export]
 macro_rules! eprintln {
-    () => ($crate::console::emergency_write_str("\n"));
     ($($arg:tt)*) => ({
-        $crate::console::emergency_write_args(format_args!($($arg)*))};
-        $crate::console::emergency_write_str("\n");
-    );
+        $crate::console::ewriteln($crate::console::DEFAULT_EMERGENCY_CONSOLE_INDEX, format_args!($($arg)*))
+    })
 }

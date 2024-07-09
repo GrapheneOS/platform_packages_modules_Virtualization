@@ -15,6 +15,7 @@
  */
 package android.system.virtualizationservice;
 
+import android.system.virtualizationservice.AudioConfig;
 import android.system.virtualizationservice.CpuTopology;
 import android.system.virtualizationservice.DiskImage;
 import android.system.virtualizationservice.DisplayConfig;
@@ -97,4 +98,6 @@ parcelable VirtualMachineRawConfig {
     boolean boostUclamp;
 
     @nullable GpuConfig gpuConfig;
+
+    @nullable AudioConfig audioConfig;
 }

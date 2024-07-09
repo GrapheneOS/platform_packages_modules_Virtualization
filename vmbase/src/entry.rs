@@ -15,8 +15,10 @@
 //! Rust entry point.
 
 use crate::{
-    bionic, console, heap, hyp, logger,
-    memory::{page_4kb_of, SIZE_16KB, SIZE_4KB},
+    bionic, console, heap, hyp,
+    layout::{UART_ADDRESSES, UART_PAGE_ADDR},
+    logger,
+    memory::{SIZE_16KB, SIZE_4KB},
     power::{reboot, shutdown},
     rand,
 };
@@ -24,8 +26,6 @@ use core::mem::size_of;
 use static_assertions::const_assert_eq;
 
 fn try_console_init() -> Result<(), hyp::Error> {
-    console::init();
-
     if let Some(mmio_guard) = hyp::get_mmio_guard() {
         mmio_guard.enroll()?;
 
@@ -43,9 +43,12 @@ fn try_console_init() -> Result<(), hyp::Error> {
             granule == SIZE_4KB || granule == SIZE_16KB
         });
         // Validate the assumption above by ensuring that the UART is not moved to another page:
-        const_assert_eq!(page_4kb_of(console::BASE_ADDRESS), 0);
-        mmio_guard.map(console::BASE_ADDRESS)?;
+        const_assert_eq!(UART_PAGE_ADDR, 0);
+        mmio_guard.map(UART_PAGE_ADDR)?;
     }
+
+    // SAFETY: UART_PAGE is mapped at stage-1 (see entry.S) and was just MMIO-guarded.
+    unsafe { console::init(&UART_ADDRESSES) };
 
     Ok(())
 }

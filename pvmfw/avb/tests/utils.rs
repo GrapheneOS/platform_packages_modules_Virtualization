@@ -72,8 +72,14 @@ pub fn load_trusted_public_key() -> Result<Vec<u8>> {
     Ok(fs::read(PUBLIC_KEY_RSA4096_PATH)?)
 }
 
+pub fn get_avb_footer_offset(signed_kernel: &[u8]) -> Result<usize> {
+    let offset = signed_kernel.len().checked_sub(size_of::<AvbFooter>());
+
+    offset.ok_or_else(|| anyhow!("Kernel too small to be AVB-signed"))
+}
+
 pub fn extract_avb_footer(kernel: &[u8]) -> Result<AvbFooter> {
-    let footer_start = kernel.len() - size_of::<AvbFooter>();
+    let footer_start = get_avb_footer_offset(kernel)?;
     // SAFETY: The slice is the same size as the struct which only contains simple data types.
     let mut footer = unsafe {
         transmute::<[u8; size_of::<AvbFooter>()], AvbFooter>(kernel[footer_start..].try_into()?)

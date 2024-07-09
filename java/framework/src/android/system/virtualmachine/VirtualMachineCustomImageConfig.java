@@ -39,6 +39,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_SWITCHES = "switches";
     private static final String KEY_NETWORK = "network";
     private static final String KEY_GPU = "gpu";
+    private static final String KEY_AUDIO_CONFIG = "audio_config";
 
     @Nullable private final String name;
     @Nullable private final String kernelPath;
@@ -47,6 +48,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final String[] params;
     @Nullable private final Disk[] disks;
     @Nullable private final DisplayConfig displayConfig;
+    @Nullable private final AudioConfig audioConfig;
     private final boolean touch;
     private final boolean keyboard;
     private final boolean mouse;
@@ -118,7 +120,8 @@ public class VirtualMachineCustomImageConfig {
             boolean mouse,
             boolean switches,
             boolean network,
-            GpuConfig gpuConfig) {
+            GpuConfig gpuConfig,
+            AudioConfig audioConfig) {
         this.name = name;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
@@ -132,6 +135,7 @@ public class VirtualMachineCustomImageConfig {
         this.switches = switches;
         this.network = network;
         this.gpuConfig = gpuConfig;
+        this.audioConfig = audioConfig;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -164,6 +168,9 @@ public class VirtualMachineCustomImageConfig {
         builder.useMouse(customImageConfigBundle.getBoolean(KEY_MOUSE));
         builder.useNetwork(customImageConfigBundle.getBoolean(KEY_NETWORK));
         builder.setGpuConfig(GpuConfig.from(customImageConfigBundle.getPersistableBundle(KEY_GPU)));
+        PersistableBundle audioConfigPb =
+                customImageConfigBundle.getPersistableBundle(KEY_AUDIO_CONFIG);
+        builder.setAudioConfig(AudioConfig.from(audioConfigPb));
         return builder.build();
     }
 
@@ -200,7 +207,15 @@ public class VirtualMachineCustomImageConfig {
         pb.putPersistableBundle(
                 KEY_GPU,
                 Optional.ofNullable(gpuConfig).map(gc -> gc.toPersistableBundle()).orElse(null));
+        pb.putPersistableBundle(
+                KEY_AUDIO_CONFIG,
+                Optional.ofNullable(audioConfig).map(ac -> ac.toPersistableBundle()).orElse(null));
         return pb;
+    }
+
+    @Nullable
+    public AudioConfig getAudioConfig() {
+        return audioConfig;
     }
 
     @Nullable
@@ -252,6 +267,7 @@ public class VirtualMachineCustomImageConfig {
         private String bootloaderPath;
         private List<String> params = new ArrayList<>();
         private List<Disk> disks = new ArrayList<>();
+        private AudioConfig audioConfig;
         private DisplayConfig displayConfig;
         private boolean touch;
         private boolean keyboard;
@@ -342,6 +358,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder setAudioConfig(AudioConfig audioConfig) {
+            this.audioConfig = audioConfig;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -356,7 +378,83 @@ public class VirtualMachineCustomImageConfig {
                     mouse,
                     switches,
                     network,
-                    gpuConfig);
+                    gpuConfig,
+                    audioConfig);
+        }
+    }
+
+    /** @hide */
+    public static final class AudioConfig {
+        private static final String KEY_USE_MICROPHONE = "use_microphone";
+        private static final String KEY_USE_SPEAKER = "use_speaker";
+        private final boolean useMicrophone;
+        private final boolean useSpeaker;
+
+        private AudioConfig(boolean useMicrophone, boolean useSpeaker) {
+            this.useMicrophone = useMicrophone;
+            this.useSpeaker = useSpeaker;
+        }
+
+        /** @hide */
+        public boolean useMicrophone() {
+            return useMicrophone;
+        }
+
+        /** @hide */
+        public boolean useSpeaker() {
+            return useSpeaker;
+        }
+
+        android.system.virtualizationservice.AudioConfig toParcelable() {
+            android.system.virtualizationservice.AudioConfig parcelable =
+                    new android.system.virtualizationservice.AudioConfig();
+            parcelable.useSpeaker = this.useSpeaker;
+            parcelable.useMicrophone = this.useMicrophone;
+
+            return parcelable;
+        }
+
+        private static AudioConfig from(PersistableBundle pb) {
+            if (pb == null) {
+                return null;
+            }
+            Builder builder = new Builder();
+            builder.setUseMicrophone(pb.getBoolean(KEY_USE_MICROPHONE));
+            builder.setUseSpeaker(pb.getBoolean(KEY_USE_SPEAKER));
+            return builder.build();
+        }
+
+        private PersistableBundle toPersistableBundle() {
+            PersistableBundle pb = new PersistableBundle();
+            pb.putBoolean(KEY_USE_MICROPHONE, this.useMicrophone);
+            pb.putBoolean(KEY_USE_SPEAKER, this.useSpeaker);
+            return pb;
+        }
+
+        /** @hide */
+        public static class Builder {
+            private boolean useMicrophone = false;
+            private boolean useSpeaker = false;
+
+            /** @hide */
+            public Builder() {}
+
+            /** @hide */
+            public Builder setUseMicrophone(boolean useMicrophone) {
+                this.useMicrophone = useMicrophone;
+                return this;
+            }
+
+            /** @hide */
+            public Builder setUseSpeaker(boolean useSpeaker) {
+                this.useSpeaker = useSpeaker;
+                return this;
+            }
+
+            /** @hide */
+            public AudioConfig build() {
+                return new AudioConfig(useMicrophone, useSpeaker);
+            }
         }
     }
 

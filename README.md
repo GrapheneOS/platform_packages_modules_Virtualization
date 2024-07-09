@@ -32,4 +32,5 @@ How-Tos:
 * [Debugging](docs/debug)
 * [Using custom VM](docs/custom_vm.md)
 * [Device assignment](docs/device_assignment.md)
+* [Microdroid vendor modules](docs/microdroid_vendor_modules.md)
 * [Huge Pages](docs/hugepages.md)

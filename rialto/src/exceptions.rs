@@ -15,7 +15,6 @@
 //! Exception handlers.
 
 use vmbase::{
-    console::emergency_write_str,
     eprintln,
     exceptions::{ArmException, Esr, HandleExceptionError},
     logger,
@@ -49,45 +48,45 @@ extern "C" fn sync_exception_current(elr: u64, _spsr: u64) {
 
 #[no_mangle]
 extern "C" fn irq_current() {
-    emergency_write_str("irq_current\n");
+    eprintln!("irq_current");
     reboot();
 }
 
 #[no_mangle]
 extern "C" fn fiq_current() {
-    emergency_write_str("fiq_current\n");
+    eprintln!("fiq_current");
     reboot();
 }
 
 #[no_mangle]
 extern "C" fn serr_current() {
-    emergency_write_str("serr_current\n");
+    eprintln!("serr_current");
     print_esr();
     reboot();
 }
 
 #[no_mangle]
 extern "C" fn sync_lower() {
-    emergency_write_str("sync_lower\n");
+    eprintln!("sync_lower");
     print_esr();
     reboot();
 }
 
 #[no_mangle]
 extern "C" fn irq_lower() {
-    emergency_write_str("irq_lower\n");
+    eprintln!("irq_lower");
     reboot();
 }
 
 #[no_mangle]
 extern "C" fn fiq_lower() {
-    emergency_write_str("fiq_lower\n");
+    eprintln!("fiq_lower");
     reboot();
 }
 
 #[no_mangle]
 extern "C" fn serr_lower() {
-    emergency_write_str("serr_lower\n");
+    eprintln!("serr_lower");
     print_esr();
     reboot();
 }

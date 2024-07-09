@@ -30,9 +30,9 @@ use log::warn;
 use log::LevelFilter;
 use vmbase::util::RangeExt as _;
 use vmbase::{
-    configure_heap, console,
+    configure_heap, console_writeln,
     hyp::{get_mem_sharer, get_mmio_guard},
-    layout::{self, crosvm},
+    layout::{self, crosvm, UART_PAGE_ADDR},
     main,
     memory::{min_dcache_line_size, MemoryTracker, MEMORY, SIZE_128KB, SIZE_4KB},
     power::reboot,
@@ -59,6 +59,21 @@ pub enum RebootReason {
     SecretDerivationError,
 }
 
+impl RebootReason {
+    pub fn as_avf_reboot_string(&self) -> &'static str {
+        match self {
+            Self::InvalidBcc => "PVM_FIRMWARE_INVALID_BCC",
+            Self::InvalidConfig => "PVM_FIRMWARE_INVALID_CONFIG_DATA",
+            Self::InternalError => "PVM_FIRMWARE_INTERNAL_ERROR",
+            Self::InvalidFdt => "PVM_FIRMWARE_INVALID_FDT",
+            Self::InvalidPayload => "PVM_FIRMWARE_INVALID_PAYLOAD",
+            Self::InvalidRamdisk => "PVM_FIRMWARE_INVALID_RAMDISK",
+            Self::PayloadVerificationError => "PVM_FIRMWARE_PAYLOAD_VERIFICATION_FAILED",
+            Self::SecretDerivationError => "PVM_FIRMWARE_SECRET_DERIVATION_FAILED",
+        }
+    }
+}
+
 main!(start);
 configure_heap!(SIZE_128KB);
 
@@ -66,11 +81,15 @@ configure_heap!(SIZE_128KB);
 pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64) {
     // Limitations in this function:
     // - can't access non-pvmfw memory (only statically-mapped memory)
-    // - can't access MMIO (therefore, no logging)
+    // - can't access MMIO (except the console, already configured by vmbase)
 
     match main_wrapper(fdt_address as usize, payload_start as usize, payload_size as usize) {
         Ok((entry, bcc)) => jump_to_payload(fdt_address, entry.try_into().unwrap(), bcc),
-        Err(_) => reboot(), // TODO(b/220071963) propagate the reason back to the host.
+        Err(e) => {
+            const REBOOT_REASON_CONSOLE: usize = 1;
+            console_writeln!(REBOOT_REASON_CONSOLE, "{}", e.as_avf_reboot_string());
+            reboot()
+        }
     }
 
     // if we reach this point and return, vmbase::entry::rust_entry() will call power::shutdown().
@@ -256,7 +275,7 @@ fn main_wrapper(
     // Call unshare_all_memory here (instead of relying on the dtor) while UART is still mapped.
     MEMORY.lock().as_mut().unwrap().unshare_all_memory();
     if let Some(mmio_guard) = get_mmio_guard() {
-        mmio_guard.unmap(console::BASE_ADDRESS).map_err(|e| {
+        mmio_guard.unmap(UART_PAGE_ADDR).map_err(|e| {
             error!("Failed to unshare the UART: {e}");
             RebootReason::InternalError
         })?;
