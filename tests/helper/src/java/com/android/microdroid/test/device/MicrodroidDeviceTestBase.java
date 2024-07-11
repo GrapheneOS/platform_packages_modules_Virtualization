@@ -18,6 +18,7 @@ package com.android.microdroid.test.device;
 import static android.content.pm.PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
 import static android.content.pm.PackageManager.FEATURE_AUTOMOTIVE;
+import static android.content.pm.PackageManager.FEATURE_LEANBACK;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.TruthJUnit.assume;
@@ -226,7 +227,8 @@ public abstract class MicrodroidDeviceTestBase {
 
     protected void assumeVsrCompliant() {
         boolean featureCheck = mCtx.getPackageManager().hasSystemFeature(FEATURE_WATCH) ||
-                               mCtx.getPackageManager().hasSystemFeature(FEATURE_AUTOMOTIVE);
+                               mCtx.getPackageManager().hasSystemFeature(FEATURE_AUTOMOTIVE) ||
+                               mCtx.getPackageManager().hasSystemFeature(FEATURE_LEANBACK);
         assume().withMessage("This device is not VSR compliant")
                 .that(featureCheck)
                 .isFalse();

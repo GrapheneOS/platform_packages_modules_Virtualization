@@ -17,10 +17,14 @@
 package com.android.virtualization.vmlauncher;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.os.ParcelFileDescriptor.AutoCloseInputStream;
+import static android.os.ParcelFileDescriptor.AutoCloseOutputStream;
 import static android.system.virtualmachine.VirtualMachineConfig.CPU_TOPOLOGY_MATCH_HOST;
 
 import android.Manifest.permission;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.crosvm.ICrosvmAndroidDisplayService;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
@@ -65,6 +69,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -79,6 +84,7 @@ public class MainActivity extends Activity {
     private ExecutorService mExecutorService;
     private VirtualMachine mVirtualMachine;
     private ParcelFileDescriptor mCursorStream;
+    private ClipboardManager mClipboardManager;
     private static final int RECORD_AUDIO_PERMISSION_REQUEST_CODE = 101;
 
     private VirtualMachineConfig createVirtualMachineConfig(String jsonPath) {
@@ -459,6 +465,117 @@ public class MainActivity extends Activity {
         Log.d(TAG, "destroyed");
     }
 
+    private static final int CLIPBOARD_SHARING_SERVER_PORT = 3580;
+    private static final byte READ_CLIPBOARD_FROM_VM = 0;
+    private static final byte WRITE_CLIPBOARD_TYPE_EMPTY = 1;
+    private static final byte WRITE_CLIPBOARD_TYPE_TEXT_PLAIN = 2;
+
+    private ClipboardManager getClipboardManager() {
+        if (mClipboardManager == null) {
+            mClipboardManager = getSystemService(ClipboardManager.class);
+        }
+        return mClipboardManager;
+    }
+
+    // Construct header for the clipboard data.
+    // Byte 0: Data type
+    // Byte 1-3: Padding alignment & Reserved for other use cases in the future
+    // Byte 4-7: Data size of the payload
+    private ByteBuffer constructClipboardHeader(byte type, int dataSize) {
+        ByteBuffer header = ByteBuffer.allocate(8);
+        header.clear();
+        header.order(ByteOrder.LITTLE_ENDIAN);
+        header.put(0, type);
+        header.putInt(4, dataSize);
+        return header;
+    }
+
+    private ParcelFileDescriptor connectClipboardSharingServer() {
+        ParcelFileDescriptor pfd;
+        try {
+            // TODO(349702313): Consider when clipboard sharing server is started to run in VM.
+            pfd = mVirtualMachine.connectVsock(CLIPBOARD_SHARING_SERVER_PORT);
+        } catch (VirtualMachineException e) {
+            Log.d(TAG, "cannot connect to the clipboard sharing server", e);
+            return null;
+        }
+        return pfd;
+    }
+
+    private boolean writeClipboardToVm() {
+        ClipboardManager clipboardManager = getClipboardManager();
+
+        if (!clipboardManager.hasPrimaryClip()) {
+            Log.d(TAG, "host device has no clipboard data");
+            return true;
+        }
+        ClipData clip = clipboardManager.getPrimaryClip();
+        String text = clip.getItemAt(0).getText().toString();
+        ByteBuffer header =
+                constructClipboardHeader(
+                        WRITE_CLIPBOARD_TYPE_TEXT_PLAIN, text.getBytes().length + 1);
+
+        ParcelFileDescriptor pfd = connectClipboardSharingServer();
+        if (pfd == null) {
+            Log.d(TAG, "file descriptor of ClipboardSharingServer is null");
+            return false;
+        }
+        OutputStream stream = new AutoCloseOutputStream(pfd);
+        try {
+            stream.write(header.array());
+            stream.write(text.getBytes());
+            stream.flush();
+            Log.d(TAG, "successfully wrote clipboard data to the VM");
+            return true;
+        } catch (IOException e) {
+            Log.e(TAG, "failed to write clipboard data to the VM", e);
+            return false;
+        }
+    }
+
+    private boolean readClipboardFromVm() {
+        ByteBuffer request = constructClipboardHeader(READ_CLIPBOARD_FROM_VM, 0);
+
+        ParcelFileDescriptor pfd = connectClipboardSharingServer();
+        if (pfd == null) {
+            Log.d(TAG, "file descriptor of ClipboardSharingServer is null");
+            return false;
+        }
+        OutputStream output = new AutoCloseOutputStream(pfd);
+        try {
+            output.write(request.array());
+            output.flush();
+            Log.d(TAG, "successfully send request to the VM for reading clipboard");
+        } catch (IOException e) {
+            Log.e(TAG, "failed to send request to the VM for read clipboard", e);
+            return false;
+        }
+
+        InputStream input = new AutoCloseInputStream(pfd);
+        try {
+            ByteBuffer header = ByteBuffer.wrap(input.readNBytes(8));
+            header.order(ByteOrder.LITTLE_ENDIAN);
+            switch (header.get(0)) {
+                case WRITE_CLIPBOARD_TYPE_EMPTY:
+                    Log.d(TAG, "clipboard data in VM is empty");
+                    return true;
+                case WRITE_CLIPBOARD_TYPE_TEXT_PLAIN:
+                    int dataSize = header.getInt(4);
+                    String text_data =
+                            new String(input.readNBytes(dataSize), StandardCharsets.UTF_8);
+                    getClipboardManager().setPrimaryClip(ClipData.newPlainText(null, text_data));
+                    Log.d(TAG, "successfully received clipboard data from VM");
+                    return true;
+                default:
+                    Log.e(TAG, "unknown clipboard response type");
+                    return false;
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "failed to receive clipboard content from the VM", e);
+            return false;
+        }
+    }
+
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
@@ -466,6 +583,15 @@ public class MainActivity extends Activity {
             SurfaceView surfaceView = findViewById(R.id.surface_view);
             Log.d(TAG, "requestPointerCapture()");
             surfaceView.requestPointerCapture();
+        }
+        if (mVirtualMachine != null) {
+            if (hasFocus) {
+                Log.d(TAG, "writing clipboard of host device into VM");
+                writeClipboardToVm();
+            } else {
+                Log.d(TAG, "reading clipboard of VM");
+                readClipboardFromVm();
+            }
         }
     }
 
