@@ -131,6 +131,26 @@ public class MainActivity extends Activity {
                                     VirtualMachineCustomImageConfig.Disk.RODisk(
                                             item.getString("image")));
                         }
+                    } else if (item.has("partitions")) {
+                        boolean diskWritable = item.optBoolean("writable", false);
+                        VirtualMachineCustomImageConfig.Disk disk =
+                                diskWritable
+                                        ? VirtualMachineCustomImageConfig.Disk.RWDisk(null)
+                                        : VirtualMachineCustomImageConfig.Disk.RODisk(null);
+                        JSONArray partitions = item.getJSONArray("partitions");
+                        for (int j = 0; j < partitions.length(); j++) {
+                            JSONObject partition = partitions.getJSONObject(j);
+                            String label = partition.getString("label");
+                            String path = partition.getString("path");
+                            boolean partitionWritable =
+                                    diskWritable && partition.optBoolean("writable", false);
+                            String guid = partition.optString("guid");
+                            VirtualMachineCustomImageConfig.Partition p =
+                                    new VirtualMachineCustomImageConfig.Partition(
+                                            label, path, partitionWritable, guid);
+                            disk.addPartition(p);
+                        }
+                        customImageConfigBuilder.addDisk(disk);
                     }
                 }
             }
@@ -303,7 +323,7 @@ public class MainActivity extends Activity {
             } catch (VirtualMachineException e) {
                 vmm.delete(VM_NAME);
                 mVirtualMachine = vmm.create(VM_NAME, config);
-                Log.e(TAG, "error" + e);
+                Log.e(TAG, "error for setting VM config", e);
             }
 
             Log.d(TAG, "vm start");
@@ -367,7 +387,9 @@ public class MainActivity extends Activity {
                             @Override
                             public void surfaceChanged(
                                     SurfaceHolder holder, int format, int width, int height) {
-                                Log.d(TAG, "width: " + width + ", height: " + height);
+                                Log.d(
+                                        TAG,
+                                        "surface changed, width: " + width + ", height: " + height);
                             }
 
                             @Override
@@ -393,8 +415,13 @@ public class MainActivity extends Activity {
                                     runWithDisplayService(
                                             (service) -> service.setCursorStream(pfds[1]));
                                 } catch (Exception e) {
-                                    Log.d("TAG", "failed to run cursor stream handler", e);
+                                    Log.d(TAG, "failed to run cursor stream handler", e);
                                 }
+                                Log.d(
+                                        TAG,
+                                        "ICrosvmAndroidDisplayService.setSurface("
+                                                + holder.getSurface()
+                                                + ")");
                                 runWithDisplayService(
                                         (service) ->
                                                 service.setSurface(
@@ -404,7 +431,12 @@ public class MainActivity extends Activity {
                             @Override
                             public void surfaceChanged(
                                     SurfaceHolder holder, int format, int width, int height) {
-                                Log.d(TAG, "width: " + width + ", height: " + height);
+                                Log.d(
+                                        TAG,
+                                        "cursor surface changed, width: "
+                                                + width
+                                                + ", height: "
+                                                + height);
                             }
 
                             @Override
@@ -412,13 +444,6 @@ public class MainActivity extends Activity {
                                 Log.d(TAG, "ICrosvmAndroidDisplayService.removeSurface()");
                                 runWithDisplayService(
                                         (service) -> service.removeSurface(true /* forCursor */));
-                                if (mCursorStream != null) {
-                                    try {
-                                        mCursorStream.close();
-                                    } catch (IOException e) {
-                                        Log.d(TAG, "failed to close fd", e);
-                                    }
-                                }
                             }
                         });
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -481,13 +506,13 @@ public class MainActivity extends Activity {
     // Byte 0: Data type
     // Byte 1-3: Padding alignment & Reserved for other use cases in the future
     // Byte 4-7: Data size of the payload
-    private ByteBuffer constructClipboardHeader(byte type, int dataSize) {
+    private byte[] constructClipboardHeader(byte type, int dataSize) {
         ByteBuffer header = ByteBuffer.allocate(8);
         header.clear();
         header.order(ByteOrder.LITTLE_ENDIAN);
         header.put(0, type);
         header.putInt(4, dataSize);
-        return header;
+        return header.array();
     }
 
     private ParcelFileDescriptor connectClipboardSharingServer() {
@@ -504,25 +529,22 @@ public class MainActivity extends Activity {
 
     private boolean writeClipboardToVm() {
         ClipboardManager clipboardManager = getClipboardManager();
-
         if (!clipboardManager.hasPrimaryClip()) {
             Log.d(TAG, "host device has no clipboard data");
             return true;
         }
         ClipData clip = clipboardManager.getPrimaryClip();
         String text = clip.getItemAt(0).getText().toString();
-        ByteBuffer header =
+        byte[] header =
                 constructClipboardHeader(
                         WRITE_CLIPBOARD_TYPE_TEXT_PLAIN, text.getBytes().length + 1);
-
         ParcelFileDescriptor pfd = connectClipboardSharingServer();
         if (pfd == null) {
             Log.d(TAG, "file descriptor of ClipboardSharingServer is null");
             return false;
         }
-        OutputStream stream = new AutoCloseOutputStream(pfd);
-        try {
-            stream.write(header.array());
+        try (OutputStream stream = new AutoCloseOutputStream(pfd)) {
+            stream.write(header);
             stream.write(text.getBytes());
             stream.flush();
             Log.d(TAG, "successfully wrote clipboard data to the VM");
@@ -534,16 +556,14 @@ public class MainActivity extends Activity {
     }
 
     private boolean readClipboardFromVm() {
-        ByteBuffer request = constructClipboardHeader(READ_CLIPBOARD_FROM_VM, 0);
-
+        byte[] request = constructClipboardHeader(READ_CLIPBOARD_FROM_VM, 0);
         ParcelFileDescriptor pfd = connectClipboardSharingServer();
         if (pfd == null) {
             Log.d(TAG, "file descriptor of ClipboardSharingServer is null");
             return false;
         }
-        OutputStream output = new AutoCloseOutputStream(pfd);
-        try {
-            output.write(request.array());
+        try (OutputStream output = new AutoCloseOutputStream(pfd)) {
+            output.write(request);
             output.flush();
             Log.d(TAG, "successfully send request to the VM for reading clipboard");
         } catch (IOException e) {
@@ -551,8 +571,7 @@ public class MainActivity extends Activity {
             return false;
         }
 
-        InputStream input = new AutoCloseInputStream(pfd);
-        try {
+        try (InputStream input = new AutoCloseInputStream(pfd)) {
             ByteBuffer header = ByteBuffer.wrap(input.readNBytes(8));
             header.order(ByteOrder.LITTLE_ENDIAN);
             switch (header.get(0)) {
@@ -611,9 +630,9 @@ public class MainActivity extends Activity {
                     ICrosvmAndroidDisplayService.Stub.asInterface(vs.waitDisplayService());
             assert service != null;
             func.apply(service);
-            Log.d(TAG, "job done");
+            Log.d(TAG, "display service runs successfully");
         } catch (Exception e) {
-            Log.d(TAG, "error", e);
+            Log.d(TAG, "error on running display service", e);
         }
     }
 
@@ -628,7 +647,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void run() {
-            Log.d(TAG, "CursorHandler");
+            Log.d(TAG, "running CursorHandler");
             try {
                 ByteBuffer byteBuffer = ByteBuffer.allocate(8 /* (x: u32, y: u32) */);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -649,7 +668,7 @@ public class MainActivity extends Activity {
                             });
                 }
             } catch (IOException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "failed to run CursorHandler", e);
             }
         }
     }

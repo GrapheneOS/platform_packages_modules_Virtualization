@@ -687,12 +687,28 @@ public final class VirtualMachineConfig {
         for (int i = 0; i < config.disks.length; i++) {
             config.disks[i] = new DiskImage();
             config.disks[i].writable = customImageConfig.getDisks()[i].isWritable();
+            String diskImagePath = customImageConfig.getDisks()[i].getImagePath();
+            if (diskImagePath != null) {
+                config.disks[i].image =
+                        ParcelFileDescriptor.open(
+                                new File(diskImagePath),
+                                config.disks[i].writable ? MODE_READ_WRITE : MODE_READ_ONLY);
+            }
 
-            config.disks[i].image =
-                    ParcelFileDescriptor.open(
-                            new File(customImageConfig.getDisks()[i].getImagePath()),
-                            config.disks[i].writable ? MODE_READ_WRITE : MODE_READ_ONLY);
-            config.disks[i].partitions = new Partition[0];
+            List<Partition> partitions = new ArrayList<>();
+            for (VirtualMachineCustomImageConfig.Partition p :
+                    customImageConfig.getDisks()[i].getPartitions()) {
+                Partition part = new Partition();
+                part.label = p.name;
+                part.image =
+                        ParcelFileDescriptor.open(
+                                new File(p.imagePath),
+                                p.writable ? MODE_READ_WRITE : MODE_READ_ONLY);
+                part.writable = p.writable;
+                part.guid = TextUtils.isEmpty(p.guid) ? null : p.guid;
+                partitions.add(part);
+            }
+            config.disks[i].partitions = partitions.toArray(new Partition[0]);
         }
 
         config.displayConfig =

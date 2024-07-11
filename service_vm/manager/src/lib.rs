@@ -220,6 +220,7 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
         label: "vm-instance".to_owned(),
         image: Some(instance_img),
         writable: true,
+        guid: None,
     }];
     let rialto = File::open(RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
     let instance_id_file = Path::new(VIRT_DATA_DIR).join(INSTANCE_ID_FILENAME);

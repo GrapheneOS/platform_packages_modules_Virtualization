@@ -23,6 +23,8 @@ use std::fs::{File, OpenOptions};
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 
+use uuid::Uuid;
+
 /// Constructs a composite disk image for the given list of partitions, and opens it ready to use.
 ///
 /// Returns the composite disk image file, and a list of files whose file descriptors must be passed
@@ -105,6 +107,7 @@ fn convert_partitions(partitions: &[Partition]) -> Result<(Vec<PartitionInfo>, V
                 partition_type: ImagePartitionType::LinuxFilesystem,
                 writable: partition.writable,
                 size,
+                part_guid: partition.guid.as_deref().map(Uuid::parse_str).transpose()?,
             })
         })
         .collect::<Result<_, Error>>()?;

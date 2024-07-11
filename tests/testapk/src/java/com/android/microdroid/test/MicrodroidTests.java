@@ -1308,6 +1308,36 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    @VsrTest(requirements = {"VSR-7.1-001.005"})
+    public void protectedVmHasValidDiceChain() throws Exception {
+        // This test validates two things regarding the pVM DICE chain:
+        // 1. The DICE chain is well-formed that all the entries conform to the DICE spec.
+        // 2. Each entry in the DICE chain is signed by the previous entry's subject public key.
+        assumeSupportedDevice();
+        assumeProtectedVM();
+        assumeVsrCompliant();
+        assumeTrue("Vendor API must be at least 202404", getVendorApiLevel() >= 202404);
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("bcc_vm_for_vsr", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (service, results) -> {
+                            results.mBcc = service.getBcc();
+                        });
+        testResults.assertNoException();
+        byte[] bccBytes = testResults.mBcc;
+        assertThat(bccBytes).isNotNull();
+        assertThat(HwTrustJni.validateDiceChain(bccBytes)).isTrue();
+    }
+
+    @Test
     @CddTest(requirements = {
             "9.17/C-1-1",
             "9.17/C-1-2"

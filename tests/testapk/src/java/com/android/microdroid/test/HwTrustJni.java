@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.system.virtualizationservice;
 
-/** A partition to be assembled into a composite image. */
-parcelable Partition {
-    /** A label for the partition. */
-    @utf8InCpp String label;
+package com.android.microdroid.test;
 
-    /** The backing file descriptor of the partition image. */
-    ParcelFileDescriptor image;
+class HwTrustJni {
+    static {
+        System.loadLibrary("hwtrust_jni");
+    }
 
-    /** Whether the partition should be writable by the VM. */
-    boolean writable;
-
-    /** GUID of the partition. If not set, automatically created */
-    @nullable String guid;
+    /**
+     * Validates a DICE chain.
+     *
+     * @param diceChain The dice chain to validate.
+     * @return true if the dice chain is valid, false otherwise.
+     */
+    public static native boolean validateDiceChain(byte[] diceChain);
 }

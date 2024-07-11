@@ -35,7 +35,6 @@ virt_apex {
 soong_config_string_variable {
     name: "avf_microdroid_guest_gki_version",
     values: [
-        "android14_61_pkvm_experimental",
         "android15_66",
     ],
 }
@@ -168,14 +167,6 @@ avf_flag_aware_apex_defaults {
     ],
     soong_config_variables: {
         avf_microdroid_guest_gki_version: {
-            android14_61_pkvm_experimental: {
-                prebuilts: [
-                    "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable",
-                    "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal",
-                    "microdroid_gki-android14-6.1-pkvm_experimental_kernel",
-                    "microdroid_gki-android14-6.1-pkvm_experimental.json",
-                ],
-            },
             android15_66: {
                 prebuilts: [
                     "microdroid_gki-android15-6.6_initrd_debuggable",

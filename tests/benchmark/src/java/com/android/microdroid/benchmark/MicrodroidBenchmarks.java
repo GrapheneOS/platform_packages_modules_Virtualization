@@ -27,12 +27,14 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
+import android.app.Application;
 import android.app.Instrumentation;
+import android.content.ComponentCallbacks2;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.ParcelFileDescriptor.AutoCloseInputStream;
 import android.os.ParcelFileDescriptor.AutoCloseOutputStream;
-import android.os.Process;
 import android.os.RemoteException;
 import android.system.Os;
 import android.system.virtualmachine.VirtualMachine;
@@ -619,7 +621,8 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(256 * ONE_MEBI)
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config);
-        MemoryReclaimListener listener = new MemoryReclaimListener(this::executeCommand);
+        MemoryReclaimListener listener =
+                new MemoryReclaimListener(this::executeCommand, getContext());
         BenchmarkVmListener.create(listener).runToFinish(TAG, vm);
         assertWithMessage("VM failed to start").that(listener.mPreCrosvm).isNotNull();
         assertWithMessage("Post trim stats not available").that(listener.mPostCrosvm).isNotNull();
@@ -654,11 +657,13 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     }
 
     private static class MemoryReclaimListener implements BenchmarkVmListener.InnerListener {
-        MemoryReclaimListener(Function<String, String> shellExecutor) {
+        MemoryReclaimListener(Function<String, String> shellExecutor, Context applicationCtx) {
             mShellExecutor = shellExecutor;
+            mApplication = (Application) applicationCtx;
         }
 
         public final Function<String, String> mShellExecutor;
+        private final Application mApplication;
 
         public CrosvmStats mPreCrosvm;
         public CrosvmStats mPostCrosvm;
@@ -674,7 +679,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
             service.allocAnonMemory(256);
             mPreCrosvm = new CrosvmStats(vmPid, mShellExecutor);
             // Send a memory trim hint to cause memory reclaim.
-            mShellExecutor.apply("am send-trim-memory " + Process.myPid() + " RUNNING_CRITICAL");
+            mApplication.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL);
             // Give time for the memory reclaim to do its work.
             try {
                 Thread.sleep(isCuttlefish() ? 10000 : 5000);

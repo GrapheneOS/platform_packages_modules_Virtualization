@@ -32,6 +32,7 @@ use std::fs::{File, OpenOptions};
 use std::io::BufReader;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 /// Configuration for a particular VM to be started.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -176,6 +177,9 @@ pub struct Partition {
     /// Whether the partition should be writable.
     #[serde(default)]
     pub writable: bool,
+    /// GUID of this partition.
+    #[serde(default)]
+    pub guid: Option<Uuid>,
 }
 
 impl Partition {
@@ -184,6 +188,7 @@ impl Partition {
             image: Some(open_parcel_file(&self.path, self.writable)?),
             writable: self.writable,
             label: self.label.to_owned(),
+            guid: None,
         })
     }
 }

@@ -579,74 +579,6 @@ prebuilt_etc {
 }
 
 ///////////////////////////////////////
-// GKI-android14-6.1-pkvm_experimental modules
-///////////////////////////////////////
-prebuilt_etc {
-    name: "microdroid_gki-android14-6.1-pkvm_experimental.json",
-    src: "microdroid_gki-android14-6.1-pkvm_experimental.json",
-}
-
-avb_add_hash_footer {
-    name: "microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed",
-    defaults: ["microdroid_kernel_signed_defaults"],
-    filename: "microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed",
-    arch: {
-        arm64: {
-            src: ":microdroid_gki_kernel_prebuilts-6.1-pkvm_experimental-arm64",
-        },
-        x86_64: {
-            src: ":microdroid_gki_kernel_prebuilts-6.1-pkvm_experimental-x86_64",
-        },
-    },
-    include_descriptors_from_images: [
-        ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_hashdesc",
-        ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_debug_hashdesc",
-    ],
-}
-
-// HACK: use cc_genrule for arch-specific properties
-cc_genrule {
-    name: "microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed-lz4",
-    out: ["microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed-lz4"],
-    srcs: [":empty_file"],
-    arch: {
-        arm64: {
-            srcs: [":microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed"],
-            exclude_srcs: [":empty_file"],
-        },
-    },
-    tools: ["lz4"],
-    cmd: "$(location lz4) -9 $(in) $(out)",
-}
-
-prebuilt_etc {
-    name: "microdroid_gki-android14-6.1-pkvm_experimental_kernel",
-    filename: "microdroid_gki-android14-6.1-pkvm_experimental_kernel",
-    src: ":empty_file",
-    relative_install_path: "fs",
-    arch: {
-        arm64: {
-            src: ":microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed-lz4",
-        },
-        x86_64: {
-            src: ":microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed",
-        },
-    },
-}
-
-avb_gen_vbmeta_image {
-    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal_hashdesc",
-    defaults: ["microdroid_initrd_normal_defaults"],
-    src: ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_normal",
-}
-
-avb_gen_vbmeta_image {
-    name: "microdroid_gki-android14-6.1-pkvm_experimental_initrd_debug_hashdesc",
-    defaults: ["microdroid_initrd_debug_defaults"],
-    src: ":microdroid_gki-android14-6.1-pkvm_experimental_initrd_debuggable",
-}
-
-///////////////////////////////////////
 // GKI-android15-6.6
 ///////////////////////////////////////
 prebuilt_etc {
@@ -726,13 +658,11 @@ cc_genrule {
     arch: {
         arm64: {
             srcs: [
-                ":microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed",
                 ":microdroid_gki-android15-6.6_kernel_signed",
             ],
         },
         x86_64: {
             srcs: [
-                ":microdroid_gki-android14-6.1-pkvm_experimental_kernel_signed",
                 ":microdroid_gki-android15-6.6_kernel_signed",
             ],
         },

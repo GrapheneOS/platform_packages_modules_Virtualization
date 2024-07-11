@@ -289,6 +289,7 @@ fn make_payload_disk(
         label: "payload-metadata".to_owned(),
         image: Some(metadata_file),
         writable: false,
+        guid: None,
     }];
 
     for (i, apex_info) in apex_infos.iter().enumerate() {
@@ -297,17 +298,20 @@ fn make_payload_disk(
             label: format!("microdroid-apex-{}", i),
             image: Some(apex_file),
             writable: false,
+            guid: None,
         });
     }
     partitions.push(Partition {
         label: "microdroid-apk".to_owned(),
         image: Some(ParcelFileDescriptor::new(apk_file)),
         writable: false,
+        guid: None,
     });
     partitions.push(Partition {
         label: "microdroid-apk-idsig".to_owned(),
         image: Some(ParcelFileDescriptor::new(idsig_file)),
         writable: false,
+        guid: None,
     });
 
     // we've already checked that extra_apks and extraIdsigs are in the same size.
@@ -319,6 +323,7 @@ fn make_payload_disk(
             label: format!("extra-apk-{i}"),
             image: Some(ParcelFileDescriptor::new(extra_apk_file)),
             writable: false,
+            guid: None,
         });
 
         partitions.push(Partition {
@@ -330,6 +335,7 @@ fn make_payload_disk(
                     .with_context(|| format!("Failed to clone the extra idsig #{i}"))?,
             )),
             writable: false,
+            guid: None,
         });
     }
 
@@ -416,6 +422,7 @@ pub fn add_microdroid_vendor_image(vendor_image: File, vm_config: &mut VirtualMa
             label: "microdroid-vendor".to_owned(),
             image: Some(ParcelFileDescriptor::new(vendor_image)),
             writable: false,
+            guid: None,
         }],
     })
 }
@@ -439,6 +446,7 @@ pub fn add_microdroid_system_images(
         label: "vm-instance".to_owned(),
         image: Some(ParcelFileDescriptor::new(instance_file)),
         writable: true,
+        guid: None,
     }];
 
     if let Some(file) = storage_image {
@@ -446,6 +454,7 @@ pub fn add_microdroid_system_images(
             label: "encryptedstore".to_owned(),
             image: Some(ParcelFileDescriptor::new(file)),
             writable: true,
+            guid: None,
         });
     }
 
