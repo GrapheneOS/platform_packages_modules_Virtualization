@@ -219,6 +219,7 @@ public class MainActivity extends Activity {
             customImageConfigBuilder.useKeyboard(true);
             customImageConfigBuilder.useMouse(true);
             customImageConfigBuilder.useSwitches(true);
+            customImageConfigBuilder.useTrackpad(true);
             customImageConfigBuilder.useNetwork(true);
 
             AudioConfig.Builder audioConfigBuilder = new AudioConfig.Builder();
@@ -358,6 +359,10 @@ public class MainActivity extends Activity {
                 (v, event) -> {
                     if (mVirtualMachine == null) {
                         return false;
+                    }
+                    int eventSource = event.getSource();
+                    if ((eventSource & InputDevice.SOURCE_CLASS_POSITION) != 0) {
+                        return mVirtualMachine.sendTrackpadEvent(event);
                     }
                     return mVirtualMachine.sendMouseEvent(event);
                 });
@@ -562,12 +567,17 @@ public class MainActivity extends Activity {
             Log.d(TAG, "file descriptor of ClipboardSharingServer is null");
             return false;
         }
-        try (OutputStream output = new AutoCloseOutputStream(pfd)) {
+        try (OutputStream output = new AutoCloseOutputStream(pfd.dup())) {
             output.write(request);
             output.flush();
             Log.d(TAG, "successfully send request to the VM for reading clipboard");
         } catch (IOException e) {
             Log.e(TAG, "failed to send request to the VM for read clipboard", e);
+            try {
+                pfd.close();
+            } catch (IOException err) {
+                Log.e(TAG, "failed to close file descriptor", err);
+            }
             return false;
         }
 

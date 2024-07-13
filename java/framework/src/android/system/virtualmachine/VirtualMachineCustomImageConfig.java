@@ -44,6 +44,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_NETWORK = "network";
     private static final String KEY_GPU = "gpu";
     private static final String KEY_AUDIO_CONFIG = "audio_config";
+    private static final String KEY_TRACKPAD = "trackpad";
 
     @Nullable private final String name;
     @Nullable private final String kernelPath;
@@ -59,6 +60,7 @@ public class VirtualMachineCustomImageConfig {
     private final boolean switches;
     private final boolean network;
     @Nullable private final GpuConfig gpuConfig;
+    private final boolean trackpad;
 
     @Nullable
     public Disk[] getDisks() {
@@ -106,6 +108,10 @@ public class VirtualMachineCustomImageConfig {
         return switches;
     }
 
+    public boolean useTrackpad() {
+        return mouse;
+    }
+
     public boolean useNetwork() {
         return network;
     }
@@ -125,7 +131,8 @@ public class VirtualMachineCustomImageConfig {
             boolean switches,
             boolean network,
             GpuConfig gpuConfig,
-            AudioConfig audioConfig) {
+            AudioConfig audioConfig,
+            boolean trackpad) {
         this.name = name;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
@@ -140,6 +147,7 @@ public class VirtualMachineCustomImageConfig {
         this.network = network;
         this.gpuConfig = gpuConfig;
         this.audioConfig = audioConfig;
+        this.trackpad = trackpad;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -190,6 +198,7 @@ public class VirtualMachineCustomImageConfig {
         PersistableBundle audioConfigPb =
                 customImageConfigBundle.getPersistableBundle(KEY_AUDIO_CONFIG);
         builder.setAudioConfig(AudioConfig.from(audioConfigPb));
+        builder.useTrackpad(customImageConfigBundle.getBoolean(KEY_TRACKPAD));
         return builder.build();
     }
 
@@ -248,6 +257,7 @@ public class VirtualMachineCustomImageConfig {
         pb.putPersistableBundle(
                 KEY_AUDIO_CONFIG,
                 Optional.ofNullable(audioConfig).map(ac -> ac.toPersistableBundle()).orElse(null));
+        pb.putBoolean(KEY_TRACKPAD, trackpad);
         return pb;
     }
 
@@ -341,6 +351,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean switches;
         private boolean network;
         private GpuConfig gpuConfig;
+        private boolean trackpad;
 
         /** @hide */
         public Builder() {}
@@ -418,6 +429,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder useTrackpad(boolean trackpad) {
+            this.trackpad = trackpad;
+            return this;
+        }
+
+        /** @hide */
         public Builder useNetwork(boolean network) {
             this.network = network;
             return this;
@@ -445,7 +462,8 @@ public class VirtualMachineCustomImageConfig {
                     switches,
                     network,
                     gpuConfig,
-                    audioConfig);
+                    audioConfig,
+                    trackpad);
         }
     }
 

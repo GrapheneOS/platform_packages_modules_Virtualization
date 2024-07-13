@@ -808,6 +808,12 @@ fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDevice
         InputDevice::Switches(switches) => InputDeviceOption::Switches(clone_file(
             switches.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
         )?),
+        InputDevice::Trackpad(trackpad) => InputDeviceOption::MultiTouchTrackpad {
+            file: clone_file(trackpad.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
+            height: u32::try_from(trackpad.height)?,
+            width: u32::try_from(trackpad.width)?,
+            name: if !trackpad.name.is_empty() { Some(trackpad.name.clone()) } else { None },
+        },
     })
 }
 /// Given the configuration for a disk image, assembles the `DiskFile` to pass to crosvm.

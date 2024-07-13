@@ -222,6 +222,7 @@ pub enum InputDeviceOption {
     Keyboard(File),
     Mouse(File),
     Switches(File),
+    MultiTouchTrackpad { file: File, width: u32, height: u32, name: Option<String> },
 }
 
 type VfioDevice = Strong<dyn IBoundDevice>;
@@ -1154,6 +1155,13 @@ fn run_vm(
                 InputDeviceOption::Switches(file) => {
                     format!("switches[path={}]", add_preserved_fd(&mut preserved_fds, file))
                 }
+                InputDeviceOption::MultiTouchTrackpad { file, width, height, name } => format!(
+                    "multi-touch-trackpad[path={},width={},height={}{}]",
+                    add_preserved_fd(&mut preserved_fds, file),
+                    width,
+                    height,
+                    name.as_ref().map_or("".into(), |n| format!(",name={}", n))
+                ),
             });
         }
     }
