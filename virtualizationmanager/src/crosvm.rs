@@ -1059,9 +1059,11 @@ fn run_vm(
     }
 
     for disk in &config.disks {
-        command
-            .arg(if disk.writable { "--rwdisk" } else { "--disk" })
-            .arg(add_preserved_fd(&mut preserved_fds, &disk.image));
+        command.arg("--block").arg(format!(
+            "path={},ro={}",
+            add_preserved_fd(&mut preserved_fds, &disk.image),
+            !disk.writable,
+        ));
     }
 
     if let Some(kernel) = &config.kernel {
