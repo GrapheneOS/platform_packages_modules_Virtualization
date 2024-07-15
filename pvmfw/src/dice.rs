@@ -26,10 +26,11 @@ use diced_open_dice::{
 use pvmfw_avb::{Capability, DebugLevel, Digest, VerifiedBootData};
 use zerocopy::AsBytes;
 
+// pVM firmware (like other VM components) is expected to populate some fields in DICE
+// Configuration Descriptor. See dice_for_avf_guest.cddl
 const COMPONENT_NAME_KEY: i64 = -70002;
 const SECURITY_VERSION_KEY: i64 = -70005;
 const RKP_VM_MARKER_KEY: i64 = -70006;
-// TODO(b/291245237): Document this key along with others used in ConfigDescriptor in AVF based VM.
 const INSTANCE_HASH_KEY: i64 = -71003;
 
 #[derive(Debug)]

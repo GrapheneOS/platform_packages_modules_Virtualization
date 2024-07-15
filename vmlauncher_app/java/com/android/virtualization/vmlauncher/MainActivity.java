@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
     private static final boolean DEBUG = true;
     private ExecutorService mExecutorService;
     private VirtualMachine mVirtualMachine;
-    private ParcelFileDescriptor mCursorStream;
+    private CursorHandler mCursorHandler;
     private ClipboardManager mClipboardManager;
     private static final int RECORD_AUDIO_PERMISSION_REQUEST_CODE = 101;
 
@@ -414,9 +414,11 @@ public class MainActivity extends Activity {
                                 try {
                                     ParcelFileDescriptor[] pfds =
                                             ParcelFileDescriptor.createSocketPair();
-                                    mExecutorService.execute(
-                                            new CursorHandler(cursorSurfaceView, pfds[0]));
-                                    mCursorStream = pfds[0];
+                                    if (mCursorHandler != null) {
+                                        mCursorHandler.interrupt();
+                                    }
+                                    mCursorHandler = new CursorHandler(cursorSurfaceView, pfds[0]);
+                                    mCursorHandler.start();
                                     runWithDisplayService(
                                             (service) -> service.setCursorStream(pfds[1]));
                                 } catch (Exception e) {
@@ -646,7 +648,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    static class CursorHandler implements Runnable {
+    static class CursorHandler extends Thread {
         private final SurfaceView mSurfaceView;
         private final ParcelFileDescriptor mStream;
 
@@ -662,6 +664,10 @@ public class MainActivity extends Activity {
                 ByteBuffer byteBuffer = ByteBuffer.allocate(8 /* (x: u32, y: u32) */);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                 while (true) {
+                    if (Thread.interrupted()) {
+                        Log.d(TAG, "interrupted: exiting CursorHandler");
+                        return;
+                    }
                     byteBuffer.clear();
                     int bytes =
                             IoBridge.read(
@@ -669,6 +675,10 @@ public class MainActivity extends Activity {
                                     byteBuffer.array(),
                                     0,
                                     byteBuffer.array().length);
+                    if (bytes == -1) {
+                        Log.e(TAG, "cannot read from cursor stream, stop the handler");
+                        return;
+                    }
                     float x = (float) (byteBuffer.getInt() & 0xFFFFFFFF);
                     float y = (float) (byteBuffer.getInt() & 0xFFFFFFFF);
                     mSurfaceView.post(

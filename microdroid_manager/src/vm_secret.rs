@@ -171,7 +171,7 @@ impl VmSecret {
 //    rollback protection of pvmfw. Such components may chose to not put SECURITY_VERSION in the
 //    corresponding DiceChainEntry.
 //  4. For each Subcomponent on the last DiceChainEntry (which corresponds to VM payload, See
-//     microdroid_manager/src/vm_config.cddl):
+//     dice_for_avf_guest.cddl):
 //       - GreaterOrEqual on SECURITY_VERSION (Required)
 //       - ExactMatch on AUTHORITY_HASH (Required).
 //  5. ExactMatch on Instance Hash (Required) - This uniquely identifies one VM instance from

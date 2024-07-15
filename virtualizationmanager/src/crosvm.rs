@@ -44,7 +44,6 @@ use std::time::{Duration, SystemTime};
 use std::thread::{self, JoinHandle};
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    MemoryTrimLevel::MemoryTrimLevel,
     VirtualMachineAppConfig::DebugLevel::DebugLevel,
     AudioConfig::AudioConfig as AudioConfigParcelable,
     DisplayConfig::DisplayConfig as DisplayConfigParcelable,
@@ -627,42 +626,35 @@ impl VmInstance {
 
     /// Responds to memory-trimming notifications by inflating the virtio
     /// balloon to reclaim guest memory.
-    pub fn trim_memory(&self, level: MemoryTrimLevel) -> Result<(), Error> {
+    pub fn get_memory_balloon(&self) -> Result<u64, Error> {
         let request = VmRequest::BalloonCommand(BalloonControlCommand::Stats {});
-        match vm_control::client::handle_request(&request, &self.crosvm_control_socket_path) {
-            Ok(VmResponse::BalloonStats { stats, balloon_actual: _ }) => {
-                if let Some(total_memory) = stats.total_memory {
-                    // Reclaim up to 50% of total memory assuming worst case
-                    // most memory is anonymous and must be swapped to zram
-                    // with an approximate 2:1 compression ratio.
-                    let pct = match level {
-                        MemoryTrimLevel::TRIM_MEMORY_RUNNING_CRITICAL => 50,
-                        MemoryTrimLevel::TRIM_MEMORY_RUNNING_LOW => 30,
-                        MemoryTrimLevel::TRIM_MEMORY_RUNNING_MODERATE => 10,
-                        _ => bail!("Invalid memory trim level {:?}", level),
-                    };
-                    let command = BalloonControlCommand::Adjust {
-                        num_bytes: total_memory * pct / 100,
-                        wait_for_success: false,
-                    };
-                    if let Err(e) = vm_control::client::handle_request(
-                        &VmRequest::BalloonCommand(command),
-                        &self.crosvm_control_socket_path,
-                    ) {
-                        bail!("Error sending balloon adjustment: {:?}", e);
+        let result =
+            match vm_control::client::handle_request(&request, &self.crosvm_control_socket_path) {
+                Ok(VmResponse::BalloonStats { stats: _, balloon_actual }) => balloon_actual,
+                Ok(VmResponse::Err(e)) => {
+                    // ENOTSUP is returned when the balloon protocol is not initialized. This
+                    // can occur for numerous reasons: Guest is still booting, guest doesn't
+                    // support ballooning, host doesn't support ballooning. We don't log or
+                    // raise an error in this case: trim is just a hint and we can ignore it.
+                    if e.errno() != libc::ENOTSUP {
+                        bail!("Errno return when requesting balloon stats: {}", e.errno())
                     }
+                    0
                 }
-            }
-            Ok(VmResponse::Err(e)) => {
-                // ENOTSUP is returned when the balloon protocol is not initialized. This
-                // can occur for numerous reasons: Guest is still booting, guest doesn't
-                // support ballooning, host doesn't support ballooning. We don't log or
-                // raise an error in this case: trim is just a hint and we can ignore it.
-                if e.errno() != libc::ENOTSUP {
-                    bail!("Errno return when requesting balloon stats: {}", e.errno())
-                }
-            }
-            e => bail!("Error requesting balloon stats: {:?}", e),
+                e => bail!("Error requesting balloon stats: {:?}", e),
+            };
+        Ok(result)
+    }
+
+    /// Responds to memory-trimming notifications by inflating the virtio
+    /// balloon to reclaim guest memory.
+    pub fn set_memory_balloon(&self, num_bytes: u64) -> Result<(), Error> {
+        let command = BalloonControlCommand::Adjust { num_bytes, wait_for_success: false };
+        if let Err(e) = vm_control::client::handle_request(
+            &VmRequest::BalloonCommand(command),
+            &self.crosvm_control_socket_path,
+        ) {
+            bail!("Error sending balloon adjustment: {:?}", e);
         }
         Ok(())
     }

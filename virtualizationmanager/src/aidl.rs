@@ -36,7 +36,6 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     IVirtualMachine::{BnVirtualMachine, IVirtualMachine},
     IVirtualMachineCallback::IVirtualMachineCallback,
     IVirtualizationService::IVirtualizationService,
-    MemoryTrimLevel::MemoryTrimLevel,
     Partition::Partition,
     PartitionType::PartitionType,
     VirtualMachineAppConfig::{DebugLevel::DebugLevel, Payload::Payload, VirtualMachineAppConfig},
@@ -1234,10 +1233,20 @@ impl IVirtualMachine for VirtualMachine {
             .or_service_specific_exception(-1)
     }
 
-    fn onTrimMemory(&self, level: MemoryTrimLevel) -> binder::Result<()> {
+    fn getMemoryBalloon(&self) -> binder::Result<i64> {
+        let balloon = self
+            .instance
+            .get_memory_balloon()
+            .with_context(|| format!("Error getting balloon for VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        Ok(balloon.try_into().unwrap())
+    }
+
+    fn setMemoryBalloon(&self, num_bytes: i64) -> binder::Result<()> {
         self.instance
-            .trim_memory(level)
-            .with_context(|| format!("Error trimming VM with CID {}", self.instance.cid))
+            .set_memory_balloon(num_bytes.try_into().unwrap())
+            .with_context(|| format!("Error setting balloon for VM with CID {}", self.instance.cid))
             .with_log()
             .or_service_specific_exception(-1)
     }

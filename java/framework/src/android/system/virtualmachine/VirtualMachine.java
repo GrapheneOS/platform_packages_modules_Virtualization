@@ -71,7 +71,6 @@ import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.IVirtualizationService;
 import android.system.virtualizationservice.InputDevice;
-import android.system.virtualizationservice.MemoryTrimLevel;
 import android.system.virtualizationservice.PartitionType;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
 import android.system.virtualizationservice.VirtualMachineRawConfig;
@@ -270,34 +269,35 @@ public class VirtualMachine implements AutoCloseable {
 
         @Override
         public void onTrimMemory(int level) {
-            @MemoryTrimLevel int vmTrimLevel;
+            int percent;
 
             switch (level) {
                 case ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL:
-                    vmTrimLevel = MemoryTrimLevel.TRIM_MEMORY_RUNNING_CRITICAL;
+                    percent = 50;
                     break;
                 case ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW:
-                    vmTrimLevel = MemoryTrimLevel.TRIM_MEMORY_RUNNING_LOW;
+                    percent = 30;
                     break;
                 case ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE:
-                    vmTrimLevel = MemoryTrimLevel.TRIM_MEMORY_RUNNING_MODERATE;
+                    percent = 10;
                     break;
                 case ComponentCallbacks2.TRIM_MEMORY_BACKGROUND:
                 case ComponentCallbacks2.TRIM_MEMORY_MODERATE:
                 case ComponentCallbacks2.TRIM_MEMORY_COMPLETE:
                     /* Release as much memory as we can. The app is on the LMKD LRU kill list. */
-                    vmTrimLevel = MemoryTrimLevel.TRIM_MEMORY_RUNNING_CRITICAL;
+                    percent = 50;
                     break;
                 default:
                     /* Treat unrecognised messages as generic low-memory warnings. */
-                    vmTrimLevel = MemoryTrimLevel.TRIM_MEMORY_RUNNING_LOW;
+                    percent = 30;
                     break;
             }
 
             synchronized (mLock) {
                 try {
                     if (mVirtualMachine != null) {
-                        mVirtualMachine.onTrimMemory(vmTrimLevel);
+                        long bytes = mConfig.getMemoryBytes();
+                        mVirtualMachine.setMemoryBalloon(bytes * percent / 100);
                     }
                 } catch (Exception e) {
                     /* Caller doesn't want our exceptions. Log them instead. */

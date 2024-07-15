@@ -59,8 +59,9 @@ A highly simplified view - Sealing policy built by Microdroid has the following 
   1. GreaterOrEqual on SECURITY_VERSION: The secrets will be accessible if version of any
      image is greater or equal to the set version.
 - For each Subcomponent on the last DiceChainEntry (which corresponds to VM payload, See
-  [vm_config.cddl][vm_config_cddl]): - GreaterOrEqual on SECURITY_VERSION - ExactMatch on
-  AUTHORITY_HASH.
+  [dice_for_avf_guest.cddl][dice_for_avf_guest_cddl]):
+    - GreaterOrEqual on SECURITY_VERSION
+    - ExactMatch on AUTHORITY_HASH.
 
 The sealing policy is updated each time the secret is retrieved. This ensures the secrets are only
 released if the security version of the images are non-decreasing.
@@ -96,4 +97,4 @@ running i.e, Updatable VMs are not supported.
 [open_dice_spec_cdi]: https://pigweed.googlesource.com/open-dice/+/HEAD/docs/specification.md#cdi-values
 [secretkeeperhal]: https://cs.android.com/android/platform/superproject/main/+/main:hardware/interfaces/security/secretkeeper/aidl/android/hardware/security/secretkeeper/ISecretkeeper.aidl
 [sk_project]: https://android.googlesource.com/platform/system/secretkeeper/
-[vm_config_cddl]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/microdroid_manager/src/vm_config.cddl
+[dice_for_avf_guest_cddl]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/dice_for_avf_guest.cddl
