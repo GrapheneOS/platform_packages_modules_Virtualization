@@ -77,6 +77,7 @@ import android.system.virtualizationservice.VirtualMachineRawConfig;
 import android.system.virtualizationservice.VirtualMachineState;
 import android.util.JsonReader;
 import android.util.Log;
+import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
@@ -112,8 +113,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.zip.ZipFile;
@@ -173,6 +177,15 @@ public class VirtualMachine implements AutoCloseable {
     private ParcelFileDescriptor mMouseSock;
     private ParcelFileDescriptor mSwitchesSock;
     private ParcelFileDescriptor mTrackpadSock;
+
+    private enum InputEventType {
+        TOUCH,
+        MOUSE,
+        TRACKPAD
+    }
+
+    private BlockingQueue<Pair<InputEventType, MotionEvent>> mInputEventQueue =
+            new LinkedBlockingQueue<>();
 
     /**
      * Status of a virtual machine
@@ -310,7 +323,7 @@ public class VirtualMachine implements AutoCloseable {
     /** Running instance of virtmgr that hosts VirtualizationService for this VM. */
     @NonNull private final VirtualizationService mVirtualizationService;
 
-    @NonNull private final MemoryManagementCallbacks mMemoryManagementCallbacks;
+    private final MemoryManagementCallbacks mMemoryManagementCallbacks;
 
     @NonNull private final Context mContext;
 
@@ -332,6 +345,8 @@ public class VirtualMachine implements AutoCloseable {
     private final boolean mConnectVmConsole;
 
     private final Executor mConsoleExecutor = Executors.newSingleThreadExecutor();
+
+    private ExecutorService mInputEventExecutor;
 
     /** The configuration that is currently associated with this VM. */
     @GuardedBy("mLock")
@@ -441,7 +456,6 @@ public class VirtualMachine implements AutoCloseable {
         mInstanceFilePath = new File(thisVmDir, INSTANCE_IMAGE_FILE);
         mIdsigFilePath = new File(thisVmDir, IDSIG_FILE);
         mExtraApks = setupExtraApks(context, config, thisVmDir);
-        mMemoryManagementCallbacks = new MemoryManagementCallbacks();
         mContext = context;
         mEncryptedStoreFilePath =
                 (config.isEncryptedStorageEnabled())
@@ -451,6 +465,14 @@ public class VirtualMachine implements AutoCloseable {
         mVmOutputCaptured = config.isVmOutputCaptured();
         mVmConsoleInputSupported = config.isVmConsoleInputSupported();
         mConnectVmConsole = config.isConnectVmConsole();
+
+        VirtualMachineCustomImageConfig customImageConfig;
+        customImageConfig = config.getCustomImageConfig();
+        if (customImageConfig == null || customImageConfig.useAutoMemoryBalloon()) {
+            mMemoryManagementCallbacks = new MemoryManagementCallbacks();
+        } else {
+            mMemoryManagementCallbacks = null;
+        }
     }
 
     /**
@@ -820,7 +842,9 @@ public class VirtualMachine implements AutoCloseable {
      */
     @GuardedBy("mLock")
     private void dropVm() {
-        mContext.unregisterComponentCallbacks(mMemoryManagementCallbacks);
+        if (mMemoryManagementCallbacks != null) {
+            mContext.unregisterComponentCallbacks(mMemoryManagementCallbacks);
+        }
         mVirtualMachine = null;
     }
 
@@ -898,16 +922,15 @@ public class VirtualMachine implements AutoCloseable {
 
         // Handle input devices here
         List<InputDevice> inputDevices = new ArrayList<>();
-        if (vmConfig.getCustomImageConfig() != null
-                && rawConfig.displayConfig != null) {
+        if (vmConfig.getCustomImageConfig() != null && rawConfig.displayConfig != null) {
             if (vmConfig.getCustomImageConfig().useTouch()) {
                 ParcelFileDescriptor[] pfds = ParcelFileDescriptor.createSocketPair();
                 mTouchSock = pfds[0];
-                InputDevice.SingleTouch t = new InputDevice.SingleTouch();
+                InputDevice.MultiTouch t = new InputDevice.MultiTouch();
                 t.width = rawConfig.displayConfig.width;
                 t.height = rawConfig.displayConfig.height;
                 t.pfd = pfds[1];
-                inputDevices.add(InputDevice.singleTouch(t));
+                inputDevices.add(InputDevice.multiTouch(t));
             }
             if (vmConfig.getCustomImageConfig().useKeyboard()) {
                 ParcelFileDescriptor[] pfds = ParcelFileDescriptor.createSocketPair();
@@ -974,6 +997,17 @@ public class VirtualMachine implements AutoCloseable {
 
     /** @hide */
     public boolean sendMouseEvent(MotionEvent event) {
+        try {
+            mInputEventQueue.add(Pair.create(InputEventType.MOUSE, event));
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, e.toString());
+            return false;
+        }
+    }
+
+    /** @hide */
+    private boolean sendMouseEventInternal(MotionEvent event) {
         if (mMouseSock == null) {
             Log.d(TAG, "mMouseSock == null");
             return false;
@@ -1061,7 +1095,18 @@ public class VirtualMachine implements AutoCloseable {
     }
 
     /** @hide */
-    public boolean sendSingleTouchEvent(MotionEvent event) {
+    public boolean sendMultiTouchEvent(MotionEvent event) {
+        try {
+            mInputEventQueue.add(Pair.create(InputEventType.TOUCH, event));
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, e.toString());
+            return false;
+        }
+    }
+
+    /** @hide */
+    private boolean sendMultiTouchEventInternal(MotionEvent event) {
         if (mTouchSock == null) {
             Log.d(TAG, "mTouchSock == null");
             return false;
@@ -1074,17 +1119,56 @@ public class VirtualMachine implements AutoCloseable {
         short ABS_X = 0x00;
         short ABS_Y = 0x01;
         short SYN_REPORT = 0x00;
+        short ABS_MT_SLOT = 0x2f;
+        short ABS_MT_POSITION_X = 0x35;
+        short ABS_MT_POSITION_Y = 0x36;
+        short ABS_MT_TRACKING_ID = 0x39;
 
-        int x = (int) event.getX();
-        int y = (int) event.getY();
-        boolean down = event.getAction() != MotionEvent.ACTION_UP;
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_MOVE:
+                List<InputEvent> events =
+                        new ArrayList<>(
+                                event.getPointerCount() * 6 /*InputEvent per a pointer*/
+                                        + 1 /*SYN*/);
+                for (int actionIdx = 0; actionIdx < event.getPointerCount(); actionIdx++) {
+                    int pointerId = event.getPointerId(actionIdx);
+                    int x = (int) event.getRawX(actionIdx);
+                    int y = (int) event.getRawY(actionIdx);
+                    events.add(new InputEvent(EV_ABS, ABS_MT_SLOT, pointerId));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_TRACKING_ID, pointerId));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_POSITION_X, x));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_POSITION_Y, y));
+                    events.add(new InputEvent(EV_ABS, ABS_X, x));
+                    events.add(new InputEvent(EV_ABS, ABS_Y, y));
+                }
+                events.add(new InputEvent(EV_SYN, SYN_REPORT, 0));
+                return writeEventsToSock(mTouchSock, events);
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
+                break;
+            default:
+                return false;
+        }
 
+        boolean down =
+                event.getActionMasked() == MotionEvent.ACTION_DOWN
+                        || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN;
+        int actionIdx = event.getActionIndex();
+        int pointerId = event.getPointerId(actionIdx);
+        int x = (int) event.getRawX(actionIdx);
+        int y = (int) event.getRawY(actionIdx);
         return writeEventsToSock(
                 mTouchSock,
                 Arrays.asList(
+                        new InputEvent(EV_KEY, BTN_TOUCH, down ? 1 : 0),
+                        new InputEvent(EV_ABS, ABS_MT_SLOT, pointerId),
+                        new InputEvent(EV_ABS, ABS_MT_TRACKING_ID, down ? pointerId : -1),
+                        new InputEvent(EV_ABS, ABS_MT_POSITION_X, x),
+                        new InputEvent(EV_ABS, ABS_MT_POSITION_Y, y),
                         new InputEvent(EV_ABS, ABS_X, x),
                         new InputEvent(EV_ABS, ABS_Y, y),
-                        new InputEvent(EV_KEY, BTN_TOUCH, down ? 1 : 0),
                         new InputEvent(EV_SYN, SYN_REPORT, 0)));
     }
 
@@ -1109,6 +1193,17 @@ public class VirtualMachine implements AutoCloseable {
 
     /** @hide */
     public boolean sendTrackpadEvent(MotionEvent event) {
+        try {
+            mInputEventQueue.add(Pair.create(InputEventType.TRACKPAD, event));
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, e.toString());
+            return false;
+        }
+    }
+
+    /** @hide */
+    private boolean sendTrackpadEventInternal(MotionEvent event) {
         if (mTrackpadSock == null) {
             Log.d(TAG, "mTrackpadSock == null");
             return false;
@@ -1119,6 +1214,9 @@ public class VirtualMachine implements AutoCloseable {
         short EV_KEY = 0x01;
         short BTN_TOUCH = 0x14a;
         short BTN_TOOL_FINGER = 0x145;
+        short BTN_TOOL_DOUBLETAP = 0x14d;
+        short BTN_TOOL_TRIPLETAP = 0x14e;
+        short BTN_TOOL_QUADTAP = 0x14f;
         short ABS_X = 0x00;
         short ABS_Y = 0x01;
         short SYN_REPORT = 0x00;
@@ -1140,30 +1238,155 @@ public class VirtualMachine implements AutoCloseable {
         short ABS_PRESSURE = 0x18;
         short ABS_TOOL_WIDTH = 0x1c;
 
-        int x = (int) event.getRawX();
-        int y = (int) event.getRawY();
-        boolean down = event.getAction() != MotionEvent.ACTION_UP;
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_BUTTON_PRESS:
+            case MotionEvent.ACTION_BUTTON_RELEASE:
+                short BTN_LEFT = 0x110;
+                short keyCode;
+                switch (event.getActionButton()) {
+                    case MotionEvent.BUTTON_PRIMARY:
+                        keyCode = BTN_LEFT;
+                        break;
+                    default:
+                        Log.d(TAG, event.toString());
+                        return false;
+                }
+                return writeEventsToSock(
+                        mMouseSock,
+                        Arrays.asList(
+                                new InputEvent(
+                                        EV_KEY,
+                                        keyCode,
+                                        event.getAction() == MotionEvent.ACTION_BUTTON_PRESS
+                                                ? 1
+                                                : 0),
+                                new InputEvent(EV_SYN, SYN_REPORT, 0)));
+            case MotionEvent.ACTION_MOVE:
+                List<InputEvent> events =
+                        new ArrayList<>(
+                                event.getPointerCount() * 10 /*InputEvent per a pointer*/
+                                        + 1 /*SYN*/);
+                for (int actionIdx = 0; actionIdx < event.getPointerCount(); actionIdx++) {
+                    int pointerId = event.getPointerId(actionIdx);
+                    int x = (int) event.getRawX(actionIdx);
+                    int y = (int) event.getRawY(actionIdx);
+                    events.add(new InputEvent(EV_ABS, ABS_MT_SLOT, pointerId));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_TRACKING_ID, pointerId));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_POSITION_X, x));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_POSITION_Y, y));
+                    events.add(
+                            new InputEvent(
+                                    EV_ABS,
+                                    ABS_MT_TOUCH_MAJOR,
+                                    (short) event.getTouchMajor(actionIdx)));
+                    events.add(
+                            new InputEvent(
+                                    EV_ABS,
+                                    ABS_MT_TOUCH_MINOR,
+                                    (short) event.getTouchMinor(actionIdx)));
+                    events.add(new InputEvent(EV_ABS, ABS_X, x));
+                    events.add(new InputEvent(EV_ABS, ABS_Y, y));
+                    events.add(
+                            new InputEvent(
+                                    EV_ABS,
+                                    ABS_PRESSURE,
+                                    (short) (255 * event.getPressure(actionIdx))));
+                    events.add(
+                            new InputEvent(
+                                    EV_ABS,
+                                    ABS_MT_PRESSURE,
+                                    (short) (255 * event.getPressure(actionIdx))));
+                }
+                events.add(new InputEvent(EV_SYN, SYN_REPORT, 0));
+                return writeEventsToSock(mTrackpadSock, events);
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
+                break;
+            default:
+                return false;
+        }
 
-        // TODO(b/347253952): support multi-touch and button click
+        boolean down =
+                event.getActionMasked() == MotionEvent.ACTION_DOWN
+                        || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN;
+        int actionIdx = event.getActionIndex();
+        int pointerId = event.getPointerId(actionIdx);
+        int x = (int) event.getRawX(actionIdx);
+        int y = (int) event.getRawY(actionIdx);
         return writeEventsToSock(
                 mTrackpadSock,
                 Arrays.asList(
                         new InputEvent(EV_KEY, BTN_TOUCH, down ? 1 : 0),
-                        new InputEvent(EV_KEY, BTN_TOOL_FINGER, down ? 1 : 0),
-                        new InputEvent(EV_ABS, ABS_MT_SLOT, 0),
                         new InputEvent(
-                                EV_ABS, ABS_MT_TRACKING_ID, down ? event.getPointerId(0) : -1),
+                                EV_KEY,
+                                BTN_TOOL_FINGER,
+                                down && event.getPointerCount() == 1 ? 1 : 0),
+                        new InputEvent(
+                                EV_KEY, BTN_TOOL_DOUBLETAP, event.getPointerCount() == 2 ? 1 : 0),
+                        new InputEvent(
+                                EV_KEY, BTN_TOOL_TRIPLETAP, event.getPointerCount() == 3 ? 1 : 0),
+                        new InputEvent(
+                                EV_KEY, BTN_TOOL_QUADTAP, event.getPointerCount() > 4 ? 1 : 0),
+                        new InputEvent(EV_ABS, ABS_MT_SLOT, pointerId),
+                        new InputEvent(EV_ABS, ABS_MT_TRACKING_ID, down ? pointerId : -1),
                         new InputEvent(EV_ABS, ABS_MT_TOOL_TYPE, 0 /* MT_TOOL_FINGER */),
                         new InputEvent(EV_ABS, ABS_MT_POSITION_X, x),
                         new InputEvent(EV_ABS, ABS_MT_POSITION_Y, y),
-                        new InputEvent(EV_ABS, ABS_MT_TOUCH_MAJOR, (short) event.getTouchMajor()),
-                        new InputEvent(EV_ABS, ABS_MT_TOUCH_MINOR, (short) event.getTouchMinor()),
+                        new InputEvent(
+                                EV_ABS, ABS_MT_TOUCH_MAJOR, (short) event.getTouchMajor(actionIdx)),
+                        new InputEvent(
+                                EV_ABS, ABS_MT_TOUCH_MINOR, (short) event.getTouchMinor(actionIdx)),
                         new InputEvent(EV_ABS, ABS_X, x),
                         new InputEvent(EV_ABS, ABS_Y, y),
-                        new InputEvent(EV_ABS, ABS_PRESSURE, (short) (255 * event.getPressure())),
                         new InputEvent(
-                                EV_ABS, ABS_MT_PRESSURE, (short) (255 * event.getPressure())),
+                                EV_ABS, ABS_PRESSURE, (short) (255 * event.getPressure(actionIdx))),
+                        new InputEvent(
+                                EV_ABS,
+                                ABS_MT_PRESSURE,
+                                (short) (255 * event.getPressure(actionIdx))),
                         new InputEvent(EV_SYN, SYN_REPORT, 0)));
+    }
+
+    /** @hide */
+    public long getMemoryBalloon() {
+        long bytes = 0;
+
+        if (mMemoryManagementCallbacks != null) {
+            Log.d(TAG, "Auto balloon enabled in getMemoryBalloon");
+            return bytes;
+        }
+
+        synchronized (mLock) {
+            try {
+                if (mVirtualMachine != null) {
+                    bytes = mVirtualMachine.getMemoryBalloon();
+                }
+            } catch (RemoteException e) {
+                Log.w(TAG, "Cannot getMemoryBalloon", e);
+            }
+        }
+
+        return bytes;
+    }
+
+    /** @hide */
+    public void setMemoryBalloon(long bytes) {
+        if (mMemoryManagementCallbacks != null) {
+            Log.d(TAG, "Auto balloon enabled in setMemoryBalloon");
+            return;
+        }
+
+        synchronized (mLock) {
+            try {
+                if (mVirtualMachine != null) {
+                    mVirtualMachine.setMemoryBalloon(bytes);
+                }
+            } catch (RemoteException e) {
+                Log.w(TAG, "Cannot setMemoryBalloon", e);
+            }
+        }
     }
 
     private boolean writeEventsToSock(ParcelFileDescriptor sock, List<InputEvent> evtList) {
@@ -1300,7 +1523,29 @@ public class VirtualMachine implements AutoCloseable {
                 } else if (mVmOutputCaptured) {
                     consoleOutFd = mConsoleOutWriter;
                 }
-
+                mInputEventExecutor = Executors.newSingleThreadExecutor();
+                mInputEventExecutor.execute(
+                        () -> {
+                            while (true) {
+                                try {
+                                    Pair<InputEventType, MotionEvent> event =
+                                            mInputEventQueue.take();
+                                    switch (event.first) {
+                                        case TOUCH:
+                                            sendMultiTouchEventInternal(event.second);
+                                            break;
+                                        case TRACKPAD:
+                                            sendTrackpadEventInternal(event.second);
+                                            break;
+                                        case MOUSE:
+                                            sendMouseEventInternal(event.second);
+                                            break;
+                                    }
+                                } catch (Exception e) {
+                                    Log.e(TAG, e.toString());
+                                }
+                            }
+                        });
                 ParcelFileDescriptor consoleInFd = null;
                 if (mConnectVmConsole) {
                     consoleInFd = mPtyFd;
@@ -1317,7 +1562,9 @@ public class VirtualMachine implements AutoCloseable {
                 mVirtualMachine =
                         service.createVm(vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter);
                 mVirtualMachine.registerCallback(new CallbackTranslator(service));
-                mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
+                if (mMemoryManagementCallbacks != null) {
+                    mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
+                }
                 if (mConnectVmConsole) {
                     mVirtualMachine.setHostConsoleName(getHostConsoleName());
                 }
@@ -1560,6 +1807,9 @@ public class VirtualMachine implements AutoCloseable {
             try {
                 mVirtualMachine.stop();
                 dropVm();
+                if (mInputEventExecutor != null) {
+                    mInputEventExecutor.shutdownNow();
+                }
             } catch (RemoteException e) {
                 throw e.rethrowAsRuntimeException();
             } catch (ServiceSpecificException e) {

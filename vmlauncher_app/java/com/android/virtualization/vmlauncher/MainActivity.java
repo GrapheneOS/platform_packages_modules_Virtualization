@@ -352,7 +352,7 @@ public class MainActivity extends Activity {
                     if (mVirtualMachine == null) {
                         return false;
                     }
-                    return mVirtualMachine.sendSingleTouchEvent(event);
+                    return mVirtualMachine.sendMultiTouchEvent(event);
                 });
         surfaceView.requestUnbufferedDispatch(InputDevice.SOURCE_ANY);
         surfaceView.setOnCapturedPointerListener(
@@ -553,6 +553,7 @@ public class MainActivity extends Activity {
         try (OutputStream stream = new AutoCloseOutputStream(pfd)) {
             stream.write(header);
             stream.write(text.getBytes());
+            stream.write('\0');
             stream.flush();
             Log.d(TAG, "successfully wrote clipboard data to the VM");
             return true;

@@ -1,4 +1,0 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="MyTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-    </style>
-</resources>

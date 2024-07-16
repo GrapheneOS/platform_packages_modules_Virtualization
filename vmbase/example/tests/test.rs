@@ -31,11 +31,9 @@ use std::{
 };
 use vmclient::{DeathReason, VmInstance};
 
-const VMBASE_EXAMPLE_PATH: &str =
-    "/data/local/tmp/vmbase_example.integration_test/arm64/vmbase_example.bin";
-const TEST_DISK_IMAGE_PATH: &str = "/data/local/tmp/vmbase_example.integration_test/test_disk.img";
-const EMPTY_DISK_IMAGE_PATH: &str =
-    "/data/local/tmp/vmbase_example.integration_test/empty_disk.img";
+const VMBASE_EXAMPLE_PATH: &str = "vmbase_example.bin";
+const TEST_DISK_IMAGE_PATH: &str = "test_disk.img";
+const EMPTY_DISK_IMAGE_PATH: &str = "empty_disk.img";
 
 /// Runs the vmbase_example VM as an unprotected VM via VirtualizationService.
 #[test]

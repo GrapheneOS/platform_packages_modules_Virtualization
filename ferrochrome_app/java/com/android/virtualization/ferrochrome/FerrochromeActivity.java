@@ -28,15 +28,11 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
-
-import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -45,18 +41,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class FerrochromeActivity extends Activity {
-    ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private static final String TAG = "FerrochromeActivity";
+    private static final String TAG = FerrochromeActivity.class.getName();
     private static final String ACTION_VM_LAUNCHER = "android.virtualization.VM_LAUNCHER";
-    private static final String FERROCHROME_VERSION = "R128-15926.0.0";
-    private static final String EXTERNAL_STORAGE_DIR =
-            Environment.getExternalStorageDirectory().getPath() + File.separator;
-    private static final Path IMAGE_PATH =
-            Path.of(EXTERNAL_STORAGE_DIR + "chromiumos_test_image.bin");
-    private static final Path IMAGE_VERSION_INFO =
-            Path.of(EXTERNAL_STORAGE_DIR + "ferrochrome_image_version");
-    private static final Path VM_CONFIG_PATH = Path.of(EXTERNAL_STORAGE_DIR + "vm_config.json");
+
+    private static final Path DEST_DIR =
+            Path.of(Environment.getExternalStorageDirectory().getPath(), "ferrochrome");
+    private static final Path VERSION_FILE = Path.of(DEST_DIR.toString(), "version");
+
     private static final int REQUEST_CODE_VMLAUNCHER = 1;
+
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,37 +74,11 @@ public class FerrochromeActivity extends Activity {
 
         executorService.execute(
                 () -> {
-                    if (Files.notExists(IMAGE_PATH)
-                            || !FERROCHROME_VERSION.equals(getVersionInfo())) {
-                        updateStatus("Starting first-time setup.");
-                        updateStatus(
-                                "Downloading Ferrochrome image. This can take about 5 to 10"
-                                        + " minutes, depending on your network speed.");
-                        if (download(FERROCHROME_VERSION)) {
-                            updateStatus("Done.");
-                        } else {
-                            updateStatus(
-                                    "Download failed. Check the internet connection and retry.");
-                            return;
-                        }
-                    } else {
-                        updateStatus("Ferrochrome is already downloaded.");
+                    if (updateImageIfNeeded()) {
+                        updateStatus("Starting Ferrochrome...");
+                        runOnUiThread(
+                                () -> startActivityForResult(intent, REQUEST_CODE_VMLAUNCHER));
                     }
-                    updateStatus("Updating VM config.");
-                    copyVmConfigJson();
-                    updateStatus("Updating VM images. This may take a few minutes.");
-                    SystemProperties.set("debug.custom_vm_setup.start", "true");
-                    while (!SystemProperties.getBoolean("debug.custom_vm_setup.done", false)) {
-                        // Wait for custom_vm_setup
-                        try {
-                            Thread.sleep(1000);
-                        } catch (Exception e) {
-                            Log.d(TAG, e.toString());
-                        }
-                    }
-                    updateStatus("Done.");
-                    updateStatus("Starting Ferrochrome...");
-                    runOnUiThread(() -> startActivityForResult(intent, REQUEST_CODE_VMLAUNCHER));
                 });
     }
 
@@ -121,63 +89,103 @@ public class FerrochromeActivity extends Activity {
         }
     }
 
+    private boolean updateImageIfNeeded() {
+        if (!isUpdateNeeded()) {
+            Log.d(TAG, "No update needed.");
+            return true;
+        }
+
+        try {
+            if (Files.notExists(DEST_DIR)) {
+                Files.createDirectory(DEST_DIR);
+            }
+
+            String[] files = getAssets().list("ferrochrome");
+            if (files == null || files.length == 0) {
+                updateStatus("ChromeOS image not found. Please go/try-ferrochrome");
+                return false;
+            }
+
+            updateStatus("Copying images...");
+            for (String file : files) {
+                updateStatus(file);
+                Path dst = Path.of(DEST_DIR.toString(), file);
+                updateFile(getAssets().open("ferrochrome/" + file), dst);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Error while updating image: " + e);
+            updateStatus("Failed.");
+            return false;
+        }
+        updateStatus("Done.");
+
+        updateStatus("Extracting images...");
+        SystemProperties.set("debug.custom_vm_setup.start", "true");
+        while (!SystemProperties.getBoolean("debug.custom_vm_setup.done", false)) {
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                Log.e(TAG, "Error while extracting image: " + e);
+                updateStatus("Failed.");
+                return false;
+            }
+        }
+        // TODO(jiyong): remove this sleep.
+        try {
+            Thread.sleep(30 * 1000);
+        } catch (Exception e) {
+            Log.e(TAG, "Interrupted while waiting for the copy to finish");
+            updateStatus("Failed.");
+            return false;
+        }
+
+        updateStatus("Done.");
+        return true;
+    }
+
+    private boolean isUpdateNeeded() {
+        Path[] pathsToCheck = {DEST_DIR, VERSION_FILE};
+        for (Path p : pathsToCheck) {
+            if (Files.notExists(p)) {
+                Log.d(TAG, p.toString() + " does not exist.");
+                return true;
+            }
+        }
+
+        try {
+            String installedVer = readLine(new FileInputStream(VERSION_FILE.toFile()));
+            String updatedVer = readLine(getAssets().open("ferrochrome/version"));
+            if (installedVer.equals(updatedVer)) {
+                return false;
+            }
+            Log.d(TAG, "Version mismatch. Installed: " + installedVer + "  Updated: " + updatedVer);
+        } catch (IOException e) {
+            Log.e(TAG, "Error while checking version: " + e);
+        }
+        return true;
+    }
+
+    private static String readLine(InputStream input) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+            return reader.readLine();
+        } catch (IOException e) {
+            throw e;
+        }
+    }
+
+    private static void updateFile(InputStream input, Path path) throws IOException {
+        try {
+            Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            input.close();
+        }
+    }
+
     private void updateStatus(String line) {
-        Log.d(TAG, line);
         runOnUiThread(
                 () -> {
                     TextView statusView = findViewById(R.id.status_txt_view);
                     statusView.append(line + "\n");
                 });
-    }
-
-    private void copyVmConfigJson() {
-        try (InputStream is = getResources().openRawResource(R.raw.vm_config)) {
-            Files.copy(is, VM_CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            updateStatus(e.toString());
-        }
-    }
-
-    private String getVersionInfo() {
-        try {
-            return new String(Files.readAllBytes(IMAGE_VERSION_INFO), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
-    private boolean updateVersionInfo(String version) {
-        try {
-            Files.write(IMAGE_VERSION_INFO, version.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            Log.d(TAG, e.toString());
-        }
-        return true;
-    }
-
-    private boolean download(String version) {
-        String urlString =
-                "https://storage.googleapis.com/chromiumos-image-archive/ferrochrome-public/"
-                        + version
-                        + "/chromiumos_test_image.tar.xz";
-        try (InputStream is = (new URL(urlString)).openStream();
-                XZCompressorInputStream xz = new XZCompressorInputStream(is);
-                TarArchiveInputStream tar = new TarArchiveInputStream(xz)) {
-            TarArchiveEntry entry;
-            while ((entry = tar.getNextTarEntry()) != null) {
-                if (!entry.getName().contains("chromiumos_test_image.bin")) {
-                    continue;
-                }
-                updateStatus("copy " + entry.getName() + " start");
-                Files.copy(tar, IMAGE_PATH, StandardCopyOption.REPLACE_EXISTING);
-                updateStatus("copy " + entry.getName() + " done");
-                updateVersionInfo(version);
-                break;
-            }
-        } catch (Exception e) {
-            updateStatus(e.toString());
-            return false;
-        }
-        return true;
     }
 }

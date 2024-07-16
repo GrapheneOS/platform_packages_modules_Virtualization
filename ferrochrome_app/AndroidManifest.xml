@@ -8,7 +8,6 @@
         android:label="Ferrochrome">
         <activity android:name=".FerrochromeActivity"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode"
-                  android:theme="@style/MyTheme"
                   android:screenOrientation="landscape"
                   android:exported="true">
             <intent-filter>

@@ -45,6 +45,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_GPU = "gpu";
     private static final String KEY_AUDIO_CONFIG = "audio_config";
     private static final String KEY_TRACKPAD = "trackpad";
+    private static final String KEY_AUTO_MEMORY_BALLOON = "auto_memory_balloon";
 
     @Nullable private final String name;
     @Nullable private final String kernelPath;
@@ -61,6 +62,7 @@ public class VirtualMachineCustomImageConfig {
     private final boolean network;
     @Nullable private final GpuConfig gpuConfig;
     private final boolean trackpad;
+    private final boolean autoMemoryBalloon;
 
     @Nullable
     public Disk[] getDisks() {
@@ -112,6 +114,10 @@ public class VirtualMachineCustomImageConfig {
         return mouse;
     }
 
+    public boolean useAutoMemoryBalloon() {
+        return autoMemoryBalloon;
+    }
+
     public boolean useNetwork() {
         return network;
     }
@@ -132,7 +138,8 @@ public class VirtualMachineCustomImageConfig {
             boolean network,
             GpuConfig gpuConfig,
             AudioConfig audioConfig,
-            boolean trackpad) {
+            boolean trackpad,
+            boolean autoMemoryBalloon) {
         this.name = name;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
@@ -148,6 +155,7 @@ public class VirtualMachineCustomImageConfig {
         this.gpuConfig = gpuConfig;
         this.audioConfig = audioConfig;
         this.trackpad = trackpad;
+        this.autoMemoryBalloon = autoMemoryBalloon;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -199,6 +207,7 @@ public class VirtualMachineCustomImageConfig {
                 customImageConfigBundle.getPersistableBundle(KEY_AUDIO_CONFIG);
         builder.setAudioConfig(AudioConfig.from(audioConfigPb));
         builder.useTrackpad(customImageConfigBundle.getBoolean(KEY_TRACKPAD));
+        builder.useAutoMemoryBalloon(customImageConfigBundle.getBoolean(KEY_AUTO_MEMORY_BALLOON));
         return builder.build();
     }
 
@@ -258,6 +267,7 @@ public class VirtualMachineCustomImageConfig {
                 KEY_AUDIO_CONFIG,
                 Optional.ofNullable(audioConfig).map(ac -> ac.toPersistableBundle()).orElse(null));
         pb.putBoolean(KEY_TRACKPAD, trackpad);
+        pb.putBoolean(KEY_AUTO_MEMORY_BALLOON, autoMemoryBalloon);
         return pb;
     }
 
@@ -352,6 +362,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean network;
         private GpuConfig gpuConfig;
         private boolean trackpad;
+        private boolean autoMemoryBalloon = true;
 
         /** @hide */
         public Builder() {}
@@ -435,6 +446,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder useAutoMemoryBalloon(boolean autoMemoryBalloon) {
+            this.autoMemoryBalloon = autoMemoryBalloon;
+            return this;
+        }
+
+        /** @hide */
         public Builder useNetwork(boolean network) {
             this.network = network;
             return this;
@@ -463,7 +480,8 @@ public class VirtualMachineCustomImageConfig {
                     network,
                     gpuConfig,
                     audioConfig,
-                    trackpad);
+                    trackpad,
+                    autoMemoryBalloon);
         }
     }
 

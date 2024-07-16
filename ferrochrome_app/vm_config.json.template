@@ -1,0 +1,37 @@
+{
+    "name": "cros",
+    "disks": [
+        {
+            "writable": true,
+            "partitions": [
+                {
+                    "label": "STATE",
+                    "path": "/data/local/tmp/state.img",
+                    "writable": true
+                },
+                {
+                    "label": "KERN-A",
+                    "path": "/data/local/tmp/kernel.img"
+                },
+                {
+                    "label": "ROOT-A",
+                    "path": "/data/local/tmp/root.img",
+                    "guid": "GUID"
+                },
+                {
+                    "label": "EFI-SYSTEM",
+                    "path": "/data/local/tmp/efi.img"
+                }
+            ]
+        }
+    ],
+    "protected": false,
+    "cpu_topology": "match_host",
+    "platform_version": "~1.0",
+    "memory_mib": 8096,
+    "gpu": {
+        "backend": "virglrenderer",
+        "context_types": ["virgl2"]
+    },
+    "console_input_device": "ttyS0"
+}

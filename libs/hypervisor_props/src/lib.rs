@@ -37,8 +37,3 @@ pub fn is_any_vm_supported() -> Result<bool> {
 pub fn version() -> Result<Option<String>> {
     Ok(hypervisorproperties::hypervisor_version()?)
 }
-
-/// Returns if the hypervisor is pKVM
-pub fn is_pkvm() -> Result<bool> {
-    Ok(version()?.unwrap_or_default().starts_with("kvm") && is_protected_vm_supported()?)
-}
