@@ -42,7 +42,6 @@ soong_config_string_variable {
     name: "release_avf_microdroid_kernel_version",
     values: [
         "android14_61",
-        "android15_61",
         "android15_66",
     ],
 }
@@ -54,9 +53,6 @@ avf_microdroid_kernel_prebuilt {
         release_avf_microdroid_kernel_version: {
             android14_61: {
                 srcs: ["android14-6.1/arm64/kernel-6.1"],
-            },
-            android15_61: {
-                srcs: ["android15-6.1/arm64/kernel-6.1"],
             },
             android15_66: {
                 srcs: ["android15-6.6/arm64/kernel-6.6"],
@@ -79,9 +75,6 @@ avf_microdroid_kernel_prebuilt {
         release_avf_microdroid_kernel_version: {
             android14_61: {
                 srcs: ["android14-6.1/x86_64/kernel-6.1"],
-            },
-            android15_61: {
-                srcs: ["android15-6.1/x86_64/kernel-6.1"],
             },
             android15_66: {
                 srcs: ["android15-6.6/x86_64/kernel-6.6"],

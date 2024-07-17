@@ -595,7 +595,12 @@ impl VirtualizationService {
             params: config.params.to_owned(),
             protected: *is_protected,
             debug_config,
-            memory_mib: config.memoryMib.try_into().ok().and_then(NonZeroU32::new),
+            memory_mib: config
+                .memoryMib
+                .try_into()
+                .ok()
+                .and_then(NonZeroU32::new)
+                .unwrap_or(NonZeroU32::new(256).unwrap()),
             cpus,
             host_cpu_topology,
             console_out_fd,

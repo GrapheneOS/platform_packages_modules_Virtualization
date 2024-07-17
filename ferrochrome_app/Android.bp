@@ -11,11 +11,17 @@ android_app {
     system_ext_specific: true,
     privileged: true,
     init_rc: ["custom_vm_setup.rc"],
-    required: ["custom_vm_setup"],
-    certificate: "platform",
-    static_libs: [
-        "apache-commons-compress",
+    required: [
+        "custom_vm_setup",
+        "privapp-permissions-ferrochrome.xml",
     ],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-ferrochrome.xml",
+    src: "privapp-permissions-ferrochrome.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
 }
 
 sh_binary {

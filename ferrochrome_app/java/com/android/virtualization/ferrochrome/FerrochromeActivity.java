@@ -120,6 +120,7 @@ public class FerrochromeActivity extends Activity {
         updateStatus("Done.");
 
         updateStatus("Extracting images...");
+        SystemProperties.set("debug.custom_vm_setup.done", "false");
         SystemProperties.set("debug.custom_vm_setup.start", "true");
         while (!SystemProperties.getBoolean("debug.custom_vm_setup.done", false)) {
             try {
@@ -129,14 +130,6 @@ public class FerrochromeActivity extends Activity {
                 updateStatus("Failed.");
                 return false;
             }
-        }
-        // TODO(jiyong): remove this sleep.
-        try {
-            Thread.sleep(30 * 1000);
-        } catch (Exception e) {
-            Log.e(TAG, "Interrupted while waiting for the copy to finish");
-            updateStatus("Failed.");
-            return false;
         }
 
         updateStatus("Done.");
