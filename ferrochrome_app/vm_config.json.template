@@ -33,5 +33,5 @@
         "backend": "virglrenderer",
         "context_types": ["virgl2"]
     },
-    "console_input_device": "ttyS0"
+    "console_input_device": "hvc0"
 }

@@ -16,5 +16,5 @@
     "cpu_topology": "match_host",
     "platform_version": "~1.0",
     "memory_mib" : 8096,
-    "console_input_device": "ttyS0"
+    "console_input_device": "hvc0"
 }

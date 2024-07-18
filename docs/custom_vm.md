@@ -201,7 +201,7 @@ $ cat > vm_config.json; adb push vm_config.json /data/local/tmp
     "cpu_topology": "match_host",
     "platform_version": "~1.0",
     "memory_mib" : 8096,
-    "console_input_device": "ttyS0"
+    "console_input_device": "hvc0"
 }
 ```
 

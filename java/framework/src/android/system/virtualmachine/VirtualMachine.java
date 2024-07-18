@@ -998,7 +998,8 @@ public class VirtualMachine implements AutoCloseable {
     /** @hide */
     public boolean sendMouseEvent(MotionEvent event) {
         try {
-            mInputEventQueue.add(Pair.create(InputEventType.MOUSE, event));
+            mInputEventQueue.add(
+                    Pair.create(InputEventType.MOUSE, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
             Log.e(TAG, e.toString());
@@ -1097,7 +1098,8 @@ public class VirtualMachine implements AutoCloseable {
     /** @hide */
     public boolean sendMultiTouchEvent(MotionEvent event) {
         try {
-            mInputEventQueue.add(Pair.create(InputEventType.TOUCH, event));
+            mInputEventQueue.add(
+                    Pair.create(InputEventType.TOUCH, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
             Log.e(TAG, e.toString());
@@ -1192,9 +1194,29 @@ public class VirtualMachine implements AutoCloseable {
     }
 
     /** @hide */
+    public boolean sendTabletModeEvent(boolean tabletMode) {
+        if (mSwitchesSock == null) {
+            Log.d(TAG, "mSwitcheSock == null");
+            return false;
+        }
+
+        // from include/uapi/linux/input-event-codes.h in the kernel.
+        short EV_SYN = 0x00;
+        short EV_SW = 0x05;
+        short SW_TABLET_MODE = 0x01;
+        short SYN_REPORT = 0x00;
+        return writeEventsToSock(
+                mSwitchesSock,
+                Arrays.asList(
+                        new InputEvent(EV_SW, SW_TABLET_MODE, tabletMode ? 1 : 0),
+                        new InputEvent(EV_SYN, SYN_REPORT, 0)));
+    }
+
+    /** @hide */
     public boolean sendTrackpadEvent(MotionEvent event) {
         try {
-            mInputEventQueue.add(Pair.create(InputEventType.TRACKPAD, event));
+            mInputEventQueue.add(
+                    Pair.create(InputEventType.TRACKPAD, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
             Log.e(TAG, e.toString());
@@ -1541,6 +1563,7 @@ public class VirtualMachine implements AutoCloseable {
                                             sendMouseEventInternal(event.second);
                                             break;
                                     }
+                                    event.second.recycle();
                                 } catch (Exception e) {
                                     Log.e(TAG, e.toString());
                                 }
