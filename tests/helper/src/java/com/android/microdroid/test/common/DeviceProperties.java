@@ -33,6 +33,8 @@ public final class DeviceProperties {
 
     private static final String CUTTLEFISH_DEVICE_PREFIX = "vsoc_";
     private static final String CUTTLEFISH_ARM64_DEVICE_PREFIX = "vsoc_arm64";
+    private static final String GOLDFISH_DEVICE_PREFIX = "emu64";
+    private static final String GOLDFISH_ARM64_DEVICE_PREFIX = "emu64a";
     private static final String USER_BUILD_TYPE = "user";
     private static final String HWASAN_SUFFIX = "_hwasan";
 
@@ -62,6 +64,23 @@ public final class DeviceProperties {
         String vendorDeviceName = getProperty(KEY_VENDOR_DEVICE);
         return vendorDeviceName != null
                 && vendorDeviceName.startsWith(CUTTLEFISH_ARM64_DEVICE_PREFIX);
+    }
+
+    /**
+     * @return whether the device is a cuttlefish device.
+     */
+    public boolean isGoldfish() {
+        String vendorDeviceName = getProperty(KEY_VENDOR_DEVICE);
+        return vendorDeviceName != null && vendorDeviceName.startsWith(GOLDFISH_DEVICE_PREFIX);
+    }
+
+    /**
+     * @return whether the device is a cuttlefish device running on 64 bit Arm.
+     */
+    public boolean isGoldfishArm64() {
+        String vendorDeviceName = getProperty(KEY_VENDOR_DEVICE);
+        return vendorDeviceName != null
+                && vendorDeviceName.startsWith(GOLDFISH_ARM64_DEVICE_PREFIX);
     }
 
     /**

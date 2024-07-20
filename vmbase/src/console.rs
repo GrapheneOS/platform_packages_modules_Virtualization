@@ -15,11 +15,8 @@
 //! Console driver for 8250 UART.
 
 use crate::uart::Uart;
-use core::{
-    cell::OnceCell,
-    fmt::{write, Arguments, Write},
-};
-use spin::mutex::SpinMutex;
+use core::fmt::{write, Arguments, Write};
+use spin::{mutex::SpinMutex, Once};
 
 // Arbitrary limit on the number of consoles that can be registered.
 //
@@ -28,12 +25,8 @@ const MAX_CONSOLES: usize = 4;
 
 static CONSOLES: [SpinMutex<Option<Uart>>; MAX_CONSOLES] =
     [SpinMutex::new(None), SpinMutex::new(None), SpinMutex::new(None), SpinMutex::new(None)];
-static ADDRESSES: [SpinMutex<OnceCell<usize>>; MAX_CONSOLES] = [
-    SpinMutex::new(OnceCell::new()),
-    SpinMutex::new(OnceCell::new()),
-    SpinMutex::new(OnceCell::new()),
-    SpinMutex::new(OnceCell::new()),
-];
+static ADDRESSES: [Once<usize>; MAX_CONSOLES] =
+    [Once::new(), Once::new(), Once::new(), Once::new()];
 
 /// Index of the console used by default for logging.
 pub const DEFAULT_CONSOLE_INDEX: usize = 0;
@@ -52,7 +45,7 @@ pub const DEFAULT_EMERGENCY_CONSOLE_INDEX: usize = DEFAULT_CONSOLE_INDEX;
 pub unsafe fn init(base_addresses: &[usize]) {
     for (i, &base_address) in base_addresses.iter().enumerate() {
         // Remember the valid address, for emergency console accesses.
-        ADDRESSES[i].lock().set(base_address).expect("console::init() called more than once");
+        ADDRESSES[i].call_once(|| base_address);
 
         // Initialize the console driver, for normal console accesses.
         let mut console = CONSOLES[i].lock();
@@ -78,8 +71,7 @@ pub fn writeln(n: usize, format_args: Arguments) {
 /// This is intended for use in situations where the UART may be in an unknown state or the global
 /// instance may be locked, such as in an exception handler or panic handler.
 pub fn ewriteln(n: usize, format_args: Arguments) {
-    let Some(cell) = ADDRESSES[n].try_lock() else { return };
-    let Some(addr) = cell.get() else { return };
+    let Some(addr) = ADDRESSES[n].get() else { return };
 
     // SAFETY: addr contains the base of a mapped UART, passed in init().
     let mut uart = unsafe { Uart::new(*addr) };

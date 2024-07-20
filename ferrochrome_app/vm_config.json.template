@@ -33,5 +33,9 @@
         "backend": "virglrenderer",
         "context_types": ["virgl2"]
     },
+    "display": {
+        "scale": "0.77",
+        "refresh_rate": "30"
+     },
     "console_input_device": "hvc0"
 }

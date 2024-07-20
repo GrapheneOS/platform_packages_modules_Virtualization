@@ -32,6 +32,9 @@ TRY_UNLOCK_MAX=10
 fecr_clean_up() {
   trap - INT
 
+  # Reset screen always on
+  adb shell svc power stayon false
+
   if [[ -d ${fecr_dir} && -z ${fecr_keep} ]]; then
     rm -rf ${fecr_dir}
   fi
@@ -134,33 +137,8 @@ if [[ -z "${fecr_skip}" ]]; then
 fi
 
 echo "Ensure screen unlocked"
-
-try_unlock=0
-while [[ "${try_unlock}" -le "${TRY_UNLOCK_MAX}" ]]; do
-  screen_state=$(adb shell dumpsys nfc | sed -n 's/^mScreenState=\(.*\)$/\1/p')
-  case "${screen_state}" in
-    "ON_UNLOCKED")
-      break
-      ;;
-    "ON_LOCKED")
-      # Disclaimer: This can unlock phone only if unlock method is swipe (default after FDR)
-      adb shell input keyevent KEYCODE_MENU
-      ;;
-    "OFF_LOCKED"|"OFF_UNLOCKED")
-      adb shell input keyevent KEYCODE_WAKEUP
-      ;;
-    *)
-      echo "Unknown screen state. Continue to boot, but may fail"
-      break
-      ;;
-  esac
-  sleep 1
-  try_unlock=$((try_unlock+1))
-done
-if [[ "${try_unlock}" -gt "${TRY_UNLOCK_MAX}" ]]; then
-  >&2 echo "Failed to unlock screen. Try again after manual unlock"
-  exit 1
-fi
+adb shell svc power stayon true
+adb shell wm dismiss-keyguard
 
 echo "Starting ferrochrome"
 adb shell am start-activity -a ${ACTION_NAME} > /dev/null

@@ -81,6 +81,14 @@ public abstract class MicrodroidDeviceTestBase {
         return getDeviceProperties().isCuttlefishArm64();
     }
 
+    public static boolean isGoldfish() {
+        return getDeviceProperties().isGoldfish();
+    }
+
+    private static boolean isGoldfishArm64() {
+        return getDeviceProperties().isGoldfishArm64();
+    }
+
     public static boolean isHwasan() {
         return getDeviceProperties().isHwasan();
     }
@@ -246,10 +254,11 @@ public abstract class MicrodroidDeviceTestBase {
                 .that(KERNEL_VERSION)
                 .isNotEqualTo("5.4");
 
-        // Cuttlefish on Arm 64 doesn't and cannot support any form of virtualization, so there's
-        // no point running any of these tests.
-        assume().withMessage("Virtualization not supported on Arm64 Cuttlefish. b/341889915")
-                .that(isCuttlefishArm64())
+        // Cuttlefish/Goldfish on Arm 64 doesn't and cannot support any form of virtualization,
+        // so there's no point running any of these tests.
+        assume().withMessage("Virtualization not supported on Arm64 Cuttlefish/Goldfish."
+                + " b/341889915")
+                .that(isCuttlefishArm64() || isGoldfishArm64())
                 .isFalse();
     }
 
