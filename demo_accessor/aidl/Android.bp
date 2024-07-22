@@ -1,0 +1,20 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+aidl_interface {
+    name: "com.android.virt.accessor_demo.vm_service",
+    srcs: ["**/*.aidl"],
+    unstable: true,
+    backend: {
+        java: {
+            gen_rpc: true,
+        },
+        rust: {
+            enabled: true,
+            apex_available: [
+                "com.android.virt.accessor_demo",
+            ],
+        },
+    },
+}

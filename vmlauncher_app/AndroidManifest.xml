@@ -17,8 +17,9 @@
                   android:exported="true">
             <intent-filter>
                 <action android:name="android.virtualization.VM_LAUNCHER" />
+                <action android:name="android.virtualization.VM_OPEN_URL" />
                 <category android:name="android.intent.category.DEFAULT" />
-	    </intent-filter>
+            </intent-filter>
         </activity>
     </application>
 

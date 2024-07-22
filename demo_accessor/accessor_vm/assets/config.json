@@ -1,0 +1,10 @@
+{
+    "os": {
+        "name": "microdroid"
+    },
+    "task": {
+        "type": "microdroid_launcher",
+        "command": "accessor_vm.so"
+    },
+    "export_tombstones": true
+}

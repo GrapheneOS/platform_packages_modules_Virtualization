@@ -2403,7 +2403,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeSupportedDevice();
         // TODO(b/325094712): Boot fails with vendor partition in Cuttlefish.
         assumeFalse(
-                "Cuttlefish doesn't support device tree under /proc/device-tree", isCuttlefish());
+                "Cuttlefish/Goldfish doesn't support device tree under /proc/device-tree",
+                isCuttlefish() || isGoldfish());
         // TODO(b/317567210): Boot fails with vendor partition in HWASAN enabled microdroid
         // after introducing verification based on DT and fstab in microdroid vendor partition.
         assumeFalse(

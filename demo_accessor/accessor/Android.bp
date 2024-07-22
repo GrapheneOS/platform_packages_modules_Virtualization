@@ -1,0 +1,31 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_binary {
+    name: "accessor_demo",
+    crate_name: "accessor_demo",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    prefer_rlib: true,
+    defaults: ["avf_build_flags_rust"], // for reading llvm_changes
+    apex_available: [
+        "com.android.virt.accessor_demo",
+    ],
+    rustlibs: [
+        "android.system.virtualizationservice-rust",
+        "android.os.accessor-rust",
+        "libanyhow",
+        "libandroid_logger",
+        "libbinder_rs",
+        "libenv_logger",
+        "libglob",
+        "libhypervisor_props",
+        "liblibc",
+        "liblog_rust",
+        "libmicrodroid_payload_config",
+        "librand",
+        "libvmconfig",
+        "libvmclient",
+    ],
+}

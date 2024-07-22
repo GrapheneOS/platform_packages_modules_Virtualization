@@ -64,6 +64,9 @@
     {
       "name": "AvfRkpdAppGoogleIntegrationTests",
       "keywords": ["internal"]
+    },
+    {
+      "name": "vm_accessor_test"
     }
   ],
   "ferrochrome-postsubmit": [

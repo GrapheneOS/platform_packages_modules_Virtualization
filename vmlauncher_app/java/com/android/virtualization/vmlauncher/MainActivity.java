@@ -23,6 +23,7 @@ import android.Manifest.permission;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Intent;
 import android.crosvm.ICrosvmAndroidDisplayService;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
@@ -80,12 +81,17 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity implements InputManager.InputDeviceListener {
     private static final String TAG = "VmLauncherApp";
     private static final String VM_NAME = "my_custom_vm";
+
     private static final boolean DEBUG = true;
+    private static final int RECORD_AUDIO_PERMISSION_REQUEST_CODE = 101;
+
+    private static final String ACTION_VM_LAUNCHER = "android.virtualization.VM_LAUNCHER";
+    private static final String ACTION_VM_OPEN_URL = "android.virtualization.VM_OPEN_URL";
+
     private ExecutorService mExecutorService;
     private VirtualMachine mVirtualMachine;
     private CursorHandler mCursorHandler;
     private ClipboardManager mClipboardManager;
-    private static final int RECORD_AUDIO_PERMISSION_REQUEST_CODE = 101;
 
     private VirtualMachineConfig createVirtualMachineConfig(String jsonPath) {
         VirtualMachineConfig.Builder configBuilder =
@@ -321,6 +327,12 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String action = getIntent().getAction();
+        if (!ACTION_VM_LAUNCHER.equals(action)) {
+            finish();
+            Log.e(TAG, "onCreate unsupported intent action: " + action);
+            return;
+        }
         checkAndRequestRecordAudioPermission();
         mExecutorService = Executors.newCachedThreadPool();
         try {
@@ -571,6 +583,7 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
     private static final byte READ_CLIPBOARD_FROM_VM = 0;
     private static final byte WRITE_CLIPBOARD_TYPE_EMPTY = 1;
     private static final byte WRITE_CLIPBOARD_TYPE_TEXT_PLAIN = 2;
+    private static final byte OPEN_URL = 3;
 
     private ClipboardManager getClipboardManager() {
         if (mClipboardManager == null) {
@@ -685,6 +698,32 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
             } catch (Exception e) {
                 Log.e(TAG, "read/write clipboard error", e);
             }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        String action = intent.getAction();
+        if (!ACTION_VM_OPEN_URL.equals(action)) {
+            Log.e(TAG, "onNewIntent unsupported intent action: " + action);
+            return;
+        }
+        Log.d(TAG, "onNewIntent intent action: " + action);
+        String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+        if (text != null) {
+            mExecutorService.execute(
+                    () -> {
+                        byte[] data = text.getBytes();
+                        try (ParcelFileDescriptor pfd = connectDataSharingService();
+                                OutputStream stream =
+                                        new FileOutputStream(pfd.getFileDescriptor())) {
+                            stream.write(constructClipboardHeader(OPEN_URL, data.length));
+                            stream.write(data);
+                            Log.d(TAG, "Successfully sent URL to the VM");
+                        } catch (IOException | VirtualMachineException e) {
+                            Log.e(TAG, "Failed to send URL to the VM", e);
+                        }
+                    });
         }
     }
 

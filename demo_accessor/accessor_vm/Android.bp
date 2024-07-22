@@ -1,0 +1,30 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_app {
+    name: "AccessorVmApp",
+    installable: true,
+    jni_libs: ["libaccessor_vm_payload"],
+    jni_uses_platform_apis: true,
+    use_embedded_native_libs: true,
+    sdk_version: "system_current",
+    compile_multilib: "first",
+    apex_available: ["com.android.virt.accessor_demo"],
+}
+
+rust_ffi {
+    name: "libaccessor_vm_payload",
+    crate_name: "accessor_vm_payload",
+    defaults: ["avf_build_flags_rust"],
+    srcs: ["src/main.rs"],
+    prefer_rlib: true,
+    rustlibs: [
+        "com.android.virt.accessor_demo.vm_service-rust",
+        "libandroid_logger",
+        "libanyhow",
+        "liblog_rust",
+        "libvm_payload_rs",
+    ],
+    apex_available: ["com.android.virt.accessor_demo"],
+}
