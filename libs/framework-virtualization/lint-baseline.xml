@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.4.0-alpha08" type="baseline" client="" dependencies="true" name="" variant="all" version="8.4.0-alpha08">
+
+    <issue
+        id="FlaggedApi"
+        message="Method `getExtraApks()` is a flagged API and should be inside an `if (Flags.avfVTestApis())` check (or annotate the surrounding method `createVirtualMachineConfigForAppFrom` with `@FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS) to transfer requirement to caller`)"
+        errorLine1="        if (!vmConfig.getExtraApks().isEmpty()) {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Virtualization/libs/framework-virtualization/src/android/system/virtualmachine/VirtualMachine.java"
+            line="1105"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `getExtraApks()` is a flagged API and should be inside an `if (Flags.avfVTestApis())` check (or annotate the surrounding method `setupExtraApks` with `@FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS) to transfer requirement to caller`)"
+        errorLine1="        List&lt;String> extraApks = config.getExtraApks();"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+		file="packages/modules/Virtualization/libs/framework-virtualization/src/android/system/virtualmachine/VirtualMachine.java"
+            line="1730"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setVendorDiskImage()` is a flagged API and should be inside an `if (Flags.avfVTestApis())` check (or annotate the surrounding method `fromPersistableBundle` with `@FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS) to transfer requirement to caller`)"
+        errorLine1="            builder.setVendorDiskImage(new File(vendorDiskImagePath));"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+		file="packages/modules/Virtualization/libs/framework-virtualization/src/android/system/virtualmachine/VirtualMachineConfig.java"
+            line="367"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setOs()` is a flagged API and should be inside an `if (Flags.avfVTestApis())` check (or annotate the surrounding method `fromPersistableBundle` with `@FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS) to transfer requirement to caller`)"
+        errorLine1="        builder.setOs(b.getString(KEY_OS));"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+		file="packages/modules/Virtualization/libs/framework-virtualization/src/android/system/virtualmachine/VirtualMachineConfig.java"
+            line="370"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `addExtraApk()` is a flagged API and should be inside an `if (Flags.avfVTestApis())` check (or annotate the surrounding method `fromPersistableBundle` with `@FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS) to transfer requirement to caller`)"
+        errorLine1="                builder.addExtraApk(extraApk);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+		file="packages/modules/Virtualization/libs/framework-virtualization/src/android/system/virtualmachine/VirtualMachineConfig.java"
+            line="375"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `MICRODROID` is a flagged API and should be inside an `if (Flags.avfVTestApis())` check (or annotate the surrounding method `?` with `@FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS) to transfer requirement to caller`)"
+        errorLine1="        @OsName private final String DEFAULT_OS = MICRODROID;"
+        errorLine2="                                                  ~~~~~~~~~~">
+        <location
+		file="packages/modules/Virtualization/libs/framework-virtualization/src/android/system/virtualmachine/VirtualMachineConfig.java"
+            line="855"
+            column="51"/>
+    </issue>
+
+</issues>

@@ -20,14 +20,21 @@
 set -e
 
 FECR_GS_URL="https://storage.googleapis.com/chromiumos-image-archive/ferrochrome-public"
-FECR_DEFAULT_VERSION="R127-15916.0.0"
+FECR_DEFAULT_VERSION="R128-15958.0.0"
+FECR_TEST_IMAGE="chromiumos_test_image"
+FECR_BASE_IMAGE="chromiumos_base_image"
 FECR_DEVICE_DIR="/data/local/tmp"
+FECR_IMAGE_VM_CONFIG_JSON="chromiumos_base_image.bin"  # hardcoded at vm_config.json
 FECR_CONFIG_PATH="/data/local/tmp/vm_config.json"  # hardcoded at VmLauncherApp
 FECR_CONSOLE_LOG_PATH="/data/data/\${pkg_name}/files/console.log"
-FECR_BOOT_COMPLETED_LOG="Have fun and send patches!"
+FECR_TEST_IMAGE_BOOT_COMPLETED_LOG="Have fun and send patches!"
+FECR_BASE_IMAGE_BOOT_COMPLETED_LOG="Chrome started, our work is done, exiting"
 FECR_BOOT_TIMEOUT="300" # 5 minutes (300 seconds)
 ACTION_NAME="android.virtualization.VM_LAUNCHER"
-TRY_UNLOCK_MAX=10
+
+# Match this with AndroidTest.xml and assets/vm_config.json
+FECR_DEFAULT_IMAGE="${FECR_BASE_IMAGE}"
+FECR_DEFAULT_BOOT_COMPLETED_LOG="${FECR_BASE_IMAGE_BOOT_COMPLETED_LOG}"
 
 fecr_clean_up() {
   trap - INT
@@ -43,7 +50,7 @@ fecr_clean_up() {
 print_usage() {
   echo "ferochrome: Launches ferrochrome image"
   echo ""
-  echo "By default, this downloads ferrochrome image with version ${FECR_DEFAULT_VERSION},"
+  echo "By default, this downloads ${FECR_DEFAULT_VERSION} with version ${FECR_DEFAULT_VERSION},"
   echo "launches, and waits for boot completed."
   echo "When done, removes downloaded image on host while keeping pushed image on device."
   echo ""
@@ -56,14 +63,17 @@ print_usage() {
   echo "  --skip: Skipping downloading and/or pushing images"
   echo "  --version \${version}: ferrochrome version to be downloaded"
   echo "  --keep: Keep downloaded ferrochrome image"
+  echo "  --test: Download test image instead"
 }
 
-fecr_version=""
+fecr_version="${FECR_DEFAULT_VERSION}"
 fecr_dir=""
 fecr_keep=""
 fecr_skip=""
 fecr_script_path=$(dirname ${0})
 fecr_verbose=""
+fecr_image="${FECR_DEFAULT_IMAGE}"
+fecr_boot_completed_log="${FECR_DEFAULT_BOOT_COMPLETED_LOG}"
 
 # Parse parameters
 while (( "${#}" )); do
@@ -85,6 +95,10 @@ while (( "${#}" )); do
       ;;
     --skip)
       fecr_skip="true"
+      ;;
+    --test)
+      fecr_image="${FECR_TEST_IMAGE}"
+      fecr_boot_completed_log="${FECR_TEST_IMAGE_BOOT_COMPLETED_LOG}"
       ;;
     -h|--help)
       print_usage
@@ -126,13 +140,12 @@ if [[ -z "${fecr_skip}" ]]; then
     fecr_dir=$(mktemp -d)
 
     echo "Downloading & extracting ferrochrome image to ${fecr_dir}"
-    fecr_version=${fecr_version:-${FECR_DEFAULT_VERSION}}
-    curl ${FECR_GS_URL}/${fecr_version}/chromiumos_test_image.tar.xz | tar xfJ - -C ${fecr_dir}
+    curl ${FECR_GS_URL}/${fecr_version}/${fecr_image}.tar.xz | tar xfJ - -C ${fecr_dir}
   fi
 
   echo "Pushing ferrochrome image to ${FECR_DEVICE_DIR}"
   adb shell mkdir -p ${FECR_DEVICE_DIR} > /dev/null || true
-  adb push ${fecr_dir}/chromiumos_test_image.bin ${FECR_DEVICE_DIR}
+  adb push ${fecr_dir}/${fecr_image}.bin ${FECR_DEVICE_DIR}/${FECR_IMAGE_VM_CONFIG_JSON}
   adb push ${fecr_script_path}/assets/vm_config.json ${FECR_CONFIG_PATH}
 fi
 
@@ -152,7 +165,7 @@ fi
 fecr_start_time=${EPOCHSECONDS}
 
 while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do
-  adb shell grep -sF \""${FECR_BOOT_COMPLETED_LOG}"\" "${log_path}" && exit 0
+  adb shell grep -soF \""${fecr_boot_completed_log}"\" "${log_path}" && exit 0 || true
   sleep 10
 done
 
@@ -160,3 +173,4 @@ done
 >&2 adb shell cat ${log_path}
 
 exit 1
+

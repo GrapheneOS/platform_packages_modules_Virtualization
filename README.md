@@ -14,21 +14,21 @@ and follow the steps there.
 For in-depth explanations about individual topics and components, visit the following links.
 
 AVF components:
-* [pVM firmware](pvmfw/README.md)
+* [pVM firmware](guest/pvmfw/README.md)
 * [Android Boot Loader (ABL)](docs/abl.md)
 * [Microdroid](microdroid/README.md)
 * [Microdroid kernel](microdroid/kernel/README.md)
-* [Microdroid payload](microdroid/payload/README.md)
-* [vmbase](vmbase/README.md)
-* [Encrypted Storage](encryptedstore/README.md)
+* [Microdroid payload](libs/libmicrodroid_payload_metadata/README.md)
+* [vmbase](libs/libvmbase/README.md)
+* [Encrypted Storage](guest/encryptedstore/README.md)
 
 AVF APIs:
-* [Java API](java/framework/README.md)
-* [VM Payload API](vm_payload/README.md)
+* [Java API](libs/framework-virtualization/README.md)
+* [VM Payload API](libs/libvm_payload/README.md)
 
 How-Tos:
-* [Building and running a demo app in Java](demo/README.md)
-* [Building and running a demo app in C++](demo_native/README.md)
+* [Building and running a demo app in Java](android/MicrodroidDemoApp/README.md)
+* [Building and running a demo app in C++](android/vm_demo_native/README.md)
 * [Debugging](docs/debug)
 * [Using custom VM](docs/custom_vm.md)
 * [Device assignment](docs/device_assignment.md)

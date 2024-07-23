@@ -34,7 +34,7 @@
         <option name="throw-if-cmd-fail" value="false" />
         <option name="run-command" value="mkdir /data/local/tmp" />
         <option name="teardown-command" value="pkill vmlauncher" />
-        <option name="teardown-command" value="rm /data/local/tmp/chromiumos_test_image.bin" />
+        <option name="teardown-command" value="rm /data/local/tmp/chromiumos_base_image.bin" />
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.binary.ExecutableHostTest" >

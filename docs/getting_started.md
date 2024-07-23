@@ -94,7 +94,7 @@ Then you can repeat building and installing AVF to the device as follows:
 
 ## Step 4: Run a Microdroid VM
 
-[Microdroid](../../microdroid/README.md) is a lightweight version of Android
+[Microdroid](../../build/microdroid/README.md) is a lightweight version of Android
 that is intended to run on pVM. You can run a Microdroid-based VM with an empty
 payload using the following command:
 

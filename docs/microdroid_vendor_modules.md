@@ -111,7 +111,7 @@ adb shell /apex/com.android.virt/bin/vm/run-microdroid \
 
 The execution flow is very similar to the non-protected case above, however
 there is one important addition. The `pvmfw` binary will use the
-[VM reference DT blob](#../pvmfw/README.md#pvmfw-data-v1-2) passed from the
+[VM reference DT blob](#../guest/pvmfw/README.md#pvmfw-data-v1-2) passed from the
 Android Bootloader (ABL), to validate the guest DT overlay passed from the host.
 
 See [Changes in Android Bootloader](#changes-in-abl) section below for more
@@ -146,7 +146,7 @@ the value of the `microdroid-vendor.img` hashtree digest into the
 the host's `vendor.img`.
 
 The Android Bootloader can read that property when construction the
-[VM reference DT blob](#../pvmfw/README.md#pvmfw-data-v1-2) passed to pvmfw.
+[VM reference DT blob](#../guest/pvmfw/README.md#pvmfw-data-v1-2) passed to pvmfw.
 
 ## GKI as Microdroid guest kernel
 

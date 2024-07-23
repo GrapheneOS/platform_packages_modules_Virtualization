@@ -2,7 +2,7 @@
     "name": "cros",
     "disks": [
         {
-            "image": "/data/local/tmp/chromiumos_test_image.bin",
+            "image": "/data/local/tmp/chromiumos_base_image.bin",
             "partitions": [],
             "writable": true
         }

@@ -14,7 +14,7 @@ ABL is responsible for the followings:
 * loading it into memory, and
 * describing the region where pvmfw is loaded using DT and passing it to hypervisor.
 
-See [ABL Support](../pvmfw/README.md#android-bootloader-abl_support) for more detail.
+See [ABL Support](../guest/pvmfw/README.md#android-bootloader-abl_support) for more detail.
 
 ABL is also responsible for constructing the pvmfw configuration data. The data consists of the
 following info:
@@ -26,7 +26,7 @@ following info:
     * Hashtree digest of the
       [microdroid-vendor.img](microdroid_vendor_modules.md#changes-in-abl).
 
-See [Configuration Data](../pvmfw/README.md#configuration-data) for more detail.
+See [Configuration Data](../guest/pvmfw/README.md#configuration-data) for more detail.
 
 ## Android
 

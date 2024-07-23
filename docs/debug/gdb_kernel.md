@@ -33,14 +33,14 @@ some general techniques on how to debug kernel with gdb.
 ## Obtaining vmlinux for Microdroid kernels
 
 If you are debugging Microdroid kernel that you have built [locally](
-../../microdroid/kernel/README.md), then look for `out/dist/vmlinux` in your
+../../build/microdroid/kernel/README.md), then look for `out/dist/vmlinux` in your
 kernel repository.
 
 If you are debugging Microdroid kernel bundled with the `com.android.virt` APEX,
 then you need to obtain the build ID of this kernel. You can do this by
 checking the prebuilt-info.txt file in the
-`packages/modules/Virtualization/microdroid/kernel/arm64` or
-`packages/modules/Virtualization/microdroid/kernel/x86_64` directories.
+`packages/modules/Virtualization/build/microdroid/kernel/arm64` or
+`packages/modules/Virtualization/build/microdroid/kernel/x86_64` directories.
 
 Using that build ID you can download the vmlinux from the build server via:
 https://ci.android.com/builds/submitted/${BUILD_ID}/kernel_microdroid_aarch64/latest/vmlinux

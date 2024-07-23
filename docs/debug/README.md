@@ -96,7 +96,7 @@ As a reference, in Pixel phones, debug policy is loaded as below:
 
 1. Bootloader loads it from the `dpm` partition and verifies it.
 1. Bootloader appends the loaded debug policy as the [configuration
-   data](../../pvmfw/README.md#configuration-data) of the pvmfw.
+   data](../../guest/pvmfw/README.md#configuration-data) of the pvmfw.
 1. When a pVM is started, pvmfw [overlays][apply_debug_policy] the debug policy to the baseline
    device tree from crosvm.
 1. OS payload (e.g. Microdroid) [reads][read_debug_policy] the device tree and enables specific

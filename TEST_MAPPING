@@ -81,13 +81,13 @@
   ],
   "imports": [
     {
-      "path": "packages/modules/Virtualization/apkdmverity"
+      "path": "packages/modules/Virtualization/guest/apkdmverity"
     },
     {
-      "path": "packages/modules/Virtualization/encryptedstore"
+      "path": "packages/modules/Virtualization/guest/encryptedstore"
     },
     {
-      "path": "packages/modules/Virtualization/virtualizationmanager"
+      "path": "packages/modules/Virtualization/android/virtmgr"
     },
     {
       "path": "packages/modules/Virtualization/libs/apexutil"
@@ -120,34 +120,34 @@
       "path": "packages/modules/Virtualization/authfs"
     },
     {
-      "path": "packages/modules/Virtualization/microdroid_manager"
+      "path": "packages/modules/Virtualization/guest/microdroid_manager"
     },
     {
-      "path": "packages/modules/Virtualization/pvmfw"
+      "path": "packages/modules/Virtualization/guest/pvmfw"
     },
     {
-      "path": "packages/modules/Virtualization/rialto"
+      "path": "packages/modules/Virtualization/guest/rialto"
     },
     {
-      "path": "packages/modules/Virtualization/service_vm/client_vm_csr"
+      "path": "packages/modules/Virtualization/libs/libclient_vm_csr"
     },
     {
-      "path": "packages/modules/Virtualization/service_vm/comm"
+      "path": "packages/modules/Virtualization/libs/libservice_vm_comm"
     },
     {
-      "path": "packages/modules/Virtualization/service_vm/requests"
+      "path": "packages/modules/Virtualization/libs/libservice_vm_requests"
     },
     {
-      "path": "packages/modules/Virtualization/virtualizationservice"
+      "path": "packages/modules/Virtualization/android/virtualizationservice"
     },
     {
-      "path": "packages/modules/Virtualization/vm"
+      "path": "packages/modules/Virtualization/android/vm"
     },
     {
-      "path": "packages/modules/Virtualization/vmbase"
+      "path": "packages/modules/Virtualization/libs/libvmbase"
     },
     {
-      "path": "packages/modules/Virtualization/zipfuse"
+      "path": "packages/modules/Virtualization/guest/zipfuse"
     }
   ]
 }

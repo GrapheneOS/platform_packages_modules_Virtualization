@@ -221,7 +221,7 @@ For protected VM, bootloader must provide VM DTBO to the pvmfw. pvmfw sanitizes
 incoming device tree with the VM DTBO.
 
 For more detail about providing VM DTBO in pvmfw,
-see: [pvmfw/README.md](../pvmfw/README.md#configuration-data-format)
+see: [pvmfw/README.md](../guest/pvmfw/README.md#configuration-data-format)
 
 
 ## Launch VM with device assignment
