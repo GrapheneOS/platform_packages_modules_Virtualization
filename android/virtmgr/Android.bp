@@ -87,6 +87,14 @@ rust_binary {
     apex_available: ["com.android.virt"],
 }
 
+rust_binary {
+    name: "early_virtmgr",
+    defaults: ["virtualizationmanager_defaults"],
+    srcs: ["src/main.rs"],
+    cfgs: ["early"],
+    apex_available: ["com.android.virt"],
+}
+
 rust_test {
     name: "virtualizationmanager_device_test",
     srcs: ["src/main.rs"],

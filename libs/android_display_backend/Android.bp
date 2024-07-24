@@ -46,6 +46,9 @@ cc_library_static {
         "android.system.virtualizationcommon-ndk",
         "android.system.virtualizationservice-ndk",
     ],
+    static_libs: [
+        "libbase",
+    ],
     shared_libs: [
         "libbinder_ndk",
         "libnativewindow",

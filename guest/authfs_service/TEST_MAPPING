@@ -1,0 +1,23 @@
+// When adding or removing tests here, don't forget to amend _all_modules list in
+// wireless/android/busytown/ath_config/configs/prod/avf/tests.gcl
+{
+  "avf-presubmit": [
+    {
+      "name": "authfs_device_test_src_lib"
+    },
+    {
+      "name": "fd_server.test"
+    },
+    {
+      "name": "open_then_run.test"
+    },
+    {
+      "name": "AuthFsHostTest"
+    }
+  ],
+  "avf-postsubmit": [
+    {
+      "name": "AuthFsBenchmarks"
+    }
+  ]
+}

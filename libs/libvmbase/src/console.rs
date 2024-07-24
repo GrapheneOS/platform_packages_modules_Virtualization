@@ -23,8 +23,8 @@ use spin::{mutex::SpinMutex, Once};
 // Matches the UART count in crosvm.
 const MAX_CONSOLES: usize = 4;
 
-static CONSOLES: [SpinMutex<Option<Uart>>; MAX_CONSOLES] =
-    [SpinMutex::new(None), SpinMutex::new(None), SpinMutex::new(None), SpinMutex::new(None)];
+static CONSOLES: [Once<SpinMutex<Uart>>; MAX_CONSOLES] =
+    [Once::new(), Once::new(), Once::new(), Once::new()];
 static ADDRESSES: [Once<usize>; MAX_CONSOLES] =
     [Once::new(), Once::new(), Once::new(), Once::new()];
 
@@ -48,10 +48,10 @@ pub unsafe fn init(base_addresses: &[usize]) {
         ADDRESSES[i].call_once(|| base_address);
 
         // Initialize the console driver, for normal console accesses.
-        let mut console = CONSOLES[i].lock();
-        assert!(console.is_none(), "console::init() called more than once");
-        // SAFETY: base_address must be the base of a mapped UART.
-        console.replace(unsafe { Uart::new(base_address) });
+        assert!(!CONSOLES[i].is_completed(), "console::init() called more than once");
+        // SAFETY: The caller promised that base_address is the base of a mapped UART with no
+        // aliases.
+        CONSOLES[i].call_once(|| SpinMutex::new(unsafe { Uart::new(base_address) }));
     }
 }
 
@@ -59,8 +59,7 @@ pub unsafe fn init(base_addresses: &[usize]) {
 ///
 /// Panics if the n-th console was not initialized by calling [`init`] first.
 pub fn writeln(n: usize, format_args: Arguments) {
-    let mut guard = CONSOLES[n].lock();
-    let uart = guard.as_mut().unwrap();
+    let uart = &mut *CONSOLES[n].get().unwrap().lock();
 
     write(uart, format_args).unwrap();
     let _ = uart.write_str("\n");

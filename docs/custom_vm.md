@@ -207,28 +207,17 @@ $ cat > vm_config.json; adb push vm_config.json /data/local/tmp
 
 ### Running the VM
 
-First, enable the `VmLauncherApp` app. This needs to be done only once. In the
-future, this step won't be necesssary.
+1. Grant permission to the `VmLauncherApp` if the virt apex is Google-signed.
+    ```shell
+    $ adb shell su root pm grant com.google.android.virtualization.vmlauncher android.permission.USE_CUSTOM_VIRTUAL_MACHINE
+    ```
 
-```
-$ adb root
-$ adb shell pm enable com.android.virtualization.vmlauncher/.MainActivityAlias
-$ adb unroot
-```
+2. Ensure your device is connected to the Internet.
 
-If virt apex is Google-signed, you need to enable the app and grant the
-permission to the app.
-```
-$ adb root
-$ adb shell pm enable com.google.android.virtualization.vmlauncher/com.android.virtualization.vmlauncher.MainActivityAlias
-$ adb shell pm grant com.google.android.virtualization.vmlauncher android.permission.USE_CUSTOM_VIRTUAL_MACHINE
-$ adb unroot
-```
-
-Second, ensure your device is connected to the Internet.
-
-Finally, tap the VmLauncherApp app from the launcher UI. You will see
-Ferrochrome booting!
+3. Launch the app with adb.
+    ```shell
+    $ adb shell su root am start-activity -a android.virtualization.VM_LAUNCHER
+    ```
 
 If it doesn’t work well, try
 

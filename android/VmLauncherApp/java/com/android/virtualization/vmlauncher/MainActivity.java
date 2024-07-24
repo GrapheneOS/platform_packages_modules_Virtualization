@@ -457,10 +457,16 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
                                                 + holder.getSurface()
                                                 + ")");
                                 runWithDisplayService(
-                                        (service) ->
-                                                service.setSurface(
+                                        s ->
+                                                s.setSurface(
                                                         holder.getSurface(),
                                                         false /* forCursor */));
+                                // TODO  execute the above and the below togther with the same call
+                                // to runWithDisplayService. Currently this doesn't work because
+                                // setSurface somtimes trigger an exception and as a result
+                                // drawSavedFrameForSurface is skipped.
+                                runWithDisplayService(
+                                        s -> s.drawSavedFrameForSurface(false /* forCursor */));
                             }
 
                             @Override
@@ -541,6 +547,12 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
     protected void onResume() {
         super.onResume();
         setTabletModeConditionally();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        runWithDisplayService(s -> s.saveFrameForSurface(false /* forCursor */));
     }
 
     @Override

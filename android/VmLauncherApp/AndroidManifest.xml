@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature android:name="android.software.virtualization_framework" android:required="true" />
+
+    <permission android:name="com.android.virtualization.vmlauncher.permission.USE_VM_LAUNCHER"
+        android:protectionLevel="signature|preinstalled"/>
+
     <application
         android:label="VmLauncherApp">
         <activity android:name=".MainActivity"
@@ -14,6 +18,7 @@
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode"
                   android:theme="@style/MyTheme"
                   android:resizeableActivity="false"
+                  android:permission="com.android.virtualization.vmlauncher.permission.USE_VM_LAUNCHER"
                   android:exported="true">
             <intent-filter>
                 <action android:name="android.virtualization.VM_LAUNCHER" />

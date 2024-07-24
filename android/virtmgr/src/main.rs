@@ -131,7 +131,11 @@ fn main() {
     // Start thread pool for kernel Binder connection to VirtualizationServiceInternal.
     ProcessState::start_thread_pool();
 
-    GLOBAL_SERVICE.removeMemlockRlimit().expect("Failed to remove memlock rlimit");
+    if cfg!(early) {
+        panic!("Early VM not implemented");
+    } else {
+        GLOBAL_SERVICE.removeMemlockRlimit().expect("Failed to remove memlock rlimit");
+    }
 
     let service = VirtualizationService::init();
     let service =

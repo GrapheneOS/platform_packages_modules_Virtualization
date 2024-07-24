@@ -1,0 +1,48 @@
+rust_test {
+    name: "authfs_device_test_src_lib",
+    defaults: ["authfs_defaults"],
+    test_suites: ["general-tests"],
+    data: [":authfs_test_files"],
+}
+
+filegroup {
+    name: "authfs_test_files",
+    srcs: [
+        "testdata/cert.der",
+        "testdata/input.4k",
+        "testdata/input.4k.fsv_meta",
+        "testdata/input.4k1",
+        "testdata/input.4k1.fsv_meta",
+        "testdata/input.4m",
+        "testdata/input.4m.fsv_meta",
+        "testdata/input.4m.fsv_meta.bad_merkle",
+    ],
+}
+
+java_genrule {
+    name: "authfs_test_apk_assets",
+    out: ["authfs_test_apk_assets.jar"],
+    tools: [
+        "fsverity_manifest_generator",
+        "fsverity",
+        "soong_zip",
+    ],
+    srcs: [
+        "testdata/input.4k",
+        "testdata/input.4k1",
+        "testdata/input.4m",
+    ],
+    /*
+     * Create a JAR file with an assets directory that can merge into the
+     * assets of an APK that depends on it in static_libs. Use this mechanism
+     * to load a generated fsverity manifest for the test input files into the
+     * test VM.
+     */
+    cmd: "mkdir -p $(genDir)/assets" +
+        "&& $(location fsverity_manifest_generator) " +
+        "    --fsverity-path $(location fsverity) " +
+        "    --base-dir $$(dirname $(in) | head -1) " +
+        "    --output $(genDir)/assets/input_manifest.pb " +
+        "    $(in) " +
+        "&& $(location soong_zip) -jar -o $(out) -C $(genDir) -D $(genDir)/assets",
+}

@@ -45,6 +45,7 @@ soong_config_module_type {
     config_namespace: "ANDROID",
     bool_variables: [
         "release_avf_enable_device_assignment",
+        "release_avf_enable_early_vm",
         "release_avf_enable_llpvm_changes",
         "release_avf_enable_network",
         "avf_remote_attestation_enabled",
@@ -63,6 +64,7 @@ soong_config_module_type {
         "systemserverclasspath_fragments",
         "vintf_fragments",
         "apps",
+        "binaries",
     ],
 }
 
@@ -209,6 +211,16 @@ avf_flag_aware_apex_defaults {
             vintf_fragments: [
                 "virtualizationservice.xml",
             ],
+        },
+        release_avf_enable_early_vm: {
+            arch: {
+                arm64: {
+                    binaries: ["early_virtmgr"],
+                },
+                x86_64: {
+                    binaries: ["early_virtmgr"],
+                },
+            },
         },
     },
 }

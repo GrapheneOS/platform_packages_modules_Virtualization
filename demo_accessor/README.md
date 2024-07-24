@@ -28,7 +28,7 @@ For very first install,
 ```shell
 adb remount -R || adb wait-for-device  # Remount to push apex to /system_ext
 adb root && adb remount                # Ensure it's rebooted.
-adb push $ANDROID_PRODUCT_OUT/system_ext/com.android.virt.accessor_demo.apex /system_ext/apex
+adb push $ANDROID_PRODUCT_OUT/system_ext/apex/com.android.virt.accessor_demo.apex /system_ext/apex
 adb reboot && adb wait-for-device      # Ensure that newly pushed apex at /system_ext is installed
 ```
 
