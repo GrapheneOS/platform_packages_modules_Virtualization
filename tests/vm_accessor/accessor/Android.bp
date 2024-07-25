@@ -21,11 +21,11 @@ rust_binary {
         "libenv_logger",
         "libglob",
         "libhypervisor_props",
-        "liblibc",
         "liblog_rust",
         "libmicrodroid_payload_config",
         "librand",
         "libvmconfig",
         "libvmclient",
+        "libnix",
     ],
 }

@@ -7,68 +7,15 @@ microdroid_filesystem_images = [
     "microdroid_vbmeta",
 ]
 
-soong_config_module_type {
-    name: "virt_apex",
-    module_type: "apex",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "avf_enabled",
-    ],
-    properties: [
-        "defaults",
-        "prebuilts",
-    ],
-}
-
-virt_apex {
+apex {
     name: "com.android.virt",
-    soong_config_variables: {
-        avf_enabled: {
-            defaults: ["com.android.virt_avf_enabled"],
-            conditions_default: {
-                defaults: ["com.android.virt_avf_disabled"],
-            },
-        },
-    },
+    defaults: select(soong_config_variable("ANDROID", "avf_enabled"), {
+        "true": ["com.android.virt_avf_enabled"],
+        default: ["com.android.virt_avf_disabled"],
+    }),
 }
 
-soong_config_string_variable {
-    name: "avf_microdroid_guest_gki_version",
-    values: [
-        "android15_66",
-    ],
-}
-
-soong_config_module_type {
-    name: "avf_flag_aware_apex_defaults",
-    module_type: "apex_defaults",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_device_assignment",
-        "release_avf_enable_early_vm",
-        "release_avf_enable_llpvm_changes",
-        "release_avf_enable_network",
-        "avf_remote_attestation_enabled",
-        "release_avf_enable_vendor_modules",
-        "release_avf_enable_virt_cpufreq",
-        "release_avf_support_custom_vm_with_paravirtualized_devices",
-    ],
-    variables: [
-        "avf_microdroid_guest_gki_version",
-    ],
-    properties: [
-        "androidManifest",
-        "arch",
-        "canned_fs_config",
-        "prebuilts",
-        "systemserverclasspath_fragments",
-        "vintf_fragments",
-        "apps",
-        "binaries",
-    ],
-}
-
-avf_flag_aware_apex_defaults {
+apex_defaults {
     name: "com.android.virt_common",
     // TODO(jiyong): make it updatable
     updatable: false,
@@ -82,7 +29,10 @@ avf_flag_aware_apex_defaults {
 
     apps: [
         "android.system.virtualmachine.res",
-    ],
+    ] + select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
+        true: ["VmLauncherApp"],
+        default: [],
+    }),
 
     file_contexts: ":com.android.virt-file_contexts",
 
@@ -99,27 +49,19 @@ avf_flag_aware_apex_defaults {
         "libsso",
         "libutils",
     ],
-    soong_config_variables: {
-        release_avf_enable_llpvm_changes: {
-            systemserverclasspath_fragments: [
-                "com.android.virt-systemserver-fragment",
-            ],
-        },
-        release_avf_enable_virt_cpufreq: {
-            canned_fs_config: "canned_fs_config_sys_nice",
-            conditions_default: {
-                canned_fs_config: "canned_fs_config",
-            },
-        },
-        release_avf_support_custom_vm_with_paravirtualized_devices: {
-            apps: [
-                "VmLauncherApp",
-            ],
-        },
-    },
+
+    systemserverclasspath_fragments: select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
+        true: ["com.android.virt-systemserver-fragment"],
+        default: [],
+    }),
+
+    canned_fs_config: select(release_flag("RELEASE_AVF_ENABLE_VIRT_CPUFREQ"), {
+        true: "canned_fs_config_sys_nice",
+        default: "canned_fs_config",
+    }),
 }
 
-avf_flag_aware_apex_defaults {
+apex_defaults {
     name: "com.android.virt_avf_enabled",
 
     defaults: ["com.android.virt_common"],
@@ -133,7 +75,13 @@ avf_flag_aware_apex_defaults {
                 "crosvm",
                 "virtmgr",
                 "virtualizationservice",
-            ],
+            ] + select(release_flag("RELEASE_AVF_ENABLE_DEVICE_ASSIGNMENT"), {
+                true: ["vfio_handler"],
+                default: [],
+            }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
+                true: ["vmnic"],
+                default: [],
+            }),
             filesystems: microdroid_filesystem_images,
             prebuilts: [
                 "rialto_bin",
@@ -144,14 +92,23 @@ avf_flag_aware_apex_defaults {
                 "crosvm",
                 "virtmgr",
                 "virtualizationservice",
-            ],
+            ] + select(release_flag("RELEASE_AVF_ENABLE_DEVICE_ASSIGNMENT"), {
+                true: ["vfio_handler"],
+                default: [],
+            }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
+                true: ["vmnic"],
+                default: [],
+            }),
             filesystems: microdroid_filesystem_images,
         },
     },
     binaries: [
         "fd_server",
         "vm",
-    ],
+    ] + select(release_flag("RELEASE_AVF_ENABLE_EARLY_VM"), {
+        true: ["early_virtmgr"],
+        default: [],
+    }),
     prebuilts: [
         "features_com.android.virt.xml",
         "microdroid_initrd_debuggable",
@@ -160,69 +117,35 @@ avf_flag_aware_apex_defaults {
         "microdroid_kernel",
         "com.android.virt.init.rc",
         "android_bootloader_crosvm_aarch64",
-    ],
+    ] + select(soong_config_variable("ANDROID", "avf_microdroid_guest_gki_version"), {
+        "android15_66": [
+            "microdroid_gki-android15-6.6_initrd_debuggable",
+            "microdroid_gki-android15-6.6_initrd_normal",
+            "microdroid_gki-android15-6.6_kernel",
+            "microdroid_gki-android15-6.6.json",
+        ],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_DEVICE_ASSIGNMENT"), {
+        true: ["com.android.virt.vfio_handler.rc"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
+        true: ["com.android.virt.vmnic.rc"],
+        default: [],
+    }),
     host_required: [
         "vm_shell",
     ],
     apps: [
         "EmptyPayloadApp",
     ],
-    soong_config_variables: {
-        avf_microdroid_guest_gki_version: {
-            android15_66: {
-                prebuilts: [
-                    "microdroid_gki-android15-6.6_initrd_debuggable",
-                    "microdroid_gki-android15-6.6_initrd_normal",
-                    "microdroid_gki-android15-6.6_kernel",
-                    "microdroid_gki-android15-6.6.json",
-                ],
-            },
-        },
-        release_avf_enable_device_assignment: {
-            prebuilts: [
-                "com.android.virt.vfio_handler.rc",
-            ],
-            arch: {
-                arm64: {
-                    binaries: ["vfio_handler"],
-                },
-                x86_64: {
-                    binaries: ["vfio_handler"],
-                },
-            },
-        },
-        release_avf_enable_llpvm_changes: {
-            androidManifest: "AndroidManifest.xml",
-        },
-        release_avf_enable_network: {
-            prebuilts: [
-                "com.android.virt.vmnic.rc",
-            ],
-            arch: {
-                arm64: {
-                    binaries: ["vmnic"],
-                },
-                x86_64: {
-                    binaries: ["vmnic"],
-                },
-            },
-        },
-        avf_remote_attestation_enabled: {
-            vintf_fragments: [
-                "virtualizationservice.xml",
-            ],
-        },
-        release_avf_enable_early_vm: {
-            arch: {
-                arm64: {
-                    binaries: ["early_virtmgr"],
-                },
-                x86_64: {
-                    binaries: ["early_virtmgr"],
-                },
-            },
-        },
-    },
+    androidManifest: select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
+        true: "AndroidManifest.xml",
+        default: unset,
+    }),
+    vintf_fragments: select(soong_config_variable("ANDROID", "avf_remote_attestation_enabled"), {
+        "true": ["virtualizationservice.xml"],
+        default: unset,
+    }),
 }
 
 apex_defaults {
@@ -242,28 +165,17 @@ android_app_certificate {
     certificate: "com.android.virt",
 }
 
-soong_config_module_type {
-    name: "avf_flag_aware_genrule",
-    module_type: "genrule",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_llpvm_changes",
-        "avf_remote_attestation_enabled",
-    ],
-    properties: ["srcs"],
-}
-
-avf_flag_aware_genrule {
+genrule {
     name: "virtualizationservice_rc_combined",
-    srcs: ["virtualizationservice.rc.base"],
-    soong_config_variables: {
-        release_avf_enable_llpvm_changes: {
-            srcs: ["virtualizationservice.rc.llpvm"],
-        },
-        avf_remote_attestation_enabled: {
-            srcs: ["virtualizationservice.rc.ra"],
-        },
-    },
+    srcs: [
+        "virtualizationservice.rc.base",
+    ] + select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
+        true: ["virtualizationservice.rc.llpvm"],
+        default: [],
+    }) + select(soong_config_variable("ANDROID", "avf_remote_attestation_enabled"), {
+        "true": ["virtualizationservice.rc.ra"],
+        default: [],
+    }),
     out: ["virtualizationservice.rc"],
     cmd: "cat $(in) > $(out)",
 }
@@ -413,28 +325,14 @@ bootclasspath_fragment {
     },
 }
 
-soong_config_module_type {
-    name: "avf_flag_aware_systemserverclasspath_fragment",
-    module_type: "systemserverclasspath_fragment",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_llpvm_changes",
-    ],
-    properties: [
-        "enabled",
-    ],
-}
-
-avf_flag_aware_systemserverclasspath_fragment {
+systemserverclasspath_fragment {
     name: "com.android.virt-systemserver-fragment",
     contents: [
         "service-virtualization",
     ],
     apex_available: ["com.android.virt"],
-    enabled: false,
-    soong_config_variables: {
-        release_avf_enable_llpvm_changes: {
-            enabled: true,
-        },
-    },
+    enabled: select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
+        true: true,
+        default: false,
+    }),
 }

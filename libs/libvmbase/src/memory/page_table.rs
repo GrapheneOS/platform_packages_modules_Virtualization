@@ -16,23 +16,29 @@
 
 use crate::read_sysreg;
 use aarch64_paging::idmap::IdMap;
-use aarch64_paging::paging::{Attributes, Constraints, Descriptor, MemoryRegion};
+use aarch64_paging::paging::{
+    Attributes, Constraints, Descriptor, MemoryRegion, TranslationRegime,
+};
 use aarch64_paging::MapError;
 use core::result;
 
 /// Software bit used to indicate a device that should be lazily mapped.
 pub(super) const MMIO_LAZY_MAP_FLAG: Attributes = Attributes::SWFLAG_0;
 
-// We assume that:
-// - MAIR_EL1.Attr0 = "Device-nGnRE memory" (0b0000_0100)
-// - MAIR_EL1.Attr1 = "Normal memory, Outer & Inner WB Non-transient, R/W-Allocate" (0b1111_1111)
+/// We assume that MAIR_EL1.Attr0 = "Device-nGnRE memory" (0b0000_0100)
+const DEVICE_NGNRE: Attributes = Attributes::ATTRIBUTE_INDEX_0;
+
+/// We assume that MAIR_EL1.Attr1 = "Normal memory, Outer & Inner WB Non-transient, R/W-Allocate"
+/// (0b1111_1111)
+const NORMAL: Attributes = Attributes::ATTRIBUTE_INDEX_1.union(Attributes::INNER_SHAREABLE);
+
 const MEMORY: Attributes =
-    Attributes::VALID.union(Attributes::NORMAL).union(Attributes::NON_GLOBAL);
+    Attributes::VALID.union(NORMAL).union(Attributes::NON_GLOBAL).union(Attributes::ACCESSED);
 const DEVICE_LAZY: Attributes =
-    MMIO_LAZY_MAP_FLAG.union(Attributes::DEVICE_NGNRE).union(Attributes::EXECUTE_NEVER);
+    MMIO_LAZY_MAP_FLAG.union(DEVICE_NGNRE).union(Attributes::UXN).union(Attributes::ACCESSED);
 const DEVICE: Attributes = DEVICE_LAZY.union(Attributes::VALID);
 const CODE: Attributes = MEMORY.union(Attributes::READ_ONLY);
-const DATA: Attributes = MEMORY.union(Attributes::EXECUTE_NEVER);
+const DATA: Attributes = MEMORY.union(Attributes::UXN);
 const RODATA: Attributes = DATA.union(Attributes::READ_ONLY);
 const DATA_DBM: Attributes = RODATA.union(Attributes::DBM);
 
@@ -64,7 +70,7 @@ impl Default for PageTable {
         assert_eq!((tcr_el1 >> TCR_EL1_TG0_SHIFT) & TCR_EL1_TG0_MASK, TCR_EL1_TG0_SIZE_4KB);
         assert_eq!((tcr_el1 >> TCR_EL1_T0SZ_SHIFT) & TCR_EL1_T0SZ_MASK, TCR_EL1_T0SZ_39_VA_BITS);
 
-        IdMap::new(Self::ASID, Self::ROOT_LEVEL).into()
+        IdMap::new(Self::ASID, Self::ROOT_LEVEL, TranslationRegime::El1And0).into()
     }
 }
 

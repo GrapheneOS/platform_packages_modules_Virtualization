@@ -105,7 +105,11 @@ In `AttestationExtension`:
     set to true only when all the DICE certificates in the pVM DICE chain are in
     normal mode.
 -   The `vmComponents` field contains a list of all the APKs and apexes loaded
-    by the pVM.
+    by the pVM. These components are extracted from the config descriptor of the
+    last DiceChainEntry of the pVM DICE chain. Refer to
+    [dice_for_avf_guest.cddl][dice_for_avf_guest_cddl] for more information.
+
+[dice_for_avf_guest_cddl]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/dice_for_avf_guest.cddl
 
 ## To Support It
 

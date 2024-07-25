@@ -26,11 +26,10 @@ use binder::{ParcelFileDescriptor, Strong};
 use glob::glob;
 use log::{error, info};
 use rand::{distributions::Alphanumeric, Rng};
-use std::fs;
-use std::fs::File;
-use std::io;
-use std::os::unix::io::{AsRawFd, FromRawFd};
+use std::fs::{self, File};
+use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;
+use std::thread;
 use vmclient::{ErrorCode, VmInstance};
 use vmconfig::open_parcel_file;
 
@@ -126,9 +125,9 @@ pub fn run_vm() -> Result<VmInstance, Error> {
     let vm = VmInstance::create(
         service.as_ref(),
         &vm_config,
-        Some(duplicate_fd(io::stdout())?), /* console_out */
-        None,                              /* console_in */
-        Some(duplicate_fd(io::stdout())?), /* log */
+        Some(android_log_fd()?), /* console_out */
+        None,                    /* console_in */
+        Some(android_log_fd()?), /* log */
         Some(Box::new(Callback {})),
     )
     .context("Failed to create VM")?;
@@ -159,17 +158,24 @@ impl vmclient::VmCallback for Callback {
     }
 }
 
-/// Safely duplicate the file descriptor.
-fn duplicate_fd<T: AsRawFd>(file: T) -> io::Result<File> {
-    let fd = file.as_raw_fd();
-    // SAFETY: This just duplicates a file descriptor which we know to be valid, and we check for an
-    // an error.
-    let dup_fd = unsafe { libc::dup(fd) };
-    if dup_fd < 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        // SAFETY: We have just duplicated the file descriptor so we own it, and `from_raw_fd` takes
-        // ownership of it.
-        Ok(unsafe { File::from_raw_fd(dup_fd) })
-    }
+/// This function is only exposed for testing.
+/// Production code prefer not expose logs from VM.
+fn android_log_fd() -> io::Result<File> {
+    let (reader_fd, writer_fd) = nix::unistd::pipe()?;
+
+    let reader = File::from(reader_fd);
+    let writer = File::from(writer_fd);
+
+    thread::spawn(|| {
+        for line in BufReader::new(reader).lines() {
+            match line {
+                Ok(l) => info!("{}", l),
+                Err(e) => {
+                    error!("Failed to read line from VM: {e:?}");
+                    break;
+                }
+            }
+        }
+    });
+    Ok(writer)
 }
