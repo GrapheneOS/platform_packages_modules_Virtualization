@@ -18,86 +18,50 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-soong_config_module_type {
-    name: "avf_flag_aware_rust_defaults",
-    module_type: "rust_defaults",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_device_assignment",
-        "release_avf_enable_dice_changes",
-        "release_avf_enable_llpvm_changes",
-        "release_avf_enable_multi_tenant_microdroid_vm",
-        "release_avf_enable_network",
-        "release_avf_enable_remote_attestation",
-        "release_avf_enable_vendor_modules",
-        "release_avf_enable_virt_cpufreq",
-        "release_avf_support_custom_vm_with_paravirtualized_devices",
-    ],
-    properties: [
-        "cfgs",
-    ],
-}
-
-avf_flag_aware_rust_defaults {
+rust_defaults {
     name: "avf_build_flags_rust",
-    soong_config_variables: {
-        release_avf_enable_device_assignment: {
-            cfgs: ["device_assignment"],
-        },
-        release_avf_enable_dice_changes: {
-            cfgs: ["dice_changes"],
-        },
-        release_avf_enable_llpvm_changes: {
-            cfgs: ["llpvm_changes"],
-        },
-        release_avf_enable_multi_tenant_microdroid_vm: {
-            cfgs: ["multi_tenant"],
-        },
-        release_avf_enable_network: {
-            cfgs: ["network"],
-        },
-        release_avf_enable_remote_attestation: {
-            cfgs: ["remote_attestation"],
-        },
-        release_avf_enable_vendor_modules: {
-            cfgs: ["vendor_modules"],
-        },
-        release_avf_enable_virt_cpufreq: {
-            cfgs: ["virt_cpufreq"],
-        },
-        release_avf_support_custom_vm_with_paravirtualized_devices: {
-            cfgs: ["paravirtualized_devices"],
-        },
-    },
+    cfgs: select(release_flag("RELEASE_AVF_ENABLE_DEVICE_ASSIGNMENT"), {
+        true: ["device_assignment"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
+        true: ["dice_changes"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
+        true: ["llpvm_changes"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_MULTI_TENANT_MICRODROID_VM"), {
+        true: ["multi_tenant"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
+        true: ["network"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_REMOTE_ATTESTATION"), {
+        true: ["remote_attestation"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
+        true: ["vendor_modules"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_VIRT_CPUFREQ"), {
+        true: ["virt_cpufreq"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
+        true: ["paravirtualized_devices"],
+        default: [],
+    }),
 }
 
-soong_config_module_type {
-    name: "avf_flag_aware_cc_defaults",
-    module_type: "cc_defaults",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_dice_changes",
-        "release_avf_enable_vendor_modules",
-        "release_avf_enable_virt_cpufreq",
-    ],
-    properties: [
-        "cflags",
-    ],
-}
-
-avf_flag_aware_cc_defaults {
+cc_defaults {
     name: "avf_build_flags_cc",
-    soong_config_variables: {
-        release_avf_enable_dice_changes: {
-            cflags: ["-DAVF_OPEN_DICE_CHANGES=1"],
-        },
-        release_avf_enable_vendor_modules: {
-            cflags: ["-DAVF_ENABLE_VENDOR_MODULES=1"],
-        },
-        release_avf_enable_virt_cpufreq: {
-            cflags: ["-DAVF_ENABLE_VIRT_CPUFREQ=1"],
-        },
-    },
+    cflags: select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
+        true: ["-DAVF_OPEN_DICE_CHANGES=1"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
+        true: ["-DAVF_ENABLE_VENDOR_MODULES=1"],
+        default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_VIRT_CPUFREQ"), {
+        true: ["-DAVF_ENABLE_VIRT_CPUFREQ=1"],
+        default: [],
+    }),
 }
 
 genrule_defaults {

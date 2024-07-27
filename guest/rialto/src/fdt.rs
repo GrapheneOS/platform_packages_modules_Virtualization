@@ -29,3 +29,10 @@ pub(crate) fn read_vendor_hashtree_root_digest(fdt: &Fdt) -> libfdt::Result<Opti
     let node = fdt.node(cstr!("/avf"))?.ok_or(FdtError::NotFound)?;
     node.getprop(cstr!("vendor_hashtree_descriptor_root_digest"))
 }
+
+pub(crate) fn read_is_strict_boot(fdt: &Fdt) -> libfdt::Result<bool> {
+    match fdt.chosen()? {
+        Some(node) => Ok(node.getprop(cstr!("avf,strict-boot"))?.is_some()),
+        None => Ok(false),
+    }
+}
