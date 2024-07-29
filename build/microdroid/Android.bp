@@ -44,22 +44,7 @@ microdroid_symlinks = [
     },
 ]
 
-soong_config_module_type {
-    name: "flag_aware_microdroid_system_image",
-    module_type: "android_system_image",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_dice_changes",
-        "release_avf_enable_multi_tenant_microdroid_vm",
-    ],
-    properties: [
-        "deps",
-        "dirs",
-        "multilib",
-    ],
-}
-
-flag_aware_microdroid_system_image {
+android_system_image {
     name: "microdroid",
     use_avb: true,
     avb_private_key: ":microdroid_sign_key",
@@ -108,7 +93,13 @@ flag_aware_microdroid_system_image {
         "traced",
         "traced_probes",
         "perfetto",
-    ] + microdroid_shell_and_utilities,
+    ] + select(release_flag("RELEASE_AVF_ENABLE_MULTI_TENANT_MICRODROID_VM"), {
+        true: [
+            "microdroid_etc_passwd",
+            "microdroid_etc_group",
+        ],
+        default: [],
+    }) + microdroid_shell_and_utilities,
     multilib: {
         common: {
             deps: [
@@ -128,7 +119,10 @@ flag_aware_microdroid_system_image {
                 "microdroid_kexec",
                 "microdroid_manager",
                 "zipfuse",
-            ],
+            ] + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
+                true: ["derive_microdroid_vendor_dice_node"],
+                default: [],
+            }),
         },
     },
     arch: {
@@ -147,33 +141,16 @@ flag_aware_microdroid_system_image {
     },
     linker_config_src: "linker.config.json",
     base_dir: "system",
-    dirs: microdroid_rootdirs,
+    dirs: microdroid_rootdirs + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
+        true: ["microdroid_resources"],
+        default: [],
+    }),
     symlinks: microdroid_symlinks,
     file_contexts: ":microdroid_file_contexts.gen",
     // For deterministic output, use fake_timestamp, hard-coded uuid
     fake_timestamp: "1611569676",
     // python -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_URL, 'www.android.com/avf/microdroid/system'))"
     uuid: "5fe079c6-f01a-52be-87d3-d415231a72ad",
-
-    // Below are dependencies that are conditionally enabled depending on value of build flags.
-    soong_config_variables: {
-        release_avf_enable_dice_changes: {
-            multilib: {
-                lib64: {
-                    deps: ["derive_microdroid_vendor_dice_node"],
-                },
-            },
-            dirs: [
-                "microdroid_resources",
-            ],
-        },
-        release_avf_enable_multi_tenant_microdroid_vm: {
-            deps: [
-                "microdroid_etc_passwd",
-                "microdroid_etc_group",
-            ],
-        },
-    },
 }
 
 prebuilt_etc {
@@ -308,19 +285,7 @@ flag_aware_microdroid_super_partition {
     },
 }
 
-soong_config_module_type {
-    name: "flag_aware_microdroid_filesystem",
-    module_type: "android_filesystem",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_dice_changes",
-    ],
-    properties: [
-        "dirs",
-    ],
-}
-
-flag_aware_microdroid_filesystem {
+android_filesystem {
     name: "microdroid_ramdisk",
     deps: [
         "init_first_stage.microdroid",
@@ -333,17 +298,11 @@ flag_aware_microdroid_filesystem {
         "mnt",
         "debug_ramdisk",
         "second_stage_resources",
-    ],
+    ] + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
+        true: ["microdroid_resources"],
+        default: [],
+    }),
     type: "compressed_cpio",
-
-    // Below are dependencies that are conditionally enabled depending on value of build flags.
-    soong_config_variables: {
-        release_avf_enable_dice_changes: {
-            dirs: [
-                "microdroid_resources",
-            ],
-        },
-    },
 }
 
 android_filesystem {
@@ -400,32 +359,16 @@ filegroup {
     srcs: [":pvmfw_embedded_key"],
 }
 
-soong_config_module_type {
-    name: "flag_aware_microdroid_vbmeta",
-    module_type: "vbmeta",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_vendor_modules",
-    ],
-    properties: [
-        "partitions",
-    ],
-}
-
-flag_aware_microdroid_vbmeta {
+vbmeta {
     name: "microdroid_vbmeta",
     partition_name: "vbmeta",
     private_key: ":microdroid_sign_key",
     partitions: [
         "microdroid",
-    ],
-    soong_config_variables: {
-        release_avf_enable_vendor_modules: {
-            conditions_default: {
-                partitions: ["microdroid_vendor"],
-            },
-        },
-    },
+    ] + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
+        true: [],
+        default: ["microdroid_vendor"],
+    }),
 }
 
 prebuilt_etc {
