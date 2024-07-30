@@ -201,15 +201,15 @@ genrule {
     name: "microdroid_build_prop_gen_x86_64",
     srcs: [
         "build.prop",
-        ":buildinfo.prop",
+        ":system-build.prop",
     ],
     out: ["build.prop.out"],
-    cmd: "(echo '# build properties from buildinfo.prop module' && " +
-        "grep ro\\.build\\.version\\.codename= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.release= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.sdk= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.security_patch= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.known_codenames= $(location :buildinfo.prop) && " +
+    cmd: "(echo '# build properties from system/build.prop' && " +
+        "grep ro\\.build\\.version\\.codename= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.release= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.sdk= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.security_patch= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.known_codenames= $(location :system-build.prop) && " +
         "cat $(location build.prop) && " +
         "echo ro.product.cpu.abilist=x86_64 && " +
         "echo ro.product.cpu.abi=x86_64) > $(out)",
@@ -219,15 +219,15 @@ genrule {
     name: "microdroid_build_prop_gen_arm64",
     srcs: [
         "build.prop",
-        ":buildinfo.prop",
+        ":system-build.prop",
     ],
     out: ["build.prop.out"],
-    cmd: "(echo '# build properties from buildinfo.prop module' && " +
-        "grep ro\\.build\\.version\\.codename= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.release= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.sdk= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.security_patch= $(location :buildinfo.prop) && " +
-        "grep ro\\.build\\.version\\.known_codenames= $(location :buildinfo.prop) && " +
+    cmd: "(echo '# build properties from system/build.prop' && " +
+        "grep ro\\.build\\.version\\.codename= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.release= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.sdk= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.security_patch= $(location :system-build.prop) && " +
+        "grep ro\\.build\\.version\\.known_codenames= $(location :system-build.prop) && " +
         "cat $(location build.prop) && " +
         "echo ro.product.cpu.abilist=arm64-v8a && " +
         "echo ro.product.cpu.abi=arm64-v8a) > $(out)",
