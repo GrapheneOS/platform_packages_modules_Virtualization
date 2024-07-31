@@ -369,6 +369,7 @@ pub struct VmInstance {
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
     /// VirtualMachineService binder object for the VM.
+    #[allow(dead_code)]
     pub vm_service: Mutex<Option<Strong<dyn IVirtualMachineService>>>,
     /// Recorded metrics of VM such as timestamp or cpu / memory usage.
     pub vm_metric: Mutex<VmMetric>,
