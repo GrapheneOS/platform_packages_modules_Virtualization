@@ -291,6 +291,19 @@ derive another [DICE layer][Layering], passed to the guest through a
 `/reserved-memory` device tree node marked as
 [`compatible=”google,open-dice”`][dice-dt].
 
+#### Testing
+
+To verify that the DICE handover is successful in pvmfw and eventually the pVM
+has a valid DICE chain, you can run the VSR test
+`MicrodroidTests#protectedVmHasValidDiceChain`. The test retrieves the DICE
+chain from within a Microdroid VM in protected mode and checks the following
+properties using the [hwtrust][hwtrust] library:
+
+1. All the fields in the DICE chain conform to
+   [Android Profile for DICE][android-open-dice].
+2. The DICE chain is a valid certificate chain, where the subject public key in
+   each certificate can be used to verify the signature of the next certificate.
+
 [AVB]: https://source.android.com/docs/security/features/verifiedboot/boot-flow
 [AndroidDiceHandover]: https://pigweed.googlesource.com/open-dice/+/42ae7760023/src/android.c#212
 [DiceAndroidHandoverMainFlow]: https://pigweed.googlesource.com/open-dice/+/42ae7760023/src/android.c#221
@@ -299,6 +312,8 @@ derive another [DICE layer][Layering], passed to the guest through a
 [dice-dt]: https://www.kernel.org/doc/Documentation/devicetree/bindings/reserved-memory/google%2Copen-dice.yaml
 [Layering]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md#layering-details
 [Trusty-BCC]: https://android.googlesource.com/trusty/lib/+/1696be0a8f3a7103/lib/hwbcc/common/swbcc.c#554
+[hwtrust]: https://cs.android.com/android/platform/superproject/main/+/main:tools/security/remote_provisioning/hwtrust/
+[android-open-dice]: https://android.googlesource.com/platform/external/open-dice/+/refs/heads/main/docs/android.md
 
 ### Platform Requirements
 

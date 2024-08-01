@@ -67,7 +67,7 @@ fn main(
     ramdisk: Option<&[u8]>,
     current_bcc_handover: &[u8],
     mut debug_policy: Option<&[u8]>,
-) -> Result<Range<usize>, RebootReason> {
+) -> Result<(Range<usize>, bool), RebootReason> {
     info!("pVM firmware");
     debug!("FDT: {:?}", fdt.as_ptr());
     debug!("Signed kernel: {:?} ({:#x} bytes)", signed_kernel.as_ptr(), signed_kernel.len());
@@ -240,7 +240,7 @@ fn main(
         (r.start as usize)..(r.end as usize)
     };
 
-    Ok(bcc_range)
+    Ok((bcc_range, debuggable))
 }
 
 fn check_dice_measurements_match_entry(

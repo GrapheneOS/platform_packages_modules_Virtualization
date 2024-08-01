@@ -17,7 +17,6 @@
 package com.android.virtualization.vmlauncher;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
-import static android.system.virtualmachine.VirtualMachineConfig.CPU_TOPOLOGY_MATCH_HOST;
 
 import android.Manifest.permission;
 import android.app.Activity;
@@ -26,7 +25,6 @@ import android.content.ClipboardManager;
 import android.content.Intent;
 import android.crosvm.ICrosvmAndroidDisplayService;
 import android.graphics.PixelFormat;
-import android.graphics.Rect;
 import android.hardware.input.InputManager;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
@@ -36,13 +34,8 @@ import android.system.virtualizationservice_internal.IVirtualizationServiceInter
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineCallback;
 import android.system.virtualmachine.VirtualMachineConfig;
-import android.system.virtualmachine.VirtualMachineCustomImageConfig;
-import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig;
-import android.system.virtualmachine.VirtualMachineCustomImageConfig.DisplayConfig;
-import android.system.virtualmachine.VirtualMachineCustomImageConfig.GpuConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -53,13 +46,8 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
-import android.view.WindowMetrics;
 
 import libcore.io.IoBridge;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -72,10 +60,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -94,164 +78,6 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
     private CursorHandler mCursorHandler;
     private ClipboardManager mClipboardManager;
 
-    private VirtualMachineConfig createVirtualMachineConfig(String jsonPath) {
-        VirtualMachineConfig.Builder configBuilder =
-                new VirtualMachineConfig.Builder(getApplication());
-        configBuilder.setCpuTopology(CPU_TOPOLOGY_MATCH_HOST);
-
-        configBuilder.setProtectedVm(false);
-        if (DEBUG) {
-            configBuilder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
-            configBuilder.setVmOutputCaptured(true);
-            configBuilder.setConnectVmConsole(true);
-        }
-        VirtualMachineCustomImageConfig.Builder customImageConfigBuilder =
-                new VirtualMachineCustomImageConfig.Builder();
-        try {
-            String rawJson = new String(Files.readAllBytes(Path.of(jsonPath)));
-            JSONObject json = new JSONObject(rawJson);
-            customImageConfigBuilder.setName(json.optString("name", ""));
-            if (json.has("kernel")) {
-                customImageConfigBuilder.setKernelPath(json.getString("kernel"));
-            }
-            if (json.has("initrd")) {
-                customImageConfigBuilder.setInitrdPath(json.getString("initrd"));
-            }
-            if (json.has("params")) {
-                Arrays.stream(json.getString("params").split(" "))
-                        .forEach(customImageConfigBuilder::addParam);
-            }
-            if (json.has("bootloader")) {
-                customImageConfigBuilder.setBootloaderPath(json.getString("bootloader"));
-            }
-            if (json.has("disks")) {
-                JSONArray diskArr = json.getJSONArray("disks");
-                for (int i = 0; i < diskArr.length(); i++) {
-                    JSONObject item = diskArr.getJSONObject(i);
-                    if (item.has("image")) {
-                        if (item.optBoolean("writable", false)) {
-                            customImageConfigBuilder.addDisk(
-                                    VirtualMachineCustomImageConfig.Disk.RWDisk(
-                                            item.getString("image")));
-                        } else {
-                            customImageConfigBuilder.addDisk(
-                                    VirtualMachineCustomImageConfig.Disk.RODisk(
-                                            item.getString("image")));
-                        }
-                    } else if (item.has("partitions")) {
-                        boolean diskWritable = item.optBoolean("writable", false);
-                        VirtualMachineCustomImageConfig.Disk disk =
-                                diskWritable
-                                        ? VirtualMachineCustomImageConfig.Disk.RWDisk(null)
-                                        : VirtualMachineCustomImageConfig.Disk.RODisk(null);
-                        JSONArray partitions = item.getJSONArray("partitions");
-                        for (int j = 0; j < partitions.length(); j++) {
-                            JSONObject partition = partitions.getJSONObject(j);
-                            String label = partition.getString("label");
-                            String path = partition.getString("path");
-                            boolean partitionWritable =
-                                    diskWritable && partition.optBoolean("writable", false);
-                            String guid = partition.optString("guid");
-                            VirtualMachineCustomImageConfig.Partition p =
-                                    new VirtualMachineCustomImageConfig.Partition(
-                                            label, path, partitionWritable, guid);
-                            disk.addPartition(p);
-                        }
-                        customImageConfigBuilder.addDisk(disk);
-                    }
-                }
-            }
-            if (json.has("console_input_device")) {
-                configBuilder.setConsoleInputDevice(json.getString("console_input_device"));
-            }
-            if (json.has("gpu")) {
-                JSONObject gpuJson = json.getJSONObject("gpu");
-
-                GpuConfig.Builder gpuConfigBuilder = new GpuConfig.Builder();
-
-                if (gpuJson.has("backend")) {
-                    gpuConfigBuilder.setBackend(gpuJson.getString("backend"));
-                }
-                if (gpuJson.has("context_types")) {
-                    ArrayList<String> contextTypes = new ArrayList<String>();
-                    JSONArray contextTypesJson = gpuJson.getJSONArray("context_types");
-                    for (int i = 0; i < contextTypesJson.length(); i++) {
-                        contextTypes.add(contextTypesJson.getString(i));
-                    }
-                    gpuConfigBuilder.setContextTypes(contextTypes.toArray(new String[0]));
-                }
-                if (gpuJson.has("pci_address")) {
-                    gpuConfigBuilder.setPciAddress(gpuJson.getString("pci_address"));
-                }
-                if (gpuJson.has("renderer_features")) {
-                    gpuConfigBuilder.setRendererFeatures(gpuJson.getString("renderer_features"));
-                }
-                if (gpuJson.has("renderer_use_egl")) {
-                    gpuConfigBuilder.setRendererUseEgl(gpuJson.getBoolean("renderer_use_egl"));
-                }
-                if (gpuJson.has("renderer_use_gles")) {
-                    gpuConfigBuilder.setRendererUseGles(gpuJson.getBoolean("renderer_use_gles"));
-                }
-                if (gpuJson.has("renderer_use_glx")) {
-                    gpuConfigBuilder.setRendererUseGlx(gpuJson.getBoolean("renderer_use_glx"));
-                }
-                if (gpuJson.has("renderer_use_surfaceless")) {
-                    gpuConfigBuilder.setRendererUseSurfaceless(
-                            gpuJson.getBoolean("renderer_use_surfaceless"));
-                }
-                if (gpuJson.has("renderer_use_vulkan")) {
-                    gpuConfigBuilder.setRendererUseVulkan(
-                            gpuJson.getBoolean("renderer_use_vulkan"));
-                }
-                customImageConfigBuilder.setGpuConfig(gpuConfigBuilder.build());
-            }
-
-            long memoryMib = 1024; // 1GB by default
-            if (json.has("memory_mib")) {
-                memoryMib = json.getLong("memory_mib");
-            }
-            configBuilder.setMemoryBytes(memoryMib * 1024 * 1024);
-
-            WindowMetrics windowMetrics = getWindowManager().getCurrentWindowMetrics();
-            float dpi = DisplayMetrics.DENSITY_DEFAULT * windowMetrics.getDensity();
-            int refreshRate = (int) getDisplay().getRefreshRate();
-            if (json.has("display")) {
-                JSONObject display = json.getJSONObject("display");
-                if (display.has("scale")) {
-                    dpi *= (float) display.getDouble("scale");
-                }
-                if (display.has("refresh_rate")) {
-                    refreshRate = display.getInt("refresh_rate");
-                }
-            }
-            int dpiInt = (int) dpi;
-            DisplayConfig.Builder displayConfigBuilder = new DisplayConfig.Builder();
-            Rect windowSize = windowMetrics.getBounds();
-            displayConfigBuilder.setWidth(windowSize.right);
-            displayConfigBuilder.setHeight(windowSize.bottom);
-            displayConfigBuilder.setHorizontalDpi(dpiInt);
-            displayConfigBuilder.setVerticalDpi(dpiInt);
-            displayConfigBuilder.setRefreshRate(refreshRate);
-
-            customImageConfigBuilder.setDisplayConfig(displayConfigBuilder.build());
-            customImageConfigBuilder.useTouch(true);
-            customImageConfigBuilder.useKeyboard(true);
-            customImageConfigBuilder.useMouse(true);
-            customImageConfigBuilder.useSwitches(true);
-            customImageConfigBuilder.useTrackpad(true);
-            customImageConfigBuilder.useNetwork(true);
-
-            AudioConfig.Builder audioConfigBuilder = new AudioConfig.Builder();
-            audioConfigBuilder.setUseMicrophone(true);
-            audioConfigBuilder.setUseSpeaker(true);
-            customImageConfigBuilder.setAudioConfig(audioConfigBuilder.build());
-            configBuilder.setCustomImageConfig(customImageConfigBuilder.build());
-
-        } catch (JSONException | IOException e) {
-            throw new IllegalStateException("malformed input", e);
-        }
-        return configBuilder.build();
-    }
 
     private static boolean isVolumeKey(int keyCode) {
         return keyCode == KeyEvent.KEYCODE_VOLUME_UP
@@ -386,7 +212,7 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
 
         try {
             VirtualMachineConfig config =
-                    createVirtualMachineConfig("/data/local/tmp/vm_config.json");
+                    VmConfigJson.from("/data/local/tmp/vm_config.json").toConfig(this);
             VirtualMachineManager vmm =
                     getApplication().getSystemService(VirtualMachineManager.class);
             if (vmm == null) {

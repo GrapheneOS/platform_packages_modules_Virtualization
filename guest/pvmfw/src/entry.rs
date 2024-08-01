@@ -256,7 +256,7 @@ fn main_wrapper(
     )?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
-    let next_bcc = crate::main(
+    let (next_bcc, debuggable_payload) = crate::main(
         slices.fdt,
         slices.kernel,
         slices.ramdisk,
@@ -274,11 +274,15 @@ fn main_wrapper(
     })?;
     // Call unshare_all_memory here (instead of relying on the dtor) while UART is still mapped.
     MEMORY.lock().as_mut().unwrap().unshare_all_memory();
+
     if let Some(mmio_guard) = get_mmio_guard() {
-        mmio_guard.unmap(UART_PAGE_ADDR).map_err(|e| {
-            error!("Failed to unshare the UART: {e}");
-            RebootReason::InternalError
-        })?;
+        // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
+        if !debuggable_payload {
+            mmio_guard.unmap(UART_PAGE_ADDR).map_err(|e| {
+                error!("Failed to unshare the UART: {e}");
+                RebootReason::InternalError
+            })?;
+        }
     }
 
     // Drop MemoryTracker and deactivate page table.

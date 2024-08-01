@@ -81,6 +81,9 @@ apex_defaults {
             }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
                 true: ["vmnic"],
                 default: [],
+            }) + select(release_flag("RELEASE_AVF_ENABLE_EARLY_VM"), {
+                true: ["early_virtmgr"],
+                default: [],
             }),
             filesystems: microdroid_filesystem_images,
             prebuilts: [
@@ -98,6 +101,9 @@ apex_defaults {
             }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
                 true: ["vmnic"],
                 default: [],
+            }) + select(release_flag("RELEASE_AVF_ENABLE_EARLY_VM"), {
+                true: ["early_virtmgr"],
+                default: [],
             }),
             filesystems: microdroid_filesystem_images,
         },
@@ -105,10 +111,7 @@ apex_defaults {
     binaries: [
         "fd_server",
         "vm",
-    ] + select(release_flag("RELEASE_AVF_ENABLE_EARLY_VM"), {
-        true: ["early_virtmgr"],
-        default: [],
-    }),
+    ],
     prebuilts: [
         "features_com.android.virt.xml",
         "microdroid_initrd_debuggable",

@@ -593,17 +593,12 @@ fn validate_pci_addr_range(
 ) -> Result<(), RebootReason> {
     let mem_flags = PciMemoryFlags(range.addr.0);
     let range_type = mem_flags.range_type();
-    let prefetchable = mem_flags.prefetchable();
     let bus_addr = range.addr.1;
     let cpu_addr = range.parent_addr;
     let size = range.size;
 
     if range_type != PciRangeType::Memory64 {
         error!("Invalid range type {:?} for bus address {:#x} in PCI node", range_type, bus_addr);
-        return Err(RebootReason::InvalidFdt);
-    }
-    if prefetchable {
-        error!("PCI bus address {:#x} in PCI node is prefetchable", bus_addr);
         return Err(RebootReason::InvalidFdt);
     }
     // Enforce ID bus-to-cpu mappings, as used by crosvm.

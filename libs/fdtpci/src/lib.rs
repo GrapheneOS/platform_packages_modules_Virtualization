@@ -206,7 +206,7 @@ pub struct PciMemoryFlags(pub u32);
 impl PciMemoryFlags {
     /// Returns whether this PCI range is prefetchable
     pub fn prefetchable(self) -> bool {
-        self.0 & 0x80000000 != 0
+        self.0 & 0x40000000 != 0
     }
 
     /// Returns the type of this PCI range
