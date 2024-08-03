@@ -53,6 +53,12 @@ class VmConfigJson {
     private String kernel;
     private String initrd;
     private String params;
+    private boolean debuggable;
+    private boolean console_out;
+    private boolean connect_console;
+    private boolean network;
+    private InputJson input;
+    private AudioJson audio;
     private DiskJson[] disks;
     private DisplayJson display;
     private GpuJson gpu;
@@ -77,23 +83,24 @@ class VmConfigJson {
         }
     }
 
+    private int getDebugLevel() {
+        return debuggable
+                ? VirtualMachineConfig.DEBUG_LEVEL_FULL
+                : VirtualMachineConfig.DEBUG_LEVEL_NONE;
+    }
+
     /** Converts this parsed JSON into VirtualMachieConfig */
     VirtualMachineConfig toConfig(Context context) {
-        VirtualMachineConfig.Builder builder = new VirtualMachineConfig.Builder(context);
-        builder.setProtectedVm(isProtected)
+        return new VirtualMachineConfig.Builder(context)
+                .setProtectedVm(isProtected)
                 .setMemoryBytes((long) memory_mib * 1024 * 1024)
                 .setConsoleInputDevice(console_input_device)
                 .setCpuTopology(getCpuTopology())
-                .setCustomImageConfig(toCustomImageConfig(context));
-
-        // TODO: make these configurable via json
-        if (DEBUG) {
-            builder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
-                    .setVmOutputCaptured(true)
-                    .setConnectVmConsole(true);
-        }
-
-        return builder.build();
+                .setCustomImageConfig(toCustomImageConfig(context))
+                .setDebugLevel(getDebugLevel())
+                .setVmOutputCaptured(console_out)
+                .setConnectVmConsole(connect_console)
+                .build();
     }
 
     private VirtualMachineCustomImageConfig toCustomImageConfig(Context context) {
@@ -103,30 +110,62 @@ class VmConfigJson {
         builder.setName(name)
                 .setBootloaderPath(bootloader)
                 .setKernelPath(kernel)
-                .setInitrdPath(initrd);
+                .setInitrdPath(initrd)
+                .useNetwork(network);
+
+        if (input != null) {
+            builder.useTouch(input.touchscreen)
+                    .useKeyboard(input.keyboard)
+                    .useMouse(input.mouse)
+                    .useTrackpad(input.trackpad)
+                    .useSwitches(input.switches);
+        }
+
+        if (audio != null) {
+            builder.setAudioConfig(audio.toConfig());
+        }
+
+        if (display != null) {
+            builder.setDisplayConfig(display.toConfig(context));
+        }
+
+        if (gpu != null) {
+            builder.setGpuConfig(gpu.toConfig());
+        }
+
         if (params != null) {
             Arrays.stream(params.split(" ")).forEach(builder::addParam);
         }
 
-        // TODO: make these configurable via json
-        builder.useTouch(true)
-                .useKeyboard(true)
-                .useMouse(true)
-                .useSwitches(true)
-                .useTrackpad(true)
-                .useNetwork(true)
-                .setAudioConfig(
-                        new AudioConfig.Builder()
-                                .setUseMicrophone(true)
-                                .setUseSpeaker(true)
-                                .build());
-
-        for (DiskJson d : disks) {
-            builder.addDisk(d.toConfig());
+        if (disks != null) {
+            Arrays.stream(disks).map(d -> d.toConfig()).forEach(builder::addDisk);
         }
-        builder.setDisplayConfig(display.toConfig(context)).setGpuConfig(gpu.toConfig());
 
         return builder.build();
+    }
+
+    private static class InputJson {
+        private InputJson() {}
+
+        private boolean touchscreen;
+        private boolean keyboard;
+        private boolean mouse;
+        private boolean switches;
+        private boolean trackpad;
+    }
+
+    private static class AudioJson {
+        private AudioJson() {}
+
+        private boolean microphone;
+        private boolean speaker;
+
+        private AudioConfig toConfig() {
+            return new AudioConfig.Builder()
+                    .setUseMicrophone(microphone)
+                    .setUseSpeaker(speaker)
+                    .build();
+        }
     }
 
     private static class DiskJson {
@@ -160,15 +199,16 @@ class VmConfigJson {
 
         private float scale;
         private int refresh_rate;
+        private int width_pixels;
+        private int height_pixels;
 
         private DisplayConfig toConfig(Context context) {
             WindowManager wm = context.getSystemService(WindowManager.class);
             WindowMetrics metrics = wm.getCurrentWindowMetrics();
             Rect dispBounds = metrics.getBounds();
 
-            // TODO: make this overridable by json
-            int width = dispBounds.right;
-            int height = dispBounds.bottom;
+            int width = width_pixels > 0 ? width_pixels : dispBounds.right;
+            int height = height_pixels > 0 ? height_pixels : dispBounds.bottom;
 
             int dpi = (int) (DisplayMetrics.DENSITY_DEFAULT * metrics.getDensity());
             if (scale > 0.0f) {

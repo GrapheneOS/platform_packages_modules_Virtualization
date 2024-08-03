@@ -31,9 +31,6 @@ sudo chmod 777 *.img
 echo Archiving. This can take long...
 tar czvS -f images.tar.gz *.img
 
-echo Calculating hash...
-hash=$(sha1sum images.tar.gz | cut -d' ' -f 1)
-
 echo Splitting...
 split -b 100M -d images.tar.gz images.tar.gz.part
 
@@ -45,6 +42,9 @@ mkdir -p ${asset_dir}
 rm ${asset_dir}/images.tar.gz.part*
 mv ${tempdir}/images.tar.gz.part* ${asset_dir}
 sed -E s/GUID/${root_guid}/ ${vm_config_template} > ${asset_dir}/vm_config.json
+
+echo Calculating hash...
+hash=$(cat ${tempdir}/images.tar.gz ${asset_dir}/vm_config.json | sha1sum | cut -d' ' -f 1)
 echo ${hash} > ${asset_dir}/version
 
 echo Cleanup...
