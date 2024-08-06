@@ -40,6 +40,7 @@ tar cfS debian.img.tar debian.img
 adb push debian.img.tar /data/local/tmp/
 adb shell tar xf /data/local/tmp/debian.img.tar -C /data/local/tmp/
 adb shell rm /data/local/tmp/debian.img.tar
+adb shell chmod a+w /data/local/tmp/debian.img
 rm debian.img.tar
 ```
 
