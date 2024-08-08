@@ -43,7 +43,7 @@
     },
     "audio": {
         "speaker": true,
-         "microphone": true
+        "microphone": true
     },
     "gpu": {
         "backend": "virglrenderer",
@@ -52,5 +52,5 @@
     "display": {
         "scale": "0.77",
         "refresh_rate": "30"
-     }
+    }
 }

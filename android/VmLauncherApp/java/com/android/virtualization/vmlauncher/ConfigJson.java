@@ -36,10 +36,10 @@ import java.io.FileReader;
 import java.util.Arrays;
 
 /** This class and its inner classes model vm_config.json. */
-class VmConfigJson {
+class ConfigJson {
     private static final boolean DEBUG = true;
 
-    private VmConfigJson() {}
+    private ConfigJson() {}
 
     @SerializedName("protected")
     private boolean isProtected;
@@ -64,9 +64,9 @@ class VmConfigJson {
     private GpuJson gpu;
 
     /** Parses JSON file at jsonPath */
-    static VmConfigJson from(String jsonPath) {
+    static ConfigJson from(String jsonPath) {
         try (FileReader r = new FileReader(jsonPath)) {
-            return new Gson().fromJson(r, VmConfigJson.class);
+            return new Gson().fromJson(r, ConfigJson.class);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse " + jsonPath, e);
         }

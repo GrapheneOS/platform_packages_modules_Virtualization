@@ -19,8 +19,7 @@ genrule {
     name: "ferrochrome-tests.sh",
     srcs: ["ferrochrome.sh"],
     out: ["ferrochrome-tests"],
-    // This breaks shebang, but test will execute the script with bash
-    cmd: "echo \"set -x\" > $(out); cat $(in) >> $(out)",
+    cmd: "sed '2 i set -x' $(in) > $(out)",
 }
 
 sh_binary_host {

@@ -46,6 +46,9 @@
     },
     {
       "name": "libdice_driver_test"
+    },
+    {
+      "name": "vm_accessor_test"
     }
   ],
   "avf-postsubmit": [
@@ -64,9 +67,6 @@
     {
       "name": "AvfRkpdAppGoogleIntegrationTests",
       "keywords": ["internal"]
-    },
-    {
-      "name": "vm_accessor_test"
     }
   ],
   "ferrochrome-postsubmit": [
