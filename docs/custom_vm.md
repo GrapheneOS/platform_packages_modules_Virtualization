@@ -53,7 +53,7 @@ cat > vm_config.json <<EOF
     "name": "debian",
     "disks": [
         {
-            "image": "/data/local/tmp/debian.img
+            "image": "/data/local/tmp/debian.img",
             "partitions": [],
             "writable": true
         }

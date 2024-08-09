@@ -29,12 +29,6 @@ ENTRY(entry)
 
 SECTIONS
 {
-	.dtb (NOLOAD) : {
-		dtb_begin = .;
-		. += LENGTH(dtb_region);
-		dtb_end = .;
-	} >dtb_region
-
 	/*
 	 * Collect together the code. This is page aligned so it can be mapped
 	 * as executable-only.

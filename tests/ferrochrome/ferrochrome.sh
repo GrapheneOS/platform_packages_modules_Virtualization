@@ -21,6 +21,7 @@ set -e
 
 FECR_GS_URL="https://storage.googleapis.com/chromiumos-image-archive/ferrochrome-public"
 FECR_DEFAULT_VERSION="R128-15958.0.0"
+FECR_DEFAULT_SCREENSHOT_DIR="/data/local/tmp/ferrochrome_screenshots"  # Hardcoded at AndroidTest.xml
 FECR_TEST_IMAGE="chromiumos_test_image"
 FECR_BASE_IMAGE="chromiumos_base_image"
 FECR_DEVICE_DIR="/data/local/tmp"
@@ -74,6 +75,7 @@ fecr_script_path=$(dirname ${0})
 fecr_verbose=""
 fecr_image="${FECR_DEFAULT_IMAGE}"
 fecr_boot_completed_log="${FECR_DEFAULT_BOOT_COMPLETED_LOG}"
+fecr_screenshot_dir="${FECR_DEFAULT_SCREENSHOT_DIR}"
 
 # Parse parameters
 while (( "${#}" )); do
@@ -164,7 +166,9 @@ else
 fi
 fecr_start_time=${EPOCHSECONDS}
 
+adb shell mkdir -p "${fecr_screenshot_dir}"
 while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do
+  adb shell screencap -a -p "${fecr_screenshot_dir}/screenshot-${EPOCHSECONDS}.png"
   adb shell grep -soF \""${fecr_boot_completed_log}"\" "${log_path}" && exit 0 || true
   sleep 10
 done

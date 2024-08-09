@@ -60,11 +60,6 @@ macro_rules! linker_region {
     }};
 }
 
-/// Memory reserved for the DTB.
-pub fn dtb_range() -> Range<VirtualAddress> {
-    linker_region!(dtb_begin, dtb_end)
-}
-
 /// Executable code.
 pub fn text_range() -> Range<VirtualAddress> {
     linker_region!(text_begin, text_end)

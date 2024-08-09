@@ -36,8 +36,10 @@ const INSTANCE_HASH_KEY: i64 = -71003;
 #[derive(Debug)]
 pub enum Error {
     /// Error in CBOR operations
+    #[allow(dead_code)]
     CborError(ciborium::value::Error),
     /// Error in DICE operations
+    #[allow(dead_code)]
     DiceError(diced_open_dice::DiceError),
 }
 

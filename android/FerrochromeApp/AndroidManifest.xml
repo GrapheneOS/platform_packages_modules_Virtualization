@@ -12,6 +12,9 @@
         <intent>
             <action android:name="android.virtualization.VM_LAUNCHER" />
         </intent>
+        <intent>
+            <action android:name="android.virtualization.FERROCHROME_DOWNLOADER" />
+        </intent>
     </queries>
     <application
         android:label="Ferrochrome">

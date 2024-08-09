@@ -29,8 +29,6 @@ pub fn boot_stack_range() -> Range<VirtualAddress> {
 }
 
 pub fn print_addresses() {
-    let dtb = layout::dtb_range();
-    info!("dtb:        {}..{} ({} bytes)", dtb.start, dtb.end, dtb.end - dtb.start);
     let text = layout::text_range();
     info!("text:       {}..{} ({} bytes)", text.start, text.end, text.end - text.start);
     let rodata = layout::rodata_range();

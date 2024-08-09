@@ -16,14 +16,17 @@
 
 package com.android.virtualization.ferrochrome;
 
+import android.annotation.WorkerThread;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemProperties;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.TextView;
@@ -43,12 +46,20 @@ import java.util.concurrent.Executors;
 public class FerrochromeActivity extends Activity {
     private static final String TAG = FerrochromeActivity.class.getName();
     private static final String ACTION_VM_LAUNCHER = "android.virtualization.VM_LAUNCHER";
+    private static final String ACTION_FERROCHROME_DOWNLOAD =
+            "android.virtualization.FERROCHROME_DOWNLOADER";
+    private static final String EXTRA_FERROCHROME_DEST_DIR = "dest_dir";
+    private static final String EXTRA_FERROCHROME_UPDATE_NEEDED = "update_needed";
 
     private static final Path DEST_DIR =
             Path.of(Environment.getExternalStorageDirectory().getPath(), "ferrochrome");
+    private static final String ASSET_DIR = "ferrochrome";
     private static final Path VERSION_FILE = Path.of(DEST_DIR.toString(), "version");
 
     private static final int REQUEST_CODE_VMLAUNCHER = 1;
+    private static final int REQUEST_CODE_FERROCHROME_DOWNLOADER = 2;
+
+    private ResolvedActivity mVmLauncher;
 
     ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -66,25 +77,28 @@ public class FerrochromeActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         // Find VM Launcher
-        Intent intent = new Intent(ACTION_VM_LAUNCHER).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PackageManager pm = getPackageManager();
-        List<ResolveInfo> resolveInfos =
-                pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-        if (resolveInfos == null || resolveInfos.size() != 1) {
+        mVmLauncher = ResolvedActivity.resolve(getPackageManager(), ACTION_VM_LAUNCHER);
+        if (mVmLauncher == null) {
             updateStatus("Failed to resolve VM Launcher");
             return;
         }
 
         // Clean up the existing vm launcher process if there is
         ActivityManager am = getSystemService(ActivityManager.class);
-        am.killBackgroundProcesses(resolveInfos.get(0).activityInfo.packageName);
+        am.killBackgroundProcesses(mVmLauncher.activityInfo.packageName);
 
         executorService.execute(
                 () -> {
-                    if (updateImageIfNeeded()) {
-                        updateStatus("Starting Ferrochrome...");
-                        runOnUiThread(
-                                () -> startActivityForResult(intent, REQUEST_CODE_VMLAUNCHER));
+                    if (hasLocalAssets()) {
+                        if (updateImageIfNeeded()) {
+                            updateStatus("Starting Ferrochrome...");
+                            runOnUiThread(
+                                    () ->
+                                            startActivityForResult(
+                                                    mVmLauncher.intent, REQUEST_CODE_VMLAUNCHER));
+                        }
+                    } else {
+                        tryLaunchDownloader();
                     }
                 });
     }
@@ -93,9 +107,55 @@ public class FerrochromeActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_CODE_VMLAUNCHER) {
             finishAndRemoveTask();
+        } else if (requestCode == REQUEST_CODE_FERROCHROME_DOWNLOADER) {
+            String destDir = data.getStringExtra(EXTRA_FERROCHROME_DEST_DIR);
+            boolean updateNeeded =
+                    data.getBooleanExtra(EXTRA_FERROCHROME_UPDATE_NEEDED, /* default= */ true);
+
+            if (resultCode != RESULT_OK || TextUtils.isEmpty(destDir)) {
+                Log.w(
+                        TAG,
+                        "Ferrochrome downloader returned error, code="
+                                + resultCode
+                                + ", dest="
+                                + destDir);
+                updateStatus("User didn't accepted ferrochrome download..");
+                return;
+            }
+
+            Log.w(TAG, "Ferrochrome downloader returned OK");
+
+            if (!updateNeeded) {
+                updateStatus("Starting Ferrochrome...");
+                startActivityForResult(mVmLauncher.intent, REQUEST_CODE_VMLAUNCHER);
+            }
+
+            executorService.execute(
+                    () -> {
+                        if (!extractImages(destDir)) {
+                            updateStatus("Images from downloader looks bad..");
+                            return;
+                        }
+                        updateStatus("Starting Ferrochrome...");
+                        runOnUiThread(
+                                () ->
+                                        startActivityForResult(
+                                                mVmLauncher.intent, REQUEST_CODE_VMLAUNCHER));
+                    });
         }
     }
 
+    @WorkerThread
+    private boolean hasLocalAssets() {
+        try {
+            String[] files = getAssets().list(ASSET_DIR);
+            return files != null && files.length > 0;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    @WorkerThread
     private boolean updateImageIfNeeded() {
         if (!isUpdateNeeded()) {
             Log.d(TAG, "No update needed.");
@@ -107,13 +167,8 @@ public class FerrochromeActivity extends Activity {
                 Files.createDirectory(DEST_DIR);
             }
 
-            String[] files = getAssets().list("ferrochrome");
-            if (files == null || files.length == 0) {
-                updateStatus("ChromeOS image not found. Please go/try-ferrochrome");
-                return false;
-            }
-
             updateStatus("Copying images...");
+            String[] files = getAssets().list("ferrochrome");
             for (String file : files) {
                 updateStatus(file);
                 Path dst = Path.of(DEST_DIR.toString(), file);
@@ -126,7 +181,38 @@ public class FerrochromeActivity extends Activity {
         }
         updateStatus("Done.");
 
+        return extractImages(DEST_DIR.toAbsolutePath().toString());
+    }
+
+    @WorkerThread
+    private void tryLaunchDownloader() {
+        // TODO(jaewan): Add safeguard to check whether ferrochrome downloader is valid.
+        Log.w(TAG, "No built-in assets found. Try again with ferrochrome downloader");
+
+        ResolvedActivity downloader =
+                ResolvedActivity.resolve(getPackageManager(), ACTION_FERROCHROME_DOWNLOAD);
+        if (downloader == null) {
+            Log.d(TAG, "Ferrochrome downloader doesn't exist");
+            updateStatus("ChromeOS image not found. Please go/try-ferrochrome");
+            return;
+        }
+        String pkgName = downloader.activityInfo.packageName;
+        Log.d(TAG, "Resolved Ferrochrome Downloader, pkgName=" + pkgName);
+        updateStatus("Launching Ferrochrome downloader for update");
+
+        // onActivityResult() will handle downloader result.
+        startActivityForResult(downloader.intent, REQUEST_CODE_FERROCHROME_DOWNLOADER);
+    }
+
+    @WorkerThread
+    private boolean extractImages(String destDir) {
         updateStatus("Extracting images...");
+
+        if (TextUtils.isEmpty(destDir)) {
+            throw new RuntimeException("Internal error: destDir shouldn't be null");
+        }
+
+        SystemProperties.set("debug.custom_vm_setup.path", destDir);
         SystemProperties.set("debug.custom_vm_setup.done", "false");
         SystemProperties.set("debug.custom_vm_setup.start", "true");
         while (!SystemProperties.getBoolean("debug.custom_vm_setup.done", false)) {
@@ -143,6 +229,7 @@ public class FerrochromeActivity extends Activity {
         return true;
     }
 
+    @WorkerThread
     private boolean isUpdateNeeded() {
         Path[] pathsToCheck = {DEST_DIR, VERSION_FILE};
         for (Path p : pathsToCheck) {
@@ -187,5 +274,34 @@ public class FerrochromeActivity extends Activity {
                     TextView statusView = findViewById(R.id.status_txt_view);
                     statusView.append(line + "\n");
                 });
+    }
+
+    private static final class ResolvedActivity {
+        public final ActivityInfo activityInfo;
+        public final Intent intent;
+
+        private ResolvedActivity(ActivityInfo activityInfo, Intent intent) {
+            this.activityInfo = activityInfo;
+            this.intent = intent;
+        }
+
+        /* synthetic access */
+        static ResolvedActivity resolve(PackageManager pm, String action) {
+            Intent intent = new Intent(action).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            List<ResolveInfo> resolveInfos =
+                    pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+            if (resolveInfos == null || resolveInfos.size() != 1) {
+                Log.w(
+                        TAG,
+                        "Failed to resolve activity, action="
+                                + action
+                                + ", resolved="
+                                + resolveInfos);
+                return null;
+            }
+            ActivityInfo activityInfo = resolveInfos.get(0).activityInfo;
+            intent.setClassName(activityInfo.packageName, activityInfo.name);
+            return new ResolvedActivity(activityInfo, intent);
+        }
     }
 }
