@@ -41,7 +41,7 @@ class Logger {
     private Logger() {}
 
     static void setup(VirtualMachine vm, Path path, ExecutorService executor) {
-        if (vm.getConfig().getDebugLevel() == VirtualMachineConfig.DEBUG_LEVEL_FULL) {
+        if (vm.getConfig().getDebugLevel() != VirtualMachineConfig.DEBUG_LEVEL_FULL) {
             return;
         }
 

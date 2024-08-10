@@ -16,6 +16,9 @@ rust_bindgen {
         "--raw-line=#![no_std]",
         "--ctypes-prefix=core::ffi",
     ],
+    dylib: {
+        enabled: false,
+    },
     static_libs: [
         "libfdt",
     ],

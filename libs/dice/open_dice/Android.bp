@@ -92,6 +92,9 @@ rust_defaults {
         "--ctypes-prefix=core::ffi",
         "--raw-line=#![no_std]",
     ],
+    dylib: {
+        enabled: false,
+    },
     no_stdlibs: true,
     prefer_rlib: true,
     stdlibs: [
