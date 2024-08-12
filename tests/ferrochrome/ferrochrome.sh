@@ -168,7 +168,7 @@ fecr_start_time=${EPOCHSECONDS}
 
 adb shell mkdir -p "${fecr_screenshot_dir}"
 while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do
-  adb shell screencap -a -p "${fecr_screenshot_dir}/screenshot-${EPOCHSECONDS}.png"
+  adb shell screencap -p "${fecr_screenshot_dir}/screenshot-${EPOCHSECONDS}.png"
   adb shell grep -soF \""${fecr_boot_completed_log}"\" "${log_path}" && exit 0 || true
   sleep 10
 done
