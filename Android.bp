@@ -1,0 +1,3 @@
+package {
+    default_team: "trendy_team_android_kvm",
+}

@@ -18,7 +18,7 @@ use crate::{
     bionic, console, heap, hyp,
     layout::{UART_ADDRESSES, UART_PAGE_ADDR},
     logger,
-    memory::{SIZE_16KB, SIZE_4KB},
+    memory::{PAGE_SIZE, SIZE_16KB, SIZE_4KB},
     power::{reboot, shutdown},
     rand,
 };
@@ -129,3 +129,37 @@ macro_rules! main {
         }
     };
 }
+
+/// Prepends a Linux kernel header to the generated binary image.
+///
+/// See https://docs.kernel.org/arch/arm64/booting.html
+/// ```
+#[macro_export]
+macro_rules! generate_image_header {
+    () => {
+        #[cfg(not(target_endian = "little"))]
+        compile_error!("Image header uses wrong endianness: bootloaders expect LE!");
+
+        core::arch::global_asm!(
+            // This section gets linked at the start of the image.
+            ".section .init.head, \"ax\"",
+            // This prevents the macro from being called more than once.
+            ".global image_header",
+            "image_header:",
+            // Linux uses a special NOP to be ELF-compatible; we're not.
+            "nop",                          // code0
+            "b entry",                      // code1
+            ".quad 0",                      // text_offset
+            ".quad bin_end - image_header", // image_size
+            ".quad (1 << 1)",               // flags (PAGE_SIZE=4KiB)
+            ".quad 0",                      // res2
+            ".quad 0",                      // res3
+            ".quad 0",                      // res4
+            ".ascii \"ARM\x64\"",           // magic
+            ".long 0",                      // res5
+        );
+    };
+}
+
+// If this fails, the image header flags are out-of-sync with PAGE_SIZE!
+static_assertions::const_assert_eq!(PAGE_SIZE, SIZE_4KB);

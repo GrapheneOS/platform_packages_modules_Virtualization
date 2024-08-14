@@ -1,0 +1,114 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_ffi_static {
+    name: "libvmbase_example",
+    defaults: ["vmbase_ffi_defaults"],
+    crate_name: "vmbase_example",
+    srcs: ["src/main.rs"],
+    rustlibs: [
+        "libaarch64_paging",
+        "libcstr",
+        "libdiced_open_dice_nostd",
+        "libfdtpci",
+        "liblibfdt",
+        "liblog_rust_nostd",
+        "libvirtio_drivers",
+        "libvmbase",
+    ],
+}
+
+genrule {
+    name: "vmbase_image.ld.S.mm",
+    // Soong won't let us use cc_object to preprocess *.ld.S files because it
+    // can't resist feeding any and all *.S files to the assembler, which fails
+    // because linker scripts typically aren't valid assembly. Also, cc_object
+    // rejects inputs that don't end in one of .{s,S,c,cpp,cc,cxx,mm}. So keep
+    // the proper extension (.ld.S) for the file in VCS and use this convoluted
+    // extra step to please Soong by pretending that our linker script is in
+    // fact some Object C++ code, which fortunately it doesn't try to compile.
+    srcs: ["image.ld.S"],
+    out: ["image.ld.S.mm"],
+    cmd: "cp $(in) $(out)",
+    visibility: ["//visibility:private"],
+}
+
+cc_defaults {
+    name: "vmbase_example_ld_defaults",
+    defaults: ["vmbase_cc_defaults"],
+    cflags: [
+        "-E",
+        "-P",
+        "-xassembler-with-cpp", // allow C preprocessor directives
+    ],
+    srcs: [":vmbase_image.ld.S.mm"],
+    visibility: ["//visibility:private"],
+}
+
+cc_object {
+    name: "vmbase_example_bios.ld",
+    defaults: ["vmbase_example_ld_defaults"],
+    cflags: ["-DVMBASE_EXAMPLE_IS_BIOS"],
+}
+
+cc_object {
+    name: "vmbase_example_kernel.ld",
+    defaults: ["vmbase_example_ld_defaults"],
+    cflags: ["-DVMBASE_EXAMPLE_IS_KERNEL"],
+}
+
+cc_defaults {
+    name: "vmbase_example_elf_defaults",
+    defaults: ["vmbase_elf_defaults"],
+    srcs: [
+        "idmap.S",
+    ],
+    static_libs: [
+        "libvmbase_example",
+    ],
+}
+
+cc_binary {
+    name: "vmbase_example_bios",
+    defaults: ["vmbase_example_elf_defaults"],
+    asflags: ["-DVMBASE_EXAMPLE_IS_BIOS"],
+    linker_scripts: [
+        ":vmbase_example_bios.ld",
+        ":vmbase_sections",
+    ],
+}
+
+cc_binary {
+    name: "vmbase_example_kernel",
+    defaults: ["vmbase_example_elf_defaults"],
+    asflags: ["-DVMBASE_EXAMPLE_IS_KERNEL"],
+    linker_scripts: [
+        ":vmbase_example_kernel.ld",
+        ":vmbase_sections",
+    ],
+}
+
+raw_binary {
+    name: "vmbase_example_bios_bin",
+    stem: "vmbase_example_bios.bin",
+    src: ":vmbase_example_bios",
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+}
+
+raw_binary {
+    name: "vmbase_example_kernel_bin",
+    stem: "vmbase_example_kernel.bin",
+    src: ":vmbase_example_kernel",
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+}

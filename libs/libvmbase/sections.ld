@@ -34,6 +34,8 @@ SECTIONS
 	 * as executable-only.
 	 */
 	.text : ALIGN(4096) {
+		KEEP(*(.init.head));
+		*(.init.head)
 		text_begin = .;
 		*(.init.entry)
 		*(.init.*)

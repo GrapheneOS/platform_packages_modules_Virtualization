@@ -1,0 +1,31 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_test {
+    name: "vmbase_example.integration_test",
+    crate_name: "vmbase_example_test",
+    srcs: ["src/main.rs"],
+    prefer_rlib: true,
+    edition: "2021",
+    rustlibs: [
+        "android.system.virtualizationservice-rust",
+        "libandroid_logger",
+        "libanyhow",
+        "liblibc",
+        "liblog_rust",
+        "libnix",
+        "libvmclient",
+    ],
+    data: [
+        ":vmbase_example_bios_bin",
+        ":vmbase_example_kernel_bin",
+    ],
+    test_suites: ["general-tests"],
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+}

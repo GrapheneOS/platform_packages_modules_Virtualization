@@ -25,42 +25,37 @@ extern crate alloc;
 
 use crate::layout::{boot_stack_range, print_addresses, DEVICE_REGION};
 use crate::pci::{check_pci, get_bar_region};
-use aarch64_paging::paging::MemoryRegion;
 use aarch64_paging::paging::VirtualAddress;
 use aarch64_paging::MapError;
 use alloc::{vec, vec::Vec};
+use core::mem;
 use core::ptr::addr_of_mut;
 use cstr::cstr;
 use fdtpci::PciInfo;
 use libfdt::Fdt;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use vmbase::{
-    bionic, configure_heap,
-    layout::{
-        crosvm::{FDT_MAX_SIZE, MEM_START},
-        rodata_range, scratch_range, text_range,
-    },
+    bionic, configure_heap, generate_image_header,
+    layout::{crosvm::FDT_MAX_SIZE, rodata_range, scratch_range, text_range},
     linker, logger, main,
     memory::{PageTable, SIZE_64KB},
+    util::RangeExt as _,
 };
 
 static INITIALISED_DATA: [u32; 4] = [1, 2, 3, 4];
 static mut ZEROED_DATA: [u32; 10] = [0; 10];
 static mut MUTABLE_DATA: [u32; 4] = [1, 2, 3, 4];
 
+generate_image_header!();
 main!(main);
 configure_heap!(SIZE_64KB);
 
-fn init_page_table(dtb: &MemoryRegion, pci_bar_range: &MemoryRegion) -> Result<(), MapError> {
-    let mut page_table = PageTable::default();
-
+fn init_page_table(page_table: &mut PageTable) -> Result<(), MapError> {
     page_table.map_device(&DEVICE_REGION)?;
     page_table.map_code(&text_range().into())?;
     page_table.map_rodata(&rodata_range().into())?;
     page_table.map_data(&scratch_range().into())?;
     page_table.map_data(&boot_stack_range().into())?;
-    page_table.map_rodata(dtb)?;
-    page_table.map_device(pci_bar_range)?;
 
     info!("Activating IdMap...");
     // SAFETY: page_table duplicates the static mappings for everything that the Rust code is
@@ -83,13 +78,15 @@ pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
     check_data();
     check_stack_guard();
 
+    let mut page_table = PageTable::default();
+    init_page_table(&mut page_table).unwrap();
+
     info!("Checking FDT...");
     let fdt_addr = usize::try_from(arg0).unwrap();
-    // We are about to access the region so check that it matches our page tables in idmap.S.
-    assert_eq!(fdt_addr, MEM_START);
     // SAFETY: The DTB range is valid, writable memory, and we don't construct any aliases to it.
     let fdt = unsafe { core::slice::from_raw_parts_mut(fdt_addr as *mut u8, FDT_MAX_SIZE) };
     let fdt_region = (VirtualAddress(fdt_addr)..VirtualAddress(fdt_addr + fdt.len())).into();
+    page_table.map_data(&fdt_region).unwrap();
     let fdt = Fdt::from_mut_slice(fdt).unwrap();
     info!("FDT passed verification.");
     check_fdt(fdt);
@@ -101,7 +98,13 @@ pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
 
     check_alloc();
 
-    init_page_table(&fdt_region, &get_bar_region(&pci_info)).unwrap();
+    let bar_region = get_bar_region(&pci_info);
+    if bar_region.is_within(&DEVICE_REGION) {
+        // Avoid a MapError::BreakBeforeMakeViolation.
+        info!("BAR region is within already mapped device region: skipping page table ops.");
+    } else {
+        page_table.map_device(&bar_region).unwrap();
+    }
 
     check_data();
     check_dice();
@@ -111,6 +114,10 @@ pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
     check_pci(&mut pci_root);
 
     emit_suppressed_log();
+
+    info!("De-activating IdMap...");
+    mem::drop(page_table); // Release PageTable and switch back to idmap.S
+    info!("De-activated.");
 }
 
 fn check_stack_guard() {

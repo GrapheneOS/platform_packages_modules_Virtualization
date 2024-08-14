@@ -17,14 +17,13 @@
 use aarch64_paging::paging::{MemoryRegion, VirtualAddress};
 use core::ops::Range;
 use log::info;
-use vmbase::layout;
+use vmbase::{layout, memory::PAGE_SIZE};
 
 /// The first 1 GiB of memory are used for MMIO.
 pub const DEVICE_REGION: MemoryRegion = MemoryRegion::new(0, 0x40000000);
 
 /// Writable data region for the stack.
 pub fn boot_stack_range() -> Range<VirtualAddress> {
-    const PAGE_SIZE: usize = 4 << 10;
     layout::stack_range(40 * PAGE_SIZE)
 }
 

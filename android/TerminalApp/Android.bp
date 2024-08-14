@@ -1,0 +1,17 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_app {
+    name: "VmTerminalApp",
+    srcs: ["java/**/*.java"],
+    resource_dirs: ["res"],
+    static_libs: [
+        "vm_launcher_lib",
+    ],
+    sdk_version: "system_current",
+    product_specific: true,
+    optimize: {
+        shrink_resources: true,
+    },
+}

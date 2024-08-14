@@ -14,6 +14,7 @@
 
 //! Utility functions.
 
+use aarch64_paging::paging::MemoryRegion;
 use core::ops::Range;
 
 /// Flatten [[T; N]] into &[T]
@@ -89,5 +90,15 @@ impl<T: PartialOrd> RangeExt for Range<T> {
 
     fn overlaps(&self, other: &Self) -> bool {
         self.start < other.end && other.start < self.end
+    }
+}
+
+impl RangeExt for MemoryRegion {
+    fn is_within(&self, other: &Self) -> bool {
+        self.start() >= other.start() && self.end() <= other.end()
+    }
+
+    fn overlaps(&self, other: &Self) -> bool {
+        self.start() < other.end() && other.start() < self.end()
     }
 }

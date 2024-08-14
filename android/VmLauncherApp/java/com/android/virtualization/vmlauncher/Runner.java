@@ -42,7 +42,10 @@ class Runner {
     /** Create a virtual machine of the given config, under the given context. */
     static Runner create(Context context, VirtualMachineConfig config)
             throws VirtualMachineException {
-        VirtualMachineManager vmm = context.getSystemService(VirtualMachineManager.class);
+        // context may already be the app context, but calling this again is not harmful.
+        // See b/359439878 on why vmm should be obtained from the app context.
+        Context appContext = context.getApplicationContext();
+        VirtualMachineManager vmm = appContext.getSystemService(VirtualMachineManager.class);
         VirtualMachineCustomImageConfig customConfig = config.getCustomImageConfig();
         if (customConfig == null) {
             throw new RuntimeException("CustomImageConfig is missing");

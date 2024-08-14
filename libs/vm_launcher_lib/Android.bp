@@ -1,0 +1,13 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+java_library {
+    name: "vm_launcher_lib",
+    srcs: ["java/**/*.java"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+    sdk_version: "system_current",
+}
