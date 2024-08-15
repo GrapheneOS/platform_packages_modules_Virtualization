@@ -37,12 +37,14 @@ use std::time::Duration;
 use vmclient::{DeathReason, VmInstance};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
+/// Size of virtual memory allocated to the Service VM.
+pub const VM_MEMORY_MB: i32 = 8;
+
 const VIRT_DATA_DIR: &str = "/data/misc/apexdata/com.android.virt";
 const RIALTO_PATH: &str = "/apex/com.android.virt/etc/rialto.bin";
 const INSTANCE_IMG_NAME: &str = "service_vm_instance.img";
 const INSTANCE_ID_FILENAME: &str = "service_vm_instance_id";
 const INSTANCE_IMG_SIZE_BYTES: i64 = 1 << 20; // 1MB
-const MEMORY_MB: i32 = 300;
 const WRITE_BUFFER_CAPACITY: usize = 512;
 const READ_TIMEOUT: Duration = Duration::from_secs(10);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
@@ -227,11 +229,11 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
     let instance_id = get_or_allocate_instance_id(service.as_ref(), instance_id_file)?;
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: String::from("Service VM"),
-        bootloader: Some(ParcelFileDescriptor::new(rialto)),
+        kernel: Some(ParcelFileDescriptor::new(rialto)),
         disks: vec![DiskImage { image: None, partitions: writable_partitions, writable: true }],
         instanceId: instance_id,
         protectedVm: true,
-        memoryMib: MEMORY_MB,
+        memoryMib: VM_MEMORY_MB,
         cpuTopology: CpuTopology::ONE_CPU,
         platformVersion: "~1.0".to_string(),
         gdbPort: 0, // No gdb

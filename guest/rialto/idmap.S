@@ -28,8 +28,8 @@
 .set .PAGE_SIZE, .SZ_4K
 
 .set .ORIGIN_ADDR, 2 * .SZ_1G
-.set .TEXT_ADDR, .ORIGIN_ADDR + (1 * .SZ_2M)
-.set .DATA_ADDR, .ORIGIN_ADDR + (2 * .SZ_2M)
+.set .TEXT_ADDR, .ORIGIN_ADDR + (0 * .SZ_2M)
+.set .DATA_ADDR, .ORIGIN_ADDR + (1 * .SZ_2M)
 
 .set .L_TT_TYPE_BLOCK, 0x1
 .set .L_TT_TYPE_PAGE,  0x3
@@ -59,7 +59,7 @@ idmap:
 	.balign .PAGE_SIZE, 0				// unmapped
 
 	/* level 2 */
-0:	.quad		0x0				// 2 MiB unmapped
+0:
 	.quad		.L_BLOCK_MEM_XIP | .TEXT_ADDR	// 2 MiB of DRAM containing image
 	.quad		.L_BLOCK_MEM | .DATA_ADDR	// 2 MiB of writable DRAM
 	.balign .PAGE_SIZE, 0				// unmapped

@@ -47,6 +47,7 @@ use virtio_drivers::{
 use vmbase::{
     configure_heap,
     fdt::SwiotlbInfo,
+    generate_image_header,
     hyp::{get_mem_sharer, get_mmio_guard},
     layout::{self, crosvm, UART_PAGE_ADDR},
     main,
@@ -232,5 +233,6 @@ pub fn main(fdt_addr: u64, _a1: u64, _a2: u64, _a3: u64) {
     }
 }
 
+generate_image_header!();
 main!(main);
 configure_heap!(SIZE_128KB * 2);

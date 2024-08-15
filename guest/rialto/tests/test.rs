@@ -34,7 +34,7 @@ use service_vm_comm::{
 use service_vm_fake_chain::client_vm::{
     fake_client_vm_dice_artifacts, fake_sub_components, SubComponent,
 };
-use service_vm_manager::ServiceVm;
+use service_vm_manager::{ServiceVm, VM_MEMORY_MB};
 use std::fs;
 use std::fs::File;
 use std::panic;
@@ -59,7 +59,7 @@ fn process_requests_in_protected_vm() -> Result<()> {
         // The test is skipped if the feature flag |dice_changes| is not enabled, because when
         // the flag is off, the DICE chain is truncated in the pvmfw, and the service VM cannot
         // verify the chain due to the missing entries in the chain.
-        check_processing_requests(VmType::ProtectedVm)
+        check_processing_requests(VmType::ProtectedVm, None)
     } else {
         warn!("pVMs are not supported on device, skipping test");
         Ok(())
@@ -68,11 +68,17 @@ fn process_requests_in_protected_vm() -> Result<()> {
 
 #[test]
 fn process_requests_in_non_protected_vm() -> Result<()> {
-    check_processing_requests(VmType::NonProtectedVm)
+    check_processing_requests(VmType::NonProtectedVm, None)
 }
 
-fn check_processing_requests(vm_type: VmType) -> Result<()> {
-    let mut vm = start_service_vm(vm_type)?;
+#[test]
+fn process_requests_in_non_protected_vm_with_extra_ram() -> Result<()> {
+    const MEMORY_MB: i32 = 300;
+    check_processing_requests(VmType::NonProtectedVm, Some(MEMORY_MB))
+}
+
+fn check_processing_requests(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<()> {
+    let mut vm = start_service_vm(vm_type, vm_memory_mb)?;
 
     check_processing_reverse_request(&mut vm)?;
     let key_pair = check_processing_generating_key_pair_request(&mut vm)?;
@@ -285,7 +291,7 @@ fn check_csr(csr: Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-fn start_service_vm(vm_type: VmType) -> Result<ServiceVm> {
+fn start_service_vm(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<ServiceVm> {
     android_logger::init_once(
         android_logger::Config::default()
             .with_tag("rialto")
@@ -297,19 +303,20 @@ fn start_service_vm(vm_type: VmType) -> Result<ServiceVm> {
     }));
     // We need to start the thread pool for Binder to work properly, especially link_to_death.
     ProcessState::start_thread_pool();
-    ServiceVm::start_vm(vm_instance(vm_type)?, vm_type)
+    ServiceVm::start_vm(vm_instance(vm_type, vm_memory_mb)?, vm_type)
 }
 
-fn vm_instance(vm_type: VmType) -> Result<VmInstance> {
+fn vm_instance(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<VmInstance> {
     match vm_type {
         VmType::ProtectedVm => {
+            assert!(vm_memory_mb.is_none());
             service_vm_manager::protected_vm_instance(PathBuf::from(INSTANCE_IMG_PATH))
         }
-        VmType::NonProtectedVm => nonprotected_vm_instance(),
+        VmType::NonProtectedVm => nonprotected_vm_instance(vm_memory_mb.unwrap_or(VM_MEMORY_MB)),
     }
 }
 
-fn nonprotected_vm_instance() -> Result<VmInstance> {
+fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
     let rialto = File::open(UNSIGNED_RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
     // Do not use `#allocateInstanceId` to generate the instance ID because the method
     // also adds an instance ID to the database it manages.
@@ -317,10 +324,10 @@ fn nonprotected_vm_instance() -> Result<VmInstance> {
     let mut instance_id = [0u8; 64];
     rand_bytes(&mut instance_id).unwrap();
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: String::from("Non protected rialto"),
-        bootloader: Some(ParcelFileDescriptor::new(rialto)),
+        name: format!("Non protected rialto ({memory_mib}MiB)"),
+        kernel: Some(ParcelFileDescriptor::new(rialto)),
         protectedVm: false,
-        memoryMib: 300,
+        memoryMib: memory_mib,
         platformVersion: "~1.0".to_string(),
         instanceId: instance_id,
         ..Default::default()
