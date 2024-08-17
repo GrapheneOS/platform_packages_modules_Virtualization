@@ -28,8 +28,8 @@ import android.system.virtualmachine.VirtualMachineManager;
 import android.util.Log;
 
 import com.android.microdroid.test.vmshare.IVmShareTestService;
-import com.android.microdroid.testservice.ITestService;
 import com.android.microdroid.testservice.IAppCallback;
+import com.android.microdroid.testservice.ITestService;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;

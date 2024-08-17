@@ -335,6 +335,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         testResults.assertNoException();
         assertThat(testResults.mAddInteger).isEqualTo(37 + 73);
     }
+
     @Test
     @CddTest(requirements = {"9.17/C-1-1"})
     public void autoCloseVm() throws Exception {
@@ -737,7 +738,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         VirtualMachineConfig.Builder otherOsBuilder =
                 newBaselineBuilder().setOs("microdroid_gki-android14-6.1");
         assertConfigCompatible(microdroidOsConfig, otherOsBuilder).isFalse();
-
     }
 
     private VirtualMachineConfig.Builder newBaselineBuilder() {
@@ -870,11 +870,12 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-1-2",
-            "9.17/C-1-4",
-    })
+    @CddTest(
+            requirements = {
+                "9.17/C-1-1",
+                "9.17/C-1-2",
+                "9.17/C-1-4",
+            })
     public void createVmWithConfigRequiresPermission() throws Exception {
         assumeSupportedDevice();
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -890,14 +891,16 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         SecurityException e =
                 assertThrows(
                         SecurityException.class, () -> runVmTestService(TAG, vm, (ts, tr) -> {}));
-        assertThat(e).hasMessageThat()
+        assertThat(e)
+                .hasMessageThat()
                 .contains("android.permission.USE_CUSTOM_VIRTUAL_MACHINE permission");
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-    })
+    @CddTest(
+            requirements = {
+                "9.17/C-1-1",
+            })
     public void deleteVm() throws Exception {
         assumeSupportedDevice();
 
@@ -954,9 +957,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-    })
+    @CddTest(
+            requirements = {
+                "9.17/C-1-1",
+            })
     public void validApkPathIsAccepted() throws Exception {
         assumeSupportedDevice();
 
@@ -989,10 +993,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-2-1"
-    })
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-1"})
     public void extraApk() throws Exception {
         assumeSupportedDevice();
 
@@ -1044,7 +1045,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     public void bootFailsWhenLowMem() throws Exception {
-        for (int memMib : new int[]{ 10, 20, 40 }) {
+        for (int memMib : new int[] {10, 20, 40}) {
             VirtualMachineConfig lowMemConfig =
                     newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                             .setMemoryBytes(memMib)
@@ -1061,8 +1062,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                             onPayloadReadyExecuted.complete(true);
                             super.onPayloadReady(vm);
                         }
+
                         @Override
-                        public void onStopped(VirtualMachine vm,  int reason) {
+                        public void onStopped(VirtualMachine vm, int reason) {
                             onStoppedExecuted.complete(true);
                             super.onStopped(vm, reason);
                         }
@@ -1210,10 +1212,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-2-7"
-    })
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
     public void instancesOfSameVmHaveDifferentCdis() throws Exception {
         assumeSupportedDevice();
         // TODO(b/325094712): VMs on CF with same payload have the same secret. This is because
@@ -1240,10 +1239,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-2-7"
-    })
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
     public void sameInstanceKeepsSameCdis() throws Exception {
         assumeSupportedDevice();
         assume().withMessage("Skip on CF. Too Slow. b/257270529").that(isCuttlefish()).isFalse();
@@ -1298,7 +1294,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 // then pvmfw, vm_entry (Microdroid kernel) and Microdroid payload entries.
                 // Before Android V we did not require that vendor code contain any DICE entries
                 // preceding pvmfw, so the minimum is one less.
-                int minDiceChainSize = getVendorApiLevel() >= 202404 ? 5 : 4;
+                int minDiceChainSize = getVendorApiLevel() > 202404 ? 5 : 4;
                 assertThat(diceChainSize).isAtLeast(minDiceChainSize);
             } else {
                 // pvmfw truncates the DICE chain it gets, so we expect exactly entries for
@@ -1339,10 +1335,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-1-2"
-    })
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-1-2"})
     public void accessToCdisIsRestricted() throws Exception {
         assumeSupportedDevice();
 
@@ -1399,8 +1392,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     private void assertThatPartitionIsMissing(UUID partitionUuid) throws Exception {
         RandomAccessFile instanceFile = prepareInstanceImage("test_vm_integrity");
-        assertThat(findPartitionDataOffset(instanceFile, partitionUuid).isPresent())
-                .isFalse();
+        assertThat(findPartitionDataOffset(instanceFile, partitionUuid).isPresent()).isFalse();
     }
 
     // Flips a bit of given partition, and then see if boot fails.
@@ -1420,10 +1412,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-2-7"
-    })
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
     public void bootFailsWhenMicrodroidDataIsCompromised() throws Exception {
         // If Updatable VM is supported => No instance.img required
         assumeNoUpdatableVmSupport();
@@ -1431,10 +1420,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {
-            "9.17/C-1-1",
-            "9.17/C-2-7"
-    })
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
     public void bootFailsWhenPvmFwDataIsCompromised() throws Exception {
         // If Updatable VM is supported => No instance.img required
         assumeNoUpdatableVmSupport();
@@ -1456,8 +1442,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
         BootResult bootResult = tryBootVmWithConfig(config, "test_vm_invalid_config");
         assertThat(bootResult.payloadStarted).isFalse();
-        assertThat(bootResult.deathReason).isEqualTo(
-                VirtualMachineCallback.STOP_REASON_MICRODROID_INVALID_PAYLOAD_CONFIG);
+        assertThat(bootResult.deathReason)
+                .isEqualTo(VirtualMachineCallback.STOP_REASON_MICRODROID_INVALID_PAYLOAD_CONFIG);
     }
 
     @Test
@@ -2143,7 +2129,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         IVmShareTestService service = connection.waitForService();
         assertWithMessage("Timed out connecting to " + serviceIntent).that(service).isNotNull();
 
-
         try {
             ITestService testServiceProxy = transferAndStartVm(service, vmDesc, "vm_to_share");
 
@@ -2627,16 +2612,15 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     private long minMemoryRequired() {
-      assertThat(Build.SUPPORTED_ABIS).isNotEmpty();
-      String primaryAbi = Build.SUPPORTED_ABIS[0];
-      switch (primaryAbi) {
-        case "x86_64":
-          return MIN_MEM_X86_64;
-        case "arm64-v8a":
-        case "arm64-v8a-hwasan":
-          return MIN_MEM_ARM64;
-      }
-      throw new AssertionError("Unsupported ABI: " + primaryAbi);
+        assertThat(Build.SUPPORTED_ABIS).isNotEmpty();
+        String primaryAbi = Build.SUPPORTED_ABIS[0];
+        switch (primaryAbi) {
+            case "x86_64":
+                return MIN_MEM_X86_64;
+            case "arm64-v8a":
+            case "arm64-v8a-hwasan":
+                return MIN_MEM_ARM64;
+        }
+        throw new AssertionError("Unsupported ABI: " + primaryAbi);
     }
-
 }

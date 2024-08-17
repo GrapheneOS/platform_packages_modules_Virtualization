@@ -27,8 +27,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Objects;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 /** pvmfw.bin with custom config payloads on host. */
 public final class Pvmfw {

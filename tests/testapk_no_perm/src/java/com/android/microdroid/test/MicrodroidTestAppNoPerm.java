@@ -16,18 +16,19 @@
 
 package com.android.microdroid.test;
 
+import static com.google.common.truth.Truth.assertThat;
+
+import static org.junit.Assert.assertThrows;
+
 import android.system.virtualmachine.VirtualMachineConfig;
 
 import com.android.compatibility.common.util.CddTest;
 import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 
-import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
-
 import org.junit.Before;
-import org.junit.runners.Parameterized;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test that the android.permission.MANAGE_VIRTUAL_MACHINE is enforced and that an app cannot launch

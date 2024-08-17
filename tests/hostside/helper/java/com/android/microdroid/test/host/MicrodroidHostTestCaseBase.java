@@ -67,8 +67,11 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     protected static final long MICRODROID_COMMAND_TIMEOUT_MILLIS = 30000;
     private static final long MICRODROID_COMMAND_RETRY_INTERVAL_MILLIS = 500;
     protected static final int MICRODROID_ADB_CONNECT_MAX_ATTEMPTS =
-            (int) (MICRODROID_ADB_CONNECT_TIMEOUT_MINUTES * 60 * 1000
-                / MICRODROID_COMMAND_RETRY_INTERVAL_MILLIS);
+            (int)
+                    (MICRODROID_ADB_CONNECT_TIMEOUT_MINUTES
+                            * 60
+                            * 1000
+                            / MICRODROID_COMMAND_RETRY_INTERVAL_MILLIS);
 
     protected static final Set<String> SUPPORTED_GKI_VERSIONS =
             Collections.unmodifiableSet(new HashSet(Arrays.asList("android15-6.6")));
@@ -148,8 +151,9 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
                 isGsi && vendorApiLevel < 202404);
     }
 
-    public static void archiveLogThenDelete(TestLogData logs, ITestDevice device, String remotePath,
-            String localName) throws DeviceNotAvailableException {
+    public static void archiveLogThenDelete(
+            TestLogData logs, ITestDevice device, String remotePath, String localName)
+            throws DeviceNotAvailableException {
         LogArchiver.archiveLogThenDelete(logs, device, remotePath, localName);
     }
 
@@ -167,6 +171,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         CommandResult result = RunUtil.getDefault().runTimedCmd(timeout, cmd);
         return result.getStdout().trim();
     }
+
     private static String join(String... strs) {
         return String.join(" ", Arrays.asList(strs));
     }
@@ -197,8 +202,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         throw new AssertionError("Failed to find test file " + name + " for module " + moduleName);
     }
 
-    public String getPathForPackage(String packageName)
-            throws DeviceNotAvailableException {
+    public String getPathForPackage(String packageName) throws DeviceNotAvailableException {
         return getPathForPackage(getDevice(), packageName);
     }
 
@@ -210,7 +214,8 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         CommandRunner android = new CommandRunner(device);
         String pathLine = android.run("pm", "path", packageName);
         assertWithMessage("Package " + packageName + " not found")
-                .that(pathLine).startsWith("package:");
+                .that(pathLine)
+                .startsWith("package:");
         return pathLine.substring("package:".length());
     }
 

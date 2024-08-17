@@ -25,9 +25,7 @@ import com.google.common.truth.IntegerSubject;
 import com.google.common.truth.StringSubject;
 import com.google.common.truth.Subject;
 
-/**
- * A <a href="https://github.com/google/truth">Truth</a> subject for {@link CommandResult}.
- */
+/** A <a href="https://github.com/google/truth">Truth</a> subject for {@link CommandResult}. */
 public class CommandResultSubject extends Subject {
     private final CommandResult mActual;
 

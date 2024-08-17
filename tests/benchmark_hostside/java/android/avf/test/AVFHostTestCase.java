@@ -69,6 +69,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
     /** Boot time test related variables */
     private static final int REINSTALL_APEX_RETRY_INTERVAL_MS = 5 * 1000;
+
     private static final int REINSTALL_APEX_TIMEOUT_SEC = 15;
     private static final int COMPILE_STAGED_APEX_RETRY_INTERVAL_MS = 10 * 1000;
     private static final int COMPILE_STAGED_APEX_TIMEOUT_SEC = 540;
@@ -122,17 +123,18 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
     @Test
     public void testNoLongHypSections() throws Exception {
-        String[] hypEvents = {
-            "hyp_enter", "hyp_exit"
-        };
+        String[] hypEvents = {"hyp_enter", "hyp_exit"};
 
-        assumeTrue("Skip without hypervisor tracing",
-            KvmHypTracer.isSupported(getDevice(), hypEvents));
+        assumeTrue(
+                "Skip without hypervisor tracing",
+                KvmHypTracer.isSupported(getDevice(), hypEvents));
 
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hypEvents);
         String result = tracer.run(COMPOSD_CMD_BIN + " test-compile");
         assertWithMessage("Failed to test compilation VM.")
-                .that(result).ignoringCase().contains("all ok");
+                .that(result)
+                .ignoringCase()
+                .contains("all ok");
 
         SimpleStats stats = tracer.getDurationStats();
         reportMetric(stats.getData(), "hyp_sections", "s");
@@ -141,32 +143,37 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
     @Test
     public void testPsciMemProtect() throws Exception {
-        String[] hypEvents = {
-            "psci_mem_protect"
-        };
+        String[] hypEvents = {"psci_mem_protect"};
 
-        assumeTrue("Skip without hypervisor tracing",
-            KvmHypTracer.isSupported(getDevice(), hypEvents));
+        assumeTrue(
+                "Skip without hypervisor tracing",
+                KvmHypTracer.isSupported(getDevice(), hypEvents));
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hypEvents);
 
         /* We need to wait for crosvm to die so all the VM pages are reclaimed */
         String result = tracer.run(COMPOSD_CMD_BIN + " test-compile && killall -w crosvm || true");
         assertWithMessage("Failed to test compilation VM.")
-                .that(result).ignoringCase().contains("all ok");
+                .that(result)
+                .ignoringCase()
+                .contains("all ok");
 
         List<Integer> values = tracer.getPsciMemProtect();
 
         assertWithMessage("PSCI MEM_PROTECT events not recorded")
-            .that(values.size()).isGreaterThan(2);
+                .that(values.size())
+                .isGreaterThan(2);
 
         assertWithMessage("PSCI MEM_PROTECT counter not starting from 0")
-            .that(values.get(0)).isEqualTo(0);
+                .that(values.get(0))
+                .isEqualTo(0);
 
         assertWithMessage("PSCI MEM_PROTECT counter not ending with 0")
-            .that(values.get(values.size() - 1)).isEqualTo(0);
+                .that(values.get(values.size() - 1))
+                .isEqualTo(0);
 
         assertWithMessage("PSCI MEM_PROTECT counter didn't increment")
-            .that(Collections.max(values)).isGreaterThan(0);
+                .that(Collections.max(values))
+                .isGreaterThan(0);
     }
 
     @Test
@@ -182,9 +189,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
     @Test
     public void testSettingsAppStartupTime() throws Exception {
-        String[] launchIntentPackages = {
-            "com.android.settings"
-        };
+        String[] launchIntentPackages = {"com.android.settings"};
         String launchIntentPackage = findSupportedPackage(launchIntentPackages);
         assume().withMessage("No supported settings package").that(launchIntentPackage).isNotNull();
         appStartupHelper(launchIntentPackage);
@@ -193,28 +198,34 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     private void appStartupHelper(String launchIntentPackage) throws Exception {
         assumeTrue(
                 "Skip on non-protected VMs",
-                ((TestDevice) getDevice()).supportsMicrodroid(/*protectedVm=*/ true));
+                ((TestDevice) getDevice()).supportsMicrodroid(/* protectedVm= */ true));
 
         StartupTimeMetricCollection mCollection =
                 new StartupTimeMetricCollection(getPackageName(launchIntentPackage), ROUND_COUNT);
         getAppStartupTime(launchIntentPackage, mCollection);
 
-        reportMetric(mCollection.mAppBeforeVmRunTotalTime,
+        reportMetric(
+                mCollection.mAppBeforeVmRunTotalTime,
                 "app_startup/" + mCollection.getPkgName() + "/total_time/before_vm",
                 "ms");
-        reportMetric(mCollection.mAppBeforeVmRunWaitTime,
+        reportMetric(
+                mCollection.mAppBeforeVmRunWaitTime,
                 "app_startup/" + mCollection.getPkgName() + "/wait_time/before_vm",
                 "ms");
-        reportMetric(mCollection.mAppDuringVmRunTotalTime,
+        reportMetric(
+                mCollection.mAppDuringVmRunTotalTime,
                 "app_startup/" + mCollection.getPkgName() + "/total_time/during_vm",
                 "ms");
-        reportMetric(mCollection.mAppDuringVmRunWaitTime,
+        reportMetric(
+                mCollection.mAppDuringVmRunWaitTime,
                 "app_startup/" + mCollection.getPkgName() + "/wait_time/during_vm",
                 "ms");
-        reportMetric(mCollection.mAppAfterVmRunTotalTime,
+        reportMetric(
+                mCollection.mAppAfterVmRunTotalTime,
                 "app_startup/" + mCollection.getPkgName() + "/total_time/after_vm",
                 "ms");
-        reportMetric(mCollection.mAppAfterVmRunWaitTime,
+        reportMetric(
+                mCollection.mAppAfterVmRunWaitTime,
                 "app_startup/" + mCollection.getPkgName() + "/wait_time/after_vm",
                 "ms");
     }
@@ -234,8 +245,9 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
         for (String pkgName : pkgNameList) {
             String appPkg = getPackageName(pkgName);
-            String hasPackage = android.run("pm list package | grep -w " + appPkg + " 1> /dev/null"
-                    + "; echo $?");
+            String hasPackage =
+                    android.run(
+                            "pm list package | grep -w " + appPkg + " 1> /dev/null" + "; echo $?");
             assertNotNull(hasPackage);
 
             if (hasPackage.equals("0")) {
@@ -390,8 +402,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         }
     }
 
-    private int getFreeMemoryInfoMb(CommandRunner android) throws DeviceNotAvailableException,
-            IllegalArgumentException {
+    private int getFreeMemoryInfoMb(CommandRunner android)
+            throws DeviceNotAvailableException, IllegalArgumentException {
         int freeMemory = 0;
         String content = android.runForResult("cat /proc/meminfo").getStdout().trim();
         String[] lines = content.split("[\r\n]+");
@@ -410,8 +422,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
             throws DeviceNotAvailableException, InterruptedException {
         android.run("input keyevent", "KEYCODE_WAKEUP");
         Thread.sleep(500);
-        final String ret = android.runForResult("dumpsys nfc | grep 'mScreenState='")
-                .getStdout().trim();
+        final String ret =
+                android.runForResult("dumpsys nfc | grep 'mScreenState='").getStdout().trim();
         if (ret != null && ret.contains("ON_LOCKED")) {
             android.run("input keyevent", "KEYCODE_MENU");
         }
@@ -429,8 +441,9 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                 String[] bootKeyVal = bootLoaderPhase.split(":");
                 String key = String.format("%s%s", BOOTLOADER_PREFIX, bootKeyVal[0]);
 
-                bootloaderTime.computeIfAbsent(key,
-                        k -> new ArrayList<>()).add(Double.parseDouble(bootKeyVal[1]));
+                bootloaderTime
+                        .computeIfAbsent(key, k -> new ArrayList<>())
+                        .add(Double.parseDouble(bootKeyVal[1]));
                 // SW is the time spent on the warning screen. So ignore it in
                 // final boot time calculation.
                 if (BOOTLOADER_PHASE_SW.equalsIgnoreCase(bootKeyVal[0])) {
@@ -438,8 +451,9 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                 }
                 bootLoaderTotalTime += Double.parseDouble(bootKeyVal[1]);
             }
-            bootloaderTime.computeIfAbsent(BOOTLOADER_TIME,
-                    k -> new ArrayList<>()).add(bootLoaderTotalTime);
+            bootloaderTime
+                    .computeIfAbsent(BOOTLOADER_TIME, k -> new ArrayList<>())
+                    .add(bootLoaderTotalTime);
         }
     }
 
@@ -518,7 +532,9 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                         android.runWithTimeout(
                                 3 * 60 * 1000, COMPOSD_CMD_BIN + " staged-apex-compile");
                 assertWithMessage("Failed to compile staged APEX. Reason: " + result)
-                    .that(result).ignoringCase().contains("all ok");
+                        .that(result)
+                        .ignoringCase()
+                        .contains("all ok");
 
                 CLog.i("Success to compile staged APEX. Result: " + result);
 
@@ -546,22 +562,23 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
             try {
                 CommandRunner android = new CommandRunner(getDevice());
 
-                String packagesOutput =
-                        android.run("pm list packages -f --apex-only");
+                String packagesOutput = android.run("pm list packages -f --apex-only");
 
-                Pattern p = Pattern.compile(
-                        "package:(.*)=(com(?:\\.google)?\\.android\\.art)$", Pattern.MULTILINE);
+                Pattern p =
+                        Pattern.compile(
+                                "package:(.*)=(com(?:\\.google)?\\.android\\.art)$",
+                                Pattern.MULTILINE);
                 Matcher m = p.matcher(packagesOutput);
                 assertWithMessage("ART module not found. Packages are:\n" + packagesOutput)
-                    .that(m.find())
-                    .isTrue();
+                        .that(m.find())
+                        .isTrue();
 
                 String artApexPath = m.group(1);
 
-                CommandResult result = android.runForResult(
-                        "pm install --apex " + artApexPath);
+                CommandResult result = android.runForResult("pm install --apex " + artApexPath);
                 assertWithMessage("Failed to install APEX. Reason: " + result)
-                    .that(result.getExitCode()).isEqualTo(0);
+                        .that(result.getExitCode())
+                        .isEqualTo(0);
 
                 CLog.i("Success to install APEX. Result: " + result);
 

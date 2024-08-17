@@ -30,8 +30,8 @@ import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.DeviceRuntimeException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
-import com.android.tradefed.util.CommandStatus;
 import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.CommandStatus;
 
 import org.junit.After;
 import org.junit.Before;

@@ -16,8 +16,8 @@ For in-depth explanations about individual topics and components, visit the foll
 AVF components:
 * [pVM firmware](guest/pvmfw/README.md)
 * [Android Boot Loader (ABL)](docs/abl.md)
-* [Microdroid](microdroid/README.md)
-* [Microdroid kernel](microdroid/kernel/README.md)
+* [Microdroid](build/microdroid/README.md)
+* [Microdroid kernel](guest/kernel/README.md)
 * [Microdroid payload](libs/libmicrodroid_payload_metadata/README.md)
 * [vmbase](libs/libvmbase/README.md)
 * [Encrypted Storage](guest/encryptedstore/README.md)

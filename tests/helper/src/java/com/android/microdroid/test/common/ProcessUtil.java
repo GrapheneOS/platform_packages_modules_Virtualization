@@ -69,13 +69,13 @@ public final class ProcessUtil {
     }
 
     /** Gets global memory metrics key and values mapping */
-    public static Map<String, Long> getProcessMemoryMap(
-            Function<String, String> shellExecutor) throws IOException {
+    public static Map<String, Long> getProcessMemoryMap(Function<String, String> shellExecutor)
+            throws IOException {
         // The input file of parseMemoryInfo need a header string as the key of output entries.
         // /proc/meminfo doesn't have this line so add one as the key.
         String header = "device memory info\n";
-        List<SMapEntry> entries = parseMemoryInfo(header
-                + shellExecutor.apply("cat /proc/meminfo"));
+        List<SMapEntry> entries =
+                parseMemoryInfo(header + shellExecutor.apply("cat /proc/meminfo"));
         if (entries.size() != 1) {
             throw new RuntimeException(
                     "expected one entry in /proc/meminfo, got " + entries.size());

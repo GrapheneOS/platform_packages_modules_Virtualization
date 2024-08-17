@@ -28,8 +28,8 @@ public final class MetricsProcessor {
 
     public static String getMetricPrefix(String debugTag) {
         return "avf_perf"
-            + ((debugTag != null && !debugTag.isEmpty()) ? "[" + debugTag + "]" : "")
-            + "/";
+                + ((debugTag != null && !debugTag.isEmpty()) ? "[" + debugTag + "]" : "")
+                + "/";
     }
 
     public MetricsProcessor(String prefix) {
@@ -41,8 +41,8 @@ public final class MetricsProcessor {
      * a {@link Map} with the corresponding keys equal to [mPrefix + name +
      * _[min|max|average|stdev]_ + unit].
      */
-    public Map<String, Double> computeStats(List<? extends Number> metrics, String name,
-            String unit) {
+    public Map<String, Double> computeStats(
+            List<? extends Number> metrics, String name, String unit) {
         List<Double> values = new ArrayList<>(metrics.size());
         for (Number metric : metrics) {
             values.add(metric.doubleValue());

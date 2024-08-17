@@ -17,22 +17,23 @@
 package com.android.microdroid.test.host;
 
 import static com.google.common.truth.Truth.assertWithMessage;
+
 import static org.junit.Assert.assertNotNull;
 
-import com.android.microdroid.test.host.CommandRunner;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.util.SimpleStats;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.BufferedReader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import javax.annotation.Nonnull;
 
 class KvmHypEvent {
@@ -42,16 +43,14 @@ class KvmHypEvent {
     public final String args;
     public final boolean valid;
 
-    private static final Pattern LOST_EVENT_PATTERN = Pattern.compile(
-            "^CPU:[0-9]* \\[LOST ([0-9]*) EVENTS\\]");
+    private static final Pattern LOST_EVENT_PATTERN =
+            Pattern.compile("^CPU:[0-9]* \\[LOST ([0-9]*) EVENTS\\]");
 
     public KvmHypEvent(String str) {
         Matcher matcher = LOST_EVENT_PATTERN.matcher(str);
-        if (matcher.find())
-            throw new OutOfMemoryError("Lost " + matcher.group(1) + " events");
+        if (matcher.find()) throw new OutOfMemoryError("Lost " + matcher.group(1) + " events");
 
-        Pattern pattern = Pattern.compile(
-                "^\\[([0-9]*)\\][ \t]*([0-9]*\\.[0-9]*): (\\S+) (.*)");
+        Pattern pattern = Pattern.compile("^\\[([0-9]*)\\][ \t]*([0-9]*\\.[0-9]*): (\\S+) (.*)");
 
         matcher = pattern.matcher(str);
         if (!matcher.find()) {
@@ -72,8 +71,7 @@ class KvmHypEvent {
     }
 
     public String toString() {
-        return String.format(
-                "[%03d]\t%f: %s %s", cpu, timestamp, name, args);
+        return String.format("[%03d]\t%f: %s %s", cpu, timestamp, name, args);
     }
 }
 
@@ -99,16 +97,16 @@ public final class KvmHypTracer {
     }
 
     public static boolean isSupported(ITestDevice device, String[] events) throws Exception {
-        for (String event: events) {
-            if (!device.doesFileExist(HYP_TRACING_ROOT + eventDir(event) + "/enable"))
-                return false;
+        for (String event : events) {
+            if (!device.doesFileExist(HYP_TRACING_ROOT + eventDir(event) + "/enable")) return false;
         }
         return true;
     }
 
     public KvmHypTracer(@Nonnull ITestDevice device, String[] events) throws Exception {
         assertWithMessage("Hypervisor events " + String.join(",", events) + " not supported")
-            .that(isSupported(device, events)).isTrue();
+                .that(isSupported(device, events))
+                .isTrue();
 
         mDevice = device;
         mRunner = new CommandRunner(mDevice);
@@ -123,8 +121,7 @@ public final class KvmHypTracer {
         setNode("tracing_on", 0);
         mRunner.run("echo 0 | tee " + HYP_TRACING_ROOT + "events/*/*/enable");
         setNode("buffer_size_kb", DEFAULT_BUF_SIZE_KB);
-        for (String event: mHypEvents)
-            setNode(eventDir(event) + "/enable", 1);
+        for (String event : mHypEvents) setNode(eventDir(event) + "/enable", 1);
         setNode("trace", 0);
 
         /* Cat each per-cpu trace_pipe in its own tmp file in the background */
@@ -147,8 +144,10 @@ public final class KvmHypTracer {
 
         /* Wait for cat to finish reading the pipe interface before killing it */
         for (int i = 0; i < mNrCpus; i++) {
-            cmd += "while $(test '$(ps -o S -p $CPU" + i
-                + "_TRACE_PIPE_PID | tail -n 1)' = 'R'); do sleep 1; done;";
+            cmd +=
+                    "while $(test '$(ps -o S -p $CPU"
+                            + i
+                            + "_TRACE_PIPE_PID | tail -n 1)' = 'R'); do sleep 1; done;";
             cmd += "kill -9 $CPU" + i + "_TRACE_PIPE_PID;";
         }
         cmd += "wait";
@@ -164,7 +163,7 @@ public final class KvmHypTracer {
 
         mRunner.run("rm -f " + cmd_script);
 
-        for (String t: trace_pipes) {
+        for (String t : trace_pipes) {
             File trace = mDevice.pullFile(t);
             assertNotNull(trace);
             mTraces.add(trace);
@@ -190,12 +189,10 @@ public final class KvmHypTracer {
         KvmHypEvent event;
         String l;
 
-        if ((l = br.readLine()) == null)
-            return null;
+        if ((l = br.readLine()) == null) return null;
 
         event = new KvmHypEvent(l);
-        if (!event.valid)
-            return null;
+        if (!event.valid) return null;
 
         return event;
     }
@@ -205,9 +202,10 @@ public final class KvmHypTracer {
         SimpleStats stats = new SimpleStats();
 
         assertWithMessage("KvmHypTracer() is missing events " + String.join(",", reqEvents))
-            .that(hasEvents(reqEvents)).isTrue();
+                .that(hasEvents(reqEvents))
+                .isTrue();
 
-        for (File trace: mTraces) {
+        for (File trace : mTraces) {
             BufferedReader br = new BufferedReader(new FileReader(trace));
             double last = 0.0, hyp_enter = 0.0;
             String prev_event = "";
@@ -219,20 +217,18 @@ public final class KvmHypTracer {
                     throw new ParseException("Incorrect CPU number: " + cpu, 0);
 
                 double cur = hypEvent.timestamp;
-                if (cur < last)
-                    throw new ParseException("Time must not go backward: " + cur, 0);
+                if (cur < last) throw new ParseException("Time must not go backward: " + cur, 0);
                 last = cur;
 
                 String event = hypEvent.name;
                 if (event.equals(prev_event)) {
-                    throw new ParseException("Hyp event found twice in a row: " +
-                                             trace + " - " + hypEvent, 0);
+                    throw new ParseException(
+                            "Hyp event found twice in a row: " + trace + " - " + hypEvent, 0);
                 }
 
                 switch (event) {
                     case "hyp_exit":
-                        if (prev_event.equals("hyp_enter"))
-                            stats.add(cur - hyp_enter);
+                        if (prev_event.equals("hyp_enter")) stats.add(cur - hyp_enter);
                         break;
                     case "hyp_enter":
                         hyp_enter = cur;
@@ -252,7 +248,8 @@ public final class KvmHypTracer {
         List<Integer> psciMemProtect = new ArrayList<>();
 
         assertWithMessage("KvmHypTracer() is missing events " + String.join(",", reqEvents))
-            .that(hasEvents(reqEvents)).isTrue();
+                .that(hasEvents(reqEvents))
+                .isTrue();
 
         BufferedReader[] brs = new BufferedReader[mTraces.size()];
         KvmHypEvent[] next = new KvmHypEvent[mTraces.size()];
@@ -266,22 +263,20 @@ public final class KvmHypTracer {
             double oldest = Double.MAX_VALUE;
             int oldestIdx = -1;
 
-            for (int i = 0; i < mTraces.size(); i ++) {
+            for (int i = 0; i < mTraces.size(); i++) {
                 if ((next[i] != null) && (next[i].timestamp < oldest)) {
                     oldest = next[i].timestamp;
                     oldestIdx = i;
                 }
             }
 
-            if (oldestIdx < 0)
-                break;
+            if (oldestIdx < 0) break;
 
-            Pattern pattern = Pattern.compile(
-                "count=([0-9]*) was=([0-9]*)");
+            Pattern pattern = Pattern.compile("count=([0-9]*) was=([0-9]*)");
             Matcher matcher = pattern.matcher(next[oldestIdx].args);
             if (!matcher.find()) {
-                throw new ParseException("Unexpected psci_mem_protect event: " +
-                                         next[oldestIdx], 0);
+                throw new ParseException(
+                        "Unexpected psci_mem_protect event: " + next[oldestIdx], 0);
             }
 
             int count = Integer.parseInt(matcher.group(1));

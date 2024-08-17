@@ -268,6 +268,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                 /* fullDebug */ false,
                 (builder) -> builder.setCpuTopology(CPU_TOPOLOGY_ONE_CPU));
     }
+
     @Test
     public void testMicrodroidHostCpuTopologyBootTime()
             throws VirtualMachineException, InterruptedException, IOException {
@@ -280,10 +281,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     @Test
     public void testMicrodroidDebugBootTime()
             throws VirtualMachineException, InterruptedException, IOException {
-        runBootTimeTest(
-                "test_vm_boot_time_debug",
-                /* fullDebug */ true,
-                (builder) -> builder);
+        runBootTimeTest("test_vm_boot_time_debug", /* fullDebug */ true, (builder) -> builder);
     }
 
     private void testMicrodroidDebugBootTime_withVendorBase(File vendorDiskImage) throws Exception {
@@ -366,12 +364,12 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
 
     @Test
     public void testVirtioBlkSeqReadRate() throws Exception {
-        testVirtioBlkReadRate(/*isRand=*/ false);
+        testVirtioBlkReadRate(/* isRand= */ false);
     }
 
     @Test
     public void testVirtioBlkRandReadRate() throws Exception {
-        testVirtioBlkReadRate(/*isRand=*/ true);
+        testVirtioBlkReadRate(/* isRand= */ true);
     }
 
     private void testVirtioBlkReadRate(boolean isRand) throws Exception {
