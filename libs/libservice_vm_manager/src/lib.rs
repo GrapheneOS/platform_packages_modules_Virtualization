@@ -38,7 +38,7 @@ use vmclient::{DeathReason, VmInstance};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
 /// Size of virtual memory allocated to the Service VM.
-pub const VM_MEMORY_MB: i32 = 8;
+pub const VM_MEMORY_MB: i32 = 6;
 
 const VIRT_DATA_DIR: &str = "/data/misc/apexdata/com.android.virt";
 const RIALTO_PATH: &str = "/apex/com.android.virt/etc/rialto.bin";
