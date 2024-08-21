@@ -17,8 +17,10 @@
 package com.android.virtualization.vmlauncher;
 
 import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineException;
+import android.util.Log;
 
 import libcore.io.Streams;
 
@@ -39,6 +41,7 @@ class VmAgent {
     private static final int DATA_SHARING_SERVICE_PORT = 3580;
     private static final int HEADER_SIZE = 8; // size of the header
     private static final int SIZE_OFFSET = 4; // offset of the size field in the header
+    private static final long RETRY_INTERVAL_MS = 1_000;
 
     static final byte READ_CLIPBOARD_FROM_VM = 0;
     static final byte WRITE_CLIPBOARD_TYPE_EMPTY = 1;
@@ -51,13 +54,26 @@ class VmAgent {
         mVirtualMachine = vm;
     }
 
-    /** Connect to the agent and returns the communication channel established. This can block. */
-    Connection connect() {
-        try {
-            // TODO: wait until the VM is up and the agent is running
-            return new Connection(mVirtualMachine.connectVsock(DATA_SHARING_SERVICE_PORT));
-        } catch (VirtualMachineException e) {
-            throw new RuntimeException("Failed to connect to the VM agent", e);
+    /**
+     * Connects to the agent and returns the established communication channel. This can block.
+     *
+     * @throws InterruptedException If the current thread was interrupted
+     */
+    Connection connect() throws InterruptedException {
+        boolean shouldLog = true;
+        while (true) {
+            if (Thread.interrupted()) {
+                throw new InterruptedException();
+            }
+            try {
+                return new Connection(mVirtualMachine.connectVsock(DATA_SHARING_SERVICE_PORT));
+            } catch (VirtualMachineException e) {
+                if (shouldLog) {
+                    shouldLog = false;
+                    Log.d(TAG, "Still waiting for VM agent to start", e);
+                }
+            }
+            SystemClock.sleep(RETRY_INTERVAL_MS);
         }
     }
 

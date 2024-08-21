@@ -24,7 +24,7 @@ use command_fds::{CommandFdExt, FdMapping};
 use log::{debug, error};
 use std::fs::OpenOptions;
 use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::io::{AsRawFd, OwnedFd, RawFd};
+use std::os::unix::io::{OwnedFd, RawFd};
 use std::process::Command;
 
 // `PseudoRawFd` is just an integer and not necessarily backed by a real FD. It is used to denote
@@ -38,8 +38,8 @@ struct OwnedFdMapping {
 }
 
 impl OwnedFdMapping {
-    fn as_fd_mapping(&self) -> FdMapping {
-        FdMapping { parent_fd: self.owned_fd.as_raw_fd(), child_fd: self.target_fd }
+    fn into_fd_mapping(self) -> FdMapping {
+        FdMapping { parent_fd: self.owned_fd, child_fd: self.target_fd }
     }
 }
 
@@ -148,9 +148,9 @@ fn try_main() -> Result<()> {
 
     // Set up FD mappings in the child process.
     let mut fd_mappings = Vec::new();
-    fd_mappings.extend(args.ro_file_fds.iter().map(OwnedFdMapping::as_fd_mapping));
-    fd_mappings.extend(args.rw_file_fds.iter().map(OwnedFdMapping::as_fd_mapping));
-    fd_mappings.extend(args.dir_fds.iter().map(OwnedFdMapping::as_fd_mapping));
+    fd_mappings.extend(args.ro_file_fds.into_iter().map(OwnedFdMapping::into_fd_mapping));
+    fd_mappings.extend(args.rw_file_fds.into_iter().map(OwnedFdMapping::into_fd_mapping));
+    fd_mappings.extend(args.dir_fds.into_iter().map(OwnedFdMapping::into_fd_mapping));
     command.fd_mappings(fd_mappings)?;
 
     debug!("Spawning {:?}", command);

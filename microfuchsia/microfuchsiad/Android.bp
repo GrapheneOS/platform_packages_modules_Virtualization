@@ -1,0 +1,25 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+// A daemon that launches microfuchsia in AVF.
+rust_binary {
+    name: "microfuchsiad",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    prefer_rlib: true,
+    defaults: ["avf_build_flags_rust"],
+    rustlibs: [
+        "android.system.microfuchsiad-rust",
+        "android.system.virtualizationservice-rust",
+        "libandroid_logger",
+        "libanyhow",
+        "libbinder_rs",
+        "liblog_rust",
+        "liblibc",
+        "libvmclient",
+    ],
+    apex_available: [
+        "com.android.microfuchsia",
+    ],
+}

@@ -52,16 +52,12 @@ public class MainActivity extends Activity {
     private DisplayProvider mDisplayProvider;
     private VmAgent mVmAgent;
     private ClipboardHandler mClipboardHandler;
+    private OpenUrlHandler mOpenUrlHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        String action = getIntent().getAction();
-        if (!ACTION_VM_LAUNCHER.equals(action)) {
-            finish();
-            Log.e(TAG, "onCreate unsupported intent action: " + action);
-            return;
-        }
+        Log.d(TAG, "onCreate intent: " + getIntent());
         checkAndRequestRecordAudioPermission();
         mExecutorService = Executors.newCachedThreadPool();
 
@@ -98,6 +94,8 @@ public class MainActivity extends Activity {
 
         mVmAgent = new VmAgent(mVirtualMachine);
         mClipboardHandler = new ClipboardHandler(this, mVmAgent);
+        mOpenUrlHandler = new OpenUrlHandler(mVmAgent);
+        handleIntent(getIntent());
     }
 
     private void makeFullscreen() {
@@ -146,6 +144,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
         mExecutorService.shutdownNow();
         mInputForwarder.cleanUp();
+        mOpenUrlHandler.shutdown();
         Log.d(TAG, "destroyed");
     }
 
@@ -172,18 +171,16 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onNewIntent(Intent intent) {
-        String action = intent.getAction();
-        if (!ACTION_VM_OPEN_URL.equals(action)) {
-            Log.e(TAG, "onNewIntent unsupported intent action: " + action);
-            return;
-        }
-        Log.d(TAG, "onNewIntent intent action: " + action);
-        String text = intent.getStringExtra(Intent.EXTRA_TEXT);
-        if (text != null) {
-            mExecutorService.execute(
-                    () -> {
-                        mVmAgent.connect().sendData(VmAgent.OPEN_URL, text.getBytes());
-                    });
+        Log.d(TAG, "onNewIntent intent: " + intent);
+        handleIntent(intent);
+    }
+
+    private void handleIntent(Intent intent) {
+        if (ACTION_VM_OPEN_URL.equals(intent.getAction())) {
+            String url = intent.getStringExtra(Intent.EXTRA_TEXT);
+            if (url != null) {
+                mOpenUrlHandler.sendUrlToVm(url);
+            }
         }
     }
 

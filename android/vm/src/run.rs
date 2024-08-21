@@ -36,7 +36,7 @@ use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
-use std::os::unix::io::{AsRawFd, FromRawFd};
+use std::os::fd::AsFd;
 use std::path::{Path, PathBuf};
 use vmclient::{ErrorCode, VmInstance};
 use vmconfig::{get_debug_level, open_parcel_file, VmConfig};
@@ -365,16 +365,6 @@ impl vmclient::VmCallback for Callback {
 }
 
 /// Safely duplicate the file descriptor.
-fn duplicate_fd<T: AsRawFd>(file: T) -> io::Result<File> {
-    let fd = file.as_raw_fd();
-    // SAFETY: This just duplicates a file descriptor which we know to be valid, and we check for an
-    // an error.
-    let dup_fd = unsafe { libc::dup(fd) };
-    if dup_fd < 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        // SAFETY: We have just duplicated the file descriptor so we own it, and `from_raw_fd` takes
-        // ownership of it.
-        Ok(unsafe { File::from_raw_fd(dup_fd) })
-    }
+fn duplicate_fd<T: AsFd>(file: T) -> io::Result<File> {
+    Ok(file.as_fd().try_clone_to_owned()?.into())
 }

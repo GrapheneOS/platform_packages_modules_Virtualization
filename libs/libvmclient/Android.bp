@@ -21,6 +21,7 @@ rust_library {
     ],
     apex_available: [
         "com.android.compos",
+        "com.android.microfuchsia",
         "com.android.virt",
     ],
 }

@@ -25,6 +25,7 @@ use libc::{sysconf, _SC_CLK_TCK};
 use log::{debug, error, info};
 use semver::{Version, VersionReq};
 use nix::{fcntl::OFlag, unistd::pipe2, unistd::Uid, unistd::User};
+use nix::unistd::dup;
 use regex::{Captures, Regex};
 use rustutils::system_properties;
 use shared_child::SharedChild;
@@ -35,7 +36,8 @@ use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::unix::io::{AsRawFd, OwnedFd, RawFd};
+use std::os::fd::FromRawFd;
+use std::os::unix::io::{AsRawFd, OwnedFd};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
@@ -872,26 +874,6 @@ fn vfio_argument_for_platform_device(device: &VfioDevice) -> Result<String, Erro
     }
 }
 
-fn append_platform_devices(
-    command: &mut Command,
-    preserved_fds: &mut Vec<RawFd>,
-    config: &CrosvmConfig,
-) -> Result<(), Error> {
-    if config.vfio_devices.is_empty() {
-        return Ok(());
-    }
-
-    let Some(dtbo) = &config.dtbo else {
-        bail!("VFIO devices assigned but no DTBO available");
-    };
-    command.arg(format!("--device-tree-overlay={},filter", add_preserved_fd(preserved_fds, dtbo)));
-
-    for device in &config.vfio_devices {
-        command.arg(vfio_argument_for_platform_device(device)?);
-    }
-    Ok(())
-}
-
 /// Starts an instance of `crosvm` to manage a new VM.
 fn run_vm(
     config: CrosvmConfig,
@@ -986,7 +968,7 @@ fn run_vm(
     }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
-    let mut preserved_fds = config.indirect_files.iter().map(|file| file.as_raw_fd()).collect();
+    let mut preserved_fds = config.indirect_files.into_iter().map(|f| f.into()).collect();
 
     // Setup the serial devices.
     // 1. uart device: used as the output device by bootloaders and as early console by linux
@@ -997,15 +979,14 @@ fn run_vm(
     //
     // When [console|log]_fd is not specified, the devices are attached to sink, which means what's
     // written there is discarded.
-    let console_out_arg = format_serial_out_arg(&mut preserved_fds, &config.console_out_fd);
+    let console_out_arg = format_serial_out_arg(&mut preserved_fds, config.console_out_fd);
     let console_in_arg = config
         .console_in_fd
-        .as_ref()
         .map(|fd| format!(",input={}", add_preserved_fd(&mut preserved_fds, fd)))
         .unwrap_or_default();
-    let log_arg = format_serial_out_arg(&mut preserved_fds, &config.log_fd);
-    let failure_serial_path = add_preserved_fd(&mut preserved_fds, &failure_pipe_write);
-    let ramdump_arg = format_serial_out_arg(&mut preserved_fds, &config.ramdump);
+    let log_arg = format_serial_out_arg(&mut preserved_fds, config.log_fd);
+    let failure_serial_path = add_preserved_fd(&mut preserved_fds, failure_pipe_write);
+    let ramdump_arg = format_serial_out_arg(&mut preserved_fds, config.ramdump);
     let console_input_device = config.console_input_device.as_deref().unwrap_or(CONSOLE_HVC0);
     match console_input_device {
         CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
@@ -1035,11 +1016,11 @@ fn run_vm(
     // /dev/hvc2
     command.arg(format!("--serial={},hardware=virtio-console,num=3", &log_arg));
 
-    if let Some(bootloader) = &config.bootloader {
+    if let Some(bootloader) = config.bootloader {
         command.arg("--bios").arg(add_preserved_fd(&mut preserved_fds, bootloader));
     }
 
-    if let Some(initrd) = &config.initrd {
+    if let Some(initrd) = config.initrd {
         command.arg("--initrd").arg(add_preserved_fd(&mut preserved_fds, initrd));
     }
 
@@ -1047,25 +1028,30 @@ fn run_vm(
         command.arg("--params").arg(params);
     }
 
-    for disk in &config.disks {
+    for disk in config.disks {
         command.arg("--block").arg(format!(
             "path={},ro={}",
-            add_preserved_fd(&mut preserved_fds, &disk.image),
+            add_preserved_fd(&mut preserved_fds, disk.image),
             !disk.writable,
         ));
     }
 
-    if let Some(kernel) = &config.kernel {
+    if let Some(kernel) = config.kernel {
         command.arg(add_preserved_fd(&mut preserved_fds, kernel));
     }
 
-    let control_server_socket = UnixSeqpacketListener::bind(crosvm_control_socket_path)
+    let control_sock = UnixSeqpacketListener::bind(crosvm_control_socket_path)
         .context("failed to create control server")?;
-    command
-        .arg("--socket")
-        .arg(add_preserved_fd(&mut preserved_fds, &control_server_socket.as_raw_descriptor()));
+    command.arg("--socket").arg(add_preserved_fd(&mut preserved_fds, {
+        let dup_fd = dup(control_sock.as_raw_descriptor())?;
+        // SAFETY: UnixSeqpacketListener doesn't provide a way to convert it into a RawFd or
+        // OwnedFd. In order to provide a OwnedFd for add_preserved_fd, dup the control socket
+        // and create a OwnedFd from the duped fd. This is fine as the original fd is still
+        // closed when control_socket is dropped.
+        unsafe { OwnedFd::from_raw_fd(dup_fd) }
+    }));
 
-    if let Some(dt_overlay) = &config.device_tree_overlay {
+    if let Some(dt_overlay) = config.device_tree_overlay {
         command.arg("--device-tree-overlay").arg(add_preserved_fd(&mut preserved_fds, dt_overlay));
     }
 
@@ -1116,15 +1102,15 @@ fn run_vm(
     }
 
     if cfg!(network) {
-        if let Some(tap) = &config.tap {
-            let tap_fd = tap.as_raw_fd();
-            preserved_fds.push(tap_fd);
-            command.arg("--net").arg(format!("tap-fd={}", tap_fd));
+        if let Some(tap) = config.tap {
+            command
+                .arg("--net")
+                .arg(format!("tap-fd={}", add_preserved_fd(&mut preserved_fds, tap)));
         }
     }
 
     if cfg!(paravirtualized_devices) {
-        for input_device_option in config.input_device_options.iter() {
+        for input_device_option in config.input_device_options.into_iter() {
             command.arg("--input");
             command.arg(match input_device_option {
                 InputDeviceOption::EvDev(file) => {
@@ -1172,7 +1158,19 @@ fn run_vm(
         command.arg("--boost-uclamp");
     }
 
-    append_platform_devices(&mut command, &mut preserved_fds, &config)?;
+    if !config.vfio_devices.is_empty() {
+        if let Some(dtbo) = config.dtbo {
+            command.arg(format!(
+                "--device-tree-overlay={},filter",
+                add_preserved_fd(&mut preserved_fds, dtbo)
+            ));
+        } else {
+            bail!("VFIO devices assigned but no DTBO available");
+        }
+    };
+    for device in config.vfio_devices {
+        command.arg(vfio_argument_for_platform_device(&device)?);
+    }
 
     debug!("Preserving FDs {:?}", preserved_fds);
     command.preserved_fds(preserved_fds);
@@ -1242,15 +1240,16 @@ fn print_crosvm_args(command: &Command) {
 
 /// Adds the file descriptor for `file` to `preserved_fds`, and returns a string of the form
 /// "/proc/self/fd/N" where N is the file descriptor.
-fn add_preserved_fd(preserved_fds: &mut Vec<RawFd>, file: &dyn AsRawFd) -> String {
-    let fd = file.as_raw_fd();
+fn add_preserved_fd<F: Into<OwnedFd>>(preserved_fds: &mut Vec<OwnedFd>, file: F) -> String {
+    let fd = file.into();
+    let raw_fd = fd.as_raw_fd();
     preserved_fds.push(fd);
-    format!("/proc/self/fd/{}", fd)
+    format!("/proc/self/fd/{}", raw_fd)
 }
 
 /// Adds the file descriptor for `file` (if any) to `preserved_fds`, and returns the appropriate
 /// string for a crosvm `--serial` flag. If `file` is none, creates a dummy sink device.
-fn format_serial_out_arg(preserved_fds: &mut Vec<RawFd>, file: &Option<File>) -> String {
+fn format_serial_out_arg(preserved_fds: &mut Vec<OwnedFd>, file: Option<File>) -> String {
     if let Some(file) = file {
         format!("type=file,path={}", add_preserved_fd(preserved_fds, file))
     } else {

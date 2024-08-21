@@ -1,0 +1,55 @@
+// Copyright (C) 2024 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+apex {
+    name: "com.android.microfuchsia",
+    manifest: "manifest.json",
+    key: "com.android.microfuchsia.key",
+
+    // Allows us to specify a file_contexts in our own repository.
+    system_ext_specific: true,
+    file_contexts: "com.android.microfuchsia-file_contexts",
+
+    updatable: false,
+    future_updatable: false,
+    platform_apis: true,
+
+    binaries: [
+        // A daemon that starts on bootup that launches microfuchsia in AVF.
+        "microfuchsiad",
+    ],
+
+    prebuilts: [
+        // An init script to launch the microfuchsiad daemon on bootup which
+        // launches the microfuchsia VM in AVF.
+        "com.android.microfuchsia.init.rc",
+    ],
+}
+
+apex_key {
+    name: "com.android.microfuchsia.key",
+    public_key: "com.android.microfuchsia.avbpubkey",
+    private_key: "com.android.microfuchsia.pem",
+}
+
+prebuilt_etc {
+    name: "com.android.microfuchsia.init.rc",
+    src: "microfuchsia.rc",
+    filename: "init.rc",
+    installable: false,
+}

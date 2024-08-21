@@ -1,0 +1,2 @@
+(/.*)?                   u:object_r:system_file:s0
+/bin/microfuchsiad       u:object_r:microfuchsiad_exec:s0

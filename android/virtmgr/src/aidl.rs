@@ -411,9 +411,9 @@ impl VirtualizationService {
 
         let state = &mut *self.state.lock().unwrap();
         let console_out_fd =
-            clone_or_prepare_logger_fd(&debug_config, console_out_fd, format!("Console({})", cid))?;
+            clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
         let console_in_fd = console_in_fd.map(clone_file).transpose()?;
-        let log_fd = clone_or_prepare_logger_fd(&debug_config, log_fd, format!("Log({})", cid))?;
+        let log_fd = clone_or_prepare_logger_fd(log_fd, format!("Log({})", cid))?;
 
         // Counter to generate unique IDs for temporary image files.
         let mut next_temporary_image_id = 0;
@@ -1563,17 +1563,12 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
 }
 
 fn clone_or_prepare_logger_fd(
-    debug_config: &DebugConfig,
     fd: Option<&ParcelFileDescriptor>,
     tag: String,
 ) -> Result<Option<File>, Status> {
     if let Some(fd) = fd {
         return Ok(Some(clone_file(fd)?));
     }
-
-    if !debug_config.should_prepare_console_output() {
-        return Ok(None);
-    };
 
     let (read_fd, write_fd) =
         pipe().context("Failed to create pipe").or_service_specific_exception(-1)?;

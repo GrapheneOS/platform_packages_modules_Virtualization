@@ -34,7 +34,7 @@ class ClipboardHandler {
         mVmAgent = vmAgent;
     }
 
-    private VmAgent.Connection getConnection() {
+    private VmAgent.Connection getConnection() throws InterruptedException {
         return mVmAgent.connect();
     }
 
@@ -53,7 +53,7 @@ class ClipboardHandler {
 
         try {
             getConnection().sendData(VmAgent.WRITE_CLIPBOARD_TYPE_TEXT_PLAIN, data);
-        } catch (RuntimeException e) {
+        } catch (InterruptedException | RuntimeException e) {
             Log.e(TAG, "Failed to write clipboard data to VM", e);
         }
     }
@@ -63,7 +63,7 @@ class ClipboardHandler {
         VmAgent.Data data;
         try {
             data = getConnection().sendAndReceive(VmAgent.READ_CLIPBOARD_FROM_VM, null);
-        } catch (RuntimeException e) {
+        } catch (InterruptedException | RuntimeException e) {
             Log.e(TAG, "Failed to read clipboard data from VM", e);
             return;
         }

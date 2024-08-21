@@ -30,8 +30,8 @@ public class OpenUrlActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        boolean isRoot = isTaskRoot();
         finish();
+
         if (!Intent.ACTION_SEND.equals(getIntent().getAction())) {
             return;
         }
@@ -49,16 +49,6 @@ public class OpenUrlActivity extends Activity {
             return;
         }
         Log.i(TAG, "Sending " + scheme + " URL to VM");
-        if (isRoot) {
-            Log.w(
-                    TAG,
-                    "Cannot open URL without starting "
-                            + FerrochromeActivity.class.getSimpleName()
-                            + " first, starting it now");
-            startActivity(
-                    new Intent(this, FerrochromeActivity.class).setAction(Intent.ACTION_MAIN));
-            return;
-        }
         startActivity(
                 new Intent(ACTION_VM_OPEN_URL)
                         .setFlags(

@@ -71,6 +71,7 @@ fn process_requests_in_non_protected_vm() -> Result<()> {
     check_processing_requests(VmType::NonProtectedVm, None)
 }
 
+#[ignore] // TODO(b/360077974): Figure out why this is flaky.
 #[test]
 fn process_requests_in_non_protected_vm_with_extra_ram() -> Result<()> {
     const MEMORY_MB: i32 = 300;

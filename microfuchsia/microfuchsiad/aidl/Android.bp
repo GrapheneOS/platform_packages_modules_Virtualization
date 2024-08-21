@@ -1,0 +1,24 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+aidl_interface {
+    name: "android.system.microfuchsiad",
+    srcs: ["android/system/microfuchsiad/*.aidl"],
+    // TODO: Make this stable when the APEX becomes updatable.
+    unstable: true,
+    backend: {
+        java: {
+            enabled: false,
+        },
+        ndk: {
+            enabled: false,
+        },
+        rust: {
+            enabled: true,
+            apex_available: [
+                "com.android.microfuchsia",
+            ],
+        },
+    },
+}
