@@ -180,8 +180,8 @@ mod tests {
     /// order as per RFC8949.
     /// The CBOR ordering rules are:
     /// 1. If two keys have different lengths, the shorter one sorts earlier;
-    /// 2. If two keys have the same length, the one with the lower value in
-    ///  (bytewise) lexical order sorts earlier.
+    /// 2. If two keys have the same length, the one with the lower value in (bytewise) lexical
+    ///    order sorts earlier.
     #[test]
     fn device_info_is_in_length_first_deterministic_order() {
         let device_info = cbor!(device_info()).unwrap();

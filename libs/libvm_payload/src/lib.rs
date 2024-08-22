@@ -401,8 +401,8 @@ pub extern "C" fn AVmAttestationStatus_toString(status: AVmAttestationStatus) ->
 /// Behavior is undefined if any of the following conditions are violated:
 ///
 /// * `data` must be [valid] for writes of `size` bytes, if size > 0.
-/// * The region of memory beginning at `data` with `size` bytes must not overlap with the
-///  region of memory `res` points to.
+/// * The region of memory beginning at `data` with `size` bytes must not overlap with the region of
+///   memory `res` points to.
 ///
 /// [valid]: ptr#safety
 /// [RFC 5915 s3]: https://datatracker.ietf.org/doc/html/rfc5915#section-3
@@ -439,8 +439,8 @@ pub unsafe extern "C" fn AVmAttestationResult_getPrivateKey(
 ///
 /// * `message` must be [valid] for reads of `message_size` bytes.
 /// * `data` must be [valid] for writes of `size` bytes, if size > 0.
-/// * The region of memory beginning at `data` with `size` bytes must not overlap with the
-///  region of memory `res` or `message` point to.
+/// * The region of memory beginning at `data` with `size` bytes must not overlap with the region of
+///   memory `res` or `message` point to.
 ///
 ///
 /// [valid]: ptr#safety
@@ -507,8 +507,8 @@ pub extern "C" fn AVmAttestationResult_getCertificateCount(res: &AttestationResu
 /// * `data` must be [valid] for writes of `size` bytes, if size > 0.
 /// * `index` must be within the range of [0, number of certificates). The number of certificates
 ///   can be obtained with `AVmAttestationResult_getCertificateCount`.
-/// * The region of memory beginning at `data` with `size` bytes must not overlap with the
-///  region of memory `res` points to.
+/// * The region of memory beginning at `data` with `size` bytes must not overlap with the region of
+///   memory `res` points to.
 ///
 /// [valid]: ptr#safety
 #[no_mangle]

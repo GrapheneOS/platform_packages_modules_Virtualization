@@ -76,7 +76,7 @@ impl ClientVmDiceChain {
     ///
     /// - The first entry of the `client_vm_dice_chain` must be signed with the root public key.
     /// - After the first entry, each entry of the `client_vm_dice_chain` must be signed with the
-    ///  subject public key of the previous entry.
+    ///   subject public key of the previous entry.
     ///
     /// Returns a partially decoded client VM's DICE chain if the verification succeeds.
     pub(crate) fn validate_signatures_and_parse_dice_chain(

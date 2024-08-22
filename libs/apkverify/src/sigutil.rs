@@ -79,6 +79,7 @@ impl<R: Read + Seek> ApkSections<R> {
     /// 2. The top-level digest is computed over the concatenation of byte 0x5a, the number of
     ///    chunks (little-endian uint32), and the concatenation of digests of the chunks in the
     ///    order the chunks appear in the APK.
+    ///
     /// (see https://source.android.com/security/apksigning/v2#integrity-protected-contents)
     pub(crate) fn compute_digest(
         &mut self,

@@ -76,7 +76,7 @@ impl<'a> FsFdt<'a> for Fdt {
                     stack.push(entry.path());
                     subnode_names.push(name);
                 } else if entry_type.is_file() {
-                    let value = fs::read(&entry.path())?;
+                    let value = fs::read(entry.path())?;
 
                     node.setprop(&name, &value)
                         .map_err(|e| anyhow!("Failed to set FDT property, {e:?}"))?;

@@ -272,7 +272,7 @@ fn run_apkdmverity(args: &[ApkDmverityArgument]) -> Result<Child> {
     for argument in args {
         cmd.arg("--apk").arg(argument.apk).arg(argument.idsig).arg(argument.name);
         if let Some(root_hash) = argument.saved_root_hash {
-            cmd.arg(&hex::encode(root_hash));
+            cmd.arg(hex::encode(root_hash));
         } else {
             cmd.arg("none");
         }
