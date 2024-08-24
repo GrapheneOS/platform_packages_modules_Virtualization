@@ -25,7 +25,6 @@ use libc::{sysconf, _SC_CLK_TCK};
 use log::{debug, error, info};
 use semver::{Version, VersionReq};
 use nix::{fcntl::OFlag, unistd::pipe2, unistd::Uid, unistd::User};
-use nix::unistd::dup;
 use regex::{Captures, Regex};
 use rustutils::system_properties;
 use shared_child::SharedChild;
@@ -36,7 +35,6 @@ use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::fd::FromRawFd;
 use std::os::unix::io::{AsRawFd, OwnedFd};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
@@ -59,7 +57,6 @@ use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
 
 /// external/crosvm
-use base::AsRawDescriptor;
 use base::UnixSeqpacketListener;
 use vm_control::{BalloonControlCommand, VmRequest, VmResponse};
 
@@ -1042,14 +1039,7 @@ fn run_vm(
 
     let control_sock = UnixSeqpacketListener::bind(crosvm_control_socket_path)
         .context("failed to create control server")?;
-    command.arg("--socket").arg(add_preserved_fd(&mut preserved_fds, {
-        let dup_fd = dup(control_sock.as_raw_descriptor())?;
-        // SAFETY: UnixSeqpacketListener doesn't provide a way to convert it into a RawFd or
-        // OwnedFd. In order to provide a OwnedFd for add_preserved_fd, dup the control socket
-        // and create a OwnedFd from the duped fd. This is fine as the original fd is still
-        // closed when control_socket is dropped.
-        unsafe { OwnedFd::from_raw_fd(dup_fd) }
-    }));
+    command.arg("--socket").arg(add_preserved_fd(&mut preserved_fds, control_sock));
 
     if let Some(dt_overlay) = config.device_tree_overlay {
         command.arg("--device-tree-overlay").arg(add_preserved_fd(&mut preserved_fds, dt_overlay));
@@ -1103,9 +1093,9 @@ fn run_vm(
 
     if cfg!(network) {
         if let Some(tap) = config.tap {
-            command
-                .arg("--net")
-                .arg(format!("tap-fd={}", add_preserved_fd(&mut preserved_fds, tap)));
+            add_preserved_fd(&mut preserved_fds, tap);
+            let tap_fd = preserved_fds.last().unwrap().as_raw_fd();
+            command.arg("--net").arg(format!("tap-fd={tap_fd}"));
         }
     }
 

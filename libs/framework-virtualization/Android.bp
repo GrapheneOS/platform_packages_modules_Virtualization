@@ -9,7 +9,10 @@ java_sdk_library {
 
     jarjar_rules: "jarjar-rules.txt",
 
-    srcs: ["src/**/*.java"],
+    srcs: [
+        "src/**/*.java",
+        ":avf-build-flags-java-gen",
+    ],
     static_libs: [
         "android.system.virtualizationservice-java",
         "avf_aconfig_flags_java",
@@ -52,4 +55,16 @@ java_sdk_library {
             "FlaggedApi",
         ],
     },
+}
+
+gensrcs {
+    name: "avf-build-flags-java-gen",
+    srcs: ["src/**/BuildFlags.java_template"],
+    output_extension: "java",
+    cmd: "cp $(in) $(genDir)/tmp.java && " +
+        select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
+            true: "sed -ie 's/@vendor_modules_enabled_placeholder/true/g'",
+            default: "sed -ie 's/@vendor_modules_enabled_placeholder/false/g'",
+        }) + " $(genDir)/tmp.java && " +
+        " cp $(genDir)/tmp.java $(out)",
 }

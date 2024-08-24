@@ -108,9 +108,3 @@ Java_android_system_virtualmachine_VirtualizationService_nativeIsOk(JNIEnv* env,
     }
     return pfds[0].revents == 0;
 }
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_android_system_virtualmachine_VirtualizationService_nativeIsVendorModulesFlagEnabled(
-        [[maybe_unused]] JNIEnv* env, [[maybe_unused]] jobject obj) {
-    return android::virtualization::IsVendorModulesFlagEnabled();
-}

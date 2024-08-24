@@ -371,10 +371,6 @@ public class VirtualMachineManager {
     private static final List<String> SUPPORTED_OS_LIST_FROM_CFG =
             extractSupportedOSListFromConfig();
 
-    private boolean isVendorModuleEnabled() {
-        return VirtualizationService.nativeIsVendorModulesFlagEnabled();
-    }
-
     private static List<String> extractSupportedOSListFromConfig() {
         List<String> supportedOsList = new ArrayList<>();
         File directory = new File("/apex/com.android.virt/etc");
@@ -400,7 +396,7 @@ public class VirtualMachineManager {
     @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
     @NonNull
     public List<String> getSupportedOSList() throws VirtualMachineException {
-        if (isVendorModuleEnabled()) {
+        if (BuildFlags.VENDOR_MODULES_ENABLED) {
             return SUPPORTED_OS_LIST_FROM_CFG;
         } else {
             return Arrays.asList("microdroid");

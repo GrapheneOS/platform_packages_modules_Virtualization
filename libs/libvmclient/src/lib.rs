@@ -45,7 +45,6 @@ use rpcbinder::{FileDescriptorTransportMode, RpcSession};
 use shared_child::SharedChild;
 use std::io::{self, Read};
 use std::process::Command;
-use std::process::Stdio;
 use std::{
     fmt::{self, Debug, Formatter},
     fs::File,
@@ -91,9 +90,6 @@ impl VirtualizationService {
         let (client_fd, server_fd) = posix_socketpair()?;
 
         let mut command = Command::new(VIRTMGR_PATH);
-        command.stdin(Stdio::null());
-        command.stdout(Stdio::null());
-        command.stderr(Stdio::null());
         // Can't use BorrowedFd as it doesn't implement Display
         command.arg("--rpc-server-fd").arg(format!("{}", server_fd.as_raw_fd()));
         command.arg("--ready-fd").arg(format!("{}", ready_fd.as_raw_fd()));
