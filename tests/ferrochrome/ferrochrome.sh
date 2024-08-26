@@ -131,9 +131,12 @@ if [[ "$(echo ${resolved_activities} | wc -l)" != "1" ]]; then
 fi
 
 pkg_name=$(dirname ${resolved_activities})
+current_user=$(adb shell am get-current-user)
 
-adb shell pm grant ${pkg_name} android.permission.USE_CUSTOM_VIRTUAL_MACHINE > /dev/null
-adb shell pm clear ${pkg_name} > /dev/null
+echo "Reset app & granting permission"
+adb shell pm grant --user ${current_user} ${pkg_name} android.permission.RECORD_AUDIO
+adb shell pm grant --user ${current_user} ${pkg_name} android.permission.USE_CUSTOM_VIRTUAL_MACHINE > /dev/null
+adb shell pm clear --user ${current_user} ${pkg_name} > /dev/null
 
 if [[ -z "${fecr_skip}" ]]; then
   if [[ -z "${fecr_dir}" ]]; then
@@ -155,14 +158,10 @@ echo "Ensure screen unlocked"
 adb shell svc power stayon true
 adb shell wm dismiss-keyguard
 
-echo "Granting runtime permissions to ensure VmLauncher is focused"
-adb shell pm grant ${pkg_name} android.permission.RECORD_AUDIO
-
 echo "Starting ferrochrome"
 adb shell am start-activity -a ${ACTION_NAME} > /dev/null
 
 # HSUM aware log path
-current_user=$(adb shell am get-current-user)
 log_path="/data/user/${current_user}/${pkg_name}/${FECR_CONSOLE_LOG_PATH}"
 fecr_start_time=${EPOCHSECONDS}
 
