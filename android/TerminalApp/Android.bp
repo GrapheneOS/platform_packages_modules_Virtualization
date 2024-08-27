@@ -10,8 +10,10 @@ android_app {
         "vm_launcher_lib",
     ],
     sdk_version: "system_current",
-    product_specific: true,
     optimize: {
         shrink_resources: true,
     },
+    apex_available: [
+        "com.android.virt",
+    ],
 }
