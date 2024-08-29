@@ -29,6 +29,7 @@ pub extern "system" fn Java_com_android_microdroid_test_HwTrustJni_validateDiceC
     env: JNIEnv,
     _class: JClass,
     dice_chain: JByteArray,
+    allow_any_mode: jboolean,
 ) -> jboolean {
     android_logger::init_once(
         android_logger::Config::default()
@@ -36,7 +37,7 @@ pub extern "system" fn Java_com_android_microdroid_test_HwTrustJni_validateDiceC
             .with_max_level(log::LevelFilter::Debug),
     );
     debug!("Starting the DICE chain validation ...");
-    match validate_dice_chain(env, dice_chain) {
+    match validate_dice_chain(env, dice_chain, allow_any_mode) {
         Ok(_) => {
             info!("DICE chain validated successfully");
             true
@@ -49,9 +50,14 @@ pub extern "system" fn Java_com_android_microdroid_test_HwTrustJni_validateDiceC
     .into()
 }
 
-fn validate_dice_chain(env: JNIEnv, jdice_chain: JByteArray) -> Result<()> {
+fn validate_dice_chain(
+    env: JNIEnv,
+    jdice_chain: JByteArray,
+    allow_any_mode: jboolean,
+) -> Result<()> {
     let dice_chain = env.convert_byte_array(jdice_chain)?;
-    let session = Session::default();
+    let mut session = Session::default();
+    session.set_allow_any_mode(allow_any_mode == jboolean::from(true));
     let _chain = dice::Chain::from_cbor(&session, &dice_chain)?;
     Ok(())
 }

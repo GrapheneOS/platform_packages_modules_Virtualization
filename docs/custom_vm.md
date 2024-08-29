@@ -110,12 +110,11 @@ reboot
 ## Graphical VMs
 
 To run OSes with graphics support, simply
-`packages/modules/Virtualization/tests/ferrochrome/ferrochrome.sh`. It prepares
-and launches the ChromiumOS, which is the only officially supported guest
-payload. We will be adding more OSes in the future.
+`packages/modules/Virtualization/tests/ferrochrome/ferrochrome.sh --forever`.
+It prepares and launches the ChromiumOS, which is the only officially supported
+guest payload. We will be adding more OSes in the future.
 
-If you want to do so by yourself (e.g. boot with your build), follow the
-instruction below.
+If you want to do so by yourself, follow the instruction below.
 
 ### Prepare a guest image
 
@@ -306,9 +305,6 @@ $ adb shell -t /apex/com.android.virt/bin/vm console
 ```
 
 To see console logs only, check
-`/data/data/com{,.google}.android.virtualization.vmlauncher/files/${vm_name}.log`
-
-For HSUM enabled devices,
 `/data/user/${current_user_id}/com{,.google}.android.virtualization.vmlauncher/files/${vm_name}.log`
 
 You can monitor console out as follows

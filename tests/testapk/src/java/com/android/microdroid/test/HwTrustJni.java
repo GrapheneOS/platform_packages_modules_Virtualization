@@ -25,7 +25,8 @@ class HwTrustJni {
      * Validates a DICE chain.
      *
      * @param diceChain The dice chain to validate.
+     * @param allowAnyMode Allow the chain's certificates to have any mode.
      * @return true if the dice chain is valid, false otherwise.
      */
-    public static native boolean validateDiceChain(byte[] diceChain);
+    public static native boolean validateDiceChain(byte[] diceChain, boolean allowAnyMode);
 }

@@ -288,7 +288,9 @@ fn check_certificate_for_client_vm(
 }
 
 fn check_csr(csr: Vec<u8>) -> Result<()> {
-    let _csr = rkp::Csr::from_cbor(&Session::default(), &csr[..]).context("Failed to parse CSR")?;
+    let mut session = Session::default();
+    session.set_allow_any_mode(true);
+    let _csr = rkp::Csr::from_cbor(&session, &csr[..]).context("Failed to parse CSR")?;
     Ok(())
 }
 

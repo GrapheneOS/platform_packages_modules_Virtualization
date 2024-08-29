@@ -73,6 +73,7 @@ use microdroid_payload_config::{ApkConfig, Task, TaskType, VmPayloadConfig};
 use nix::unistd::pipe;
 use rpcbinder::RpcServer;
 use rustutils::system_properties;
+use safe_ownedfd::take_fd_ownership;
 use semver::VersionReq;
 use std::collections::HashSet;
 use std::convert::TryInto;
@@ -82,7 +83,7 @@ use std::fs::{canonicalize, read_dir, remove_file, File, OpenOptions};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
+use std::os::unix::io::{AsRawFd, IntoRawFd};
 use std::os::unix::raw::pid_t;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak};
@@ -1274,7 +1275,7 @@ impl IVirtualMachine for VirtualMachine {
         let stream = VsockStream::connect_with_cid_port(self.instance.cid, port)
             .context("Failed to connect")
             .or_service_specific_exception(-1)?;
-        Ok(vsock_stream_to_pfd(stream))
+        vsock_stream_to_pfd(stream)
     }
 
     fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
@@ -1433,10 +1434,12 @@ fn maybe_clone_file(file: &Option<ParcelFileDescriptor>) -> binder::Result<Optio
 }
 
 /// Converts a `VsockStream` to a `ParcelFileDescriptor`.
-fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
-    // SAFETY: ownership is transferred from stream to f
-    let f = unsafe { File::from_raw_fd(stream.into_raw_fd()) };
-    ParcelFileDescriptor::new(f)
+fn vsock_stream_to_pfd(stream: VsockStream) -> binder::Result<ParcelFileDescriptor> {
+    let owned_fd = take_fd_ownership(stream.into_raw_fd())
+        .context("Failed to take ownership of the vsock stream")
+        .with_log()
+        .or_service_specific_exception(-1)?;
+    Ok(ParcelFileDescriptor::new(owned_fd))
 }
 
 /// Parses the platform version requirement string.

@@ -18,6 +18,7 @@ rust_library {
     defaults: ["libsafe_ownedfd.defaults"],
     apex_available: [
         "com.android.compos",
+        "com.android.microfuchsia",
         "com.android.virt",
     ],
 }
