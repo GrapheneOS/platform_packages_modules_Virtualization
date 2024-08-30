@@ -18,6 +18,7 @@ rust_binary {
         "libnix",
         "librpcbinder_rs",
         "librustutils",
+        "libsafe_ownedfd",
         "libshared_child",
     ],
     prefer_rlib: true,

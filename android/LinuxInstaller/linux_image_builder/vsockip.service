@@ -1,0 +1,12 @@
+[Unit]
+Description=vsock ip service
+After=syslog.target
+After=network.target
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/vsock.py
+Type=simple
+Restart=always
+User=root
+Group=root
+[Install]
+WantedBy=multi-user.target

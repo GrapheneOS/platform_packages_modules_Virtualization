@@ -20,6 +20,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -53,6 +55,12 @@ public class MainActivity extends Activity implements VmLauncherServices.VmLaunc
                 });
     }
 
+    @Override
+    protected void onDestroy() {
+        VmLauncherServices.stopVmLauncherService(this);
+        super.onDestroy();
+    }
+
     private void gotoURL(String url) {
         runOnUiThread(() -> mWebView.loadUrl(url));
     }
@@ -78,5 +86,22 @@ public class MainActivity extends Activity implements VmLauncherServices.VmLaunc
         // TODO(b/359523803): Use AVF API to be notified when shell is ready instead of using dealy
         new Handler(Looper.getMainLooper())
                 .postDelayed(() -> gotoURL("http://" + mVmIpAddr + ":7681"), 2000);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onMenuItemSelected(int featureId, MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.stop_vm:
+                VmLauncherServices.stopVmLauncherService(this);
+                return true;
+            default:
+                return super.onMenuItemSelected(featureId, item);
+        }
     }
 }
