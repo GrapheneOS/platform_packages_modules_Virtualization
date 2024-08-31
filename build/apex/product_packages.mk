@@ -70,3 +70,7 @@ ifdef RELEASE_AVF_ENABLE_EARLY_VM
     $(error RELEASE_AVF_ENABLE_EARLY_VM can only be enabled in trunk_staging until b/357025924 is fixed)
   endif
 endif
+
+ifdef RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES
+  PRODUCT_PACKAGES += LinuxInstallerAppStub
+endif

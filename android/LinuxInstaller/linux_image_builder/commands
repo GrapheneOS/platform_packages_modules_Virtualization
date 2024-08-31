@@ -1,6 +1,6 @@
 upload init.sh:/root
 upload vsock.py:/usr/local/bin
-upload ttyd:/usr/local/bin
+upload /tmp/ttyd:/usr/local/bin
 upload ttyd.service:/etc/systemd/system
 upload vsockip.service:/etc/systemd/system
 chmod 0777:/root/init.sh

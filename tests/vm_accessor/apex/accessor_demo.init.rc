@@ -16,5 +16,6 @@
 service accessor_demo /apex/com.android.virt.accessor_demo/bin/accessor_demo
     disabled
     oneshot
+    user root
     # MUST match with VINTF and accessor/src/main.rs
     interface aidl android.os.IAccessor/IAccessorVmService/default
