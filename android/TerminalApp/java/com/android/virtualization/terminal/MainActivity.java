@@ -102,17 +102,16 @@ public class MainActivity extends Activity implements VmLauncherServices.VmLaunc
 
     @Override
     public boolean onMenuItemSelected(int featureId, MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.copy_ip_addr:
-                // TODO(b/340126051): remove this menu item when port forwarding is supported.
-                getSystemService(ClipboardManager.class)
-                        .setPrimaryClip(ClipData.newPlainText("A VM's IP address", mVmIpAddr));
-                return true;
-            case R.id.stop_vm:
-                VmLauncherServices.stopVmLauncherService(this);
-                return true;
-            default:
-                return super.onMenuItemSelected(featureId, item);
+        int id = item.getItemId();
+        if (id == R.id.copy_ip_addr) {
+            // TODO(b/340126051): remove this menu item when port forwarding is supported.
+            getSystemService(ClipboardManager.class)
+                    .setPrimaryClip(ClipData.newPlainText("A VM's IP address", mVmIpAddr));
+            return true;
+        } else if (id == R.id.stop_vm) {
+            VmLauncherServices.stopVmLauncherService(this);
+            return true;
         }
+        return super.onMenuItemSelected(featureId, item);
     }
 }

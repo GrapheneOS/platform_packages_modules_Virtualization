@@ -13,6 +13,7 @@ android_app {
     required: [
         "privapp-permissions-linuxinstaller.xml",
     ],
+    certificate: ":com.android.virtualization.linuxinstaller_certificate",
 }
 
 android_app {
@@ -24,6 +25,7 @@ android_app {
     required: [
         "privapp-permissions-linuxinstaller.xml",
     ],
+    certificate: ":com.android.virtualization.linuxinstaller_certificate",
 }
 
 prebuilt_etc {
@@ -31,4 +33,9 @@ prebuilt_etc {
     src: "privapp-permissions-linuxinstaller.xml",
     sub_dir: "permissions",
     system_ext_specific: true,
+}
+
+android_app_certificate {
+    name: "com.android.virtualization.linuxinstaller_certificate",
+    certificate: "com_android_virtualization_linuxinstaller",
 }
