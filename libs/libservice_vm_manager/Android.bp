@@ -12,7 +12,6 @@ rust_library {
         "android.system.virtualizationservice-rust",
         "libanyhow",
         "libciborium",
-        "liblazy_static",
         "liblog_rust",
         "libnix",
         "libservice_vm_comm",

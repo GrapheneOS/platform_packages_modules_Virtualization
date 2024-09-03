@@ -25,7 +25,6 @@ rust_binary {
         "libandroid_logger",
         "libanyhow",
         "libbinder_rs",
-        "liblazy_static",
         "liblog_rust",
         "libnix",
         "librustutils",

@@ -44,7 +44,6 @@ rust_defaults {
         "libglob",
         "libhex",
         "libhypervisor_props",
-        "liblazy_static",
         "liblibc",
         "liblog_rust",
         "libmicrodroid_metadata",

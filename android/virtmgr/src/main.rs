@@ -27,10 +27,10 @@ use crate::aidl::{GLOBAL_SERVICE, VirtualizationService};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
-use lazy_static::lazy_static;
 use log::{info, LevelFilter};
 use rpcbinder::{FileDescriptorTransportMode, RpcServer};
 use std::os::unix::io::{AsFd, RawFd};
+use std::sync::LazyLock;
 use clap::Parser;
 use nix::unistd::{write, Pid, Uid};
 use std::os::unix::raw::{pid_t, uid_t};
@@ -38,11 +38,9 @@ use safe_ownedfd::take_fd_ownership;
 
 const LOG_TAG: &str = "virtmgr";
 
-lazy_static! {
-    static ref PID_CURRENT: Pid = Pid::this();
-    static ref PID_PARENT: Pid = Pid::parent();
-    static ref UID_CURRENT: Uid = Uid::current();
-}
+static PID_CURRENT: LazyLock<Pid> = LazyLock::new(Pid::this);
+static PID_PARENT: LazyLock<Pid> = LazyLock::new(Pid::parent);
+static UID_CURRENT: LazyLock<Uid> = LazyLock::new(Uid::current);
 
 fn get_this_pid() -> pid_t {
     // Return the process ID of this process.

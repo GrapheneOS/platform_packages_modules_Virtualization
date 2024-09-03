@@ -38,7 +38,6 @@ rust_defaults {
         "libbinder_rs",
         "libhex",
         "libhypervisor_props",
-        "liblazy_static",
         "liblibc",
         "liblibsqlite3_sys",
         "liblog_rust",

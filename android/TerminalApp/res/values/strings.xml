@@ -16,7 +16,8 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="vm_creation_message">A VM instance is being created.</string>
-    <string name="vm_stop_message">A VM instance is stopped, finish the app.</string>
-    <string name="vm_error_message">A VM instance is crashed, finish the app.</string>
+    <string name="app_name">Terminal</string>
+    <string name="vm_creation_message">Virtual machine is booting. Please wait.</string>
+    <string name="vm_stop_message">Virtual machine is stopped. Exiting.</string>
+    <string name="vm_error_message">Virtual machine crashed. Exiting.</string>
 </resources>

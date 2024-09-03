@@ -100,4 +100,6 @@ parcelable VirtualMachineRawConfig {
     @nullable GpuConfig gpuConfig;
 
     @nullable AudioConfig audioConfig;
+
+    boolean noBalloon;
 }

@@ -724,6 +724,7 @@ public final class VirtualMachineConfig {
                 Optional.ofNullable(customImageConfig.getAudioConfig())
                         .map(ac -> ac.toParcelable())
                         .orElse(null);
+        config.noBalloon = !customImageConfig.useAutoMemoryBalloon();
         return config;
     }
 
@@ -777,6 +778,7 @@ public final class VirtualMachineConfig {
             VirtualMachineAppConfig.CustomConfig customConfig =
                     new VirtualMachineAppConfig.CustomConfig();
             customConfig.devices = EMPTY_STRING_ARRAY;
+            customConfig.extraKernelCmdlineParams = EMPTY_STRING_ARRAY;
             try {
                 customConfig.vendorImage =
                         ParcelFileDescriptor.open(mVendorDiskImage, MODE_READ_ONLY);
