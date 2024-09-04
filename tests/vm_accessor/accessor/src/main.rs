@@ -42,7 +42,7 @@ fn main() -> Result<(), Error> {
     let vm = run_vm()?;
 
     // If you want to serve multiple services in a VM, then register Accessor impls multiple times.
-    let accessor = Accessor::new(vm, PORT);
+    let accessor = Accessor::new(vm, PORT, SERVICE_NAME);
     let accessor_binder = BnAccessor::new_binder(accessor, BinderFeatures::default());
     binder::register_lazy_service(SERVICE_NAME, accessor_binder.as_binder()).map_err(|e| {
         anyhow!("Failed to register lazy service, service={SERVICE_NAME}, err={e:?}",)

@@ -17,7 +17,7 @@
 use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
-use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, VmContext, VmInstance, VmState};
+use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, UsbConfig, VmContext, VmInstance, VmState};
 use crate::debug_config::DebugConfig;
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
@@ -584,6 +584,13 @@ impl VirtualizationService {
             None
         };
 
+        let usb_config = config
+            .usbConfig
+            .as_ref()
+            .map(UsbConfig::new)
+            .unwrap_or(Ok(UsbConfig { controller: false }))
+            .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?;
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -623,6 +630,7 @@ impl VirtualizationService {
             gpu_config,
             audio_config,
             no_balloon: config.noBalloon,
+            usb_config,
         };
         let instance = Arc::new(
             VmInstance::new(

@@ -47,6 +47,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     AudioConfig::AudioConfig as AudioConfigParcelable,
     DisplayConfig::DisplayConfig as DisplayConfigParcelable,
     GpuConfig::GpuConfig as GpuConfigParcelable,
+    UsbConfig::UsbConfig as UsbConfigParcelable,
 };
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
@@ -134,6 +135,7 @@ pub struct CrosvmConfig {
     pub gpu_config: Option<GpuConfig>,
     pub audio_config: Option<AudioConfig>,
     pub no_balloon: bool,
+    pub usb_config: UsbConfig,
 }
 
 #[derive(Debug)]
@@ -145,6 +147,17 @@ pub struct AudioConfig {
 impl AudioConfig {
     pub fn new(raw_config: &AudioConfigParcelable) -> Self {
         AudioConfig { use_microphone: raw_config.useMicrophone, use_speaker: raw_config.useSpeaker }
+    }
+}
+
+#[derive(Debug)]
+pub struct UsbConfig {
+    pub controller: bool,
+}
+
+impl UsbConfig {
+    pub fn new(raw_config: &UsbConfigParcelable) -> Result<UsbConfig> {
+        Ok(UsbConfig { controller: raw_config.controller })
     }
 }
 
@@ -898,6 +911,10 @@ fn run_vm(
         command.arg("--balloon-page-reporting");
     } else {
         command.arg("--no-balloon");
+    }
+
+    if !config.usb_config.controller {
+        command.arg("--no-usb");
     }
 
     let mut memory_mib = config.memory_mib;

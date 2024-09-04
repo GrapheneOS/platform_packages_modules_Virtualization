@@ -46,6 +46,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_AUDIO_CONFIG = "audio_config";
     private static final String KEY_TRACKPAD = "trackpad";
     private static final String KEY_AUTO_MEMORY_BALLOON = "auto_memory_balloon";
+    private static final String KEY_USB_CONFIG = "usb_config";
 
     @Nullable private final String name;
     @Nullable private final String kernelPath;
@@ -63,6 +64,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final GpuConfig gpuConfig;
     private final boolean trackpad;
     private final boolean autoMemoryBalloon;
+    @Nullable private final UsbConfig usbConfig;
 
     @Nullable
     public Disk[] getDisks() {
@@ -139,7 +141,8 @@ public class VirtualMachineCustomImageConfig {
             GpuConfig gpuConfig,
             AudioConfig audioConfig,
             boolean trackpad,
-            boolean autoMemoryBalloon) {
+            boolean autoMemoryBalloon,
+            UsbConfig usbConfig) {
         this.name = name;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
@@ -156,6 +159,7 @@ public class VirtualMachineCustomImageConfig {
         this.audioConfig = audioConfig;
         this.trackpad = trackpad;
         this.autoMemoryBalloon = autoMemoryBalloon;
+        this.usbConfig = usbConfig;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -208,6 +212,9 @@ public class VirtualMachineCustomImageConfig {
         builder.setAudioConfig(AudioConfig.from(audioConfigPb));
         builder.useTrackpad(customImageConfigBundle.getBoolean(KEY_TRACKPAD));
         builder.useAutoMemoryBalloon(customImageConfigBundle.getBoolean(KEY_AUTO_MEMORY_BALLOON));
+        PersistableBundle usbConfigPb =
+                customImageConfigBundle.getPersistableBundle(KEY_USB_CONFIG);
+        builder.setUsbConfig(UsbConfig.from(usbConfigPb));
         return builder.build();
     }
 
@@ -266,6 +273,9 @@ public class VirtualMachineCustomImageConfig {
                 Optional.ofNullable(audioConfig).map(ac -> ac.toPersistableBundle()).orElse(null));
         pb.putBoolean(KEY_TRACKPAD, trackpad);
         pb.putBoolean(KEY_AUTO_MEMORY_BALLOON, autoMemoryBalloon);
+        pb.putPersistableBundle(
+                KEY_USB_CONFIG,
+                Optional.ofNullable(usbConfig).map(uc -> uc.toPersistableBundle()).orElse(null));
         return pb;
     }
 
@@ -282,6 +292,11 @@ public class VirtualMachineCustomImageConfig {
     @Nullable
     public GpuConfig getGpuConfig() {
         return gpuConfig;
+    }
+
+    @Nullable
+    public UsbConfig getUsbConfig() {
+        return usbConfig;
     }
 
     /** @hide */
@@ -362,6 +377,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean trackpad;
         // TODO(b/363985291): balloon breaks Linux VM behavior
         private boolean autoMemoryBalloon = false;
+        private UsbConfig usbConfig;
 
         /** @hide */
         public Builder() {}
@@ -463,6 +479,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder setUsbConfig(UsbConfig usbConfig) {
+            this.usbConfig = usbConfig;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -480,7 +502,63 @@ public class VirtualMachineCustomImageConfig {
                     gpuConfig,
                     audioConfig,
                     trackpad,
-                    autoMemoryBalloon);
+                    autoMemoryBalloon,
+                    usbConfig);
+        }
+    }
+
+    /** @hide */
+    public static final class UsbConfig {
+        private static final String KEY_USE_CONTROLLER = "use_controller";
+        public final boolean controller;
+
+        public UsbConfig(boolean controller) {
+            this.controller = controller;
+        }
+
+        public boolean getUsbController() {
+            return this.controller;
+        }
+
+        android.system.virtualizationservice.UsbConfig toParceclable() {
+            android.system.virtualizationservice.UsbConfig parcelable =
+                    new android.system.virtualizationservice.UsbConfig();
+            parcelable.controller = this.controller;
+            return parcelable;
+        }
+
+        private static UsbConfig from(PersistableBundle pb) {
+            if (pb == null) {
+                return null;
+            }
+            Builder builder = new Builder();
+            builder.setController(pb.getBoolean(KEY_USE_CONTROLLER));
+            return builder.build();
+        }
+
+        private PersistableBundle toPersistableBundle() {
+            PersistableBundle pb = new PersistableBundle();
+            pb.putBoolean(KEY_USE_CONTROLLER, this.controller);
+            return pb;
+        }
+
+        /** @hide */
+        public static class Builder {
+            private boolean useController = false;
+
+            /** @hide */
+            public Builder() {}
+
+            /** @hide */
+            public Builder setController(boolean useController) {
+                this.useController = useController;
+                return this;
+            }
+
+            /** @hide */
+            public UsbConfig build() {
+                return new UsbConfig(useController);
+            }
         }
     }
 
