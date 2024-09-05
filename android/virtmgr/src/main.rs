@@ -102,7 +102,17 @@ fn main() {
     ProcessState::start_thread_pool();
 
     if cfg!(early) {
-        panic!("Early VM not implemented");
+        // we can't access VirtualizationServiceInternal, so directly call rlimit
+        let pid = i32::from(*PID_CURRENT);
+        let lim = libc::rlimit { rlim_cur: libc::RLIM_INFINITY, rlim_max: libc::RLIM_INFINITY };
+
+        // SAFETY: borrowing the new limit struct only. prlimit doesn't use lim outside its lifetime
+        let ret = unsafe { libc::prlimit(pid, libc::RLIMIT_MEMLOCK, &lim, std::ptr::null_mut()) };
+        if ret == -1 {
+            panic!("rlimit error: {}", std::io::Error::last_os_error());
+        } else if ret != 0 {
+            panic!("Unexpected return value from prlimit(): {ret}");
+        }
     } else {
         GLOBAL_SERVICE.removeMemlockRlimit().expect("Failed to remove memlock rlimit");
     }

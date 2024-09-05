@@ -45,6 +45,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     VirtualMachineRawConfig::VirtualMachineRawConfig,
     VirtualMachineState::VirtualMachineState,
 };
+use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal::IVirtualizationServiceInternal;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
         BnVirtualMachineService, IVirtualMachineService,
@@ -74,14 +75,16 @@ use rpcbinder::RpcServer;
 use rustutils::system_properties;
 use safe_ownedfd::take_fd_ownership;
 use semver::VersionReq;
+use serde::Deserialize;
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fs;
 use std::ffi::CStr;
-use std::fs::{canonicalize, read_dir, remove_file, File, OpenOptions};
+use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::{NonZeroU16, NonZeroU32};
+use std::ops::Range;
 use std::os::unix::io::{AsRawFd, IntoRawFd};
 use std::os::unix::raw::pid_t;
 use std::path::{Path, PathBuf};
@@ -120,8 +123,12 @@ const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 
 pub static GLOBAL_SERVICE: LazyLock<Strong<dyn IVirtualizationServiceInternal>> =
     LazyLock::new(|| {
-        wait_for_interface(BINDER_SERVICE_IDENTIFIER)
-            .expect("Could not connect to VirtualizationServiceInternal")
+        if cfg!(early) {
+            panic!("Early virtmgr must not connect to VirtualizatinoServiceInternal")
+        } else {
+            wait_for_interface(BINDER_SERVICE_IDENTIFIER)
+                .expect("Could not connect to VirtualizationServiceInternal")
+        }
     });
 static SUPPORTED_OS_NAMES: LazyLock<HashSet<String>> =
     LazyLock::new(|| get_supported_os_names().expect("Failed to get list of supported os names"));
@@ -340,9 +347,108 @@ impl IVirtualizationService for VirtualizationService {
     }
 }
 
+/// Implementation of the AIDL `IGlobalVmContext` interface for early VMs.
+#[derive(Debug, Default)]
+struct EarlyVmContext {
+    /// The unique CID assigned to the VM for vsock communication.
+    cid: Cid,
+    /// Temporary directory for this VM instance.
+    temp_dir: PathBuf,
+}
+
+impl EarlyVmContext {
+    fn new(cid: Cid, temp_dir: PathBuf) -> Result<Self> {
+        // Remove the entire directory before creating a VM. Early VMs use predefined CIDs and AVF
+        // should trust clients, e.g. they won't run two VMs at the same time
+        let _ = remove_dir_all(&temp_dir);
+        create_dir_all(&temp_dir).context(format!("can't create '{}'", temp_dir.display()))?;
+
+        Ok(Self { cid, temp_dir })
+    }
+}
+
+impl Interface for EarlyVmContext {}
+
+impl Drop for EarlyVmContext {
+    fn drop(&mut self) {
+        if let Err(e) = remove_dir_all(&self.temp_dir) {
+            error!("Cannot remove {} upon dropping: {e}", self.temp_dir.display());
+        }
+    }
+}
+
+impl IGlobalVmContext for EarlyVmContext {
+    fn getCid(&self) -> binder::Result<i32> {
+        Ok(self.cid as i32)
+    }
+
+    fn getTemporaryDirectory(&self) -> binder::Result<String> {
+        Ok(self.temp_dir.to_string_lossy().to_string())
+    }
+
+    fn setHostConsoleName(&self, _pathname: &str) -> binder::Result<()> {
+        Err(Status::new_exception_str(
+            ExceptionCode::UNSUPPORTED_OPERATION,
+            Some("Early VM doesn't support setting host console name"),
+        ))
+    }
+}
+
+fn find_partition(path: &Path) -> binder::Result<String> {
+    match path.components().nth(1) {
+        Some(std::path::Component::Normal(partition)) => {
+            Ok(partition.to_string_lossy().into_owned())
+        }
+        _ => Err(anyhow!("Can't find partition in '{}'", path.display()))
+            .or_service_specific_exception(-1),
+    }
+}
+
 impl VirtualizationService {
     pub fn init() -> VirtualizationService {
         VirtualizationService::default()
+    }
+
+    fn create_early_vm_context(
+        &self,
+        config: &VirtualMachineConfig,
+    ) -> binder::Result<(VmContext, Cid, PathBuf)> {
+        let calling_exe_path = format!("/proc/{}/exe", get_calling_pid());
+        let link = fs::read_link(&calling_exe_path)
+            .context(format!("can't read_link '{calling_exe_path}'"))
+            .or_service_specific_exception(-1)?;
+        let partition = find_partition(&link)?;
+
+        let name = match config {
+            VirtualMachineConfig::RawConfig(config) => &config.name,
+            VirtualMachineConfig::AppConfig(config) => &config.name,
+        };
+        let early_vm =
+            find_early_vm_for_partition(&partition, name).or_service_specific_exception(-1)?;
+        if Path::new(&early_vm.path) != link {
+            return Err(anyhow!(
+                "VM '{name}' in partition '{partition}' must be created with '{}', not '{}'",
+                &early_vm.path,
+                link.display()
+            ))
+            .or_service_specific_exception(-1);
+        }
+
+        let cid = early_vm.cid as Cid;
+        let temp_dir = PathBuf::from(format!("/mnt/vm/early/{cid}"));
+
+        let context = EarlyVmContext::new(cid, temp_dir.clone())
+            .context(format!("Can't create early vm contexts for {cid}"))
+            .or_service_specific_exception(-1)?;
+        let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
+
+        // Start VM service listening for connections from the new CID on port=CID.
+        let port = cid;
+        let vm_server = RpcServer::new_vsock(service, cid, port)
+            .context(format!("Could not start RpcServer on port {port}"))
+            .or_service_specific_exception(-1)?;
+        vm_server.start();
+        Ok((VmContext::new(Strong::new(Box::new(context)), vm_server), cid, temp_dir))
     }
 
     fn create_vm_context(
@@ -386,8 +492,16 @@ impl VirtualizationService {
 
         check_config_features(config)?;
 
+        if cfg!(early) {
+            check_config_allowed_for_early_vms(config)?;
+        }
+
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
-        let (vm_context, cid, temporary_directory) = self.create_vm_context(requester_debug_pid)?;
+        let (vm_context, cid, temporary_directory) = if cfg!(early) {
+            self.create_early_vm_context(config)?
+        } else {
+            self.create_vm_context(requester_debug_pid)?
+        };
 
         if is_custom_config(config) {
             check_use_custom_virtual_machine()?;
@@ -1118,6 +1232,10 @@ struct CompositeImageFilenames {
 
 /// Checks whether the caller has a specific permission
 fn check_permission(perm: &str) -> binder::Result<()> {
+    if cfg!(early) {
+        // Skip permission check for early VMs, in favor of SELinux
+        return Ok(());
+    }
     let calling_pid = get_calling_pid();
     let calling_uid = get_calling_uid();
     // Root can do anything
@@ -1591,6 +1709,13 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
+fn check_config_allowed_for_early_vms(config: &VirtualMachineConfig) -> binder::Result<()> {
+    check_no_vendor_modules(config)?;
+    check_no_devices(config)?;
+
+    Ok(())
+}
+
 fn clone_or_prepare_logger_fd(
     fd: Option<&ParcelFileDescriptor>,
     tag: String,
@@ -1802,6 +1927,74 @@ impl IAuthGraphKeyExchange for AuthGraphKeyExchangeProxy {
     ) -> binder::Result<[AuthgraphArc; 2]> {
         self.0.authenticationComplete(peer_signature, shared_keys)
     }
+}
+
+// KEEP IN SYNC WITH early_vms.xsd
+#[derive(Debug, Deserialize, PartialEq)]
+struct EarlyVm {
+    #[allow(dead_code)]
+    name: String,
+    #[allow(dead_code)]
+    cid: i32,
+    #[allow(dead_code)]
+    path: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct EarlyVms {
+    #[allow(dead_code)]
+    early_vm: Vec<EarlyVm>,
+}
+
+fn range_for_partition(partition: &str) -> Result<Range<Cid>> {
+    match partition {
+        "system" => Ok(100..200),
+        "system_ext" | "product" => Ok(200..300),
+        _ => Err(anyhow!("Early VMs are not supported for {partition}")),
+    }
+}
+
+fn find_early_vm(xml_path: &Path, cid_range: &Range<Cid>, name: &str) -> Result<EarlyVm> {
+    if !xml_path.exists() {
+        bail!("{} doesn't exist", xml_path.display());
+    }
+
+    let xml =
+        fs::read(xml_path).with_context(|| format!("Failed to read {}", xml_path.display()))?;
+    let xml = String::from_utf8(xml)
+        .with_context(|| format!("{} is not a valid UTF-8 file", xml_path.display()))?;
+    let early_vms: EarlyVms = serde_xml_rs::from_str(&xml)
+        .with_context(|| format!("Can't parse {}", xml_path.display()))?;
+
+    let mut found_vm: Option<EarlyVm> = None;
+
+    for early_vm in early_vms.early_vm {
+        if early_vm.name != name {
+            continue;
+        }
+
+        let cid = early_vm
+            .cid
+            .try_into()
+            .with_context(|| format!("Invalid CID value {}", early_vm.cid))?;
+
+        if !cid_range.contains(&cid) {
+            bail!("VM '{}' uses CID {cid} which is out of range. Available CIDs for '{}': {cid_range:?}", xml_path.display(), early_vm.name);
+        }
+
+        if found_vm.is_some() {
+            bail!("Multiple VMs named {name} are found in {}", xml_path.display());
+        }
+
+        found_vm = Some(early_vm);
+    }
+
+    found_vm.ok_or_else(|| anyhow!("Can't find {name} in {}", xml_path.display()))
+}
+
+fn find_early_vm_for_partition(partition: &str, name: &str) -> Result<EarlyVm> {
+    let cid_range = range_for_partition(partition)?;
+    find_early_vm(Path::new(&format!("/{partition}/etc/avf/early_vms.xml")), &cid_range, name)
 }
 
 #[cfg(test)]
@@ -2017,6 +2210,71 @@ mod tests {
         if result != os_names {
             bail!("Expected {:?} but was {:?}", os_names, result);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_early_vms_from_xml() -> Result<()> {
+        let tmp_dir = tempfile::TempDir::new()?;
+        let tmp_dir_path = tmp_dir.path().to_owned();
+        let xml_path = tmp_dir_path.join("early_vms.xml");
+
+        std::fs::write(
+            &xml_path,
+            br#"<?xml version="1.0" encoding="utf-8"?>
+        <early_vms>
+            <early_vm>
+                <name>vm_demo_native_early</name>
+                <cid>123</cid>
+                <path>/system/bin/vm_demo_native_early</path>
+            </early_vm>
+            <early_vm>
+                <name>vm_demo_duplicated_name</name>
+                <cid>456</cid>
+                <path>/system/bin/vm_demo_duplicated_name_1</path>
+            </early_vm>
+            <early_vm>
+                <name>vm_demo_duplicated_name</name>
+                <cid>789</cid>
+                <path>/system/bin/vm_demo_duplicated_name_2</path>
+            </early_vm>
+            <early_vm>
+                <name>vm_demo_invalid_cid_1</name>
+                <cid>-1</cid>
+                <path>/system/bin/vm_demo_invalid_cid_1</path>
+            </early_vm>
+            <early_vm>
+                <name>vm_demo_invalid_cid_2</name>
+                <cid>999999</cid>
+                <path>/system/bin/vm_demo_invalid_cid_2</path>
+            </early_vm>
+        </early_vms>
+        "#,
+        )?;
+
+        let cid_range = 100..1000;
+
+        let result = find_early_vm(&xml_path, &cid_range, "vm_demo_native_early")?;
+        let expected = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system/bin/vm_demo_native_early".to_owned(),
+        };
+        assert_eq!(result, expected);
+
+        assert!(
+            find_early_vm(&xml_path, &cid_range, "vm_demo_duplicated_name").is_err(),
+            "should fail"
+        );
+        assert!(
+            find_early_vm(&xml_path, &cid_range, "vm_demo_invalid_cid_1").is_err(),
+            "should fail"
+        );
+        assert!(
+            find_early_vm(&xml_path, &cid_range, "vm_demo_invalid_cid_2").is_err(),
+            "should fail"
+        );
+
         Ok(())
     }
 }

@@ -265,7 +265,7 @@ fn verify_payload_with_instance_img(
     // Verify the payload before using it.
     let extracted_data = verify_payload(metadata, saved_data.as_ref())
         .context("Payload verification failed")
-        .map_err(|e| MicrodroidError::PayloadVerificationFailed(e.to_string()))?;
+        .map_err(|e| MicrodroidError::PayloadVerificationFailed(format!("{:?}", e)))?;
 
     // In case identity is ignored (by debug policy), we should reuse existing payload data, even
     // when the payload is changed. This is to keep the derived secret same as before.

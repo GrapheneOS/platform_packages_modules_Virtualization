@@ -95,6 +95,13 @@ rust_binary {
     apex_available: ["com.android.virt"],
 }
 
+xsd_config {
+    name: "early_vms",
+    srcs: ["early_vms.xsd"],
+    api_dir: "schema",
+    package_name: "android.system.virtualizationservice",
+}
+
 rust_test {
     name: "virtualizationmanager_device_test",
     srcs: ["src/main.rs"],

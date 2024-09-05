@@ -35,6 +35,7 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_xml_rs::from_reader;
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::fs::{metadata, File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -94,11 +95,13 @@ impl ApexInfoList {
             // For active APEXes, we run derive_classpath and parse its output to see if it
             // contributes to the classpath(s). (This allows us to handle any new classpath env
             // vars seamlessly.)
-            let classpath_vars = run_derive_classpath()?;
-            let classpath_apexes = find_apex_names_in_classpath(&classpath_vars)?;
+            if !cfg!(early) {
+                let classpath_vars = run_derive_classpath()?;
+                let classpath_apexes = find_apex_names_in_classpath(&classpath_vars)?;
 
-            for apex_info in apex_info_list.list.iter_mut() {
-                apex_info.has_classpath_jar = classpath_apexes.contains(&apex_info.name);
+                for apex_info in apex_info_list.list.iter_mut() {
+                    apex_info.has_classpath_jar = classpath_apexes.contains(&apex_info.name);
+                }
             }
 
             Ok(apex_info_list)
@@ -169,6 +172,9 @@ impl PackageManager {
         let mut list = self.apex_info_list.clone();
         // When prefer_staged, we override ApexInfo by consulting "package_native"
         if prefer_staged {
+            if cfg!(early) {
+                return Err(anyhow!("Can't turn on prefer_staged on early boot VMs"));
+            }
             let pm =
                 wait_for_interface::<dyn IPackageManagerNative>(PACKAGE_MANAGER_NATIVE_SERVICE)
                     .context("Failed to get service when prefer_staged is set.")?;
@@ -293,7 +299,16 @@ fn make_payload_disk(
     }];
 
     for (i, apex_info) in apex_infos.iter().enumerate() {
-        let apex_file = open_parcel_file(&apex_info.path, false)?;
+        let path = if cfg!(early) {
+            let path = &apex_info.preinstalled_path;
+            if path.extension().and_then(OsStr::to_str).unwrap_or("") != "apex" {
+                bail!("compressed APEX {} not supported", path.display());
+            }
+            path
+        } else {
+            &apex_info.path
+        };
+        let apex_file = open_parcel_file(path, false)?;
         partitions.push(Partition {
             label: format!("microdroid-apex-{}", i),
             image: Some(apex_file),
