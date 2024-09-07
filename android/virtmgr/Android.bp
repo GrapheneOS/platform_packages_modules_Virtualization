@@ -54,7 +54,6 @@ rust_defaults {
         "libregex",
         "librpcbinder_rs",
         "librustutils",
-        "libsafe_ownedfd",
         "libsemver",
         "libselinux_bindgen",
         "libserde",

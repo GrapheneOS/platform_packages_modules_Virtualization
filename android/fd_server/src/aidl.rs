@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use log::error;
 use nix::{
     errno::Errno, fcntl::openat, fcntl::OFlag, sys::stat::fchmod, sys::stat::mkdirat,
     sys::stat::mode_t, sys::stat::Mode, sys::statvfs::statvfs, sys::statvfs::Statvfs,
     unistd::unlinkat, unistd::UnlinkatFlags,
 };
-use safe_ownedfd::take_fd_ownership;
 use std::cmp::min;
 use std::collections::{btree_map, BTreeMap};
 use std::convert::TryInto;
 use std::fs::File;
 use std::io;
 use std::os::unix::fs::FileExt;
-use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd};
+use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, OwnedFd};
 use std::path::{Component, Path, PathBuf, MAIN_SEPARATOR};
 use std::sync::{Arc, RwLock};
 
@@ -39,8 +38,7 @@ use authfs_fsverity_metadata::{
     get_fsverity_metadata_path, parse_fsverity_metadata, FSVerityMetadata,
 };
 use binder::{
-    BinderFeatures, ExceptionCode, Interface, IntoBinderResult, Result as BinderResult, Status,
-    StatusCode, Strong,
+    BinderFeatures, ExceptionCode, Interface, Result as BinderResult, Status, StatusCode, Strong,
 };
 
 /// Bitflags of forbidden file mode, e.g. setuid, setgid and sticky bit.
@@ -301,11 +299,9 @@ impl IVirtFdService for FdService {
                     mode,
                 )
                 .map_err(new_errno_error)?;
-                let new_fd = take_fd_ownership(new_fd)
-                    .context("Failed to take ownership of fd for file")
-                    .or_service_specific_exception(-1)?;
-                let new_file = File::from(new_fd);
-                Ok((new_file.as_raw_fd(), FdConfig::ReadWrite(new_file)))
+                // SAFETY: new_fd is just created and not an error.
+                let new_file = unsafe { File::from_raw_fd(new_fd) };
+                Ok((new_fd, FdConfig::ReadWrite(new_file)))
             }
             _ => Err(new_errno_error(Errno::ENOTDIR)),
         })
@@ -331,10 +327,9 @@ impl IVirtFdService for FdService {
                     Mode::empty(),
                 )
                 .map_err(new_errno_error)?;
-                let fd_owner = take_fd_ownership(new_dir_fd)
-                    .context("Failed to take ownership of the fd for directory")
-                    .or_service_specific_exception(-1)?;
-                Ok((fd_owner.as_raw_fd(), FdConfig::OutputDir(fd_owner)))
+                // SAFETY: new_dir_fd is just created and not an error.
+                let fd_owner = unsafe { OwnedFd::from_raw_fd(new_dir_fd) };
+                Ok((new_dir_fd, FdConfig::OutputDir(fd_owner)))
             }
             _ => Err(new_errno_error(Errno::ENOTDIR)),
         })
@@ -413,11 +408,9 @@ fn new_errno_error(errno: Errno) -> Status {
 
 fn open_readonly_at(dir_fd: BorrowedFd, path: &Path) -> nix::Result<File> {
     let new_fd = openat(Some(dir_fd.as_raw_fd()), path, OFlag::O_RDONLY, Mode::empty())?;
-    let new_fd = take_fd_ownership(new_fd).map_err(|e| match e {
-        safe_ownedfd::Error::Errno(e) => e,
-        _ => Errno::UnknownErrno,
-    })?;
-    Ok(File::from(new_fd))
+    // SAFETY: new_fd is just created successfully and not owned.
+    let new_file = unsafe { File::from_raw_fd(new_fd) };
+    Ok(new_file)
 }
 
 fn validate_and_cast_offset(offset: i64) -> Result<u64, Status> {

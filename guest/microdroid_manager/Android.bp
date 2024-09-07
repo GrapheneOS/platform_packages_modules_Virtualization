@@ -48,7 +48,6 @@ rust_defaults {
         "libprotobuf",
         "librpcbinder_rs",
         "librustutils",
-        "libsafe_ownedfd",
         "libsecretkeeper_client",
         "libsecretkeeper_comm_nostd",
         "libscopeguard",
@@ -60,7 +59,6 @@ rust_defaults {
         "libvsock",
         "librand",
         "libzeroize",
-        "libsafe_ownedfd",
     ],
     init_rc: ["microdroid_manager.rc"],
     multilib: {

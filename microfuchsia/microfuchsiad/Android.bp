@@ -15,9 +15,8 @@ rust_binary {
         "libandroid_logger",
         "libanyhow",
         "libbinder_rs",
-        "liblibc",
         "liblog_rust",
-        "libsafe_ownedfd",
+        "liblibc",
         "libvmclient",
     ],
     apex_available: [

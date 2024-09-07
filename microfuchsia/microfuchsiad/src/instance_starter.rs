@@ -23,10 +23,9 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 use anyhow::{ensure, Context, Result};
 use binder::{LazyServiceGuard, ParcelFileDescriptor};
 use log::info;
-use safe_ownedfd::take_fd_ownership;
 use std::ffi::CStr;
 use std::fs::File;
-use std::os::fd::AsRawFd;
+use std::os::fd::FromRawFd;
 use vmclient::VmInstance;
 
 pub struct MicrofuchsiaInstance {
@@ -134,7 +133,6 @@ fn openpty() -> Result<Pty> {
             "failed to openpty"
         );
     }
-    let leader = take_fd_ownership(leader)?;
 
     // SAFETY: calling these libc functions with valid+initialized variables is safe.
     unsafe {
@@ -147,25 +145,24 @@ fn openpty() -> Result<Pty> {
             c_line: 0,
             c_cc: [0u8; 19],
         };
-        ensure!(
-            libc::tcgetattr(leader.as_raw_fd(), &mut attr) == 0,
-            "failed to get termios attributes"
-        );
+        ensure!(libc::tcgetattr(leader, &mut attr) == 0, "failed to get termios attributes");
 
         // Force it to be a raw pty and re-set it.
         libc::cfmakeraw(&mut attr);
         ensure!(
-            libc::tcsetattr(leader.as_raw_fd(), libc::TCSANOW, &attr) == 0,
+            libc::tcsetattr(leader, libc::TCSANOW, &attr) == 0,
             "failed to set termios attributes"
         );
     }
 
     // Construct the return value.
+    // SAFETY: The file descriptors are valid because openpty returned without error (above).
+    let leader = unsafe { File::from_raw_fd(leader) };
     let follower_name: Vec<u8> = follower_name.iter_mut().map(|x| *x as _).collect();
     let follower_name = CStr::from_bytes_until_nul(&follower_name)
         .context("pty filename missing NUL")?
         .to_str()
         .context("pty filename invalid utf8")?
         .to_string();
-    Ok(Pty { leader: File::from(leader), follower_name })
+    Ok(Pty { leader, follower_name })
 }
