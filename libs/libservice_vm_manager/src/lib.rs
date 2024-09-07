@@ -25,7 +25,6 @@ use android_system_virtualizationservice::{
     binder::ParcelFileDescriptor,
 };
 use anyhow::{anyhow, ensure, Context, Result};
-use lazy_static::lazy_static;
 use log::{info, warn};
 use service_vm_comm::{Request, Response, ServiceVmRequest, VmType};
 use std::fs::{self, File, OpenOptions};
@@ -48,11 +47,10 @@ const INSTANCE_IMG_SIZE_BYTES: i64 = 1 << 20; // 1MB
 const WRITE_BUFFER_CAPACITY: usize = 512;
 const READ_TIMEOUT: Duration = Duration::from_secs(10);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
-lazy_static! {
-    static ref PENDING_REQUESTS: AtomicCounter = AtomicCounter::default();
-    static ref SERVICE_VM: Mutex<Option<ServiceVm>> = Mutex::new(None);
-    static ref SERVICE_VM_SHUTDOWN: Condvar = Condvar::new();
-}
+
+static PENDING_REQUESTS: AtomicCounter = AtomicCounter::new();
+static SERVICE_VM: Mutex<Option<ServiceVm>> = Mutex::new(None);
+static SERVICE_VM_SHUTDOWN: Condvar = Condvar::new();
 
 /// Atomic counter with a condition variable that is used to wait for the counter
 /// to become positive within a timeout.
@@ -63,6 +61,10 @@ struct AtomicCounter {
 }
 
 impl AtomicCounter {
+    const fn new() -> Self {
+        Self { num: Mutex::new(0), num_increased: Condvar::new() }
+    }
+
     /// Checks if the counter becomes positive within the given timeout.
     fn is_positive_within_timeout(&self, timeout: Duration) -> bool {
         let (guard, _wait_result) = self

@@ -33,7 +33,6 @@ use binder::{
     self, wait_for_interface, BinderFeatures, ExceptionCode, Interface, IntoBinderResult,
     LazyServiceGuard, ParcelFileDescriptor, Status, Strong,
 };
-use lazy_static::lazy_static;
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
 use nix::unistd::{chown, Uid};
@@ -52,7 +51,7 @@ use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::{pid_t, uid_t};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, Mutex, Weak};
+use std::sync::{Arc, Condvar, LazyLock, Mutex, Weak};
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
 use virtualizationmaintenance::{
@@ -157,18 +156,18 @@ const FAKE_CERTIFICATE_FOR_TESTING: &[u8] = &[
     0xb9, 0x0f,
 ];
 
-lazy_static! {
-    static ref FAKE_PROVISIONED_KEY_BLOB_FOR_TESTING: Mutex<Option<Vec<u8>>> = Mutex::new(None);
-    static ref VFIO_SERVICE: Strong<dyn IVfioHandler> =
-        wait_for_interface(<BpVfioHandler as IVfioHandler>::get_descriptor())
-            .expect("Could not connect to VfioHandler");
-    static ref NETWORK_SERVICE: Strong<dyn IVmnic> =
-        wait_for_interface(<BpVmnic as IVmnic>::get_descriptor())
-            .expect("Could not connect to Vmnic");
-    static ref TETHERING_SERVICE: Strong<dyn IVmTethering> =
-        wait_for_interface(<BpVmTethering as IVmTethering>::get_descriptor())
-            .expect("Could not connect to VmTethering");
-}
+static FAKE_PROVISIONED_KEY_BLOB_FOR_TESTING: Mutex<Option<Vec<u8>>> = Mutex::new(None);
+static VFIO_SERVICE: LazyLock<Strong<dyn IVfioHandler>> = LazyLock::new(|| {
+    wait_for_interface(<BpVfioHandler as IVfioHandler>::get_descriptor())
+        .expect("Could not connect to VfioHandler")
+});
+static NETWORK_SERVICE: LazyLock<Strong<dyn IVmnic>> = LazyLock::new(|| {
+    wait_for_interface(<BpVmnic as IVmnic>::get_descriptor()).expect("Could not connect to Vmnic")
+});
+static TETHERING_SERVICE: LazyLock<Strong<dyn IVmTethering>> = LazyLock::new(|| {
+    wait_for_interface(<BpVmTethering as IVmTethering>::get_descriptor())
+        .expect("Could not connect to VmTethering")
+});
 
 fn is_valid_guest_cid(cid: Cid) -> bool {
     (GUEST_CID_MIN..=GUEST_CID_MAX).contains(&cid)

@@ -148,7 +148,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
 
     let payload_config_str = format!("{:?}!{:?}", config.apk, payload);
 
-    let custom_config = CustomConfig {
+    let mut custom_config = CustomConfig {
         gdbPort: config.debug.gdb.map(u16::from).unwrap_or(0) as i32, // 0 means no gdb
         vendorImage: vendor,
         devices: config
@@ -162,6 +162,21 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         networkSupported: config.common.network_supported(),
         ..Default::default()
     };
+
+    if config.debug.enable_earlycon() {
+        if config.debug.debug != DebugLevel::FULL {
+            bail!("earlycon is only supported for debuggable VMs")
+        }
+        if cfg!(target_arch = "aarch64") {
+            custom_config
+                .extraKernelCmdlineParams
+                .push(String::from("earlycon=uart8250,mmio,0x3f8"));
+        } else if cfg!(target_arch = "x86_64") {
+            custom_config.extraKernelCmdlineParams.push(String::from("earlycon=uart8250,io,0x3f8"));
+        } else {
+            bail!("unexpected architecture!");
+        }
+    }
 
     let vm_config = VirtualMachineConfig::AppConfig(VirtualMachineAppConfig {
         name: config.common.name.unwrap_or_else(|| String::from("VmRunApp")),

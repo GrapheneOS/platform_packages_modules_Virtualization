@@ -1,0 +1,41 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_app {
+    name: "LinuxInstallerApp",
+    srcs: ["java/**/*.java"],
+    resource_dirs: ["res"],
+    asset_dirs: ["assets"],
+    manifest: "AndroidManifest.xml",
+    defaults: ["VmPayloadInstaller"],
+    overrides: ["LinuxInstallerAppStub"],
+    required: [
+        "privapp-permissions-linuxinstaller.xml",
+    ],
+    certificate: ":com.android.virtualization.linuxinstaller_certificate",
+}
+
+android_app {
+    name: "LinuxInstallerAppStub",
+    srcs: ["java/**/*.java"],
+    resource_dirs: ["res"],
+    manifest: "AndroidManifest_stub.xml",
+    defaults: ["VmPayloadInstaller"],
+    required: [
+        "privapp-permissions-linuxinstaller.xml",
+    ],
+    certificate: ":com.android.virtualization.linuxinstaller_certificate",
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-linuxinstaller.xml",
+    src: "privapp-permissions-linuxinstaller.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+android_app_certificate {
+    name: "com.android.virtualization.linuxinstaller_certificate",
+    certificate: "com_android_virtualization_linuxinstaller",
+}

@@ -65,6 +65,7 @@ print_usage() {
   echo "  --version \${version}: ferrochrome version to be downloaded"
   echo "  --keep: Keep downloaded ferrochrome image"
   echo "  --test: Download test image instead"
+  echo "  --forever: Keep ferrochrome running forever. Used for manual test"
 }
 
 fecr_version="${FECR_DEFAULT_VERSION}"
@@ -76,6 +77,7 @@ fecr_verbose=""
 fecr_image="${FECR_DEFAULT_IMAGE}"
 fecr_boot_completed_log="${FECR_DEFAULT_BOOT_COMPLETED_LOG}"
 fecr_screenshot_dir="${FECR_DEFAULT_SCREENSHOT_DIR}"
+fecr_forever=""
 
 # Parse parameters
 while (( "${#}" )); do
@@ -101,6 +103,9 @@ while (( "${#}" )); do
     --test)
       fecr_image="${FECR_TEST_IMAGE}"
       fecr_boot_completed_log="${FECR_TEST_IMAGE_BOOT_COMPLETED_LOG}"
+      ;;
+    --forever)
+      fecr_forever="true"
       ;;
     -h|--help)
       print_usage
@@ -134,9 +139,9 @@ pkg_name=$(dirname ${resolved_activities})
 current_user=$(adb shell am get-current-user)
 
 echo "Reset app & granting permission"
+adb shell pm clear --user ${current_user} ${pkg_name} > /dev/null
 adb shell pm grant --user ${current_user} ${pkg_name} android.permission.RECORD_AUDIO
 adb shell pm grant --user ${current_user} ${pkg_name} android.permission.USE_CUSTOM_VIRTUAL_MACHINE > /dev/null
-adb shell pm clear --user ${current_user} ${pkg_name} > /dev/null
 
 if [[ -z "${fecr_skip}" ]]; then
   if [[ -z "${fecr_dir}" ]]; then
@@ -165,15 +170,23 @@ adb shell am start-activity -a ${ACTION_NAME} > /dev/null
 log_path="/data/user/${current_user}/${pkg_name}/${FECR_CONSOLE_LOG_PATH}"
 fecr_start_time=${EPOCHSECONDS}
 
-adb shell mkdir -p "${fecr_screenshot_dir}"
-while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do
-  adb shell screencap -p "${fecr_screenshot_dir}/screenshot-${EPOCHSECONDS}.png"
-  adb shell grep -soF \""${fecr_boot_completed_log}"\" "${log_path}" && exit 0 || true
-  sleep 10
-done
+echo "Check ${log_path} on device for console log"
 
->&2 echo "Ferrochrome failed to boot. Dumping console log"
->&2 adb shell cat ${log_path}
+if [[ "${fecr_forever}" == "true" ]]; then
+  echo "Ctrl+C to stop running"
+  echo "To open interactive serial console, use following command:"
+  echo "adb shell -t /apex/com.android.virt/bin/vm console"
+else
+  adb shell mkdir -p "${fecr_screenshot_dir}"
+  while [[ $((EPOCHSECONDS - fecr_start_time)) -lt ${FECR_BOOT_TIMEOUT} ]]; do
+    adb shell screencap -p "${fecr_screenshot_dir}/screenshot-${EPOCHSECONDS}.png"
+    adb shell grep -soF \""${fecr_boot_completed_log}"\" "${log_path}" && exit 0 || true
+    sleep 10
+  done
 
-exit 1
+  >&2 echo "Ferrochrome failed to boot. Dumping console log"
+  >&2 adb shell cat ${log_path}
+
+  exit 1
+fi
 

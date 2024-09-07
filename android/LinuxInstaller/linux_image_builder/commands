@@ -1,0 +1,11 @@
+upload init.sh:/root
+upload vsock.py:/usr/local/bin
+upload /tmp/ttyd:/usr/local/bin
+upload ttyd.service:/etc/systemd/system
+upload vsockip.service:/etc/systemd/system
+chmod 0777:/root/init.sh
+firstboot-command "/root/init.sh"
+chmod 0644:/etc/systemd/system/vsockip.service
+chmod 0644:/etc/systemd/system/ttyd.service
+chmod 0777:/usr/local/bin/vsock.py
+chmod 0777:/usr/local/bin/ttyd

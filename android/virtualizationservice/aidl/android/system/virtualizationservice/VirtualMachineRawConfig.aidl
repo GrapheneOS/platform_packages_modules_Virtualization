@@ -21,6 +21,7 @@ import android.system.virtualizationservice.DiskImage;
 import android.system.virtualizationservice.DisplayConfig;
 import android.system.virtualizationservice.GpuConfig;
 import android.system.virtualizationservice.InputDevice;
+import android.system.virtualizationservice.UsbConfig;
 
 /** Raw configuration for running a VM. */
 parcelable VirtualMachineRawConfig {
@@ -100,4 +101,9 @@ parcelable VirtualMachineRawConfig {
     @nullable GpuConfig gpuConfig;
 
     @nullable AudioConfig audioConfig;
+
+    boolean noBalloon;
+
+    /** Enable or disable USB passthrough support */
+    @nullable UsbConfig usbConfig;
 }

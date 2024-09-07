@@ -99,6 +99,10 @@ pub fn write_vm_creation_stats(
     is_protected: bool,
     ret: &binder::Result<Strong<dyn IVirtualMachine>>,
 ) {
+    if cfg!(early) {
+        info!("Writing VmCreationRequested atom for early VMs is not implemented; skipping");
+        return;
+    }
     let creation_succeeded;
     let binder_exception_code;
     match ret {
@@ -165,6 +169,11 @@ pub fn write_vm_booted_stats(
     vm_identifier: &str,
     vm_start_timestamp: Option<SystemTime>,
 ) {
+    if cfg!(early) {
+        info!("Writing VmCreationRequested atom for early VMs is not implemented; skipping");
+        return;
+    }
+
     let vm_identifier = vm_identifier.to_owned();
     let duration = get_duration(vm_start_timestamp);
 
@@ -190,6 +199,10 @@ pub fn write_vm_exited_stats_sync(
     exit_signal: Option<i32>,
     vm_metric: &VmMetric,
 ) {
+    if cfg!(early) {
+        info!("Writing VmExited atom for early VMs is not implemented; skipping");
+        return;
+    }
     let vm_identifier = vm_identifier.to_owned();
     let elapsed_time_millis = get_duration(vm_metric.start_timestamp).as_millis() as i64;
     let guest_time_millis = vm_metric.cpu_guest_time.unwrap_or_default();

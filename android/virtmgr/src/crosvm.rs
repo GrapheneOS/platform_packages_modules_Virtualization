@@ -20,7 +20,6 @@ use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
 use binder::ParcelFileDescriptor;
 use command_fds::CommandFdExt;
-use lazy_static::lazy_static;
 use libc::{sysconf, _SC_CLK_TCK};
 use log::{debug, error, info};
 use semver::{Version, VersionReq};
@@ -39,7 +38,7 @@ use std::os::unix::io::{AsRawFd, OwnedFd};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, LazyLock};
 use std::time::{Duration, SystemTime};
 use std::thread::{self, JoinHandle};
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
@@ -48,6 +47,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     AudioConfig::AudioConfig as AudioConfigParcelable,
     DisplayConfig::DisplayConfig as DisplayConfigParcelable,
     GpuConfig::GpuConfig as GpuConfigParcelable,
+    UsbConfig::UsbConfig as UsbConfigParcelable,
 };
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
@@ -89,16 +89,16 @@ const CONSOLE_HVC0: &str = "hvc0";
 /// Serial (emulated uart)
 const CONSOLE_TTYS0: &str = "ttyS0";
 
-lazy_static! {
-    /// If the VM doesn't move to the Started state within this amount time, a hang-up error is
-    /// triggered.
-    static ref BOOT_HANGUP_TIMEOUT: Duration = if nested_virt::is_nested_virtualization().unwrap() {
+/// If the VM doesn't move to the Started state within this amount time, a hang-up error is
+/// triggered.
+static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
+    if nested_virt::is_nested_virtualization().unwrap() {
         // Nested virtualization is slow, so we need a longer timeout.
         Duration::from_secs(300)
     } else {
         Duration::from_secs(30)
-    };
-}
+    }
+});
 
 /// Configuration for a VM to run with crosvm.
 #[derive(Debug)]
@@ -134,6 +134,8 @@ pub struct CrosvmConfig {
     pub boost_uclamp: bool,
     pub gpu_config: Option<GpuConfig>,
     pub audio_config: Option<AudioConfig>,
+    pub no_balloon: bool,
+    pub usb_config: UsbConfig,
 }
 
 #[derive(Debug)]
@@ -145,6 +147,17 @@ pub struct AudioConfig {
 impl AudioConfig {
     pub fn new(raw_config: &AudioConfigParcelable) -> Self {
         AudioConfig { use_microphone: raw_config.useMicrophone, use_speaker: raw_config.useSpeaker }
+    }
+}
+
+#[derive(Debug)]
+pub struct UsbConfig {
+    pub controller: bool,
+}
+
+impl UsbConfig {
+    pub fn new(raw_config: &UsbConfigParcelable) -> Result<UsbConfig> {
+        Ok(UsbConfig { controller: raw_config.controller })
     }
 }
 
@@ -892,10 +905,16 @@ fn run_vm(
         .arg("--cid")
         .arg(config.cid.to_string());
 
-    if system_properties::read_bool("hypervisor.memory_reclaim.supported", false)? {
+    if system_properties::read_bool("hypervisor.memory_reclaim.supported", false)?
+        && !config.no_balloon
+    {
         command.arg("--balloon-page-reporting");
     } else {
         command.arg("--no-balloon");
+    }
+
+    if !config.usb_config.controller {
+        command.arg("--no-usb");
     }
 
     let mut memory_mib = config.memory_mib;

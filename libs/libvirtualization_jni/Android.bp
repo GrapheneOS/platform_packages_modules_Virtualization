@@ -16,7 +16,10 @@ cc_library_shared {
         "liblog",
         "libnativehelper",
     ],
-    static_libs: ["libavf_cc_flags"],
+    static_libs: [
+        "libavf_cc_flags",
+        "libvmclient.ffi",
+    ],
 }
 
 cc_library_shared {

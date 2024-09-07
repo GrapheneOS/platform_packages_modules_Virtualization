@@ -44,6 +44,9 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_VIRT_CPUFREQ"), {
         true: ["virt_cpufreq"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_IMPROVE_DEBUGGABLE_VMS"), {
+        true: ["debuggable_vms_improvements"],
+        default: [],
     }) + select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
         true: ["paravirtualized_devices"],
         default: [],

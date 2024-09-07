@@ -1,0 +1,19 @@
+{
+    "name": "debian",
+    "disks": [
+        {
+            "image": "/data/local/tmp/debian.img",
+            "partitions": [],
+            "writable": true
+        }
+    ],
+    "protected": false,
+    "cpu_topology": "match_host",
+    "platform_version": "~1.0",
+    "memory_mib": 4096,
+    "debuggable": true,
+    "console_out": true,
+    "connect_console": true,
+    "console_input_device": "ttyS0",
+    "network": true
+}

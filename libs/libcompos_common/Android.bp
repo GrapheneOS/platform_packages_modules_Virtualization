@@ -14,7 +14,6 @@ rust_library {
         "libanyhow",
         "libbinder_rs",
         "libglob",
-        "liblazy_static",
         "liblog_rust",
         "libnested_virt",
         "libnum_traits",

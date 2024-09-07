@@ -385,15 +385,6 @@ fn check_access_mode(flags: u32, mode: libc::c_int) -> io::Result<()> {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(all(any(target_arch = "aarch64", target_arch = "riscv64"),
-                 target_pointer_width = "64"))] {
-        fn blk_size() -> libc::c_int { CHUNK_SIZE as libc::c_int }
-    } else {
-        fn blk_size() -> libc::c_long { CHUNK_SIZE as libc::c_long }
-    }
-}
-
 #[allow(clippy::enum_variant_names)]
 enum AccessMode {
     ReadOnly,
@@ -421,7 +412,7 @@ fn create_stat(
     st.st_gid = 0;
     st.st_size = libc::off64_t::try_from(file_size)
         .map_err(|_| io::Error::from_raw_os_error(libc::EFBIG))?;
-    st.st_blksize = blk_size();
+    st.st_blksize = CHUNK_SIZE.try_into().unwrap();
     // Per man stat(2), st_blocks is "Number of 512B blocks allocated".
     st.st_blocks = libc::c_longlong::try_from(divide_roundup(file_size, 512))
         .map_err(|_| io::Error::from_raw_os_error(libc::EFBIG))?;

@@ -200,6 +200,7 @@ public final class ComposTestCase extends MicrodroidHostTestCaseBase {
                                 10000,
                                 validator.getAbsolutePath(),
                                 "dice-chain",
+                                "--allow-any-mode",
                                 bcc_file.getAbsolutePath());
         assertWithMessage("hwtrust failed").about(command_results()).that(result).isSuccess();
     }

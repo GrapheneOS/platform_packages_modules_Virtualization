@@ -2,17 +2,22 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+java_defaults {
+    name: "VmPayloadInstaller",
+    init_rc: [":custom_vm_setup.rc"],
+    required: ["custom_vm_setup"],
+    // TODO(b/348113995): move this app to product partition
+    system_ext_specific: true,
+    platform_apis: true,
+    privileged: true,
+}
+
 android_app {
     name: "FerrochromeApp",
     srcs: ["java/**/*.java"],
     resource_dirs: ["res"],
-    platform_apis: true,
-    // TODO(b/348113995): move this app to product partition
-    system_ext_specific: true,
-    privileged: true,
-    init_rc: ["custom_vm_setup.rc"],
+    defaults: ["VmPayloadInstaller"],
     required: [
-        "custom_vm_setup",
         "privapp-permissions-ferrochrome.xml",
     ],
 }
@@ -22,6 +27,11 @@ prebuilt_etc {
     src: "privapp-permissions-ferrochrome.xml",
     sub_dir: "permissions",
     system_ext_specific: true,
+}
+
+filegroup {
+    name: "custom_vm_setup.rc",
+    srcs: ["custom_vm_setup.rc"],
 }
 
 sh_binary {

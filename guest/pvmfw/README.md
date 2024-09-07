@@ -251,26 +251,19 @@ PvmfwDiceHandover = {
 }
 ```
 
-and contains the _Compound Device Identifiers_ ("CDIs"), used to derive the
-next-stage secret, and a certificate chain, intended for pVM attestation. Note
-that it differs from the `AndroidDiceHandover` defined by the specification in
-that its `DiceCertChain` field is mandatory (while optional in the original).
+It contains the _Compound Device Identifiers_ (CDIs), used for deriving the
+next-stage secret, and a certificate chain, necessary for building the full
+[pVM DICE chain][pvm-dice-chain] required by features like
+[pVM remote attestation][vm-attestation].
+
+Note that it differs from the `AndroidDiceHandover` defined by the specification
+in that its `DiceCertChain` field is mandatory (while optional in the original).
 
 Devices that fully implement DICE should provide a certificate rooted at the
 Unique Device Secret (UDS) in a boot stage preceding the pvmfw loader (typically
 ABL), in such a way that it would receive a valid `AndroidDiceHandover`, that
 can be passed to [`DiceAndroidHandoverMainFlow`][DiceAndroidHandoverMainFlow] along with
 the inputs described below.
-
-Otherwise, as an intermediate step towards supporting DICE throughout the
-software stack of the device, incomplete implementations may root the DICE chain
-at the pvmfw loader, using an arbitrary constant as initial CDI. The pvmfw
-loader can easily do so by:
-
-1. Building an "empty" `AndroidDiceHandover` using CBOR operations only
-   containing constant CDIs ([example][Trusty-BCC])
-1. Passing the resulting `AndroidDiceHandover` to `DiceAndroidHandoverMainFlow`
-   as described above
 
 The recommended DICE inputs at this stage are:
 
@@ -291,19 +284,6 @@ derive another [DICE layer][Layering], passed to the guest through a
 `/reserved-memory` device tree node marked as
 [`compatible=”google,open-dice”`][dice-dt].
 
-#### Testing
-
-To verify that the DICE handover is successful in pvmfw and eventually the pVM
-has a valid DICE chain, you can run the VSR test
-`MicrodroidTests#protectedVmHasValidDiceChain`. The test retrieves the DICE
-chain from within a Microdroid VM in protected mode and checks the following
-properties using the [hwtrust][hwtrust] library:
-
-1. All the fields in the DICE chain conform to
-   [Android Profile for DICE][android-open-dice].
-2. The DICE chain is a valid certificate chain, where the subject public key in
-   each certificate can be used to verify the signature of the next certificate.
-
 [AVB]: https://source.android.com/docs/security/features/verifiedboot/boot-flow
 [AndroidDiceHandover]: https://pigweed.googlesource.com/open-dice/+/42ae7760023/src/android.c#212
 [DiceAndroidHandoverMainFlow]: https://pigweed.googlesource.com/open-dice/+/42ae7760023/src/android.c#221
@@ -311,9 +291,8 @@ properties using the [hwtrust][hwtrust] library:
 [dice-mode]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md#Mode-Value-Details
 [dice-dt]: https://www.kernel.org/doc/Documentation/devicetree/bindings/reserved-memory/google%2Copen-dice.yaml
 [Layering]: https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md#layering-details
-[Trusty-BCC]: https://android.googlesource.com/trusty/lib/+/1696be0a8f3a7103/lib/hwbcc/common/swbcc.c#554
-[hwtrust]: https://cs.android.com/android/platform/superproject/main/+/main:tools/security/remote_provisioning/hwtrust/
-[android-open-dice]: https://android.googlesource.com/platform/external/open-dice/+/refs/heads/main/docs/android.md
+[pvm-dice-chain]: ../../docs/pvm_dice_chain.md
+[vm-attestation]: ../../docs/vm_remote_attestation.md
 
 ### Platform Requirements
 

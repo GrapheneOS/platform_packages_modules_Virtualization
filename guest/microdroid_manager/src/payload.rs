@@ -16,7 +16,7 @@
 
 use crate::instance::ApexData;
 use crate::ioutil::wait_for_file;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use log::{info, warn};
 use microdroid_metadata::{read_metadata, ApexPayload, Metadata};
 use std::time::Duration;
@@ -38,7 +38,8 @@ pub fn get_apex_data_from_payload(metadata: &Metadata) -> Result<Vec<ApexData>> 
         .iter()
         .map(|apex| {
             let apex_path = format!("/dev/block/by-name/{}", apex.partition_name);
-            let extracted = apexutil::verify(&apex_path)?;
+            let extracted =
+                apexutil::verify(&apex_path).context(format!("Failed to parse {}", &apex_path))?;
             if let Some(manifest_name) = &extracted.name {
                 if &apex.name != manifest_name {
                     warn!("Apex named {} is named {} in its manifest", apex.name, manifest_name);

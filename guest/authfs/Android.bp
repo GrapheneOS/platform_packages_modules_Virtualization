@@ -13,7 +13,6 @@ rust_defaults {
         "libanyhow",
         "libauthfs_fsverity_metadata",
         "libbinder_rs",
-        "libcfg_if",
         "libclap",
         "libfsverity_digests_proto_rust",
         "libfuse_rust",

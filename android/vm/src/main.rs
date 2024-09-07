@@ -109,6 +109,23 @@ pub struct DebugConfig {
     /// Note: this is only supported on Android kernels android14-5.15 and higher.
     #[arg(long)]
     gdb: Option<NonZeroU16>,
+
+    /// Whether to enable earlycon. Only supported for debuggable Linux-based VMs.
+    #[cfg(debuggable_vms_improvements)]
+    #[arg(long)]
+    enable_earlycon: bool,
+}
+
+impl DebugConfig {
+    #[cfg(debuggable_vms_improvements)]
+    fn enable_earlycon(&self) -> bool {
+        self.enable_earlycon
+    }
+
+    #[cfg(not(debuggable_vms_improvements))]
+    fn enable_earlycon(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Args, Default)]
@@ -142,12 +159,12 @@ pub struct MicrodroidConfig {
 
 impl MicrodroidConfig {
     #[cfg(vendor_modules)]
-    fn vendor(&self) -> &Option<PathBuf> {
-        &self.vendor
+    fn vendor(&self) -> Option<&PathBuf> {
+        self.vendor.as_ref()
     }
 
     #[cfg(not(vendor_modules))]
-    fn vendor(&self) -> Option<PathBuf> {
+    fn vendor(&self) -> Option<&PathBuf> {
         None
     }
 
@@ -162,13 +179,13 @@ impl MicrodroidConfig {
     }
 
     #[cfg(device_assignment)]
-    fn devices(&self) -> &Vec<PathBuf> {
+    fn devices(&self) -> &[PathBuf] {
         &self.devices
     }
 
     #[cfg(not(device_assignment))]
-    fn devices(&self) -> Vec<PathBuf> {
-        Vec::new()
+    fn devices(&self) -> &[PathBuf] {
+        &[]
     }
 }
 

@@ -68,14 +68,9 @@ fn process_requests_in_protected_vm() -> Result<()> {
 
 #[test]
 fn process_requests_in_non_protected_vm() -> Result<()> {
-    check_processing_requests(VmType::NonProtectedVm, None)
-}
-
-#[ignore] // TODO(b/360077974): Figure out why this is flaky.
-#[test]
-fn process_requests_in_non_protected_vm_with_extra_ram() -> Result<()> {
     const MEMORY_MB: i32 = 300;
-    check_processing_requests(VmType::NonProtectedVm, Some(MEMORY_MB))
+    check_processing_requests(VmType::NonProtectedVm, Some(MEMORY_MB))?;
+    check_processing_requests(VmType::NonProtectedVm, None)
 }
 
 fn check_processing_requests(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<()> {
@@ -288,7 +283,9 @@ fn check_certificate_for_client_vm(
 }
 
 fn check_csr(csr: Vec<u8>) -> Result<()> {
-    let _csr = rkp::Csr::from_cbor(&Session::default(), &csr[..]).context("Failed to parse CSR")?;
+    let mut session = Session::default();
+    session.set_allow_any_mode(true);
+    let _csr = rkp::Csr::from_cbor(&session, &csr[..]).context("Failed to parse CSR")?;
     Ok(())
 }
 

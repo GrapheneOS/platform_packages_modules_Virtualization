@@ -17,7 +17,7 @@
 //! Timeouts for common situations, with support for longer timeouts when using nested
 //! virtualization.
 
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 /// Holder for the various timeouts we use.
@@ -31,15 +31,15 @@ pub struct Timeouts {
     pub vm_max_time_to_exit: Duration,
 }
 
-lazy_static! {
 /// The timeouts that are appropriate on the current platform.
-pub static ref TIMEOUTS: Timeouts = if nested_virt::is_nested_virtualization().unwrap() {
-    // Nested virtualization is slow.
-    EXTENDED_TIMEOUTS
-} else {
-    NORMAL_TIMEOUTS
-};
-}
+pub static TIMEOUTS: LazyLock<Timeouts> = LazyLock::new(|| {
+    if nested_virt::is_nested_virtualization().unwrap() {
+        // Nested virtualization is slow.
+        EXTENDED_TIMEOUTS
+    } else {
+        NORMAL_TIMEOUTS
+    }
+});
 
 /// The timeouts that we use normally.
 const NORMAL_TIMEOUTS: Timeouts = Timeouts {

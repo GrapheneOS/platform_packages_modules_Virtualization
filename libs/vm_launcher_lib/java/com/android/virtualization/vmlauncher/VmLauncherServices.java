@@ -59,6 +59,11 @@ public class VmLauncherServices {
         return i;
     }
 
+    public static void stopVmLauncherService(Context context) {
+        Intent i = buildVmLauncherServiceIntent(context);
+        context.stopService(i);
+    }
+
     public static void startVmLauncherService(Context context, VmLauncherServiceCallback callback) {
         Intent i = buildVmLauncherServiceIntent(context);
         if (i == null) {

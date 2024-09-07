@@ -292,7 +292,7 @@ pub(crate) unsafe trait Libfdt {
         // SAFETY: Accesses (read-only) are constrained to the DT totalsize.
         let ret = unsafe { libfdt_bindgen::fdt_find_max_phandle(fdt, &mut phandle) };
 
-        FdtRawResult::from(ret).try_into()?;
+        () = FdtRawResult::from(ret).try_into()?;
 
         phandle.try_into()
     }
@@ -390,7 +390,7 @@ pub(crate) unsafe trait LibfdtMut {
             // SAFETY: Accesses are constrained to the DT totalsize (validated by ctor).
             unsafe { libfdt_bindgen::fdt_setprop_placeholder(fdt, node, name, len, &mut data) };
 
-        FdtRawResult::from(ret).try_into()?;
+        () = FdtRawResult::from(ret).try_into()?;
 
         get_mut_slice_at_ptr(self.as_fdt_slice_mut(), data.cast(), size).ok_or(FdtError::Internal)
     }

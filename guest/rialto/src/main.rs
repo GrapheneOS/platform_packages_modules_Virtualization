@@ -109,31 +109,27 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     let fdt = libfdt::Fdt::from_slice(fdt)?;
 
     let memory_range = fdt.first_memory_range()?;
-    MEMORY.lock().as_mut().unwrap().shrink(&memory_range).map_err(|e| {
+    MEMORY.lock().as_mut().unwrap().shrink(&memory_range).inspect_err(|_| {
         error!("Failed to use memory range value from DT: {memory_range:#x?}");
-        e
     })?;
 
     if let Some(mem_sharer) = get_mem_sharer() {
         let granule = mem_sharer.granule()?;
-        MEMORY.lock().as_mut().unwrap().init_dynamic_shared_pool(granule).map_err(|e| {
+        MEMORY.lock().as_mut().unwrap().init_dynamic_shared_pool(granule).inspect_err(|_| {
             error!("Failed to initialize dynamically shared pool.");
-            e
         })?;
     } else if let Ok(swiotlb_info) = SwiotlbInfo::new_from_fdt(fdt) {
         let range = swiotlb_info.fixed_range().ok_or_else(|| {
             error!("Pre-shared pool range not specified in swiotlb node");
             Error::from(FdtError::BadValue)
         })?;
-        MEMORY.lock().as_mut().unwrap().init_static_shared_pool(range).map_err(|e| {
+        MEMORY.lock().as_mut().unwrap().init_static_shared_pool(range).inspect_err(|_| {
             error!("Failed to initialize pre-shared pool.");
-            e
         })?;
     } else {
         info!("No MEM_SHARE capability detected or swiotlb found: allocating buffers from heap.");
-        MEMORY.lock().as_mut().unwrap().init_heap_shared_pool().map_err(|e| {
+        MEMORY.lock().as_mut().unwrap().init_heap_shared_pool().inspect_err(|_| {
             error!("Failed to initialize heap-based pseudo-shared pool.");
-            e
         })?;
     }
 
@@ -153,9 +149,8 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
             let res = unsafe {
                 MEMORY.lock().as_mut().unwrap().alloc_range_outside_main_memory(&dice_range)
             };
-            res.map_err(|e| {
+            res.inspect_err(|_| {
                 error!("Failed to use DICE range from DT: {dice_range:#x?}");
-                e
             })?;
             let dice_start = dice_range.start as *const u8;
             // SAFETY: There's no memory overlap and the region is mapped as read-only data.

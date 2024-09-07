@@ -2,8 +2,8 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-rust_library {
-    name: "libvmclient",
+rust_defaults {
+    name: "libvmclient.default",
     crate_name: "vmclient",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
@@ -24,4 +24,14 @@ rust_library {
         "com.android.microfuchsia",
         "com.android.virt",
     ],
+}
+
+rust_library {
+    name: "libvmclient",
+    defaults: ["libvmclient.default"],
+}
+
+rust_ffi_static {
+    name: "libvmclient.ffi",
+    defaults: ["libvmclient.default"],
 }
