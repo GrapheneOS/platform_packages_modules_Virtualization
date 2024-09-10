@@ -16,6 +16,7 @@ rust_defaults {
         "libbinder_rs",
         "libclap",
         "libenv_logger",
+        "libcfg_if",
         "libglob",
         "libhypervisor_props",
         "liblibc",

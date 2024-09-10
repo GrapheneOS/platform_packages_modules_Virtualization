@@ -10,7 +10,6 @@ rust_ffi_static {
     rustlibs: [
         "libaarch64_paging",
         "libbssl_avf_nostd",
-        "libbssl_sys_nostd",
         "libciborium_io_nostd",
         "libciborium_nostd",
         "libcstr",

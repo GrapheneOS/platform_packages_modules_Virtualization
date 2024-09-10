@@ -22,7 +22,6 @@ rust_library_rlib {
         "alloc",
     ],
     whole_static_libs: [
-        "libopen_dice_cbor",
         "libcrypto_baremetal",
     ],
     visibility: [
@@ -55,6 +54,7 @@ rust_library {
         "//packages/modules/Virtualization:__subpackages__",
         "//system/authgraph/tests:__subpackages__",
         "//system/secretkeeper/client:__subpackages__",
+        "//system/software_defined_vehicle:__subpackages__",
     ],
     apex_available: [
         "//apex_available:platform",
