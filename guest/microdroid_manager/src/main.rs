@@ -654,7 +654,7 @@ fn load_crashkernel_if_supported() -> Result<()> {
     if requested {
         let status = Command::new("/system/bin/kexec_load").status()?;
         if !status.success() {
-            return Err(anyhow!("Failed to load crashkernel: {:?}", status));
+            return Err(anyhow!("Failed to load crashkernel: {status}"));
         }
         info!("ramdump is loaded: debuggable={debuggable}, ramdump={ramdump}");
     }
