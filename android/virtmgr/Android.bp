@@ -70,6 +70,7 @@ rust_defaults {
         "liblibfdt",
         "libfsfdt",
         "libhypervisor_props",
+        "libzerocopy",
         "libuuid",
         // TODO(b/202115393) stabilize the interface
         "packagemanager_aidl-rust",

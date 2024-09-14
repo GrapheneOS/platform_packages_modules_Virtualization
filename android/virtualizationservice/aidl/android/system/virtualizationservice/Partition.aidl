@@ -20,7 +20,12 @@ parcelable Partition {
     /** A label for the partition. */
     @utf8InCpp String label;
 
-    /** The backing file descriptor of the partition image. */
+    /**
+     * The backing file descriptor of the partition image.
+     *
+     * The image file must either be a raw binary file, or an android-sparse
+     * formatted file.
+     */
     ParcelFileDescriptor image;
 
     /** Whether the partition should be writable by the VM. */

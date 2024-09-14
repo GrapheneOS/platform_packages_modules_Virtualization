@@ -107,6 +107,7 @@ apex_defaults {
             filesystems: microdroid_filesystem_images,
             prebuilts: [
                 "rialto_bin",
+                "android_bootloader_crosvm_aarch64",
             ],
         },
         x86_64: {
@@ -125,6 +126,9 @@ apex_defaults {
                 default: [],
             }),
             filesystems: microdroid_filesystem_images,
+            prebuilts: [
+                "android_bootloader_crosvm_x86_64",
+            ],
         },
     },
     binaries: [
@@ -138,7 +142,6 @@ apex_defaults {
         "microdroid.json",
         "microdroid_kernel",
         "com.android.virt.init.rc",
-        "android_bootloader_crosvm_aarch64",
     ] + select(soong_config_variable("ANDROID", "avf_microdroid_guest_gki_version"), {
         "android15_66": [
             "microdroid_gki-android15-6.6_initrd_debuggable",

@@ -4,7 +4,7 @@ pushd $(dirname $0) > /dev/null
 tempdir=$(mktemp -d)
 echo Get Debian image and dependencies...
 wget https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.raw -O ${tempdir}/debian.img
-wget https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.tyd.x86_64 -O ${tempdir}/ttyd
+wget https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -O ${tempdir}/ttyd
 
 echo Customize the image...
 virt-customize --commands-from-file <(sed "s|/tmp|$tempdir|g" commands) -a ${tempdir}/debian.img

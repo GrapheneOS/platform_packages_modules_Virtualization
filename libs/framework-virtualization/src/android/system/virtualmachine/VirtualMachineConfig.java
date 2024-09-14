@@ -78,7 +78,8 @@ public final class VirtualMachineConfig {
     private static final String TAG = "VirtualMachineConfig";
 
     private static String[] EMPTY_STRING_ARRAY = {};
-    private static final String U_BOOT_PREBUILT_PATH = "/apex/com.android.virt/etc/u-boot.bin";
+    private static final String U_BOOT_PREBUILT_PATH_ARM = "/apex/com.android.virt/etc/u-boot.bin";
+    private static final String U_BOOT_PREBUILT_PATH_X86 = "/apex/com.android.virt/etc/u-boot.rom";
 
     // These define the schema of the config file persisted on disk.
     // Please bump up the version number when adding a new key.
@@ -668,7 +669,11 @@ public final class VirtualMachineConfig {
                         .orElse(null);
 
         if (config.kernel == null && config.bootloader == null) {
-            config.bootloader = openOrNull(new File(U_BOOT_PREBUILT_PATH), MODE_READ_ONLY);
+          if (Arrays.stream(Build.SUPPORTED_ABIS).anyMatch("x86_64"::equals)) {
+            config.bootloader = openOrNull(new File(U_BOOT_PREBUILT_PATH_X86), MODE_READ_ONLY);
+          } else {
+            config.bootloader = openOrNull(new File(U_BOOT_PREBUILT_PATH_ARM), MODE_READ_ONLY);
+          }
         }
 
         config.params =

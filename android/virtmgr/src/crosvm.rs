@@ -1045,8 +1045,9 @@ fn run_vm(
     }
 
     for disk in config.disks {
+        // Disk file locking is disabled because of missing SELinux policies.
         command.arg("--block").arg(format!(
-            "path={},ro={}",
+            "path={},ro={},lock=false",
             add_preserved_fd(&mut preserved_fds, disk.image),
             !disk.writable,
         ));

@@ -78,9 +78,9 @@ class KvmHypEvent {
 /** This class provides utilities to interact with the hyp tracing subsystem */
 public final class KvmHypTracer {
 
-    private static final String HYP_TRACING_ROOT = "/sys/kernel/tracing/hyp/";
     private static final int DEFAULT_BUF_SIZE_KB = 4 * 1024;
 
+    private final String mHypTracingRoot;
     private final CommandRunner mRunner;
     private final ITestDevice mDevice;
     private final int mNrCpus;
@@ -88,17 +88,41 @@ public final class KvmHypTracer {
 
     private final ArrayList<File> mTraces;
 
-    private void setNode(String node, int val) throws Exception {
-        mRunner.run("echo " + val + " > " + HYP_TRACING_ROOT + node);
+    private static String getHypTracingRoot(ITestDevice device) throws Exception {
+        String legacy = "/sys/kernel/tracing/hyp/";
+        String path = "/sys/kernel/tracing/hypervisor/";
+
+        if (device.doesFileExist(path)) {
+            return path;
+        }
+
+        if (device.doesFileExist(legacy)) {
+            return legacy;
+        }
+
+        throw new Exception("Hypervisor tracing not found");
     }
 
-    private static String eventDir(String event) {
-        return "events/hyp/" + event + "/";
+    private static String getHypEventsDir(String root) {
+        if (root.endsWith("/hypervisor/"))
+            return "events/hypervisor/";
+
+        return "events/hyp/";
     }
 
     public static boolean isSupported(ITestDevice device, String[] events) throws Exception {
-        for (String event : events) {
-            if (!device.doesFileExist(HYP_TRACING_ROOT + eventDir(event) + "/enable")) return false;
+        String dir;
+
+        try {
+            dir = getHypTracingRoot(device);
+            dir += getHypEventsDir(dir);
+        } catch (Exception e) {
+            return false;
+        }
+
+        for (String event: events) {
+            if (!device.doesFileExist(dir + event + "/enable"))
+                return false;
         }
         return true;
     }
@@ -108,6 +132,7 @@ public final class KvmHypTracer {
                 .that(isSupported(device, events))
                 .isTrue();
 
+        mHypTracingRoot = getHypTracingRoot(device);
         mDevice = device;
         mRunner = new CommandRunner(mDevice);
         mTraces = new ArrayList<File>();
@@ -115,17 +140,25 @@ public final class KvmHypTracer {
         mHypEvents = events;
     }
 
+    private void setNode(String node, int val) throws Exception {
+        mRunner.run("echo " + val + " > " + mHypTracingRoot + node);
+    }
+
     public String run(String payload_cmd) throws Exception {
         mTraces.clear();
 
         setNode("tracing_on", 0);
-        mRunner.run("echo 0 | tee " + HYP_TRACING_ROOT + "events/*/*/enable");
+        mRunner.run("echo 0 | tee " + mHypTracingRoot + "events/*/*/enable");
         setNode("buffer_size_kb", DEFAULT_BUF_SIZE_KB);
-        for (String event : mHypEvents) setNode(eventDir(event) + "/enable", 1);
+
+        for (String event: mHypEvents) {
+            setNode(getHypEventsDir(mHypTracingRoot) + event + "/enable", 1);
+        }
+
         setNode("trace", 0);
 
         /* Cat each per-cpu trace_pipe in its own tmp file in the background */
-        String cmd = "cd " + HYP_TRACING_ROOT + ";";
+        String cmd = "cd " + mHypTracingRoot + ";";
         String trace_pipes[] = new String[mNrCpus];
         for (int i = 0; i < mNrCpus; i++) {
             trace_pipes[i] = mRunner.run("mktemp -t trace_pipe.cpu" + i + ".XXXXXXXXXX");
