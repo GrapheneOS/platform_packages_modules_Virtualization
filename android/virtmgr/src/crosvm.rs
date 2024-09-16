@@ -57,7 +57,6 @@ use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
 
 /// external/crosvm
-use base::UnixSeqpacketListener;
 use vm_control::{BalloonControlCommand, VmRequest, VmResponse};
 
 const CROSVM_PATH: &str = "/apex/com.android.virt/bin/crosvm";
@@ -1057,8 +1056,8 @@ fn run_vm(
         command.arg(add_preserved_fd(&mut preserved_fds, kernel));
     }
 
-    let control_sock = UnixSeqpacketListener::bind(crosvm_control_socket_path)
-        .context("failed to create control server")?;
+    let control_sock = create_crosvm_control_listener(crosvm_control_socket_path)
+        .context("failed to create control listener")?;
     command.arg("--socket").arg(add_preserved_fd(&mut preserved_fds, control_sock));
 
     if let Some(dt_overlay) = config.device_tree_overlay {
@@ -1271,4 +1270,23 @@ fn format_serial_out_arg(preserved_fds: &mut Vec<OwnedFd>, file: Option<File>) -
 fn create_pipe() -> Result<(File, File), Error> {
     let (read_fd, write_fd) = pipe2(OFlag::O_CLOEXEC)?;
     Ok((read_fd.into(), write_fd.into()))
+}
+
+/// Creates and binds a unix seqpacket listening socket to be passed as crosvm's `--socket`
+/// argument. See `UnixSeqpacketListener::bind` in crosvm's code for reference.
+fn create_crosvm_control_listener(crosvm_control_socket_path: &Path) -> Result<OwnedFd> {
+    use nix::sys::socket;
+    let fd = socket::socket(
+        socket::AddressFamily::Unix,
+        socket::SockType::SeqPacket,
+        socket::SockFlag::empty(),
+        None,
+    )
+    .context("socket failed")?;
+    socket::bind(fd.as_raw_fd(), &socket::UnixAddr::new(crosvm_control_socket_path)?)
+        .context("bind failed")?;
+    // The exact backlog size isn't imporant. crosvm uses 128 internally. We use 127 here
+    // because of a `nix` bug.
+    socket::listen(&fd, socket::Backlog::new(127).unwrap()).context("listen failed")?;
+    Ok(fd)
 }

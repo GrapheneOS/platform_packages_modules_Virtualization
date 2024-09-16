@@ -34,7 +34,6 @@ rust_defaults {
         "libapkverify",
         "libavf_features",
         "libavflog",
-        "libbase_rust",
         "libbinder_rs",
         "libcfg_if",
         "libclap",
