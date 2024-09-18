@@ -25,15 +25,15 @@ mod selinux;
 
 use crate::aidl::{GLOBAL_SERVICE, VirtualizationService};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
 use log::{info, LevelFilter};
 use rpcbinder::{FileDescriptorTransportMode, RpcServer};
-use std::os::unix::io::{AsFd, FromRawFd, OwnedFd, RawFd};
+use std::os::unix::io::{AsFd, RawFd};
 use std::sync::LazyLock;
 use clap::Parser;
-use nix::fcntl::{fcntl, F_GETFD, F_SETFD, FdFlag};
 use nix::unistd::{write, Pid, Uid};
+use rustutils::inherited_fd::take_fd_ownership;
 use std::os::unix::raw::{pid_t, uid_t};
 
 const LOG_TAG: &str = "virtmgr";
@@ -71,32 +71,6 @@ struct Args {
     ready_fd: RawFd,
 }
 
-fn take_fd_ownership(raw_fd: RawFd, owned_fds: &mut Vec<RawFd>) -> Result<OwnedFd, anyhow::Error> {
-    // Basic check that the integer value does correspond to a file descriptor.
-    fcntl(raw_fd, F_GETFD).with_context(|| format!("Invalid file descriptor {raw_fd}"))?;
-
-    // The file descriptor had CLOEXEC disabled to be inherited from the parent.
-    // Re-enable it to make sure it is not accidentally inherited further.
-    fcntl(raw_fd, F_SETFD(FdFlag::FD_CLOEXEC))
-        .with_context(|| format!("Could not set CLOEXEC on file descriptor {raw_fd}"))?;
-
-    // Creating OwnedFd for stdio FDs is not safe.
-    if [libc::STDIN_FILENO, libc::STDOUT_FILENO, libc::STDERR_FILENO].contains(&raw_fd) {
-        bail!("File descriptor {raw_fd} is standard I/O descriptor");
-    }
-
-    // Reject RawFds that already have a corresponding OwnedFd.
-    if owned_fds.contains(&raw_fd) {
-        bail!("File descriptor {raw_fd} already owned");
-    }
-    owned_fds.push(raw_fd);
-
-    // SAFETY: Initializing OwnedFd for a RawFd provided in cmdline arguments.
-    // We checked that the integer value corresponds to a valid FD and that this
-    // is the first argument to claim its ownership.
-    Ok(unsafe { OwnedFd::from_raw_fd(raw_fd) })
-}
-
 fn check_vm_support() -> Result<()> {
     if hypervisor_props::is_any_vm_supported()? {
         Ok(())
@@ -109,6 +83,11 @@ fn check_vm_support() -> Result<()> {
 }
 
 fn main() {
+    // SAFETY: This is very early in the process. Nobody has taken ownership of the inherited FDs
+    // yet.
+    unsafe { rustutils::inherited_fd::init_once() }
+        .expect("Failed to take ownership of inherited FDs");
+
     android_logger::init_once(
         android_logger::Config::default()
             .with_tag(LOG_TAG)
@@ -120,11 +99,9 @@ fn main() {
 
     let args = Args::parse();
 
-    let mut owned_fds = vec![];
-    let rpc_server_fd = take_fd_ownership(args.rpc_server_fd, &mut owned_fds)
-        .expect("Failed to take ownership of rpc_server_fd");
-    let ready_fd = take_fd_ownership(args.ready_fd, &mut owned_fds)
-        .expect("Failed to take ownership of ready_fd");
+    let rpc_server_fd =
+        take_fd_ownership(args.rpc_server_fd).expect("Failed to take ownership of rpc_server_fd");
+    let ready_fd = take_fd_ownership(args.ready_fd).expect("Failed to take ownership of ready_fd");
 
     // Start thread pool for kernel Binder connection to VirtualizationServiceInternal.
     ProcessState::start_thread_pool();
