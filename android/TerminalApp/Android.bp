@@ -9,8 +9,10 @@ android_app {
     static_libs: [
         "vm_launcher_lib",
     ],
-    sdk_version: "system_current",
+    platform_apis: true,
+    privileged: true,
     optimize: {
+        proguard_flags_files: ["proguard.flags"],
         shrink_resources: true,
     },
     apex_available: [

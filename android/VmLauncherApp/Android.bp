@@ -11,7 +11,7 @@ android_app {
         "android.system.virtualizationservice_internal-java",
         // TODO(b/331708504): will be removed when AVF framework handles surface
         "libcrosvm_android_display_service-java",
-        "gson",
+        "vm_launcher_lib",
     ],
     libs: [
         "framework-virtualization.impl",

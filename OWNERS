@@ -28,3 +28,10 @@ smostafa@google.com
 tabba@google.com
 vdonnefort@google.com
 victorhsieh@google.com
+
+# Ferrochrome
+per-file android/FerrochromeApp/**=jiyong@google.com,jeongik@google.com
+per-file android/LinuxInstaller/**=jiyong@google.com,jeongik@google.com
+per-file android/TerminalApp/**=jiyong@google.com,jeongik@google.com
+per-file android/VmLauncherApp/**=jiyong@google.com,jeongik@google.com
+per-file libs/vm_launcher_lib/**=jiyong@google.com,jeongik@google.com

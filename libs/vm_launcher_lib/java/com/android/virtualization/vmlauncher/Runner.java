@@ -30,7 +30,7 @@ import java.util.concurrent.ForkJoinPool;
 
 /** Utility class for creating a VM and waiting for it to finish. */
 class Runner {
-    private static final String TAG = MainActivity.TAG;
+    private static final String TAG = Runner.class.getSimpleName();
     private final VirtualMachine mVirtualMachine;
     private final Callback mCallback;
 

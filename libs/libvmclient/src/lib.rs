@@ -55,6 +55,7 @@ use std::{
     time::Duration,
 };
 
+const EARLY_VIRTMGR_PATH: &str = "/apex/com.android.virt/bin/early_virtmgr";
 const VIRTMGR_PATH: &str = "/apex/com.android.virt/bin/virtmgr";
 const VIRTMGR_THREADS: usize = 2;
 
@@ -122,10 +123,20 @@ impl VirtualizationService {
     /// Spawns a new instance of virtmgr, a child process that will host
     /// the VirtualizationService AIDL service.
     pub fn new() -> Result<VirtualizationService, io::Error> {
+        Self::new_with_path(VIRTMGR_PATH)
+    }
+
+    /// Spawns a new instance of early_virtmgr, a child process that will host
+    /// the VirtualizationService AIDL service for early VMs.
+    pub fn new_early() -> Result<VirtualizationService, io::Error> {
+        Self::new_with_path(EARLY_VIRTMGR_PATH)
+    }
+
+    fn new_with_path(virtmgr_path: &str) -> Result<VirtualizationService, io::Error> {
         let (wait_fd, ready_fd) = posix_pipe()?;
         let (client_fd, server_fd) = posix_socketpair()?;
 
-        let mut command = Command::new(VIRTMGR_PATH);
+        let mut command = Command::new(virtmgr_path);
         // Can't use BorrowedFd as it doesn't implement Display
         command.arg("--rpc-server-fd").arg(format!("{}", server_fd.as_raw_fd()));
         command.arg("--ready-fd").arg(format!("{}", ready_fd.as_raw_fd()));
