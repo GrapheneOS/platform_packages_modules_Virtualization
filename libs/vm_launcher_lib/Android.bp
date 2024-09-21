@@ -9,5 +9,12 @@ java_library {
         "//apex_available:platform",
         "com.android.virt",
     ],
-    sdk_version: "system_current",
+    platform_apis: true,
+    static_libs: [
+        "gson",
+    ],
+    libs: [
+        "framework-virtualization.impl",
+        "framework-annotations-lib",
+    ],
 }

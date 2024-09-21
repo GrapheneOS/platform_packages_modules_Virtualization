@@ -29,6 +29,7 @@ aidl_interface {
         rust: {
             enabled: true,
             apex_available: [
+                "//apex_available:platform",
                 "com.android.virt",
                 "com.android.compos",
                 "com.android.microfuchsia",
@@ -149,6 +150,7 @@ aidl_interface {
         rust: {
             enabled: true,
             apex_available: [
+                "//apex_available:platform",
                 "com.android.virt",
                 "com.android.compos",
                 "com.android.microfuchsia",

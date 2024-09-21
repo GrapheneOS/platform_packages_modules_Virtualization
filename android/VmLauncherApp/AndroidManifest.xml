@@ -6,8 +6,6 @@
     <uses-permission android:name="android.permission.USE_CUSTOM_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-feature android:name="android.software.virtualization_framework" android:required="true" />
 
     <permission android:name="com.android.virtualization.vmlauncher.permission.USE_VM_LAUNCHER"
@@ -28,20 +26,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <service
-            android:name=".VmLauncherService"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="com.android.virtualization.vmlauncher.permission.USE_VM_LAUNCHER"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Run VM instances" />
-            <intent-filter>
-                <action android:name="android.virtualization.START_VM_LAUNCHER_SERVICE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </service>
 
     </application>
 

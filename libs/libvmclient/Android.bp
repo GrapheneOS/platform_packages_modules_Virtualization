@@ -23,6 +23,7 @@ rust_defaults {
         "com.android.compos",
         "com.android.microfuchsia",
         "com.android.virt",
+        "//apex_available:platform",
     ],
 }
 

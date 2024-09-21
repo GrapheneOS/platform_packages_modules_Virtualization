@@ -1,0 +1,7 @@
+# Keep the no-args constructor of the deserialized class
+-keepclassmembers class com.android.virtualization.vmlauncher.ConfigJson {
+  <init>();
+}
+-keepclassmembers class com.android.virtualization.vmlauncher.ConfigJson$* {
+  <init>();
+}
