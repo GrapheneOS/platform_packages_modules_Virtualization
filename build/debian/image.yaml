@@ -1,0 +1,60 @@
+# After modifications, please call:
+# "python3 -m debian_cloud_images.cli.generate_ci .gitlab/ci/generated.yml"
+---
+apiVersion: cloud.debian.org/v1alpha1
+kind: ImageConfig
+
+archs:
+- name: amd64
+  azureName: X64
+  ociArch: amd64
+  faiClasses: [AMD64]
+- name: arm64
+  azureName: Arm64
+  ociArch: arm64
+  faiClasses: [ARM64]
+- name: ppc64el
+  faiClasses: [PPC64EL]
+  ociArch: ppc64le
+- name: riscv64
+  faiClasses: [RISCV64]
+  ociArch: riscv64
+
+releases:
+- name: bookworm
+  basename: bookworm
+  id: '12'
+  baseid: '12'
+  faiClasses: [BOOKWORM, LINUX_VERSION_BASE, EXTRAS]
+  matches:
+  - matchArches: [amd64, arm64, ppc64el]
+- name: bookworm-backports
+  basename: bookworm-backports
+  id: 12-backports
+  baseid: '12'
+  faiClasses: [BOOKWORM, LINUX_VERSION_BACKPORTS, EXTRAS]
+  matches:
+  - matchArches: [amd64, arm64, ppc64el]
+- name: trixie
+  basename: trixie
+  id: '13'
+  baseid: '13'
+  faiClasses: [TRIXIE, LINUX_VERSION_BASE, EXTRAS]
+  matches:
+  - matchArches: [amd64, arm64, ppc64el]
+
+vendors:
+- name: nocloud
+  faiClasses: [SYSTEM_BOOT, NOCLOUD, LINUX_VARIANT_BASE, TIME_SYSTEMD, AVF]
+  size: 2
+
+types:
+- name: dev
+  faiClasses: [TYPE_DEV]
+  outputName: 'debian-{release}-{vendor}-{arch}-{build_type}-{build_id}-{version}'
+  outputVersion: '{version}'
+  outputVersionAzure: '0.0.{version!s}'
+- name: official
+  outputName: 'debian-{release}-{vendor}-{arch}-{build_type}-{version}'
+  outputVersion: '{date}-{version}'
+  outputVersionAzure: '0.{date!s}.{version!s}'
