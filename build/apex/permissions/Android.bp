@@ -21,4 +21,5 @@ prebuilt_etc {
     name: "features_com.android.virt.xml",
     sub_dir: "permissions",
     src: "features_com.android.virt.xml",
+    soc_specific: true,
 }
