@@ -70,6 +70,12 @@ copy_android_config() {
 
 	cp -R ${src}/* ${dst}
 	cp $(dirname $0)/image.yaml ${resources_dir}
+
+	local ttyd_version=1.7.7
+	local url=https://github.com/tsl0922/ttyd/releases/download/${ttyd_version}/ttyd.aarch64
+	mkdir -p ${dst}/files/usr/local/bin/ttyd
+	wget ${url} -O ${dst}/files/usr/local/bin/ttyd/AVF
+	chmod 777 ${dst}/files/usr/local/bin/ttyd/AVF
 }
 
 run_fai() {
