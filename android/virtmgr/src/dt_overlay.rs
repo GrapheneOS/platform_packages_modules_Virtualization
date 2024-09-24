@@ -17,7 +17,7 @@
 use anyhow::{anyhow, Result};
 use cstr::cstr;
 use fsfdt::FsFdt;
-use libfdt::Fdt;
+use libfdt::{Fdt, FdtError};
 use std::ffi::CStr;
 use std::path::Path;
 
@@ -90,7 +90,26 @@ pub(crate) fn create_device_tree_overlay<'a>(
         fdt.overlay_onto(cstr!("/fragment@0/__overlay__"), path)?;
     }
 
-    if !trusted_props.is_empty() {
+    if cfg!(tpu_assignable_device) {
+        let mut avf = fdt
+            .node_mut(cstr!("/fragment@0/__overlay__/avf"))
+            .map_err(|e| anyhow!("Failed to search avf node: {e:?}"))?
+            .ok_or(anyhow!("Failed to get avf node"))?;
+        let vendor_digest = cstr!("vendor_hashtree_descriptor_root_digest");
+        // Remove the vendor digest.
+        // In the case it is actually requested, it will be re-added by virtue of being in
+        // `trusted_props`.
+        match avf.delprop(vendor_digest) {
+            Ok(()) | Err(FdtError::NotFound) => {}
+            Err(e) => {
+                return Err(anyhow!("Unexpected error pre-removing {vendor_digest:?}: {e:?}"))
+            }
+        }
+        for (name, value) in trusted_props {
+            avf.setprop(name, value)
+                .map_err(|e| anyhow!("Failed to set trusted property: {e:?}"))?;
+        }
+    } else if !trusted_props.is_empty() {
         let mut avf = fdt
             .node_mut(cstr!("/fragment@0/__overlay__/avf"))
             .map_err(|e| anyhow!("Failed to search avf node: {e:?}"))?

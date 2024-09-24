@@ -1105,7 +1105,9 @@ fn load_app_config(
 
         if let Some(file) = custom_config.vendorImage.as_ref() {
             add_microdroid_vendor_image(clone_file(file)?, &mut vm_config);
-            append_kernel_param("androidboot.microdroid.mount_vendor=1", &mut vm_config)
+            if !cfg!(tpu_assignable_device) {
+                append_kernel_param("androidboot.microdroid.mount_vendor=1", &mut vm_config);
+            }
         }
 
         vm_config.devices.clone_from(&custom_config.devices);

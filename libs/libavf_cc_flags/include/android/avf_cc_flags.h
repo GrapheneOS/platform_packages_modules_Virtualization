@@ -35,5 +35,13 @@ inline bool IsVendorModulesFlagEnabled() {
 #endif
 }
 
+inline bool IsEnableTpuAssignableDeviceFlagEnabled() {
+#ifdef AVF_ENABLE_TPU_ASSIGNABLE_DEVICE
+    return AVF_ENABLE_TPU_ASSIGNABLE_DEVICE;
+#else
+    return false;
+#endif
+}
+
 } // namespace virtualization
 } // namespace android
