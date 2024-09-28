@@ -34,6 +34,7 @@ parse_options() {
 }
 
 install_prerequisites() {
+	apt update
 	DEBIAN_FRONTEND=noninteractive \
 	apt install --no-install-recommends --assume-yes \
 		ca-certificates \
@@ -52,6 +53,15 @@ install_prerequisites() {
 		udev \
 		qemu-system-arm \
 		qemu-user-static
+
+        sed -i s/losetup\ -f/losetup\ -P\ -f/g /usr/sbin/fai-diskimage
+        sed -i 's/wget \$/wget -t 0 \$/g' /usr/share/debootstrap/functions
+
+        apt install --no-install-recommends --assume-yes curl
+        # just for testing
+        echo libseccomp: $(curl -is https://deb.debian.org/debian/pool/main/libs/libseccomp/libseccomp2_2.5.4-1+deb12u1_arm64.deb | head -n 1)
+        echo libsemanage-common: $(curl -is https://deb.debian.org/debian/pool/main/libs/libsemanage/libsemanage-common_3.4-1_all.deb | head -n 1)
+        echo libpcre2: $(curl -is https://deb.debian.org/debian/pool/main/p/pcre2/libpcre2-8-0_10.42-1_arm64.deb | head -n 1)
 }
 
 download_debian_cloud_image() {
@@ -70,6 +80,12 @@ copy_android_config() {
 
 	cp -R ${src}/* ${dst}
 	cp $(dirname $0)/image.yaml ${resources_dir}
+
+	local ttyd_version=1.7.7
+	local url=https://github.com/tsl0922/ttyd/releases/download/${ttyd_version}/ttyd.aarch64
+	mkdir -p ${dst}/files/usr/local/bin/ttyd
+	wget ${url} -O ${dst}/files/usr/local/bin/ttyd/AVF
+	chmod 777 ${dst}/files/usr/local/bin/ttyd/AVF
 }
 
 run_fai() {
@@ -97,3 +113,4 @@ install_prerequisites
 download_debian_cloud_image
 copy_android_config
 run_fai
+fdisk -l image.raw

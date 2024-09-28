@@ -1,0 +1,53 @@
+#!/bin/sh
+set -eu
+touch $LOGDIR/skip.partition
+
+set -- $disklist
+device=/dev/$1
+
+wait_for_device() {
+  for s in $(seq 10); do
+    if [ -e "$1" ]; then
+      break
+    fi
+    sleep 1
+  done
+}
+
+sfdisk "$device" << EOF
+label: gpt
+unit: sectors
+
+# EFI system
+p15 : start=2048, size=260096, type="EFI System", uuid=${PARTUUID_ESP}
+# Linux
+p1 : start=262144, type="Linux root (ARM-64)", uuid=${PARTUUID_ROOT}
+EOF
+
+file=$(losetup -O BACK-FILE ${device} | tail -1)
+
+root_offset=$(parted -m ${device} unit B print | awk -F '[B:]' '/1:/{ print $2 }')
+root_size=$(  parted -m ${device} unit B print | awk -F '[B:]' '/1:/{ print $6 }')
+efi_offset=$( parted -m ${device} unit B print | awk -F '[B:]' '/15:/{ print $2 }')
+efi_size=$(   parted -m ${device} unit B print | awk -F '[B:]' '/15:/{ print $6 }')
+device_root=$(losetup -o ${root_offset} --sizelimit ${root_size} --show -f ${file})
+device_efi=$(losetup -o ${efi_offset} --sizelimit ${efi_size} --show -f ${file})
+rm -f ${device}p1
+rm -f ${device}p15
+ln -sf ${device_root} ${device}p1
+ln -sf ${device_efi} ${device}p15
+
+ls -al /dev/loop*
+losetup -a -l
+parted ${device} unit B print
+
+partprobe "$device"
+
+wait_for_device "$device_root"
+mkfs.ext4 -U "$FSUUID_ROOT" "$device_root"
+tune2fs -c 0 -i 0 "$device_root"
+
+wait_for_device "$device_efi"
+mkfs.vfat "$device_efi"
+
+parted ${device} unit B print

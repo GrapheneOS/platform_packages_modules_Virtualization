@@ -6,11 +6,13 @@ describing the protected VM's environment.
 
 ![][pvm-dice-chain-img]
 
-The full RKP VM DICE chain, starting from `UDS_Pub` rooted in ROM, is
-sent to the RKP server during [pVM remote attestation][vm-attestation].
+The full [RKP VM DICE chain][rkpvm-dice-chain], starting from `UDS_Pub`
+rooted in ROM, is sent to the RKP server during
+[pVM remote attestation][vm-attestation].
 
 [vm-attestation]: vm_remote_attestation.md
 [pvm-dice-chain-img]: img/pvm-dice.png
+[rkpvm-dice-chain]: vm_remote_attestation.md#rkp-vm-marker
 
 ## Key derivation
 

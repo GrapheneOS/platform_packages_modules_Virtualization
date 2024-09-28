@@ -38,6 +38,7 @@ import android.cts.statsdatom.lib.ConfigUtils;
 import android.cts.statsdatom.lib.ReportUtils;
 
 import com.android.compatibility.common.util.CddTest;
+import com.android.compatibility.common.util.VsrTest;
 import com.android.microdroid.test.common.ProcessUtil;
 import com.android.microdroid.test.host.CommandRunner;
 import com.android.microdroid.test.host.MicrodroidHostTestCaseBase;
@@ -416,6 +417,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
     @Test
     @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void UpgradedPackageIsAcceptedWithSecretkeeper() throws Exception {
         assumeUpdatableVmSupported();
         getDevice().uninstallPackage(PACKAGE_NAME);
@@ -431,6 +433,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
     @Test
     @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void DowngradedPackageIsRejectedProtectedVm() throws Exception {
         assumeProtectedVm(); // Rollback protection is provided only for protected VM.
 
@@ -506,7 +509,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest(requirements = {"9.17/C-2-1", "9.17/C-2-2", "9.17/C-2-6"})
+    @CddTest(requirements = {"9.17/C-2-1", "9.17/C-2-2", "9.17/C-2-5", "9.17/C-2-6"})
     public void protectedVmWithImageSignedWithDifferentKeyFailsToVerifyPayload() throws Exception {
         // Arrange
         assumeProtectedVm();
@@ -551,7 +554,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest(requirements = {"9.17/C-2-2", "9.17/C-2-6"})
+    @CddTest(requirements = {"9.17/C-2-2", "9.17/C-2-5", "9.17/C-2-6"})
     public void testBootFailsWhenVbMetaDigestDoesNotMatchBootconfig() throws Exception {
         // protectedVmWithImageSignedWithDifferentKeyRunsPvmfw() is the protected case.
         assumeNonProtectedVm();
@@ -921,7 +924,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-1-2", "9.17/C/1-3"})
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-1-2", "9.17/C-1-3"})
     public void testMicrodroidBoots() throws Exception {
         final String configPath = "assets/vm_config.json"; // path inside the APK
         testMicrodroidBootsWithBuilder(

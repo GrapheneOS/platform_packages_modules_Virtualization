@@ -1212,7 +1212,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7", "9.17/C-3-4"})
     public void instancesOfSameVmHaveDifferentCdis() throws Exception {
         assumeSupportedDevice();
         // TODO(b/325094712): VMs on CF with same payload have the same secret. This is because
@@ -1239,7 +1239,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7", "9.17/C-3-4"})
     public void sameInstanceKeepsSameCdis() throws Exception {
         assumeSupportedDevice();
         assume().withMessage("Skip on CF. Too Slow. b/257270529").that(isCuttlefish()).isFalse();

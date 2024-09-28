@@ -24,6 +24,7 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/updatable_apex.mk)
 
 PRODUCT_PACKAGES += \
     com.android.compos \
+    features_com.android.virt.xml
 
 # TODO(b/207336449): Figure out how to get these off /system
 PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST := \

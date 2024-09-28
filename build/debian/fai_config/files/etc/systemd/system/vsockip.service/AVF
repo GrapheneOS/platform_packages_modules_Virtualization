@@ -1,9 +1,9 @@
 [Unit]
-Description=TTYD
+Description=vsock ip service
 After=syslog.target
 After=network.target
 [Service]
-ExecStart=/usr/local/bin/ttyd -W screen -aAxR -S main login
+ExecStart=/usr/bin/python3 /usr/local/bin/vsock.py
 Type=simple
 Restart=always
 User=root
