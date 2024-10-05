@@ -38,6 +38,7 @@ const TEST_IMG_WITH_NON_INITRD_HASHDESC_PATH: &str = "test_image_with_non_initrd
 const TEST_IMG_WITH_INITRD_AND_NON_INITRD_DESC_PATH: &str =
     "test_image_with_initrd_and_non_initrd_desc.img";
 const TEST_IMG_WITH_MULTIPLE_CAPABILITIES: &str = "test_image_with_multiple_capabilities.img";
+const TEST_IMG_WITH_ALL_CAPABILITIES: &str = "test_image_with_all_capabilities.img";
 const UNSIGNED_TEST_IMG_PATH: &str = "unsigned_test.img";
 
 const RANDOM_FOOTER_POS: usize = 30;
@@ -416,5 +417,24 @@ fn payload_with_multiple_capabilities() -> Result<()> {
 
     assert!(verified_boot_data.has_capability(Capability::RemoteAttest));
     assert!(verified_boot_data.has_capability(Capability::SecretkeeperProtection));
+    Ok(())
+}
+
+#[test]
+fn payload_with_all_capabilities() -> Result<()> {
+    let public_key = load_trusted_public_key()?;
+    let verified_boot_data = verify_payload(
+        &fs::read(TEST_IMG_WITH_ALL_CAPABILITIES)?,
+        /* initrd= */ None,
+        &public_key,
+    )
+    .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
+
+    assert!(verified_boot_data.has_capability(Capability::RemoteAttest));
+    assert!(verified_boot_data.has_capability(Capability::SecretkeeperProtection));
+    assert!(verified_boot_data.has_capability(Capability::SupportsUefiBoot));
+    // Fail if this test doesn't actually cover all supported capabilities.
+    assert_eq!(Capability::COUNT, 3);
+
     Ok(())
 }

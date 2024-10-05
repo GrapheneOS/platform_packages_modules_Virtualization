@@ -70,6 +70,11 @@ pub enum Capability {
     RemoteAttest,
     /// Secretkeeper protected secrets.
     SecretkeeperProtection,
+    /// UEFI support for booting guest kernel.
+    SupportsUefiBoot,
+    /// (internal)
+    #[allow(non_camel_case_types)] // TODO: Use mem::variant_count once stable.
+    _VARIANT_COUNT,
 }
 
 impl Capability {
@@ -77,6 +82,9 @@ impl Capability {
     const REMOTE_ATTEST: &'static [u8] = b"remote_attest";
     const SECRETKEEPER_PROTECTION: &'static [u8] = b"secretkeeper_protection";
     const SEPARATOR: u8 = b'|';
+    const SUPPORTS_UEFI_BOOT: &'static [u8] = b"supports_uefi_boot";
+    /// Number of supported capabilites.
+    pub const COUNT: usize = Self::_VARIANT_COUNT as usize;
 
     /// Returns the capabilities indicated in `descriptor`, or error if the descriptor has
     /// unexpected contents.
@@ -91,6 +99,7 @@ impl Capability {
             let cap = match v {
                 Self::REMOTE_ATTEST => Self::RemoteAttest,
                 Self::SECRETKEEPER_PROTECTION => Self::SecretkeeperProtection,
+                Self::SUPPORTS_UEFI_BOOT => Self::SupportsUefiBoot,
                 _ => return Err(PvmfwVerifyError::UnknownVbmetaProperty),
             };
             if res.contains(&cap) {

@@ -1,6 +1,0 @@
-#!/bin/sh
-set -euE
-
-touch "${LOGDIR}/skip.extrbase"
-
-debootstrap --verbose --variant minbase --arch "$DEBOOTSTRAP_ARCH" "$SUITE" "$FAI_ROOT" "$DEBOOTSTRAP_MIRROR"

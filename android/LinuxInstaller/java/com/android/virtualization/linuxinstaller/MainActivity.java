@@ -136,10 +136,10 @@ public class MainActivity extends Activity {
             throw new RuntimeException("Internal error: destDir shouldn't be null");
         }
 
-        SystemProperties.set("debug.custom_vm_setup.path", destDir);
-        SystemProperties.set("debug.custom_vm_setup.done", "false");
-        SystemProperties.set("debug.custom_vm_setup.start", "true");
-        while (!SystemProperties.getBoolean("debug.custom_vm_setup.done", false)) {
+        SystemProperties.set("debug.linux_vm_setup.path", destDir);
+        SystemProperties.set("debug.linux_vm_setup.done", "false");
+        SystemProperties.set("debug.linux_vm_setup.start", "true");
+        while (!SystemProperties.getBoolean("debug.linux_vm_setup.done", false)) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {

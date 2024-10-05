@@ -37,4 +37,7 @@ java_library {
     libs: ["services"],
     sdk_version: "",
     installable: true,
+
+    // The dexpreopt artifacts of service-compos will be installed in /system_ext
+    system_ext_specific: true,
 }

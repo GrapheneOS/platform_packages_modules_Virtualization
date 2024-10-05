@@ -1,0 +1,9 @@
+[package]
+name = "forwarder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2.159"
+remain = "0.2.14"
+vsock = "0.5.1"

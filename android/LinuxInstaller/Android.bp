@@ -2,13 +2,22 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+java_defaults {
+    name: "LinuxVmPayloadInstaller",
+    init_rc: [":linux_vm_setup.rc"],
+    required: ["linux_vm_setup"],
+    system_ext_specific: true,
+    platform_apis: true,
+    privileged: true,
+}
+
 android_app {
     name: "LinuxInstallerApp",
     srcs: ["java/**/*.java"],
     resource_dirs: ["res"],
     asset_dirs: ["assets"],
     manifest: "AndroidManifest.xml",
-    defaults: ["VmPayloadInstaller"],
+    defaults: ["LinuxVmPayloadInstaller"],
     overrides: ["LinuxInstallerAppStub"],
     required: [
         "privapp-permissions-linuxinstaller.xml",
@@ -21,7 +30,7 @@ android_app {
     srcs: ["java/**/*.java"],
     resource_dirs: ["res"],
     manifest: "AndroidManifest_stub.xml",
-    defaults: ["VmPayloadInstaller"],
+    defaults: ["LinuxVmPayloadInstaller"],
     required: [
         "privapp-permissions-linuxinstaller.xml",
     ],
@@ -38,4 +47,16 @@ prebuilt_etc {
 android_app_certificate {
     name: "com.android.virtualization.linuxinstaller_certificate",
     certificate: "com_android_virtualization_linuxinstaller",
+}
+
+filegroup {
+    name: "linux_vm_setup.rc",
+    srcs: ["linux_vm_setup.rc"],
+}
+
+sh_binary {
+    name: "linux_vm_setup",
+    src: "linux_vm_setup.sh",
+    system_ext_specific: true,
+    host_supported: false,
 }

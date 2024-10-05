@@ -43,6 +43,7 @@ rust_test {
         ":test_image_with_duplicated_capability",
         ":test_image_with_rollback_index_5",
         ":test_image_with_multiple_capabilities",
+        ":test_image_with_all_capabilities",
         ":unsigned_test_image",
     ],
     prefer_rlib: true,
@@ -215,6 +216,20 @@ avb_add_hash_footer {
         {
             name: "com.android.virt.cap",
             value: "remote_attest|secretkeeper_protection",
+        },
+    ],
+}
+
+avb_add_hash_footer {
+    name: "test_image_with_all_capabilities",
+    src: ":unsigned_test_image",
+    partition_name: "boot",
+    private_key: ":pvmfw_sign_key",
+    salt: "4231",
+    props: [
+        {
+            name: "com.android.virt.cap",
+            value: "remote_attest|secretkeeper_protection|supports_uefi_boot",
         },
     ],
 }

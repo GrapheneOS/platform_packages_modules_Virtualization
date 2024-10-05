@@ -1,0 +1,15 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_library {
+    name: "libforwarder",
+    crate_name: "forwarder",
+    edition: "2021",
+    srcs: ["src/lib.rs"],
+    rustlibs: [
+        "liblibc",
+        "libvsock",
+    ],
+    proc_macros: ["libremain"],
+}

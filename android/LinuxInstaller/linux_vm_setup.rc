@@ -1,4 +1,4 @@
-# Copyright (C) 2024 The Android Open Source Project
+# Copyright 2024 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-service custom_vm_setup /system_ext/bin/custom_vm_setup
+service linux_vm_setup /system_ext/bin/linux_vm_setup
     user shell
     group shell media_rw
     disabled
     oneshot
     seclabel u:r:shell:s0
 
-on property:debug.custom_vm_setup.start=true
-    start custom_vm_setup
+on property:debug.linux_vm_setup.start=true
+    start linux_vm_setup

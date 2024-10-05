@@ -17,7 +17,6 @@ java_test_host {
     static_libs: [
         "MicrodroidHostTestHelper",
         "compatibility-host-util",
-        "cts-host-utils",
         "cts-statsd-atom-host-test-utils",
         "microdroid_payload_metadata",
     ],

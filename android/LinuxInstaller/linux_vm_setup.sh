@@ -7,7 +7,7 @@ function round_up() {
 }
 
 function install() {
-  src_dir=$(getprop debug.custom_vm_setup.path)
+  src_dir=$(getprop debug.linux_vm_setup.path)
   src_dir=${src_dir/#\/storage\/emulated\//\/data\/media\/}
   dst_dir=/data/local/tmp/
 
@@ -26,7 +26,7 @@ function install() {
   rm ${src_dir}/vm_config.json
 }
 
-setprop debug.custom_vm_setup.done false
+setprop debug.linux_vm_setup.done false
 install
-setprop debug.custom_vm_setup.start false
-setprop debug.custom_vm_setup.done true
+setprop debug.linux_vm_setup.start false
+setprop debug.linux_vm_setup.done true

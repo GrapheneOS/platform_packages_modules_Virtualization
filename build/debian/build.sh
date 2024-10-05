@@ -37,22 +37,35 @@ install_prerequisites() {
 	apt update
 	DEBIAN_FRONTEND=noninteractive \
 	apt install --no-install-recommends --assume-yes \
+		binfmt-support \
+		build-essential \
 		ca-certificates \
+		curl \
 		debsums \
 		dosfstools \
 		fai-server \
 		fai-setup-storage \
 		fdisk \
+		gcc-aarch64-linux-gnu \
+		libc6-dev-arm64-cross \
 		make \
 		python3 \
 		python3-libcloud \
 		python3-marshmallow \
 		python3-pytest \
 		python3-yaml \
+		qemu-system-arm \
+		qemu-user-static \
 		qemu-utils \
 		udev \
-		qemu-system-arm \
-		qemu-user-static
+
+
+	if [ ! -f $HOME/.cargo/bin/cargo ]; then
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+	fi
+
+        source $HOME/.cargo/env
+        rustup target add aarch64-unknown-linux-gnu
 
         sed -i s/losetup\ -f/losetup\ -P\ -f/g /usr/sbin/fai-diskimage
         sed -i 's/wget \$/wget -t 0 \$/g' /usr/share/debootstrap/functions
@@ -86,6 +99,15 @@ copy_android_config() {
 	mkdir -p ${dst}/files/usr/local/bin/ttyd
 	wget ${url} -O ${dst}/files/usr/local/bin/ttyd/AVF
 	chmod 777 ${dst}/files/usr/local/bin/ttyd/AVF
+
+        pushd $(dirname $0)/forwarder_guest > /dev/null
+		RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc" cargo build \
+			--target aarch64-unknown-linux-gnu \
+			--target-dir ${workdir}/forwarder_guest
+		mkdir -p ${dst}/files/usr/local/bin/forwarder_guest
+		cp ${workdir}/forwarder_guest/aarch64-unknown-linux-gnu/debug/forwarder_guest ${dst}/files/usr/local/bin/forwarder_guest/AVF
+		chmod 777 ${dst}/files/usr/local/bin/forwarder_guest/AVF
+	popd > /dev/null
 }
 
 run_fai() {
