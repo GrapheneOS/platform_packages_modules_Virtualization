@@ -28,4 +28,8 @@
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
         <option name="jar" value="MicrodroidHostTestCases.jar" />
     </test>
+
+    <!-- Controller that will skip the module if a native bridge situation is detected -->
+    <!-- For example: module wants to run arm and device is x86 -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
 </configuration>

@@ -152,6 +152,7 @@ impl ComposClient {
             console_fd,
             /* console_in_fd */ None,
             log_fd,
+            /* dump_dt */ None,
             Some(callback),
         )
         .context("Failed to create VM")?;

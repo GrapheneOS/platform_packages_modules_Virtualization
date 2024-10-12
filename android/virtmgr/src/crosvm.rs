@@ -135,6 +135,7 @@ pub struct CrosvmConfig {
     pub audio_config: Option<AudioConfig>,
     pub no_balloon: bool,
     pub usb_config: UsbConfig,
+    pub dump_dt_fd: Option<File>,
 }
 
 #[derive(Debug)]
@@ -984,6 +985,11 @@ fn run_vm(
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
     let mut preserved_fds = config.indirect_files.into_iter().map(|f| f.into()).collect();
+
+    if let Some(dump_dt_fd) = config.dump_dt_fd {
+        let dump_dt_fd = add_preserved_fd(&mut preserved_fds, dump_dt_fd);
+        command.arg("--dump-device-tree-blob").arg(dump_dt_fd);
+    }
 
     // Setup the serial devices.
     // 1. uart device: used as the output device by bootloaders and as early console by linux

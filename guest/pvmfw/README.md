@@ -233,10 +233,10 @@ In version 1.2, a fourth blob is added.
 
 [header]: src/config.rs
 [DTBO]: https://android.googlesource.com/platform/external/dtc/+/refs/heads/main/Documentation/dt-object-internal.txt
-[debug_policy]: ../docs/debug/README.md#debug-policy
-[device_assignment]: ../docs/device_assignment.md
+[debug_policy]: ../../docs/debug/README.md#debug-policy
+[device_assignment]: ../../docs/device_assignment.md
 [secretkeeper_key]: https://android.googlesource.com/platform/system/secretkeeper/+/refs/heads/main/README.md#secretkeeper-public-key
-[vendor_hashtree_digest]: ../microdroid/README.md#verification-of-vendor-image
+[vendor_hashtree_digest]: ../../build/microdroid/README.md#verification-of-vendor-image
 
 #### Virtual Platform DICE Chain Handover
 
@@ -402,7 +402,7 @@ DICE chain:
 };
 ```
 
-[dt.md]: ../docs/device_trees.md#avf_specific-properties-and-nodes
+[dt.md]: ../../docs/device_trees.md#avf_specific-properties-and-nodes
 
 ### Guest Image Signing
 

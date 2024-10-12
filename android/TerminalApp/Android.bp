@@ -4,10 +4,16 @@ package {
 
 android_app {
     name: "VmTerminalApp",
-    srcs: ["java/**/*.java"],
+    srcs: [
+        "java/**/*.java",
+        "java/**/*.kt",
+    ],
     resource_dirs: ["res"],
     static_libs: [
         "vm_launcher_lib",
+        "androidx-constraintlayout_constraintlayout",
+        "com.google.android.material_material",
+        "androidx.window_window",
     ],
     platform_apis: true,
     privileged: true,

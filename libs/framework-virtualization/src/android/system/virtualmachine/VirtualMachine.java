@@ -1578,7 +1578,8 @@ public class VirtualMachine implements AutoCloseable {
                                 : createVirtualMachineConfigForAppFrom(vmConfig, service);
 
                 mVirtualMachine =
-                        service.createVm(vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter);
+                        service.createVm(
+                                vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
                 mVirtualMachine.registerCallback(new CallbackTranslator(service));
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);

@@ -15,7 +15,7 @@ rust_ffi_static {
         "libcstr",
         "libdiced_open_dice_nostd",
         "libfdtpci",
-        "liblibfdt",
+        "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libservice_vm_comm_nostd",
         "libservice_vm_fake_chain_nostd",

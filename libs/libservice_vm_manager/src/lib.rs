@@ -244,8 +244,9 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
     let console_out = Some(android_log_fd()?);
     let console_in = None;
     let log = Some(android_log_fd()?);
+    let dump_dt = None;
     let callback = None;
-    VmInstance::create(service.as_ref(), &config, console_out, console_in, log, callback)
+    VmInstance::create(service.as_ref(), &config, console_out, console_in, log, dump_dt, callback)
         .context("Failed to create service VM")
 }
 

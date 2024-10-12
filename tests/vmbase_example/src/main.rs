@@ -119,6 +119,7 @@ fn run_test(
         Some(console),
         /* consoleIn */ None,
         Some(log_writer),
+        /* dump_dt */ None,
         None,
     )
     .context("Failed to create VM")?;

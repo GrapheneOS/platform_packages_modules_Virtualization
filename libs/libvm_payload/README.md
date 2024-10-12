@@ -9,7 +9,7 @@ Note that only native code is supported in Microdroid, so no Java APIs are
 available in the VM, and only 64 bit code is supported.
 
 To create a VM and run the payload from Android see the [AVF Java
-APIs](../libs/framework-virtualization/README.md).
+APIs](../framework-virtualization/README.md).
 
 ## Entry point
 

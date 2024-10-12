@@ -1,15 +1,16 @@
 # Demo for serving a service in a VM
 
 You can implement a service in a VM, and let client in the Android can use it
-as if it's in the Android. To do so, implement IAccessor.
+as if it's in the Android. To do so, use libbinder's IAccessor.
 
-IAccessor allows AIDL service in a VM can be accessed via servicemanager.
-To do so, VM owners should also provide IAccessor implementation. servicemanager
-will connect to the IAccessor and get the binder of the service in a VM with it.
+IAccessor allows AIDL service in a VM to be accessed via servicemanager.
+To do so, VM owners should also provide IAccessor through libbinder's service
+manager APIs. servicemanager will connect to the IAccessor and get the binder
+of the service in a VM with it.
 
 com.android.virt.accessor_demo apex contains the minimum setup for IAccessor as
 follows:
-  - accessor_demo: Sample implementation of IAccessor, which is expected to
+  - accessor_demo: Sample implementation using IAccessor, which is expected to
       launch VM and returns the Vsock connection of service in the VM.
   - AccessorVmApp: Sample app that conatins VM payload. Provides the actual
       implementation of service in a VM.

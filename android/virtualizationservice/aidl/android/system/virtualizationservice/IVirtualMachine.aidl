@@ -19,6 +19,13 @@ import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.VirtualMachineState;
 
 interface IVirtualMachine {
+    /**
+     * Encountered an unexpected error. This is an implementation detail and the client
+     * can do nothing about it.
+     * This is used as a Service Specific Exception.
+     */
+    const int ERROR_UNEXPECTED = -1;
+
     /** Get the CID allocated to the VM. */
     int getCid();
 
@@ -47,6 +54,19 @@ interface IVirtualMachine {
 
     /** Open a vsock connection to the CID of the VM on the given port. */
     ParcelFileDescriptor connectVsock(int port);
+
+    /**
+     * Create an Accessor in libbinder that will open a vsock connection
+     * to the CID of the VM on the given port.
+     *
+     * \param instance name of the service that the accessor is responsible for.
+     *        This is the same instance that we expect clients to use when trying
+     *        to get the service with the ServiceManager APIs.
+     *
+     * \return IBinder of the IAccessor on success, or throws a service specific exception
+     *         on error. See the ERROR_* values above.
+     */
+    IBinder createAccessorBinder(String instance, int port);
 
     /** Set the name of the peer end (ptsname) of the host console. */
     void setHostConsoleName(in @utf8InCpp String pathname);

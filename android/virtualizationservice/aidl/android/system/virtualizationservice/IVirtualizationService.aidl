@@ -35,11 +35,14 @@ interface IVirtualizationService {
      * `consoleInFd` is provided then console input to the VM will be read from it. If `osLogFd` is
      * provided then the OS-level logs will be sent to it. `osLogFd` is supported only when the OS
      * running in the VM has the logging system. In case of Microdroid, the logging system is logd.
+     * `dumpDtFd` is the file where to dump the VM's device tree. It is only used in
+     * debugging/testing.
      */
     IVirtualMachine createVm(in VirtualMachineConfig config,
             in @nullable ParcelFileDescriptor consoleOutFd,
             in @nullable ParcelFileDescriptor consoleInFd,
-            in @nullable ParcelFileDescriptor osLogFd);
+            in @nullable ParcelFileDescriptor osLogFd,
+            in @nullable ParcelFileDescriptor dumpDtFd);
 
     /**
      * Allocate an instance_id to the (newly created) VM.

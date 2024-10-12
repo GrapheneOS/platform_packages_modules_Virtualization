@@ -7,6 +7,11 @@
     android:orientation="vertical"
     android:fitsSystemWindows="true"
     tools:context=".MainActivity">
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"/>
     <TextView
         android:id="@+id/ip_addr_textview"
         android:layout_width="wrap_content"

@@ -90,6 +90,7 @@ impl InstanceStarter {
             console_out,
             console_in,
             /* log= */ None,
+            /* dump_dt= */ None,
             None,
         )
         .context("Failed to create VM")?;

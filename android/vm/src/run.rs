@@ -203,6 +203,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         config.debug.console.as_ref().map(|p| p.as_ref()),
         config.debug.console_in.as_ref().map(|p| p.as_ref()),
         config.debug.log.as_ref().map(|p| p.as_ref()),
+        config.debug.dump_device_tree.as_ref().map(|p| p.as_ref()),
     )
 }
 
@@ -284,6 +285,7 @@ pub fn command_run(config: RunCustomVmConfig) -> Result<(), Error> {
         config.debug.console.as_ref().map(|p| p.as_ref()),
         config.debug.console_in.as_ref().map(|p| p.as_ref()),
         config.debug.log.as_ref().map(|p| p.as_ref()),
+        config.debug.dump_device_tree.as_ref().map(|p| p.as_ref()),
     )
 }
 
@@ -306,6 +308,7 @@ fn run(
     console_out_path: Option<&Path>,
     console_in_path: Option<&Path>,
     log_path: Option<&Path>,
+    dump_device_tree: Option<&Path>,
 ) -> Result<(), Error> {
     let console_out = if let Some(console_out_path) = console_out_path {
         Some(File::create(console_out_path).with_context(|| {
@@ -330,9 +333,17 @@ fn run(
     } else {
         Some(duplicate_fd(io::stdout())?)
     };
+    let dump_dt = if let Some(dump_device_tree) = dump_device_tree {
+        Some(File::create(dump_device_tree).with_context(|| {
+            format!("Failed to open file to dump device tree: {:?}", dump_device_tree)
+        })?)
+    } else {
+        None
+    };
     let callback = Box::new(Callback {});
-    let vm = VmInstance::create(service, config, console_out, console_in, log, Some(callback))
-        .context("Failed to create VM")?;
+    let vm =
+        VmInstance::create(service, config, console_out, console_in, log, dump_dt, Some(callback))
+            .context("Failed to create VM")?;
     vm.start().context("Failed to start VM")?;
 
     let debug_level = get_debug_level(config).unwrap_or(DebugLevel::NONE);

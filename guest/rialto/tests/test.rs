@@ -335,6 +335,14 @@ fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
     let virtmgr = vmclient::VirtualizationService::new().context("Failed to spawn VirtMgr")?;
     let service = virtmgr.connect().context("Failed to connect to VirtMgr")?;
     info!("Connected to VirtMgr for service VM");
-    VmInstance::create(service.as_ref(), &config, console, /* consoleIn */ None, log, None)
-        .context("Failed to create VM")
+    VmInstance::create(
+        service.as_ref(),
+        &config,
+        console,
+        /* consoleIn */ None,
+        log,
+        /* dump_dt */ None,
+        None,
+    )
+    .context("Failed to create VM")
 }

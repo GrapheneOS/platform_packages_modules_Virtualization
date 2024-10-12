@@ -12,7 +12,7 @@ rust_ffi_static {
         "libcstr",
         "libdiced_open_dice_nostd",
         "libfdtpci",
-        "liblibfdt",
+        "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libvirtio_drivers",
         "libvmbase",

@@ -19,14 +19,14 @@ rust_bindgen {
     dylib: {
         enabled: false,
     },
-    static_libs: [
+    header_libs: [
         "libfdt",
     ],
     apex_available: ["com.android.virt"],
 }
 
-rust_library_rlib {
-    name: "liblibfdt",
+rust_defaults {
+    name: "liblibfdt_defaults",
     crate_name: "libfdt",
     defaults: ["avf_build_flags_rust"],
     srcs: [
@@ -34,21 +34,34 @@ rust_library_rlib {
         ":liblibfdt_bindgen",
     ],
     edition: "2021",
-    no_stdlibs: true,
-    prefer_rlib: true,
-    stdlibs: [
-        "libcore.rust_sysroot",
-    ],
     rustlibs: [
         "libcstr",
         "liblibfdt_bindgen",
         "libstatic_assertions",
         "libzerocopy_nostd",
     ],
+}
+
+rust_library_rlib {
+    name: "liblibfdt",
+    defaults: ["liblibfdt_defaults"],
     whole_static_libs: [
         "libfdt",
     ],
     apex_available: ["com.android.virt"],
+}
+
+rust_library_rlib {
+    name: "liblibfdt_nostd",
+    defaults: ["liblibfdt_defaults"],
+    no_stdlibs: true,
+    prefer_rlib: true,
+    stdlibs: [
+        "libcore.rust_sysroot",
+    ],
+    whole_static_libs: [
+        "libfdt_baremetal",
+    ],
 }
 
 rust_test {

@@ -14,7 +14,6 @@ rust_binary {
     ],
     rustlibs: [
         "android.system.virtualizationservice-rust",
-        "android.os.accessor-rust",
         "libanyhow",
         "libandroid_logger",
         "libbinder_rs",

@@ -128,6 +128,7 @@ pub fn run_vm() -> Result<VmInstance, Error> {
         Some(android_log_fd()?), /* console_out */
         None,                    /* console_in */
         Some(android_log_fd()?), /* log */
+        None,                    /* dump_dt */
         Some(Box::new(Callback {})),
     )
     .context("Failed to create VM")?;

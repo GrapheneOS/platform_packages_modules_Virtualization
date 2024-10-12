@@ -11,7 +11,7 @@ rust_library_rlib {
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
     rustlibs: [
-        "liblibfdt",
+        "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libvirtio_drivers",
     ],

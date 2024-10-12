@@ -1,0 +1,37 @@
+<resources xmlns:window="http://schemas.android.com/apk/res-auto">
+
+    <!-- Define a split for the named activities. -->
+    <ActivityRule window:alwaysExpand="true">
+        <ActivityFilter window:activityName=".MainActivity" />
+    </ActivityRule>
+
+    <SplitPairRule
+        window:clearTop="true"
+        window:finishPrimaryWithSecondary="adjacent"
+        window:finishSecondaryWithPrimary="always"
+        window:splitLayoutDirection="locale"
+        window:splitMaxAspectRatioInPortrait="alwaysAllow"
+        window:splitMinWidthDp="@integer/split_min_width"
+        window:splitRatio="@dimen/activity_split_ratio">
+        <SplitPairFilter
+            window:primaryActivityName="com.android.virtualization.terminal.SettingsActivity"
+            window:secondaryActivityName="com.android.virtualization.terminal.SettingsDiskResizeActivity" />
+        <SplitPairFilter
+            window:primaryActivityName="com.android.virtualization.terminal.SettingsActivity"
+            window:secondaryActivityName="com.android.virtualization.terminal.SettingsPortForwardingActivity" />
+        <SplitPairFilter
+            window:primaryActivityName="com.android.virtualization.terminal.SettingsActivity"
+            window:secondaryActivityName="com.android.virtualization.terminal.SettingsRecoveryActivity" />
+    </SplitPairRule>
+
+    <SplitPlaceholderRule
+        window:placeholderActivityName="com.android.virtualization.terminal.SettingsDiskResizeActivity"
+        window:splitLayoutDirection="locale"
+        window:splitMaxAspectRatioInPortrait="alwaysAllow"
+        window:splitMinWidthDp="@integer/split_min_width"
+        window:splitRatio="@dimen/activity_split_ratio">
+        window:stickyPlaceholder="false">
+        <ActivityFilter
+            window:activityName="com.android.virtualization.terminal.SettingsActivity"/>
+    </SplitPlaceholderRule>
+</resources>
