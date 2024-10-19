@@ -1,0 +1,4 @@
+#!/bin/bash
+
+$ROOTCMD useradd -m -u 1000 -N -G sudo droid
+$ROOTCMD echo 'droid ALL=(ALL) NOPASSWD:ALL' >> $target/etc/sudoers

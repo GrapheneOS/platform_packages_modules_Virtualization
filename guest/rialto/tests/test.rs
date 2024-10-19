@@ -25,7 +25,10 @@ use anyhow::{bail, Context, Result};
 use bssl_avf::{rand_bytes, sha256, EcKey, PKey};
 use client_vm_csr::generate_attestation_key_and_csr;
 use coset::{CborSerializable, CoseMac0, CoseSign};
-use hwtrust::{rkp, session::Session};
+use hwtrust::{
+    rkp,
+    session::{RkpInstance, Session},
+};
 use log::{info, warn};
 use service_vm_comm::{
     ClientVmAttestationParams, Csr, CsrPayload, EcdsaP256KeyPair, GenerateCertificateRequestParams,
@@ -206,7 +209,8 @@ fn check_vm_component(vm_component: &asn1::Any, expected_component: &SubComponen
     let vm_component = vm_component.decode_as::<asn1::SequenceOf<asn1::Any, 4>>().unwrap();
     assert_eq!(4, vm_component.len());
     let name = vm_component.get(0).unwrap().decode_as::<asn1::Utf8StringRef>().unwrap();
-    assert_eq!(expected_component.name, name.as_ref());
+    let name_str: &str = name.as_ref();
+    assert_eq!(expected_component.name, name_str);
     let version = vm_component.get(1).unwrap().decode_as::<u64>().unwrap();
     assert_eq!(expected_component.version, version);
     let code_hash = vm_component.get(2).unwrap().decode_as::<asn1::OctetString>().unwrap();
@@ -285,6 +289,7 @@ fn check_certificate_for_client_vm(
 fn check_csr(csr: Vec<u8>) -> Result<()> {
     let mut session = Session::default();
     session.set_allow_any_mode(true);
+    session.set_rkp_instance(RkpInstance::Avf);
     let _csr = rkp::Csr::from_cbor(&session, &csr[..]).context("Failed to parse CSR")?;
     Ok(())
 }

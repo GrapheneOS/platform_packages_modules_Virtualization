@@ -12,14 +12,32 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"/>
-    <TextView
-        android:id="@+id/ip_addr_textview"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-  <WebView
-      android:id="@+id/webview"
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:layout_marginBottom="5dp" />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+            <com.google.android.material.textview.MaterialTextView
+                android:text="@string/vm_creation_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"/>
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:indeterminate="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+        <WebView
+            android:id="@+id/webview"
+            android:layout_marginBottom="5dp"
+            android:layout_gravity="fill"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="invisible"/>
+    </FrameLayout>
 
 </LinearLayout>

@@ -43,7 +43,6 @@ rust_defaults {
         "libmicrodroid_payload_config",
         "libmicrodroid_uids",
         "libnix",
-        "libonce_cell",
         "libopenssl",
         "libprotobuf",
         "librpcbinder_rs",

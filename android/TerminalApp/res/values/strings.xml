@@ -16,25 +16,48 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">Terminal</string>
-    <string name="vm_creation_message">Virtual machine is booting. Please wait.</string>
-    <string name="vm_stop_message">Virtual machine is stopped. Exiting.</string>
-    <string name="vm_error_message">Virtual machine crashed. Exiting.</string>
 
+    <!-- Application name of this terminal app shown in the launcher. This app provides computer terminal to connect to virtual machine. [CHAR LIMIT=16] -->
+    <string name="app_name">Terminal</string>
+
+    <!-- Action bar icon name for the settings view CHAR LIMIT=none] -->
+    <string name="action_settings">Settings</string>
+
+    <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
+    <string name="vm_creation_message">Preparing terminal</string>
+    <!-- Toast message to notify that terminal is stopping [CHAR LIMIT=none] -->
+    <string name="vm_stop_message">Stopping terminal</string>
+    <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
+    <string name="vm_error_message">Terminal crashed</string>
+
+    <!-- Settings memu title for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_title">Disk Resize</string>
+    <!-- Settings memu subtitle for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_sub_title">Resize / Rootfs</string>
+    <!-- Toast message after new disk size is set. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_resize_message">Disk size set</string>
-    <string name="settings_disk_resize_resize_gb_assigned">GB Assigned</string>
-    <string name="settings_disk_resize_resize_gb_total">256 GB total</string>
+    <!-- Settings menu option description format of the current disk size. [CHAR LIMIT=none] -->
+    <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">%1$s</xliff:g> assigned</string>
+    <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
+    <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">%1$s</xliff:g> max</string>
+    <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=32] -->
     <string name="settings_disk_resize_resize_cancel">Cancel</string>
+    <!-- Settings menu button to apply change that requires to restart VM (abbrev of virtual machine). [CHAR LIMIT=64] -->
     <string name="settings_disk_resize_resize_restart_vm_to_apply">Restart VM to apply</string>
 
+    <!-- Settings menu title for 'port forwarding' [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_title">Port Forwarding</string>
+    <!-- Settings menu subtitle for 'port forwarding' [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_sub_title">Configure port forwarding</string>
 
+    <!-- Settings menu title for recoverying image [CHAR LIMIT=none] -->
     <string name="settings_recovery_title">Recovery</string>
+    <!-- Settings menu subtitle for recoverying image [CHAR LIMIT=none] -->
     <string name="settings_recovery_sub_title">Partition Recovery options</string>
+    <!-- Settings menu title for resetting the virtual machine image [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_title">Change to Initial version</string>
+    <!-- Settings menu subtitle for resetting the virtual machine image [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_sub_title">Remove all</string>
+    <!-- Toast message for reset is completed [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_message">VM reset</string>
 </resources>

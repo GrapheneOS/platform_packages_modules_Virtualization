@@ -80,6 +80,11 @@ apex_defaults {
     }),
 }
 
+vintf_fragment {
+    name: "virtualizationservice.xml",
+    src: "virtualizationservice.xml",
+}
+
 apex_defaults {
     name: "com.android.virt_avf_enabled",
 
@@ -174,9 +179,13 @@ apex_defaults {
         true: "AndroidManifest.xml",
         default: unset,
     }),
-    vintf_fragments: select(soong_config_variable("ANDROID", "avf_remote_attestation_enabled"), {
+    vintf_fragment_modules: select(soong_config_variable("ANDROID", "avf_remote_attestation_enabled"), {
         "true": ["virtualizationservice.xml"],
         default: unset,
+    }),
+    required: select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
+        true: ["linux_vm_setup"],
+        default: [],
     }),
 }
 

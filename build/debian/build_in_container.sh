@@ -19,6 +19,6 @@ while getopts "a:" option; do
   esac
 done
 
-docker run --privileged -it -v \
+docker run --privileged -it --workdir /root/Virtualization/build/debian -v \
   "$ANDROID_BUILD_TOP/packages/modules/Virtualization:/root/Virtualization" -v \
   /dev:/dev ubuntu:22.04 /root/Virtualization/build/debian/build.sh -a "$arch"

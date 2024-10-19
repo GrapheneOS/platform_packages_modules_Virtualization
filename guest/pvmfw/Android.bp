@@ -21,7 +21,6 @@ rust_ffi_static {
         "libfdtpci",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
-        "libonce_cell_nostd",
         "libpvmfw_avb_nostd",
         "libpvmfw_embedded_key",
         "libpvmfw_fdt_template",

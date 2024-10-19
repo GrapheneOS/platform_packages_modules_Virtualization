@@ -21,27 +21,19 @@
         android:layout_height="match_parent">
 
         <TextView
-            android:id="@+id/settings_disk_resize_disk_size"
+            android:id="@+id/settings_disk_resize_resize_gb_assigned"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:textSize="36sp"
-            app:layout_constraintLeft_toLeftOf="parent"
+            android:textSize="14sp"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
         <TextView
+            android:id="@+id/settings_disk_resize_resize_gb_max"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:text="@string/settings_disk_resize_resize_gb_assigned"
             android:textSize="14sp"
-            app:layout_constraintLeft_toRightOf="@+id/settings_disk_resize_disk_size"
-            app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="@string/settings_disk_resize_resize_gb_total"
-            android:textSize="14sp"
-            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
         <com.google.android.material.slider.Slider
@@ -51,7 +43,6 @@
             android:layout_marginBottom="36dp"
             app:tickVisible="false"
             android:valueFrom="0"
-            android:valueTo="256"
             android:stepSize="4"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
@@ -65,7 +56,7 @@
             android:layout_marginHorizontal="8dp"
             app:layout_constraintTop_toTopOf="@+id/settings_disk_resize_disk_size_slider"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintRight_toLeftOf="@+id/settings_disk_resize_resize_button" />
+            app:layout_constraintEnd_toStartOf="@+id/settings_disk_resize_resize_button" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/settings_disk_resize_resize_button"
@@ -76,6 +67,6 @@
             android:layout_marginHorizontal="8dp"
             app:layout_constraintTop_toTopOf="@+id/settings_disk_resize_disk_size_slider"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintRight_toRightOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

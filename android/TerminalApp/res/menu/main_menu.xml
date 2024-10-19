@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/copy_ip_addr"
-        android:title="Copy the IP address"/>
-    <item android:id="@+id/stop_vm"
-        android:title="Stop the existing VM instance"/>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/menu_item_settings"
-        android:title="Settings"/>
+        android:icon="@drawable/ic_settings"
+        android:title="@string/action_settings"
+        app:showAsAction="always"/>
 </menu>

@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.android.virtualization.terminal">
 
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_CUSTOM_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -12,15 +13,18 @@
     <uses-feature android:name="android.software.virtualization_framework" android:required="true" />
 
     <application
-	android:label="@string/app_name"
+        android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:enabled="false">
         <activity android:name=".MainActivity"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
                   android:exported="true">
             <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.virtualization.VM_TERMINAL" />
+                <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -44,20 +48,15 @@
                 android:name="${applicationId}.SplitInitializer"
                 android:value="androidx.startup" />
         </provider>
-        <activity-alias
-            android:name=".MainActivityAlias"
-            android:targetActivity="com.android.virtualization.terminal.MainActivity"
-            android:exported="true"
-            android:enabled="false" >
+        <activity android:name=".InstallerActivity"
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
 
         <service
             android:name="com.android.virtualization.vmlauncher.VmLauncherService"
-            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property

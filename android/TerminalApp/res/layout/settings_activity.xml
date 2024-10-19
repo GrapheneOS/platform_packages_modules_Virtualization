@@ -5,10 +5,6 @@
     android:orientation="vertical"
     android:fitsSystemWindows="true">
 
-    <com.google.android.material.search.SearchBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/settings_list_recycler_view"
         android:layout_marginHorizontal="16dp"

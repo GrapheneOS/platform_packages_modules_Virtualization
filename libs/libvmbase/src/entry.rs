@@ -56,8 +56,7 @@ fn try_console_init() -> Result<(), hyp::Error> {
 /// This is the entry point to the Rust code, called from the binary entry point in `entry.S`.
 #[no_mangle]
 extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
-    // SAFETY: Only called once, from here, and inaccessible to client code.
-    unsafe { heap::init() };
+    heap::init();
 
     if try_console_init().is_err() {
         // Don't panic (or log) here to avoid accessing the console.

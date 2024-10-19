@@ -60,6 +60,7 @@ install_prerequisites() {
 		fai-setup-storage
 		fdisk
 		make
+		protobuf-compiler
 		python3
 		python3-libcloud
 		python3-marshmallow
@@ -84,22 +85,12 @@ install_prerequisites() {
 	DEBIAN_FRONTEND=noninteractive \
 	apt install --no-install-recommends --assume-yes "${packages[@]}"
 
-
 	if [ ! -f $"HOME"/.cargo/bin/cargo ]; then
 		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 	fi
 
 	source "$HOME"/.cargo/env
 	rustup target add "${arch}"-unknown-linux-gnu
-
-	sed -i s/losetup\ -f/losetup\ -P\ -f/g /usr/sbin/fai-diskimage
-	sed -i 's/wget \$/wget -t 0 \$/g' /usr/share/debootstrap/functions
-
-	apt install --no-install-recommends --assume-yes curl
-	# just for testing
-	echo "libseccomp: $(curl -is https://deb.debian.org/debian/pool/main/libs/libseccomp/libseccomp2_2.5.4-1+deb12u1_"${debian_arch}".deb | head -n 1)"
-	echo "libsemanage-common: $(curl -is https://deb.debian.org/debian/pool/main/libs/libsemanage/libsemanage-common_3.4-1_all.deb | head -n 1)"
-	echo "libpcre2: $(curl -is https://deb.debian.org/debian/pool/main/p/pcre2/libpcre2-8-0_10.42-1_"${debian_arch}".deb | head -n 1)"
 }
 
 download_debian_cloud_image() {
@@ -110,6 +101,17 @@ download_debian_cloud_image() {
 
 	mkdir -p "${outdir}"
 	wget -O - "${url}" | tar xz -C "${outdir}" --strip-components=1
+}
+
+build_rust_binary_and_copy() {
+	pushd "$(dirname "$0")/../../guest/$1" > /dev/null
+	RUSTFLAGS="-C linker=${arch}-linux-gnu-gcc" cargo build \
+		--target "${arch}-unknown-linux-gnu" \
+		--target-dir "${workdir}/$1"
+	mkdir -p "${dst}/files/usr/local/bin/$1"
+	cp "${workdir}/$1/${arch}-unknown-linux-gnu/debug/$1" "${dst}/files/usr/local/bin/$1/AVF"
+	chmod 777 "${dst}/files/usr/local/bin/$1/AVF"
+	popd > /dev/null
 }
 
 copy_android_config() {
@@ -125,14 +127,9 @@ copy_android_config() {
 	wget "${url}" -O "${dst}/files/usr/local/bin/ttyd/AVF"
 	chmod 777 "${dst}/files/usr/local/bin/ttyd/AVF"
 
-	pushd "$(dirname "$0")/forwarder_guest" > /dev/null
-	RUSTFLAGS="-C linker=${arch}-linux-gnu-gcc" cargo build \
-		--target "${arch}-unknown-linux-gnu" \
-		--target-dir "${workdir}/forwarder_guest"
-	mkdir -p "${dst}/files/usr/local/bin/forwarder_guest"
-	cp "${workdir}/forwarder_guest/${arch}-unknown-linux-gnu/debug/forwarder_guest" "${dst}/files/usr/local/bin/forwarder_guest/AVF"
-	chmod 777 "${dst}/files/usr/local/bin/forwarder_guest/AVF"
-	popd > /dev/null
+	build_rust_binary_and_copy forwarder_guest
+	build_rust_binary_and_copy forwarder_guest_launcher
+	build_rust_binary_and_copy ip_addr_reporter
 }
 
 run_fai() {

@@ -1,0 +1,13 @@
+[Unit]
+Description=ip report service
+After=syslog.target
+After=network.target
+Requires=ttyd.service
+[Service]
+ExecStart=/usr/local/bin/ip_addr_reporter
+Type=simple
+Restart=on-failure
+User=root
+Group=root
+[Install]
+WantedBy=multi-user.target

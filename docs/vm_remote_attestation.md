@@ -126,7 +126,7 @@ following requirements:
 
 To support VM remote attestation, vendors must include an RKP VM marker in their
 DICE certificates. This marker should be present from the early boot stage
-within the TEE and continue through to the last DICE certificate before
+within the TEE and continue through to the leaf DICE certificate before
 [pvmfw][pvmfw] takes over.
 
 ![RKP VM DICE chain][rkpvm-dice-chain]
@@ -139,6 +139,20 @@ This mechanism also serves as a security measure. If an attacker tries to launch
 a malicious guest OS or payload, their DICE chain will be rejected by the RKP
 server because it will lack the RKP VM marker that pvmfw would have added in a
 genuine RKP VM boot process.
+
+### Testing
+
+To ensure the correct implementation and usage of RKP VM markers, we've
+incorporated comprehensive checks into various xTS tests (e.g.,
+`VtsHalRemotelyProvisionedComponentTargetTest`).
+
+These tests validate the following conditions:
+
+- The RKP VM DICE chain must have a continuous presence of at least two RKP VM
+  markers, extending to the leaf DICE certificate.
+- Non-RKP VM DICE chains must not have a continuous presence of two or more RKP
+  VM markers, preventing non-RKP VM chains from being incorrectly identified as
+  RKP VM chains.
 
 [pvmfw]: ../guest/pvmfw/README.md
 [rkpvm-dice-chain]: img/rkpvm-dice-chain.png

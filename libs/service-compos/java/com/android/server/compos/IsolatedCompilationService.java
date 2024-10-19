@@ -104,7 +104,7 @@ public class IsolatedCompilationService extends SystemService {
                 packageNative.registerStagedApexObserver(observer);
                 // In the unlikely event that an APEX has been staged before we get here, we may
                 // have to schedule compilation immediately.
-                observer.checkModules(packageNative.getStagedApexModuleNames());
+                observer.checkModules(packageNative.getStagedApexInfos());
             } catch (RemoteException e) {
                 Log.e(TAG, "Failed to initialize observer", e);
             }
@@ -118,26 +118,21 @@ public class IsolatedCompilationService extends SystemService {
         @Override
         public void onApexStaged(ApexStagedEvent event) {
             Log.d(TAG, "onApexStaged");
-            checkModules(event.stagedApexModuleNames);
+            checkModules(event.stagedApexInfos);
         }
 
-        void checkModules(String[] moduleNames) {
+        void checkModules(StagedApexInfo[] stagedApexInfos) {
             if (IsolatedCompilationJobService.isStagedApexJobScheduled(mScheduler)) {
                 Log.d(TAG, "Job already scheduled");
                 // We're going to run anyway, we don't need to check this update
                 return;
             }
             boolean needCompilation = false;
-            for (String moduleName : moduleNames) {
-                try {
-                    StagedApexInfo apexInfo = mPackageNative.getStagedApexInfo(moduleName);
-                    if (apexInfo != null && apexInfo.hasClassPathJars) {
-                        Log.i(TAG, "Classpath affecting module updated: " + moduleName);
-                        needCompilation = true;
-                        break;
-                    }
-                } catch (RemoteException e) {
-                    Log.w(TAG, "Failed to get getStagedApexInfo for " + moduleName);
+            for (StagedApexInfo apexInfo : stagedApexInfos) {
+                if (apexInfo != null && apexInfo.hasClassPathJars) {
+                    Log.i(TAG, "Classpath affecting module updated: " + apexInfo.moduleName);
+                    needCompilation = true;
+                    break;
                 }
             }
             if (needCompilation) {

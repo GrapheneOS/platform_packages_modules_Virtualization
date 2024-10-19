@@ -9,6 +9,7 @@ android_app {
         "java/**/*.kt",
     ],
     resource_dirs: ["res"],
+    asset_dirs: ["assets"],
     static_libs: [
         "vm_launcher_lib",
         "androidx-constraintlayout_constraintlayout",
@@ -24,4 +25,16 @@ android_app {
     apex_available: [
         "com.android.virt",
     ],
+}
+
+filegroup {
+    name: "linux_vm_setup.rc",
+    srcs: ["linux_vm_setup.rc"],
+}
+
+sh_binary {
+    name: "linux_vm_setup",
+    src: "linux_vm_setup.sh",
+    init_rc: [":linux_vm_setup.rc"],
+    host_supported: false,
 }

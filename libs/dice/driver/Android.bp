@@ -22,7 +22,6 @@ rust_defaults {
         "liblibc",
         "liblog_rust",
         "libnix",
-        "libonce_cell",
         "libopenssl",
         "libthiserror",
         "libserde_cbor",

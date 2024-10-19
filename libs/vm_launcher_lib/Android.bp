@@ -12,6 +12,7 @@ java_library {
     platform_apis: true,
     static_libs: [
         "gson",
+        "debian-service-grpclib-lite",
     ],
     libs: [
         "framework-virtualization.impl",

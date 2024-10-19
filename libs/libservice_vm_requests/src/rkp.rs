@@ -63,8 +63,7 @@ pub(super) fn generate_ecdsa_p256_key_pair(
 
 const CSR_PAYLOAD_SCHEMA_V3: u8 = 3;
 const AUTH_REQ_SCHEMA_V1: u8 = 1;
-// TODO(b/300624493): Add a new certificate type for AVF CSR.
-const CERTIFICATE_TYPE: &str = "keymint";
+const CERTIFICATE_TYPE: &str = "rkp-vm";
 
 /// Builds the CSR described in:
 ///

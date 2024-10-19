@@ -22,39 +22,78 @@ use core::alloc::GlobalAlloc as _;
 use core::ffi::c_void;
 use core::mem;
 use core::num::NonZeroUsize;
+use core::ops::Range;
 use core::ptr;
 use core::ptr::NonNull;
 
 use buddy_system_allocator::LockedHeap;
+use spin::{
+    mutex::{SpinMutex, SpinMutexGuard},
+    Once,
+};
 
 /// Configures the size of the global allocator.
 #[macro_export]
 macro_rules! configure_heap {
     ($len:expr) => {
-        static mut __HEAP_ARRAY: [u8; $len] = [0; $len];
-        #[export_name = "HEAP"]
-        // SAFETY: HEAP will only be accessed once as mut, from init().
-        static mut __HEAP: &'static mut [u8] = unsafe { &mut __HEAP_ARRAY };
+        static __HEAP: $crate::heap::HeapArray<{ $len }> = $crate::heap::HeapArray::new();
+        #[export_name = "get_heap"]
+        fn __get_heap() -> &'static mut [u8] {
+            __HEAP.get()
+        }
     };
 }
 
+/// An array to be used as a heap.
+///
+/// This should be stored in a static variable to have the appropriate lifetime.
+pub struct HeapArray<const SIZE: usize> {
+    array: SpinMutex<[u8; SIZE]>,
+}
+
+impl<const SIZE: usize> HeapArray<SIZE> {
+    /// Creates a new empty heap array.
+    #[allow(clippy::new_without_default)]
+    pub const fn new() -> Self {
+        Self { array: SpinMutex::new([0; SIZE]) }
+    }
+
+    /// Gets the heap as a slice.
+    ///
+    /// Panics if called more than once.
+    pub fn get(&self) -> &mut [u8] {
+        SpinMutexGuard::leak(self.array.try_lock().expect("Page heap was already taken"))
+            .as_mut_slice()
+    }
+}
+
 extern "Rust" {
-    /// Slice used by the global allocator, configured using configure_heap!().
-    static mut HEAP: &'static mut [u8];
+    /// Gets slice used by the global allocator, configured using configure_heap!().
+    ///
+    /// Panics if called more than once.
+    fn get_heap() -> &'static mut [u8];
 }
 
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::<32>::new();
 
+/// The range of addresses used for the heap.
+static HEAP_RANGE: Once<Range<usize>> = Once::new();
+
 /// Initialize the global allocator.
 ///
-/// # Safety
-///
-/// Must be called no more than once.
-pub(crate) unsafe fn init() {
-    // SAFETY: Nothing else accesses this memory, and we hand it over to the heap to manage and
-    // never touch it again. The heap is locked, so there cannot be any races.
-    let (start, size) = unsafe { (HEAP.as_mut_ptr() as usize, HEAP.len()) };
+/// Panics if called more than once.
+pub(crate) fn init() {
+    // SAFETY: This is in fact a safe Rust function.
+    let heap = unsafe { get_heap() };
+
+    HEAP_RANGE.call_once(|| {
+        let range = heap.as_ptr_range();
+        range.start as usize..range.end as usize
+    });
+
+    let start = heap.as_mut_ptr() as usize;
+    let size = heap.len();
 
     let mut heap = HEAP_ALLOCATOR.lock();
     // SAFETY: We are supplying a valid memory range, and we only do this once.
@@ -107,10 +146,9 @@ unsafe extern "C" fn __memset_chk(
 /// errors.
 unsafe extern "C" fn free(ptr: *mut c_void) {
     let Some(ptr) = NonNull::new(ptr) else { return };
-    // SAFETY: The contents of the HEAP slice may change, but the address range never does.
-    let heap_range = unsafe { HEAP.as_ptr_range() };
+    let heap_range = HEAP_RANGE.get().expect("free called before heap was initialised");
     assert!(
-        heap_range.contains(&(ptr.as_ptr() as *const u8)),
+        heap_range.contains(&(ptr.as_ptr() as usize)),
         "free() called on a pointer that is not part of the HEAP: {ptr:?}"
     );
     // SAFETY: ptr is non-null and was allocated by allocate, which prepends a correctly aligned

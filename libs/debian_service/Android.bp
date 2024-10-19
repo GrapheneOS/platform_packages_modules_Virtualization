@@ -1,0 +1,56 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+JAVA_LITE_PROTO_CMD = "mkdir -p $(genDir)/gen && " +
+    "$(location aprotoc) --java_opt=annotate_code=false " +
+    "-Iexternal/protobuf/src " +
+    "-Ipackages/modules/Virtualization/libs/debian_service/proto " +
+    "--plugin=protoc-gen-grpc-java=$(location protoc-gen-grpc-java-plugin) " +
+    "--grpc-java_out=lite:$(genDir)/gen $(in) && " +
+    "$(location soong_zip) -o $(out) -C $(genDir)/gen -D $(genDir)/gen"
+
+java_genrule {
+    name: "debian-service-stub-lite",
+    tools: [
+        "aprotoc",
+        "protoc-gen-grpc-java-plugin",
+        "soong_zip",
+    ],
+    cmd: JAVA_LITE_PROTO_CMD,
+    srcs: [
+        "proto/*.proto",
+        ":libprotobuf-internal-protos",
+    ],
+    out: [
+        "protos.srcjar",
+    ],
+}
+
+java_library {
+    name: "debian-service-grpclib-lite",
+    proto: {
+        type: "lite",
+        include_dirs: [
+            "external/protobuf/src",
+            "external/protobuf/java",
+        ],
+    },
+    srcs: [
+        ":debian-service-stub-lite",
+        "proto/*.proto",
+        ":libprotobuf-internal-protos",
+    ],
+    libs: ["javax_annotation-api_1.3.2"],
+    static_libs: [
+        "libprotobuf-java-lite",
+        "grpc-java-core-android",
+        "grpc-java-okhttp-client-lite",
+        "guava",
+    ],
+    sdk_version: "current",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+}

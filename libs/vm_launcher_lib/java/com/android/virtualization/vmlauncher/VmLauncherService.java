@@ -22,25 +22,23 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.ParcelFileDescriptor;
 import android.os.ResultReceiver;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
+import io.grpc.InsecureServerCredentials;
+import io.grpc.Server;
+import io.grpc.okhttp.OkHttpServerBuilder;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class VmLauncherService extends Service {
+public class VmLauncherService extends Service implements DebianServiceImpl.DebianServiceCallback {
     private static final String TAG = "VmLauncherService";
     // TODO: this path should be from outside of this service
     private static final String VM_CONFIG_PATH = "/data/local/tmp/vm_config.json";
@@ -54,6 +52,7 @@ public class VmLauncherService extends Service {
     private ExecutorService mExecutorService;
     private VirtualMachine mVirtualMachine;
     private ResultReceiver mResultReceiver;
+    private Server mServer;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -87,7 +86,10 @@ public class VmLauncherService extends Service {
 
         Runner runner;
         try {
+            android.os.Trace.beginSection("vmCreate");
             runner = Runner.create(this, config);
+            android.os.Trace.endSection();
+            android.os.Trace.beginAsyncSection("debianBoot", 0);
         } catch (VirtualMachineException e) {
             Log.e(TAG, "cannot create runner", e);
             stopSelf();
@@ -113,10 +115,9 @@ public class VmLauncherService extends Service {
         startForeground();
 
         mResultReceiver.send(RESULT_START, null);
-        if (config.getCustomImageConfig().useNetwork()) {
-            Handler handler = new Handler(Looper.getMainLooper());
-            gatherIpAddrFromVm(handler);
-        }
+
+        startDebianServer();
+
         return START_NOT_STICKY;
     }
 
@@ -134,6 +135,7 @@ public class VmLauncherService extends Service {
             mExecutorService = null;
             mVirtualMachine = null;
         }
+        stopDebianServer();
     }
 
     private boolean isVmRunning() {
@@ -141,34 +143,38 @@ public class VmLauncherService extends Service {
                 && mVirtualMachine.getStatus() == VirtualMachine.STATUS_RUNNING;
     }
 
-    // TODO(b/359523803): Use AVF API to get ip addr when it exists
-    private void gatherIpAddrFromVm(Handler handler) {
-        handler.postDelayed(
-                () -> {
-                    if (!isVmRunning()) {
-                        Log.d(TAG, "A virtual machine instance isn't running");
-                        return;
-                    }
-                    int INTERNAL_VSOCK_SERVER_PORT = 1024;
-                    try (ParcelFileDescriptor pfd =
-                            mVirtualMachine.connectVsock(INTERNAL_VSOCK_SERVER_PORT)) {
-                        try (BufferedReader input =
-                                new BufferedReader(
-                                        new InputStreamReader(
-                                                new FileInputStream(pfd.getFileDescriptor())))) {
-                            String vmIpAddr = input.readLine().strip();
-                            Bundle b = new Bundle();
-                            b.putString(KEY_VM_IP_ADDR, vmIpAddr);
-                            mResultReceiver.send(RESULT_IPADDR, b);
-                            return;
-                        } catch (IOException e) {
-                            Log.e(TAG, e.toString());
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, e.toString());
-                    }
-                    gatherIpAddrFromVm(handler);
-                },
-                1000);
+    private void startDebianServer() {
+        new Thread(
+                        () -> {
+                            // TODO(b/372666638): gRPC for java doesn't support vsock for now.
+                            // In addition, let's consider using a dynamic port and SSL(and client
+                            // certificate)
+                            int port = 12000;
+                            try {
+                                mServer =
+                                        OkHttpServerBuilder.forPort(
+                                                        port, InsecureServerCredentials.create())
+                                                .addService(new DebianServiceImpl(this))
+                                                .build()
+                                                .start();
+                            } catch (IOException e) {
+                                Log.d(TAG, "grpc server error", e);
+                            }
+                        })
+                .start();
+    }
+
+    private void stopDebianServer() {
+        if (mServer != null) {
+            mServer.shutdown();
+        }
+    }
+
+    @Override
+    public void onIpAddressAvailable(String ipAddr) {
+        android.os.Trace.endAsyncSection("debianBoot", 0);
+        Bundle b = new Bundle();
+        b.putString(VmLauncherService.KEY_VM_IP_ADDR, ipAddr);
+        mResultReceiver.send(VmLauncherService.RESULT_IPADDR, b);
     }
 }

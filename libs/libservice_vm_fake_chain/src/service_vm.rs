@@ -116,6 +116,7 @@ pub(crate) fn fake_dice_artifacts_up_to_pvmfw() -> Result<(CdiValues, Vec<u8>)> 
         component_name: Some(cstr!("Protected VM firmware")),
         component_version: Some(1),
         resettable: true,
+        rkp_vm_marker: true,
         ..Default::default()
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;
@@ -158,6 +159,7 @@ pub fn fake_service_vm_dice_artifacts() -> Result<OwnedDiceArtifacts> {
         component_name: Some(cstr!("vm_entry")),
         component_version: Some(12),
         resettable: true,
+        rkp_vm_marker: true,
         ..Default::default()
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;

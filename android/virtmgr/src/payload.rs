@@ -178,14 +178,9 @@ impl PackageManager {
             let pm =
                 wait_for_interface::<dyn IPackageManagerNative>(PACKAGE_MANAGER_NATIVE_SERVICE)
                     .context("Failed to get service when prefer_staged is set.")?;
-            let staged =
-                pm.getStagedApexModuleNames().context("getStagedApexModuleNames failed")?;
-            for name in staged {
-                if let Some(staged_apex_info) =
-                    pm.getStagedApexInfo(&name).context("getStagedApexInfo failed")?
-                {
-                    list.override_staged_apex(&staged_apex_info)?;
-                }
+            let staged = pm.getStagedApexInfos().context("getStagedApexInfos failed")?;
+            for apex in staged {
+                list.override_staged_apex(&apex)?;
             }
         }
         Ok(list)
