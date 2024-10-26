@@ -2,38 +2,38 @@
 package android.system.virtualmachine {
 
   public class VirtualMachine implements java.lang.AutoCloseable {
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public void enableTestAttestation() throws android.system.virtualmachine.VirtualMachineException;
+    method @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public void enableTestAttestation() throws android.system.virtualmachine.VirtualMachineException;
     method @NonNull @WorkerThread public java.io.OutputStream getConsoleInput() throws android.system.virtualmachine.VirtualMachineException;
     method @NonNull public java.io.File getRootDir();
   }
 
   public final class VirtualMachineConfig {
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public java.util.List<java.lang.String> getExtraApks();
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public String getOs();
+    method @NonNull public java.util.List<java.lang.String> getExtraApks();
+    method @NonNull public String getOs();
     method @Nullable public String getPayloadConfigPath();
     method public boolean isVmConsoleInputSupported();
-    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String MICRODROID = "microdroid";
+    field public static final String MICRODROID = "microdroid";
   }
 
   public static final class VirtualMachineConfig.Builder {
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder addExtraApk(@NonNull String);
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setOs(@NonNull String);
+    method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder addExtraApk(@NonNull String);
+    method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setOs(@NonNull String);
     method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setPayloadConfigPath(@NonNull String);
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setVendorDiskImage(@NonNull java.io.File);
+    method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setVendorDiskImage(@NonNull java.io.File);
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setVmConsoleInputSupported(boolean);
   }
 
   public class VirtualMachineManager {
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @NonNull public java.util.List<java.lang.String> getSupportedOSList() throws android.system.virtualmachine.VirtualMachineException;
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isFeatureEnabled(String) throws android.system.virtualmachine.VirtualMachineException;
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isRemoteAttestationSupported() throws android.system.virtualmachine.VirtualMachineException;
-    method @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isUpdatableVmSupported() throws android.system.virtualmachine.VirtualMachineException;
-    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
-    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
-    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_MULTI_TENANT = "com.android.kvm.MULTI_TENANT";
+    method @NonNull public java.util.List<java.lang.String> getSupportedOSList() throws android.system.virtualmachine.VirtualMachineException;
+    method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isFeatureEnabled(String) throws android.system.virtualmachine.VirtualMachineException;
+    method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isRemoteAttestationSupported() throws android.system.virtualmachine.VirtualMachineException;
+    method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isUpdatableVmSupported() throws android.system.virtualmachine.VirtualMachineException;
+    field public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
+    field public static final String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
+    field public static final String FEATURE_MULTI_TENANT = "com.android.kvm.MULTI_TENANT";
     field public static final String FEATURE_NETWORK = "com.android.kvm.NETWORK";
-    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_REMOTE_ATTESTATION = "com.android.kvm.REMOTE_ATTESTATION";
-    field @FlaggedApi("com.android.system.virtualmachine.flags.avf_v_test_apis") public static final String FEATURE_VENDOR_MODULES = "com.android.kvm.VENDOR_MODULES";
+    field public static final String FEATURE_REMOTE_ATTESTATION = "com.android.kvm.REMOTE_ATTESTATION";
+    field public static final String FEATURE_VENDOR_MODULES = "com.android.kvm.VENDOR_MODULES";
   }
 
 }

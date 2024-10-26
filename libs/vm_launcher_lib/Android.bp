@@ -13,6 +13,7 @@ java_library {
     static_libs: [
         "gson",
         "debian-service-grpclib-lite",
+        "apache-commons-compress",
     ],
     libs: [
         "framework-virtualization.impl",

@@ -80,7 +80,6 @@ rust_library_rlib {
         "libaarch64_paging",
         "libbuddy_system_allocator",
         "libcstr",
-        "libfdtpci",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libonce_cell_nostd",

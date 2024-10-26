@@ -14,8 +14,6 @@
 
 //! Library for working with (VirtIO) PCI devices discovered from a device tree.
 
-#![no_std]
-
 use core::{
     ffi::CStr,
     fmt::{self, Display, Formatter},

@@ -29,12 +29,14 @@ use rustutils::system_properties;
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::max;
+use std::ffi::CString;
 use std::fmt;
 use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
 use std::os::unix::io::{AsRawFd, OwnedFd};
+use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
@@ -55,9 +57,6 @@ use binder::Strong;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
-
-/// external/crosvm
-use vm_control::{BalloonControlCommand, VmRequest, VmResponse};
 
 const CROSVM_PATH: &str = "/apex/com.android.virt/bin/crosvm";
 
@@ -108,6 +107,7 @@ pub struct CrosvmConfig {
     pub kernel: Option<File>,
     pub initrd: Option<File>,
     pub disks: Vec<DiskFile>,
+    pub shared_paths: Vec<SharedPathConfig>,
     pub params: Option<String>,
     pub protected: bool,
     pub debug_config: DebugConfig,
@@ -224,6 +224,19 @@ pub struct DiskFile {
     pub writable: bool,
 }
 
+/// Shared path between host and guest VM.
+#[derive(Debug)]
+pub struct SharedPathConfig {
+    pub path: String,
+    pub host_uid: i32,
+    pub host_gid: i32,
+    pub guest_uid: i32,
+    pub guest_gid: i32,
+    pub mask: i32,
+    pub tag: String,
+    pub socket_path: String,
+}
+
 /// virtio-input device configuration from `external/crosvm/src/crosvm/config.rs`
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -305,6 +318,8 @@ impl VmState {
             let vfio_devices = config.vfio_devices.clone();
             let tap =
                 if let Some(tap_file) = &config.tap { Some(tap_file.try_clone()?) } else { None };
+
+            run_virtiofs(&config)?;
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child =
@@ -638,37 +653,34 @@ impl VmInstance {
         Ok(())
     }
 
-    /// Responds to memory-trimming notifications by inflating the virtio
-    /// balloon to reclaim guest memory.
+    /// Returns current virtio-balloon size.
     pub fn get_memory_balloon(&self) -> Result<u64, Error> {
-        let request = VmRequest::BalloonCommand(BalloonControlCommand::Stats {});
-        let result =
-            match vm_control::client::handle_request(&request, &self.crosvm_control_socket_path) {
-                Ok(VmResponse::BalloonStats { stats: _, balloon_actual }) => balloon_actual,
-                Ok(VmResponse::Err(e)) => {
-                    // ENOTSUP is returned when the balloon protocol is not initialized. This
-                    // can occur for numerous reasons: Guest is still booting, guest doesn't
-                    // support ballooning, host doesn't support ballooning. We don't log or
-                    // raise an error in this case: trim is just a hint and we can ignore it.
-                    if e.errno() != libc::ENOTSUP {
-                        bail!("Errno return when requesting balloon stats: {}", e.errno())
-                    }
-                    0
-                }
-                e => bail!("Error requesting balloon stats: {:?}", e),
-            };
-        Ok(result)
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        let mut balloon_actual = 0u64;
+        // SAFETY: Pointers are valid for the lifetime of the call. Null `stats` is valid.
+        let success = unsafe {
+            crosvm_control::crosvm_client_balloon_stats(
+                socket_path_cstring.as_ptr(),
+                /* stats= */ std::ptr::null_mut(),
+                &mut balloon_actual,
+            )
+        };
+        if !success {
+            bail!("Error requesting balloon stats");
+        }
+        Ok(balloon_actual)
     }
 
-    /// Responds to memory-trimming notifications by inflating the virtio
-    /// balloon to reclaim guest memory.
+    /// Inflates the virtio-balloon by `num_bytes` to reclaim guest memory. Called in response to
+    /// memory-trimming notifications.
     pub fn set_memory_balloon(&self, num_bytes: u64) -> Result<(), Error> {
-        let command = BalloonControlCommand::Adjust { num_bytes, wait_for_success: false };
-        if let Err(e) = vm_control::client::handle_request(
-            &VmRequest::BalloonCommand(command),
-            &self.crosvm_control_socket_path,
-        ) {
-            bail!("Error sending balloon adjustment: {:?}", e);
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        // SAFETY: Pointer is valid for the lifetime of the call.
+        let success = unsafe {
+            crosvm_control::crosvm_client_balloon_vms(socket_path_cstring.as_ptr(), num_bytes)
+        };
+        if !success {
+            bail!("Error sending balloon adjustment");
         }
         Ok(())
     }
@@ -704,26 +716,28 @@ impl VmInstance {
         Ok(())
     }
 
-    /// Suspends the VM
+    /// Suspends the VM's vCPUs.
     pub fn suspend(&self) -> Result<(), Error> {
-        match vm_control::client::handle_request(
-            &VmRequest::SuspendVcpus,
-            &self.crosvm_control_socket_path,
-        ) {
-            Ok(VmResponse::Ok) => Ok(()),
-            e => bail!("Failed to suspend VM: {e:?}"),
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        // SAFETY: Pointer is valid for the lifetime of the call.
+        let success =
+            unsafe { crosvm_control::crosvm_client_suspend_vm(socket_path_cstring.as_ptr()) };
+        if !success {
+            bail!("Failed to suspend VM");
         }
+        Ok(())
     }
 
-    /// Resumes the suspended VM
+    /// Resumes the VM's vCPUs.
     pub fn resume(&self) -> Result<(), Error> {
-        match vm_control::client::handle_request(
-            &VmRequest::ResumeVcpus,
-            &self.crosvm_control_socket_path,
-        ) {
-            Ok(VmResponse::Ok) => Ok(()),
-            e => bail!("Failed to resume: {e:?}"),
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        // SAFETY: Pointer is valid for the lifetime of the call.
+        let success =
+            unsafe { crosvm_control::crosvm_client_resume_vm(socket_path_cstring.as_ptr()) };
+        if !success {
+            bail!("Failed to resume VM");
         }
+        Ok(())
     }
 }
 
@@ -884,6 +898,40 @@ fn vfio_argument_for_platform_device(device: &VfioDevice) -> Result<String, Erro
     }
 }
 
+fn run_virtiofs(config: &CrosvmConfig) -> io::Result<()> {
+    for shared_path in &config.shared_paths {
+        let ugid_map_value = format!(
+            "{} {} {} {} {} /",
+            shared_path.guest_uid,
+            shared_path.guest_gid,
+            shared_path.host_uid,
+            shared_path.host_gid,
+            shared_path.mask,
+        );
+
+        let cfg_arg = format!("writeback=true,cache_policy=always,ugid_map='{}'", ugid_map_value);
+
+        let mut command = Command::new(CROSVM_PATH);
+        command
+            .arg("device")
+            .arg("fs")
+            .arg(format!("--socket={}", &shared_path.socket_path))
+            .arg(format!("--tag={}", &shared_path.tag))
+            .arg(format!("--shared-dir={}", &shared_path.path))
+            .arg("--cfg")
+            .arg(cfg_arg.as_str())
+            .arg("--disable-sandbox")
+            .arg("--skip-pivot-root=true");
+
+        print_crosvm_args(&command);
+
+        let result = SharedChild::spawn(&mut command)?;
+        info!("Spawned virtiofs crosvm({})", result.id());
+    }
+
+    Ok(())
+}
+
 /// Starts an instance of `crosvm` to manage a new VM.
 fn run_vm(
     config: CrosvmConfig,
@@ -893,6 +941,9 @@ fn run_vm(
     validate_config(&config)?;
 
     let mut command = Command::new(CROSVM_PATH);
+
+    let vm_name = "crosvm_".to_owned() + &config.name;
+    command.arg0(vm_name.clone());
     // TODO(qwandor): Remove --disable-sandbox.
     command
         .arg("--extended-status")
@@ -901,6 +952,8 @@ fn run_vm(
         .arg("--log-level")
         .arg("info,disk=warn")
         .arg("run")
+        .arg("--name")
+        .arg(vm_name)
         .arg("--disable-sandbox")
         .arg("--cid")
         .arg(config.cid.to_string());
@@ -1062,6 +1115,9 @@ fn run_vm(
         command.arg(add_preserved_fd(&mut preserved_fds, kernel));
     }
 
+    #[cfg(target_arch = "aarch64")]
+    command.arg("--no-pmu");
+
     let control_sock = create_crosvm_control_listener(crosvm_control_socket_path)
         .context("failed to create control listener")?;
     command.arg("--socket").arg(add_preserved_fd(&mut preserved_fds, control_sock));
@@ -1187,6 +1243,12 @@ fn run_vm(
         command.arg(vfio_argument_for_platform_device(&device)?);
     }
 
+    for shared_path in &config.shared_paths {
+        command
+            .arg("--vhost-user-fs")
+            .arg(format!("{},tag={}", &shared_path.socket_path, &shared_path.tag));
+    }
+
     debug!("Preserving FDs {:?}", preserved_fds);
     command.preserved_fds(preserved_fds);
 
@@ -1295,4 +1357,14 @@ fn create_crosvm_control_listener(crosvm_control_socket_path: &Path) -> Result<O
     // because of a `nix` bug.
     socket::listen(&fd, socket::Backlog::new(127).unwrap()).context("listen failed")?;
     Ok(fd)
+}
+
+fn path_to_cstring(path: &Path) -> CString {
+    if let Some(s) = path.to_str() {
+        if let Ok(s) = CString::new(s) {
+            return s;
+        }
+    }
+    // The path contains invalid utf8 or a null, which should never happen.
+    panic!("bad path: {path:?}");
 }

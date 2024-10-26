@@ -2,19 +2,13 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-prebuilt_etc {
-    name: "vendor_sign_key",
-    src: ":avb_testkey_rsa4096",
-    installable: false,
-}
-
 android_filesystem {
     name: "test_microdroid_vendor_image",
     partition_name: "microdroid-vendor",
     type: "ext4",
     file_contexts: ":microdroid_vendor_file_contexts.gen",
     use_avb: true,
-    avb_private_key: ":vendor_sign_key",
+    avb_private_key: ":avb_testkey_rsa4096",
     rollback_index: 5,
 }
 
@@ -24,7 +18,7 @@ android_filesystem {
     type: "ext4",
     file_contexts: ":microdroid_vendor_file_contexts.gen",
     use_avb: true,
-    avb_private_key: ":vendor_sign_key",
+    avb_private_key: ":avb_testkey_rsa4096",
 }
 
 android_filesystem {

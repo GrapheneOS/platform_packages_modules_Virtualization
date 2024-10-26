@@ -30,13 +30,8 @@ filegroup {
     name: "microdroid_kernel_prebuilt-arm64",
     // Below are properties that are conditionally set depending on value of build flags.
     srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
-        "android14_61": ["android14-6.1/arm64/kernel-6.1"],
         "android15_66": ["android15-6.6/arm64/kernel-6.6"],
-        // In case release configuration doesn't specify value of the
-        // RELEASE_AVF_MICRODROID_KERNEL_VERSION fallback to the kernel we
-        // already released.
-        // TODO(b/298011555): remove this once we set the flag in all release configs.
-        default: ["android14-6.1/arm64/kernel-6.1"],
+        default: [],
     }),
 }
 
@@ -44,12 +39,7 @@ filegroup {
     name: "microdroid_kernel_prebuilt-x86_64",
     // Below are properties that are conditionally set depending on value of build flags.
     srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
-        "android14_61": ["android14-6.1/x86_64/kernel-6.1"],
         "android15_66": ["android15-6.6/x86_64/kernel-6.6"],
-        // In case release configuration doesn't specify value of the
-        // RELEASE_AVF_MICRODROID_KERNEL_VERSION fallback to the kernel we
-        // already released.
-        // TODO(b/298011555): remove this once we set the flag in all release configs.
-        default: ["android14-6.1/x86_64/kernel-6.1"],
+        default: [],
     }),
 }

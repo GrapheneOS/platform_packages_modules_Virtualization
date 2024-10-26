@@ -17,7 +17,7 @@
 use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
-use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, UsbConfig, VmContext, VmInstance, VmState};
+use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, SharedPathConfig, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, UsbConfig, VmContext, VmInstance, VmState};
 use crate::debug_config::DebugConfig;
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
@@ -32,6 +32,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     AssignableDevice::AssignableDevice,
     CpuTopology::CpuTopology,
     DiskImage::DiskImage,
+    SharedPath::SharedPath,
     InputDevice::InputDevice,
     IVirtualMachine::{self, BnVirtualMachine},
     IVirtualMachineCallback::IVirtualMachineCallback,
@@ -67,6 +68,7 @@ use binder::{
 };
 use cstr::cstr;
 use glob::glob;
+use libc::{AF_VSOCK, sa_family_t, sockaddr_vm};
 use log::{debug, error, info, warn};
 use microdroid_payload_config::{ApkConfig, Task, TaskType, VmPayloadConfig};
 use nix::unistd::pipe;
@@ -89,7 +91,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak, LazyLock};
 use vbmeta::VbMetaImage;
 use vmconfig::{VmConfig, get_debug_level};
-use vsock::{VsockAddr, VsockStream};
+use vsock::VsockStream;
 use zip::ZipArchive;
 
 /// The unique ID of a VM used (together with a port number) for vsock communication.
@@ -612,6 +614,8 @@ impl VirtualizationService {
             })
             .collect::<Result<Vec<DiskFile>, _>>()?;
 
+        let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
+
         let (cpus, host_cpu_topology) = match config.cpuTopology {
             CpuTopology::MATCH_HOST => (None, true),
             CpuTopology::ONE_CPU => (NonZeroU32::new(1), false),
@@ -718,6 +722,7 @@ impl VirtualizationService {
             kernel,
             initrd,
             disks,
+            shared_paths,
             params: config.params.to_owned(),
             protected: *is_protected,
             debug_config,
@@ -955,6 +960,32 @@ fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDevice
         },
     })
 }
+
+fn assemble_shared_paths(
+    shared_paths: &[SharedPath],
+    temporary_directory: &Path,
+) -> Result<Vec<SharedPathConfig>, Status> {
+    if shared_paths.is_empty() {
+        return Ok(Vec::new()); // Return an empty vector if shared_paths is empty
+    }
+
+    shared_paths
+        .iter()
+        .map(|path| {
+            Ok(SharedPathConfig {
+                path: path.sharedPath.clone(),
+                host_uid: path.hostUid,
+                host_gid: path.hostGid,
+                guest_uid: path.guestUid,
+                guest_gid: path.guestGid,
+                mask: path.mask,
+                tag: path.tag.clone(),
+                socket_path: temporary_directory.join(&path.socket).to_string_lossy().to_string(),
+            })
+        })
+        .collect()
+}
+
 /// Given the configuration for a disk image, assembles the `DiskFile` to pass to crosvm.
 ///
 /// This may involve assembling a composite disk from a set of partition images.
@@ -1434,8 +1465,14 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
             ));
         }
         let cid = self.instance.cid;
-        let get_connection_info =
-            move |_instance: &str| Some(ConnectionInfo::Vsock(VsockAddr::new(cid, port)));
+        let addr = sockaddr_vm {
+            svm_family: AF_VSOCK as sa_family_t,
+            svm_reserved1: 0,
+            svm_port: port,
+            svm_cid: cid,
+            svm_zero: [0u8; 4],
+        };
+        let get_connection_info = move |_instance: &str| Some(ConnectionInfo::Vsock(addr));
         let accessor = Accessor::new(name, get_connection_info);
         accessor
             .as_binder()

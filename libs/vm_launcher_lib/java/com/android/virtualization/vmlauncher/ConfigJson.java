@@ -17,6 +17,7 @@
 package com.android.virtualization.vmlauncher;
 
 import android.content.Context;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Rect;
 import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig;
@@ -25,6 +26,7 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig.Disk;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.DisplayConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.GpuConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.Partition;
+import android.system.virtualmachine.VirtualMachineCustomImageConfig.SharedPath;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
@@ -34,6 +36,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.io.FileReader;
 import java.util.Arrays;
+import java.util.Objects;
 
 /** This class and its inner classes model vm_config.json. */
 class ConfigJson {
@@ -60,6 +63,7 @@ class ConfigJson {
     private InputJson input;
     private AudioJson audio;
     private DiskJson[] disks;
+    private SharedPathJson[] sharedPath;
     private DisplayJson display;
     private GpuJson gpu;
 
@@ -141,7 +145,34 @@ class ConfigJson {
             Arrays.stream(disks).map(d -> d.toConfig()).forEach(builder::addDisk);
         }
 
+        if (sharedPath != null) {
+            Arrays.stream(sharedPath)
+                    .map(d -> d.toConfig(context))
+                    .filter(Objects::nonNull)
+                    .forEach(builder::addSharedPath);
+        }
         return builder.build();
+    }
+
+    private static class SharedPathJson {
+        private SharedPathJson() {}
+
+        // Package ID of Terminal app.
+        private static final String TERMINAL_PACKAGE_ID =
+                "com.google.android.virtualization.terminal";
+        private String sharedPath;
+
+        private SharedPath toConfig(Context context) {
+            try {
+                int uid =
+                        context.getPackageManager()
+                                .getPackageUidAsUser(TERMINAL_PACKAGE_ID, context.getUserId());
+
+                return new SharedPath(sharedPath, uid, uid, 0, 0, 0007, "android", "android");
+            } catch (NameNotFoundException e) {
+                return null;
+            }
+        }
     }
 
     private static class InputJson {

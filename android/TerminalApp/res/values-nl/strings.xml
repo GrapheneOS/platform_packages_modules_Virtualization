@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
+    <string name="action_settings" msgid="5729342767795123227">"Instellingen"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"Terminal voorbereiden"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"Terminal stoppen"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"Terminal gecrasht"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Formaat van schijf aanpassen"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Formaat van /Rootfs aanpassen"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Schijfgrootte ingesteld"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> toegewezen"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> max."</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Annuleren"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Start de VM opnieuw op om dit toe te passen"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Poortdoorschakeling"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Poortdoorschakeling instellen"</string>
+    <!-- no translation found for settings_port_forwarding_notification_title (2822798067500254704) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_notification_content (2167103177775323330) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_notification_accept (3571520986524038185) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_notification_deny (636848749634710403) -->
+    <skip />
+    <string name="settings_recovery_title" msgid="6586840079226383285">"Herstel"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Herstelopties voor partities"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Wijzigen naar eerste versie"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Alles verwijderen"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM gereset"</string>
+    <!-- no translation found for service_notification_settings (1437365721184401135) -->
+    <skip />
+    <!-- no translation found for service_notification_title (2918088850910713393) -->
+    <skip />
+    <!-- no translation found for service_notification_content (8652887364784704911) -->
+    <skip />
+    <!-- no translation found for service_notification_quit_action (4888327875869277455) -->
+    <skip />
+</resources>

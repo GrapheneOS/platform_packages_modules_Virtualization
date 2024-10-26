@@ -20,6 +20,8 @@ java_test_host {
     per_testcase_directory: true,
     data: [
         ":authfs_test_files",
+    ],
+    device_common_data: [
         ":MicrodroidTestApp",
     ],
 }

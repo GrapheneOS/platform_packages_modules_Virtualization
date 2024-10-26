@@ -30,7 +30,7 @@ python_binary_host {
     srcs: ["gen_vbmeta_bootconfig.py"],
 }
 
-genrule {
+java_genrule {
     name: "microdroid_initrd_gen",
     srcs: [
         ":microdroid_ramdisk",
@@ -40,7 +40,7 @@ genrule {
     cmd: "cat $(in) > $(out)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_gen_arm64",
     srcs: [
         ":microdroid_ramdisk",
@@ -51,7 +51,7 @@ genrule {
     cmd: "cat $(in) > $(out)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_gen_x86_64",
     srcs: [
         ":microdroid_ramdisk",
@@ -63,7 +63,7 @@ genrule {
 }
 
 // This contains vbmeta hashes & related (boot)configs which are passed to kernel/init
-genrule {
+java_genrule {
     name: "microdroid_vbmeta_bootconfig_gen",
     srcs: [":microdroid_vbmeta"],
     out: ["bootconfig_microdroid_vbmeta"],
@@ -84,7 +84,7 @@ bootconfigs_x86_64 = [
     ":microdroid_vbmeta_bootconfig_gen",
 ]
 
-genrule {
+java_genrule {
     name: "microdroid_initrd_debuggable_arm64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -95,7 +95,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_debuggable_arm64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -106,7 +106,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_initrd_debuggable_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -117,7 +117,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_debuggable_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -128,7 +128,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_initrd_normal_arm64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -139,7 +139,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_normal_arm64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -150,7 +150,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_initrd_normal_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -161,7 +161,7 @@ genrule {
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_normal_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [

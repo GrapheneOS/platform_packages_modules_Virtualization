@@ -11,6 +11,7 @@ android_app {
     resource_dirs: ["res"],
     asset_dirs: ["assets"],
     static_libs: [
+        "VmTerminalApp.aidl-java",
         "vm_launcher_lib",
         "androidx-constraintlayout_constraintlayout",
         "com.google.android.material_material",
@@ -27,14 +28,17 @@ android_app {
     ],
 }
 
-filegroup {
-    name: "linux_vm_setup.rc",
-    srcs: ["linux_vm_setup.rc"],
-}
-
-sh_binary {
-    name: "linux_vm_setup",
-    src: "linux_vm_setup.sh",
-    init_rc: [":linux_vm_setup.rc"],
-    host_supported: false,
+aidl_interface {
+    name: "VmTerminalApp.aidl",
+    srcs: ["aidl/**/*.aidl"],
+    unstable: true,
+    local_include_dir: "aidl",
+    backend: {
+        java: {
+            enabled: true,
+            apex_available: [
+                "com.android.virt",
+            ],
+        },
+    },
 }

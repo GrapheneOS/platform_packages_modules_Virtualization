@@ -197,7 +197,7 @@ prebuilt_root {
     no_full_install: true,
 }
 
-genrule {
+java_genrule {
     name: "microdroid_build_prop_gen_x86_64",
     srcs: [
         "build.prop",
@@ -215,7 +215,7 @@ genrule {
         "echo ro.product.cpu.abi=x86_64) > $(out)",
 }
 
-genrule {
+java_genrule {
     name: "microdroid_build_prop_gen_arm64",
     srcs: [
         "build.prop",
@@ -597,6 +597,7 @@ python_binary_host {
 // HACK: use cc_genrule for arch-specific properties
 cc_genrule {
     name: "microdroid_kernel_hashes_rs",
+    compile_multilib: "first",
     srcs: [":microdroid_kernel"],
     arch: {
         arm64: {
@@ -621,6 +622,7 @@ cc_genrule {
 
 rust_library_rlib {
     name: "libmicrodroid_kernel_hashes",
+    compile_multilib: "first",
     srcs: [":microdroid_kernel_hashes_rs"],
     crate_name: "microdroid_kernel_hashes",
     prefer_rlib: true,

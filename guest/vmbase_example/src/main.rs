@@ -31,11 +31,12 @@ use alloc::{vec, vec::Vec};
 use core::mem;
 use core::ptr::addr_of_mut;
 use cstr::cstr;
-use fdtpci::PciInfo;
 use libfdt::Fdt;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use vmbase::{
-    bionic, configure_heap, generate_image_header,
+    bionic, configure_heap,
+    fdt::pci::PciInfo,
+    generate_image_header,
     layout::{crosvm::FDT_MAX_SIZE, rodata_range, scratch_range, text_range},
     linker, logger, main,
     memory::{PageTable, SIZE_64KB},

@@ -1,0 +1,20 @@
+rust_binary {
+    name: "trusty_security_vm_launcher",
+    crate_name: "trusty_security_vm_launcher",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    prefer_rlib: true,
+    rustlibs: [
+        "android.system.virtualizationservice-rust",
+        "libanyhow",
+        "libclap",
+        "libvmclient",
+    ],
+    bootstrap: true,
+    apex_available: ["//apex_available:platform"],
+    system_ext_specific: true,
+    enabled: select(release_flag("RELEASE_AVF_ENABLE_EARLY_VM"), {
+        true: true,
+        false: false,
+    }),
+}

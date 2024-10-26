@@ -45,13 +45,17 @@ java_test_host {
     ],
     per_testcase_directory: true,
     data: [
+        "assets/bcc.dat",
+    ],
+    device_common_data: [
         ":MicrodroidTestApp",
-        ":pvmfw_test",
         ":test_avf_debug_policy_with_ramdump",
         ":test_avf_debug_policy_without_ramdump",
         ":test_avf_debug_policy_with_adb",
         ":test_avf_debug_policy_without_adb",
-        "assets/bcc.dat",
+    ],
+    device_first_data: [
+        ":pvmfw_test",
     ],
     data_device_bins_first: ["dtc_static"],
 }

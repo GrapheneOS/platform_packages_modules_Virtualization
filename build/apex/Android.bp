@@ -183,10 +183,6 @@ apex_defaults {
         "true": ["virtualizationservice.xml"],
         default: unset,
     }),
-    required: select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
-        true: ["linux_vm_setup"],
-        default: [],
-    }),
 }
 
 apex_defaults {
@@ -297,8 +293,10 @@ sh_test_host {
         "libz",
     ],
     data: [
-        ":com.android.virt",
         ":test.com.android.virt.pem",
+    ],
+    device_common_data: [
+        ":com.android.virt",
     ],
     test_suites: ["general-tests"],
 }

@@ -31,7 +31,7 @@ rust_test_host {
         "libanyhow",
         "libtempfile",
     ],
-    data: [
+    device_common_data: [
         ":avb_testkey_rsa2048",
         ":avb_testkey_rsa4096",
         ":avb_testkey_rsa8192",

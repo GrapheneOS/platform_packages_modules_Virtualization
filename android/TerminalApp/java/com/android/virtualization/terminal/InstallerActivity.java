@@ -16,164 +16,235 @@
 
 package com.android.virtualization.terminal;
 
-import android.annotation.WorkerThread;
-import android.app.Activity;
+import android.annotation.MainThread;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.SystemProperties;
-import android.text.TextUtils;
+import android.os.FileUtils;
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.text.format.Formatter;
 import android.util.Log;
+import android.widget.CheckBox;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import libcore.io.Streams;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-public class InstallerActivity extends Activity {
+public class InstallerActivity extends BaseActivity {
     private static final String TAG = "LinuxInstaller";
 
-    private static final Path DEST_DIR =
-            Path.of(Environment.getExternalStorageDirectory().getPath(), "linux");
+    private static final long ESTIMATED_IMG_SIZE_BYTES = FileUtils.parseSize("350MB");
 
-    private static final String ASSET_DIR = "linux";
-    private static final String HASH_FILE_NAME = "hash";
-    private static final Path HASH_FILE = Path.of(DEST_DIR.toString(), HASH_FILE_NAME);
+    private ExecutorService mExecutorService;
+    private CheckBox mWaitForWifiCheckbox;
+    private TextView mInstallButton;
 
-    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private IInstallerService mService;
+    private ServiceConnection mInstallerServiceConnection;
+    private InstallProgressListener mInstallProgressListener;
+    private boolean mInstallRequested;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setResult(RESULT_CANCELED);
 
+        mInstallProgressListener = new InstallProgressListener(this);
+
         setContentView(R.layout.activity_installer);
 
-        executorService.execute(this::installLinuxImage);
+        TextView desc = (TextView) findViewById(R.id.installer_desc);
+        desc.setText(
+                getString(
+                        R.string.installer_desc_text_format,
+                        Formatter.formatShortFileSize(this, ESTIMATED_IMG_SIZE_BYTES)));
+
+        mWaitForWifiCheckbox = (CheckBox) findViewById(R.id.installer_wait_for_wifi_checkbox);
+        mInstallButton = (TextView) findViewById(R.id.installer_install_button);
+
+        mInstallButton.setOnClickListener(
+                (event) -> {
+                    requestInstall();
+                });
+
+        Intent intent = new Intent(this, InstallerService.class);
+        mInstallerServiceConnection = new InstallerServiceConnection(this);
+        if (!bindService(intent, mInstallerServiceConnection, Context.BIND_AUTO_CREATE)) {
+            handleCriticalError(new Exception("Failed to connect to installer service"));
+        }
     }
 
-    private void installLinuxImage() {
-        if (!hasLocalAssets()) {
-            updateStatus("No local assets");
-            setResult(RESULT_CANCELED, null);
-            return;
+    @Override
+    public void onDestroy() {
+        if (mInstallerServiceConnection != null) {
+            unbindService(mInstallerServiceConnection);
+            mInstallerServiceConnection = null;
         }
-        try {
-            updateImageIfNeeded();
-        } catch (IOException e) {
-            Log.e(TAG, "failed to update image", e);
-            return;
+
+        super.onDestroy();
+    }
+
+    public void handleCriticalError(Exception e) {
+        if (Build.isDebuggable()) {
+            Toast.makeText(
+                            this,
+                            e.getMessage() + ". File a bugreport to go/ferrochrome-bug",
+                            Toast.LENGTH_LONG)
+                    .show();
         }
-        updateStatus("Done.");
-        setResult(RESULT_OK);
+        Log.e(TAG, "Internal error", e);
+        finishWithResult(RESULT_CANCELED);
+    }
+
+    private void finishWithResult(int resultCode) {
+        setResult(resultCode);
         finish();
     }
 
-    @WorkerThread
-    private boolean hasLocalAssets() {
-        try {
-            String[] files = getAssets().list(ASSET_DIR);
-            return files != null && files.length > 0;
-        } catch (IOException e) {
-            Log.e(TAG, "there is an error during listing up assets", e);
-            return false;
-        }
+    private void setInstallEnabled(boolean enable) {
+        mInstallButton.setEnabled(enable);
+        mWaitForWifiCheckbox.setEnabled(enable);
+
+        int resId =
+                enable
+                        ? R.string.installer_install_button_enabled_text
+                        : R.string.installer_install_button_disabled_text;
+        mInstallButton.setText(getString(resId));
     }
 
-    @WorkerThread
-    private void updateImageIfNeeded() throws IOException {
-        if (!isUpdateNeeded()) {
-            Log.d(TAG, "No update needed.");
-            return;
-        }
+    @MainThread
+    private void requestInstall() {
+        setInstallEnabled(/* enable= */ false);
 
-        try {
-            if (Files.notExists(DEST_DIR)) {
-                Files.createDirectory(DEST_DIR);
-            }
-
-            updateStatus("Copying images...");
-            String[] files = getAssets().list(ASSET_DIR);
-            for (String file : files) {
-                updateStatus(file);
-                Path dst = Path.of(DEST_DIR.toString(), file);
-                updateFile(getAssets().open(ASSET_DIR + "/" + file), dst);
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "Error while updating image: " + e);
-            updateStatus("Failed to update image.");
-            throw e;
-        }
-        extractImages(DEST_DIR.toAbsolutePath().toString());
-    }
-
-    @WorkerThread
-    private void extractImages(String destDir) throws IOException {
-        updateStatus("Extracting images...");
-
-        if (TextUtils.isEmpty(destDir)) {
-            throw new RuntimeException("Internal error: destDir shouldn't be null");
-        }
-
-        SystemProperties.set("debug.linux_vm_setup.path", destDir);
-        SystemProperties.set("debug.linux_vm_setup.done", "false");
-        SystemProperties.set("debug.linux_vm_setup.start", "true");
-        while (!SystemProperties.getBoolean("debug.linux_vm_setup.done", false)) {
+        if (mService != null) {
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Log.e(TAG, "Error while extracting image: " + e);
-                updateStatus("Failed to extract image.");
-                throw new IOException("extracting image is interrupted", e);
+                mService.requestInstall();
+            } catch (RemoteException e) {
+                handleCriticalError(e);
             }
+        } else {
+            Log.d(TAG, "requestInstall() is called, but not yet connected");
+            mInstallRequested = true;
         }
     }
 
-    @WorkerThread
-    private boolean isUpdateNeeded() {
-        Path[] pathsToCheck = {DEST_DIR, HASH_FILE};
-        for (Path p : pathsToCheck) {
-            if (Files.notExists(p)) {
-                Log.d(TAG, p.toString() + " does not exist.");
-                return true;
-            }
-        }
-
+    @MainThread
+    public void handleInstallerServiceConnected() {
         try {
-            String installedHash = readAll(new FileInputStream(HASH_FILE.toFile()));
-            String updatedHash = readAll(getAssets().open(ASSET_DIR + "/" + HASH_FILE_NAME));
-            if (installedHash.equals(updatedHash)) {
-                return false;
+            mService.setProgressListener(mInstallProgressListener);
+            if (mService.isInstalled()) {
+                // Finishing this activity will trigger MainActivity::onResume(),
+                // and VM will be started from there.
+                finishWithResult(RESULT_OK);
+                return;
             }
-            Log.d(TAG, "Hash mismatch. Installed: " + installedHash + "  Updated: " + updatedHash);
-        } catch (IOException e) {
-            Log.e(TAG, "Error while checking hash: " + e);
-        }
-        return true;
-    }
 
-    private static String readAll(InputStream input) throws IOException {
-        return Streams.readFully(new InputStreamReader(input)).strip();
-    }
-
-    private static void updateFile(InputStream input, Path path) throws IOException {
-        try (input) {
-            Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING);
+            if (mInstallRequested) {
+                requestInstall();
+            } else if (mService.isInstalling()) {
+                setInstallEnabled(false);
+            }
+        } catch (RemoteException e) {
+            handleCriticalError(e);
         }
     }
 
-    private void updateStatus(String line) {
-        runOnUiThread(
-                () -> {
-                    TextView statusView = findViewById(R.id.status_txt_view);
-                    statusView.append(line + "\n");
-                });
+    @MainThread
+    public void handleInstallerServiceDisconnected() {
+        handleCriticalError(new Exception("InstallerService is destroyed while in use"));
+    }
+
+    @MainThread
+    private void handleError(String displayText) {
+        // TODO(b/375542145): Display error with snackbar.
+        if (Build.isDebuggable()) {
+            Toast.makeText(this, displayText, Toast.LENGTH_LONG).show();
+        }
+        setInstallEnabled(true);
+    }
+
+    private static class InstallProgressListener extends IInstallProgressListener.Stub {
+        private final WeakReference<InstallerActivity> mActivity;
+
+        InstallProgressListener(InstallerActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void onCompleted() {
+            InstallerActivity activity = mActivity.get();
+            if (activity == null) {
+                // Ignore incoming connection or disconnection after activity is destroyed.
+                return;
+            }
+
+            // MainActivity will be resume and handle rest of progress.
+            activity.finishWithResult(RESULT_OK);
+        }
+
+        @Override
+        public void onError(String displayText) {
+            InstallerActivity context = mActivity.get();
+            if (context == null) {
+                // Ignore incoming connection or disconnection after activity is destroyed.
+                return;
+            }
+
+            context.runOnUiThread(
+                    () -> {
+                        InstallerActivity activity = mActivity.get();
+                        if (activity == null) {
+                            // Ignore incoming connection or disconnection after activity is
+                            // destroyed.
+                            return;
+                        }
+
+                        activity.handleError(displayText);
+                    });
+        }
+    }
+
+    @MainThread
+    public static final class InstallerServiceConnection implements ServiceConnection {
+        private final WeakReference<InstallerActivity> mActivity;
+
+        InstallerServiceConnection(InstallerActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            InstallerActivity activity = mActivity.get();
+            if (activity == null || activity.mInstallerServiceConnection == null) {
+                // Ignore incoming connection or disconnection after activity is destroyed.
+                return;
+            }
+            if (service == null) {
+                activity.handleCriticalError(new Exception("service shouldn't be null"));
+            }
+
+            activity.mService = IInstallerService.Stub.asInterface(service);
+            activity.handleInstallerServiceConnected();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            InstallerActivity activity = mActivity.get();
+            if (activity == null || activity.mInstallerServiceConnection == null) {
+                // Ignore incoming connection or disconnection after activity is destroyed.
+                return;
+            }
+
+            if (activity.mInstallerServiceConnection != null) {
+                activity.unbindService(activity.mInstallerServiceConnection);
+                activity.mInstallerServiceConnection = null;
+            }
+            activity.handleInstallerServiceDisconnected();
+        }
     }
 }

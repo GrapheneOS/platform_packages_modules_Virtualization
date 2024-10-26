@@ -1,9 +1,0 @@
-// When adding or removing tests here, don't forget to amend _all_modules list in
-// wireless/android/busytown/ath_config/configs/prod/avf/tests.gcl
-{
-  "avf-presubmit": [
-    {
-      "name": "vmbase_example.integration_test"
-    }
-  ]
-}

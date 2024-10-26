@@ -40,14 +40,13 @@ import android.os.PersistableBundle;
 import android.sysprop.HypervisorProperties;
 import android.system.virtualizationservice.DiskImage;
 import android.system.virtualizationservice.Partition;
+import android.system.virtualizationservice.SharedPath;
 import android.system.virtualizationservice.UsbConfig;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
 import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 import android.system.virtualizationservice.VirtualMachineRawConfig;
 import android.text.TextUtils;
 import android.util.Log;
-
-import com.android.system.virtualmachine.flags.Flags;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -223,7 +222,6 @@ public final class VirtualMachineConfig {
      * @hide
      */
     @TestApi
-    @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
     @OsName
     public static final String MICRODROID = "microdroid";
 
@@ -448,7 +446,6 @@ public final class VirtualMachineConfig {
      * @hide
      */
     @TestApi
-    @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
     @NonNull
     public List<String> getExtraApks() {
         return mExtraApks;
@@ -594,7 +591,6 @@ public final class VirtualMachineConfig {
      * @hide
      */
     @TestApi
-    @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
     @NonNull
     @OsName
     public String getOs() {
@@ -710,6 +706,15 @@ public final class VirtualMachineConfig {
                 partitions.add(part);
             }
             config.disks[i].partitions = partitions.toArray(new Partition[0]);
+        }
+
+        config.sharedPaths =
+                new SharedPath
+                        [Optional.ofNullable(customImageConfig.getSharedPaths())
+                                .map(arr -> arr.length)
+                                .orElse(0)];
+        for (int i = 0; i < config.sharedPaths.length; i++) {
+            config.sharedPaths[i] = customImageConfig.getSharedPaths()[i].toParcelable();
         }
 
         config.displayConfig =
@@ -1013,7 +1018,6 @@ public final class VirtualMachineConfig {
          * @hide
          */
         @TestApi
-        @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
         @NonNull
         public Builder addExtraApk(@NonNull String packageName) {
             mExtraApks.add(requireNonNull(packageName, "extra APK package name must not be null"));
@@ -1266,7 +1270,6 @@ public final class VirtualMachineConfig {
          * @hide
          */
         @TestApi
-        @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
         @RequiresPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
         @NonNull
         public Builder setVendorDiskImage(@NonNull File vendorDiskImage) {
@@ -1283,7 +1286,6 @@ public final class VirtualMachineConfig {
          * @hide
          */
         @TestApi
-        @FlaggedApi(Flags.FLAG_AVF_V_TEST_APIS)
         @RequiresPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
         @NonNull
         public Builder setOs(@NonNull @OsName String os) {

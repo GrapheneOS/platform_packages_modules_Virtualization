@@ -14,11 +14,13 @@
 
 //! Functions to scan the PCI bus for VirtIO devices.
 
-use crate::memory::{MemoryTracker, MemoryTrackerError};
+use crate::{
+    fdt::pci::PciInfo,
+    memory::{MemoryTracker, MemoryTrackerError},
+};
 use alloc::boxed::Box;
 use core::fmt;
 use core::marker::PhantomData;
-use fdtpci::PciInfo;
 use log::debug;
 use once_cell::race::OnceBox;
 use virtio_drivers::{

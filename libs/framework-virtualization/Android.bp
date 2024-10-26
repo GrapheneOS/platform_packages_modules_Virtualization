@@ -15,7 +15,6 @@ java_sdk_library {
     ],
     static_libs: [
         "android.system.virtualizationservice-java",
-        "avf_aconfig_flags_java",
         // For android.sysprop.HypervisorProperties
         "PlatformProperties",
     ],
@@ -45,9 +44,6 @@ java_sdk_library {
     ],
     impl_library_visibility: [
         "//packages/modules/Virtualization:__subpackages__",
-    ],
-    aconfig_declarations: [
-        "avf_aconfig_flags",
     ],
     lint: {
         baseline_filename: "lint-baseline.xml",

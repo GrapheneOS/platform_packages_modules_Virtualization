@@ -6,10 +6,51 @@
     android:fitsSystemWindows="true"
     android:paddingLeft="16dp"
     android:paddingRight="16dp">
-  <TextView
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:textSize="28sp"
-      android:id="@+id/status_txt_view"/>
+    <TextView
+        android:id="@+id/installer_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:textSize="32sp"
+        android:text="@string/installer_title_text" />
+
+    <ImageView
+        android:id="@+id/installer_icon"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:padding="10dp"
+        android:layout_below="@id/installer_title"
+        android:layout_alignParentStart="true"
+        android:src="@drawable/ic_lock_open"
+        android:adjustViewBounds="true" />
+
+    <TextView
+        android:id="@+id/installer_desc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:layout_below="@id/installer_icon"
+        android:layout_alignParentStart="true"
+        android:singleLine="false"
+        android:textSize="24sp" />
+
+    <CheckBox
+        android:id="@+id/installer_wait_for_wifi_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:layout_alignParentEnd="true"
+        android:layout_below="@id/installer_desc"
+        android:text="@string/installer_wait_for_wifi_checkbox_text" />
+
+    <Button
+        android:id="@+id/installer_install_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:text="@string/installer_install_button_enabled_text" />
 
 </RelativeLayout>

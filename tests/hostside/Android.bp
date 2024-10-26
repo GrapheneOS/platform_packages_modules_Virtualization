@@ -21,7 +21,7 @@ java_test_host {
         "microdroid_payload_metadata",
     ],
     per_testcase_directory: true,
-    data: [
+    device_common_data: [
         ":MicrodroidTestApp",
         ":MicrodroidTestAppUpdated",
         ":microdroid_general_sepolicy.conf",

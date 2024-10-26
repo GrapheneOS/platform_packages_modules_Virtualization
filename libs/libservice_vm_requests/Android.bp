@@ -4,6 +4,7 @@ package {
 
 rust_defaults {
     name: "libservice_vm_requests_nostd_defaults",
+    compile_multilib: "first",
     crate_name: "service_vm_requests",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],

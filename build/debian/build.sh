@@ -82,6 +82,13 @@ install_prerequisites() {
 			qemu-system
 		)
 	fi
+
+	# TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
+	if [[ "$arch" == "x86_64" ]]; then
+		packages+=(
+			libguestfs-tools
+		)
+	fi
 	DEBIAN_FRONTEND=noninteractive \
 	apt install --no-install-recommends --assume-yes "${packages[@]}"
 
@@ -160,3 +167,18 @@ download_debian_cloud_image
 copy_android_config
 run_fai
 fdisk -l image.raw
+images=(image.raw)
+# TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
+if [[ "$arch" == "x86_64" ]]; then
+	virt-get-kernel -a image.raw
+	mv vmlinuz* vmlinuz
+	mv initrd.img* initrd.img
+	images+=(
+		vmlinuz
+		initrd.img
+	)
+fi
+
+cp $(dirname $0)/vm_config.json.${arch} vm_config.json
+# --sparse option isn't supported in apache-commons-compress
+tar czv -f images.tar.gz ${images[@]} vm_config.json

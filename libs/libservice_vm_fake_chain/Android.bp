@@ -18,6 +18,7 @@ package {
 
 rust_defaults {
     name: "libservice_vm_fake_chain_defaults",
+    compile_multilib: "first",
     crate_name: "service_vm_fake_chain",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],

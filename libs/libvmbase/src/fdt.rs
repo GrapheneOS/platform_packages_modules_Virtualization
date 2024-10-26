@@ -14,6 +14,8 @@
 
 //! High-level FDT functions.
 
+pub mod pci;
+
 use core::ops::Range;
 use cstr::cstr;
 use libfdt::{self, Fdt, FdtError};

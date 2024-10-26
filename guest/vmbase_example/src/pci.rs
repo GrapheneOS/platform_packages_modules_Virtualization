@@ -17,7 +17,6 @@
 use aarch64_paging::paging::MemoryRegion;
 use alloc::alloc::{alloc_zeroed, dealloc, handle_alloc_error, Layout};
 use core::{mem::size_of, ptr::NonNull};
-use fdtpci::PciInfo;
 use log::{debug, info};
 use virtio_drivers::{
     device::console::VirtIOConsole,
@@ -27,7 +26,10 @@ use virtio_drivers::{
     },
     BufferDirection, Error, Hal, PhysAddr, PAGE_SIZE,
 };
-use vmbase::virtio::pci::{self, PciTransportIterator};
+use vmbase::{
+    fdt::pci::PciInfo,
+    virtio::pci::{self, PciTransportIterator},
+};
 
 /// The standard sector size of a VirtIO block device, in bytes.
 const SECTOR_SIZE_BYTES: usize = 512;

@@ -3,12 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.android.virtualization.terminal">
 
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_CUSTOM_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <uses-feature android:name="android.software.virtualization_framework" android:required="true" />
 
@@ -54,6 +56,11 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
+        <service android:name=".InstallerService"
+            android:foregroundServiceType="specialUse"
+            android:value="Prepares Linux image"
+            android:exported="false"
+            android:stopWithTask="true" />
 
         <service
             android:name="com.android.virtualization.vmlauncher.VmLauncherService"

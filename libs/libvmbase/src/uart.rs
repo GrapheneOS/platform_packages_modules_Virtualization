@@ -15,6 +15,7 @@
 //! Minimal driver for an 8250 UART. This only implements enough to work with the emulated 8250
 //! provided by crosvm, and won't work with real hardware.
 
+use crate::arch::write_volatile_u8;
 use core::fmt::{self, Write};
 
 /// Minimal driver for an 8250 UART. This only implements enough to work with the emulated 8250
@@ -39,13 +40,7 @@ impl Uart {
     pub fn write_byte(&self, byte: u8) {
         // SAFETY: We know that the base address points to the control registers of a UART device
         // which is appropriately mapped.
-        unsafe {
-            core::arch::asm!(
-                "strb {value:w}, [{ptr}]",
-                value = in(reg) byte,
-                ptr = in(reg) self.base_address,
-            );
-        }
+        unsafe { write_volatile_u8(self.base_address, byte) }
     }
 }
 

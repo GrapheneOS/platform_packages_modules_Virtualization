@@ -54,6 +54,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final String bootloaderPath;
     @Nullable private final String[] params;
     @Nullable private final Disk[] disks;
+    @Nullable private final SharedPath[] sharedPaths;
     @Nullable private final DisplayConfig displayConfig;
     @Nullable private final AudioConfig audioConfig;
     private final boolean touch;
@@ -96,6 +97,11 @@ public class VirtualMachineCustomImageConfig {
         return params;
     }
 
+    @Nullable
+    public SharedPath[] getSharedPaths() {
+        return sharedPaths;
+    }
+
     public boolean useTouch() {
         return touch;
     }
@@ -132,6 +138,7 @@ public class VirtualMachineCustomImageConfig {
             String bootloaderPath,
             String[] params,
             Disk[] disks,
+            SharedPath[] sharedPaths,
             DisplayConfig displayConfig,
             boolean touch,
             boolean keyboard,
@@ -149,6 +156,7 @@ public class VirtualMachineCustomImageConfig {
         this.bootloaderPath = bootloaderPath;
         this.params = params;
         this.disks = disks;
+        this.sharedPaths = sharedPaths;
         this.displayConfig = displayConfig;
         this.touch = touch;
         this.keyboard = keyboard;
@@ -300,6 +308,91 @@ public class VirtualMachineCustomImageConfig {
     }
 
     /** @hide */
+    public static final class SharedPath {
+        private final String path;
+        private final int hostUid;
+        private final int hostGid;
+        private final int guestUid;
+        private final int guestGid;
+        private final int mask;
+        private final String tag;
+        private final String socket;
+
+        public SharedPath(
+                String path,
+                int hostUid,
+                int hostGid,
+                int guestUid,
+                int guestGid,
+                int mask,
+                String tag,
+                String socket) {
+            this.path = path;
+            this.hostUid = hostUid;
+            this.hostGid = hostGid;
+            this.guestUid = guestUid;
+            this.guestGid = guestGid;
+            this.mask = mask;
+            this.tag = tag;
+            this.socket = socket;
+        }
+
+        android.system.virtualizationservice.SharedPath toParcelable() {
+            android.system.virtualizationservice.SharedPath parcelable =
+                    new android.system.virtualizationservice.SharedPath();
+            parcelable.sharedPath = this.path;
+            parcelable.hostUid = this.hostUid;
+            parcelable.hostGid = this.hostGid;
+            parcelable.guestUid = this.guestUid;
+            parcelable.guestGid = this.guestGid;
+            parcelable.mask = this.mask;
+            parcelable.tag = this.tag;
+            parcelable.socket = this.socket;
+            return parcelable;
+        }
+
+        /** @hide */
+        public String getSharedPath() {
+            return path;
+        }
+
+        /** @hide */
+        public int getHostUid() {
+            return hostUid;
+        }
+
+        /** @hide */
+        public int getHostGid() {
+            return hostGid;
+        }
+
+        /** @hide */
+        public int getGuestUid() {
+            return guestUid;
+        }
+
+        /** @hide */
+        public int getGuestGid() {
+            return guestGid;
+        }
+
+        /** @hide */
+        public int getMask() {
+            return mask;
+        }
+
+        /** @hide */
+        public String getTag() {
+            return tag;
+        }
+
+        /** @hide */
+        public String getSocket() {
+            return socket;
+        }
+    }
+
+    /** @hide */
     public static final class Disk {
         private final boolean writable;
         private final String imagePath;
@@ -366,6 +459,7 @@ public class VirtualMachineCustomImageConfig {
         private String bootloaderPath;
         private List<String> params = new ArrayList<>();
         private List<Disk> disks = new ArrayList<>();
+        private List<SharedPath> sharedPaths = new ArrayList<>();
         private AudioConfig audioConfig;
         private DisplayConfig displayConfig;
         private boolean touch;
@@ -409,6 +503,12 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public Builder addDisk(Disk disk) {
             this.disks.add(disk);
+            return this;
+        }
+
+        /** @hide */
+        public Builder addSharedPath(SharedPath path) {
+            this.sharedPaths.add(path);
             return this;
         }
 
@@ -493,6 +593,7 @@ public class VirtualMachineCustomImageConfig {
                     this.bootloaderPath,
                     this.params.toArray(new String[0]),
                     this.disks.toArray(new Disk[0]),
+                    this.sharedPaths.toArray(new SharedPath[0]),
                     displayConfig,
                     touch,
                     keyboard,

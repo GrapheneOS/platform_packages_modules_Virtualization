@@ -17,10 +17,11 @@
 use aarch64_paging::MapError;
 use core::{fmt, result};
 use diced_open_dice::DiceError;
-use fdtpci::PciError;
 use libfdt::FdtError;
 use service_vm_comm::RequestProcessingError;
-use vmbase::{hyp::Error as HypervisorError, memory::MemoryTrackerError, virtio::pci};
+use vmbase::{
+    fdt::pci::PciError, hyp::Error as HypervisorError, memory::MemoryTrackerError, virtio::pci,
+};
 
 pub type Result<T> = result::Result<T, Error>;
 
