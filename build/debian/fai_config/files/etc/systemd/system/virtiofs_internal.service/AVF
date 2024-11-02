@@ -1,0 +1,13 @@
+[Unit]
+Description=Mount virtiofs terminal app internal file path
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/bin/bash -c 'mkdir -p /mnt/internal; chown 1000:100 /mnt/internal; mount -t virtiofs internal /mnt/internal'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

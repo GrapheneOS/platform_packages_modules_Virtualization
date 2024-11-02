@@ -16,6 +16,7 @@ java_library {
         "apache-commons-compress",
     ],
     libs: [
+        "androidx.annotation_annotation",
         "framework-virtualization.impl",
         "framework-annotations-lib",
     ],

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"టెర్మినల్"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux టెర్మినల్‌ను ఇన్‌స్టాల్ చేయండి"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux టెర్మినల్‌ను ప్రారంభించడానికి, మీరు నెట్‌వర్క్ ద్వారా దాదాపు <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> డేటాను డౌన్‌లోడ్ చేసుకోవాలి.\nమీరు కొనసాగిస్తారా?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ఇన్‌స్టాల్ చేయి"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ఇన్‌స్టాల్ చేస్తోంది"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"నెట్‌వర్క్ ఎర్రర్. కనెక్షన్‌ను చెక్ చేసి, మళ్లీ ట్రై చేయండి."</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux టెర్మినల్‌ను ఇన్‌స్టాల్ చేస్తోంది"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"పూర్తయిన తర్వాత Linux టెర్మినల్ ప్రారంభమవుతుంది"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"నెట్‌వర్క్ సమస్య కారణంగా ఇన్‌స్టాల్ చేయడం విఫలమైంది"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"ఇన్‌స్టాల్ చేయడం విఫలమైంది. మళ్లీ ట్రై చేయండి."</string>
+    <string name="action_settings" msgid="5729342767795123227">"సెట్టింగ్‌లు"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"టెర్మినల్‌ను సిద్ధం చేస్తోంది"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"టెర్మినల్‌ను ఆపివేస్తోంది"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"టెర్మినల్ క్రాష్ అయింది"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"డిస్క్ సైజ్ మార్చడం"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"సైజ్ మార్చండి / Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"డిస్క్ సైజ్ సెట్ చేయబడింది"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> కేటాయించబడింది"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"గరిష్ఠంగా <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"రద్దు చేయండి"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"దరఖాస్తు చేయడానికి VMను రీస్టార్ట్ చేయండి"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"పోర్ట్ ఫార్వర్డింగ్"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"పోర్ట్ ఫార్వర్డింగ్‌ను కాన్ఫిగర్ చేయండి"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"టెర్మినల్ ఒక కొత్త పోర్ట్‌ను తెరవడానికి ట్రై చేస్తోంది"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"పోర్ట్ తెరవాలని రిక్వెస్ట్ చేశారు: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ఆమోదించండి"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"తిరస్కరించండి"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"రికవరీ"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"పార్టిషన్ రికవరీ ఆప్షన్‌లు"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"మొదటి వెర్షన్‌కు మార్చండి"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"అన్నీ తీసివేయండి"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM రీసెట్"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"సెట్టింగ్‌లు"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"టెర్మినల్ రన్ అవుతోంది"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"టెర్మినల్‌ను తెరవడానికి క్లిక్ చేయండి."</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"మూసివేయండి"</string>
+</resources>

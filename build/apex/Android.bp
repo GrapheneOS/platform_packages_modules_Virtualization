@@ -45,13 +45,7 @@ apex_defaults {
 
     apps: [
         "android.system.virtualmachine.res",
-    ] + select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
-        true: [
-            "VmLauncherApp",
-            "VmTerminalApp",
-        ],
-        default: [],
-    }),
+    ],
 
     file_contexts: ":com.android.virt-file_contexts",
 
@@ -174,7 +168,12 @@ apex_defaults {
     ],
     apps: [
         "EmptyPayloadApp",
-    ],
+    ] + select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
+        true: [
+            "VmTerminalApp",
+        ],
+        default: [],
+    }),
     androidManifest: select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
         true: "AndroidManifest.xml",
         default: unset,
@@ -182,6 +181,12 @@ apex_defaults {
     vintf_fragment_modules: select(soong_config_variable("ANDROID", "avf_remote_attestation_enabled"), {
         "true": ["virtualizationservice.xml"],
         default: unset,
+    }),
+    required: select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
+        true: [
+            "default-permissions_com.android.virt.xml",
+        ],
+        default: [],
     }),
 }
 

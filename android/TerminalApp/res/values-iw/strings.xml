@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"טרמינל"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"התקנה של טרמינל Linux"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"כדי להפעיל את טרמינל Linux, צריך להוריד נתונים בנפח של בערך <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> דרך הרשת.\nלהמשיך?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"התקנה"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"בתהליך התקנה"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"שגיאה בחיבור לרשת. צריך לבדוק את החיבור ולנסות שוב."</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"מתבצעת התקנה של טרמינל Linux"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"טרמינל Linux יופעל אחרי שההתקנה תסתיים"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"ההתקנה נכשלה בגלל בעיה ברשת"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"ההתקנה נכשלה. אפשר לנסות שוב."</string>
+    <string name="action_settings" msgid="5729342767795123227">"הגדרות"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"הטרמינל בהכנה"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"המערכת עוצרת את הטרמינל"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"הטרמינל קרס"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"שינוי הגודל של הדיסק"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"שינוי הגודל / Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"גודל הדיסק הוגדר"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"הוקצו <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"מקסימום <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ביטול"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"צריך להפעיל מחדש את ה-VM כדי להחיל את השינויים"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"העברה ליציאה אחרת"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"הגדרת העברה ליציאה אחרת"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"הטרמינל מנסה לפתוח יציאה חדשה"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"נשלחה בקשה לפתיחת היציאה: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"אישור"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"דחייה"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"שחזור"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"אפשרויות שחזור של המחיצה"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"שינוי לגרסה הראשונית"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"הסרת הכול"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"איפוס VM"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"הגדרות"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"הטרמינל פועל"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"צריך ללחוץ כדי לפתוח את הטרמינל."</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"סגירה"</string>
+</resources>

@@ -19,6 +19,7 @@ package com.android.virtualization.vmlauncher;
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Rect;
+import android.os.Environment;
 import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig;
@@ -157,21 +158,39 @@ class ConfigJson {
     private static class SharedPathJson {
         private SharedPathJson() {}
 
-        // Package ID of Terminal app.
-        private static final String TERMINAL_PACKAGE_ID =
-                "com.google.android.virtualization.terminal";
         private String sharedPath;
+        private static final int GUEST_UID = 1000;
+        private static final int GUEST_GID = 100;
 
         private SharedPath toConfig(Context context) {
             try {
-                int uid =
-                        context.getPackageManager()
-                                .getPackageUidAsUser(TERMINAL_PACKAGE_ID, context.getUserId());
-
-                return new SharedPath(sharedPath, uid, uid, 0, 0, 0007, "android", "android");
+                int terminalUid = getTerminalUid(context);
+                if (sharedPath.contains("emulated")) {
+                    if (Environment.isExternalStorageManager()) {
+                        int currentUserId = context.getUserId();
+                        String path = sharedPath + "/" + currentUserId + "/Download";
+                        return new SharedPath(
+                                path,
+                                terminalUid,
+                                terminalUid,
+                                GUEST_UID,
+                                GUEST_GID,
+                                0007,
+                                "android",
+                                "android");
+                    }
+                    return null;
+                }
+                return new SharedPath(
+                        sharedPath, terminalUid, terminalUid, 0, 0, 0007, "internal", "internal");
             } catch (NameNotFoundException e) {
                 return null;
             }
+        }
+
+        private int getTerminalUid(Context context) throws NameNotFoundException {
+            return context.getPackageManager()
+                    .getPackageUidAsUser(context.getPackageName(), context.getUserId());
         }
     }
 

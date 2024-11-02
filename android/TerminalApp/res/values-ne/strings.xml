@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"टर्मिनल"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux टर्मिनल इन्स्टल गर्नुहोस्"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux टर्मिनल लन्च गर्नका निम्ति, तपाईंले नेटवर्क प्रयोग गरेर लगभग <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> जति डेटा डाउनलोड गर्नु पर्ने हुन्छ।\nतपाईं अघि बढ्नुहुन्छ?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"इन्स्टल गर्नुहोस्"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"इन्स्टल गरिँदै छ"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"नेटवर्कसम्बन्धी त्रुटि। कनेक्सन जाँच गर्नुहोस् र फेरि प्रयास गर्नुहोस्।"</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux टर्मिनल इन्स्टल गरिँदै छ"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"पूरा भइसकेपछि Linux टर्मिनल सुरु हुने छ"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"नेटवर्कसम्बन्धी समस्याका कारण इन्स्टल गर्न सकिएन"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"इन्स्टल गर्न सकिएन। फेरि प्रयास गर्नुहोस्।"</string>
+    <string name="action_settings" msgid="5729342767795123227">"सेटिङ"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"टर्मिनल तयार पारिँदै छ"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"टर्मिनल रोकिँदै छ"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"टर्मिनल क्र्यास भयो"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"डिस्कको आकार बदल्नुहोस्"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"आकार बदल्नुहोस् / Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्कको आकारको सेट गरियो"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> असाइन गरिएको छ"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"अधिकतम <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द गर्नुहोस्"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"परिवर्तन लागू गर्न VM रिस्टार्ट गर्नुहोस्"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"पोर्ट फर्वार्डिङ"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"पोर्ट फर्वार्डिङ कन्फिगर गर्नुहोस्"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"टर्मिनलले एउटा नयाँ पोर्ट खोल्न खोजिरहेको छ"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"खोल्न अनुरोध गरिएको पोर्ट: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकार गर्नुहोस्"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"अस्वीकार गर्नुहोस्"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"रिकभरी"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"पार्टिसन रिकभरीसम्बन्धी विकल्पहरू"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"यो संस्करण बदलेर सुरुको संस्करण बनाउनुहोस्"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"सबै हटाउनुहोस्"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM रिसेट गर्नुहोस्"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"सेटिङ"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चलिरहेको छ"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"टर्मिनल खोल्न क्लिक गर्नुहोस्।"</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"बन्द गर्नुहोस्"</string>
+</resources>

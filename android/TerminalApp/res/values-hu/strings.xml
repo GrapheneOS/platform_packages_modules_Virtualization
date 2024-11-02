@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"Terminál"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux-terminál telepítése"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"A Linux-terminál elindításához körülbelül <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> adatmennyiséget kell letöltenie a hálózaton keresztül.\nFolytatja?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Telepítés"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Telepítés…"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Hálózati hiba. Ellenőrizze a kapcsolatot, majd próbálja újra."</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux-terminál telepítése…"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"A Linux-terminál a befejezés után indul el"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"Hálózati probléma miatt nem sikerült a telepítés"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"Nem sikerült a telepítés. Próbálkozzon újra."</string>
+    <string name="action_settings" msgid="5729342767795123227">"Beállítások"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"A terminál előkészítése…"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"A terminál leállítása…"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"A terminál összeomlott"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Lemez átméretezése"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Átméretezés/Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Lemezméret beállítva"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> hozzárendelve"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maximum: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Mégse"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"A VM újraindítása az alkalmazáshoz"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Portátirányítás"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Portátirányítás konfigurálása"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"A Terminal új portot próbál megnyitni"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"A megnyitni kívánt port: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Elfogadás"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Elutasítás"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"Helyreállítás"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Partíció-helyreállítási lehetőségek"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Váltás az eredeti verzióra"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Az összes eltávolítása"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM visszaállítása"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"Beállítások"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"A terminál fut"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"Kattintson a terminál megnyitásához."</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"Bezárás"</string>
+</resources>

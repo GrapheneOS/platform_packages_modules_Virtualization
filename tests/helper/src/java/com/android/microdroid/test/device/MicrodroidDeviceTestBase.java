@@ -70,8 +70,9 @@ public abstract class MicrodroidDeviceTestBase {
     private final String MAX_PERFORMANCE_TASK_PROFILE = "CPUSET_SP_TOP_APP";
 
     protected static final String KERNEL_VERSION = SystemProperties.get("ro.kernel.version");
-    protected static final Set<String> SUPPORTED_GKI_VERSIONS =
-            Collections.unmodifiableSet(new HashSet(Arrays.asList("android15-6.6")));
+    protected static final Set<String> SUPPORTED_OSES =
+            Collections.unmodifiableSet(
+                    new HashSet<>(Arrays.asList("microdroid", "microdroid_gki-android15-6.6")));
 
     public static boolean isCuttlefish() {
         return getDeviceProperties().isCuttlefish();
@@ -132,7 +133,7 @@ public abstract class MicrodroidDeviceTestBase {
 
     private final Context mCtx = ApplicationProvider.getApplicationContext();
     private boolean mProtectedVm;
-    private String mGki;
+    private String mOs;
 
     protected Context getContext() {
         return mCtx;
@@ -161,7 +162,7 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     protected final String os() {
-        return mGki != null ? "microdroid_gki-" + mGki : "microdroid";
+        return mOs;
     }
 
     /**
@@ -190,11 +191,11 @@ public abstract class MicrodroidDeviceTestBase {
         }
     }
 
-    public void prepareTestSetup(boolean protectedVm, String gki) {
+    public void prepareTestSetup(boolean protectedVm, String os) {
         assumeFeatureVirtualizationFramework();
 
         mProtectedVm = protectedVm;
-        mGki = gki;
+        mOs = os;
 
         int capabilities = getVirtualMachineManager().getCapabilities();
         if (protectedVm) {

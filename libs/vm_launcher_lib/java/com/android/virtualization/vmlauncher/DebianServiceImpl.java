@@ -18,10 +18,12 @@ package com.android.virtualization.vmlauncher;
 
 import android.util.Log;
 
+import androidx.annotation.Keep;
+
 import com.android.virtualization.vmlauncher.proto.DebianServiceGrpc;
-import com.android.virtualization.vmlauncher.proto.Empty;
 import com.android.virtualization.vmlauncher.proto.ForwardingRequestItem;
 import com.android.virtualization.vmlauncher.proto.IpAddr;
+import com.android.virtualization.vmlauncher.proto.QueueOpeningRequest;
 import com.android.virtualization.vmlauncher.proto.ReportVmIpAddrResponse;
 
 import io.grpc.stub.StreamObserver;
@@ -29,6 +31,10 @@ import io.grpc.stub.StreamObserver;
 class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     public static final String TAG = "DebianService";
     private final DebianServiceCallback mCallback;
+
+    static {
+        System.loadLibrary("forwarder_host_jni");
+    }
 
     protected DebianServiceImpl(DebianServiceCallback callback) {
         super();
@@ -47,13 +53,31 @@ class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
 
     @Override
     public void openForwardingRequestQueue(
-            Empty request, StreamObserver<ForwardingRequestItem> responseObserver) {
+            QueueOpeningRequest request, StreamObserver<ForwardingRequestItem> responseObserver) {
         Log.d(DebianServiceImpl.TAG, "OpenForwardingRequestQueue");
-
-        // TODO(b/340126051): Bring information from forwarder_host.
-
+        runForwarderHost(request.getCid(), new ForwarderHostCallback(responseObserver));
         responseObserver.onCompleted();
     }
+
+    @Keep
+    private static class ForwarderHostCallback {
+        private StreamObserver<ForwardingRequestItem> mResponseObserver;
+
+        ForwarderHostCallback(StreamObserver<ForwardingRequestItem> responseObserver) {
+            mResponseObserver = responseObserver;
+        }
+
+        private void onForwardingRequestReceived(int guestTcpPort, int vsockPort) {
+            ForwardingRequestItem item =
+                    ForwardingRequestItem.newBuilder()
+                            .setGuestTcpPort(guestTcpPort)
+                            .setVsockPort(vsockPort)
+                            .build();
+            mResponseObserver.onNext(item);
+        }
+    }
+
+    private static native void runForwarderHost(int cid, ForwarderHostCallback callback);
 
     protected interface DebianServiceCallback {
         void onIpAddressAvailable(String ipAddr);

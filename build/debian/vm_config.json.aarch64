@@ -7,6 +7,14 @@
             "writable": true
         }
     ],
+    "sharedPath": [
+        {
+            "sharedPath": "/storage/emulated"
+        },
+        {
+            "sharedPath": "/data/data/$PACKAGE_NAME/files"
+        }
+    ],
     "protected": false,
     "cpu_topology": "match_host",
     "platform_version": "~1.0",

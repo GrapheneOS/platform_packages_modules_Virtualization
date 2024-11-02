@@ -131,7 +131,7 @@ fn main() -> Result<()> {
     debug!("fd_server is starting as a rpc service.");
     let service = FdService::new_binder(fd_pool).as_binder();
     // TODO(b/259920193): Only accept connections from the intended guest VM.
-    let server = RpcServer::new_vsock(service, libc::VMADDR_CID_ANY, RPC_SERVICE_PORT)?;
+    let (server, _) = RpcServer::new_vsock(service, libc::VMADDR_CID_ANY, RPC_SERVICE_PORT)?;
     debug!("fd_server is ready");
 
     // Close the ready-fd if we were given one to signal our readiness.

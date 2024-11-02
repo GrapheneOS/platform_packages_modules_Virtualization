@@ -1,25 +1,44 @@
 # pVM DICE Chain
 
-Unlike KeyMint, which only needs a vendor DICE chain, the pVM DICE
-chain combines the vendor's DICE chain with additional pVM DICE nodes
-describing the protected VM's environment.
+A VM [DICE][open-dice] chain is a cryptographically linked
+[certificates chain][cert-chain] that captures measurements of the VM's
+entire execution environment.
 
-![][pvm-dice-chain-img]
+This chain should be rooted in the device's ROM and encompass all components
+involved in the VM's loading and boot process. To achieve this, we typically
+extract measurements of all the components after verified boot at each stage
+of the boot process. These measurements are then used to derive a new DICE
+certificate describing the next boot stage.
 
-The full [RKP VM DICE chain][rkpvm-dice-chain], starting from `UDS_Pub`
-rooted in ROM, is sent to the RKP server during
-[pVM remote attestation][vm-attestation].
+![][pvm-dice-chain-built-img]
 
-[vm-attestation]: vm_remote_attestation.md
-[pvm-dice-chain-img]: img/pvm-dice.png
-[rkpvm-dice-chain]: vm_remote_attestation.md#rkp-vm-marker
+[pvm-dice-chain-built-img]: img/pvm-dice-built-during-boot.png
+[cert-chain]: https://en.wikipedia.org/wiki/Chain_of_trust
 
-## Key derivation
+## Vendor responsibility
+
+Vendors are responsible for constructing the first portion of the DICE chain,
+from ROM to the pvmfw loader (e.g., ABL). This portion describes the VM's
+loading environment. The final certificate in the vendor's chain must include
+measurements of pvmfw, the hypervisor, and any other code relevant to pvmfw's
+secure execution.
+
+## pVM DICE handover
+
+Vendors then pass this DICE chain, along with its corresponding
+[CDI values][dice-cdi], in a handover to pvmfw. The pVM takes over this
+handover and extends it with additional nodes describing its own execution
+environment.
+
+[dice-cdi]: https://android.googlesource.com/platform/external/open-dice/+/main/docs/specification.md#cdi-values
+![][pvm-dice-handover-img]
+
+### Key derivation
 
 Key derivation is a critical step in the DICE handover process within
 [pvmfw][pvmfw]. Vendors need to ensure that both pvmfw and their final DICE
 node use the same method to derive a key pair from `CDI_Attest` in order to
-maintain a valid certificate chain. Pvmfw use [open-dice][open-dice] with the
+maintain a valid certificate chain. Pvmfw uses [open-dice][open-dice] with the
 following formula:
 
 ```
@@ -35,7 +54,17 @@ Vendors must use a supported algorithm for the last DICE node to ensure
 compatibility and chain integrity.
 
 [pvmfw]: ../guest/pvmfw
-[open-dice]: https://cs.android.com/android/platform/superproject/main/+/main:external/open-dice/
+[pvm-dice-handover-img]: img/pvm-dice-handover.png
+[open-dice]: https://android.googlesource.com/platform/external/open-dice/+/main/docs/specification.md
+
+## Validation
+
+While pvmfw and the Microdroid OS extend the VM DICE chain, they don't
+perform comprehensive validation of the chain's structure or its ROM-rooted
+origin. The [VM Remote Attestation][vm-attestation] feature is specifically
+designed to ensure the validity and ROM-rooted nature of a VM DICE chain.
+
+[vm-attestation]: vm_remote_attestation.md
 
 ## Testing
 

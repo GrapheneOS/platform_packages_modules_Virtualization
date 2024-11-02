@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"ទែមីណាល់"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"ដំឡើងទែមីណាល់ Linux"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"ដើម្បីបើកដំណើរការទែមីណាល់ Linux អ្នកត្រូវទាញយកទិន្នន័យប្រហែលជា <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> នៅលើបណ្តាញ។\nតើអ្នកចង់បន្តដែរឬទេ?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ដំឡើង"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"កំពុងដំឡើង"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"មានបញ្ហាបណ្ដាញ។ ពិនិត្យមើលការតភ្ជាប់ រួចព្យាយាមម្ដងទៀត។"</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"កំពុងដំឡើងទែមីណាល់ Linux"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"ទែមីណាល់ Linux នឹងត្រូវបានចាប់ផ្ដើមបន្ទាប់ពីបញ្ចប់"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"មិនអាច​ដំឡើងបានទេ ដោយសារបញ្ហាបណ្ដាញ"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"មិនអាច​ដំឡើងបានទេ។ សូមព្យាយាមម្ដងទៀត។"</string>
+    <string name="action_settings" msgid="5729342767795123227">"ការកំណត់"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"កំពុងរៀបចំទែមីណាល់"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"កំពុងបញ្ឈប់ទែមីណាល់"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"ទែមីណាល់បានគាំង"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"ប្ដូរ​ទំហំថាស"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"ប្ដូរ​ទំហំ / Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"បានកំណត់ទំហំ​ថាស"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"បានកំណត់ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"អតិបរមា <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"បោះបង់"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"ចាប់ផ្ដើម​ VM ឡើងវិញ ដើម្បីអនុវត្ត"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ការបញ្ជូនច្រកបន្ត"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"កំណត់រចនាសម្ព័ន្ធ​ការបញ្ជូនច្រកបន្ត"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ទែមីណាល់កំពុងព្យាយាមបើកច្រកថ្មី"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"បានស្នើសុំឱ្យបើកច្រក៖ <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ទទួលយក"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"បដិសេធ"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"ស្ដារ"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ជម្រើសស្ដារផ្នែក"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ប្ដូរ​ទៅ​កំណែ​ដំបូង"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ដកចេញទាំងអស់"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"បានកំណត់ VM ឡើងវិញ"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"ការកំណត់"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"ទែមីណាល់កំពុងដំណើរការ"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"ចុចដើម្បីបើកទែមីណាល់។"</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"បិទ"</string>
+</resources>

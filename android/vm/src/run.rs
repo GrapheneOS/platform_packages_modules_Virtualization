@@ -140,11 +140,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         bail!("Either --config-path or --payload-binary-name must be defined")
     };
 
-    let os_name = if let Some(ver) = config.microdroid.gki() {
-        format!("microdroid_gki-{ver}")
-    } else {
-        "microdroid".to_owned()
-    };
+    let os_name = if let Some(ref os) = config.microdroid.os { os } else { "microdroid" };
 
     let payload_config_str = format!("{:?}!{:?}", config.apk, payload);
 
@@ -192,7 +188,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         memoryMib: config.common.mem.unwrap_or(0) as i32, // 0 means use the VM default
         cpuTopology: config.common.cpu_topology,
         customConfig: Some(custom_config),
-        osName: os_name,
+        osName: os_name.to_string(),
         hugePages: config.common.hugepages,
         boostUclamp: config.common.boost_uclamp,
     });

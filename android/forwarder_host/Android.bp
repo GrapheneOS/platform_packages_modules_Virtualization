@@ -1,0 +1,26 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_ffi_shared {
+    name: "libforwarder_host_jni",
+    crate_name: "forwarder_host",
+    edition: "2021",
+    srcs: ["src/forwarder_host.rs"],
+    rustlibs: [
+        "libforwarder",
+        "libjni",
+        "liblog_rust",
+        "libnix",
+        "libvmm_sys_util",
+        "libvsock",
+    ],
+    proc_macros: [
+        "libpoll_token_derive",
+        "libremain",
+    ],
+    apex_available: [
+        "com.android.virt",
+    ],
+    prefer_rlib: true,
+}

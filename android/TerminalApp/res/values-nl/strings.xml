@@ -17,12 +17,23 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux-terminal installeren"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Als je Linux-terminal wilt starten, moet je ongeveer <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> aan data downloaden via het netwerk.\nWil je doorgaan?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Installeren"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installeren"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Netwerkfout. Check de verbinding en probeer het opnieuw."</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux-terminal installeren"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux-terminal wordt gestart na afronding"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"Kan niet installeren vanwege het netwerkprobleem"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"Installatie mislukt. Probeer het opnieuw."</string>
     <string name="action_settings" msgid="5729342767795123227">"Instellingen"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Terminal voorbereiden"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Terminal stoppen"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminal gecrasht"</string>
     <string name="settings_disk_resize_title" msgid="1545791169419914600">"Formaat van schijf aanpassen"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Formaat van /Rootfs aanpassen"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Formaat aanpassen/Rootfs"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Schijfgrootte ingesteld"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> toegewezen"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> max."</string>
@@ -30,25 +41,17 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Start de VM opnieuw op om dit toe te passen"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Poortdoorschakeling"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Poortdoorschakeling instellen"</string>
-    <!-- no translation found for settings_port_forwarding_notification_title (2822798067500254704) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_notification_content (2167103177775323330) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_notification_accept (3571520986524038185) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_notification_deny (636848749634710403) -->
-    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal probeert een nieuwe poort te openen"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Poort die moet worden geopend: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Accepteren"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Weigeren"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Herstel"</string>
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Herstelopties voor partities"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Wijzigen naar eerste versie"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Alles verwijderen"</string>
     <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM gereset"</string>
-    <!-- no translation found for service_notification_settings (1437365721184401135) -->
-    <skip />
-    <!-- no translation found for service_notification_title (2918088850910713393) -->
-    <skip />
-    <!-- no translation found for service_notification_content (8652887364784704911) -->
-    <skip />
-    <!-- no translation found for service_notification_quit_action (4888327875869277455) -->
-    <skip />
+    <string name="service_notification_settings" msgid="1437365721184401135">"Instellingen"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"Terminal wordt uitgevoerd"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"Klik om de terminal te openen."</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"Sluiten"</string>
 </resources>

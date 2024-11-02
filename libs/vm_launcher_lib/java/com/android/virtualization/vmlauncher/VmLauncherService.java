@@ -27,12 +27,22 @@ import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.util.Log;
 
+import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
+import io.grpc.Metadata;
 import io.grpc.Server;
+import io.grpc.ServerCall;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
+import io.grpc.Status;
 import io.grpc.okhttp.OkHttpServerBuilder;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,6 +72,11 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (Objects.equals(
+                intent.getAction(), VmLauncherServices.ACTION_STOP_VM_LAUNCHER_SERVICE)) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (mVirtualMachine != null) {
             Log.d(TAG, "VM instance is already started");
             return START_NOT_STICKY;
@@ -131,19 +146,54 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
     }
 
     private void startDebianServer() {
+        ServerInterceptor interceptor =
+                new ServerInterceptor() {
+                    @Override
+                    public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
+                            ServerCall<ReqT, RespT> call,
+                            Metadata headers,
+                            ServerCallHandler<ReqT, RespT> next) {
+                        // Refer to VirtualizationSystemService.TetheringService
+                        final String VM_STATIC_IP_ADDR = "192.168.0.2";
+                        InetSocketAddress remoteAddr =
+                                (InetSocketAddress)
+                                        call.getAttributes().get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR);
+
+                        if (remoteAddr != null
+                                && Objects.equals(
+                                        remoteAddr.getAddress().getHostAddress(),
+                                        VM_STATIC_IP_ADDR)) {
+                            // Allow the request only if it is from VM
+                            return next.startCall(call, headers);
+                        }
+                        Log.d(TAG, "blocked grpc request from " + remoteAddr);
+                        call.close(Status.Code.PERMISSION_DENIED.toStatus(), new Metadata());
+                        return new ServerCall.Listener<ReqT>() {};
+                    }
+                };
         new Thread(
                         () -> {
-                            // TODO(b/372666638): gRPC for java doesn't support vsock for now.
-                            // In addition, let's consider using a dynamic port and SSL(and client
-                            // certificate)
-                            int port = 12000;
                             try {
+                                // TODO(b/372666638): gRPC for java doesn't support vsock for now.
+                                int port = 0;
                                 mServer =
                                         OkHttpServerBuilder.forPort(
                                                         port, InsecureServerCredentials.create())
+                                                .intercept(interceptor)
                                                 .addService(new DebianServiceImpl(this))
                                                 .build()
                                                 .start();
+
+                                // TODO(b/373533555): we can use mDNS for that.
+                                String debianServicePortFileName = "debian_service_port";
+                                File debianServicePortFile =
+                                        new File(getFilesDir(), debianServicePortFileName);
+                                try (FileOutputStream writer =
+                                        new FileOutputStream(debianServicePortFile)) {
+                                    writer.write(String.valueOf(mServer.getPort()).getBytes());
+                                } catch (IOException e) {
+                                    Log.d(TAG, "cannot write grpc port number", e);
+                                }
                             } catch (IOException e) {
                                 Log.d(TAG, "grpc server error", e);
                             }

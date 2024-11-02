@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"ਟਰਮੀਨਲ"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux ਟਰਮੀਨਲ ਐਪ ਸਥਾਪਤ ਕਰੋ"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ਟਰਮੀਨਲ ਐਪ ਨੂੰ ਲਾਂਚ ਕਰਨ ਲਈ, ਤੁਹਾਨੂੰ ਨੈੱਟਵਰਕ \'ਤੇ ਲਗਭਗ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ਡਾਟਾ ਡਾਊਨਲੋਡ ਕਰਨ ਦੀ ਲੋੜ ਹੈ।\nਕੀ ਅੱਗੇ ਵਧਣਾ ਹੈ?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ਸਥਾਪਤ ਕਰੋ"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ਸਥਾਪਤ ਹੋ ਰਹੀ ਹੈ"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"ਨੈੱਟਵਰਕ ਗੜਬੜ। ਕਨੈਕਸ਼ਨ ਦੀ ਜਾਂਚ ਕਰ ਕੇ ਮੁੜ-ਕੋਸ਼ਿਸ਼ ਕਰੋ।"</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ਟਰਮੀਨਲ ਐਪ ਸਥਾਪਤ ਕਰਨਾ"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"ਪ੍ਰਕਿਰਿਆ ਪੂਰੀ ਹੋਣ ਤੋਂ ਬਾਅਦ, Linux ਟਰਮੀਨਲ ਐਪ ਸ਼ੁਰੂ ਹੋ ਜਾਵੇਗੀ"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"ਨੈੱਟਵਰਕ ਸੰਬੰਧੀ ਸਮੱਸਿਆ ਕਾਰਨ ਸਥਾਪਤ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"ਸਥਾਪਤ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"</string>
+    <string name="action_settings" msgid="5729342767795123227">"ਸੈਟਿੰਗਾਂ"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"ਟਰਮੀਨਲ ਨੂੰ ਤਿਆਰ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"ਟਰਮੀਨਲ ਨੂੰ ਬੰਦ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"ਟਰਮੀਨਲ ਕ੍ਰੈਸ਼ ਹੋ ਗਿਆ"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"ਡਿਸਕ ਦਾ ਆਕਾਰ ਬਦਲੋ"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"ਆਕਾਰ ਬਦਲੋ / Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ਡਿਸਕ ਸਾਈਜ਼ ਸੈੱਟ ਕੀਤਾ ਗਿਆ"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ਜ਼ਿੰਮੇ ਲਗਾਇਆ ਗਿਆ"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ਵੱਧੋ-ਵੱਧ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ਰੱਦ ਕਰੋ"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"ਲਾਗੂ ਕਰਨ ਲਈ VM ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕਰੋ"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ਪੋਰਟ ਫਾਰਵਰਡਿੰਗ"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ਪੋਰਟ ਫਾਰਵਰਡਿੰਗ ਦਾ ਸੰਰੂਪਣ ਕਰੋ"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ਟਰਮੀਨਲ ਇੱਕ ਨਵੇਂ ਪੋਰਟ ਨੂੰ ਖੋਲ੍ਹਣ ਦੀ ਕੋਸ਼ਿਸ਼ ਕਰ ਰਿਹਾ ਹੈ"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"ਪੋਰਟ ਨੂੰ ਖੋਲ੍ਹਣ ਦੀ ਬੇਨਤੀ ਕੀਤੀ ਗਈ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ਸਵੀਕਾਰ ਕਰੋ"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"ਅਸਵੀਕਾਰ ਕਰੋ"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"ਰਿਕਵਰੀ"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ਪਾਰਟੀਸ਼ਨ ਰਿਕਵਰੀ ਦੇ ਵਿਕਲਪ"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ਸ਼ੁਰੂਆਤੀ ਵਰਜਨ \'ਤੇ ਬਦਲੋ"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ਸਭ ਹਟਾਓ"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM ਰੀਸੈੱਟ ਕੀਤਾ ਗਿਆ"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"ਸੈਟਿੰਗਾਂ"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"ਟਰਮੀਨਲ ਚਾਲੂ ਹੈ"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"ਟਰਮੀਨਲ ਨੂੰ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ।"</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"ਬੰਦ ਕਰੋ"</string>
+</resources>

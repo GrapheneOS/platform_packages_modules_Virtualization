@@ -27,7 +27,10 @@ rust_library {
     defaults: ["libapkverify.defaults"],
     // TODO(b/204562227): move to host_supported to the defaults to include tests
     host_supported: true,
-    apex_available: ["com.android.virt"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
 }
 
 rust_test {

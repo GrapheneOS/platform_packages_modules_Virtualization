@@ -2,8 +2,9 @@
 Description=TTYD
 After=syslog.target
 After=network.target
+After=virtiofs_internal.service
 [Service]
-ExecStart=/usr/local/bin/ttyd --ssl --ssl-cert /etc/ttyd/server.crt --ssl-key /etc/ttyd/server.key --ssl-ca /etc/ttyd/ca.crt -W screen -aAxR -S main login -f droid
+ExecStart=/usr/local/bin/ttyd --ssl --ssl-cert /etc/ttyd/server.crt --ssl-key /etc/ttyd/server.key --ssl-ca /mnt/internal/ca.crt -W login -f droid
 Type=simple
 Restart=always
 User=root

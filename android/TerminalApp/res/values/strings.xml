@@ -24,8 +24,8 @@
     <string name="installer_title_text">Install Linux terminal</string>
     <!-- Installer activity description format [CHAR LIMIT=none] -->
     <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">%1$s</xliff:g> of data over network.\nWould you proceed?</string>
-    <!-- Checkbox at the installer activity to wait for Wi-Fi on metered network to prevent from paying network traffic [CHAR LIMIT=none] -->
-    <string name="installer_wait_for_wifi_checkbox_text">Wait for Wi-Fi on metered network</string>
+    <!-- Checkbox at the installer activity to download when Wi-Fi is available to prevent from paying network traffic [CHAR LIMIT=none] -->
+    <string name="installer_wait_for_wifi_checkbox_text">Download when Wi-Fi is available</string>
     <!-- Button at the installer activity to confirm installation [CHAR LIMIT=16] -->
     <string name="installer_install_button_enabled_text">Install</string>
     <!-- Button at the installer activity to when installation is already in progress [CHAR LIMIT=16] -->
@@ -87,8 +87,14 @@
     <string name="settings_recovery_reset_title">Change to Initial version</string>
     <!-- Settings menu subtitle for resetting the virtual machine image [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_sub_title">Remove all</string>
-    <!-- Toast message for reset is completed [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_message">VM reset</string>
+    <!-- Dialog title for restarting the terminal [CHAR LIMIT=none] -->
+    <string name="settings_recovery_reset_dialog_title">Reset the virtual machine</string>
+    <!-- Dialog message for restarting the terminal [CHAR LIMIT=none] -->
+    <string name="settings_recovery_reset_dialog_message">Data will be deleted.</string>
+    <!-- Dialog button confirm for restarting the terminal [CHAR LIMIT=16] -->
+    <string name="settings_recovery_reset_dialog_confirm">Confirm</string>
+    <!-- Dialog button cancel for restarting the terminal [CHAR LIMIT=16] -->
+    <string name="settings_recovery_reset_dialog_cancel">Cancel</string>
 
     <!-- Notification action button for settings [CHAR LIMIT=none] -->
     <string name="service_notification_settings">Settings</string>

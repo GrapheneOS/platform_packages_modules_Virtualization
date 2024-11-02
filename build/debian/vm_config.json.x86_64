@@ -7,6 +7,14 @@
             "writable": true
         }
     ],
+    "sharedPath": [
+        {
+            "sharedPath": "/storage/emulated"
+        },
+        {
+            "sharedPath": "/data/data/$PACKAGE_NAME/files"
+        }
+    ],
     "kernel": "$PAYLOAD_DIR/vmlinuz",
     "initrd": "$PAYLOAD_DIR/initrd.img",
     "params": "root=/dev/vda1",

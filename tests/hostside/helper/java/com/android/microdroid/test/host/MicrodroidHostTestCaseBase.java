@@ -23,31 +23,25 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.microdroid.test.common.DeviceProperties;
 import com.android.microdroid.test.common.MetricsProcessor;
-import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
-import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.RunUtil;
+import com.android.tradefed.util.SearchArtifactUtil;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     protected static final String TEST_ROOT = "/data/local/tmp/virt/";
@@ -73,8 +67,13 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
                             * 1000
                             / MICRODROID_COMMAND_RETRY_INTERVAL_MILLIS);
 
-    protected static final Set<String> SUPPORTED_GKI_VERSIONS =
-            Collections.unmodifiableSet(new HashSet(Arrays.asList("android15-6.6")));
+    // We use a map here because the parameterizer `DeviceParameterizedRunner` doesn't support "-"
+    // in test names.
+    // The key of the map is the name of the parameter while the value is the actual OS variant.
+    protected static final Map<String, String> SUPPORTED_OSES =
+            Map.ofEntries(
+                    Map.entry("microdroid", "microdroid"),
+                    Map.entry("android15_66", "microdroid_gki-android15-6.6"));
 
     /* Keep this sync with AssignableDevice.aidl */
     public static final class AssignableDevice {
@@ -178,28 +177,12 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
 
     public File findTestFile(String name) {
         String moduleName = getInvocationContext().getConfigurationDescriptor().getModuleName();
-        IBuildInfo buildInfo = getBuild();
-        CompatibilityBuildHelper helper = new CompatibilityBuildHelper(buildInfo);
-
-        // We're not using helper.getTestFile here because it sometimes picks a file
-        // from a different module, which may be old and/or wrong. See b/328779049.
-        try {
-            File testsDir = helper.getTestsDir().getAbsoluteFile();
-
-            for (File subDir : FileUtil.findDirsUnder(testsDir, testsDir.getParentFile())) {
-                if (!subDir.getName().equals(moduleName)) {
-                    continue;
-                }
-                File testFile = FileUtil.findFile(subDir, name);
-                if (testFile != null) {
-                    return testFile;
-                }
-            }
-        } catch (IOException e) {
+        File testFile = SearchArtifactUtil.searchFile(name, false);
+        if (testFile == null) {
             throw new AssertionError(
-                    "Failed to find test file " + name + " for module " + moduleName, e);
+                    "Failed to find test file " + name + " for module " + moduleName);
         }
-        throw new AssertionError("Failed to find test file " + name + " for module " + moduleName);
+        return testFile;
     }
 
     public String getPathForPackage(String packageName) throws DeviceNotAvailableException {
@@ -278,13 +261,6 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
 
     public List<String> getSupportedOSList() throws Exception {
         return parseStringArrayFieldsFromVmInfo("Available OS list: ");
-    }
-
-    public List<String> getSupportedGKIVersions() throws Exception {
-        return getSupportedOSList().stream()
-                .filter(os -> os.startsWith("microdroid_gki-"))
-                .map(os -> os.replaceFirst("^microdroid_gki-", ""))
-                .collect(Collectors.toList());
     }
 
     protected boolean isPkvmHypervisor() throws DeviceNotAvailableException {

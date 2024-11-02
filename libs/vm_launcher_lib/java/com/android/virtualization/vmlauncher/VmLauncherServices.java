@@ -36,6 +36,8 @@ public class VmLauncherServices {
     private static final String ACTION_START_VM_LAUNCHER_SERVICE =
             "android.virtualization.START_VM_LAUNCHER_SERVICE";
 
+    public static final String ACTION_STOP_VM_LAUNCHER_SERVICE =
+            "android.virtualization.STOP_VM_LAUNCHER_SERVICE";
     private static final int RESULT_START = 0;
     private static final int RESULT_STOP = 1;
     private static final int RESULT_ERROR = 2;

@@ -909,7 +909,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<()> {
             shared_path.mask,
         );
 
-        let cfg_arg = format!("writeback=true,cache_policy=always,ugid_map='{}'", ugid_map_value);
+        let cfg_arg = format!("ugid_map='{}'", ugid_map_value);
 
         let mut command = Command::new(CROSVM_PATH);
         command
@@ -1244,6 +1244,9 @@ fn run_vm(
     }
 
     for shared_path in &config.shared_paths {
+        if let Err(e) = wait_for_file(&shared_path.socket_path, 5) {
+            bail!("Error waiting for file: {}", e);
+        }
         command
             .arg("--vhost-user-fs")
             .arg(format!("{},tag={}", &shared_path.socket_path, &shared_path.tag));
@@ -1267,6 +1270,23 @@ fn run_vm(
     let result = SharedChild::spawn(&mut command)?;
     debug!("Spawned crosvm({}).", result.id());
     Ok(result)
+}
+
+fn wait_for_file(path: &str, timeout_secs: u64) -> Result<(), std::io::Error> {
+    let start_time = std::time::Instant::now();
+    let timeout = Duration::from_secs(timeout_secs);
+
+    while start_time.elapsed() < timeout {
+        if std::fs::metadata(path).is_ok() {
+            return Ok(()); // File exists
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        format!("File not found within {} seconds: {}", timeout_secs, path),
+    ))
 }
 
 /// Ensure that the configuration has a valid combination of fields set, or return an error if not.

@@ -1,0 +1,77 @@
+/*
+ * Copyright (C) 2024 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.virtualization.terminal;
+
+import static org.junit.Assert.assertTrue;
+
+import android.app.Instrumentation;
+import android.content.Context;
+import android.content.Intent;
+
+import androidx.test.InstrumentationRegistry;
+import androidx.test.runner.AndroidJUnit4;
+
+import com.android.virtualization.vmlauncher.InstallUtils;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+@RunWith(AndroidJUnit4.class)
+public class TerminalAppTest {
+    private Instrumentation mInstr;
+    private Context mTargetContext;
+
+    @Before
+    public void setup() {
+        mInstr = InstrumentationRegistry.getInstrumentation();
+        mTargetContext = mInstr.getTargetContext();
+        installVmImage();
+    }
+
+    private void installVmImage() {
+        final long INSTALL_TIMEOUT_MILLIS = 300_000; // 5 min
+
+        Intent intent = new Intent(mTargetContext, InstallerActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(InstallerActivity.EXTRA_AUTO_DOWNLOAD, true);
+
+        if (mInstr.startActivitySync(intent) instanceof InstallerActivity activity) {
+            assertTrue(
+                    "Failed to install VM image",
+                    activity.waitForInstallCompleted(INSTALL_TIMEOUT_MILLIS));
+        }
+    }
+
+    @Test
+    public void boot() throws Exception {
+        final long BOOT_TIMEOUT_MILLIS = 30_000; // 30 sec
+
+        Intent intent = new Intent(mTargetContext, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        if (mInstr.startActivitySync(intent) instanceof MainActivity activity) {
+            assertTrue("Failed to boot in 30s", activity.waitForBootCompleted(BOOT_TIMEOUT_MILLIS));
+        }
+    }
+
+    @After
+    public void tearDown() {
+        InstallUtils.deleteInstallation(mTargetContext);
+    }
+}

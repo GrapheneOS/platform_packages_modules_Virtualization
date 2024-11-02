@@ -2,12 +2,15 @@
 name = "forwarder_guest_launcher"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
+anyhow = "1.0.91"
 clap = { version = "4.5.20", features = ["derive"] }
 prost = "0.13.3"
-tokio = { version = "1.40.0", features = ["rt-multi-thread"] }
+tokio = { version = "1.40.0", features = ["process", "rt-multi-thread"] }
 tonic = "0.12.3"
+vsock = "0.5.1"
 
 [build-dependencies]
 tonic-build = "0.12.3"

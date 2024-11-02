@@ -71,9 +71,9 @@ interface IVirtualMachine {
     /** Set the name of the peer end (ptsname) of the host console. */
     void setHostConsoleName(in @utf8InCpp String pathname);
 
-    /** Suspends the VM. */
+    /** Suspends the VM vcpus. */
     void suspend();
 
-    /** Resumes the suspended VM. */
+    /** Resumes the suspended VM vcpus. */
     void resume();
 }

@@ -449,7 +449,7 @@ impl VirtualizationService {
 
         // Start VM service listening for connections from the new CID on port=CID.
         let port = cid;
-        let vm_server = RpcServer::new_vsock(service, cid, port)
+        let (vm_server, _) = RpcServer::new_vsock(service, cid, port)
             .context(format!("Could not start RpcServer on port {port}"))
             .or_service_specific_exception(-1)?;
         vm_server.start();
@@ -471,7 +471,7 @@ impl VirtualizationService {
             // Start VM service listening for connections from the new CID on port=CID.
             let port = cid;
             match RpcServer::new_vsock(service, cid, port) {
-                Ok(vm_server) => {
+                Ok((vm_server, _)) => {
                     vm_server.start();
                     return Ok((VmContext::new(vm_context, vm_server), cid, temp_dir));
                 }

@@ -24,7 +24,6 @@ use std::mem::size_of;
 use std::path::Path;
 use zerocopy::AsBytes;
 
-use crate::util::*;
 use crate::DmTargetSpec;
 
 // The UAPI for the verity target is here.
@@ -81,6 +80,8 @@ impl<'a> Default for DmVerityTargetBuilder<'a> {
     }
 }
 
+const BLOCK_SIZE: u64 = 4096;
+
 impl<'a> DmVerityTargetBuilder<'a> {
     /// Sets the device that will be used as the data device (i.e. providing actual data).
     pub fn data_device(&mut self, p: &'a Path, size: u64) -> &mut Self {
@@ -132,8 +133,7 @@ impl<'a> DmVerityTargetBuilder<'a> {
             .context("data device is not set")?
             .to_str()
             .context("data device path is not encoded in utf8")?;
-        let stat = fstat(self.data_device.unwrap())?; // safe; checked just above
-        let data_block_size = stat.st_blksize as u64;
+        let data_block_size = BLOCK_SIZE;
         let data_size = self.data_size;
         let num_data_blocks = data_size / data_block_size;
 
@@ -142,8 +142,7 @@ impl<'a> DmVerityTargetBuilder<'a> {
             .context("hash device is not set")?
             .to_str()
             .context("hash device path is not encoded in utf8")?;
-        let stat = fstat(self.data_device.unwrap())?; // safe; checked just above
-        let hash_block_size = stat.st_blksize;
+        let hash_block_size = BLOCK_SIZE;
 
         let hash_algorithm = match self.hash_algorithm {
             DmVerityHashAlgorithm::SHA256 => "sha256",

@@ -129,15 +129,13 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Rule public Timeout globalTimeout = Timeout.seconds(300);
 
-    @Parameterized.Parameters(name = "protectedVm={0},gki={1}")
+    @Parameterized.Parameters(name = "protectedVm={0},os={1}")
     public static Collection<Object[]> params() {
         List<Object[]> ret = new ArrayList<>();
-        ret.add(new Object[] {true /* protectedVm */, null /* use microdroid kernel */});
-        ret.add(new Object[] {false /* protectedVm */, null /* use microdroid kernel */});
         // TODO(b/302465542): run only the latest GKI on presubmit to reduce running time
-        for (String gki : SUPPORTED_GKI_VERSIONS) {
-            ret.add(new Object[] {true /* protectedVm */, gki});
-            ret.add(new Object[] {false /* protectedVm */, gki});
+        for (String os : SUPPORTED_OSES) {
+            ret.add(new Object[] {true /* protectedVm */, os});
+            ret.add(new Object[] {false /* protectedVm */, os});
         }
         return ret;
     }
@@ -146,12 +144,12 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public boolean mProtectedVm;
 
     @Parameterized.Parameter(1)
-    public String mGki;
+    public String mOs;
 
     @Before
     public void setup() {
-        prepareTestSetup(mProtectedVm, mGki);
-        if (mGki != null) {
+        prepareTestSetup(mProtectedVm, mOs);
+        if (mOs != "microdroid") {
             // Using a non-default VM always needs the custom permission.
             grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         } else {
@@ -1957,7 +1955,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     public void testConsoleInputSupported() throws Exception {
         assumeSupportedDevice();
-        assumeTrue("Not supported on GKI kernels", mGki == null);
+        assumeFalse("Not supported on GKI kernels", mOs.startsWith("microdroid_gki-"));
 
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")

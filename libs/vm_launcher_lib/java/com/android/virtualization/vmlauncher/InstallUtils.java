@@ -17,6 +17,7 @@ package com.android.virtualization.vmlauncher;
 
 import android.content.Context;
 import android.os.Environment;
+import android.os.FileUtils;
 import android.util.Log;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -47,6 +48,24 @@ public class InstallUtils {
 
     public static boolean isImageInstalled(Context context) {
         return Files.exists(getInstallationCompletedPath(context));
+    }
+
+    public static void unInstall(Context context) throws IOException {
+        Files.delete(getInstallationCompletedPath(context));
+    }
+
+    public static boolean createInstalledMarker(Context context) {
+        try {
+            File file = new File(getInstallationCompletedPath(context).toString());
+            return file.createNewFile();
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to mark install completed", e);
+            return false;
+        }
+    }
+
+    public static void deleteInstallation(Context context) {
+        FileUtils.deleteContentsAndDir(getInternalStorageDir(context));
     }
 
     private static Path getPayloadPath() {
@@ -114,19 +133,13 @@ public class InstallUtils {
         }
 
         // Create marker for installation done.
-        try {
-            File file = new File(getInstallationCompletedPath(context).toString());
-            file.createNewFile();
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to mark install completed", e);
-            return false;
-        }
-        return true;
+        return createInstalledMarker(context);
     }
 
     private static Function<String, String> getReplacer(Context context) {
         Map<String, String> rules = new HashMap<>();
         rules.put("\\$PAYLOAD_DIR", new File(context.getFilesDir(), PAYLOAD_DIR).toString());
+        rules.put("\\$PACKAGE_NAME", context.getPackageName());
         return (s) -> {
             for (Map.Entry<String, String> rule : rules.entrySet()) {
                 s = s.replaceAll(rule.getKey(), rule.getValue());

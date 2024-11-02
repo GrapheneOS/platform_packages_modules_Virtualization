@@ -1,0 +1,22 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_test {
+    name: "TerminalAppTests",
+    srcs: ["src/**/*.java"],
+    libs: [
+        "android.test.runner.stubs.system",
+        "android.test.base.stubs.system",
+        "android.test.mock.stubs.system",
+    ],
+    static_libs: [
+        "androidx.test.rules",
+        "androidx.test.core",
+        "androidx.test.ext.junit",
+        "junit",
+    ],
+    platform_apis: true,
+    test_suites: ["device-tests"],
+    instrumentation_for: "VmTerminalApp",
+}

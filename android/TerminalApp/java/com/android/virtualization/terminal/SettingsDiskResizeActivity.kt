@@ -15,45 +15,77 @@
  */
 package com.android.virtualization.terminal
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.FileUtils
-import android.widget.TextView
-import android.widget.Toast
-import android.text.style.RelativeSizeSpan
-import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
-import android.text.format.Formatter
 import android.text.TextUtils
+import android.text.format.Formatter
+import android.text.style.RelativeSizeSpan
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
-
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 class SettingsDiskResizeActivity : AppCompatActivity() {
-    private val maxDiskSize: Float = 256F
+    private val maxDiskSizeMb: Float = (16 shl 10).toFloat()
     private val numberPattern: Pattern = Pattern.compile("[\\d]*[\\٫.,]?[\\d]+");
-    private var diskSize: Float = 104F
+
+    private fun bytesToMb(bytes: Long): Long {
+        return bytes shr 20;
+    }
+
+    private fun mbToBytes(bytes: Long): Long {
+        return bytes shl 20;
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_disk_resize)
+        val sharedPref =
+            this.getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
+        var diskSizeMb =
+            bytesToMb(
+                sharedPref.getLong(
+                    getString(R.string.preference_disk_size_key),
+                    0
+                )
+            ).toFloat();
+        val minDiskSizeMb =
+            bytesToMb(
+                    sharedPref.getLong(
+                    getString(R.string.preference_min_disk_size_key),
+                    0
+                )
+            ).toFloat();
+
         val diskSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_assigned)
         val diskMaxSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_max)
         diskMaxSizeText.text = getString(R.string.settings_disk_resize_resize_gb_max_format,
-            localizedFileSize(maxDiskSize));
+            localizedFileSize(maxDiskSizeMb)
+        );
 
         val diskSizeSlider = findViewById<Slider>(R.id.settings_disk_resize_disk_size_slider)
-        diskSizeSlider.setValueTo(maxDiskSize)
+        diskSizeSlider.setValueTo(maxDiskSizeMb)
         val cancelButton = findViewById<MaterialButton>(R.id.settings_disk_resize_cancel_button)
         val resizeButton = findViewById<MaterialButton>(R.id.settings_disk_resize_resize_button)
-        diskSizeSlider.value = diskSize
+        diskSizeSlider.valueFrom = minDiskSizeMb
+        diskSizeSlider.valueTo = maxDiskSizeMb
+        diskSizeSlider.value = diskSizeMb
+        diskSizeSlider.stepSize =
+            resources.getInteger(R.integer.disk_size_round_up_step_size_in_mb).toFloat()
+        diskSizeSlider.setLabelFormatter { value: Float ->
+            localizedFileSize(value)
+        }
         diskSizeText.text = enlargeFontOfNumber(
             getString(R.string.settings_disk_resize_resize_gb_assigned_format,
-            localizedFileSize(diskSize)))
+                localizedFileSize(diskSizeMb)
+            )
+        )
 
         diskSizeSlider.addOnChangeListener { _, value, _ ->
             diskSizeText.text = enlargeFontOfNumber(
@@ -63,24 +95,35 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
             resizeButton.isVisible = true
         }
         cancelButton.setOnClickListener {
-            diskSizeSlider.value = diskSize
+            diskSizeSlider.value = diskSizeMb
             cancelButton.isVisible = false
             resizeButton.isVisible = false
         }
 
         resizeButton.setOnClickListener {
-            diskSize = diskSizeSlider.value
+            diskSizeMb = diskSizeSlider.value
             cancelButton.isVisible = false
             resizeButton.isVisible = false
-            Toast.makeText(this@SettingsDiskResizeActivity, R.string.settings_disk_resize_resize_message, Toast.LENGTH_SHORT)
-                .show()
+            val editor = sharedPref.edit()
+            editor.putLong(
+                getString(R.string.preference_disk_size_key),
+                mbToBytes(diskSizeMb.toLong())
+            )
+            editor.apply()
+
+            // Restart terminal
+            val intent =
+                baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
+            intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            finish()
+            startActivity(intent)
         }
     }
 
-    fun localizedFileSize(sizeGb: Float): String {
+    fun localizedFileSize(sizeMb: Float): String {
         // formatShortFileSize() uses SI unit (i.e. kB = 1000 bytes),
-        // so covert sizeGb with "GB" instead of "GIB".
-        val bytes = FileUtils.parseSize(sizeGb.toLong().toString() + "GB")
+        // so covert sizeMb with "MB" instead of "MIB".
+        val bytes = FileUtils.parseSize(sizeMb.toLong().toString() + "MB")
         return Formatter.formatShortFileSize(this, bytes)
     }
 

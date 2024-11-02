@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"टर्मिनल"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux टर्मिनल ऐप्लिकेशन इंस्टॉल करें"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux टर्मिनल ऐप्लिकेशन को लॉन्च करने के लिए, आपको इंटरनेट से <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> डेटा डाउनलोड करना होगा.\nक्या आपको आगे बढ़ना है?"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"इंस्टॉल करें"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"इंस्टॉल हो रहा"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"नेटवर्क की गड़बड़ी हुई. इंटरनेट कनेक्शन की जांच करें और फिर से कोशिश करें."</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux टर्मिनल ऐप्लिकेशन इंस्टॉल हो रहा है"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"प्रोसेस पूरी होने के बाद, Linux टर्मिनल ऐप्लिकेशन, इस्तेमाल किया जा सकेगा"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"नेटवर्क की समस्या की वजह से, इंस्टॉल नहीं किया जा सका"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"इंस्टॉल नहीं किया जा सका. फिर से कोशिश करें."</string>
+    <string name="action_settings" msgid="5729342767795123227">"सेटिंग"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"टर्मिनल तैयार किया जा रहा है"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"टर्मिनल को रोका जा रहा है"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"टर्मिनल क्रैश हो गया"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"डिस्क का साइज़ बदलें"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"साइज़ बदलें / Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्क का साइज़ सेट किया गया"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"असाइन किया गया साइज़: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ज़्यादा से ज़्यादा साइज़: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द करें"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"बदलाव लागू करने के लिए वीएम को रीस्टार्ट करें"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"पोर्ट फ़ॉरवर्डिंग"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"पोर्ट फ़ॉरवर्डिंग को कॉन्फ़िगर करें"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"टर्मिनल, एक नया पोर्ट खोलने की कोशिश कर रहा है"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"पोर्ट को खोलने का अनुरोध किया गया: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकार करें"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"अस्वीकार करें"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"इमेज को रिकवर करें"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"इमेज के हिस्से को रिकवर करने के विकल्प"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"शुरुआती वर्शन पर स्विच करें"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"वीएम की सभी इमेज हटाएं"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"वीएम को रीसेट किया गया"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"सेटिंग"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चालू है"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"टर्मिनल खोलने के लिए क्लिक करें."</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"बंद करें"</string>
+</resources>

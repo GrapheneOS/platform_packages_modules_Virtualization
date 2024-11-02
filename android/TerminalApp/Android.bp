@@ -17,11 +17,14 @@ android_app {
         "com.google.android.material_material",
         "androidx.window_window",
     ],
+    jni_libs: [
+        "libforwarder_host_jni",
+    ],
+    use_embedded_native_libs: true,
     platform_apis: true,
     privileged: true,
     optimize: {
-        proguard_flags_files: ["proguard.flags"],
-        shrink_resources: true,
+        enabled: false,
     },
     apex_available: [
         "com.android.virt",

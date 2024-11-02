@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+  -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" msgid="5597111707986572208">"终端"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"安装 Linux 终端"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> 的数据。\n要继续吗？"</string>
+    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
+    <skip />
+    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"安装"</string>
+    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"正在安装"</string>
+    <string name="installer_install_network_error_message" msgid="2450409107529774410">"网络错误。请检查网络连接，然后重试。"</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"正在安装 Linux 终端"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"完成后将启动 Linux 终端"</string>
+    <string name="installer_error_network" msgid="3265100678310833813">"由于网络问题，安装失败"</string>
+    <string name="installer_error_unknown" msgid="1991780204241177455">"安装失败。请重试。"</string>
+    <string name="action_settings" msgid="5729342767795123227">"设置"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"正在准备终端"</string>
+    <string name="vm_stop_message" msgid="3978349856095529255">"正在停止终端"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"终端已崩溃"</string>
+    <string name="settings_disk_resize_title" msgid="1545791169419914600">"调整磁盘大小"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"调整大小/Rootfs"</string>
+    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"重启虚拟机以应用更改"</string>
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"端口转发"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"配置端口转发"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"终端正在尝试打开新端口"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"请求打开的端口：<xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"接受"</string>
+    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"拒绝"</string>
+    <string name="settings_recovery_title" msgid="6586840079226383285">"恢复"</string>
+    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"分区恢复选项"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"更改为初始版本"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"全部移除"</string>
+    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"已重置虚拟机"</string>
+    <string name="service_notification_settings" msgid="1437365721184401135">"设置"</string>
+    <string name="service_notification_title" msgid="2918088850910713393">"终端正在运行"</string>
+    <string name="service_notification_content" msgid="8652887364784704911">"点击即可打开终端。"</string>
+    <string name="service_notification_quit_action" msgid="4888327875869277455">"关闭"</string>
+</resources>
