@@ -19,8 +19,7 @@
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Installera Linux-terminalen"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Om du vill starta Linux-terminalen måste du ladda ned ungefär <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data via nätverket.\nVill du fortsätta?"</string>
-    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
-    <skip />
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Ladda ned när wifi är tillgängligt"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Installera"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installerar"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"Nätverksfel. Kontrollera anslutningen och försök igen."</string>
@@ -49,7 +48,10 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Återställningsalternativ för partition"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Ändra till ursprunglig version"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Ta bort alla"</string>
-    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"VM-återställning"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Återställ den virtuella datorn"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Data kommer att raderas."</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Bekräfta"</string>
+    <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Avbryt"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Inställningar"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen körs"</string>
     <string name="service_notification_content" msgid="8652887364784704911">"Klicka för att öppna terminalen."</string>

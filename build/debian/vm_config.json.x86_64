@@ -12,7 +12,7 @@
             "sharedPath": "/storage/emulated"
         },
         {
-            "sharedPath": "/data/data/$PACKAGE_NAME/files"
+            "sharedPath": "$APP_DATA_DIR/files"
         }
     ],
     "kernel": "$PAYLOAD_DIR/vmlinuz",

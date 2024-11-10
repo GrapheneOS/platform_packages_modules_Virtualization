@@ -20,6 +20,8 @@ import android.os.Environment;
 import android.os.FileUtils;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
+
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -64,6 +66,7 @@ public class InstallUtils {
         }
     }
 
+    @VisibleForTesting
     public static void deleteInstallation(Context context) {
         FileUtils.deleteContentsAndDir(getInternalStorageDir(context));
     }
@@ -139,7 +142,14 @@ public class InstallUtils {
     private static Function<String, String> getReplacer(Context context) {
         Map<String, String> rules = new HashMap<>();
         rules.put("\\$PAYLOAD_DIR", new File(context.getFilesDir(), PAYLOAD_DIR).toString());
+        rules.put("\\$USER_ID", String.valueOf(context.getUserId()));
         rules.put("\\$PACKAGE_NAME", context.getPackageName());
+        String appDataDir = context.getDataDir().toString();
+        // TODO: remove this hack
+        if (context.getUserId() == 0) {
+            appDataDir = "/data/data/" + context.getPackageName();
+        }
+        rules.put("\\$APP_DATA_DIR", appDataDir);
         return (s) -> {
             for (Map.Entry<String, String> rule : rules.entrySet()) {
                 s = s.replaceAll(rule.getKey(), rule.getValue());

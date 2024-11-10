@@ -18,16 +18,16 @@ mod dbm;
 mod error;
 mod page_table;
 mod shared;
+mod tracker;
 mod util;
 
 pub use error::MemoryTrackerError;
 pub use page_table::PageTable;
-pub use shared::{
-    handle_permission_fault, handle_translation_fault, MemoryRange, MemoryTracker, MEMORY,
-};
+pub use shared::MemoryRange;
+pub use tracker::{MemoryTracker, MEMORY};
 pub use util::{
-    flush, flushed_zeroize, min_dcache_line_size, page_4kb_of, PAGE_SIZE, SIZE_128KB, SIZE_16KB,
-    SIZE_2MB, SIZE_4KB, SIZE_4MB, SIZE_64KB,
+    flush, flushed_zeroize, page_4kb_of, PAGE_SIZE, SIZE_128KB, SIZE_16KB, SIZE_2MB, SIZE_4KB,
+    SIZE_4MB, SIZE_64KB,
 };
 
 pub(crate) use shared::{alloc_shared, dealloc_shared};

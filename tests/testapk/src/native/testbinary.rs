@@ -123,6 +123,9 @@ impl ITestService for TestService {
     fn getMountFlags(&self, _: &str) -> BinderResult<i32> {
         unimplemented()
     }
+    fn getPageSize(&self) -> BinderResult<i32> {
+        unimplemented()
+    }
     fn requestCallback(&self, _: &Strong<dyn IAppCallback + 'static>) -> BinderResult<()> {
         unimplemented()
     }

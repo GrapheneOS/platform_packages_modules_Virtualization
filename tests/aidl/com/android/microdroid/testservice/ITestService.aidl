@@ -70,6 +70,9 @@ interface ITestService {
     /** Returns flags for the given mountPoint. */
     int getMountFlags(String mountPoint);
 
+    /** Returns page size of the VM. */
+    int getPageSize();
+
     /** Requests the VM to asynchronously call appCallback.setVmCallback() */
     void requestCallback(IAppCallback appCallback);
 

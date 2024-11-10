@@ -14,9 +14,8 @@
 
 //! Utility functions for memory management.
 
-use crate::read_sysreg;
+use crate::arch::flush_region;
 use crate::util::unchecked_align_down;
-use core::arch::asm;
 use core::ptr::NonNull;
 use zeroize::Zeroize;
 
@@ -35,38 +34,6 @@ pub const SIZE_4MB: usize = 4 << 20;
 
 /// The page size in bytes assumed by vmbase - 4 KiB.
 pub const PAGE_SIZE: usize = SIZE_4KB;
-
-/// Reads the number of words in the smallest cache line of all the data caches and unified caches.
-#[inline]
-pub fn min_dcache_line_size() -> usize {
-    const DMINLINE_SHIFT: usize = 16;
-    const DMINLINE_MASK: usize = 0xf;
-    let ctr_el0 = read_sysreg!("ctr_el0");
-
-    // DminLine: log2 of the number of words in the smallest cache line of all the data caches.
-    let dminline = (ctr_el0 >> DMINLINE_SHIFT) & DMINLINE_MASK;
-
-    1 << dminline
-}
-
-/// Flush `size` bytes of data cache by virtual address.
-#[inline]
-pub(super) fn flush_region(start: usize, size: usize) {
-    let line_size = min_dcache_line_size();
-    let end = start + size;
-    let start = unchecked_align_down(start, line_size);
-
-    for line in (start..end).step_by(line_size) {
-        // SAFETY: Clearing cache lines shouldn't have Rust-visible side effects.
-        unsafe {
-            asm!(
-                "dc cvau, {x}",
-                x = in(reg) line,
-                options(nomem, nostack, preserves_flags),
-            )
-        }
-    }
-}
 
 /// Flushes the slice to the point of unification.
 #[inline]

@@ -52,6 +52,7 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.virtualization.vmlauncher.InstallUtils;
 import com.android.virtualization.vmlauncher.VmLauncherService;
 import com.android.virtualization.vmlauncher.VmLauncherServices;
@@ -88,6 +89,7 @@ public class MainActivity extends BaseActivity
     private ConditionVariable mBootCompleted = new ConditionVariable();
     private static final int POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 101;
     private ActivityResultLauncher<Intent> manageExternalStorageActivityResultLauncher;
+    private static int diskSizeStep;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +105,8 @@ public class MainActivity extends BaseActivity
         }
 
         setContentView(R.layout.activity_headless);
+        diskSizeStep = getResources().getInteger(
+                R.integer.disk_size_round_up_step_size_in_mb) << 20;
 
         MaterialToolbar toolbar = (MaterialToolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -292,9 +296,9 @@ public class MainActivity extends BaseActivity
         }
     }
 
-    private static File getPartitionFile(Context context, String fileName)
+    public static File getPartitionFile(Context context, String fileName)
             throws FileNotFoundException {
-        File file = new File(context.getFilesDir(), fileName);
+        File file = new File(InstallUtils.getInternalStorageDir(context), fileName);
         if (!file.exists()) {
             Log.d(TAG, file.getAbsolutePath() + " - file not found");
             throw new FileNotFoundException("File not found: " + fileName);
@@ -510,19 +514,19 @@ public class MainActivity extends BaseActivity
         VmLauncherServices.startVmLauncherService(this, this, notification);
     }
 
+    @VisibleForTesting
     public boolean waitForBootCompleted(long timeoutMillis) {
         return mBootCompleted.block(timeoutMillis);
     }
 
-    private long roundUpDiskSize(long diskSize) {
-        // Round up every disk_size_round_up_step_size_in_mb MB
-        int disk_size_step = getResources().getInteger(
-                R.integer.disk_size_round_up_step_size_in_mb) * 1024 * 1024;
-        return (long) Math.ceil(((double) diskSize) / disk_size_step) * disk_size_step;
+    private static long roundUpDiskSize(long diskSize) {
+        // Round up every diskSizeStep MB
+        return (long) Math.ceil(((double) diskSize) / diskSizeStep) * diskSizeStep;
     }
 
-    private long getMinFilesystemSize(File file) throws IOException, NumberFormatException {
+    public static long getMinFilesystemSize(File file) throws IOException, NumberFormatException {
         try {
+            runE2fsck(file.getAbsolutePath());
             String result = runCommand("/system/bin/resize2fs", "-P", file.getAbsolutePath());
             // The return value is the number of 4k block
             long minSize = Long.parseLong(
@@ -545,12 +549,10 @@ public class MainActivity extends BaseActivity
                     getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPref.edit();
 
-            long minDiskSize = getMinFilesystemSize(file);
-            editor.putLong(getString(R.string.preference_min_disk_size_key), minDiskSize);
-
             long currentDiskSize = getFilesystemSize(file);
+            // The default partition size is 6G
             long newSizeInBytes = sharedPref.getLong(getString(R.string.preference_disk_size_key),
-                    roundUpDiskSize(currentDiskSize));
+                    6L << 30);
             editor.putLong(getString(R.string.preference_disk_size_key), newSizeInBytes);
             editor.apply();
 

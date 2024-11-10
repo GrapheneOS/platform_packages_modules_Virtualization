@@ -15,8 +15,13 @@ android_test {
         "androidx.test.core",
         "androidx.test.ext.junit",
         "junit",
+        "MicrodroidTestHelper",
     ],
     platform_apis: true,
-    test_suites: ["device-tests"],
+    test_suites: ["general-tests"],
     instrumentation_for: "VmTerminalApp",
+    data: [
+        "TerminalAppTests-helper.sh",
+        "TerminalAppTests-downloader.sh",
+    ],
 }

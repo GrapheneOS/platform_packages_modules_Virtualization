@@ -523,6 +523,14 @@ def TargetFiles(input_dir):
             ret[f'gki-{ver}_initrd_normal.img']     = initrd_normal
             ret[f'gki-{ver}_initrd_debuggable.img'] = initrd_debug
 
+    kernel_16k = os.path.join(input_dir, 'etc/fs/microdroid_kernel_16k')
+    initrd_normal_16k = os.path.join(input_dir, 'etc/microdroid_16k_initrd_normal.img')
+    initrd_debug_16k = os.path.join(input_dir, 'etc/microdroid_16k_initrd_debuggable.img')
+    if os.path.isfile(kernel_16k):
+        ret['kernel_16k'] = kernel_16k
+        ret['16k_initrd_normal.img'] = initrd_normal_16k
+        ret['16k_initrd_debuggable.img'] = initrd_debug_16k
+
     return ret
 
 def IsInitrdImage(path):

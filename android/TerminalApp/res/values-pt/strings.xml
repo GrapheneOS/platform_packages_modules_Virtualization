@@ -19,8 +19,7 @@
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Instalar terminal Linux"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Para iniciar o terminal Linux, é necessário baixar cerca de <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> de dados pela rede.\nVocê quer continuar?"</string>
-    <!-- no translation found for installer_wait_for_wifi_checkbox_text (487720664098014506) -->
-    <skip />
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Baixar quando o Wi-Fi estiver disponível"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Instalar"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Instalando"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"Erro de rede. Verifique a conexão e tente de novo."</string>
@@ -49,7 +48,14 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opções de recuperação da partição"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Mudar para a versão inicial"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Remover tudo"</string>
-    <string name="settings_recovery_reset_message" msgid="3450358289168768830">"Redefinição da VM"</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (2695282831393218812) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (3126236636568914757) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_confirm (431718610013947861) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_cancel (1666264288208459725) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"Configurações"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"O terminal está em execução"</string>
     <string name="service_notification_content" msgid="8652887364784704911">"Clique para abrir o terminal."</string>

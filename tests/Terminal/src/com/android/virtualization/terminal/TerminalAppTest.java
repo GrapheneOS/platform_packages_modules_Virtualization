@@ -21,10 +21,12 @@ import static org.junit.Assert.assertTrue;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 
+import com.android.microdroid.test.common.MetricsProcessor;
 import com.android.virtualization.vmlauncher.InstallUtils;
 
 import org.junit.After;
@@ -32,10 +34,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 @RunWith(AndroidJUnit4.class)
 public class TerminalAppTest {
     private Instrumentation mInstr;
     private Context mTargetContext;
+    private final MetricsProcessor mMetricsProc = new MetricsProcessor("avf_perf/terminal/");
 
     @Before
     public void setup() {
@@ -65,9 +72,21 @@ public class TerminalAppTest {
         Intent intent = new Intent(mTargetContext, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
+        long start = System.currentTimeMillis();
         if (mInstr.startActivitySync(intent) instanceof MainActivity activity) {
             assertTrue("Failed to boot in 30s", activity.waitForBootCompleted(BOOT_TIMEOUT_MILLIS));
         }
+        long delay = System.currentTimeMillis() - start;
+
+        // TODO: measure multiple times?
+        List<Long> measurements = new ArrayList<>();
+        measurements.add(delay);
+        Map<String, Double> stats = mMetricsProc.computeStats(measurements, "boot", "ms");
+        Bundle bundle = new Bundle();
+        for (Map.Entry<String, Double> entry : stats.entrySet()) {
+            bundle.putDouble(entry.getKey(), entry.getValue());
+        }
+        mInstr.sendStatus(0, bundle);
     }
 
     @After

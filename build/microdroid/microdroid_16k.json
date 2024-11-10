@@ -1,0 +1,21 @@
+{
+  "kernel": "/apex/com.android.virt/etc/fs/microdroid_kernel_16k",
+  "disks": [
+    {
+      "partitions": [
+        {
+          "label": "vbmeta_a",
+          "path": "/apex/com.android.virt/etc/fs/microdroid_vbmeta.img"
+        },
+        {
+          "label": "super",
+          "path": "/apex/com.android.virt/etc/fs/microdroid_super.img"
+        }
+      ],
+      "writable": false
+    }
+  ],
+  "memory_mib": 256,
+  "console_input_device": "hvc0",
+  "platform_version": "~1.0"
+}

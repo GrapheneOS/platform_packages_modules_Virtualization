@@ -20,12 +20,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
+import com.google.android.material.appbar.MaterialToolbar
+
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_activity)
 
+        val toolbar: MaterialToolbar = findViewById(R.id.settings_toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.title = resources.getString(R.string.action_settings)
         val settingsItems = arrayOf(
             SettingsItem(
                 resources.getString(R.string.settings_disk_resize_title),

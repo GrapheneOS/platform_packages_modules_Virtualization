@@ -26,12 +26,22 @@
         <option name="force-root" value="true"/>
     </target_preparer>
 
+    <!-- Download the VM image and push it to the device -->
+    <target_preparer class="com.android.tradefed.targetprep.RunHostScriptTargetPreparer">
+        <option name="script-file" value="TerminalAppTests-downloader.sh" />
+    </target_preparer>
+
+    <!-- Push the helper script to the device -->
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="push" value="TerminalAppTests-helper.sh->/data/local/tmp/helper.sh"/>
+        <option name="post-push" value="chmod 755 /data/local/tmp/helper.sh"/>
+        <option name="cleanup" value="true"/>
+    </target_preparer>
+
+    <!-- Run the helper script to enable/disable the Terminal app before and after the test run -->
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
-        <option name="throw-if-cmd-fail" value="true" />
-        <option name="run-command"
-            value="pm enable com.google.android.virtualization.terminal/com.android.virtualization.terminal.MainActivity" />
-        <option name="teardown-command"
-            value="pm disable com.google.android.virtualization.terminal/com.android.virtualization.terminal.MainActivity" />
+        <option name="run-command" value="/data/local/tmp/helper.sh setup"/>
+        <option name="teardown-command" value="/data/local/tmp/helper.sh teardown"/>
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.AndroidJUnitTest">

@@ -69,7 +69,7 @@ pub trait MemSharingHypervisor {
 /// Device assigning hypervisor
 pub trait DeviceAssigningHypervisor {
     /// Returns MMIO token.
-    fn get_phys_mmio_token(&self, base_ipa: u64, size: u64) -> Result<u64>;
+    fn get_phys_mmio_token(&self, base_ipa: u64) -> Result<u64>;
 
     /// Returns DMA token as a tuple of (phys_iommu_id, phys_sid).
     fn get_phys_iommu_token(&self, pviommu_id: u64, vsid: u64) -> Result<(u64, u64)>;

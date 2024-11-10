@@ -33,6 +33,8 @@ import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.internal.annotations.VisibleForTesting;
+
 import java.lang.ref.WeakReference;
 import java.util.concurrent.ExecutorService;
 
@@ -98,6 +100,7 @@ public class InstallerActivity extends BaseActivity {
         super.onDestroy();
     }
 
+    @VisibleForTesting
     public boolean waitForInstallCompleted(long timeoutMillis) {
         return mInstallCompleted.block(timeoutMillis);
     }

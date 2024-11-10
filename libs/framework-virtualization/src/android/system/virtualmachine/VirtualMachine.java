@@ -43,7 +43,6 @@ import static android.system.virtualmachine.VirtualMachineCallback.STOP_REASON_V
 import static java.util.Objects.requireNonNull;
 
 import android.annotation.CallbackExecutor;
-import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;

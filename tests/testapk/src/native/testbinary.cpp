@@ -34,6 +34,7 @@
 #include <vm_main.h>
 #include <vm_payload_restricted.h>
 
+#include <cstdint>
 #include <string>
 #include <thread>
 
@@ -308,6 +309,11 @@ Result<void> start_test_service() {
                                                                    msg.c_str());
             }
             *out = entry->flags;
+            return ScopedAStatus::ok();
+        }
+
+        ScopedAStatus getPageSize(int32_t* out) override {
+            *out = getpagesize();
             return ScopedAStatus::ok();
         }
 

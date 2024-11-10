@@ -173,10 +173,9 @@ impl MemSharingHypervisor for ProtectedKvmHypervisor {
 }
 
 impl DeviceAssigningHypervisor for ProtectedKvmHypervisor {
-    fn get_phys_mmio_token(&self, base_ipa: u64, size: u64) -> Result<u64> {
+    fn get_phys_mmio_token(&self, base_ipa: u64) -> Result<u64> {
         let mut args = [0u64; 17];
         args[0] = base_ipa;
-        args[1] = size;
 
         let ret = checked_hvc64_expect_results(VENDOR_HYP_KVM_DEV_REQ_MMIO_FUNC_ID, args)?;
         Ok(ret[0])

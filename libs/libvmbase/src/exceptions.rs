@@ -17,11 +17,12 @@
 use crate::{
     eprintln,
     layout::UART_PAGE_ADDR,
-    memory::{page_4kb_of, MemoryTrackerError},
+    memory::{page_4kb_of, MemoryTrackerError, MEMORY},
     read_sysreg,
 };
 use aarch64_paging::paging::VirtualAddress;
 use core::fmt;
+use core::result;
 
 /// Represents an error that can occur while handling an exception.
 #[derive(Debug)]
@@ -135,4 +136,20 @@ impl ArmException {
     fn is_uart_exception(&self) -> bool {
         self.esr == Esr::DataAbortSyncExternalAbort && page_4kb_of(self.far.0) == UART_PAGE_ADDR
     }
+}
+
+/// Handles a translation fault with the given fault address register (FAR).
+#[inline]
+pub fn handle_translation_fault(far: VirtualAddress) -> result::Result<(), HandleExceptionError> {
+    let mut guard = MEMORY.try_lock().ok_or(HandleExceptionError::PageTableUnavailable)?;
+    let memory = guard.as_mut().ok_or(HandleExceptionError::PageTableNotInitialized)?;
+    Ok(memory.handle_mmio_fault(far)?)
+}
+
+/// Handles a permission fault with the given fault address register (FAR).
+#[inline]
+pub fn handle_permission_fault(far: VirtualAddress) -> result::Result<(), HandleExceptionError> {
+    let mut guard = MEMORY.try_lock().ok_or(HandleExceptionError::PageTableUnavailable)?;
+    let memory = guard.as_mut().ok_or(HandleExceptionError::PageTableNotInitialized)?;
+    Ok(memory.handle_permission_fault(far)?)
 }

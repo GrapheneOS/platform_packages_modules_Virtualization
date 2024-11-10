@@ -28,7 +28,7 @@ import com.android.virtualization.vmlauncher.proto.ReportVmIpAddrResponse;
 
 import io.grpc.stub.StreamObserver;
 
-class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
+final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     public static final String TAG = "DebianService";
     private final DebianServiceCallback mCallback;
 
@@ -78,6 +78,8 @@ class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     }
 
     private static native void runForwarderHost(int cid, ForwarderHostCallback callback);
+
+    public static native void terminateForwarderHost();
 
     protected interface DebianServiceCallback {
         void onIpAddressAvailable(String ipAddr);

@@ -258,6 +258,11 @@ public class VmShareServiceImpl extends Service {
         }
 
         @Override
+        public int getPageSize() throws RemoteException {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
         public void requestCallback(IAppCallback appCallback) {
             throw new UnsupportedOperationException("Not supported");
         }

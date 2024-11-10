@@ -19,6 +19,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
@@ -34,14 +35,29 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_port_forwarding)
 
-        val settingsPortForwardingItems = arrayOf(
-            SettingsPortForwardingItem(8080, true),
-            SettingsPortForwardingItem(443, false),
-            SettingsPortForwardingItem(80, false)
+        val settingsPortForwardingItems = ArrayList<SettingsPortForwardingItem>()
+
+        val sharedPref = this.getSharedPreferences(
+            getString(R.string.preference_file_key), Context.MODE_PRIVATE
         )
 
+        val ports =
+            sharedPref.getStringSet(
+                getString(R.string.preference_forwarding_ports),
+                HashSet<String>()
+            )
+
+        for (port in ports!!) {
+            val enabled =
+                sharedPref.getBoolean(
+                    getString(R.string.preference_forwarding_port_is_enabled) + port,
+                    false
+                )
+            settingsPortForwardingItems.add(SettingsPortForwardingItem(port.toInt(), enabled));
+        }
+
         val settingsPortForwardingAdapter =
-            SettingsPortForwardingAdapter(settingsPortForwardingItems)
+            SettingsPortForwardingAdapter(settingsPortForwardingItems, this)
 
         val recyclerView: RecyclerView = findViewById(R.id.settings_port_forwarding_recycler_view)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -59,7 +75,12 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
                 .setChannelId(TAG)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(resources.getString(R.string.settings_port_forwarding_notification_title))
-                .setContentText(resources.getString(R.string.settings_port_forwarding_notification_content, settingsPortForwardingItems[0].port))
+                .setContentText(
+                    resources.getString(
+                        R.string.settings_port_forwarding_notification_content,
+                        8080
+                    )
+                )
                 .addAction(
                     Notification.Action.Builder(
                         Icon.createWithResource(resources, R.drawable.ic_launcher_foreground),

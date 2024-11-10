@@ -5,7 +5,7 @@ After=network.target
 Requires=ttyd.service
 After=virtiofs_internal.service
 [Service]
-ExecStart=/usr/local/bin/ip_addr_reporter --grpc_port $(cat /mnt/internal/debian_service_port)
+ExecStart=/usr/bin/bash -c '/usr/local/bin/ip_addr_reporter --grpc_port $(cat /mnt/internal/debian_service_port)'
 Type=simple
 Restart=on-failure
 User=root

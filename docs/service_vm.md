@@ -16,9 +16,9 @@ across all reboots.
 
 ## Architecture
 
-[Rialto](../rialto) is used as the bare-metal kernel for the Service VM. It
+[Rialto][rialto] is used as the bare-metal kernel for the Service VM. It
 shares some low-level setup, such as memory management and virtio device
-parsing, with pvmfw. The common setup code is grouped in [vmbase/](../libs/libvmbase).
+parsing, with pvmfw. The common setup code is grouped in [libvmbase/][libvmbase].
 
 ## Functionality
 
@@ -26,12 +26,21 @@ The main functionality of the Service VM is to process requests from the host
 and provide responses for each request. The requests and responses are
 serialized in CBOR format and transmitted over a virtio-vsock device.
 
--   [./comm](./comm) contains the definitions for the requests and responses.
--   [./requests](./requests) contains the library that processes the requests.
--   [./manager](./manager) manages the Service VM session, ensuring that only
-    one Service VM is active at any given time. The
-    [virtualizationservice](../android/virtualizationservice) process owns and manages
-    the Service VM instance.
+-   [libservice_vm_comm][libservice_vm_comm] contains the definitions for the
+    requests and responses.
+-   [libservice_vm_requests][libservice_vm_requests] contains the library that
+    processes the requests.
+-   [libservice_vm_manager][libservice_vm_manager] manages the Service VM
+    session, ensuring that only one Service VM is active at any given time. The
+    [virtualizationservice][virtualizationservice] process owns and manages the
+    Service VM instance.
+
+[rialto]: ../guest/rialto
+[libvmbase]: ../libs/libvmbase
+[libservice_vm_comm]: ../libs/libservice_vm_comm
+[libservice_vm_requests]: ../libs/libservice_vm_requests
+[libservice_vm_manager]: ../libs/libservice_vm_manager
+[virtualizationservice]: ../android/virtualizationservice
 
 ### RKP VM (Remote Key Provisioning Virtual Machine)
 

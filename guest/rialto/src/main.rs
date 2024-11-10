@@ -47,8 +47,8 @@ use vmbase::{
     fdt::pci::PciInfo,
     fdt::SwiotlbInfo,
     generate_image_header,
-    hyp::{get_mem_sharer, get_mmio_guard},
-    layout::{self, crosvm, UART_PAGE_ADDR},
+    hyp::get_mem_sharer,
+    layout::{self, crosvm},
     main,
     memory::{MemoryTracker, PageTable, MEMORY, PAGE_SIZE, SIZE_128KB},
     power::reboot,
@@ -188,36 +188,14 @@ fn find_socket_device<T: Hal>(pci_root: &mut PciRoot) -> Result<VirtIOSocket<T>>
         .ok_or(Error::MissingVirtIOSocketDevice)
 }
 
-fn try_unshare_all_memory() -> Result<()> {
-    info!("Starting unsharing memory...");
-
-    // No logging after unmapping UART.
-    if let Some(mmio_guard) = get_mmio_guard() {
-        mmio_guard.unmap(UART_PAGE_ADDR)?;
-    }
-    // Unshares all memory and deactivates page table.
-    drop(MEMORY.lock().take());
-    Ok(())
-}
-
-fn unshare_all_memory() {
-    if let Err(e) = try_unshare_all_memory() {
-        error!("Failed to unshare the memory: {e}");
-    }
-}
-
 /// Entry point for Rialto.
 pub fn main(fdt_addr: u64, _a1: u64, _a2: u64, _a3: u64) {
     log::set_max_level(log::LevelFilter::Debug);
     // SAFETY: `fdt_addr` is supposed to be a valid pointer and points to
     // a valid `Fdt`.
-    match unsafe { try_main(fdt_addr as usize) } {
-        Ok(()) => unshare_all_memory(),
-        Err(e) => {
-            error!("Rialto failed with {e}");
-            unshare_all_memory();
-            reboot()
-        }
+    if let Err(e) = unsafe { try_main(fdt_addr as usize) } {
+        error!("Rialto failed with {e}");
+        reboot()
     }
 }
 

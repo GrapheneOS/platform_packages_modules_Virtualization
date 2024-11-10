@@ -200,6 +200,8 @@ fn main(
         Cow::Owned(truncated_bcc_handover)
     };
 
+    trace!("BCC leaf subject public key algorithm: {:?}", bcc.leaf_subject_pubkey().cose_alg);
+
     dice_inputs
         .write_next_bcc(
             new_bcc_handover.as_ref(),

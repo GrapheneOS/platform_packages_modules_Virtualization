@@ -34,6 +34,14 @@ struct Args {
     /// Whether the VM is protected or not.
     #[arg(long)]
     protected: bool,
+
+    /// Name of the VM. Used to pull correct config from early_vms.xml
+    #[arg(long, default_value = "trusty_security_vm_launcher")]
+    name: String,
+
+    /// Memory size of the VM in MiB
+    #[arg(long, default_value_t = 128)]
+    memory_size_mib: i32,
 }
 
 fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
@@ -51,10 +59,10 @@ fn main() -> Result<()> {
         File::open(&args.kernel).with_context(|| format!("Failed to open {:?}", &args.kernel))?;
 
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: "trusty_security_vm_launcher".to_owned(),
+        name: args.name.to_owned(),
         kernel: Some(ParcelFileDescriptor::new(kernel)),
         protectedVm: args.protected,
-        memoryMib: 128,
+        memoryMib: args.memory_size_mib,
         platformVersion: "~1.0".to_owned(),
         // TODO: add instanceId
         ..Default::default()

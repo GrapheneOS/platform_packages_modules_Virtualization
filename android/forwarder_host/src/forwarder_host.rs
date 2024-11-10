@@ -24,7 +24,7 @@ use std::io;
 use std::net::{Ipv4Addr, Ipv6Addr, TcpListener};
 use std::os::unix::io::AsRawFd;
 use std::result;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
 use forwarder::forwarder::ForwarderSession;
@@ -41,6 +41,9 @@ use vsock::VMADDR_CID_ANY;
 const CHUNNEL_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
 const VMADDR_PORT_ANY: u32 = u32::MAX;
+
+static SHUTDOWN_EVT: LazyLock<EventFd> =
+    LazyLock::new(|| EventFd::new().expect("Could not create shutdown eventfd"));
 
 #[remain::sorted]
 #[derive(Debug)]
@@ -111,6 +114,7 @@ type SessionTag = u32;
 /// Implements PollToken for chunneld's main poll loop.
 #[derive(Clone, Copy, PollToken)]
 enum Token {
+    Shutdown,
     UpdatePorts,
     Ipv4Listener(u16),
     Ipv6Listener(u16),
@@ -290,12 +294,16 @@ impl<'a> ForwarderSessions<'a> {
     fn run(&mut self) -> Result<()> {
         let poll_ctx: PollContext<Token> = PollContext::new().map_err(Error::PollContextNew)?;
         poll_ctx.add(&self.update_evt, Token::UpdatePorts).map_err(Error::PollContextAdd)?;
+        poll_ctx.add(&*SHUTDOWN_EVT, Token::Shutdown).map_err(Error::PollContextAdd)?;
 
         loop {
             let events = poll_ctx.wait().map_err(Error::PollWait)?;
 
             for event in events.iter_readable() {
                 match event.token() {
+                    Token::Shutdown => {
+                        return Ok(());
+                    }
                     Token::UpdatePorts => {
                         if let Err(e) = self.process_update_queue(&poll_ctx) {
                             error!("error updating listening ports: {}", e);
@@ -424,4 +432,13 @@ pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_r
             error!("Error on forwarder_host: {:?}", e);
         }
     }
+}
+
+/// JNI function for terminating forwarder_host.
+#[no_mangle]
+pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_terminateForwarderHost(
+    _env: JNIEnv,
+    _class: JObject,
+) {
+    SHUTDOWN_EVT.write(1).expect("Failed to write shutdown event FD");
 }

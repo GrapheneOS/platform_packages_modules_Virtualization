@@ -72,7 +72,11 @@ public abstract class MicrodroidDeviceTestBase {
     protected static final String KERNEL_VERSION = SystemProperties.get("ro.kernel.version");
     protected static final Set<String> SUPPORTED_OSES =
             Collections.unmodifiableSet(
-                    new HashSet<>(Arrays.asList("microdroid", "microdroid_gki-android15-6.6")));
+                    new HashSet<>(
+                            Arrays.asList(
+                                    "microdroid",
+                                    "microdroid_16k",
+                                    "microdroid_gki-android15-6.6")));
 
     public static boolean isCuttlefish() {
         return getDeviceProperties().isCuttlefish();
@@ -205,6 +209,10 @@ public abstract class MicrodroidDeviceTestBase {
             assume().withMessage("Testing protected VMs on GSI isn't supported. b/272443823")
                     .that(isGsi())
                     .isFalse();
+            // TODO(b/376870129): remove this
+            assume().withMessage("pVMs with 16k kernel are not supported yet :(")
+                    .that(mOs)
+                    .doesNotContain("_16k");
         } else {
             assume().withMessage("Skip where VMs aren't supported")
                     .that(capabilities & VirtualMachineManager.CAPABILITY_NON_PROTECTED_VM)
@@ -579,6 +587,7 @@ public abstract class MicrodroidDeviceTestBase {
         public int mMountFlags;
         public String mConsoleInput;
         public byte[] mInstanceSecret;
+        public int mPageSize;
 
         public void assertNoException() {
             if (mException != null) {

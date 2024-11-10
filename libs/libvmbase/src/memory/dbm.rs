@@ -15,7 +15,7 @@
 //! Hardware management of the access flag and dirty state.
 
 use super::page_table::PageTable;
-use super::util::flush_region;
+use crate::arch::flush_region;
 use crate::{dsb, isb, read_sysreg, tlbi, write_sysreg};
 use aarch64_paging::paging::{Attributes, Descriptor, MemoryRegion};
 

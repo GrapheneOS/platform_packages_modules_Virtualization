@@ -16,9 +16,9 @@
 
 use vmbase::{
     eprintln,
+    exceptions::{handle_permission_fault, handle_translation_fault},
     exceptions::{ArmException, Esr, HandleExceptionError},
     logger,
-    memory::{handle_permission_fault, handle_translation_fault},
     power::reboot,
     read_sysreg,
 };

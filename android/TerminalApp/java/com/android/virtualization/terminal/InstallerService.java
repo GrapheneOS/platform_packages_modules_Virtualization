@@ -25,6 +25,7 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.SELinux;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -37,6 +38,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.URL;
@@ -45,6 +47,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,11 +57,13 @@ public class InstallerService extends Service {
     private static final String NOTIFICATION_CHANNEL_ID = "installer";
     private static final int NOTIFICATION_ID = 1313; // any unique number among notifications
 
-    // TODO(b/369740847): Replace this URL with dl.google.com
     private static final String IMAGE_URL =
             Arrays.asList(Build.SUPPORTED_ABIS).contains("x86_64")
-                    ? "https://github.com/ikicha/debian_ci/releases/download/release_x86_64/images.tar.gz"
-                    : "https://github.com/ikicha/debian_ci/releases/download/release_aarch64/images.tar.gz";
+                    ? "https://dl.google.com/android/ferrochrome/latest/x86_64/images.tar.gz"
+                    : "https://dl.google.com/android/ferrochrome/latest/aarch64/images.tar.gz";
+
+    private static final String SELINUX_FILE_CONTEXT =
+            "u:object_r:virtualizationservice_data_file:";
 
     private final Object mLock = new Object();
 
@@ -144,7 +149,9 @@ public class InstallerService extends Service {
                 () -> {
                     // TODO(b/374015561): Provide progress update
                     boolean success = downloadFromSdcard() || downloadFromUrl();
-
+                    if (success) {
+                        reLabelImagesSELinuxContext();
+                    }
                     stopForeground(STOP_FOREGROUND_REMOVE);
 
                     synchronized (mLock) {
@@ -154,6 +161,24 @@ public class InstallerService extends Service {
                         notifyCompleted();
                     }
                 });
+    }
+
+    private void reLabelImagesSELinuxContext() {
+        File payloadFolder = InstallUtils.getInternalStorageDir(this);
+
+        // The context should be u:object_r:privapp_data_file:s0:c35,c257,c512,c768
+        // and we want to get s0:c35,c257,c512,c768 part
+        String level = SELinux.getFileContext(payloadFolder.toString()).split(":", 4)[3];
+        String targetContext = SELINUX_FILE_CONTEXT + level;
+
+        File[] files = payloadFolder.listFiles();
+        for (File file : files) {
+            if (file.isFile() &&
+                    !Objects.equals(SELinux.getFileContext(file.toString()),
+                            targetContext)) {
+                SELinux.setFileContext(file.toString(), targetContext);
+            }
+        }
     }
 
     private boolean downloadFromSdcard() {

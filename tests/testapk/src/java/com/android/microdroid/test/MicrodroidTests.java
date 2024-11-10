@@ -2511,6 +2511,30 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mMountFlags & expectedFlags).isEqualTo(expectedFlags);
     }
 
+    @Test
+    public void pageSize() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_page_size", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mPageSize = ts.getPageSize();
+                        });
+
+        assertThat(testResults.mException).isNull();
+        int expectedPageSize = mOs.endsWith("_16k") ? 16384 : 4096;
+        assertThat(testResults.mPageSize).isEqualTo(expectedPageSize);
+    }
+
     private static class VmShareServiceConnection implements ServiceConnection {
 
         private final CountDownLatch mLatch = new CountDownLatch(1);

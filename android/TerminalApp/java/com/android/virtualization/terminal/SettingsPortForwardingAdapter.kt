@@ -15,6 +15,8 @@
  */
 package com.android.virtualization.terminal
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +24,10 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.materialswitch.MaterialSwitch
 
-class SettingsPortForwardingAdapter(private val dataSet: Array<SettingsPortForwardingItem>) :
+class SettingsPortForwardingAdapter(
+    private val dataSet: ArrayList<SettingsPortForwardingItem>,
+    private val context: Context
+) :
     RecyclerView.Adapter<SettingsPortForwardingAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -40,6 +45,17 @@ class SettingsPortForwardingAdapter(private val dataSet: Array<SettingsPortForwa
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
         viewHolder.port.text = dataSet[position].port.toString()
         viewHolder.enabledSwitch.isChecked = dataSet[position].enabled
+        viewHolder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
+            val sharedPref: SharedPreferences = context.getSharedPreferences(
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE
+            )
+            val editor = sharedPref.edit()
+            editor.putBoolean(
+                context.getString(R.string.preference_forwarding_port_is_enabled) + viewHolder.port.text,
+                isChecked
+            )
+            editor.apply()
+        }
     }
 
     override fun getItemCount() = dataSet.size

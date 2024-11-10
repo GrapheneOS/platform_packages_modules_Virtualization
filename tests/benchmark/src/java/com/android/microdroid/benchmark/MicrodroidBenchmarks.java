@@ -594,7 +594,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         @Override
         public void onPayloadReady(VirtualMachine vm, IBenchmarkService service)
                 throws RemoteException {
-            int vmPid = ProcessUtil.getCrosvmPid(Os.getpid(), mShellExecutor);
+            int vmPid = ProcessUtil.getCrosvmPid(Os.getpid(), "test_vm_mem_usage", mShellExecutor);
 
             mMemTotal = service.getMemInfoEntry("MemTotal");
             mMemFree = service.getMemInfoEntry("MemFree");
@@ -668,7 +668,8 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         @SuppressWarnings("ReturnValueIgnored")
         public void onPayloadReady(VirtualMachine vm, IBenchmarkService service)
                 throws RemoteException {
-            int vmPid = ProcessUtil.getCrosvmPid(Os.getpid(), mShellExecutor);
+            int vmPid =
+                    ProcessUtil.getCrosvmPid(Os.getpid(), "test_vm_mem_reclaim", mShellExecutor);
 
             // Allocate 256MB of anonymous memory. This will fill all guest
             // memory and cause swapping to start.

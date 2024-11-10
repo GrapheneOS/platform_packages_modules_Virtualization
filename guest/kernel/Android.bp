@@ -43,3 +43,12 @@ filegroup {
         default: [],
     }),
 }
+
+filegroup {
+    name: "microdroid_kernel_16k_prebuilt-arm64",
+    // Below are properties that are conditionally set depending on value of build flags.
+    srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
+        "android15_66": ["android15-6.6/arm64/16k/kernel-6.6"],
+        default: [],
+    }),
+}

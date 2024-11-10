@@ -415,7 +415,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void UpgradedPackageIsAcceptedWithSecretkeeper() throws Exception {
         // Preconditions
-        assumeVmTypeSupported(true); // Non-protected VMs may not support upgrades
+        assumeVmTypeSupported("microdroid", true); // Non-protected VMs may not support upgrades
         ensureUpdatableVmSupported();
         getDevice().uninstallPackage(PACKAGE_NAME);
         getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ true);
@@ -433,7 +433,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void DowngradedPackageIsRejectedProtectedVm() throws Exception {
         // Preconditions: Rollback protection is provided only for protected VM.
-        assumeVmTypeSupported(true);
+        assumeVmTypeSupported("microdroid", true);
 
         // Install the upgraded version (v6)
         getDevice().uninstallPackage(PACKAGE_NAME);
@@ -483,7 +483,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     public void protectedVmRunsPvmfw(String os) throws Exception {
         // Arrange
         assumeKernelSupported(os);
-        assumeVmTypeSupported(true);
+        assumeVmTypeSupported(os, true);
         final String configPath = "assets/vm_config_apex.json";
 
         // Act
@@ -516,7 +516,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     public void protectedVmWithImageSignedWithDifferentKeyFailsToVerifyPayload(String os)
             throws Exception {
         assumeKernelSupported(os);
-        assumeVmTypeSupported(true);
+        assumeVmTypeSupported(os, true);
         File key = findTestFile("test.com.android.virt.pem");
 
         // Act
@@ -664,7 +664,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
             throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
         // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
         assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
         assertThat(
@@ -685,7 +685,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
             boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
         // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
         assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
         assertThat(
@@ -707,7 +707,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
             throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
         assumeFalse("Cuttlefish is not supported", isCuttlefish());
         assumeFalse("Skipping test because ramdump is disabled on user build", isUserBuild());
 
@@ -784,7 +784,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
         assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
 
         // Act
         assertThat(isTombstoneGeneratedWithCrashPayload(protectedVm, os, /* debuggable= */ true))
@@ -800,7 +800,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
         assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
 
         // Act
         assertThat(isTombstoneGeneratedWithCrashPayload(protectedVm, os, /* debuggable= */ false))
@@ -822,7 +822,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
         assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
 
         // Act
         assertThat(isTombstoneGeneratedWithCrashConfig(protectedVm, os, /* debuggable= */ true))
@@ -837,7 +837,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
         assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
         assertThat(isTombstoneGeneratedWithCrashConfig(protectedVm, os, /* debuggable= */ false))
                 .isFalse();
     }
@@ -847,7 +847,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @TestCaseName("{method}_protectedVm_{0}_os_{1}")
     public void testTelemetryPushedAtoms(boolean protectedVm, String os) throws Exception {
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
         // Reset statsd config and report before the test
         ConfigUtils.removeConfig(getDevice());
         ReportUtils.clearReports(getDevice());
@@ -1011,7 +1011,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     public void testMicrodroidBoots(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
 
         final String configPath = "assets/vm_config.json"; // path inside the APK
         testMicrodroidBootsWithBuilder(
@@ -1049,7 +1049,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     void checkMicrodroidRamUsage(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
 
         final String configPath = "assets/vm_config.json";
         mMicrodroidDevice =
@@ -1245,7 +1245,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     public void testDeviceAssignment(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
         assumeVfioPlatformSupported();
 
         List<AssignableDevice> devices = getAssignableDevices();
@@ -1309,7 +1309,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     public void testHugePages(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(protectedVm);
+        assumeVmTypeSupported(os, protectedVm);
 
         ITestDevice device = getDevice();
         boolean disableRoot = !device.isAdbRoot();
@@ -1382,7 +1382,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String configPath = "assets/vm_config.json";
         // Preconditions
         assumeKernelSupported(os);
-        assumeVmTypeSupported(true);
+        assumeVmTypeSupported(os, true);
         int mem_size = 256;
         assertTrue("Memory size too small", mem_size >= minMemorySize());
 
@@ -1551,7 +1551,11 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                 getSupportedOSList().contains(os));
     }
 
-    private void assumeVmTypeSupported(boolean protectedVm) throws Exception {
+    private void assumeVmTypeSupported(String os, boolean protectedVm) throws Exception {
+        // TODO(b/376870129): remove this check
+        if (protectedVm) {
+            assumeFalse("pVMs with 16k kernel are not supported yet :(", os.endsWith("_16k"));
+        }
         assumeTrue(
                 "Microdroid is not supported for specific VM protection type",
                 getAndroidDevice().supportsMicrodroid(protectedVm));

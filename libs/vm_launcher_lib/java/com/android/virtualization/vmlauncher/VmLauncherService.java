@@ -171,38 +171,36 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
                         return new ServerCall.Listener<ReqT>() {};
                     }
                 };
-        new Thread(
-                        () -> {
-                            try {
-                                // TODO(b/372666638): gRPC for java doesn't support vsock for now.
-                                int port = 0;
-                                mServer =
-                                        OkHttpServerBuilder.forPort(
-                                                        port, InsecureServerCredentials.create())
-                                                .intercept(interceptor)
-                                                .addService(new DebianServiceImpl(this))
-                                                .build()
-                                                .start();
+        try {
+            // TODO(b/372666638): gRPC for java doesn't support vsock for now.
+            int port = 0;
+            mServer =
+                    OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
+                            .intercept(interceptor)
+                            .addService(new DebianServiceImpl(this))
+                            .build()
+                            .start();
+        } catch (IOException e) {
+            Log.d(TAG, "grpc server error", e);
+            return;
+        }
 
-                                // TODO(b/373533555): we can use mDNS for that.
-                                String debianServicePortFileName = "debian_service_port";
-                                File debianServicePortFile =
-                                        new File(getFilesDir(), debianServicePortFileName);
-                                try (FileOutputStream writer =
-                                        new FileOutputStream(debianServicePortFile)) {
-                                    writer.write(String.valueOf(mServer.getPort()).getBytes());
-                                } catch (IOException e) {
-                                    Log.d(TAG, "cannot write grpc port number", e);
-                                }
-                            } catch (IOException e) {
-                                Log.d(TAG, "grpc server error", e);
-                            }
-                        })
-                .start();
+        mExecutorService.execute(
+                () -> {
+                    // TODO(b/373533555): we can use mDNS for that.
+                    String debianServicePortFileName = "debian_service_port";
+                    File debianServicePortFile = new File(getFilesDir(), debianServicePortFileName);
+                    try (FileOutputStream writer = new FileOutputStream(debianServicePortFile)) {
+                        writer.write(String.valueOf(mServer.getPort()).getBytes());
+                    } catch (IOException e) {
+                        Log.d(TAG, "cannot write grpc port number", e);
+                    }
+                });
     }
 
     private void stopDebianServer() {
         if (mServer != null) {
+            DebianServiceImpl.terminateForwarderHost();
             mServer.shutdown();
         }
     }

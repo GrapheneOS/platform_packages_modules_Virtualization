@@ -169,6 +169,19 @@ run_fai() {
 	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
 }
 
+extract_partitions() {
+	root_partition_num=1
+	efi_partition_num=15
+
+	loop=$(losetup -f --show --partscan image.raw)
+	dd if=${loop}p$root_partition_num of=root_part
+	dd if=${loop}p$efi_partition_num of=efi_part
+	losetup -d ${loop}
+
+	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid image.raw $root_partition_num)/g" vm_config.json
+	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid image.raw $efi_partition_num)/g" vm_config.json
+}
+
 clean_up() {
 	rm -rf "${workdir}"
 }
@@ -191,18 +204,29 @@ download_debian_cloud_image
 copy_android_config
 run_fai
 fdisk -l image.raw
-images=(image.raw)
+images=()
+
+cp $(dirname $0)/vm_config.json.${arch} vm_config.json
+
+if [[ "$arch" == "aarch64" ]]; then
+	extract_partitions
+	images+=(
+		root_part
+		efi_part
+	)
+fi
+
 # TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
 if [[ "$arch" == "x86_64" ]]; then
 	virt-get-kernel -a image.raw
 	mv vmlinuz* vmlinuz
 	mv initrd.img* initrd.img
 	images+=(
+		image.raw
 		vmlinuz
 		initrd.img
 	)
 fi
 
-cp $(dirname $0)/vm_config.json.${arch} vm_config.json
 # --sparse option isn't supported in apache-commons-compress
 tar czv -f images.tar.gz ${images[@]} vm_config.json

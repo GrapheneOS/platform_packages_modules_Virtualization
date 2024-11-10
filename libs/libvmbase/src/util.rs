@@ -17,15 +17,6 @@
 use aarch64_paging::paging::MemoryRegion;
 use core::ops::Range;
 
-/// Flatten [[T; N]] into &[T]
-/// TODO: use slice::flatten when it graduates from experimental
-pub fn flatten<T, const N: usize>(original: &[[T; N]]) -> &[T] {
-    // SAFETY: no overflow because original (whose size is len()*N) is already in memory
-    let len = original.len() * N;
-    // SAFETY: [T] has the same layout as [T;N]
-    unsafe { core::slice::from_raw_parts(original.as_ptr().cast(), len) }
-}
-
 /// Computes the largest multiple of the provided alignment smaller or equal to the address.
 ///
 /// Note: the result is undefined if alignment isn't a power of two.

@@ -127,9 +127,10 @@ public final class ProcessUtil {
         return getSingleChildProcess(parentPid, VIRTMGR_BIN, shellExecutor);
     }
 
-    public static int getCrosvmPid(int parentPid, Function<String, String> shellExecutor) {
+    public static int getCrosvmPid(
+            int parentPid, String testName, Function<String, String> shellExecutor) {
         int virtmgrPid = getVirtmgrPid(parentPid, shellExecutor);
-        return getSingleChildProcess(virtmgrPid, CROSVM_BIN, shellExecutor);
+        return getSingleChildProcess(virtmgrPid, "crosvm_" + testName, shellExecutor);
     }
 
     // To ensures that only one object is created at a time.

@@ -8,8 +8,9 @@ aidl interface.
 
 To run an early VM, clients must follow these steps.
 
-1) Early VMs need to be defined in `{partition}/etc/avf/early_vms.xml`. The
-schema for this file is defined in [`early_vms.xsd`](../android/virtmgr/early_vms.xsd).
+1) Early VMs must be defined in XML files located at
+`{partition}/etc/avf/early_vms*.xml`. Schema for these files is defined in
+[`early_vms.xsd`](../android/virtmgr/early_vms.xsd).
 
 ```early_vms.xml
 <early_vms>
@@ -24,6 +25,9 @@ schema for this file is defined in [`early_vms.xsd`](../android/virtmgr/early_vm
 In this example, the binary `/system/bin/vm_demo_native_early` can establish a
 connection with `early_virtmgr` and create a VM named `vm_demo_native_early`,
 which will be assigned the static CID 123.
+
+Multiple XML files matching the glob pattern
+`{partition}/etc/avf/early_vms*.xml` can be used to define early VMs.
 
 2) The client must have the following three or four capabilities.
 

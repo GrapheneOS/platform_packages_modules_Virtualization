@@ -55,13 +55,10 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
                     0
                 )
             ).toFloat();
+        val partition = MainActivity.getPartitionFile(this, "root_part")
         val minDiskSizeMb =
-            bytesToMb(
-                    sharedPref.getLong(
-                    getString(R.string.preference_min_disk_size_key),
-                    0
-                )
-            ).toFloat();
+            bytesToMb(MainActivity.getMinFilesystemSize(partition)).toFloat()
+                .coerceAtMost(diskSizeMb)
 
         val diskSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_assigned)
         val diskMaxSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_max)

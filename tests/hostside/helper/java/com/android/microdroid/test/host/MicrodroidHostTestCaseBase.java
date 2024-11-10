@@ -73,6 +73,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     protected static final Map<String, String> SUPPORTED_OSES =
             Map.ofEntries(
                     Map.entry("microdroid", "microdroid"),
+                    Map.entry("microdroid_16k", "microdroid_16k"),
                     Map.entry("android15_66", "microdroid_gki-android15-6.6"));
 
     /* Keep this sync with AssignableDevice.aidl */

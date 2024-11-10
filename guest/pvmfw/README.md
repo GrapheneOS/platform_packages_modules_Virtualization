@@ -487,3 +487,19 @@ adb shell /apex/com.android.virt/bin/vm run-microdroid --protected
 Note: `adb root` is required to set the system property.
 
 [bcc.dat]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
+
+### Running pVM without pvmfw
+
+Sometimes, it might be useful to start a pVM without pvmfw, e.g. when debugging
+early pVM boot issues. You can achieve that by setting `hypervisor.pvmfw.path`
+propety to the value `none`:
+
+```shell
+adb shell 'setprop hypervisor.pvmfw.path "none"'
+```
+
+Then run a protected VM:
+
+```shell
+adb shell /apex/com.android.virt/bin/vm run-microdroid --protected
+```

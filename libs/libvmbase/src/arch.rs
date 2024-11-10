@@ -1,4 +1,4 @@
-// Copyright 2023, The Android Open Source Project
+// Copyright 2024, The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,85 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Wrappers of assembly calls.
+//! Low-level CPU-specific operations.
 
-/// Reads a value from a system register.
-#[macro_export]
-macro_rules! read_sysreg {
-    ($sysreg:literal) => {{
-        let mut r: usize;
-        #[allow(unused_unsafe)] // In case the macro is used within an unsafe block.
-        // SAFETY: Reading a system register does not affect memory.
-        unsafe {
-            core::arch::asm!(
-                concat!("mrs {}, ", $sysreg),
-                out(reg) r,
-                options(nomem, nostack, preserves_flags),
-            )
-        }
-        r
-    }};
-}
-
-/// Writes a value to a system register.
-///
-/// # Safety
-///
-/// Callers must ensure that side effects of updating the system register are properly handled.
-#[macro_export]
-macro_rules! write_sysreg {
-    ($sysreg:literal, $val:expr) => {{
-        let value: usize = $val;
-        core::arch::asm!(
-            concat!("msr ", $sysreg, ", {}"),
-            in(reg) value,
-            options(nomem, nostack, preserves_flags),
-        )
-    }};
-}
-
-/// Executes an instruction synchronization barrier.
-#[macro_export]
-macro_rules! isb {
-    () => {{
-        #[allow(unused_unsafe)] // In case the macro is used within an unsafe block.
-        // SAFETY: memory barriers do not affect Rust's memory model.
-        unsafe {
-            core::arch::asm!("isb", options(nomem, nostack, preserves_flags));
-        }
-    }};
-}
-
-/// Executes a data synchronization barrier.
-#[macro_export]
-macro_rules! dsb {
-    ($option:literal) => {{
-        #[allow(unused_unsafe)] // In case the macro is used within an unsafe block.
-        // SAFETY: memory barriers do not affect Rust's memory model.
-        unsafe {
-            core::arch::asm!(concat!("dsb ", $option), options(nomem, nostack, preserves_flags));
-        }
-    }};
-}
-
-/// Invalidates cached leaf PTE entries by virtual address.
-#[macro_export]
-macro_rules! tlbi {
-    ($option:literal, $asid:expr, $addr:expr) => {{
-        let asid: usize = $asid;
-        let addr: usize = $addr;
-        #[allow(unused_unsafe)] // In case the macro is used within an unsafe block.
-        // SAFETY: Invalidating the TLB doesn't affect Rust. When the address matches a
-        // block entry larger than the page size, all translations for the block are invalidated.
-        unsafe {
-            core::arch::asm!(
-                concat!("tlbi ", $option, ", {x}"),
-                x = in(reg) (asid << 48) | (addr >> 12),
-                options(nomem, nostack, preserves_flags)
-            );
-        }
-    }};
-}
+#[cfg(target_arch = "aarch64")]
+pub mod aarch64;
 
 /// Write with well-defined compiled behavior.
 ///
@@ -99,14 +24,32 @@ macro_rules! tlbi {
 /// # Safety
 ///
 /// `dst` must be valid for writes.
+#[inline]
 pub unsafe fn write_volatile_u8(dst: *mut u8, src: u8) {
-    // SAFETY: strb only modifies *dst, which must be valid for writes.
-    unsafe {
-        core::arch::asm!(
-            "strb {value:w}, [{ptr}]",
-            value = in(reg) src,
-            ptr = in(reg) dst,
-            options(preserves_flags),
-        );
+    cfg_if::cfg_if! {
+        if #[cfg(target_arch = "aarch64")] {
+            // SAFETY: `dst` is valid for writes.
+            unsafe { aarch64::strb(dst, src) }
+        } else {
+            compile_error!("Unsupported target_arch")
+        }
+    }
+}
+
+/// Flush `size` bytes of data cache by virtual address.
+#[inline]
+pub(crate) fn flush_region(start: usize, size: usize) {
+    cfg_if::cfg_if! {
+        if #[cfg(target_arch = "aarch64")] {
+            let line_size = aarch64::min_dcache_line_size();
+            let end = start + size;
+            let start = crate::util::unchecked_align_down(start, line_size);
+
+            for line in (start..end).step_by(line_size) {
+                crate::dc!("cvau", line);
+            }
+        } else {
+            compile_error!("Unsupported target_arch")
+        }
     }
 }

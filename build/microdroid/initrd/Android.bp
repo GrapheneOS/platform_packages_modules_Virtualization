@@ -84,6 +84,10 @@ bootconfigs_x86_64 = [
     ":microdroid_vbmeta_bootconfig_gen",
 ]
 
+bootconfigs_x86_64_16k = bootconfigs_x86_64 + [
+    ":microdroid_16k_bootconfig_x86_64_gen",
+]
+
 java_genrule {
     name: "microdroid_initrd_debuggable_arm64",
     tools: ["initrd_bootconfig"],
@@ -114,6 +118,17 @@ java_genrule {
         ":microdroid_bootconfig_debuggable_src",
     ] + bootconfigs_x86_64,
     out: ["microdroid_initrd_debuggable_x86_64"],
+    cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
+}
+
+java_genrule {
+    name: "microdroid_16k_initrd_debuggable_x86_64",
+    tools: ["initrd_bootconfig"],
+    srcs: [
+        ":microdroid_initrd_gen",
+        ":microdroid_bootconfig_debuggable_src",
+    ] + bootconfigs_x86_64_16k,
+    out: ["microdroid_16k_initrd_debuggable_x86_64"],
     cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
 }
 
@@ -162,6 +177,17 @@ java_genrule {
 }
 
 java_genrule {
+    name: "microdroid_16k_initrd_normal_x86_64",
+    tools: ["initrd_bootconfig"],
+    srcs: [
+        ":microdroid_initrd_gen",
+        ":microdroid_bootconfig_normal_src",
+    ] + bootconfigs_x86_64_16k,
+    out: ["microdroid_16k_initrd_normal_x86_64"],
+    cmd: "$(location initrd_bootconfig) attach --output $(out) $(in)",
+}
+
+java_genrule {
     name: "microdroid_gki-android15-6.6_initrd_normal_x86_64",
     tools: ["initrd_bootconfig"],
     srcs: [
@@ -185,6 +211,24 @@ prebuilt_etc {
         },
     },
     filename: "microdroid_initrd_debuggable.img",
+}
+
+prebuilt_etc {
+    name: "microdroid_16k_initrd_debuggable",
+    // We don't have ramdisk for architectures other than x86_64 & arm64
+    src: ":empty_file",
+    arch: {
+        // For x86_64 we emulate 16k by adding `page_shift=14` to bootconfig, that's why we need
+        // separate initrd.
+        x86_64: {
+            src: ":microdroid_16k_initrd_debuggable_x86_64",
+        },
+        // For arm64, the initrd for 16k kernel is the same.
+        arm64: {
+            src: ":microdroid_initrd_debuggable_arm64",
+        },
+    },
+    filename: "microdroid_16k_initrd_debuggable.img",
 }
 
 prebuilt_etc {
@@ -215,6 +259,24 @@ prebuilt_etc {
         },
     },
     filename: "microdroid_initrd_normal.img",
+}
+
+prebuilt_etc {
+    name: "microdroid_16k_initrd_normal",
+    // We don't have ramdisk for architectures other than x86_64 & arm64
+    src: ":empty_file",
+    arch: {
+        // For x86_64 we emulate 16k by adding `page_shift=14` to bootconfig, that's why we need
+        // separate initrd.
+        x86_64: {
+            src: ":microdroid_16k_initrd_normal_x86_64",
+        },
+        // For arm64, the initrd for 16k kernel is the same.
+        arm64: {
+            src: ":microdroid_initrd_normal_arm64",
+        },
+    },
+    filename: "microdroid_16k_initrd_normal.img",
 }
 
 prebuilt_etc {

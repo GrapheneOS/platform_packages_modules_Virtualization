@@ -162,6 +162,14 @@ apex_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
         true: ["com.android.virt.vmnic.rc"],
         default: [],
+    }) + select(soong_config_variable("ANDROID", "target_boots_16k"), {
+        true: [
+            "microdroid_16k_initrd_debuggable",
+            "microdroid_16k_initrd_normal",
+            "microdroid_kernel_16k",
+            "microdroid_16k.json",
+        ],
+        default: [],
     }),
     host_required: [
         "vm_shell",

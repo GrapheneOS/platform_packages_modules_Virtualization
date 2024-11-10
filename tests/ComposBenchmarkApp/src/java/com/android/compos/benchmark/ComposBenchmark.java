@@ -130,7 +130,8 @@ public class ComposBenchmark extends MicrodroidDeviceTestBase {
 
         for (int round = 0; round < ROUND_COUNT; ++round) {
 
-            GetMetricsRunnable getMetricsRunnable = new GetMetricsRunnable("crosvm", processMemory);
+            GetMetricsRunnable getMetricsRunnable =
+                    new GetMetricsRunnable("crosvm_ComposdTest", processMemory);
             Thread threadGetMetrics = new Thread(getMetricsRunnable);
 
             threadGetMetrics.start();
