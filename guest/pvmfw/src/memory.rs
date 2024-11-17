@@ -23,12 +23,12 @@ use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::result;
 use core::slice;
+use hypervisor_backends::get_mem_sharer;
 use log::debug;
 use log::error;
 use log::info;
 use log::warn;
 use vmbase::{
-    hyp::get_mem_sharer,
     layout::{self, crosvm},
     memory::{PageTable, MEMORY, SIZE_2MB, SIZE_4KB},
     util::align_up,

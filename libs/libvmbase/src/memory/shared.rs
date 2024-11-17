@@ -16,7 +16,6 @@
 
 use super::error::MemoryTrackerError;
 use super::util::virt_to_phys;
-use crate::hyp::{self, get_mem_sharer, get_mmio_guard};
 use crate::layout;
 use crate::util::unchecked_align_down;
 use aarch64_paging::paging::{MemoryRegion as VaRange, VirtualAddress, PAGE_SIZE};
@@ -29,6 +28,7 @@ use core::cmp::max;
 use core::ops::Range;
 use core::ptr::NonNull;
 use core::result;
+use hypervisor_backends::{self, get_mem_sharer, get_mmio_guard};
 use log::trace;
 use once_cell::race::OnceBox;
 use spin::mutex::SpinMutex;
@@ -108,7 +108,7 @@ impl Drop for MmioSharer {
 
 /// Allocates a memory range of at least the given size and alignment that is shared with the host.
 /// Returns a pointer to the buffer.
-pub(crate) fn alloc_shared(layout: Layout) -> hyp::Result<NonNull<u8>> {
+pub(crate) fn alloc_shared(layout: Layout) -> hypervisor_backends::Result<NonNull<u8>> {
     assert_ne!(layout.size(), 0);
     let Some(buffer) = try_shared_alloc(layout) else {
         handle_alloc_error(layout);
@@ -143,7 +143,10 @@ fn try_shared_alloc(layout: Layout) -> Option<NonNull<u8>> {
 ///
 /// The memory must have been allocated by `alloc_shared` with the same layout, and not yet
 /// deallocated.
-pub(crate) unsafe fn dealloc_shared(vaddr: NonNull<u8>, layout: Layout) -> hyp::Result<()> {
+pub(crate) unsafe fn dealloc_shared(
+    vaddr: NonNull<u8>,
+    layout: Layout,
+) -> hypervisor_backends::Result<()> {
     SHARED_POOL.get().unwrap().lock().dealloc_aligned(vaddr.as_ptr() as usize, layout);
 
     trace!("Deallocated shared buffer at {vaddr:?} with {layout:?}");

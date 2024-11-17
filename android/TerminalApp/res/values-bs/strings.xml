@@ -48,10 +48,10 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opcije za oporavak particije"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Promijeni u početnu verziju"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Uklonite sve"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Ponovno postavljanje virtualnog stroja"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Poništite virtuelnu mašinu"</string>
     <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Podaci će se izbrisati."</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Potvrdi"</string>
-    <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Odustani"</string>
+    <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Otkaži"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Postavke"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal je pokrenut"</string>
     <string name="service_notification_content" msgid="8652887364784704911">"Kliknite da otvorite terminal."</string>

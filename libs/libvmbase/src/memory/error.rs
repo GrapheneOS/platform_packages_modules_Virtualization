@@ -16,7 +16,7 @@
 
 use core::fmt;
 
-use crate::hyp;
+use hypervisor_backends::Error as HypervisorError;
 
 /// Errors for MemoryTracker operations.
 #[derive(Debug, Clone)]
@@ -38,7 +38,7 @@ pub enum MemoryTrackerError {
     /// Region couldn't be unmapped.
     FailedToUnmap,
     /// Error from the interaction with the hypervisor.
-    Hypervisor(hyp::Error),
+    Hypervisor(HypervisorError),
     /// Failure to set `SHARED_MEMORY`.
     SharedMemorySetFailure,
     /// Failure to set `SHARED_POOL`.
@@ -82,8 +82,8 @@ impl fmt::Display for MemoryTrackerError {
     }
 }
 
-impl From<hyp::Error> for MemoryTrackerError {
-    fn from(e: hyp::Error) -> Self {
+impl From<HypervisorError> for MemoryTrackerError {
+    fn from(e: HypervisorError) -> Self {
         Self::Hypervisor(e)
     }
 }

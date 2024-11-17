@@ -46,7 +46,7 @@ releases:
 vendors:
 - name: nocloud
   faiClasses: [SYSTEM_BOOT, NOCLOUD, LINUX_VARIANT_BASE, TIME_SYSTEMD, AVF]
-  size: 2
+  size: 6
 
 types:
 - name: dev

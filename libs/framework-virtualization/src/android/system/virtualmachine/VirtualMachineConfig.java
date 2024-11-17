@@ -744,6 +744,7 @@ public final class VirtualMachineConfig {
                                     return usbConfig;
                                 })
                         .orElse(null);
+        config.teeServices = EMPTY_STRING_ARRAY;
         return config;
     }
 
@@ -798,6 +799,7 @@ public final class VirtualMachineConfig {
                     new VirtualMachineAppConfig.CustomConfig();
             customConfig.devices = EMPTY_STRING_ARRAY;
             customConfig.extraKernelCmdlineParams = EMPTY_STRING_ARRAY;
+            customConfig.teeServices = EMPTY_STRING_ARRAY;
             try {
                 customConfig.vendorImage =
                         ParcelFileDescriptor.open(mVendorDiskImage, MODE_READ_ONLY);

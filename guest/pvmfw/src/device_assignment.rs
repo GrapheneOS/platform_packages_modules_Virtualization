@@ -28,12 +28,12 @@ use core::ffi::CStr;
 use core::iter::Iterator;
 use core::mem;
 use core::ops::Range;
+// TODO(b/308694211): Use hypervisor_backends::{DeviceAssigningHypervisor, Error} proper for tests.
+#[cfg(not(test))]
+use hypervisor_backends::DeviceAssigningHypervisor;
 use libfdt::{Fdt, FdtError, FdtNode, FdtNodeMut, Phandle, Reg};
 use log::error;
 use log::warn;
-// TODO(b/308694211): Use vmbase::hyp::{DeviceAssigningHypervisor, Error} proper for tests.
-#[cfg(not(test))]
-use vmbase::hyp::DeviceAssigningHypervisor;
 use zerocopy::byteorder::big_endian::U32;
 use zerocopy::FromBytes as _;
 

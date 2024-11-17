@@ -14,8 +14,13 @@
 
 //! This library provides wrappers around various hypervisor backends.
 
+#![no_std]
+
+extern crate alloc;
+
 mod error;
 mod hypervisor;
+mod mem;
 
 pub use error::{Error, Result};
 pub use hypervisor::{

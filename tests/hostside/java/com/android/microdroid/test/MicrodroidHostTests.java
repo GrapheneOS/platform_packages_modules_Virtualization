@@ -1345,9 +1345,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @Parameters(method = "gkiVersions")
+    @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
-    @Ignore("b/360388014") // TODO(b/360388014): fix & re-enable
     public void microdroidDeviceTreeCompat(String os) throws Exception {
         assumeArm64Supported();
         final String configPath = "assets/vm_config.json";
@@ -1374,9 +1373,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @Parameters(method = "gkiVersions")
+    @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
-    @Ignore("b/360388014") // TODO(b/360388014): fix & re-enable
     public void microdroidProtectedDeviceTreeCompat(String os) throws Exception {
         assumeArm64Supported();
         final String configPath = "assets/vm_config.json";

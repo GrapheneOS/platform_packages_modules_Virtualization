@@ -14,7 +14,7 @@
 
 //! This module regroups some common traits shared by all the hypervisors.
 
-use crate::hyp::Result;
+use crate::Result;
 
 /// Trait for the hypervisor.
 pub trait Hypervisor {

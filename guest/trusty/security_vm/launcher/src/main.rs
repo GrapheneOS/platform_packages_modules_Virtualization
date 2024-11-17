@@ -15,8 +15,8 @@
 //! A client for trusty security VMs during early boot.
 
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    IVirtualizationService::IVirtualizationService, VirtualMachineConfig::VirtualMachineConfig,
-    VirtualMachineRawConfig::VirtualMachineRawConfig,
+    CpuTopology::CpuTopology, IVirtualizationService::IVirtualizationService,
+    VirtualMachineConfig::VirtualMachineConfig, VirtualMachineRawConfig::VirtualMachineRawConfig,
 };
 use android_system_virtualizationservice::binder::{ParcelFileDescriptor, Strong};
 use anyhow::{Context, Result};
@@ -26,7 +26,8 @@ use std::path::PathBuf;
 use vmclient::VmInstance;
 
 #[derive(Parser)]
-struct Args {
+/// Collection of CLI for trusty_security_vm_launcher
+pub struct Args {
     /// Path to the trusty kernel image.
     #[arg(long)]
     kernel: PathBuf,
@@ -42,12 +43,24 @@ struct Args {
     /// Memory size of the VM in MiB
     #[arg(long, default_value_t = 128)]
     memory_size_mib: i32,
+
+    /// CPU Topology exposed to the VM <one-cpu|match-host>
+    #[arg(long, default_value = "one-cpu", value_parser = parse_cpu_topology)]
+    cpu_topology: CpuTopology,
 }
 
 fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
     let virtmgr = vmclient::VirtualizationService::new_early()
         .context("Failed to spawn VirtualizationService")?;
     virtmgr.connect().context("Failed to connect to VirtualizationService")
+}
+
+fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
+    match s {
+        "one-cpu" => Ok(CpuTopology::ONE_CPU),
+        "match-host" => Ok(CpuTopology::MATCH_HOST),
+        _ => Err(format!("Invalid cpu topology {}", s)),
+    }
 }
 
 fn main() -> Result<()> {
@@ -63,6 +76,7 @@ fn main() -> Result<()> {
         kernel: Some(ParcelFileDescriptor::new(kernel)),
         protectedVm: args.protected,
         memoryMib: args.memory_size_mib,
+        cpuTopology: args.cpu_topology,
         platformVersion: "~1.0".to_owned(),
         // TODO: add instanceId
         ..Default::default()

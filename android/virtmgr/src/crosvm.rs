@@ -475,10 +475,23 @@ impl VmInstance {
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
-        mut failure_pipe_read: File,
+        failure_pipe_read: File,
         vfio_devices: Vec<VfioDevice>,
         tap: Option<File>,
     ) {
+        let failure_reason_thread = std::thread::spawn(move || {
+            // Read the pipe to see if any failure reason is written
+            let mut failure_reason = String::new();
+            // Arbitrary max size in case of misbehaving guest.
+            const MAX_SIZE: u64 = 50_000;
+            match failure_pipe_read.take(MAX_SIZE).read_to_string(&mut failure_reason) {
+                Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
+                Ok(len) if len > 0 => error!("VM returned failure reason '{}'", &failure_reason),
+                _ => (),
+            };
+            failure_reason
+        });
+
         let result = child.wait();
         match &result {
             Err(e) => error!("Error waiting for crosvm({}) instance to die: {}", child.id(), e),
@@ -492,19 +505,13 @@ impl VmInstance {
             }
         }
 
+        let failure_reason = failure_reason_thread.join().expect("failure_reason_thread panic'd");
+
         let mut vm_state = self.vm_state.lock().unwrap();
         *vm_state = VmState::Dead;
         // Ensure that the mutex is released before calling the callbacks.
         drop(vm_state);
         info!("{} exited", &self);
-
-        // Read the pipe to see if any failure reason is written
-        let mut failure_reason = String::new();
-        match failure_pipe_read.read_to_string(&mut failure_reason) {
-            Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
-            Ok(len) if len > 0 => info!("VM returned failure reason '{}'", &failure_reason),
-            _ => (),
-        };
 
         // In case of hangup, the pipe doesn't give us any information because the hangup can't be
         // detected on the VM side (otherwise, it isn't a hangup), but in the

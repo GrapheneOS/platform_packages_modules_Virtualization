@@ -17,10 +17,7 @@
 use core::fmt::{self, Display, Formatter};
 
 use super::{Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
-use crate::{
-    hyp::{Error, Result},
-    memory::page_4kb_of,
-};
+use crate::{mem::page_4kb_of, Error, Result};
 
 use smccc::{
     error::{positive_or_error_64, success_or_error_64},

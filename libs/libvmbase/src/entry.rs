@@ -15,7 +15,7 @@
 //! Rust entry point.
 
 use crate::{
-    bionic, console, heap, hyp,
+    bionic, console, heap,
     layout::{UART_ADDRESSES, UART_PAGE_ADDR},
     logger,
     memory::{PAGE_SIZE, SIZE_16KB, SIZE_4KB},
@@ -23,10 +23,11 @@ use crate::{
     rand,
 };
 use core::mem::size_of;
+use hypervisor_backends::{get_mmio_guard, Error};
 use static_assertions::const_assert_eq;
 
-fn try_console_init() -> Result<(), hyp::Error> {
-    if let Some(mmio_guard) = hyp::get_mmio_guard() {
+fn try_console_init() -> Result<(), Error> {
+    if let Some(mmio_guard) = get_mmio_guard() {
         mmio_guard.enroll()?;
 
         // TODO(ptosi): Use MmioSharer::share() to properly track this MMIO_GUARD_MAP.

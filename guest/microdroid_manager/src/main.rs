@@ -140,10 +140,10 @@ fn write_death_reason_to_serial(err: &Error) -> Result<()> {
         Owned(format!("MICRODROID_UNKNOWN_RUNTIME_ERROR|{:?}", err))
     };
 
-    for chunk in death_reason.as_bytes().chunks(16) {
-        // TODO(b/220071963): Sometimes, sending more than 16 bytes at once makes MM hang.
-        OpenOptions::new().read(false).write(true).open(FAILURE_SERIAL_DEVICE)?.write_all(chunk)?;
-    }
+    let mut serial_file = OpenOptions::new().read(false).write(true).open(FAILURE_SERIAL_DEVICE)?;
+    serial_file.write_all(death_reason.as_bytes()).context("serial device write_all failed")?;
+    // Block until the serial port trasmits all the data to the host.
+    nix::sys::termios::tcdrain(&serial_file).context("tcdrain failed")?;
 
     Ok(())
 }
@@ -670,7 +670,9 @@ fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Resul
         });
     }
 
-    command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+    if !is_debuggable()? {
+        command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+    }
 
     info!("notifying payload started");
     service.notifyPayloadStarted()?;

@@ -33,7 +33,6 @@
     "memory_mib": 4096,
     "debuggable": true,
     "console_out": true,
-    "connect_console": true,
     "console_input_device": "ttyS0",
     "network": true
 }

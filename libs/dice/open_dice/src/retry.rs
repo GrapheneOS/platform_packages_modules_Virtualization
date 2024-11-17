@@ -23,7 +23,6 @@ use crate::dice::{
 };
 use crate::error::{DiceError, Result};
 use crate::ops::generate_certificate;
-#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 #[cfg(feature = "serde_derive")]
 use serde_derive::{Deserialize, Serialize};

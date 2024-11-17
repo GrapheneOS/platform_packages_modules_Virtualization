@@ -14,16 +14,37 @@
 
 //! Launcher of forwarder_guest
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use clap::Parser;
+use csv_async::AsyncReader;
 use debian_service::debian_service_client::DebianServiceClient;
-use debian_service::QueueOpeningRequest;
+use debian_service::{QueueOpeningRequest, ReportVmActivePortsRequest};
+use futures::stream::StreamExt;
+use log::{debug, error};
+use serde::Deserialize;
+use std::collections::HashSet;
+use std::process::Stdio;
+use tokio::io::BufReader;
 use tokio::process::Command;
-use tonic::transport::Endpoint;
+use tokio::try_join;
+use tonic::transport::{Channel, Endpoint};
 use tonic::Request;
 
 mod debian_service {
     tonic::include_proto!("com.android.virtualization.vmlauncher.proto");
+}
+
+const NON_PREVILEGED_PORT_RANGE_START: i32 = 1024;
+const TCPSTATES_IP_4: i8 = 4;
+const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+struct TcpStateRow {
+    ip: i8,
+    lport: i32,
+    oldstate: String,
+    newstate: String,
 }
 
 #[derive(Parser)]
@@ -39,14 +60,9 @@ pub struct Args {
     grpc_port: String,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting forwarder_guest_launcher");
-    let args = Args::parse();
-    let addr = format!("https://{}:{}", args.host_addr, args.grpc_port);
-
-    let channel = Endpoint::from_shared(addr)?.connect().await?;
-    let mut client = DebianServiceClient::new(channel);
+async fn process_forwarding_request_queue(
+    mut client: DebianServiceClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let cid = vsock::get_local_cid().context("Failed to get CID of VM")?;
     let mut res_stream = client
         .open_forwarding_request_queue(Request::new(QueueOpeningRequest { cid: cid as i32 }))
@@ -58,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .context("Failed to convert guest_tcp_port as i16")?;
         let vsock_port = response.vsock_port as u32;
 
-        println!(
+        debug!(
             "executing forwarder_guest with guest_tcp_port: {:?}, vsock_port: {:?}",
             &tcp_port, &vsock_port
         );
@@ -70,5 +86,85 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .arg(format!("vsock:2:{}", vsock_port))
             .spawn();
     }
+    Err(anyhow!("process_forwarding_request_queue is terminated").into())
+}
+
+async fn send_active_ports_report(
+    listening_ports: HashSet<i32>,
+    client: &mut DebianServiceClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let res = client
+        .report_vm_active_ports(Request::new(ReportVmActivePortsRequest {
+            ports: listening_ports.into_iter().collect(),
+        }))
+        .await?
+        .into_inner();
+    if res.success {
+        debug!("Successfully reported active ports to the host");
+    } else {
+        error!("Failure response received from the host for reporting active ports");
+    }
+    Ok(())
+}
+
+async fn report_active_ports(
+    mut client: DebianServiceClient<Channel>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new("python3")
+        .arg("-u")
+        .arg("/usr/sbin/tcpstates-bpfcc")
+        .arg("-s")
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let stdout = cmd.stdout.take().context("Failed to get stdout of tcpstates")?;
+    let mut csv_reader = AsyncReader::from_reader(BufReader::new(stdout));
+    let header = csv_reader.headers().await?.clone();
+
+    // TODO(b/340126051): Consider using NETLINK_SOCK_DIAG for the optimization.
+    let listeners = listeners::get_all()?;
+    // TODO(b/340126051): Support distinguished port forwarding for ipv6 as well.
+    let mut listening_ports: HashSet<_> = listeners
+        .iter()
+        .map(|x| x.socket)
+        .filter(|x| x.is_ipv4())
+        .map(|x| x.port().into())
+        .filter(|x| *x >= NON_PREVILEGED_PORT_RANGE_START) // Ignore privileged ports
+        .collect();
+    send_active_ports_report(listening_ports.clone(), &mut client).await?;
+
+    let mut records = csv_reader.records();
+    while let Some(record) = records.next().await {
+        let row: TcpStateRow = record?.deserialize(Some(&header))?;
+        if row.ip != TCPSTATES_IP_4 {
+            continue;
+        }
+        if row.lport < NON_PREVILEGED_PORT_RANGE_START {
+            continue;
+        }
+        match (row.oldstate.as_str(), row.newstate.as_str()) {
+            (_, TCPSTATES_STATE_LISTEN) => {
+                listening_ports.insert(row.lport);
+            }
+            (TCPSTATES_STATE_LISTEN, _) => {
+                listening_ports.remove(&row.lport);
+            }
+            (_, _) => continue,
+        }
+        send_active_ports_report(listening_ports.clone(), &mut client).await?;
+    }
+
+    Err(anyhow!("report_active_ports is terminated").into())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+    debug!("Starting forwarder_guest_launcher");
+    let args = Args::parse();
+    let addr = format!("https://{}:{}", args.host_addr, args.grpc_port);
+    let channel = Endpoint::from_shared(addr)?.connect().await?;
+    let client = DebianServiceClient::new(channel);
+
+    try_join!(process_forwarding_request_queue(client.clone()), report_active_ports(client))?;
     Ok(())
 }

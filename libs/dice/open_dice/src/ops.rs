@@ -17,10 +17,11 @@
 //! main DICE functions depend on.
 
 use crate::dice::{
-    derive_cdi_private_key_seed, DiceArtifacts, Hash, InputValues, PrivateKey, PublicKey,
-    Signature, HASH_SIZE, PRIVATE_KEY_SEED_SIZE, PRIVATE_KEY_SIZE, PUBLIC_KEY_SIZE, SIGNATURE_SIZE,
+    derive_cdi_private_key_seed, DiceArtifacts, Hash, InputValues, PrivateKey, HASH_SIZE,
+    PRIVATE_KEY_SEED_SIZE, PRIVATE_KEY_SIZE, VM_KEY_ALGORITHM,
 };
-use crate::error::{check_result, Result};
+use crate::error::{check_result, DiceError, Result};
+use alloc::{vec, vec::Vec};
 use open_dice_cbor_bindgen::{
     DiceGenerateCertificate, DiceHash, DiceKdf, DiceKeypairFromSeed, DiceSign, DiceVerify,
 };
@@ -71,8 +72,8 @@ pub fn kdf(ikm: &[u8], salt: &[u8], info: &[u8], derived_key: &mut [u8]) -> Resu
 /// Deterministically generates a public and private key pair from `seed`.
 /// Since this is deterministic, `seed` is as sensitive as a private key and can
 /// be used directly as the private key.
-pub fn keypair_from_seed(seed: &[u8; PRIVATE_KEY_SEED_SIZE]) -> Result<(PublicKey, PrivateKey)> {
-    let mut public_key = [0u8; PUBLIC_KEY_SIZE];
+pub fn keypair_from_seed(seed: &[u8; PRIVATE_KEY_SEED_SIZE]) -> Result<(Vec<u8>, PrivateKey)> {
+    let mut public_key = vec![0u8; VM_KEY_ALGORITHM.public_key_size()];
     let mut private_key = PrivateKey::default();
     check_result(
         // SAFETY: The function writes to the `public_key` and `private_key` within the given
@@ -106,8 +107,8 @@ pub fn derive_cdi_leaf_priv(dice_artifacts: &dyn DiceArtifacts) -> Result<Privat
 }
 
 /// Signs the `message` with the give `private_key` using `DiceSign`.
-pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Signature> {
-    let mut signature = [0u8; SIGNATURE_SIZE];
+pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Vec<u8>> {
+    let mut signature = vec![0u8; VM_KEY_ALGORITHM.signature_size()];
     check_result(
         // SAFETY: The function writes to the `signature` within the given bounds, and only reads
         // the message and the private key. The first argument context is not used in this
@@ -127,7 +128,12 @@ pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Sign
 }
 
 /// Verifies the `signature` of the `message` with the given `public_key` using `DiceVerify`.
-pub fn verify(message: &[u8], signature: &Signature, public_key: &PublicKey) -> Result<()> {
+pub fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<()> {
+    if signature.len() != VM_KEY_ALGORITHM.signature_size()
+        || public_key.len() != VM_KEY_ALGORITHM.public_key_size()
+    {
+        return Err(DiceError::InvalidInput);
+    }
     check_result(
         // SAFETY: only reads the messages, signature and public key as constant values.
         // The first argument context is not used in this function.

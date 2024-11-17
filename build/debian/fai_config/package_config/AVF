@@ -1,4 +1,5 @@
 PACKAGES install
 
-# Just for testing
-tree
+bpfcc-tools
+linux-headers-generic
+procps

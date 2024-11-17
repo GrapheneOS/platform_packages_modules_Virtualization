@@ -17,7 +17,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
@@ -27,7 +26,6 @@ mod bcc;
 mod dice;
 mod error;
 mod ops;
-#[cfg(feature = "alloc")]
 mod retry;
 
 pub use bcc::{
@@ -36,18 +34,14 @@ pub use bcc::{
 };
 pub use dice::{
     derive_cdi_certificate_id, derive_cdi_private_key_seed, dice_main_flow, Cdi, CdiValues, Config,
-    DiceArtifacts, DiceMode, Hash, Hidden, InlineConfig, InputValues, PrivateKey, PrivateKeySeed,
-    PublicKey, Signature, CDI_SIZE, HASH_SIZE, HIDDEN_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
+    DiceArtifacts, DiceMode, Hash, Hidden, InlineConfig, InputValues, KeyAlgorithm, PrivateKey,
+    PrivateKeySeed, CDI_SIZE, HASH_SIZE, HIDDEN_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
+    VM_KEY_ALGORITHM,
 };
 pub use error::{DiceError, Result};
-// Currently, open-dice library only supports a single signing and verification algorithm.
-// The value of DICE_COSE_KEY_ALG_VALUE depends on the algorithm chosen by the underlying C
-// library at build time. Refer to b/342333212 for more information.
-pub use open_dice_cbor_bindgen::DICE_COSE_KEY_ALG_VALUE;
 pub use ops::{
     derive_cdi_leaf_priv, generate_certificate, hash, kdf, keypair_from_seed, sign, verify,
 };
-#[cfg(feature = "alloc")]
 pub use retry::{
     retry_bcc_format_config_descriptor, retry_bcc_main_flow, retry_dice_main_flow,
     retry_generate_certificate, OwnedDiceArtifacts,

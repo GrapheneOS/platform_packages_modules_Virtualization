@@ -32,6 +32,7 @@ use ciborium_io::Write;
 use core::num::NonZeroUsize;
 use core::slice;
 use diced_open_dice::{bcc_handover_parse, DiceArtifacts};
+use hypervisor_backends::get_mem_sharer;
 use libfdt::FdtError;
 use log::{debug, error, info};
 use service_vm_comm::{ServiceVmRequest, VmType};
@@ -47,7 +48,6 @@ use vmbase::{
     fdt::pci::PciInfo,
     fdt::SwiotlbInfo,
     generate_image_header,
-    hyp::get_mem_sharer,
     layout::{self, crosvm},
     main,
     memory::{MemoryTracker, PageTable, MEMORY, PAGE_SIZE, SIZE_128KB},

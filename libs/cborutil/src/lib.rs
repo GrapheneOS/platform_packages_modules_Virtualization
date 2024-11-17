@@ -21,10 +21,7 @@ extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 use ciborium::value::{Integer, Value};
-use coset::{
-    iana::{self, EnumI64},
-    CborSerializable, CoseError, CoseKey, Label, Result,
-};
+use coset::{CborSerializable, CoseError, CoseKey, Label, Result};
 use log::error;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -134,20 +131,4 @@ pub fn get_label_value(key: &CoseKey, label: Label) -> Result<&Value> {
         .find(|(k, _)| k == &label)
         .ok_or(CoseError::UnexpectedItem("", "Label not found in CoseKey"))?
         .1)
-}
-
-/// Converts the provided COSE key algorithm integer to an `iana::Algorithm` used
-/// by DICE chains.
-pub fn dice_cose_key_alg(cose_key_alg: i32) -> Result<iana::Algorithm> {
-    let key_alg = iana::Algorithm::from_i64(cose_key_alg as i64).ok_or_else(|| {
-        error!("Unsupported COSE key algorithm for DICE: {cose_key_alg}");
-        CoseError::UnexpectedItem("COSE key algorithm", "")
-    })?;
-    match key_alg {
-        iana::Algorithm::EdDSA | iana::Algorithm::ES256 | iana::Algorithm::ES384 => Ok(key_alg),
-        _ => {
-            error!("Unsupported COSE key algorithm for DICE: {key_alg:?}");
-            Err(CoseError::UnexpectedItem("-8, -7 or -35", ""))
-        }
-    }
 }

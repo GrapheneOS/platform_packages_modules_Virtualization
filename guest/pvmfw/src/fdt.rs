@@ -30,6 +30,8 @@ use core::fmt;
 use core::mem::size_of;
 use core::ops::Range;
 use cstr::cstr;
+use hypervisor_backends::get_device_assigner;
+use hypervisor_backends::get_mem_sharer;
 use libfdt::AddressRange;
 use libfdt::CellIterator;
 use libfdt::Fdt;
@@ -46,7 +48,6 @@ use tinyvec::ArrayVec;
 use vmbase::fdt::pci::PciMemoryFlags;
 use vmbase::fdt::pci::PciRangeType;
 use vmbase::fdt::SwiotlbInfo;
-use vmbase::hyp;
 use vmbase::layout::{crosvm::MEM_START, MAX_VIRT_ADDR};
 use vmbase::memory::SIZE_4KB;
 use vmbase::util::RangeExt as _;
@@ -1147,9 +1148,9 @@ fn parse_device_tree(fdt: &Fdt, vm_dtbo: Option<&VmDtbo>) -> Result<DeviceTreeIn
 
     let device_assignment = match vm_dtbo {
         Some(vm_dtbo) => {
-            if let Some(hypervisor) = hyp::get_device_assigner() {
+            if let Some(hypervisor) = get_device_assigner() {
                 // TODO(ptosi): Cache the (single?) granule once, in vmbase.
-                let granule = hyp::get_mem_sharer()
+                let granule = get_mem_sharer()
                     .ok_or_else(|| {
                         error!("No MEM_SHARE found during device assignment validation");
                         RebootReason::InternalError

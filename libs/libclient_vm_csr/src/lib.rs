@@ -20,9 +20,7 @@ use coset::{
     iana, CborSerializable, CoseKey, CoseKeyBuilder, CoseSign, CoseSignBuilder, CoseSignature,
     CoseSignatureBuilder, HeaderBuilder,
 };
-use diced_open_dice::{
-    derive_cdi_leaf_priv, sign, DiceArtifacts, PrivateKey, DICE_COSE_KEY_ALG_VALUE,
-};
+use diced_open_dice::{derive_cdi_leaf_priv, sign, DiceArtifacts, PrivateKey, VM_KEY_ALGORITHM};
 use openssl::{
     bn::{BigNum, BigNumContext},
     ec::{EcGroup, EcKey, EcKeyRef},
@@ -93,8 +91,7 @@ fn build_signed_data(
     cdi_leaf_priv: &PrivateKey,
     attestation_key: &EcKeyRef<Private>,
 ) -> Result<CoseSign> {
-    let dice_key_alg = cbor_util::dice_cose_key_alg(DICE_COSE_KEY_ALG_VALUE)?;
-    let cdi_leaf_sig_headers = build_signature_headers(dice_key_alg);
+    let cdi_leaf_sig_headers = build_signature_headers(VM_KEY_ALGORITHM.into());
     let attestation_key_sig_headers = build_signature_headers(ATTESTATION_KEY_ALGO);
     let aad = &[];
     let signed_data = CoseSignBuilder::new()

@@ -110,4 +110,7 @@ parcelable VirtualMachineRawConfig {
 
     /** Enable or disable USB passthrough support */
     @nullable UsbConfig usbConfig;
+
+    /** List of tee services this VM wants to access */
+    String[] teeServices;
 }

@@ -28,7 +28,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
 use forwarder::forwarder::ForwarderSession;
-use jni::objects::{JObject, JValue};
+use jni::objects::{JIntArray, JObject, JValue};
 use jni::sys::jint;
 use jni::JNIEnv;
 use log::{debug, error, info, warn};
@@ -45,11 +45,16 @@ const VMADDR_PORT_ANY: u32 = u32::MAX;
 static SHUTDOWN_EVT: LazyLock<EventFd> =
     LazyLock::new(|| EventFd::new().expect("Could not create shutdown eventfd"));
 
+static UPDATE_EVT: LazyLock<EventFd> =
+    LazyLock::new(|| EventFd::new().expect("Could not create update eventfd"));
+
+static UPDATE_QUEUE: LazyLock<Arc<Mutex<VecDeque<u16>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(VecDeque::new())));
+
 #[remain::sorted]
 #[derive(Debug)]
 enum Error {
     BindVsock(io::Error),
-    EventFdNew(nix::Error),
     IncorrectCid(u32),
     LaunchForwarderGuest(jni::errors::Error),
     NoListenerForPort(u16),
@@ -62,7 +67,6 @@ enum Error {
     TcpAccept(io::Error),
     TcpListenerPort(io::Error),
     UpdateEventRead(nix::Error),
-    UpdateEventWrite(nix::Error),
     VsockAccept(io::Error),
     VsockAcceptTimeout,
     VsockListenerPort(io::Error),
@@ -78,7 +82,6 @@ impl fmt::Display for Error {
         #[remain::sorted]
         match self {
             BindVsock(e) => write!(f, "failed to bind vsock: {}", e),
-            EventFdNew(e) => write!(f, "failed to create eventfd: {}", e),
             IncorrectCid(cid) => write!(f, "chunnel connection from unexpected cid {}", cid),
             LaunchForwarderGuest(e) => write!(f, "failed to launch forwarder_guest {}", e),
             NoListenerForPort(port) => write!(f, "could not find listener for port: {}", port),
@@ -93,18 +96,11 @@ impl fmt::Display for Error {
                 write!(f, "failed to read local sockaddr for tcp listener: {}", e)
             }
             UpdateEventRead(e) => write!(f, "failed to read update eventfd: {}", e),
-            UpdateEventWrite(e) => write!(f, "failed to write update eventfd: {}", e),
             VsockAccept(e) => write!(f, "failed to accept vsock: {}", e),
             VsockAcceptTimeout => write!(f, "timed out waiting for vsock connection"),
             VsockListenerPort(e) => write!(f, "failed to get vsock listener port: {}", e),
         }
     }
-}
-
-/// A TCP forwarding target. Uniquely identifies a listening port in a given container.
-struct TcpForwardTarget {
-    pub port: u16,
-    pub vsock_cid: u32,
 }
 
 /// A tag that uniquely identifies a particular forwarding session. This has arbitrarily been
@@ -127,7 +123,6 @@ enum Token {
 struct PortListeners {
     tcp4_listener: TcpListener,
     tcp6_listener: TcpListener,
-    forward_target: TcpForwardTarget,
 }
 
 /// SocketFamily specifies whether a socket uses IPv4 or IPv6.
@@ -140,25 +135,18 @@ enum SocketFamily {
 struct ForwarderSessions<'a> {
     listening_ports: BTreeMap<u16, PortListeners>,
     tcp4_forwarders: HashMap<SessionTag, ForwarderSession>,
-    update_evt: EventFd,
-    update_queue: Arc<Mutex<VecDeque<TcpForwardTarget>>>,
+    cid: u32,
     jni_env: JNIEnv<'a>,
     jni_cb: JObject<'a>,
 }
 
 impl<'a> ForwarderSessions<'a> {
     /// Creates a new instance of ForwarderSessions.
-    fn new(
-        update_evt: EventFd,
-        update_queue: Arc<Mutex<VecDeque<TcpForwardTarget>>>,
-        jni_env: JNIEnv<'a>,
-        jni_cb: JObject<'a>,
-    ) -> Result<Self> {
+    fn new(cid: i32, jni_env: JNIEnv<'a>, jni_cb: JObject<'a>) -> Result<Self> {
         Ok(ForwarderSessions {
             listening_ports: BTreeMap::new(),
             tcp4_forwarders: HashMap::new(),
-            update_evt,
-            update_queue,
+            cid: cid as u32,
             jni_env,
             jni_cb,
         })
@@ -167,12 +155,11 @@ impl<'a> ForwarderSessions<'a> {
     /// Adds or removes listeners based on the latest listening ports from the D-Bus thread.
     fn process_update_queue(&mut self, poll_ctx: &PollContext<Token>) -> Result<()> {
         // Unwrap of LockResult is customary.
-        let mut update_queue = self.update_queue.lock().unwrap();
+        let mut update_queue = UPDATE_QUEUE.lock().unwrap();
         let mut active_ports: BTreeSet<u16> = BTreeSet::new();
 
         // Add any new listeners first.
-        while let Some(target) = update_queue.pop_front() {
-            let port = target.port;
+        while let Some(port) = update_queue.pop_front() {
             // Ignore privileged ports.
             if port < 1024 {
                 continue;
@@ -201,7 +188,7 @@ impl<'a> ForwarderSessions<'a> {
                 poll_ctx
                     .add(&tcp6_listener, Token::Ipv6Listener(port))
                     .map_err(Error::PollContextAdd)?;
-                o.insert(PortListeners { tcp4_listener, tcp6_listener, forward_target: target });
+                o.insert(PortListeners { tcp4_listener, tcp6_listener });
             }
             active_ports.insert(port);
         }
@@ -218,7 +205,7 @@ impl<'a> ForwarderSessions<'a> {
         }
 
         // Consume the eventfd.
-        self.update_evt.read().map_err(Error::UpdateEventRead)?;
+        UPDATE_EVT.read().map_err(Error::UpdateEventRead)?;
 
         Ok(())
     }
@@ -240,12 +227,8 @@ impl<'a> ForwarderSessions<'a> {
         // This session should be dropped if any of the PollContext setup fails. Since the only
         // extant fds for the underlying sockets will be closed, they will be unregistered from
         // epoll set automatically.
-        let session = create_forwarder_session(
-            listener,
-            &port_listeners.forward_target,
-            &mut self.jni_env,
-            &self.jni_cb,
-        )?;
+        let session =
+            create_forwarder_session(listener, self.cid, &mut self.jni_env, &self.jni_cb)?;
 
         let tag = session.local_stream().as_raw_fd() as u32;
 
@@ -293,7 +276,7 @@ impl<'a> ForwarderSessions<'a> {
 
     fn run(&mut self) -> Result<()> {
         let poll_ctx: PollContext<Token> = PollContext::new().map_err(Error::PollContextNew)?;
-        poll_ctx.add(&self.update_evt, Token::UpdatePorts).map_err(Error::PollContextAdd)?;
+        poll_ctx.add(&*UPDATE_EVT, Token::UpdatePorts).map_err(Error::PollContextAdd)?;
         poll_ctx.add(&*SHUTDOWN_EVT, Token::Shutdown).map_err(Error::PollContextAdd)?;
 
         loop {
@@ -340,7 +323,7 @@ impl<'a> ForwarderSessions<'a> {
 /// Creates a forwarder session from a `listener` that has a pending connection to accept.
 fn create_forwarder_session(
     listener: &TcpListener,
-    target: &TcpForwardTarget,
+    cid: u32,
     jni_env: &mut JNIEnv,
     jni_cb: &JObject,
 ) -> Result<ForwarderSession> {
@@ -376,7 +359,7 @@ fn create_forwarder_session(
         Some(_) => {
             let (vsock_stream, sockaddr) = vsock_listener.accept().map_err(Error::VsockAccept)?;
 
-            if sockaddr.cid() != target.vsock_cid {
+            if sockaddr.cid() != cid {
                 Err(Error::IncorrectCid(sockaddr.cid()))
             } else {
                 Ok(ForwarderSession::new(tcp_stream.into(), vsock_stream.into()))
@@ -386,33 +369,10 @@ fn create_forwarder_session(
     }
 }
 
-fn update_listening_ports(
-    update_queue: &Arc<Mutex<VecDeque<TcpForwardTarget>>>,
-    update_evt: &EventFd,
-    cid: i32,
-) -> Result<()> {
-    let mut update_queue = update_queue.lock().unwrap();
-
-    // TODO(b/340126051): Bring listening ports from the guest.
-    update_queue.push_back(TcpForwardTarget {
-        port: 12345, /* Example value for testing */
-        vsock_cid: cid as u32,
-    });
-
-    update_evt.write(1).map_err(Error::UpdateEventWrite)?;
-    Ok(())
-}
-
 // TODO(b/340126051): Host can receive opened ports from the guest.
 fn run_forwarder_host(cid: i32, jni_env: JNIEnv, jni_cb: JObject) -> Result<()> {
     debug!("Starting forwarder_host");
-    let update_evt = EventFd::new().map_err(Error::EventFdNew)?;
-    let update_queue = Arc::new(Mutex::new(VecDeque::new()));
-
-    // TODO(b/340126051): Instead of one-time execution, bring port info with separated thread.
-    update_listening_ports(&update_queue, &update_evt, cid)?;
-
-    let mut sessions = ForwarderSessions::new(update_evt, update_queue, jni_env, jni_cb)?;
+    let mut sessions = ForwarderSessions::new(cid, jni_env, jni_cb)?;
     sessions.run()
 }
 
@@ -441,4 +401,23 @@ pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_t
     _class: JObject,
 ) {
     SHUTDOWN_EVT.write(1).expect("Failed to write shutdown event FD");
+}
+
+/// JNI function for updating listening ports.
+#[no_mangle]
+pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_updateListeningPorts(
+    env: JNIEnv,
+    _class: JObject,
+    ports: JIntArray,
+) {
+    let length = env.get_array_length(&ports).expect("Failed to get length of port array");
+    let mut buf = vec![0; length as usize];
+    env.get_int_array_region(ports, 0, &mut buf).expect("Failed to get port array");
+
+    let mut update_queue = UPDATE_QUEUE.lock().unwrap();
+    update_queue.clear();
+    for port in buf {
+        update_queue.push_back(port.try_into().expect("Failed to add port into update queue"));
+    }
+    UPDATE_EVT.write(1).expect("failed to write update eventfd");
 }

@@ -18,3 +18,43 @@ rust_binary {
         false: false,
     }),
 }
+
+prebuilt_etc {
+    name: "lk_trusty.elf",
+    system_ext_specific: true,
+    relative_install_path: "vm/trusty_vm",
+    filename: "lk_trusty.elf",
+    arch: {
+        x86_64: {
+            src: ":trusty_security_vm_signed",
+        },
+    },
+    src: ":empty_file",
+}
+
+filegroup {
+    name: "trusty_vm_sign_key",
+    srcs: [":avb_testkey_rsa4096"],
+}
+
+// python -c "import hashlib; print(hashlib.sha256(b'trusty_security_vm_salt').hexdigest())"
+trusty_security_vm_salt = "75a71e967c1a1e0f805cca20465e7acf83e6a04e567a67c426d8b5a94f8d61c5"
+
+TRUSTY_SECURITY_VM_VERSION = 1
+
+avb_add_hash_footer {
+    name: "trusty_security_vm_signed",
+    filename: "trusty_security_vm_signed",
+    partition_name: "boot",
+    private_key: ":trusty_vm_sign_key",
+    salt: trusty_security_vm_salt,
+    rollback_index: TRUSTY_SECURITY_VM_VERSION,
+    src: ":empty_file",
+    enabled: false,
+    arch: {
+        x86_64: {
+            src: ":trusty-test-lk.elf",
+            enabled: true,
+        },
+    },
+}

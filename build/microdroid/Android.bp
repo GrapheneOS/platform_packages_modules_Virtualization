@@ -139,7 +139,10 @@ android_system_image {
             ],
         },
     },
-    linker_config_src: "linker.config.json",
+    linker_config: {
+        gen_linker_config: true,
+        linker_config_srcs: ["linker.config.json"],
+    },
     base_dir: "system",
     dirs: microdroid_rootdirs + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
         true: ["microdroid_resources"],

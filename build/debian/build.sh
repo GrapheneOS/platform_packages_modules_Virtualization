@@ -11,6 +11,7 @@ show_help() {
 	echo "Options:"
 	echo "-h         Print usage and this help message and exit."
 	echo "-a ARCH    Architecture of the image [default is aarch64]"
+	echo "-r         Release mode build"
 }
 
 check_sudo() {
@@ -21,7 +22,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "ha:" option; do
+	while getopts "hra:" option; do
 		case ${option} in
 			h)
 				show_help
@@ -35,6 +36,9 @@ parse_options() {
 				if [[ "$arch" == "x86_64" ]]; then
 					debian_arch="amd64"
 				fi
+				;;
+			r)
+				mode=release
 				;;
 			*)
 				echo "Invalid option: $OPTARG"
@@ -119,11 +123,17 @@ download_debian_cloud_image() {
 
 build_rust_binary_and_copy() {
 	pushd "$(dirname "$0")/../../guest/$1" > /dev/null
+	local release_flag=
+	local artifact_mode=debug
+	if [[ "$mode" == "release" ]]; then
+		release_flag="--release"
+		artifact_mode=release
+	fi
 	RUSTFLAGS="-C linker=${arch}-linux-gnu-gcc" cargo build \
 		--target "${arch}-unknown-linux-gnu" \
-		--target-dir "${workdir}/$1"
+		--target-dir "${workdir}/$1" ${release_flag}
 	mkdir -p "${dst}/files/usr/local/bin/$1"
-	cp "${workdir}/$1/${arch}-unknown-linux-gnu/debug/$1" "${dst}/files/usr/local/bin/$1/AVF"
+	cp "${workdir}/$1/${arch}-unknown-linux-gnu/${artifact_mode}/$1" "${dst}/files/usr/local/bin/$1/AVF"
 	chmod 777 "${dst}/files/usr/local/bin/$1/AVF"
 
 	mkdir -p "${dst}/files/usr/share/doc/$1"
@@ -197,6 +207,7 @@ config_space=${debian_cloud_image}/config_space/${debian_version}
 resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch=aarch64
 debian_arch=arm64
+mode=debug
 parse_options "$@"
 check_sudo
 install_prerequisites

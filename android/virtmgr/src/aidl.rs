@@ -21,7 +21,7 @@ use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, SharedPathConfig, Displ
 use crate::debug_config::DebugConfig;
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
-use crate::selinux::{getfilecon, SeContext};
+use crate::selinux::{check_tee_service_permission, getfilecon, getprevcon, SeContext};
 use android_os_permissions_aidl::aidl::android::os::IPermissionController;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
     Certificate::Certificate,
@@ -502,6 +502,9 @@ impl VirtualizationService {
             check_config_allowed_for_early_vms(config)?;
         }
 
+        let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
+        info!("callers secontext: {}", caller_secontext);
+
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
         let (vm_context, cid, temporary_directory) = if cfg!(early) {
             self.create_early_vm_context(config)?
@@ -534,7 +537,13 @@ impl VirtualizationService {
             clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
         let console_in_fd = console_in_fd.map(clone_file).transpose()?;
         let log_fd = clone_or_prepare_logger_fd(log_fd, format!("Log({})", cid))?;
-        let dump_dt_fd = dump_dt_fd.map(clone_file).transpose()?;
+        let dump_dt_fd = if let Some(fd) = dump_dt_fd {
+            Some(clone_file(fd)?)
+        } else if debug_config.dump_device_tree {
+            Some(prepare_dump_dt_file(&temporary_directory)?)
+        } else {
+            None
+        };
 
         // Counter to generate unique IDs for temporary image files.
         let mut next_temporary_image_id = 0;
@@ -557,6 +566,12 @@ impl VirtualizationService {
         };
         let config = config.as_ref();
         *is_protected = config.protectedVm;
+
+        if !config.teeServices.is_empty() {
+            check_tee_service_permission(&caller_secontext, &config.teeServices)
+                .with_log()
+                .or_binder_exception(ExceptionCode::SECURITY)?;
+        }
 
         // Check if partition images are labeled incorrectly. This is to prevent random images
         // which are not protected by the Android Verified Boot (e.g. bits downloaded by apps) from
@@ -1152,6 +1167,8 @@ fn load_app_config(
         for param in custom_config.extraKernelCmdlineParams.iter() {
             append_kernel_param(param, &mut vm_config);
         }
+
+        vm_config.teeServices.clone_from(&custom_config.teeServices);
     }
 
     // Unfortunately specifying page_shift = 14 in bootconfig doesn't enable 16k pages emulation,
@@ -1669,6 +1686,16 @@ fn prepare_ramdump_file(temporary_directory: &Path) -> binder::Result<File> {
     Ok(ramdump)
 }
 
+/// Create the empty device tree dump file
+fn prepare_dump_dt_file(temporary_directory: &Path) -> binder::Result<File> {
+    let path = temporary_directory.join("device_tree.dtb");
+    let file = File::create(path)
+        .context("Failed to prepare device tree dump file")
+        .with_log()
+        .or_service_specific_exception(-1)?;
+    Ok(file)
+}
+
 fn is_protected(config: &VirtualMachineConfig) -> bool {
     match config {
         VirtualMachineConfig::RawConfig(config) => config.protectedVm,
@@ -1759,6 +1786,26 @@ fn check_no_extra_kernel_cmdline_params(config: &VirtualMachineConfig) -> binder
     Ok(())
 }
 
+fn check_no_tee_services(config: &VirtualMachineConfig) -> binder::Result<()> {
+    match config {
+        VirtualMachineConfig::RawConfig(config) => {
+            if !config.teeServices.is_empty() {
+                return Err(anyhow!("tee_services_allowlist feature is disabled"))
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+            }
+        }
+        VirtualMachineConfig::AppConfig(config) => {
+            if let Some(custom_config) = &config.customConfig {
+                if !custom_config.teeServices.is_empty() {
+                    return Err(anyhow!("tee_services_allowlist feature is disabled"))
+                        .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+                }
+            }
+        }
+    };
+    Ok(())
+}
+
 fn check_protected_vm_is_supported() -> binder::Result<()> {
     let is_pvm_supported =
         hypervisor_props::is_protected_vm_supported().or_service_specific_exception(-1)?;
@@ -1782,6 +1829,9 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     }
     if !cfg!(debuggable_vms_improvements) {
         check_no_extra_kernel_cmdline_params(config)?;
+    }
+    if !cfg!(tee_services_allowlist) {
+        check_no_tee_services(config)?;
     }
     Ok(())
 }

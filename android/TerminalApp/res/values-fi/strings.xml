@@ -48,14 +48,10 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Osion palautusvaihtoehdot"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Vaihda ensimmäiseen versioon"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Poista kaikki"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (2695282831393218812) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (3126236636568914757) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_confirm (431718610013947861) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_cancel (1666264288208459725) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Nollaa virtuaalikone"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Data poistetaan."</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Vahvista"</string>
+    <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Peru"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Asetukset"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Pääte on käynnissä"</string>
     <string name="service_notification_content" msgid="8652887364784704911">"Avaa pääte klikkaamalla."</string>

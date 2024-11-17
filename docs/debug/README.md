@@ -45,6 +45,25 @@ vm_shell start-microdroid --auto-connect -- --protected --debug full
 Note: `--debug full` is the default option when omitted. You need to explicitly
 use `--debug none` to set the debug level to NONE.
 
+### Dump device tree
+
+The VMs device tree can be dumped on creation by adding the `--dump_device_tree`
+argument and passing a path where the device tree gets dumped to, as follows:
+
+```shell
+adb shell /apex/com.android.virt/bin/vm run-microdroid --dump-device-tree PATH
+```
+
+Note: you can set the system property
+`hypervisor.virtualizationmanager.dump_device_tree` to true to always dump the
+device tree to `/data/misc/virtualizationservice/$CID/device_tree.dtb` where
+$CID is the CID of the VM. To set the property, run:
+
+```shell
+adb root
+adb shell setprop hypervisor.virtualizationmanager.dump_device_tree true
+```
+
 ### Debug policy
 
 Debug policy is a per-device property which forcibly enables selected debugging

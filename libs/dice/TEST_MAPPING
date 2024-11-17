@@ -1,16 +1,18 @@
 {
   "postsubmit": [
     {
-      "name": "libdiced_open_dice.integration_test"
-    },
-    {
-      "name": "libdiced_open_dice_nostd.integration_test"
-    },
-    {
       "name": "libopen_dice_cbor_bindgen_test"
     },
     {
       "name": "libopen_dice_android_bindgen_test"
+    }
+  ],
+  "presubmit": [
+    {
+      "name": "libdiced_open_dice.integration_test"
+    },
+    {
+      "name": "libdiced_open_dice_nostd.integration_test"
     },
     {
       "name": "libdiced_sample_inputs.integration_test"

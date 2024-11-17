@@ -18,7 +18,7 @@
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ടെർമിനൽ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ടെർമിനൽ ഇൻസ്റ്റാൾ ചെയ്യുക"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ടെർമിനൽ ലോഞ്ച് ചെയ്യാൻ, നിങ്ങൾക്ക് നെറ്റ്‌വർക്കിലൂടെ ഏകദേശം <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ഡാറ്റ ഡൗൺലോഡ് ചെയ്യേണ്ടതുണ്ട്.\nനിങ്ങൾ തുടരുമോ?"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ടെർമിനൽ ലോഞ്ച് ചെയ്യാൻ, നിങ്ങൾക്ക് നെറ്റ്‌വർക്കിലൂടെ ഏകദേശം <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ഡാറ്റ ഡൗൺലോഡ് ചെയ്യേണ്ടതുണ്ട്.\nനിങ്ങൾക്ക് തുടരണോ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"വൈഫൈ ലഭ്യമാകുമ്പോൾ ഡൗൺലോഡ് ചെയ്യുക"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ഇൻസ്റ്റാൾ ചെയ്യൂ"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ഇൻസ്റ്റാൾ ചെയ്യുന്നു"</string>
@@ -48,14 +48,10 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"പാർട്ടീഷൻ വീണ്ടെടുക്കൽ ഓപ്‌ഷനുകൾ"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"പ്രാരംഭ പതിപ്പിലേക്ക് മാറ്റുക"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"എല്ലാം നീക്കം ചെയ്യുക"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (2695282831393218812) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (3126236636568914757) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_confirm (431718610013947861) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_cancel (1666264288208459725) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"വെർച്വൽ മെഷീൻ റീസെറ്റ് ചെയ്യുക"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"ഡാറ്റ ഇല്ലാതാക്കും."</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"സ്ഥിരീകരിക്കുക"</string>
+    <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"റദ്ദാക്കുക"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ക്രമീകരണം"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ടെർമിനൽ റൺ ചെയ്യുന്നു"</string>
     <string name="service_notification_content" msgid="8652887364784704911">"ടെർമിനൽ തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക."</string>
