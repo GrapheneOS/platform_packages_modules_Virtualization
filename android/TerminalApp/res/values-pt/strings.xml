@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Atribuído: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Máximo: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancelar"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Reinicie a VM para aplicar"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Encaminhamento de portas"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Configurar o encaminhamento de portas"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"O terminal está tentando abrir uma nova porta"</string>
@@ -48,12 +49,15 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opções de recuperação da partição"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Mudar para a versão inicial"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Remover tudo"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Redefinir a máquina virtual"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Os dados serão excluídos."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Confirmar"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Cancelar"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Configurações"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"O terminal está em execução"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Clique para abrir o terminal."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Fechar"</string>
 </resources>

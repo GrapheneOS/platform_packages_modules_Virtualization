@@ -19,7 +19,7 @@
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Installer Linux-terminalen"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Du skal downloade ca. <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data via netværket for at åbne Linux-terminalen.\nVil du fortsætte?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Download, når du har forbindelse til et Wi-Fi-netværk"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Download, når du har Wi-Fi-forbindelse"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Installer"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installerer"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"Netværksfejl. Tjek forbindelsen, og prøv igen."</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Tildelt: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maks.: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Annuller"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Genstart VM for at anvende"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Omdirigering af port"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurer omdirigering af port"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminalen forsøger at åbne en ny port"</string>
@@ -48,12 +49,15 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Muligheder for gendannelse af partition"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Skift til oprindelig version"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Fjern alle"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Nulstil den virtuelle maskine"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Data slettes."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Bekræft"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Annuller"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Indstillinger"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen kører"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Klik for at åbne terminalen."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Luk"</string>
 </resources>

@@ -21,15 +21,18 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SELinux;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.GuardedBy;
-import com.android.virtualization.vmlauncher.InstallUtils;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -38,7 +41,9 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
@@ -70,9 +75,14 @@ public class InstallerService extends Service {
     private boolean mIsInstalling;
 
     @GuardedBy("mLock")
+    private boolean mHasWifi;
+
+    @GuardedBy("mLock")
     private IInstallProgressListener mListener;
 
     private ExecutorService mExecutorService;
+    private ConnectivityManager mConnectivityManager;
+    private MyNetworkCallback mNetworkCallback;
 
     @Override
     public void onCreate() {
@@ -92,6 +102,18 @@ public class InstallerService extends Service {
                         .build();
 
         mExecutorService = Executors.newSingleThreadExecutor();
+
+        mConnectivityManager = getSystemService(ConnectivityManager.class);
+        Network defaultNetwork = mConnectivityManager.getBoundNetworkForProcess();
+        if (defaultNetwork != null) {
+            NetworkCapabilities capability =
+                    mConnectivityManager.getNetworkCapabilities(defaultNetwork);
+            if (capability != null) {
+                mHasWifi = capability.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+            }
+        }
+        mNetworkCallback = new MyNetworkCallback();
+        mConnectivityManager.registerDefaultNetworkCallback(mNetworkCallback);
     }
 
     @Nullable
@@ -117,9 +139,10 @@ public class InstallerService extends Service {
         if (mExecutorService != null) {
             mExecutorService.shutdown();
         }
+        mConnectivityManager.unregisterNetworkCallback(mNetworkCallback);
     }
 
-    private void requestInstall() {
+    private void requestInstall(boolean isWifiOnly) {
         synchronized (mLock) {
             if (mIsInstalling) {
                 Log.i(TAG, "already installing..");
@@ -138,8 +161,7 @@ public class InstallerService extends Service {
 
         mExecutorService.execute(
                 () -> {
-                    // TODO(b/374015561): Provide progress update
-                    boolean success = downloadFromSdcard() || downloadFromUrl();
+                    boolean success = downloadFromSdcard() || downloadFromUrl(isWifiOnly);
                     if (success) {
                         reLabelImagesSELinuxContext();
                     }
@@ -188,15 +210,31 @@ public class InstallerService extends Service {
         return false;
     }
 
+    private boolean checkForWifiOnly(boolean isWifiOnly) {
+        if (!isWifiOnly) {
+            return true;
+        }
+        synchronized (mLock) {
+            return mHasWifi;
+        }
+    }
+
     // TODO(b/374015561): Support pause/resume download
-    // TODO(b/374015561): Wait for Wi-Fi on metered network if requested.
-    private boolean downloadFromUrl() {
+    private boolean downloadFromUrl(boolean isWifiOnly) {
         Log.i(TAG, "trying to download from " + IMAGE_URL);
+
+        if (!checkForWifiOnly(isWifiOnly)) {
+            Log.e(TAG, "Install isn't started because Wifi isn't available");
+            notifyError(getString(R.string.installer_error_no_wifi));
+            return false;
+        }
 
         try (BufferedInputStream inputStream =
                         new BufferedInputStream(new URL(IMAGE_URL).openStream());
+                WifiCheckInputStream wifiInputStream =
+                        new WifiCheckInputStream(inputStream, isWifiOnly);
                 TarArchiveInputStream tar =
-                        new TarArchiveInputStream(new GzipCompressorInputStream(inputStream))) {
+                        new TarArchiveInputStream(new GzipCompressorInputStream(wifiInputStream))) {
             ArchiveEntry entry;
             Path baseDir = InstallUtils.getInternalStorageDir(this).toPath();
             Files.createDirectories(baseDir);
@@ -208,20 +246,22 @@ public class InstallerService extends Service {
                     Files.copy(tar, extractTo, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
-        } catch (UnknownHostException e) {
+        } catch (WifiCheckInputStream.NoWifiException e) {
+            Log.e(TAG, "Install failed because of Wi-Fi is gone");
+            notifyError(getString(R.string.installer_error_no_wifi));
+            return false;
+        } catch (UnknownHostException | SocketException e) {
             // Log.e() doesn't print stack trace for UnknownHostException
-            Log.e(TAG, "Install failed UnknownHostException: " + e.getMessage());
-            notifyError(getString(R.string.installer_install_network_error_message));
+            Log.e(TAG, "Install failed: " + e.getMessage(), e);
+            notifyError(getString(R.string.installer_error_network));
             return false;
         } catch (IOException e) {
-            // TODO(b/374015561): Provide more finer grained error message
             Log.e(TAG, "Installation failed", e);
             notifyError(getString(R.string.installer_error_unknown));
             return false;
         }
 
         if (!InstallUtils.resolvePathInVmConfig(this)) {
-            // TODO(b/374015561): Provide more finer grained error message
             notifyError(getString(R.string.installer_error_unknown));
             return false;
         }
@@ -272,10 +312,10 @@ public class InstallerService extends Service {
         }
 
         @Override
-        public void requestInstall() {
+        public void requestInstall(boolean isWifiOnly) {
             InstallerService service = ensureServiceConnected();
             synchronized (service.mLock) {
-                service.requestInstall();
+                service.requestInstall(isWifiOnly);
             }
         }
 
@@ -300,6 +340,59 @@ public class InstallerService extends Service {
             InstallerService service = ensureServiceConnected();
             synchronized (service.mLock) {
                 return !service.mIsInstalling && InstallUtils.isImageInstalled(service);
+            }
+        }
+    }
+
+    private final class WifiCheckInputStream extends InputStream {
+        private static final int READ_BYTES = 1024;
+
+        private final InputStream mInputStream;
+        private final boolean mIsWifiOnly;
+
+        public WifiCheckInputStream(InputStream is, boolean isWifiOnly) {
+            super();
+            mInputStream = is;
+            mIsWifiOnly = isWifiOnly;
+        }
+
+        @Override
+        public int read(byte[] buf, int offset, int numToRead) throws IOException {
+            int totalRead = 0;
+            while (numToRead > 0) {
+                if (!checkForWifiOnly(mIsWifiOnly)) {
+                    throw new NoWifiException();
+                }
+                int read =
+                        mInputStream.read(buf, offset + totalRead, Math.min(READ_BYTES, numToRead));
+                if (read <= 0) {
+                    break;
+                }
+                totalRead += read;
+                numToRead -= read;
+            }
+            return totalRead;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (!checkForWifiOnly(mIsWifiOnly)) {
+                throw new NoWifiException();
+            }
+            return mInputStream.read();
+        }
+
+        private static final class NoWifiException extends SocketException {
+            // empty
+        }
+    }
+
+    private final class MyNetworkCallback extends ConnectivityManager.NetworkCallback {
+        @Override
+        public void onCapabilitiesChanged(
+                @NonNull Network network, @NonNull NetworkCapabilities capability) {
+            synchronized (mLock) {
+                mHasWifi = capability.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
             }
         }
     }

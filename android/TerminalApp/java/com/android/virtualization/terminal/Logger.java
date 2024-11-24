@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.virtualization.vmlauncher;
+package com.android.virtualization.terminal;
 
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineConfig;

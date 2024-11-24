@@ -17,14 +17,14 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
-    <string name="installer_title_text" msgid="500663060973466805">"Cài đặt thiết bị đầu cuối Linux"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Để khởi chạy thiết bị đầu cuối Linux, bạn cần tải khoảng <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> dữ liệu xuống qua mạng.\nBạn có muốn tiếp tục không?"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Cài đặt Linux terminal"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Để chạy Linux terminal, bạn cần tải khoảng <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> dữ liệu xuống qua mạng.\nBạn có muốn tiếp tục không?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Tải xuống khi có Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Cài đặt"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Đang cài đặt"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"Lỗi mạng. Hãy kiểm tra trạng thái kết nối rồi thử lại."</string>
-    <string name="installer_notif_title_text" msgid="471160690081159042">"Đang cài đặt thiết bị đầu cuối Linux"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Thiết bị đầu cuối Linux sẽ khởi động sau khi cài đặt xong"</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Đang cài đặt Linux terminal"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux terminal sẽ khởi động sau khi cài đặt xong"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Không cài đặt được do sự cố mạng"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Không cài đặt được. Hãy thử lại."</string>
     <string name="action_settings" msgid="5729342767795123227">"Cài đặt"</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Ðã phân bổ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Tối đa <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Huỷ"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Khởi động lại máy ảo để áp dụng"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Chuyển tiếp cổng"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Định cấu hình tính năng chuyển tiếp cổng"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal đang cố mở một cổng mới"</string>
@@ -46,14 +47,17 @@
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Từ chối"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Khôi phục"</string>
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Tuỳ chọn khôi phục phân vùng"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Thay đổi thành phiên bản ban đầu"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Chuyển về phiên bản ban đầu"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Xoá tất cả"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Đặt lại máy ảo"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Dữ liệu sẽ bị xoá."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Xác nhận"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Huỷ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Cài đặt"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal đang chạy"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Nhấp để mở Terminal."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Đóng"</string>
 </resources>

@@ -23,7 +23,7 @@
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ਸਥਾਪਤ ਕਰੋ"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ਸਥਾਪਤ ਹੋ ਰਹੀ ਹੈ"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"ਨੈੱਟਵਰਕ ਗੜਬੜ। ਕਨੈਕਸ਼ਨ ਦੀ ਜਾਂਚ ਕਰ ਕੇ ਮੁੜ-ਕੋਸ਼ਿਸ਼ ਕਰੋ।"</string>
-    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ਟਰਮੀਨਲ ਐਪ ਸਥਾਪਤ ਕਰਨਾ"</string>
+    <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ਟਰਮੀਨਲ ਐਪ ਸਥਾਪਤ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"ਪ੍ਰਕਿਰਿਆ ਪੂਰੀ ਹੋਣ ਤੋਂ ਬਾਅਦ, Linux ਟਰਮੀਨਲ ਐਪ ਸ਼ੁਰੂ ਹੋ ਜਾਵੇਗੀ"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"ਨੈੱਟਵਰਕ ਸੰਬੰਧੀ ਸਮੱਸਿਆ ਕਾਰਨ ਸਥਾਪਤ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"ਸਥਾਪਤ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ਜ਼ਿੰਮੇ ਲਗਾਇਆ ਗਿਆ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ਵੱਧੋ-ਵੱਧ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ਰੱਦ ਕਰੋ"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"ਲਾਗੂ ਕਰਨ ਲਈ VM ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕਰੋ"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ਪੋਰਟ ਫਾਰਵਰਡਿੰਗ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ਪੋਰਟ ਫਾਰਵਰਡਿੰਗ ਦਾ ਸੰਰੂਪਣ ਕਰੋ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ਟਰਮੀਨਲ ਇੱਕ ਨਵੇਂ ਪੋਰਟ ਨੂੰ ਖੋਲ੍ਹਣ ਦੀ ਕੋਸ਼ਿਸ਼ ਕਰ ਰਿਹਾ ਹੈ"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ਪਾਰਟੀਸ਼ਨ ਰਿਕਵਰੀ ਦੇ ਵਿਕਲਪ"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ਸ਼ੁਰੂਆਤੀ ਵਰਜਨ \'ਤੇ ਬਦਲੋ"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ਸਭ ਹਟਾਓ"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"ਆਭਾਸੀ ਮਸ਼ੀਨ ਨੂੰ ਰੀਸੈੱਟ ਕਰੋ"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"ਡਾਟਾ ਮਿਟਾ ਦਿੱਤਾ ਜਾਵੇਗਾ।"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ਟਰਮੀਨਲ ਨੂੰ ਰੀਸੈੱਟ ਕਰੋ"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ਡਾਟਾ ਮਿਟਾ ਦਿੱਤਾ ਜਾਵੇਗਾ"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"ਤਸਦੀਕ ਕਰੋ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ਰੱਦ ਕਰੋ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ਸੈਟਿੰਗਾਂ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ਟਰਮੀਨਲ ਚਾਲੂ ਹੈ"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"ਟਰਮੀਨਲ ਨੂੰ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ।"</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"ਟਰਮੀਨਲ ਨੂੰ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ਬੰਦ ਕਰੋ"</string>
 </resources>

@@ -55,7 +55,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
                     0
                 )
             ).toFloat();
-        val partition = MainActivity.getPartitionFile(this, "root_part")
+        val partition = InstallUtils.getRootfsFile(this)
         val minDiskSizeMb =
             bytesToMb(MainActivity.getMinFilesystemSize(partition)).toFloat()
                 .coerceAtMost(diskSizeMb)

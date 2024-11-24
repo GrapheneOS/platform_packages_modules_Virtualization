@@ -16,7 +16,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name" msgid="5597111707986572208">"පර්යන්තය"</string>
+    <string name="app_name" msgid="5597111707986572208">"ටර්මිනලය"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ටර්මිනලය ස්ථාපනය කරන්න"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ටර්මිනලය දියත් කිරීමට, ඔබට ජාලය හරහා දත්ත <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> පමණ බාගත කිරීමට අවශ්‍ය වේ.\nඔබ ඉදිරියට යනවා ද?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Wi-Fi ලබා ගත හැකි විට බාගන්න"</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> පවරන ලදි"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> උපරිමය"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"අවලංගු කරන්න"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"අයදුම් කිරීමට VM යළි අරඹන්න"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"පෝටය යොමු කිරීම"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"පෝටය යොමු කිරීම වින්‍යාස කරන්න"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ටර්මිනලය නව පෝටයක් විවෘත කිරීමට උත්සාහ කරයි"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"කොටස් ප්‍රතිසාන විකල්ප"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ආරම්භක අනුවාදයට වෙනස් කරන්න"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"සියල්ල ඉවත් කරන්න"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"අතථ්‍ය යන්ත්‍රය යළි සකසන්න"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"දත්ත මකනු ඇත."</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ටර්මිනලය යළි සකසන්න"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"දත්ත මකනු ඇත"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"තහවුරු කරන්න"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"අවලංගු කරන්න"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"සැකසීම්"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"පර්යන්තය ධාවනය වේ"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"ටර්මිනලය විවෘත කිරීමට ක්ලික් කරන්න."</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"ටර්මිනලය විවෘත කිරීමට ක්ලික් කරන්න"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"වසන්න"</string>
 </resources>

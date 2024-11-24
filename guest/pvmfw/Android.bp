@@ -116,11 +116,13 @@ rust_test {
     rustlibs: [
         "libcbor_util",
         "libciborium",
-        "libdiced_open_dice",
+        "libdiced_open_dice_nostd",
         "libpvmfw_avb_nostd",
+        "libdiced_sample_inputs_nostd",
         "libzerocopy_nostd",
         "libhex",
     ],
+    static_libs: ["libopen_dice_clear_memory"],
 }
 
 genrule {
@@ -276,6 +278,7 @@ cc_binary {
     ],
     static_libs: [
         "libpvmfw",
+        "libvmbase_dice_clear_memory",
     ],
     linker_scripts: [
         "image.ld",

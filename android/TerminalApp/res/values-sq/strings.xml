@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Caktuar: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksimumi: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Anulo"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Rinis VM për ta zbatuar"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Transferimi i portës"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfiguro transferimin e portës"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminali po përpiqet të hapë një portë të re"</string>
@@ -48,12 +49,15 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opsionet e rikuperimit të ndarjes"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Ndrysho në versionin fillestar"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Hiqi të gjitha"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Rivendos makinën virtuale"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Të dhënat do të fshihen."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Konfirmo"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Anulo"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Cilësimet"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminali po ekzekutohet"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Kliko për të hapur terminalin."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Mbyll"</string>
 </resources>

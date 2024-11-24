@@ -55,6 +55,18 @@ fn latest_normal_payload_passes_verification() -> Result<()> {
 }
 
 #[test]
+fn latest_trusty_security_vm_kernel_passes_verification() -> Result<()> {
+    let salt = b"trusty_security_vm_salt";
+    let expected_rollback_index = 1;
+    assert_payload_without_initrd_passes_verification(
+        &load_latest_trusty_security_vm_signed_kernel()?,
+        salt,
+        expected_rollback_index,
+        vec![Capability::TrustySecurityVm],
+    )
+}
+
+#[test]
 fn latest_debug_payload_passes_verification() -> Result<()> {
     assert_latest_payload_verification_passes(
         &load_latest_initrd_debug()?,
@@ -431,10 +443,11 @@ fn payload_with_all_capabilities() -> Result<()> {
     .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     assert!(verified_boot_data.has_capability(Capability::RemoteAttest));
+    assert!(verified_boot_data.has_capability(Capability::TrustySecurityVm));
     assert!(verified_boot_data.has_capability(Capability::SecretkeeperProtection));
     assert!(verified_boot_data.has_capability(Capability::SupportsUefiBoot));
     // Fail if this test doesn't actually cover all supported capabilities.
-    assert_eq!(Capability::COUNT, 3);
+    assert_eq!(Capability::COUNT, 4);
 
     Ok(())
 }

@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> تفویض کردہ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"زیادہ سے زیادہ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"منسوخ کریں"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"لاگو کرنے کے لیے VM کو ری سٹارٹ کریں"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"پورٹ فارورڈنگ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"پورٹ فارورڈنگ کو کنفیگر کریں"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ٹرمینل ایک نیا پورٹ کھولنے کی کوشش کر رہا ہے"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"پارٹیشن کی بازیابی کے اختیارات"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ابتدائی ورژن میں تبدیلی"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"سبھی ہٹائیں"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"ورچوئل مشین کو ری سیٹ کریں"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"ڈیٹا حذف کر دیا جائے گا۔"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ٹرمینل ری سیٹ کریں"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ڈیٹا حذف کر دیا جائے گا"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"تصدیق کریں"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"منسوخ کریں"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ترتیبات"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ٹرمینل چل رہا ہے"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"ٹرمینل کھولنے کے لیے کلک کریں۔"</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"ٹرمینل کھولنے کے لیے کلک کریں"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"بند کریں"</string>
 </resources>

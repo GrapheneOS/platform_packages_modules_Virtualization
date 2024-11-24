@@ -33,6 +33,7 @@ use std::{
 const MICRODROID_KERNEL_IMG_PATH: &str = "microdroid_kernel";
 const INITRD_NORMAL_IMG_PATH: &str = "microdroid_initrd_normal.img";
 const INITRD_DEBUG_IMG_PATH: &str = "microdroid_initrd_debuggable.img";
+const TRUSTY_SECURITY_VM_KERNEL_IMG_PATH: &str = "trusty_security_vm_signed";
 const PUBLIC_KEY_RSA4096_PATH: &str = "data/testkey_rsa4096_pub.bin";
 
 pub const PUBLIC_KEY_RSA2048_PATH: &str = "data/testkey_rsa2048_pub.bin";
@@ -58,6 +59,10 @@ pub fn assert_payload_verification_fails(
 
 pub fn load_latest_signed_kernel() -> Result<Vec<u8>> {
     Ok(fs::read(MICRODROID_KERNEL_IMG_PATH)?)
+}
+
+pub fn load_latest_trusty_security_vm_signed_kernel() -> Result<Vec<u8>> {
+    Ok(fs::read(TRUSTY_SECURITY_VM_KERNEL_IMG_PATH)?)
 }
 
 pub fn load_latest_initrd_normal() -> Result<Vec<u8>> {
@@ -128,6 +133,36 @@ pub fn assert_latest_payload_verification_passes(
         public_key: &public_key,
         capabilities,
         rollback_index: if cfg!(llpvm_changes) { 1 } else { 0 },
+    };
+    assert_eq!(expected_boot_data, verified_boot_data);
+
+    Ok(())
+}
+
+pub fn assert_payload_without_initrd_passes_verification(
+    kernel: &[u8],
+    salt: &[u8],
+    expected_rollback_index: u64,
+    capabilities: Vec<Capability>,
+) -> Result<()> {
+    let public_key = load_trusted_public_key()?;
+    let verified_boot_data = verify_payload(
+        kernel,
+        None, // initrd
+        &public_key,
+    )
+    .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
+
+    let footer = extract_avb_footer(kernel)?;
+    let kernel_digest =
+        hash(&[&hash(&[salt]), &kernel[..usize::try_from(footer.original_image_size)?]]);
+    let expected_boot_data = VerifiedBootData {
+        debug_level: DebugLevel::None,
+        kernel_digest,
+        initrd_digest: None,
+        public_key: &public_key,
+        capabilities,
+        rollback_index: expected_rollback_index,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 

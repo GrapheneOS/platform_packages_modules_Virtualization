@@ -70,6 +70,8 @@ pub enum Capability {
     RemoteAttest,
     /// Secretkeeper protected secrets.
     SecretkeeperProtection,
+    /// Trusty security VM.
+    TrustySecurityVm,
     /// UEFI support for booting guest kernel.
     SupportsUefiBoot,
     /// (internal)
@@ -80,6 +82,7 @@ pub enum Capability {
 impl Capability {
     const KEY: &'static str = "com.android.virt.cap";
     const REMOTE_ATTEST: &'static [u8] = b"remote_attest";
+    const TRUSTY_SECURITY_VM: &'static [u8] = b"trusty_security_vm";
     const SECRETKEEPER_PROTECTION: &'static [u8] = b"secretkeeper_protection";
     const SEPARATOR: u8 = b'|';
     const SUPPORTS_UEFI_BOOT: &'static [u8] = b"supports_uefi_boot";
@@ -98,6 +101,7 @@ impl Capability {
         for v in descriptor.value.split(|b| *b == Self::SEPARATOR) {
             let cap = match v {
                 Self::REMOTE_ATTEST => Self::RemoteAttest,
+                Self::TRUSTY_SECURITY_VM => Self::TrustySecurityVm,
                 Self::SECRETKEEPER_PROTECTION => Self::SecretkeeperProtection,
                 Self::SUPPORTS_UEFI_BOOT => Self::SupportsUefiBoot,
                 _ => return Err(PvmfwVerifyError::UnknownVbmetaProperty),

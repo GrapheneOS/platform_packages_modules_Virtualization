@@ -47,7 +47,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
-        <WebView
+        <com.android.virtualization.terminal.TerminalView
             android:id="@+id/webview"
             android:layout_marginBottom="5dp"
             android:layout_gravity="fill"

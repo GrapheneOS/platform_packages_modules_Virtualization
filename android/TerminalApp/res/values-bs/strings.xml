@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Dodijeljeno: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksimalno <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Otkaži"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Ponovo pokrenite virtuelnu mašinu da primijenite"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Prosljeđivanje priključka"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurirajte prosljeđivanje priključka"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal pokušava otvoriti novi priključak"</string>
@@ -47,13 +48,13 @@
     <string name="settings_recovery_title" msgid="6586840079226383285">"Oporavak"</string>
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opcije za oporavak particije"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Promijeni u početnu verziju"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Uklonite sve"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Poništite virtuelnu mašinu"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Podaci će se izbrisati."</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Ukloni sve"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Poništite terminal"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Podaci će se izbrisati"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Potvrdi"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Otkaži"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Postavke"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal je pokrenut"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Kliknite da otvorite terminal."</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"Kliknite da otvorite terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Zatvori"</string>
 </resources>

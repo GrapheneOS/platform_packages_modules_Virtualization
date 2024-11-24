@@ -24,7 +24,7 @@
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ಇನ್‌ಸ್ಟಾಲ್"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"ನೆಟ್‌ವರ್ಕ್ ದೋಷ. ಕನೆಕ್ಷನ್ ಅನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"ಮುಗಿದ ನಂತರ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"ಮುಗಿದ ಮೇಲೆ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆಯಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."</string>
     <string name="action_settings" msgid="5729342767795123227">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ರದ್ದುಮಾಡಿ"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"ಅನ್ವಯಿಸಲು VM ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ಪೋರ್ಟ್ ಫಾರ್ವರ್ಡ್ ಮಾಡುವಿಕೆ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ಪೋರ್ಟ್ ಫಾರ್ವರ್ಡ್ ಮಾಡುವಿಕೆಯನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದೆ"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ಪಾರ್ಟಿಶನ್ ರಿಕವರಿ ಆಯ್ಕೆಗಳು"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ಆರಂಭಿಕ ಆವೃತ್ತಿಗೆ ಬದಲಾಯಿಸಿ"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ಎಲ್ಲವನ್ನೂ ತೆಗೆದುಹಾಕಿ"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"ವರ್ಚುವಲ್ ಯಂತ್ರವನ್ನು ರೀಸೆಟ್ ಮಾಡಿ"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"ಡೇಟಾವನ್ನು ಅಳಿಸಲಾಗುತ್ತದೆ."</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ರೀಸೆಟ್‌ ಮಾಡಿ"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ಡೇಟಾವನ್ನು ಅಳಿಸಲಾಗುತ್ತದೆ"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"ದೃಢೀಕರಿಸಿ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ರದ್ದುಮಾಡಿ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್‌ ಮಾಡಿ."</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್‌ ಮಾಡಿ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ಮುಚ್ಚಿರಿ"</string>
 </resources>

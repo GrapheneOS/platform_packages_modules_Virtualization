@@ -14,13 +14,13 @@
 
 //! This module mirrors the content in open-dice/include/dice/android.h
 
-use crate::dice::{Cdi, CdiValues, DiceArtifacts, InputValues, CDI_SIZE};
+use crate::dice::{context, Cdi, CdiValues, DiceArtifacts, InputValues, CDI_SIZE};
 use crate::error::{check_result, DiceError, Result};
 use open_dice_android_bindgen::{
-    DiceAndroidConfigValues, DiceAndroidFormatConfigDescriptor, DiceAndroidHandoverMainFlow,
-    DiceAndroidHandoverParse, DiceAndroidMainFlow, DICE_ANDROID_CONFIG_COMPONENT_NAME,
-    DICE_ANDROID_CONFIG_COMPONENT_VERSION, DICE_ANDROID_CONFIG_RESETTABLE,
-    DICE_ANDROID_CONFIG_RKP_VM_MARKER, DICE_ANDROID_CONFIG_SECURITY_VERSION,
+    DiceAndroidConfigValues, DiceAndroidFormatConfigDescriptor, DiceAndroidHandoverParse,
+    DiceAndroidMainFlow, DICE_ANDROID_CONFIG_COMPONENT_NAME, DICE_ANDROID_CONFIG_COMPONENT_VERSION,
+    DICE_ANDROID_CONFIG_RESETTABLE, DICE_ANDROID_CONFIG_RKP_VM_MARKER,
+    DICE_ANDROID_CONFIG_SECURITY_VERSION,
 };
 use std::{ffi::CStr, ptr};
 
@@ -101,10 +101,11 @@ pub fn bcc_main_flow(
         // SAFETY: `DiceAndroidMainFlow` only reads the `current_chain` and CDI values and writes
         // to `next_chain` and next CDI values within its bounds. It also reads `input_values` as a
         // constant input and doesn't store any pointer.
-        // The first argument can be null and is not used in the current implementation.
+        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
+        // and a null pointer otherwise.
         unsafe {
             DiceAndroidMainFlow(
-                ptr::null_mut(), // context
+                context(),
                 current_cdi_attest.as_ptr(),
                 current_cdi_seal.as_ptr(),
                 current_chain.as_ptr(),
@@ -127,20 +128,23 @@ pub fn bcc_main_flow(
 /// A handover combines the DICE chain and CDIs in a single CBOR object.
 /// This function takes the current boot stage's handover bundle and produces a
 /// bundle for the next stage.
+#[cfg(feature = "multialg")]
 pub fn bcc_handover_main_flow(
     current_handover: &[u8],
     input_values: &InputValues,
     next_handover: &mut [u8],
+    ctx: crate::dice::DiceContext,
 ) -> Result<usize> {
     let mut next_handover_size = 0;
+    let mut ctx: open_dice_cbor_bindgen::DiceContext_ = ctx.into();
     check_result(
         // SAFETY: The function only reads `current_handover` and writes to `next_handover`
         // within its bounds,
         // It also reads `input_values` as a constant input and doesn't store any pointer.
-        // The first argument can be null and is not used in the current implementation.
+        // The first argument is a pointer to a valid |DiceContext_| object.
         unsafe {
-            DiceAndroidHandoverMainFlow(
-                ptr::null_mut(), // context
+            open_dice_android_bindgen::DiceAndroidHandoverMainFlow(
+                &mut ctx as *mut _ as *mut std::ffi::c_void,
                 current_handover.as_ptr(),
                 current_handover.len(),
                 input_values.as_ptr(),

@@ -30,7 +30,6 @@ class SettingsActivity : AppCompatActivity() {
 
         val toolbar: MaterialToolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = resources.getString(R.string.action_settings)
         val settingsItems = arrayOf(
             SettingsItem(
                 resources.getString(R.string.settings_disk_resize_title),

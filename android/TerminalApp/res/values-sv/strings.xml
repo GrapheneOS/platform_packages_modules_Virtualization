@@ -37,8 +37,9 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> har tilldelats"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Max <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Avbryt"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Starta om VM för att tillämpa"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Portvidarebefordran"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
+    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Port­vidare­befordran"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurera portvidarebefordran"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminalen försöker öppna en ny port"</string>
     <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Port som begärs att öppnas: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
@@ -48,12 +49,15 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Återställningsalternativ för partition"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Ändra till ursprunglig version"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Ta bort alla"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Återställ den virtuella datorn"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Data kommer att raderas."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Bekräfta"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Avbryt"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Inställningar"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen körs"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Klicka för att öppna terminalen."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Stäng"</string>
 </resources>

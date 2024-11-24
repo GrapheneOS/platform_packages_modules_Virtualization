@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.virtualization.vmlauncher;
+package com.android.virtualization.terminal;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -22,13 +22,13 @@ import android.util.Log;
 
 import androidx.annotation.Keep;
 
-import com.android.virtualization.vmlauncher.proto.DebianServiceGrpc;
-import com.android.virtualization.vmlauncher.proto.ForwardingRequestItem;
-import com.android.virtualization.vmlauncher.proto.IpAddr;
-import com.android.virtualization.vmlauncher.proto.QueueOpeningRequest;
-import com.android.virtualization.vmlauncher.proto.ReportVmActivePortsRequest;
-import com.android.virtualization.vmlauncher.proto.ReportVmActivePortsResponse;
-import com.android.virtualization.vmlauncher.proto.ReportVmIpAddrResponse;
+import com.android.virtualization.terminal.proto.DebianServiceGrpc;
+import com.android.virtualization.terminal.proto.ForwardingRequestItem;
+import com.android.virtualization.terminal.proto.IpAddr;
+import com.android.virtualization.terminal.proto.QueueOpeningRequest;
+import com.android.virtualization.terminal.proto.ReportVmActivePortsRequest;
+import com.android.virtualization.terminal.proto.ReportVmActivePortsResponse;
+import com.android.virtualization.terminal.proto.ReportVmIpAddrResponse;
 
 import io.grpc.stub.StreamObserver;
 
@@ -48,7 +48,6 @@ final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     private final SharedPreferences mSharedPref;
     private SharedPreferences.OnSharedPreferenceChangeListener mPortForwardingListener;
     private final DebianServiceCallback mCallback;
-
 
     static {
         System.loadLibrary("forwarder_host_jni");

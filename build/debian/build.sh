@@ -183,13 +183,13 @@ extract_partitions() {
 	root_partition_num=1
 	efi_partition_num=15
 
-	loop=$(losetup -f --show --partscan image.raw)
+	loop=$(losetup -f --show --partscan $built_image)
 	dd if=${loop}p$root_partition_num of=root_part
 	dd if=${loop}p$efi_partition_num of=efi_part
 	losetup -d ${loop}
 
-	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid image.raw $root_partition_num)/g" vm_config.json
-	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid image.raw $efi_partition_num)/g" vm_config.json
+	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $built_image $root_partition_num)/g" vm_config.json
+	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $built_image $efi_partition_num)/g" vm_config.json
 }
 
 clean_up() {
@@ -214,7 +214,7 @@ install_prerequisites
 download_debian_cloud_image
 copy_android_config
 run_fai
-fdisk -l image.raw
+fdisk -l "${built_image}"
 images=()
 
 cp $(dirname $0)/vm_config.json.${arch} vm_config.json
@@ -229,11 +229,11 @@ fi
 
 # TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
 if [[ "$arch" == "x86_64" ]]; then
-	virt-get-kernel -a image.raw
+	virt-get-kernel -a "${built_image}"
 	mv vmlinuz* vmlinuz
 	mv initrd.img* initrd.img
 	images+=(
-		image.raw
+		"${built_image}"
 		vmlinuz
 		initrd.img
 	)

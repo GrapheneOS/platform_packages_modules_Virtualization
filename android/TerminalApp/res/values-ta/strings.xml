@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ஒதுக்கப்பட்டது"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"அதிகபட்சம் <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ரத்துசெய்"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"பயன்படுத்துவதற்கு VMமை மீண்டும் தொடங்கு"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"போர்ட் அனுப்புதல்"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"போர்ட் அனுப்புதலை உள்ளமைத்தல்"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"டெர்மினல் புதிய போர்ட்டைத் திறக்க முயல்கிறது"</string>
@@ -46,14 +47,14 @@
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"நிராகரி"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"மீட்டெடுத்தல்"</string>
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"பார்டிஷன் மீட்டெடுப்பு விருப்பங்கள்"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"முதல் பதிப்பிற்கு மாற்றுதல்"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"அனைத்தையும் அகற்றுதல்"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"விர்ச்சுவல் மெஷினை மீட்டமைத்தல்"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"தரவு நீக்கப்படும்."</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"முதல் பதிப்பிற்கு மாற்று"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"அனைத்தையும் அகற்றும்"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"டெர்மினலை மீட்டமைத்தல்"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"தரவு நீக்கப்படும்"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"உறுதிசெய்"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ரத்துசெய்"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"அமைப்புகள்"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"டெர்மினல் இயக்கத்தில் உள்ளது"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"டெர்மினலைத் திறக்க கிளிக் செய்யுங்கள்."</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"டெர்மினலைத் திறக்க கிளிக் செய்யுங்கள்"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"மூடு"</string>
 </resources>

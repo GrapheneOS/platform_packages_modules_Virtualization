@@ -93,6 +93,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     private static final String APK_NAME = "MicrodroidTestApp.apk";
     private static final String APK_UPDATED_NAME = "MicrodroidTestAppUpdated.apk";
     private static final String PACKAGE_NAME = "com.android.microdroid.test";
+    private static final String EMPTY_AOSP_PACKAGE_NAME = "com.android.microdroid.empty_payload";
+    private static final String EMPTY_PACKAGE_NAME = "com.google.android.microdroid.empty_payload";
     private static final String SHELL_PACKAGE_NAME = "com.android.shell";
     private static final String VIRT_APEX = "/apex/com.android.virt/";
     private static final String INSTANCE_IMG = TEST_ROOT + "instance.img";
@@ -1128,6 +1130,70 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String ret = android.runForResult(String.join(" ", cmd)).getStderr().trim();
 
         assertThat(ret).contains("Payload binary name must not specify a path");
+    }
+
+    private boolean hasAppPackage(String pkgName, CommandRunner android) throws DeviceNotAvailableException {
+        String hasPackage =
+        android.run(
+                "pm list package | grep -w " + pkgName + " 1> /dev/null" + "; echo $?");
+        if (hasPackage.equals("0")) {
+            return true;
+        }
+
+        return false;
+    }
+
+    @Test
+    public void testRunEmptyPayload() throws Exception {
+        CommandRunner android = new CommandRunner(getDevice());
+
+        // Create the idsig file for the APK
+        String apkPath;
+        if (hasAppPackage(EMPTY_AOSP_PACKAGE_NAME, android))
+            apkPath = getPathForPackage(EMPTY_AOSP_PACKAGE_NAME);
+        else
+            apkPath = getPathForPackage(EMPTY_PACKAGE_NAME);
+
+        final String idSigPath = TEST_ROOT + "idsig";
+        final String instanceImgPath = TEST_ROOT + "instance.img";
+
+        android.run(VIRT_APEX + "bin/vm", "create-idsig", apkPath, idSigPath);
+
+        List<String> cmd =
+                new ArrayList<>(
+                        Arrays.asList(
+                                "adb",
+                                "-s",
+                                getDevice().getSerialNumber(),
+                                "shell",
+                                VIRT_APEX + "bin/vm",
+                                "run-app",
+                                "--debug full",
+                                "--console " + CONSOLE_PATH,
+                                "--payload-binary-name",
+                                "MicrodroidEmptyPayloadJniLib.so",
+                                apkPath,
+                                idSigPath,
+                                instanceImgPath));
+        if (isFeatureEnabled("com.android.kvm.LLPVM_CHANGES")) {
+            cmd.add("--instance-id-file");
+            cmd.add(TEST_ROOT + "instance_id");
+        }
+
+        PipedInputStream pis = new PipedInputStream();
+        Process process = createRunUtil().runCmdInBackground(cmd, new PipedOutputStream(pis));
+        String bufferedInput = "";
+
+        do {
+            byte[] pipeBuffer = new byte[4096];
+            pis.read(pipeBuffer, 0, 4096);
+            bufferedInput += new String(pipeBuffer);
+        } while (!bufferedInput.contains("payload is ready"));
+
+        String consoleLog = getDevice().pullFileContents(CONSOLE_PATH);
+        assertThat(consoleLog).contains("Hello Microdroid");
+
+        process.destroy();
     }
 
     @Test

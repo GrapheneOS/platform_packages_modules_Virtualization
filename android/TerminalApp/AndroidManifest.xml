@@ -34,6 +34,7 @@
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar"
         android:usesCleartextTraffic="true"
+        android:supportsRtl="true"
         android:enabled="false">
         <activity android:name=".MainActivity"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
@@ -45,14 +46,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity android:name=".SettingsActivity">
-        </activity>
-        <activity android:name=".SettingsDiskResizeActivity">
-        </activity>
-        <activity android:name=".SettingsPortForwardingActivity">
-        </activity>
-        <activity android:name=".SettingsRecoveryActivity">
-        </activity>
+        <activity android:name=".SettingsActivity" />
+        <activity android:name=".SettingsDiskResizeActivity" />
+        <activity android:name=".SettingsPortForwardingActivity" />
+        <activity android:name=".SettingsRecoveryActivity" />
+        <activity android:name=".ErrorActivity" />
         <property
             android:name="android.window.PROPERTY_ACTIVITY_EMBEDDING_SPLITS_ENABLED"
             android:value="true" />
@@ -78,7 +76,7 @@
             android:stopWithTask="true" />
 
         <service
-            android:name="com.android.virtualization.vmlauncher.VmLauncherService"
+            android:name=".VmLauncherService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
             android:stopWithTask="true" >

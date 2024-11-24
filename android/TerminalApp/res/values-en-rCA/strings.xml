@@ -37,7 +37,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> assigned"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> max"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancel"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Restart VM to apply"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Restart to apply"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Port Forwarding"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Configure port forwarding"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal is trying to open a new port"</string>
@@ -48,12 +48,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Partition Recovery options"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Change to Initial version"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Remove all"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Reset the virtual machine"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Data will be deleted."</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Reset terminal"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Data will be deleted"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Confirm"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Cancel"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Settings"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal is running"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Click to open the terminal."</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"Click to open the terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Close"</string>
 </resources>

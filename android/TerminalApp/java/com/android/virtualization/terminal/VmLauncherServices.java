@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.virtualization.vmlauncher;
+package com.android.virtualization.terminal;
 
 import android.app.Notification;
 import android.content.Context;
@@ -67,8 +67,8 @@ public class VmLauncherServices {
         context.stopService(i);
     }
 
-    public static void startVmLauncherService(Context context, VmLauncherServiceCallback callback,
-            Notification notification) {
+    public static void startVmLauncherService(
+            Context context, VmLauncherServiceCallback callback, Notification notification) {
         Intent i = buildVmLauncherServiceIntent(context);
         if (i == null) {
             return;

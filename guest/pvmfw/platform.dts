@@ -4,6 +4,11 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
+// Undefine macros conflicting with our definitions.
+#ifdef linux
+#undef linux
+#endif
+
 #define PLACEHOLDER	0xffffffff
 #define PLACEHOLDER2	PLACEHOLDER PLACEHOLDER
 #define PLACEHOLDER4	PLACEHOLDER2 PLACEHOLDER2

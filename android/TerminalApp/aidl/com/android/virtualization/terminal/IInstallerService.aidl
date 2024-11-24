@@ -19,7 +19,7 @@ package com.android.virtualization.terminal;
 import com.android.virtualization.terminal.IInstallProgressListener;
 
 interface IInstallerService {
-    void requestInstall();
+    void requestInstall(boolean isWifiOnly);
     void setProgressListener(in IInstallProgressListener listener);
 
     boolean isInstalling();

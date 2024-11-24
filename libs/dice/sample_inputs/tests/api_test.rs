@@ -146,21 +146,3 @@ fn cdi_leaf_priv_corresponds_to_leaf_public_key_in_dice_chain() -> Result<()> {
     let public_key = chain.leaf().subject_public_key();
     public_key.verify(&signature, MESSAGE)
 }
-
-/// Flushes data caches over the provided address range in open-dice.
-///
-/// # Safety
-///
-/// The provided address and size must be to an address range that is valid for read and write
-/// (typically on the stack, .bss, .data, or provided BCC) from a single allocation
-/// (e.g. stack array).
-#[cfg(not(feature = "std"))]
-#[no_mangle]
-unsafe extern "C" fn DiceClearMemory(
-    _ctx: *mut core::ffi::c_void,
-    size: usize,
-    addr: *mut core::ffi::c_void,
-) {
-    // SAFETY: The caller ensures that the address and size are valid for write.
-    unsafe { core::ptr::write_bytes(addr as *mut u8, 0, size) };
-}

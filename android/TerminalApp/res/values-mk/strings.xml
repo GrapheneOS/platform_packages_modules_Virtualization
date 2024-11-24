@@ -24,11 +24,11 @@
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Се инсталира"</string>
     <string name="installer_install_network_error_message" msgid="2450409107529774410">"Грешка на мрежата. Проверете ја врската и обидете се повторно."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux-терминалот се инсталира"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux-терминалот ќе се стартува откако по довршувањето"</string>
+    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux-терминалот ќе се стартува по довршувањето"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Не можеше да се инсталира поради проблем со мрежата"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Не можеше да се инсталира. Обидете се повторно."</string>
     <string name="action_settings" msgid="5729342767795123227">"Поставки"</string>
-    <string name="vm_creation_message" msgid="6594953532721367502">"Терминалот се подготовува"</string>
+    <string name="vm_creation_message" msgid="6594953532721367502">"Терминалот се подготвува"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Терминалот се сопира"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Терминалот падна"</string>
     <string name="settings_disk_resize_title" msgid="1545791169419914600">"Променување на големината на дискот"</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Доделено: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Макс.: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Откажи"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Рестартирај ја VM за да се примени"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Проследување порти"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Конфигурирајте го проследувањето порти"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Терминалот се обидува да отвори нова порта"</string>
@@ -48,12 +49,15 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Опции за враќање партиции"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Промени на првата верзија"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Отстрани ги сите"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Ресетирање на виртуелната машина"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Податоците ќе се избришат."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Потврди"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Откажи"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Поставки"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминалот е активен"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Кликнете за да го отворите терминалот."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Затвори"</string>
 </resources>

@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"បានកំណត់ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"អតិបរមា <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"បោះបង់"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"ចាប់ផ្ដើម​ VM ឡើងវិញ ដើម្បីអនុវត្ត"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ការបញ្ជូនច្រកបន្ត"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"កំណត់រចនាសម្ព័ន្ធ​ការបញ្ជូនច្រកបន្ត"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ទែមីណាល់កំពុងព្យាយាមបើកច្រកថ្មី"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ជម្រើសស្ដារផ្នែក"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ប្ដូរ​ទៅ​កំណែ​ដំបូង"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ដកចេញទាំងអស់"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"កំណត់ម៉ាស៊ីននិម្មិតឡើងវិញ"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"ទិន្នន័យនឹងត្រូវបានលុប។"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"កំណត់ទែមីណាល់ឡើងវិញ"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ទិន្នន័យនឹងត្រូវបានលុប"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"បញ្ជាក់"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"បោះបង់"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ការកំណត់"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ទែមីណាល់កំពុងដំណើរការ"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"ចុចដើម្បីបើកទែមីណាល់។"</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"ចុចដើម្បីបើកទែមីណាល់"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"បិទ"</string>
 </resources>

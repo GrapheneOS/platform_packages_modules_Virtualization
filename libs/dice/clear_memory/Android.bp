@@ -1,0 +1,15 @@
+package {
+    default_visibility: [":__subpackages__"],
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_ffi_static {
+    name: "libvmbase_dice_clear_memory",
+    crate_name: "vmbase_dice_clear_memory",
+    defaults: ["vmbase_ffi_defaults"],
+    srcs: ["src/lib.rs"],
+    rustlibs: ["libvmbase"],
+    visibility: [
+        "//packages/modules/Virtualization:__subpackages__",
+    ],
+}

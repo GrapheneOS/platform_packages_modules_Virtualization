@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Додељено <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Макс. <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Откажи"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Рестартуј виртуелну машину ради примене"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Прослеђивање порта"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Конфигуришите прослеђивање порта"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Терминал покушава да отвори нови порт"</string>
@@ -46,14 +47,17 @@
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Одбиј"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Опоравак"</string>
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Опције опоравка партиција"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Промените на почетну верзију"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Промени на почетну верзију"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Уклоните све"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Ресетујте виртуелну машину"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Подаци ће бити избрисани."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Потврди"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Откажи"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Подешавања"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал је активан"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Кликните да бисте отворили терминал."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Затвори"</string>
 </resources>

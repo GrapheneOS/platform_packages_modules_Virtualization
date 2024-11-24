@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"تم تخصيص <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"‫<xliff:g id="MAX_SIZE">%1$s</xliff:g> كحد أقصى"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"إلغاء"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"إعادة تشغيل الجهاز الافتراضي لتطبيق التغييرات"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"إعادة توجيه المنفذ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ضبط إعادة توجيه المنفذ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"تحاول الوحدة الطرفية فتح منفذ جديد"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"خيارات استرداد القسم"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"التبديل إلى الإصدار الأولي"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"إزالة الكل"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"إعادة ضبط الجهاز الافتراضي"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"سيتم حذف البيانات."</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"إعادة ضبط الوحدة الطرفية"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"سيتم حذف البيانات"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"تأكيد"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"إلغاء"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"الإعدادات"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"الوحدة الطرفية قيد التشغيل"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"انقر لفتح الوحدة الطرفية."</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"انقر لفتح الوحدة الطرفية"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"إغلاق"</string>
 </resources>

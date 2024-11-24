@@ -21,7 +21,7 @@ use ciborium::cbor;
 use ciborium::Value;
 use core::mem::size_of;
 use diced_open_dice::{
-    bcc_handover_main_flow, hash, Config, DiceMode, Hash, InputValues, HIDDEN_SIZE,
+    bcc_handover_main_flow, hash, Config, DiceContext, DiceMode, Hash, InputValues, HIDDEN_SIZE,
 };
 use pvmfw_avb::{Capability, DebugLevel, Digest, VerifiedBootData};
 use zerocopy::AsBytes;
@@ -102,6 +102,7 @@ impl PartialInputs {
         instance_hash: Option<Hash>,
         deferred_rollback_protection: bool,
         next_bcc: &mut [u8],
+        context: DiceContext,
     ) -> Result<()> {
         let config = self
             .generate_config_descriptor(instance_hash)
@@ -114,7 +115,7 @@ impl PartialInputs {
             self.mode,
             self.make_hidden(salt, deferred_rollback_protection)?,
         );
-        let _ = bcc_handover_main_flow(current_bcc_handover, &dice_inputs, next_bcc)?;
+        let _ = bcc_handover_main_flow(current_bcc_handover, &dice_inputs, next_bcc, context)?;
         Ok(())
     }
 
@@ -169,29 +170,6 @@ impl PartialInputs {
     }
 }
 
-/// Flushes data caches over the provided address range.
-///
-/// # Safety
-///
-/// The provided address and size must be to an address range that is valid for read and write
-/// (typically on the stack, .bss, .data, or provided BCC) from a single allocation
-/// (e.g. stack array).
-#[no_mangle]
-#[cfg(not(test))]
-unsafe extern "C" fn DiceClearMemory(
-    _ctx: *mut core::ffi::c_void,
-    size: usize,
-    addr: *mut core::ffi::c_void,
-) {
-    use core::slice;
-    use vmbase::memory::flushed_zeroize;
-
-    // SAFETY: We require our caller to provide a valid range within a single object. The open-dice
-    // always calls this on individual stack-allocated arrays which ensures that.
-    let region = unsafe { slice::from_raw_parts_mut(addr as *mut u8, size) };
-    flushed_zeroize(region)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -200,8 +178,11 @@ mod tests {
     };
     use ciborium::Value;
     use diced_open_dice::DiceArtifacts;
+    use diced_open_dice::DiceContext;
     use diced_open_dice::DiceMode;
+    use diced_open_dice::KeyAlgorithm;
     use diced_open_dice::HIDDEN_SIZE;
+    use diced_sample_inputs::make_sample_bcc_and_cdis;
     use pvmfw_avb::Capability;
     use pvmfw_avb::DebugLevel;
     use pvmfw_avb::Digest;
@@ -321,6 +302,10 @@ mod tests {
         let mut buffer_without_defer = [0; 4096];
         let mut buffer_with_defer = [0; 4096];
         let mut buffer_without_defer_retry = [0; 4096];
+        let context = DiceContext {
+            authority_algorithm: KeyAlgorithm::Ed25519,
+            subject_algorithm: KeyAlgorithm::Ed25519,
+        };
 
         let sample_dice_input: &[u8] = &[
             0xa3, // CDI attest
@@ -344,6 +329,7 @@ mod tests {
                 Some([0u8; 64]),
                 false,
                 &mut buffer_without_defer,
+                context.clone(),
             )
             .unwrap();
         let bcc_handover1 = diced_open_dice::bcc_handover_parse(&buffer_without_defer).unwrap();
@@ -356,6 +342,7 @@ mod tests {
                 Some([0u8; 64]),
                 true,
                 &mut buffer_with_defer,
+                context.clone(),
             )
             .unwrap();
         let bcc_handover2 = diced_open_dice::bcc_handover_parse(&buffer_with_defer).unwrap();
@@ -368,6 +355,7 @@ mod tests {
                 Some([0u8; 64]),
                 false,
                 &mut buffer_without_defer_retry,
+                context.clone(),
             )
             .unwrap();
         let bcc_handover3 =
@@ -375,5 +363,83 @@ mod tests {
 
         assert_ne!(bcc_handover1.cdi_seal(), bcc_handover2.cdi_seal());
         assert_eq!(bcc_handover1.cdi_seal(), bcc_handover3.cdi_seal());
+    }
+
+    #[test]
+    fn dice_derivation_with_different_algorithms_is_valid() {
+        let dice_artifacts = make_sample_bcc_and_cdis().unwrap();
+        let bcc_handover0_bytes = to_bcc_handover(&dice_artifacts);
+        let vb_data = VerifiedBootData { debug_level: DebugLevel::Full, ..BASE_VB_DATA };
+        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let mut buffer = [0; 4096];
+
+        inputs
+            .clone()
+            .write_next_bcc(
+                &bcc_handover0_bytes,
+                &[0u8; HIDDEN_SIZE],
+                Some([0u8; 64]),
+                true,
+                &mut buffer,
+                DiceContext {
+                    authority_algorithm: KeyAlgorithm::Ed25519,
+                    subject_algorithm: KeyAlgorithm::EcdsaP256,
+                },
+            )
+            .expect("Failed to derive Ed25519 -> EcdsaP256 BCC");
+        let bcc_handover1 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
+        let bcc_handover1_bytes = to_bcc_handover(&bcc_handover1);
+        buffer.fill(0);
+
+        inputs
+            .clone()
+            .write_next_bcc(
+                &bcc_handover1_bytes,
+                &[0u8; HIDDEN_SIZE],
+                Some([0u8; 64]),
+                true,
+                &mut buffer,
+                DiceContext {
+                    authority_algorithm: KeyAlgorithm::EcdsaP256,
+                    subject_algorithm: KeyAlgorithm::EcdsaP384,
+                },
+            )
+            .expect("Failed to derive EcdsaP256 -> EcdsaP384 BCC");
+        let bcc_handover2 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
+        let bcc_handover2_bytes = to_bcc_handover(&bcc_handover2);
+        buffer.fill(0);
+
+        inputs
+            .clone()
+            .write_next_bcc(
+                &bcc_handover2_bytes,
+                &[0u8; HIDDEN_SIZE],
+                Some([0u8; 64]),
+                true,
+                &mut buffer,
+                DiceContext {
+                    authority_algorithm: KeyAlgorithm::EcdsaP384,
+                    subject_algorithm: KeyAlgorithm::Ed25519,
+                },
+            )
+            .expect("Failed to derive EcdsaP384 -> Ed25519 BCC");
+        let _bcc_handover3 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
+
+        // TODO(b/378813154): Check the DICE chain with `hwtrust` once the profile version
+        // is updated.
+        // The check cannot be done now because parsing the chain causes the following error:
+        // Invalid payload at index 3. Caused by:
+        // 0: opendice.example.p256
+        // 1: unknown profile version
+    }
+
+    fn to_bcc_handover(dice_artifacts: &dyn DiceArtifacts) -> Vec<u8> {
+        let dice_chain = cbor_util::deserialize::<Value>(dice_artifacts.bcc().unwrap()).unwrap();
+        let bcc_handover = Value::Map(vec![
+            (Value::Integer(1.into()), Value::Bytes(dice_artifacts.cdi_attest().to_vec())),
+            (Value::Integer(2.into()), Value::Bytes(dice_artifacts.cdi_seal().to_vec())),
+            (Value::Integer(3.into()), dice_chain),
+        ]);
+        cbor_util::serialize(&bcc_handover).unwrap()
     }
 }

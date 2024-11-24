@@ -199,28 +199,6 @@ pub fn main(fdt_addr: u64, _a1: u64, _a2: u64, _a3: u64) {
     }
 }
 
-/// Flushes data caches over the provided address range.
-///
-/// # Safety
-///
-/// The provided address and size must be to an address range that is valid for read and write
-/// (typically on the stack, .bss, .data, or provided BCC) from a single allocation
-/// (e.g. stack array).
-#[no_mangle]
-unsafe extern "C" fn DiceClearMemory(
-    _ctx: *mut core::ffi::c_void,
-    size: usize,
-    addr: *mut core::ffi::c_void,
-) {
-    use core::slice;
-    use vmbase::memory::flushed_zeroize;
-
-    // SAFETY: We require our caller to provide a valid range within a single object. The open-dice
-    // always calls this on individual stack-allocated arrays which ensures that.
-    let region = unsafe { slice::from_raw_parts_mut(addr as *mut u8, size) };
-    flushed_zeroize(region)
-}
-
 generate_image_header!();
 main!(main);
 configure_heap!(SIZE_128KB * 2);

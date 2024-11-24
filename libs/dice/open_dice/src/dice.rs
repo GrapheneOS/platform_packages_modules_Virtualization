@@ -15,7 +15,7 @@
 //! Structs and functions about the types used in DICE.
 //! This module mirrors the content in open-dice/include/dice/dice.h
 
-use crate::error::{check_result, Result};
+use crate::error::{check_result, DiceError, Result};
 use coset::iana;
 pub use open_dice_cbor_bindgen::DiceMode;
 use open_dice_cbor_bindgen::{
@@ -23,9 +23,11 @@ use open_dice_cbor_bindgen::{
     DiceMainFlow, DICE_CDI_SIZE, DICE_HASH_SIZE, DICE_HIDDEN_SIZE, DICE_ID_SIZE,
     DICE_INLINE_CONFIG_SIZE, DICE_PRIVATE_KEY_SEED_SIZE, DICE_PRIVATE_KEY_SIZE,
 };
+#[cfg(feature = "multialg")]
+use open_dice_cbor_bindgen::{DiceContext_, DiceKeyAlgorithm};
 #[cfg(feature = "serde_derive")]
 use serde_derive::{Deserialize, Serialize};
-use std::{marker::PhantomData, ptr};
+use std::{ffi::c_void, marker::PhantomData, ptr};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// The size of a DICE hash.
@@ -112,6 +114,69 @@ impl KeyAlgorithm {
             KeyAlgorithm::EcdsaP384 => 48,
         }
     }
+}
+
+impl TryFrom<iana::Algorithm> for KeyAlgorithm {
+    type Error = DiceError;
+
+    fn try_from(alg: iana::Algorithm) -> Result<Self> {
+        match alg {
+            iana::Algorithm::EdDSA => Ok(KeyAlgorithm::Ed25519),
+            iana::Algorithm::ES256 => Ok(KeyAlgorithm::EcdsaP256),
+            iana::Algorithm::ES384 => Ok(KeyAlgorithm::EcdsaP384),
+            other => Err(DiceError::UnsupportedKeyAlgorithm(other)),
+        }
+    }
+}
+
+#[cfg(feature = "multialg")]
+impl From<KeyAlgorithm> for DiceKeyAlgorithm {
+    fn from(alg: KeyAlgorithm) -> Self {
+        match alg {
+            KeyAlgorithm::Ed25519 => DiceKeyAlgorithm::kDiceKeyAlgorithmEd25519,
+            KeyAlgorithm::EcdsaP256 => DiceKeyAlgorithm::kDiceKeyAlgorithmP256,
+            KeyAlgorithm::EcdsaP384 => DiceKeyAlgorithm::kDiceKeyAlgorithmP384,
+        }
+    }
+}
+
+/// Represents the context used for DICE operations.
+#[cfg(feature = "multialg")]
+#[derive(Debug, Clone)]
+pub struct DiceContext {
+    /// The algorithm used for the authority key.
+    pub authority_algorithm: KeyAlgorithm,
+    /// The algorithm used for the subject key.
+    pub subject_algorithm: KeyAlgorithm,
+}
+
+#[cfg(feature = "multialg")]
+impl From<DiceContext> for DiceContext_ {
+    fn from(ctx: DiceContext) -> Self {
+        DiceContext_ {
+            authority_algorithm: ctx.authority_algorithm.into(),
+            subject_algorithm: ctx.subject_algorithm.into(),
+        }
+    }
+}
+
+#[cfg(feature = "multialg")]
+const VM_DICE_CONTEXT: DiceContext_ = DiceContext_ {
+    authority_algorithm: DiceKeyAlgorithm::kDiceKeyAlgorithmEd25519,
+    subject_algorithm: DiceKeyAlgorithm::kDiceKeyAlgorithmEd25519,
+};
+
+/// Returns the pointer points to |DiceContext_| for DICE operations when `multialg`
+/// feature is enabled.
+#[cfg(feature = "multialg")]
+pub(crate) fn context() -> *mut c_void {
+    &VM_DICE_CONTEXT as *const DiceContext_ as *mut c_void
+}
+
+/// Returns a null pointer when `multialg` feature is disabled.
+#[cfg(not(feature = "multialg"))]
+pub(crate) fn context() -> *mut c_void {
+    ptr::null_mut()
 }
 
 /// A trait for types that represent Dice artifacts, which include:
@@ -322,10 +387,9 @@ pub fn dice_main_flow(
     check_result(
         // SAFETY: The function only reads the current CDI values and inputs and writes
         // to `next_cdi_certificate` and next CDI values within its bounds.
-        // The first argument can be null and is not used in the current implementation.
         unsafe {
             DiceMainFlow(
-                ptr::null_mut(), // context
+                context(),
                 current_cdi_attest.as_ptr(),
                 current_cdi_seal.as_ptr(),
                 input_values.as_ptr(),

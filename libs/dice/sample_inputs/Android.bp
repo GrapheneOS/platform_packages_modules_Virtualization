@@ -78,4 +78,5 @@ rust_test {
         "libdiced_open_dice_nostd",
         "libdiced_sample_inputs_nostd",
     ],
+    static_libs: ["libopen_dice_clear_memory"],
 }

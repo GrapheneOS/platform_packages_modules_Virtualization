@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.virtualization.vmlauncher;
+package com.android.virtualization.terminal;
 
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -94,21 +94,20 @@ class ConfigJson {
                 : VirtualMachineConfig.DEBUG_LEVEL_NONE;
     }
 
-    /** Converts this parsed JSON into VirtualMachieConfig */
-    VirtualMachineConfig toConfig(Context context) {
+    /** Converts this parsed JSON into VirtualMachieConfig Builder */
+    VirtualMachineConfig.Builder toConfigBuilder(Context context) {
         return new VirtualMachineConfig.Builder(context)
                 .setProtectedVm(isProtected)
                 .setMemoryBytes((long) memory_mib * 1024 * 1024)
                 .setConsoleInputDevice(console_input_device)
                 .setCpuTopology(getCpuTopology())
-                .setCustomImageConfig(toCustomImageConfig(context))
+                .setCustomImageConfig(toCustomImageConfigBuilder(context).build())
                 .setDebugLevel(getDebugLevel())
                 .setVmOutputCaptured(console_out)
-                .setConnectVmConsole(connect_console)
-                .build();
+                .setConnectVmConsole(connect_console);
     }
 
-    private VirtualMachineCustomImageConfig toCustomImageConfig(Context context) {
+    VirtualMachineCustomImageConfig.Builder toCustomImageConfigBuilder(Context context) {
         VirtualMachineCustomImageConfig.Builder builder =
                 new VirtualMachineCustomImageConfig.Builder();
 
@@ -152,7 +151,7 @@ class ConfigJson {
                     .filter(Objects::nonNull)
                     .forEach(builder::addSharedPath);
         }
-        return builder.build();
+        return builder;
     }
 
     private static class SharedPathJson {

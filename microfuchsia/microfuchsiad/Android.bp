@@ -19,6 +19,13 @@ rust_binary {
         "liblibc",
         "libvmclient",
     ],
+    cfgs: [
+        // Enable this to configure microfuchsia VM instances with an interactive serial console. This console can
+        // be attached to using the 'vm console' command.
+        // Warning - enabling this will cause the VM to stall out unless a console is attached.
+        // See b/379163126 for details.
+        // "enable_console",
+    ],
     apex_available: [
         "com.android.microfuchsia",
     ],

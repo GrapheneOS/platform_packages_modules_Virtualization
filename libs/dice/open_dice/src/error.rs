@@ -29,6 +29,8 @@ pub enum DiceError {
     BufferTooSmall(usize),
     /// Platform error.
     PlatformError,
+    /// Unsupported key algorithm.
+    UnsupportedKeyAlgorithm(coset::iana::Algorithm),
 }
 
 /// This makes `DiceError` accepted by anyhow.
@@ -43,6 +45,9 @@ impl fmt::Display for DiceError {
                 write!(f, "Buffer too small; need {buffer_required_size} bytes")
             }
             Self::PlatformError => write!(f, "Platform error"),
+            Self::UnsupportedKeyAlgorithm(algorithm) => {
+                write!(f, "Unsupported key algorithm: {algorithm:?}")
+            }
         }
     }
 }

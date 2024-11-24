@@ -16,7 +16,7 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_marginEnd="24dp"
@@ -28,48 +28,101 @@
         android:layout_width="wrap_content"
         android:text="@string/settings_recovery_title"
         android:textSize="48sp"
+        android:hyphenationFrequency="full"
         android:layout_marginStart="24dp"
         android:layout_marginBottom="24dp"/>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/settings_recovery_reset_card"
-        app:strokeWidth="0dp"
-        app:cardCornerRadius="0dp"
-        app:checkedIcon="@null"
-        android:focusable="true"
-        android:checkable="true"
-        android:layout_height="wrap_content"
-        android:layout_width="match_parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/recovery_boot_progress"
+            android:indeterminate="true"
+            android:layout_gravity="center"
+            android:visibility="invisible"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <LinearLayout
+            android:id="@+id/setting_recovery_card_container"
             android:layout_width="match_parent"
-            android:layout_height="88dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginStart="24dp">
-
-            <TextView
-                android:id="@+id/settings_recovery_reset_title"
-                android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+            <!-- TODO: consider custom view for settings item -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/settings_recovery_reset_card"
+                app:strokeWidth="0dp"
+                app:cardCornerRadius="0dp"
+                app:checkedIcon="@null"
+                android:focusable="true"
+                android:checkable="true"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:layout_marginStart="24dp"
-                android:textSize="20sp"
-                android:text="@string/settings_recovery_reset_title"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toTopOf="@+id/settings_recovery_reset_sub_title"
-                app:layout_constraintLeft_toLeftOf="parent" />
-
-            <TextView
-                android:id="@+id/settings_recovery_reset_sub_title"
-                android:layout_width="0dp"
+                android:layout_width="match_parent">
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginStart="24dp">
+                    <TextView
+                        android:id="@+id/settings_recovery_reset_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginStart="24dp"
+                        android:textSize="20sp"
+                        android:text="@string/settings_recovery_reset_title"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toTopOf="@+id/settings_recovery_reset_sub_title"
+                        app:layout_constraintStart_toStartOf="parent" />
+                    <TextView
+                        android:id="@+id/settings_recovery_reset_sub_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="20dp"
+                        android:layout_marginStart="24dp"
+                        android:text="@string/settings_recovery_reset_sub_title"
+                        app:layout_constraintTop_toBottomOf="@+id/settings_recovery_reset_title"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/settings_recovery_reset_backup_card"
+                app:strokeWidth="0dp"
+                app:cardCornerRadius="0dp"
+                app:checkedIcon="@null"
+                android:focusable="true"
+                android:checkable="true"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:layout_marginBottom="20dp"
-                android:layout_marginStart="24dp"
-                android:text="@string/settings_recovery_reset_sub_title"
-                app:layout_constraintTop_toBottomOf="@+id/settings_recovery_reset_title"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintLeft_toLeftOf="parent" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </com.google.android.material.card.MaterialCardView>
+                android:layout_width="match_parent">
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginStart="24dp">
+                    <TextView
+                        android:id="@+id/settings_recovery_reset_backup_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginStart="24dp"
+                        android:textSize="20sp"
+                        android:text="@string/settings_recovery_remove_backup_title"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toTopOf="@+id/settings_recovery_reset_backup_sub_title"
+                        app:layout_constraintStart_toStartOf="parent" />
+                    <TextView
+                        android:id="@+id/settings_recovery_reset_backup_sub_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="20dp"
+                        android:layout_marginStart="24dp"
+                        android:text="@string/settings_recovery_remove_backup_sub_title"
+                        app:layout_constraintTop_toBottomOf="@+id/settings_recovery_reset_backup_title"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </FrameLayout>
 </LinearLayout>

@@ -38,8 +38,7 @@
         android:adjustViewBounds="true"
         android:layout_alignParentStart="true"
         android:layout_marginTop="48dp"
-        android:layout_marginLeft="32dp"
-        android:layout_marginRight="32dp"
+        android:layout_marginHorizontal="32dp"
         app:tint="?attr/colorPrimary" />
 
     <TextView
@@ -49,10 +48,8 @@
         android:singleLine="false"
         android:text="@string/installer_title_text"
         android:layout_below="@id/installer_terminal_icon"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="24dp"
-        android:layout_marginLeft="32dp"
-        android:layout_marginRight="32dp"
+        android:layout_marginVertical="24dp"
+        android:layout_marginHorizontal="32dp"
         android:textSize="36sp" />
 
     <TextView
@@ -63,8 +60,7 @@
         android:layout_below="@id/installer_title"
         android:lineSpacingExtra="5dp"
         android:layout_marginTop="24dp"
-        android:layout_marginLeft="32dp"
-        android:layout_marginRight="32dp"
+        android:layout_marginHorizontal="32dp"
         android:textSize="16sp" />
 
     <CheckBox
@@ -72,8 +68,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="16sp"
-        android:layout_marginLeft="42dp"
-        android:layout_marginRight="42dp"
+        android:layout_marginHorizontal="42dp"
         android:layout_above="@id/installer_install_button"
         android:layout_alignParentEnd="true"
         android:text="@string/installer_wait_for_wifi_checkbox_text" />
@@ -85,8 +80,7 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="32dp"
-        android:layout_marginLeft="40dp"
-        android:layout_marginRight="40dp"
+        android:layout_marginHorizontal="40dp"
         android:backgroundTint="?attr/colorPrimaryDark"
         android:text="@string/installer_install_button_enabled_text" />
 </RelativeLayout>

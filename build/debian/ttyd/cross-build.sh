@@ -120,6 +120,9 @@ build_libwebsockets() {
 
 build_ttyd() {
     echo "=== Building ttyd (${TARGET})..."
+    # TODO: Remove this when https://github.com/xtermjs/xterm.js/pull/5221 is
+    # deployed
+    patch -p1 < $(dirname $0)/xtermjs_a11y.patch
     rm -rf build && mkdir -p build && cd build
     cmake -DCMAKE_TOOLCHAIN_FILE="${BUILD_DIR}/cross-${TARGET}.cmake" \
         -DCMAKE_INSTALL_PREFIX="${STAGE_DIR}" \

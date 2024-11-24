@@ -3,7 +3,7 @@ use api::IpAddr;
 
 use clap::Parser;
 pub mod api {
-    tonic::include_proto!("com.android.virtualization.vmlauncher.proto");
+    tonic::include_proto!("com.android.virtualization.terminal.proto");
 }
 
 #[derive(Parser)]

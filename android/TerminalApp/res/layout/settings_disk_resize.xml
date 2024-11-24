@@ -29,6 +29,7 @@
         android:layout_width="wrap_content"
         android:text="@string/settings_disk_resize_title"
         android:textSize="48sp"
+        android:hyphenationFrequency="full"
         android:layout_marginBottom="24dp"/>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -38,16 +39,21 @@
         <TextView
             android:id="@+id/settings_disk_resize_resize_gb_assigned"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:textSize="14sp"
+            android:singleLine="false"
+            app:layout_constraintWidth_percent="0.5"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
         <TextView
             android:id="@+id/settings_disk_resize_resize_gb_max"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:textSize="14sp"
+            android:singleLine="false"
+            android:gravity="end"
+            app:layout_constraintWidth_percent="0.5"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
@@ -65,7 +71,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxWidth="150sp"
-            android:hyphenationFrequency="normal"
+            android:hyphenationFrequency="full"
             android:text="@string/settings_disk_resize_resize_cancel"
             android:visibility="invisible"
             android:layout_marginTop="48dp"
@@ -79,7 +85,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxWidth="150sp"
-            android:hyphenationFrequency="normal"
+            android:hyphenationFrequency="full"
             android:text="@string/settings_disk_resize_resize_restart_vm_to_apply"
             android:visibility="invisible"
             android:layout_marginTop="48dp"

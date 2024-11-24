@@ -28,6 +28,7 @@ import android.graphics.drawable.Icon;
 import android.graphics.fonts.FontStyle;
 import android.net.Uri;
 import android.net.http.SslError;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.ConditionVariable;
 import android.os.Environment;
@@ -35,10 +36,12 @@ import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.accessibility.AccessibilityManager;
+import android.view.accessibility.AccessibilityManager.AccessibilityStateChangeListener;
 import android.webkit.ClientCertRequest;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
@@ -46,16 +49,12 @@ import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.virtualization.vmlauncher.InstallUtils;
-import com.android.virtualization.vmlauncher.VmLauncherService;
-import com.android.virtualization.vmlauncher.VmLauncherServices;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
@@ -73,10 +72,8 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
 public class MainActivity extends BaseActivity
-        implements VmLauncherServices.VmLauncherServiceCallback,
-                AccessibilityManager.TouchExplorationStateChangeListener {
-
-    private static final String TAG = "VmTerminalApp";
+        implements VmLauncherServices.VmLauncherServiceCallback, AccessibilityStateChangeListener {
+    static final String TAG = "VmTerminalApp";
     private static final String VM_ADDR = "192.168.0.2";
     private static final int TTYD_PORT = 7681;
     private static final int REQUEST_CODE_INSTALLER = 0x33;
@@ -120,7 +117,7 @@ public class MainActivity extends BaseActivity
         mWebView.setWebChromeClient(new WebChromeClient());
 
         mAccessibilityManager = getSystemService(AccessibilityManager.class);
-        mAccessibilityManager.addTouchExplorationStateChangeListener(this);
+        mAccessibilityManager.addAccessibilityStateChangeListener(this);
 
         readClientCertificate();
         connectToTerminalService();
@@ -142,6 +139,17 @@ public class MainActivity extends BaseActivity
         }
     }
 
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (Build.isDebuggable() && event.getKeyCode() == KeyEvent.KEYCODE_UNKNOWN) {
+            if (event.getAction() == KeyEvent.ACTION_UP) {
+                launchErrorActivity(new Exception("Debug: KeyEvent.KEYCODE_UNKNOWN"));
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     private void requestStoragePermissions(
             Context context, ActivityResultLauncher<Intent> activityResultLauncher) {
         Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
@@ -161,7 +169,7 @@ public class MainActivity extends BaseActivity
                         + "&fontWeightBold="
                         + (FontStyle.FONT_WEIGHT_BOLD + config.fontWeightAdjustment)
                         + "&screenReaderMode="
-                        + mAccessibilityManager.isTouchExplorationEnabled()
+                        + mAccessibilityManager.isEnabled()
                         + "&titleFixed="
                         + getString(R.string.app_name);
 
@@ -289,16 +297,6 @@ public class MainActivity extends BaseActivity
         }
     }
 
-    public static File getPartitionFile(Context context, String fileName)
-            throws FileNotFoundException {
-        File file = new File(InstallUtils.getInternalStorageDir(context), fileName);
-        if (!file.exists()) {
-            Log.d(TAG, file.getAbsolutePath() + " - file not found");
-            throw new FileNotFoundException("File not found: " + fileName);
-        }
-        return file;
-    }
-
     private static void allocateSpace(File file, long sizeInBytes) throws IOException {
         try {
             RandomAccessFile raf = new RandomAccessFile(file, "rw");
@@ -367,7 +365,7 @@ public class MainActivity extends BaseActivity
 
     @Override
     protected void onDestroy() {
-        getSystemService(AccessibilityManager.class).removeTouchExplorationStateChangeListener(this);
+        getSystemService(AccessibilityManager.class).removeAccessibilityStateChangeListener(this);
         VmLauncherServices.stopVmLauncherService(this);
         super.onDestroy();
     }
@@ -379,16 +377,14 @@ public class MainActivity extends BaseActivity
 
     @Override
     public void onVmStop() {
-        Toast.makeText(this, R.string.vm_stop_message, Toast.LENGTH_SHORT).show();
         Log.i(TAG, "onVmStop()");
         finish();
     }
 
     @Override
     public void onVmError() {
-        Toast.makeText(this, R.string.vm_error_message, Toast.LENGTH_SHORT).show();
         Log.i(TAG, "onVmError()");
-        finish();
+        launchErrorActivity(new Exception("onVmError"));
     }
 
     @Override
@@ -414,7 +410,7 @@ public class MainActivity extends BaseActivity
     }
 
     @Override
-    public void onTouchExplorationStateChanged(boolean enabled) {
+    public void onAccessibilityStateChanged(boolean enabled) {
         connectToTerminalService();
     }
 
@@ -433,6 +429,13 @@ public class MainActivity extends BaseActivity
                 startVm();
             }
         }
+    }
+
+    private void launchErrorActivity(Exception e) {
+        Intent intent = new Intent(this, ErrorActivity.class);
+        intent.putExtra(ErrorActivity.EXTRA_CAUSE, e);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        this.startActivity(intent);
     }
 
     private boolean installIfNecessary() {
@@ -536,7 +539,7 @@ public class MainActivity extends BaseActivity
 
     private void resizeDiskIfNecessary() {
         try {
-            File file = getPartitionFile(this, "root_part");
+            File file = InstallUtils.getRootfsFile(this);
             SharedPreferences sharedPref = this.getSharedPreferences(
                     getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPref.edit();

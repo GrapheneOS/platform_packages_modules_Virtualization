@@ -17,7 +17,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
-    <string name="installer_title_text" msgid="500663060973466805">"Instaliranje Linux terminala"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Instalirajte Linux terminal"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Da biste pokrenuli Linux terminal, trebate preuzeti otprilike <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> podataka putem mreže.\nŽelite li nastaviti?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Preuzmi kada Wi-Fi bude dostupan"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Instaliraj"</string>
@@ -37,7 +37,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Dodijeljeno: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maks. <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Odustani"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"Ponovo pokrenite VM da bi se izmjena primijenila"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Prosljeđivanje priključka"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfiguriranje prosljeđivanja priključka"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal pokušava otvoriti novi priključak"</string>
@@ -46,14 +47,17 @@
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Odbij"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Oporavak"</string>
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opcije oporavka particije"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Promijeni na početnu verziju"</string>
+    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Vrati na početnu verziju"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Ukloni sve"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"Ponovno postavljanje virtualnog stroja"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"Podaci će se izbrisati."</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Potvrdi"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Odustani"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Postavke"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal je pokrenut"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"Kliknite da biste otvorili terminal."</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Zatvori"</string>
 </resources>

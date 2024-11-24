@@ -378,7 +378,7 @@ fn run_forwarder_host(cid: i32, jni_env: JNIEnv, jni_cb: JObject) -> Result<()> 
 
 /// JNI function for running forwarder_host.
 #[no_mangle]
-pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_runForwarderHost(
+pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_runForwarderHost(
     env: JNIEnv,
     _class: JObject,
     cid: jint,
@@ -396,7 +396,7 @@ pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_r
 
 /// JNI function for terminating forwarder_host.
 #[no_mangle]
-pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_terminateForwarderHost(
+pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_terminateForwarderHost(
     _env: JNIEnv,
     _class: JObject,
 ) {
@@ -405,7 +405,7 @@ pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_t
 
 /// JNI function for updating listening ports.
 #[no_mangle]
-pub extern "C" fn Java_com_android_virtualization_vmlauncher_DebianServiceImpl_updateListeningPorts(
+pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_updateListeningPorts(
     env: JNIEnv,
     _class: JObject,
     ports: JIntArray,

@@ -35,20 +35,17 @@ import android.widget.CheckBox;
 import android.widget.TextView;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.virtualization.vmlauncher.InstallUtils;
 
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.lang.ref.WeakReference;
-import java.util.concurrent.ExecutorService;
 
 public class InstallerActivity extends BaseActivity {
     private static final String TAG = "LinuxInstaller";
 
-    private static final long ESTIMATED_IMG_SIZE_BYTES = FileUtils.parseSize("350MB");
+    private static final long ESTIMATED_IMG_SIZE_BYTES = FileUtils.parseSize("550MB");
 
-    private ExecutorService mExecutorService;
     private CheckBox mWaitForWifiCheckbox;
     private TextView mInstallButton;
 
@@ -84,7 +81,7 @@ public class InstallerActivity extends BaseActivity {
         Intent intent = new Intent(this, InstallerService.class);
         mInstallerServiceConnection = new InstallerServiceConnection(this);
         if (!bindService(intent, mInstallerServiceConnection, Context.BIND_AUTO_CREATE)) {
-            handleCriticalError(new Exception("Failed to connect to installer service"));
+            handleInternalError(new Exception("Failed to connect to installer service"));
         }
     }
 
@@ -93,11 +90,7 @@ public class InstallerActivity extends BaseActivity {
         super.onResume();
 
         if (Build.isDebuggable() && InstallUtils.payloadFromExternalStorageExists()) {
-            Snackbar.make(
-                            findViewById(android.R.id.content),
-                            "Auto installing",
-                            Snackbar.LENGTH_LONG)
-                    .show();
+            showSnackbar("Auto installing", Snackbar.LENGTH_LONG);
             requestInstall();
         }
     }
@@ -126,13 +119,17 @@ public class InstallerActivity extends BaseActivity {
         return mInstallCompleted.block(timeoutMillis);
     }
 
-    public void handleCriticalError(Exception e) {
+    private void showSnackbar(String message, int length) {
+        Snackbar snackbar = Snackbar.make(findViewById(android.R.id.content), message, length);
+        snackbar.setAnchorView(mWaitForWifiCheckbox);
+        snackbar.show();
+    }
+
+    public void handleInternalError(Exception e) {
         if (Build.isDebuggable()) {
-            Snackbar.make(
-                            findViewById(android.R.id.content),
-                            e.getMessage() + ". File a bugreport to go/ferrochrome-bug",
-                            Snackbar.LENGTH_INDEFINITE)
-                    .show();
+            showSnackbar(
+                    e.getMessage() + ". File a bugreport to go/ferrochrome-bug",
+                    Snackbar.LENGTH_INDEFINITE);
         }
         Log.e(TAG, "Internal error", e);
         finishWithResult(RESULT_CANCELED);
@@ -169,9 +166,9 @@ public class InstallerActivity extends BaseActivity {
 
         if (mService != null) {
             try {
-                mService.requestInstall();
+                mService.requestInstall(mWaitForWifiCheckbox.isChecked());
             } catch (RemoteException e) {
-                handleCriticalError(e);
+                handleInternalError(e);
             }
         } else {
             Log.d(TAG, "requestInstall() is called, but not yet connected");
@@ -196,21 +193,18 @@ public class InstallerActivity extends BaseActivity {
                 setInstallEnabled(false);
             }
         } catch (RemoteException e) {
-            handleCriticalError(e);
+            handleInternalError(e);
         }
     }
 
     @MainThread
     public void handleInstallerServiceDisconnected() {
-        handleCriticalError(new Exception("InstallerService is destroyed while in use"));
+        handleInternalError(new Exception("InstallerService is destroyed while in use"));
     }
 
     @MainThread
-    private void handleError(String displayText) {
-        if (Build.isDebuggable()) {
-            Snackbar.make(findViewById(android.R.id.content), displayText, Snackbar.LENGTH_LONG)
-                    .show();
-        }
+    private void handleInstallError(String displayText) {
+        showSnackbar(displayText, Snackbar.LENGTH_LONG);
         setInstallEnabled(true);
     }
 
@@ -250,7 +244,7 @@ public class InstallerActivity extends BaseActivity {
                             return;
                         }
 
-                        activity.handleError(displayText);
+                        activity.handleInstallError(displayText);
                     });
         }
     }
@@ -271,7 +265,7 @@ public class InstallerActivity extends BaseActivity {
                 return;
             }
             if (service == null) {
-                activity.handleCriticalError(new Exception("service shouldn't be null"));
+                activity.handleInternalError(new Exception("service shouldn't be null"));
             }
 
             activity.mService = IInstallerService.Stub.asInterface(service);

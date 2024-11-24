@@ -34,10 +34,11 @@
     <string name="settings_disk_resize_title" msgid="1545791169419914600">"डिस्कको आकार बदल्नुहोस्"</string>
     <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"आकार बदल्नुहोस् / Rootfs"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्कको आकारको सेट गरियो"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> असाइन गरिएको छ"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"असाइन गरिएको: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"अधिकतम <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द गर्नुहोस्"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"परिवर्तन लागू गर्न VM रिस्टार्ट गर्नुहोस्"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"पोर्ट फर्वार्डिङ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"पोर्ट फर्वार्डिङ कन्फिगर गर्नुहोस्"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"टर्मिनलले एउटा नयाँ पोर्ट खोल्न खोजिरहेको छ"</string>
@@ -48,12 +49,15 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"पार्टिसन रिकभरीसम्बन्धी विकल्पहरू"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"यो संस्करण बदलेर सुरुको संस्करण बनाउनुहोस्"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"सबै हटाउनुहोस्"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"भर्चुअल मेसिन रिसेट गर्नुहोस्"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"डेटा मेटाइने छ।"</string>
+    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
+    <skip />
+    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
+    <skip />
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"पुष्टि गर्नुहोस्"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"रद्द गर्नुहोस्"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिङ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चलिरहेको छ"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"टर्मिनल खोल्न क्लिक गर्नुहोस्।"</string>
+    <!-- no translation found for service_notification_content (3579923802797824545) -->
+    <skip />
     <string name="service_notification_quit_action" msgid="4888327875869277455">"बन्द गर्नुहोस्"</string>
 </resources>

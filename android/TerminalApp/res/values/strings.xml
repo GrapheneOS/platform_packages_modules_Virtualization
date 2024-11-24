@@ -20,6 +20,13 @@
     <!-- Application name of this terminal app shown in the launcher. This app provides computer terminal to connect to virtual machine. [CHAR LIMIT=16] -->
     <string name="app_name">Terminal</string>
 
+    <!-- Description of the entire terminal display showing texts. This is read by talkback. -->
+    <string name="terminal_display">Terminal display</string>
+    <!-- Description of the edit box accepting user input. This is read by talkback. -->
+    <string name="terminal_input">Cursor</string>
+    <!-- Description of an empty line in the terminal. This is read by talkback. -->
+    <string name="empty_line">Empty line</string>
+
     <!-- Installer activity title [CHAR LIMIT=none] -->
     <string name="installer_title_text">Install Linux terminal</string>
     <!-- Installer activity description format [CHAR LIMIT=none] -->
@@ -38,6 +45,8 @@
     <string name="installer_notif_desc_text">Linux terminal will be started after finish</string>
     <!-- Toast error message for install failure due to the network issue [CHAR LIMIT=none] -->
     <string name="installer_error_network">Failed to install due to the network issue</string>
+    <!-- Toast error message for install failure because Wi-Fi isn't available although required [CHAR LIMIT=none] -->
+    <string name="installer_error_no_wifi">Failed to install because Wi-Fi isn\'t available</string>
     <!-- Toast error message for install failure due to the unidentified issue [CHAR LIMIT=none] -->
     <string name="installer_error_unknown">Failed to install. Try again.</string>
 
@@ -95,6 +104,25 @@
     <string name="settings_recovery_reset_dialog_confirm">Confirm</string>
     <!-- Dialog button cancel for resetting the terminal [CHAR LIMIT=16] -->
     <string name="settings_recovery_reset_dialog_cancel">Cancel</string>
+    <!-- Dialog option to back up previous image(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
+    <string name="settings_recovery_reset_dialog_backup_option">Back up data to <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <!-- Snankbar to indicate recovery error due to backup [CHAR LIMIT=none] -->
+    <string name="settings_recovery_error_due_to_backup">Recovery failed because backup failed</string>
+    <!-- Snankbar to indicate recovery error [CHAR LIMIT=none] -->
+    <string name="settings_recovery_error">Recovery failed</string>
+    <!-- Snankbar to indicate recovery error during removing backup [CHAR LIMIT=none] -->
+    <string name="settings_recovery_error_during_removing_backup">Cannot remove backup file</string>
+    <!-- Settings menu title for removing backup data [CHAR LIMIT=none] -->
+    <string name="settings_recovery_remove_backup_title">Remove backup data</string>
+    <!-- Settings menu sub title for removing backup data(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
+    <string name="settings_recovery_remove_backup_sub_title">Clean up <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+
+    <!-- Error page that shows error page [CHAR LIMIT=none] -->
+    <string name="error_title">Unrecoverable Error</string>
+    <!-- Error page that shows error page [CHAR LIMIT=none] -->
+    <string name="error_desc">Failed to recover from an error.\nYou can try restart the app, or try one of recovery option.</string>
+    <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
+    <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
 
     <!-- Notification action button for settings [CHAR LIMIT=20] -->
     <string name="service_notification_settings">Settings</string>

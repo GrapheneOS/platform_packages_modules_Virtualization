@@ -17,8 +17,8 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"တာမီနယ်"</string>
-    <string name="installer_title_text" msgid="500663060973466805">"Linux တာမီနယ်ကို ထည့်သွင်းခြင်း"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux တာမီနယ်ကို စတင်ရန်အတွက် ကွန်ရက်ပေါ်တွင် အကြမ်းဖျင်း ဒေတာ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ကို ဒေါင်းလုဒ်လုပ်ရမည်။\nရှေ့ဆက်လိုပါသလား။"</string>
+    <string name="installer_title_text" msgid="500663060973466805">"Linux တာမီနယ် ထည့်သွင်းခြင်း"</string>
+    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux တာမီနယ် စတင်ရန် ကွန်ရက်ပေါ်တွင် ဒေတာ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ခန့်ကို ဒေါင်းလုဒ်လုပ်ရမည်။\nရှေ့ဆက်လိုပါသလား။"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Wi-Fi ရသည့်အခါ ဒေါင်းလုဒ်လုပ်ရန်"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ထည့်သွင်းရန်"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ထည့်သွင်းနေသည်"</string>
@@ -32,12 +32,13 @@
     <string name="vm_stop_message" msgid="3978349856095529255">"တာမီနယ်ကို ရပ်နေသည်"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"တာမီနယ် ရပ်တန့်သွားသည်"</string>
     <string name="settings_disk_resize_title" msgid="1545791169419914600">"ဒစ်ခ်အရွယ်ပြင်ခြင်း"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"/ Rootf အရွယ်ပြင်ရန်"</string>
+    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"/ Rootfs အရွယ်ပြင်ရန်"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ဒစ်ခ်အရွယ်အစား သတ်မှတ်လိုက်သည်"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> သတ်မှတ်ထားသည်"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"အများဆုံး <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"မလုပ်တော့"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="8122668558537714453">"သုံးရန်အတွက် VM ကို ပြန်စရန်"</string>
+    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
+    <skip />
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ပို့တ်ထပ်ဆင့်ပို့ခြင်း"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ပို့တ်ထပ်ဆင့်ပို့ခြင်းကို စီစဉ်သတ်မှတ်ပါ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"တာမီနယ်က ပို့တ်အသစ်ကိုဖွင့်ရန် ကြိုးပမ်းနေသည်"</string>
@@ -48,12 +49,12 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"အကန့်ပြန်ရယူရေး နည်းလမ်းများ"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ကနဦးဗားရှင်းသို့ ပြောင်းရန်"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"အားလုံး ဖယ်ရှားရန်"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="2695282831393218812">"ပကတိအသွင်စက်ကို ပြင်ဆင်သတ်မှတ်ခြင်း"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="3126236636568914757">"ဒေတာကို ဖျက်ပါမည်။"</string>
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"တာမီနယ်ကို ပြင်ဆင်သတ်မှတ်ခြင်း"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ဒေတာကို ဖျက်ပါမည်"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"အတည်ပြုရန်"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"မလုပ်တော့"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ဆက်တင်များ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"တာမီနယ်ကို ဖွင့်ထားသည်"</string>
-    <string name="service_notification_content" msgid="8652887364784704911">"တာမီနယ်ဖွင့်ရန် နှိပ်ပါ။"</string>
+    <string name="service_notification_content" msgid="3579923802797824545">"တာမီနယ်ဖွင့်ရန် နှိပ်ပါ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ပိတ်ရန်"</string>
 </resources>

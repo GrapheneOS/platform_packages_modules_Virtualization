@@ -31,7 +31,7 @@ use tonic::transport::{Channel, Endpoint};
 use tonic::Request;
 
 mod debian_service {
-    tonic::include_proto!("com.android.virtualization.vmlauncher.proto");
+    tonic::include_proto!("com.android.virtualization.terminal.proto");
 }
 
 const NON_PREVILEGED_PORT_RANGE_START: i32 = 1024;
@@ -110,6 +110,7 @@ async fn send_active_ports_report(
 async fn report_active_ports(
     mut client: DebianServiceClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: we can remove python3 -u when https://github.com/iovisor/bcc/pull/5142 is deployed
     let mut cmd = Command::new("python3")
         .arg("-u")
         .arg("/usr/sbin/tcpstates-bpfcc")

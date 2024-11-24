@@ -1,0 +1,7 @@
+prebuilt_etc {
+    name: "early_vms.xml",
+    src: "early_vms.xml",
+    filename: "early_vms.xml",
+    relative_install_path: "avf",
+    system_ext_specific: true,
+}

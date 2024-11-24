@@ -28,6 +28,9 @@ prebuilt_etc {
         x86_64: {
             src: ":trusty_security_vm_signed",
         },
+        arm64: {
+            src: ":trusty_security_vm_signed",
+        },
     },
     src: ":empty_file",
 }
@@ -49,10 +52,20 @@ avb_add_hash_footer {
     private_key: ":trusty_vm_sign_key",
     salt: trusty_security_vm_salt,
     rollback_index: TRUSTY_SECURITY_VM_VERSION,
+    props: [
+        {
+            name: "com.android.virt.cap",
+            value: "trusty_security_vm",
+        },
+    ],
     src: ":empty_file",
     enabled: false,
     arch: {
         x86_64: {
+            src: ":trusty-lk.elf",
+            enabled: true,
+        },
+        arm64: {
             src: ":trusty-test-lk.elf",
             enabled: true,
         },
