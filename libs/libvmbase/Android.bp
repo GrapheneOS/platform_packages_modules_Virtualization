@@ -29,6 +29,9 @@ rust_defaults {
         android_arm64: {
             enabled: true,
         },
+        android_x86_64: {
+            enabled: true,
+        },
     },
 }
 
@@ -50,6 +53,9 @@ cc_defaults {
     enabled: false,
     target: {
         android_arm64: {
+            enabled: true,
+        },
+        android_x86_64: {
             enabled: true,
         },
     },
