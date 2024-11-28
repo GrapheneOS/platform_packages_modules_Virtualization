@@ -12,15 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Module providing Low-level platform specific implementations
+//! x86_64 platform specific code
 
-#[cfg(target_arch = "aarch64")]
-mod aarch64;
-#[cfg(target_arch = "x86_64")]
-mod x86_64;
-
-#[cfg(target_arch = "aarch64")]
-pub use aarch64::payload;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::payload;
+pub mod payload;

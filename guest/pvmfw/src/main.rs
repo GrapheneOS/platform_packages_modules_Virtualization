@@ -16,6 +16,8 @@
 
 #![no_main]
 #![no_std]
+// TODO(b/354116267): Remove once all warnings are resolved
+#![cfg_attr(target_arch = "x86_64", allow(dead_code, unused_imports))]
 
 extern crate alloc;
 
