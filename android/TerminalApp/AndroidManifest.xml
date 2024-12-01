@@ -32,7 +32,7 @@
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+        android:theme="@style/VmTerminalAppTheme"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:enabled="false">
@@ -47,9 +47,12 @@
             </intent-filter>
         </activity>
         <activity android:name=".SettingsActivity" />
-        <activity android:name=".SettingsDiskResizeActivity" />
-        <activity android:name=".SettingsPortForwardingActivity" />
-        <activity android:name=".SettingsRecoveryActivity" />
+        <activity android:name=".SettingsDiskResizeActivity"
+            android:label="@string/settings_disk_resize_title" />
+        <activity android:name=".SettingsPortForwardingActivity"
+            android:label="@string/settings_port_forwarding_title" />
+        <activity android:name=".SettingsRecoveryActivity"
+            android:label="@string/settings_recovery_title" />
         <activity android:name=".ErrorActivity" />
         <property
             android:name="android.window.PROPERTY_ACTIVITY_EMBEDDING_SPLITS_ENABLED"
@@ -83,10 +86,6 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Run VM instances" />
-            <intent-filter>
-                <action android:name="android.virtualization.START_VM_LAUNCHER_SERVICE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </service>
     </application>
 

@@ -173,6 +173,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         } else {
             bail!("unexpected architecture!");
         }
+        custom_config.extraKernelCmdlineParams.push(String::from("keep_bootcon"));
     }
 
     let vm_config = VirtualMachineConfig::AppConfig(VirtualMachineAppConfig {

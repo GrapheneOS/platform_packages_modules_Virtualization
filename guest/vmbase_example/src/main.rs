@@ -23,8 +23,8 @@ mod pci;
 
 extern crate alloc;
 
-use crate::layout::{boot_stack_range, print_addresses, DEVICE_REGION};
-use crate::pci::{check_pci, get_bar_region};
+use crate::layout::{boot_stack_range, print_addresses};
+use crate::pci::{check_pci, get_bar_region, get_cam_region};
 use aarch64_paging::paging::VirtualAddress;
 use aarch64_paging::MapError;
 use alloc::{vec, vec::Vec};
@@ -37,10 +37,9 @@ use vmbase::{
     bionic, configure_heap,
     fdt::pci::PciInfo,
     generate_image_header,
-    layout::{crosvm::FDT_MAX_SIZE, rodata_range, scratch_range, text_range},
+    layout::{console_uart_page, crosvm::FDT_MAX_SIZE, rodata_range, scratch_range, text_range},
     linker, logger, main,
     memory::{PageTable, SIZE_64KB},
-    util::RangeExt as _,
 };
 
 static INITIALISED_DATA: [u32; 4] = [1, 2, 3, 4];
@@ -52,7 +51,7 @@ main!(main);
 configure_heap!(SIZE_64KB);
 
 fn init_page_table(page_table: &mut PageTable) -> Result<(), MapError> {
-    page_table.map_device(&DEVICE_REGION)?;
+    page_table.map_device(&console_uart_page().into())?;
     page_table.map_code(&text_range().into())?;
     page_table.map_rodata(&rodata_range().into())?;
     page_table.map_data(&scratch_range().into())?;
@@ -99,13 +98,10 @@ pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
 
     check_alloc();
 
+    let cam_region = get_cam_region(&pci_info);
+    page_table.map_device(&cam_region).unwrap();
     let bar_region = get_bar_region(&pci_info);
-    if bar_region.is_within(&DEVICE_REGION) {
-        // Avoid a MapError::BreakBeforeMakeViolation.
-        info!("BAR region is within already mapped device region: skipping page table ops.");
-    } else {
-        page_table.map_device(&bar_region).unwrap();
-    }
+    page_table.map_device(&bar_region).unwrap();
 
     check_data();
     check_dice();

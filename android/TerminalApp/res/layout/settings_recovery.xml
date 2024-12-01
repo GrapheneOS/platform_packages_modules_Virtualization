@@ -53,7 +53,7 @@
                 app:cardCornerRadius="0dp"
                 app:checkedIcon="@null"
                 android:focusable="true"
-                android:checkable="true"
+                android:longClickable="false"
                 android:layout_height="wrap_content"
                 android:layout_width="match_parent">
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -91,7 +91,7 @@
                 app:cardCornerRadius="0dp"
                 app:checkedIcon="@null"
                 android:focusable="true"
-                android:checkable="true"
+                android:longClickable="false"
                 android:layout_height="wrap_content"
                 android:layout_width="match_parent">
                 <androidx.constraintlayout.widget.ConstraintLayout

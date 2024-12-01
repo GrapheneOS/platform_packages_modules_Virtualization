@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"Tampilan terminal"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"Kursor"</string>
+    <string name="empty_line" msgid="5012067143408427178">"Baris kosong"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Instal terminal Linux"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Untuk meluncurkan terminal Linux, Anda perlu mendownload sekitar <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data melalui jaringan.\nApakah Anda ingin melanjutkan?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Download saat Wi-Fi tersedia"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Menginstal terminal Linux"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"Terminal Linux akan dimulai setelah penginstalan selesai"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Gagal menginstal karena ada masalah jaringan"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Gagal menginstal karena Wi-Fi tidak tersedia"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Gagal menginstal. Coba lagi."</string>
     <string name="action_settings" msgid="5729342767795123227">"Setelan"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Menyiapkan terminal"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ditetapkan"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maks <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Batal"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Mulai ulang untuk menerapkan"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Penerusan Port"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurasi penerusan port"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal mencoba membuka port baru"</string>
@@ -49,15 +52,23 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opsi Pemulihan Partisi"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Ubah ke Versi awal"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Hapus semua"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Reset terminal"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Data akan dihapus"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Konfirmasi"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Batal"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Cadangkan data ke <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Pemulihan gagal karena pencadangan gagal"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"Pemulihan gagal"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Tidak dapat menghapus file cadangan"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Hapus data cadangan"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Membersihkan <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"Error yang Tidak Dapat Dipulihkan"</string>
+    <string name="error_desc" msgid="1939028888570920661">"Gagal memulihkan dari error.\nAnda dapat mencoba memulai ulang aplikasi, atau mencoba salah satu opsi pemulihan."</string>
+    <string name="error_code" msgid="3585291676855383649">"Kode error: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Setelan"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal sedang berjalan"</string>
-    <!-- no translation found for service_notification_content (3579923802797824545) -->
-    <skip />
+    <string name="service_notification_content" msgid="3579923802797824545">"Klik untuk membuka terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Tutup"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

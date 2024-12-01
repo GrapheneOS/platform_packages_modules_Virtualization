@@ -117,7 +117,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
         MEMORY.lock().as_mut().unwrap().init_dynamic_shared_pool(granule).inspect_err(|_| {
             error!("Failed to initialize dynamically shared pool.");
         })?;
-    } else if let Ok(swiotlb_info) = SwiotlbInfo::new_from_fdt(fdt) {
+    } else if let Ok(Some(swiotlb_info)) = SwiotlbInfo::new_from_fdt(fdt) {
         let range = swiotlb_info.fixed_range().ok_or_else(|| {
             error!("Pre-shared pool range not specified in swiotlb node");
             Error::from(FdtError::BadValue)

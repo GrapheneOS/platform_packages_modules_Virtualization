@@ -384,6 +384,10 @@ pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_run
     cid: jint,
     callback: JObject,
 ) {
+    // Clear shutdown event FD before running forwarder host.
+    SHUTDOWN_EVT.write(1).expect("Failed to write shutdown event FD");
+    SHUTDOWN_EVT.read().expect("Failed to consume shutdown event FD");
+
     match run_forwarder_host(cid, env, callback) {
         Ok(_) => {
             info!("forwarder_host is terminated");

@@ -23,9 +23,3 @@ prebuilt_etc {
     src: "features_com.android.virt.xml",
     soc_specific: true,
 }
-
-prebuilt_etc {
-    name: "default-permissions_com.android.virt.xml",
-    sub_dir: "default-permissions",
-    src: "default-permissions_com.android.virt.xml",
-}

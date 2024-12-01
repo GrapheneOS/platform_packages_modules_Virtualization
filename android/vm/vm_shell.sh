@@ -30,7 +30,7 @@ function print_help() {
     echo "        /apex/com.android.virt/bin/vm run-microdroid binary."
     echo ""
     echo "        E.g.:"
-    echo "            vm_shell start-microdroid -- --cpu 5"
+    echo "            vm_shell start-microdroid -- --protected --debug full"
     echo ""
     echo "        --auto-connect - automatically connects to the started VMs"
     echo ""

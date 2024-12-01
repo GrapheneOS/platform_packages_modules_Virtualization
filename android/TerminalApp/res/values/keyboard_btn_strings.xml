@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--  Copyright (C) 2024 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+ -->
+
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="btn_esc_text" translatable="false">Esc</string>
+    <string name="btn_tab_text" translatable="false">Tab</string>
+    <string name="btn_home_text" translatable="false">Home</string>
+    <string name="btn_up_text" translatable="false">↑</string>
+    <string name="btn_end_text" translatable="false">End</string>
+    <string name="btn_pgup_text" translatable="false">PgUp</string>
+    <string name="btn_ctrl_text" translatable="false">Ctrl</string>
+    <string name="btn_alt_text" translatable="false">Alt</string>
+    <string name="btn_left_text" translatable="false">←</string>
+    <string name="btn_down_text" translatable="false">↓</string>
+    <string name="btn_right_text" translatable="false">→</string>
+    <string name="btn_pgdn_text" translatable="false">PgDn</string>
+</resources>

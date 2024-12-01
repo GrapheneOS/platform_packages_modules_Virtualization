@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Терминал"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"Терминалдын дисплейи"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"Курсор"</string>
+    <string name="empty_line" msgid="5012067143408427178">"Бош сап"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux терминалын орнотуу"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux терминалын иштетүү үчүн болжол менен <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> жүктөп алышыңыз керек.\nУлантасызбы?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Wi-Fi жеткиликтүү болгондо жүктөп алуу"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux терминалы орнотулууда"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"Бүткөндөн кийин Linux терминалы иштеп баштайт"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Тармактагы маселеден улам орнотулбай калды"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Wi-Fi жеткиликсиз болгондуктан, орнотулбай калды"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Орнотулган жок. Кайра аракет кылыңыз."</string>
     <string name="action_settings" msgid="5729342767795123227">"Параметрлер"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Терминал даярдалууда"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> дайындалды"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Эң көп <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Жокко чыгаруу"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Колдонуу үчүн өчүрүп күйгүзүү"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Оюкчаны багыттоо"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Оюкчаны багыттоону конфигурациялоо"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Терминал жаңы портту ачканы жатат"</string>
@@ -49,15 +52,23 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Катуу диск бөлүгүн калыбына келтирүү параметрлери"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Баштапкы версияга өзгөртүү"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Баарын өчүрүү"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Терминалды баштапкы абалга келтирүү"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Маалымат өчүрүлөт"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Ырастоо"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Жокко чыгаруу"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Маалыматтын камдык көчүрмөсүн төмөнкүгө сактоо: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Камдык көчүрмө сакталбагандыктан калыбына келтирилген жок"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"Калыбына келтирилген жок"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Камдык көчүрмө файлы өчпөй жатат"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Маалыматтын камдык көчүрмөсүн өчүрүү"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Тазалоо: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"Оңдолбос ката"</string>
+    <string name="error_desc" msgid="1939028888570920661">"Катадан кийин калыбына келтирилген жок.\nКолдонмону кайрадан ачып же аккаунтту калыбына келтирүү жолдорунун бирин колдонуп көрүңүз."</string>
+    <string name="error_code" msgid="3585291676855383649">"Ката коду: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Параметрлер"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал иштеп жатат"</string>
-    <!-- no translation found for service_notification_content (3579923802797824545) -->
-    <skip />
+    <string name="service_notification_content" msgid="3579923802797824545">"Терминалды ачуу үчүн чыкылдатыңыз"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Жабуу"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

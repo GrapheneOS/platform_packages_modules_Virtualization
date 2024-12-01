@@ -22,13 +22,66 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SortedList
+import androidx.recyclerview.widget.SortedListAdapterCallback
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class SettingsPortForwardingAdapter(
-    private val dataSet: ArrayList<SettingsPortForwardingItem>,
-    private val context: Context
+    private val sharedPref: SharedPreferences?,
+    private val context: Context,
 ) :
-    RecyclerView.Adapter<SettingsPortForwardingAdapter.ViewHolder>() {
+    RecyclerView.Adapter<SettingsPortForwardingAdapter.ViewHolder>(),
+    SharedPreferences.OnSharedPreferenceChangeListener {
+
+    private var mItems: SortedList<SettingsPortForwardingItem>
+
+    init {
+        mItems =
+            SortedList(
+                SettingsPortForwardingItem::class.java,
+                object : SortedListAdapterCallback<SettingsPortForwardingItem>(this) {
+                    override fun compare(
+                        o1: SettingsPortForwardingItem,
+                        o2: SettingsPortForwardingItem,
+                    ): Int {
+                        return o1.port - o2.port
+                    }
+
+                    override fun areContentsTheSame(
+                        o1: SettingsPortForwardingItem,
+                        o2: SettingsPortForwardingItem,
+                    ): Boolean {
+                        return o1.port == o2.port && o1.enabled == o2.enabled
+                    }
+
+                    override fun areItemsTheSame(
+                        o1: SettingsPortForwardingItem,
+                        o2: SettingsPortForwardingItem,
+                    ): Boolean {
+                        return o1.port == o2.port
+                    }
+                },
+            )
+        mItems.addAll(getCurrentSettingsPortForwardingItem())
+    }
+
+    private fun getCurrentSettingsPortForwardingItem(): ArrayList<SettingsPortForwardingItem> {
+        val items = ArrayList<SettingsPortForwardingItem>()
+        val ports =
+            sharedPref!!.getStringSet(
+                context.getString(R.string.preference_forwarding_ports),
+                HashSet<String>(),
+            )
+        for (port in ports!!) {
+            val enabled =
+                sharedPref.getBoolean(
+                    context.getString(R.string.preference_forwarding_port_is_enabled) + port,
+                    false,
+                )
+            items.add(SettingsPortForwardingItem(port.toInt(), enabled))
+        }
+        return items
+    }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val enabledSwitch: MaterialSwitch =
@@ -37,26 +90,40 @@ class SettingsPortForwardingAdapter(
     }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(viewGroup.context)
-            .inflate(R.layout.settings_port_forwarding_item, viewGroup, false)
+        val view =
+            LayoutInflater.from(viewGroup.context)
+                .inflate(R.layout.settings_port_forwarding_item, viewGroup, false)
         return ViewHolder(view)
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
-        viewHolder.port.text = dataSet[position].port.toString()
-        viewHolder.enabledSwitch.isChecked = dataSet[position].enabled
+        viewHolder.port.text = mItems[position].port.toString()
+        viewHolder.enabledSwitch.contentDescription = viewHolder.port.text
+        viewHolder.enabledSwitch.isChecked = mItems[position].enabled
         viewHolder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val sharedPref: SharedPreferences = context.getSharedPreferences(
-                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE
-            )
+            val sharedPref: SharedPreferences =
+                context.getSharedPreferences(
+                    context.getString(R.string.preference_file_key),
+                    Context.MODE_PRIVATE,
+                )
             val editor = sharedPref.edit()
             editor.putBoolean(
-                context.getString(R.string.preference_forwarding_port_is_enabled) + viewHolder.port.text,
-                isChecked
+                context.getString(R.string.preference_forwarding_port_is_enabled) +
+                    viewHolder.port.text,
+                isChecked,
             )
             editor.apply()
         }
     }
 
-    override fun getItemCount() = dataSet.size
+    override fun getItemCount() = mItems.size()
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (
+            key == context.getString(R.string.preference_forwarding_ports) ||
+                key!!.startsWith(context.getString(R.string.preference_forwarding_port_is_enabled))
+        ) {
+            mItems.replaceAll(getCurrentSettingsPortForwardingItem())
+        }
+    }
 }

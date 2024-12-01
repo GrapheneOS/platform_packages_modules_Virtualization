@@ -33,20 +33,20 @@ pub struct SwiotlbInfo {
 
 impl SwiotlbInfo {
     /// Creates a `SwiotlbInfo` struct from the given device tree.
-    pub fn new_from_fdt(fdt: &Fdt) -> libfdt::Result<SwiotlbInfo> {
-        let node =
-            fdt.compatible_nodes(cstr!("restricted-dma-pool"))?.next().ok_or(FdtError::NotFound)?;
-
+    pub fn new_from_fdt(fdt: &Fdt) -> libfdt::Result<Option<SwiotlbInfo>> {
+        let Some(node) = fdt.compatible_nodes(cstr!("restricted-dma-pool"))?.next() else {
+            return Ok(None);
+        };
         let (addr, size, align) = if let Some(mut reg) = node.reg()? {
-            let reg = reg.next().ok_or(FdtError::NotFound)?;
-            let size = reg.size.ok_or(FdtError::NotFound)?;
+            let reg = reg.next().ok_or(FdtError::BadValue)?;
+            let size = reg.size.ok_or(FdtError::BadValue)?;
             (Some(reg.addr.try_into().unwrap()), size.try_into().unwrap(), None)
         } else {
             let size = node.getprop_u64(cstr!("size"))?.ok_or(FdtError::NotFound)?;
             let align = node.getprop_u64(cstr!("alignment"))?.ok_or(FdtError::NotFound)?;
             (None, size.try_into().unwrap(), Some(align.try_into().unwrap()))
         };
-        Ok(Self { addr, size, align })
+        Ok(Some(Self { addr, size, align }))
     }
 
     /// Returns the fixed range of memory mapped by the SWIOTLB buffer, if available.

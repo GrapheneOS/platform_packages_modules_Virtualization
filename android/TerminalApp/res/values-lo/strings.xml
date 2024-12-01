@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ສະຖານີ"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"ຈໍສະແດງຜົນ Terminal"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"ເຄີເຊີ"</string>
+    <string name="empty_line" msgid="5012067143408427178">"ແຖວຫວ່າງເປົ່າ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"ຕິດຕັ້ງເທີມິນອນ Linux"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"ເພື່ອເປີດໃຊ້ເທີມິນອນ Linux, ທ່ານຕ້ອງດາວໂຫຼດຂໍ້ມູນປະມານ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ຜ່ານເຄືອຂ່າຍ.\nທ່ານຕ້ອງການດຳເນີນການຕໍ່ບໍ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"ດາວໂຫຼດເມື່ອມີການເຊື່ອມຕໍ່ Wi-Fi"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"ກຳລັງຕິດຕັ້ງເທີມິນອນ Linux"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"ເທີມິນອນ Linux ຈະເລີ່ມຕົ້ນຫຼັງຈາກສຳເລັດ"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"ຕິດຕັ້ງບໍ່ສຳເລັດເນື່ອງຈາກບັນຫາເຄືອຂ່າຍ"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"ຕິດຕັ້ງບໍ່ສຳເລັດຍ້ອນວ່າ Wi-Fi ບໍ່ມີໃຫ້"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"ຕິດຕັ້ງບໍ່ສໍາເລັດ. ກະລຸນາລອງໃໝ່."</string>
     <string name="action_settings" msgid="5729342767795123227">"ການຕັ້ງຄ່າ"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ກຳລັງກະກຽມເທີມິນອນ"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"ມອບໝາຍແລ້ວ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ສູງສຸດ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ຍົກເລີກ"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"ຣີສະຕາດເພື່ອນຳໃຊ້"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ການ​ສົ່ງ​ຕໍ່​ຜອດ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ຕັ້ງຄ່າການ​ສົ່ງ​ຕໍ່​ຜອດ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ເທີມິນອນກຳລັງພະຍາຍາມເປີດ​ຜອດໃໝ່"</string>
@@ -53,8 +56,19 @@
     <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ຂໍ້ມູນຈະຖືກລຶບ"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"ຢືນຢັນ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ຍົກເລີກ"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"ສຳຮອງຂໍ້ມູນໃສ່ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"ການກູ້ຄືນບໍ່ສຳເລັດຍ້ອນການສຳຮອງຂໍ້ມູນບໍ່ສຳເລັດ"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"ການກູ້ຄືນບໍ່ສຳເລັດ"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"ບໍ່ສາມາດລຶບໄຟລ໌ສຳຮອງຂໍ້ມູນອອກໄດ້"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ລຶບການສຳຮອງຂໍ້ມູນອອກ"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"ອະນາໄມ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"ຂໍ້ຜິດພາດທີ່ບໍ່ສາມາດກູ້ຄືນມາໄດ້"</string>
+    <string name="error_desc" msgid="1939028888570920661">"ການກູ້ຄືນຈາກຂໍ້ຜິດພາດບໍ່ສໍາເລັດ.\nທ່ານສາມາດລອງຣີສະຕາດແອັບ ຫຼື ລອງໜຶ່ງໃນຕົວເລືອກການກູ້ຄືນໄດ້."</string>
+    <string name="error_code" msgid="3585291676855383649">"ລະຫັດຂໍ້ຜິດພາດ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ການຕັ້ງຄ່າ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ເທີມິນອນກຳລັງເຮັດວຽກຢູ່"</string>
     <string name="service_notification_content" msgid="3579923802797824545">"ຄລິກເພື່ອເປີດເທີມິນອນ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ປິດ"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

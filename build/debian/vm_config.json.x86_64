@@ -2,8 +2,26 @@
     "name": "debian",
     "disks": [
         {
-            "image": "$PAYLOAD_DIR/image.raw",
-            "partitions": [],
+            "partitions": [
+                {
+                    "label": "ROOT",
+                    "path": "$PAYLOAD_DIR/root_part",
+                    "writable": true,
+                    "guid": "{root_part_guid}"
+                },
+                {
+                    "label": "BIOS",
+                    "path": "$PAYLOAD_DIR/bios_part",
+                    "writable": true,
+                    "guid": "{bios_part_guid}"
+                },
+                {
+                    "label": "EFI",
+                    "path": "$PAYLOAD_DIR/efi_part",
+                    "writable": false,
+                    "guid": "{efi_part_guid}"
+                }
+            ],
             "writable": true
         }
     ],

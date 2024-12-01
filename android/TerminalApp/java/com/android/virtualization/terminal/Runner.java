@@ -16,6 +16,8 @@
 
 package com.android.virtualization.terminal;
 
+import static com.android.virtualization.terminal.MainActivity.TAG;
+
 import android.content.Context;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineCallback;
@@ -30,7 +32,6 @@ import java.util.concurrent.ForkJoinPool;
 
 /** Utility class for creating a VM and waiting for it to finish. */
 class Runner {
-    private static final String TAG = Runner.class.getSimpleName();
     private final VirtualMachine mVirtualMachine;
     private final Callback mCallback;
 

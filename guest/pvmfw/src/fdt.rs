@@ -1140,10 +1140,15 @@ fn parse_device_tree(fdt: &Fdt, vm_dtbo: Option<&VmDtbo>) -> Result<DeviceTreeIn
         RebootReason::InvalidFdt
     })?;
 
-    let swiotlb_info = SwiotlbInfo::new_from_fdt(fdt).map_err(|e| {
-        error!("Failed to read swiotlb info from DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
+    let swiotlb_info = SwiotlbInfo::new_from_fdt(fdt)
+        .map_err(|e| {
+            error!("Failed to read swiotlb info from DT: {e}");
+            RebootReason::InvalidFdt
+        })?
+        .ok_or_else(|| {
+            error!("Swiotlb info missing from DT");
+            RebootReason::InvalidFdt
+        })?;
     validate_swiotlb_info(&swiotlb_info, &memory_range)?;
 
     let device_assignment = match vm_dtbo {

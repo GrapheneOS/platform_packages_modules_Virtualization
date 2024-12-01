@@ -47,13 +47,20 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
-        <com.android.virtualization.terminal.TerminalView
-            android:id="@+id/webview"
-            android:layout_marginBottom="5dp"
-            android:layout_gravity="fill"
+        <LinearLayout
+            android:id="@+id/webview_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="invisible"/>
+            android:layout_marginBottom="5dp"
+            android:orientation="vertical"
+            android:visibility="gone" >
+            <com.android.virtualization.terminal.TerminalView
+                android:id="@+id/webview"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+            <include layout="@layout/layout_keyboard" />
+        </LinearLayout>
     </FrameLayout>
 
 </LinearLayout>

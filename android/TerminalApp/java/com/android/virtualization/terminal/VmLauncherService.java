@@ -16,11 +16,18 @@
 
 package com.android.virtualization.terminal;
 
+import static com.android.virtualization.terminal.MainActivity.TAG;
+
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Parcel;
 import android.os.ResultReceiver;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineConfig;
@@ -28,6 +35,7 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig;
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.Disk;
 import android.system.virtualmachine.VirtualMachineException;
 import android.util.Log;
+import android.widget.Toast;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
@@ -43,14 +51,20 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class VmLauncherService extends Service implements DebianServiceImpl.DebianServiceCallback {
-    public static final String EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION";
-    private static final String TAG = "VmLauncherService";
+    private static final String EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION";
+    private static final String ACTION_START_VM_LAUNCHER_SERVICE =
+            "android.virtualization.START_VM_LAUNCHER_SERVICE";
+
+    public static final String ACTION_STOP_VM_LAUNCHER_SERVICE =
+            "android.virtualization.STOP_VM_LAUNCHER_SERVICE";
 
     private static final int RESULT_START = 0;
     private static final int RESULT_STOP = 1;
@@ -63,20 +77,73 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
     private ResultReceiver mResultReceiver;
     private Server mServer;
     private DebianServiceImpl mDebianService;
+    private PortNotifier mPortNotifier;
+
+    private static Intent getMyIntent(Context context) {
+        return new Intent(context.getApplicationContext(), VmLauncherService.class);
+    }
+
+    public interface VmLauncherServiceCallback {
+        void onVmStart();
+
+        void onVmStop();
+
+        void onVmError();
+
+        void onIpAddrAvailable(String ipAddr);
+    }
+
+    public static void run(
+            Context context, VmLauncherServiceCallback callback, Notification notification) {
+        Intent i = getMyIntent(context);
+        if (i == null) {
+            return;
+        }
+        ResultReceiver resultReceiver =
+                new ResultReceiver(new Handler(Looper.myLooper())) {
+                    @Override
+                    protected void onReceiveResult(int resultCode, Bundle resultData) {
+                        if (callback == null) {
+                            return;
+                        }
+                        switch (resultCode) {
+                            case RESULT_START:
+                                callback.onVmStart();
+                                return;
+                            case RESULT_STOP:
+                                callback.onVmStop();
+                                return;
+                            case RESULT_ERROR:
+                                callback.onVmError();
+                                return;
+                            case RESULT_IPADDR:
+                                callback.onIpAddrAvailable(resultData.getString(KEY_VM_IP_ADDR));
+                                return;
+                        }
+                    }
+                };
+        i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver));
+        i.putExtra(VmLauncherService.EXTRA_NOTIFICATION, notification);
+        context.startForegroundService(i);
+    }
+
+    private static ResultReceiver getResultReceiverForIntent(ResultReceiver r) {
+        Parcel parcel = Parcel.obtain();
+        r.writeToParcel(parcel, 0);
+        parcel.setDataPosition(0);
+        r = ResultReceiver.CREATOR.createFromParcel(parcel);
+        parcel.recycle();
+        return r;
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
-    private void startForeground(Notification notification) {
-        startForeground(this.hashCode(), notification);
-    }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (Objects.equals(
-                intent.getAction(), VmLauncherServices.ACTION_STOP_VM_LAUNCHER_SERVICE)) {
+        if (Objects.equals(intent.getAction(), ACTION_STOP_VM_LAUNCHER_SERVICE)) {
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -86,13 +153,12 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         }
         mExecutorService = Executors.newCachedThreadPool();
 
-        ConfigJson json = ConfigJson.from(InstallUtils.getVmConfigPath(this));
+        InstalledImage image = InstalledImage.getDefault(this);
+        ConfigJson json = ConfigJson.from(this, image.getConfigPath());
         VirtualMachineConfig.Builder configBuilder = json.toConfigBuilder(this);
         VirtualMachineCustomImageConfig.Builder customImageConfigBuilder =
                 json.toCustomImageConfigBuilder(this);
-        File backupFile = InstallUtils.getBackupFile(this);
-        if (backupFile.exists()) {
-            customImageConfigBuilder.addDisk(Disk.RWDisk(backupFile.getPath()));
+        if (overrideConfigIfNecessary(customImageConfigBuilder)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build());
         }
         VirtualMachineConfig config = configBuilder.build();
@@ -126,32 +192,41 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         Notification notification =
                 intent.getParcelableExtra(EXTRA_NOTIFICATION, Notification.class);
 
-        startForeground(notification);
+        startForeground(this.hashCode(), notification);
 
         mResultReceiver.send(RESULT_START, null);
 
+        mPortNotifier = new PortNotifier(this);
         startDebianServer();
 
         return START_NOT_STICKY;
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        stopDebianServer();
-        if (mVirtualMachine != null) {
-            if (mVirtualMachine.getStatus() == VirtualMachine.STATUS_RUNNING) {
-                try {
-                    mVirtualMachine.stop();
-                    stopForeground(STOP_FOREGROUND_REMOVE);
-                } catch (VirtualMachineException e) {
-                    Log.e(TAG, "failed to stop a VM instance", e);
-                }
-            }
-            mExecutorService.shutdownNow();
-            mExecutorService = null;
-            mVirtualMachine = null;
+    private boolean overrideConfigIfNecessary(VirtualMachineCustomImageConfig.Builder builder) {
+        boolean changed = false;
+        // TODO: check if ANGLE is enabled for the app.
+        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("virglrenderer"))) {
+            builder.setGpuConfig(
+                    new VirtualMachineCustomImageConfig.GpuConfig.Builder()
+                            .setBackend("virglrenderer")
+                            .setRendererUseEgl(true)
+                            .setRendererUseGles(true)
+                            .setRendererUseGlx(false)
+                            .setRendererUseSurfaceless(true)
+                            .setRendererUseVulkan(false)
+                            .setContextTypes(new String[] {"virgl2"})
+                            .build());
+            Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show();
+            changed = true;
         }
+
+        InstalledImage image = InstalledImage.getDefault(this);
+        if (image.hasBackup()) {
+            Path backup = image.getBackupFile();
+            builder.addDisk(Disk.RWDisk(backup.toString()));
+            changed = true;
+        }
+        return changed;
     }
 
     private void startDebianServer() {
@@ -208,6 +283,45 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
                 });
     }
 
+    @Override
+    public void onIpAddressAvailable(String ipAddr) {
+        android.os.Trace.endAsyncSection("debianBoot", 0);
+        Bundle b = new Bundle();
+        b.putString(VmLauncherService.KEY_VM_IP_ADDR, ipAddr);
+        mResultReceiver.send(VmLauncherService.RESULT_IPADDR, b);
+    }
+
+    @Override
+    public void onActivePortsChanged(Set<String> oldPorts, Set<String> newPorts) {
+        mPortNotifier.onActivePortsChanged(oldPorts, newPorts);
+    }
+
+    public static void stop(Context context) {
+        Intent i = getMyIntent(context);
+        context.stopService(i);
+    }
+
+    @Override
+    public void onDestroy() {
+        mPortNotifier.stop();
+        getSystemService(NotificationManager.class).cancelAll();
+        stopDebianServer();
+        if (mVirtualMachine != null) {
+            if (mVirtualMachine.getStatus() == VirtualMachine.STATUS_RUNNING) {
+                try {
+                    mVirtualMachine.stop();
+                    stopForeground(STOP_FOREGROUND_REMOVE);
+                } catch (VirtualMachineException e) {
+                    Log.e(TAG, "failed to stop a VM instance", e);
+                }
+            }
+            mExecutorService.shutdownNow();
+            mExecutorService = null;
+            mVirtualMachine = null;
+        }
+        super.onDestroy();
+    }
+
     private void stopDebianServer() {
         if (mDebianService != null) {
             mDebianService.killForwarderHost();
@@ -215,13 +329,5 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         if (mServer != null) {
             mServer.shutdown();
         }
-    }
-
-    @Override
-    public void onIpAddressAvailable(String ipAddr) {
-        android.os.Trace.endAsyncSection("debianBoot", 0);
-        Bundle b = new Bundle();
-        b.putString(VmLauncherService.KEY_VM_IP_ADDR, ipAddr);
-        mResultReceiver.send(VmLauncherService.RESULT_IPADDR, b);
     }
 }

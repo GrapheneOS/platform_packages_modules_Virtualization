@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"Terminalskjerm"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"Markør"</string>
+    <string name="empty_line" msgid="5012067143408427178">"Tom linje"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Installer Linux-terminalen"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"For å starte Linux-terminalen må du laste ned omtrent <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data via nettverket.\nVil du fortsette?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Last ned når wifi er tilgjengelig"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Installerer Linux-terminalen"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux-terminalen startes når prosessen er ferdig"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Kunne ikke installere på grunn av et nettverksproblem"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Kunne ikke installere fordi wifi ikke er tilgjengelig"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Installasjonen mislyktes. Prøv på nytt."</string>
     <string name="action_settings" msgid="5729342767795123227">"Innstillinger"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Forbereder terminalen"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> er tildelt"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> maks"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Avbryt"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Omstart for å bruke"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Viderekobling av porter"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurer viderekobling av porter"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminalen prøver å åpne en ny port"</string>
@@ -49,15 +52,23 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Gjenopprettingsalternativer for partisjoner"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Bytt til første versjon"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Fjern alle"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Tilbakestill terminalen"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Dataene slettes"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Bekreft"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Avbryt"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Sikkerhetskopier data til <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Gjenopprettingen mislyktes fordi sikkerhetskopieringen mislyktes"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"Gjenopprettingen mislyktes"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Kan ikke fjerne sikkerhetskopifilen"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Fjern sikkerhetskopierte data"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Rydd opp <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"Ugjenopprettelig feil"</string>
+    <string name="error_desc" msgid="1939028888570920661">"Kunne ikke gjenopprette etter en feil.\nDu kan prøve å starte appen på nytt eller prøve et av gjenopprettingsalternativene."</string>
+    <string name="error_code" msgid="3585291676855383649">"Feilkode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Innstillinger"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen kjører"</string>
-    <!-- no translation found for service_notification_content (3579923802797824545) -->
-    <skip />
+    <string name="service_notification_content" msgid="3579923802797824545">"Klikk for å åpne terminalen"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Lukk"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

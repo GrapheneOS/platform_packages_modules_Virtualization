@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ಟರ್ಮಿನಲ್‌"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"ಟರ್ಮಿನಲ್‌ ಪ್ರದರ್ಶನ"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"ಕರ್ಸರ್‌"</string>
+    <string name="empty_line" msgid="5012067143408427178">"ಖಾಲಿ ಸಾಲು"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನೀವು ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಸುಮಾರು <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ಡೇಟಾವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.\nನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"ವೈ-ಫೈ ಲಭ್ಯವಿದ್ದಾಗ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"ಮುಗಿದ ಮೇಲೆ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆಯಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"ವೈ-ಫೈ ಲಭ್ಯವಿಲ್ಲದ ಕಾರಣ ಇನ್‌ಸ್ಟಾಲ್‌ ವಿಫಲವಾಗಿದೆ"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."</string>
     <string name="action_settings" msgid="5729342767795123227">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ರದ್ದುಮಾಡಿ"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"ಅನ್ವಯಿಸಲು ಮರುಪ್ರಾರಂಭಿಸಿ"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ಪೋರ್ಟ್ ಫಾರ್ವರ್ಡ್ ಮಾಡುವಿಕೆ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ಪೋರ್ಟ್ ಫಾರ್ವರ್ಡ್ ಮಾಡುವಿಕೆಯನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದೆ"</string>
@@ -53,8 +56,19 @@
     <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ಡೇಟಾವನ್ನು ಅಳಿಸಲಾಗುತ್ತದೆ"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"ದೃಢೀಕರಿಸಿ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ರದ್ದುಮಾಡಿ"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"ಡೇಟಾವನ್ನು <xliff:g id="PATH">/mnt/backup</xliff:g> ಗೆ ಬ್ಯಾಕಪ್‌ ಮಾಡಿ"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"ಬ್ಯಾಕಪ್‌ ವಿಫಲವಾದ ಕಾರಣ ರಿಕವರಿ ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"ರಿಕವರಿ ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"ಬ್ಯಾಕಪ್‌ ಫೈಲ್‌ ಅನ್ನು ತೆಗೆದುಹಾಕಲು ಸಾಧ್ಯವಿಲ್ಲ"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ಬ್ಯಾಕಪ್‌ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"<xliff:g id="PATH">/mnt/backup</xliff:g> ಅನ್ನು ಕ್ಲೀನ್‌ ಅಪ್‌ ಮಾಡಿ"</string>
+    <string name="error_title" msgid="7196464038692913778">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ ಎದುರಾಗಿದೆ"</string>
+    <string name="error_desc" msgid="1939028888570920661">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\nನೀವು ಆ್ಯಪ್‌ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು."</string>
+    <string name="error_code" msgid="3585291676855383649">"ದೋಷ ಕೋಡ್‌: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
     <string name="service_notification_content" msgid="3579923802797824545">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್‌ ಮಾಡಿ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ಮುಚ್ಚಿರಿ"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

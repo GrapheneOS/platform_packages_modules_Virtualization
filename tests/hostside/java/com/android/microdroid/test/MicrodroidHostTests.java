@@ -405,6 +405,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                         VIRT_APEX + "bin/vm run",
                         "--console " + CONSOLE_PATH,
                         "--log " + LOG_PATH,
+                        "--name " + "microdroid", // to still be seen as microdroid vm
                         configPath);
 
         PipedInputStream pis = new PipedInputStream();

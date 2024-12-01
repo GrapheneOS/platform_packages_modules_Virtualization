@@ -16,6 +16,8 @@
 
 package com.android.virtualization.terminal;
 
+import static com.android.virtualization.terminal.MainActivity.TAG;
+
 import android.content.Context;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
@@ -37,8 +39,6 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 
 public class CertificateUtils {
-    private static final String TAG = "CertificateUtils";
-
     private static final String ALIAS = "ttyd";
 
     public static KeyStore.PrivateKeyEntry createOrGetKey() {

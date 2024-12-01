@@ -190,12 +190,6 @@ apex_defaults {
         "true": ["virtualizationservice.xml"],
         default: unset,
     }),
-    required: select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
-        true: [
-            "default-permissions_com.android.virt.xml",
-        ],
-        default: [],
-    }),
 }
 
 apex_defaults {

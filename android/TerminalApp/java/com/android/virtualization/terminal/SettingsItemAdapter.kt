@@ -35,8 +35,9 @@ class SettingsItemAdapter(private val dataSet: Array<SettingsItem>) :
     }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(viewGroup.context)
-            .inflate(R.layout.settings_list_item, viewGroup, false)
+        val view =
+            LayoutInflater.from(viewGroup.context)
+                .inflate(R.layout.settings_list_item, viewGroup, false)
         return ViewHolder(view)
     }
 
@@ -46,14 +47,16 @@ class SettingsItemAdapter(private val dataSet: Array<SettingsItem>) :
         viewHolder.subTitle.text = dataSet[position].subTitle
 
         viewHolder.card.setOnClickListener { view ->
-            val intent = Intent(
-                viewHolder.itemView.context,
-                when (dataSet[position].settingsItemEnum) {
-                    SettingsItemEnum.DiskResize -> SettingsDiskResizeActivity::class.java
-                    SettingsItemEnum.PortForwarding -> SettingsPortForwardingActivity::class.java
-                    SettingsItemEnum.Recovery -> SettingsRecoveryActivity::class.java
-                }
-            )
+            val intent =
+                Intent(
+                    viewHolder.itemView.context,
+                    when (dataSet[position].settingsItemEnum) {
+                        SettingsItemEnum.DiskResize -> SettingsDiskResizeActivity::class.java
+                        SettingsItemEnum.PortForwarding ->
+                            SettingsPortForwardingActivity::class.java
+                        SettingsItemEnum.Recovery -> SettingsRecoveryActivity::class.java
+                    },
+                )
             view.context.startActivity(intent)
         }
     }

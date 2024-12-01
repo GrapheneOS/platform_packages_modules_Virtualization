@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ଟର୍ମିନାଲ"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"ଟର୍ମିନାଲ ଡିସପ୍ଲେ"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"କର୍ସର"</string>
+    <string name="empty_line" msgid="5012067143408427178">"ଖାଲି ଲାଇନ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ଟର୍ମିନାଲକୁ ଇନଷ୍ଟଲ କରନ୍ତୁ"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ଟର୍ମିନାଲ ଲଞ୍ଚ କରିବାକୁ ଆପଣଙ୍କୁ ନେଟୱାର୍କ ମାଧ୍ୟମରେ ପ୍ରାୟ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g>ର ଡାଟା ଡାଉନଲୋଡ କରିବାକୁ ହେବ।\nଆପଣ ଆଗକୁ ବଢ଼ିବେ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"ୱାଇ-ଫାଇ ଉପଲବ୍ଧ ହେଲେ ଡାଉନଲୋଡ କରନ୍ତୁ"</string>
@@ -26,19 +29,19 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ଟର୍ମିନାଲକୁ ଇନଷ୍ଟଲ କରାଯାଉଛି"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"ପ୍ରକ୍ରିୟା ସମ୍ପୂର୍ଣ୍ଣ ହେବା ପରେ Linux ଟର୍ମିନାଲ ଆରମ୍ଭ ହେବ"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"ନେଟୱାର୍କ ସମସ୍ୟା ଯୋଗୁଁ ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"ୱାଇ-ଫାଇ ଉପଲବ୍ଧ ନଥିବା ଯୋଗୁଁ ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି। ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"</string>
     <string name="action_settings" msgid="5729342767795123227">"ସେଟିଂସ"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ଟର୍ମିନାଲକୁ ପ୍ରସ୍ତୁତ କରାଯାଉଛି"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Terminalକୁ ବନ୍ଦ କରାଯାଉଛି"</string>
-    <string name="vm_error_message" msgid="5231867246177661525">"Terminal କ୍ରାସ ହୋଇଛି"</string>
+    <string name="vm_error_message" msgid="5231867246177661525">"ଟର୍ମିନାଲ କ୍ରାସ ହୋଇଛି"</string>
     <string name="settings_disk_resize_title" msgid="1545791169419914600">"ଡିସ୍କ ରିସାଇଜ କରନ୍ତୁ"</string>
     <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"ରିସାଇଜ କରନ୍ତୁ / Rootfs"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ଡିସ୍କ ସାଇଜ ସେଟ ହୋଇଛି"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ଆସାଇନ କରାଯାଇଛି"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ସର୍ବାଧିକ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ବାତିଲ କରନ୍ତୁ"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"ଲାଗୁ ପାଇଁ ରିଷ୍ଟାର୍ଟ"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ପୋର୍ଟ ଫରୱାର୍ଡିଂ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ପୋର୍ଟ ଫରୱାର୍ଡିଂକୁ କନଫିଗର କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ଏକ ନୂଆ ପୋର୍ଟ ଖୋଲିବାକୁ ଟର୍ମିନାଲ ଅନୁରୋଧ କରୁଛି"</string>
@@ -49,15 +52,23 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ପାର୍ଟିସନ ରିକଭରି ବିକଳ୍ପ"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ପ୍ରାରମ୍ଭିକ ଭର୍ସନକୁ ପରିବର୍ତ୍ତନ କରନ୍ତୁ"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ସବୁ କାଢ଼ି ଦିଅନ୍ତୁ"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ଟର୍ମିନାଲ ରିସେଟ କରନ୍ତୁ"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ଡାଟାକୁ ଡିଲିଟ କରାଯିବ"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"ସୁନିଶ୍ଚିତ କରନ୍ତୁ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ବାତିଲ କରନ୍ତୁ"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"<xliff:g id="PATH">/mnt/backup</xliff:g>ରେ ଡାଟାର ବେକଅପ ନିଅନ୍ତୁ"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"ବେକଅପ ବିଫଳ ହୋଇଥିବା ଯୋଗୁଁ ରିକଭରି ବିଫଳ ହୋଇଛି"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"ରିକଭରି ବିଫଳ ହୋଇଛି"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"ବେକଅପ ଫାଇଲକୁ କାଢ଼ି ଦିଆଯାଇପାରିବ ନାହିଁ"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ବେକଅପ ଡାଟାକୁ କାଢ଼ି ଦିଅନ୍ତୁ"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"<xliff:g id="PATH">/mnt/backup</xliff:g> ଖାଲି କରନ୍ତୁ"</string>
+    <string name="error_title" msgid="7196464038692913778">"ରିକଭର କରିହେଉନଥିବା ତ୍ରୁଟି"</string>
+    <string name="error_desc" msgid="1939028888570920661">"ଏକ ତ୍ରୁଟିରୁ ରିକଭର କରିବାରେ ବିଫଳ ହୋଇଛି।\nଆପଣ ଆପ ରିଷ୍ଟାର୍ଟ କରିବାକୁ ଚେଷ୍ଟା କରିପାରିବେ କିମ୍ବା ଗୋଟିଏ ରିକଭରି ବିକଳ୍ପ ଚେଷ୍ଟା କରିପାରିବେ।"</string>
+    <string name="error_code" msgid="3585291676855383649">"ତ୍ରୁଟି କୋଡ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ସେଟିଂସ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ଟର୍ମିନାଲ ଚାଲୁ ଅଛି"</string>
-    <!-- no translation found for service_notification_content (3579923802797824545) -->
-    <skip />
+    <string name="service_notification_content" msgid="3579923802797824545">"ଟର୍ମିନାଲ ଖୋଲିବାକୁ କ୍ଲିକ କରନ୍ତୁ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ବନ୍ଦ କରନ୍ତୁ"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

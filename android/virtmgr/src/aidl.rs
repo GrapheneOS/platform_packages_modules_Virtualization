@@ -445,20 +445,25 @@ impl VirtualizationService {
         let context = EarlyVmContext::new(cid, temp_dir.clone())
             .context(format!("Can't create early vm contexts for {cid}"))
             .or_service_specific_exception(-1)?;
-        let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
 
-        // Start VM service listening for connections from the new CID on port=CID.
-        let port = cid;
-        let (vm_server, _) = RpcServer::new_vsock(service, cid, port)
-            .context(format!("Could not start RpcServer on port {port}"))
-            .or_service_specific_exception(-1)?;
-        vm_server.start();
-        Ok((VmContext::new(Strong::new(Box::new(context)), vm_server), cid, temp_dir))
+        if requires_vm_service(config) {
+            // Start VM service listening for connections from the new CID on port=CID.
+            let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
+            let port = cid;
+            let (vm_server, _) = RpcServer::new_vsock(service, cid, port)
+                .context(format!("Could not start RpcServer on port {port}"))
+                .or_service_specific_exception(-1)?;
+            vm_server.start();
+            Ok((VmContext::new(Strong::new(Box::new(context)), Some(vm_server)), cid, temp_dir))
+        } else {
+            Ok((VmContext::new(Strong::new(Box::new(context)), None), cid, temp_dir))
+        }
     }
 
     fn create_vm_context(
         &self,
         requester_debug_pid: pid_t,
+        config: &VirtualMachineConfig,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         const NUM_ATTEMPTS: usize = 5;
 
@@ -466,6 +471,12 @@ impl VirtualizationService {
             let vm_context = GLOBAL_SERVICE.allocateGlobalVmContext(requester_debug_pid)?;
             let cid = vm_context.getCid()? as Cid;
             let temp_dir: PathBuf = vm_context.getTemporaryDirectory()?.into();
+
+            // We don't need to start the VM service for custom VMs.
+            if !requires_vm_service(config) {
+                return Ok((VmContext::new(vm_context, None), cid, temp_dir));
+            }
+
             let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
 
             // Start VM service listening for connections from the new CID on port=CID.
@@ -473,7 +484,7 @@ impl VirtualizationService {
             match RpcServer::new_vsock(service, cid, port) {
                 Ok((vm_server, _)) => {
                     vm_server.start();
-                    return Ok((VmContext::new(vm_context, vm_server), cid, temp_dir));
+                    return Ok((VmContext::new(vm_context, Some(vm_server)), cid, temp_dir));
                 }
                 Err(err) => {
                     warn!("Could not start RpcServer on port {}: {}", port, err);
@@ -509,7 +520,7 @@ impl VirtualizationService {
         let (vm_context, cid, temporary_directory) = if cfg!(early) {
             self.create_early_vm_context(config)?
         } else {
-            self.create_vm_context(requester_debug_pid)?
+            self.create_vm_context(requester_debug_pid, config)?
         };
 
         if is_custom_config(config) {
@@ -573,40 +584,41 @@ impl VirtualizationService {
                 .or_binder_exception(ExceptionCode::SECURITY)?;
         }
 
-        // Check if partition images are labeled incorrectly. This is to prevent random images
-        // which are not protected by the Android Verified Boot (e.g. bits downloaded by apps) from
-        // being loaded in a pVM. This applies to everything but the instance image in the raw
-        // config, and everything but the non-executable, generated partitions in the app
-        // config.
-        config
-            .disks
-            .iter()
-            .flat_map(|disk| disk.partitions.iter())
-            .filter(|partition| {
-                if is_app_config {
-                    !is_safe_app_partition(&partition.label)
-                } else {
-                    !is_safe_raw_partition(&partition.label)
-                }
-            })
-            .try_for_each(check_label_for_partition)
-            .or_service_specific_exception(-1)?;
+        let kernel = maybe_clone_file(&config.kernel)?;
+        let initrd = maybe_clone_file(&config.initrd)?;
+
+        if config.protectedVm {
+            // Fail fast with a meaningful error message in case device doesn't support pVMs.
+            check_protected_vm_is_supported()?;
+
+            // In a protected VM, we require custom kernels to come from a trusted source
+            // (b/237054515).
+            check_label_for_kernel_files(&kernel, &initrd).or_service_specific_exception(-1)?;
+
+            // Check if partition images are labeled incorrectly. This is to prevent random images
+            // which are not protected by the Android Verified Boot (e.g. bits downloaded by apps)
+            // from being loaded in a pVM. This applies to everything but the instance image in the
+            // raw config, and everything but the non-executable, generated partitions in the app
+            // config.
+            config
+                .disks
+                .iter()
+                .flat_map(|disk| disk.partitions.iter())
+                .filter(|partition| {
+                    if is_app_config {
+                        !is_safe_app_partition(&partition.label)
+                    } else {
+                        !is_safe_raw_partition(&partition.label)
+                    }
+                })
+                .try_for_each(check_label_for_partition)
+                .or_service_specific_exception(-1)?;
+        }
 
         // Check if files for payloads and bases are NOT coming from /vendor and /odm, as they may
         // have unstable interfaces.
         // TODO(b/316431494): remove once Treble interfaces are stabilized.
         check_partitions_for_files(config).or_service_specific_exception(-1)?;
-
-        let kernel = maybe_clone_file(&config.kernel)?;
-        let initrd = maybe_clone_file(&config.initrd)?;
-
-        if config.protectedVm {
-            // In a protected VM, we require custom kernels to come from a trusted source
-            // (b/237054515).
-            check_label_for_kernel_files(&kernel, &initrd).or_service_specific_exception(-1)?;
-            // Fail fast with a meaningful error message in case device doesn't support pVMs.
-            check_protected_vm_is_supported()?;
-        }
 
         let zero_filler_path = temporary_directory.join("zero.img");
         write_zero_filler(&zero_filler_path)
@@ -816,6 +828,17 @@ fn is_custom_config(config: &VirtualMachineConfig) -> bool {
                 }) || config.osName != MICRODROID_OS_NAME
             }
         }
+    }
+}
+
+/// Returns whether a VM config requires VirtualMachineService running on the host. Only Microdroid
+/// VM (i.e. AppConfig) requires it. However, a few Microdroid tests use RawConfig for Microdroid
+/// VM. To handle the exceptional case, we use name as a second criteria; if the name is
+/// "microdroid" we run VirtualMachineService
+fn requires_vm_service(config: &VirtualMachineConfig) -> bool {
+    match config {
+        VirtualMachineConfig::AppConfig(_) => true,
+        VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
     }
 }
 

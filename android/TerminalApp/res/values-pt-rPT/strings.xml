@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"Ecrã do terminal"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"Cursor"</string>
+    <string name="empty_line" msgid="5012067143408427178">"Linha vazia"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Instale o terminal do Linux"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Para iniciar o terminal do Linux, tem de transferir cerca de <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> de dados através da rede.\nQuer continuar?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Transferir quando estiver disponível uma rede Wi-Fi"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"A instalar o terminal do Linux"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"O terminal do Linux vai ser iniciado após a conclusão"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Falha ao instalar devido a um problema de rede"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Falha ao instalar porque o Wi-Fi não está disponível"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Falha ao instalar. Tente novamente."</string>
     <string name="action_settings" msgid="5729342767795123227">"Definições"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"A preparar o terminal"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Tamanho atribuído: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Tamanho máx.: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancelar"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Reiniciar p/ aplicar"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Encaminhamento de portas"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Configure o encaminhamento de portas"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"O terminal está a tentar abrir uma nova porta"</string>
@@ -53,8 +56,18 @@
     <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Os dados vão ser eliminados"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Confirmar"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Cancelar"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Fazer uma cópia de segurança dos dados para <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"A recuperação falhou porque ocorreu uma falha na cópia de segurança"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"Falha na recuperação"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Não é possível remover o ficheiro da cópia de segurança"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Remova os dados da cópia de segurança"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Limpe <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"Erro irrecuperável"</string>
+    <string name="error_desc" msgid="1939028888570920661">"Falha ao recuperar de um erro.\nPode tentar reiniciar a app ou experimentar uma das opções de recuperação."</string>
+    <string name="error_code" msgid="3585291676855383649">"Código de erro: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Definições"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"O terminal está em execução"</string>
     <string name="service_notification_content" msgid="3579923802797824545">"Clique para abrir o terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Fechar"</string>
+    <string name="virgl_enabled" msgid="5466273280705345122">"A VirGL está ativada"</string>
 </resources>

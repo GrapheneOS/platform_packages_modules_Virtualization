@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminali"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"Ekrani i terminalit"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"Kursori"</string>
+    <string name="empty_line" msgid="5012067143408427178">"Rresht bosh"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Instalo terminalin e Linux"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Për të hapur terminalin e Linux, duhet të shkarkosh afërsisht <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> të dhëna nëpërmjet rrjetit.\nDëshiron të vazhdosh?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Shkarko kur të ofrohet Wi-Fi"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Terminali i Linux po instalohet"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"Terminali i Linux do të niset pas përfundimit"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Instalimi dështoi për shkak të një problemi të rrjetit"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Instalimi dështoi për shkak se Wi-Fi nuk ofrohet"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Instalimi dështoi. Provo përsëri."</string>
     <string name="action_settings" msgid="5729342767795123227">"Cilësimet"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Terminali po përgatitet"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Caktuar: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksimumi: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Anulo"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Rinis për të zbatuar"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Transferimi i portës"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfiguro transferimin e portës"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminali po përpiqet të hapë një portë të re"</string>
@@ -49,15 +52,23 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Opsionet e rikuperimit të ndarjes"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Ndrysho në versionin fillestar"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Hiqi të gjitha"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Rivendos terminalin"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Të dhënat do të fshihen"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Konfirmo"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Anulo"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Rezervo të dhënat te <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Rikuperimi dështoi për shkak se rezervimi dështoi"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"Rikuperimi dështoi"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Skedari i rezervimit nuk mund të hiqet"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Hiq të dhënat e rezervimit"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Pastro <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"Gabim i parikuperueshëm"</string>
+    <string name="error_desc" msgid="1939028888570920661">"Rikuperimi nga një gabim dështoi.\nMund të provosh ta rinisësh aplikacionin ose provo një nga opsionet e rikuperimit."</string>
+    <string name="error_code" msgid="3585291676855383649">"Kodi i gabimit: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Cilësimet"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminali po ekzekutohet"</string>
-    <!-- no translation found for service_notification_content (3579923802797824545) -->
-    <skip />
+    <string name="service_notification_content" msgid="3579923802797824545">"Kliko për të hapur terminalin"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Mbyll"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

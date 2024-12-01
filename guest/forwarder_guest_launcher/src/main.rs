@@ -35,7 +35,9 @@ mod debian_service {
 }
 
 const NON_PREVILEGED_PORT_RANGE_START: i32 = 1024;
+const TTYD_PORT: i32 = 7681;
 const TCPSTATES_IP_4: i8 = 4;
+const TCPSTATES_STATE_CLOSE: &str = "CLOSE";
 const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 
 #[derive(Debug, Deserialize)]
@@ -43,7 +45,7 @@ const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 struct TcpStateRow {
     ip: i8,
     lport: i32,
-    oldstate: String,
+    rport: i32,
     newstate: String,
 }
 
@@ -107,6 +109,10 @@ async fn send_active_ports_report(
     Ok(())
 }
 
+fn is_forwardable_port(port: i32) -> bool {
+    port >= NON_PREVILEGED_PORT_RANGE_START && port != TTYD_PORT
+}
+
 async fn report_active_ports(
     mut client: DebianServiceClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -129,7 +135,7 @@ async fn report_active_ports(
         .map(|x| x.socket)
         .filter(|x| x.is_ipv4())
         .map(|x| x.port().into())
-        .filter(|x| *x >= NON_PREVILEGED_PORT_RANGE_START) // Ignore privileged ports
+        .filter(|x| is_forwardable_port(*x))
         .collect();
     send_active_ports_report(listening_ports.clone(), &mut client).await?;
 
@@ -139,17 +145,20 @@ async fn report_active_ports(
         if row.ip != TCPSTATES_IP_4 {
             continue;
         }
-        if row.lport < NON_PREVILEGED_PORT_RANGE_START {
+        if !is_forwardable_port(row.lport) {
             continue;
         }
-        match (row.oldstate.as_str(), row.newstate.as_str()) {
-            (_, TCPSTATES_STATE_LISTEN) => {
+        if row.rport > 0 {
+            continue;
+        }
+        match row.newstate.as_str() {
+            TCPSTATES_STATE_LISTEN => {
                 listening_ports.insert(row.lport);
             }
-            (TCPSTATES_STATE_LISTEN, _) => {
+            TCPSTATES_STATE_CLOSE => {
                 listening_ports.remove(&row.lport);
             }
-            (_, _) => continue,
+            _ => continue,
         }
         send_active_ports_report(listening_ports.clone(), &mut client).await?;
     }

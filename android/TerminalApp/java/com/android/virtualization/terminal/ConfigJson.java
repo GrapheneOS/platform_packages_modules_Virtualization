@@ -35,9 +35,16 @@ import android.view.WindowMetrics;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
+import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /** This class and its inner classes model vm_config.json. */
 class ConfigJson {
@@ -69,11 +76,37 @@ class ConfigJson {
     private GpuJson gpu;
 
     /** Parses JSON file at jsonPath */
-    static ConfigJson from(String jsonPath) {
-        try (FileReader r = new FileReader(jsonPath)) {
-            return new Gson().fromJson(r, ConfigJson.class);
+    static ConfigJson from(Context context, Path jsonPath) {
+        try (FileReader fileReader = new FileReader(jsonPath.toFile())) {
+            String content = replaceKeywords(fileReader, context);
+            return new Gson().fromJson(content, ConfigJson.class);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse " + jsonPath, e);
+        }
+    }
+
+    private static String replaceKeywords(Reader r, Context context) throws IOException {
+        Map<String, String> rules = new HashMap<>();
+        rules.put("\\$PAYLOAD_DIR", InstalledImage.getDefault(context).getInstallDir().toString());
+        rules.put("\\$USER_ID", String.valueOf(context.getUserId()));
+        rules.put("\\$PACKAGE_NAME", context.getPackageName());
+        String appDataDir = context.getDataDir().toString();
+        // TODO: remove this hack
+        if (context.getUserId() == 0) {
+            appDataDir = "/data/data/" + context.getPackageName();
+        }
+        rules.put("\\$APP_DATA_DIR", appDataDir);
+
+        try (BufferedReader br = new BufferedReader(r)) {
+            return br.lines()
+                    .map(
+                            line -> {
+                                for (Map.Entry<String, String> rule : rules.entrySet()) {
+                                    line = line.replaceAll(rule.getKey(), rule.getValue());
+                                }
+                                return line;
+                            })
+                    .collect(Collectors.joining("\n"));
         }
     }
 

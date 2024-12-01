@@ -33,6 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -88,7 +89,7 @@ public class TerminalAppTest {
     }
 
     @After
-    public void tearDown() {
-        InstallUtils.deleteInstallation(mTargetContext);
+    public void tearDown() throws IOException {
+        InstalledImage.getDefault(mTargetContext).uninstallFully();
     }
 }

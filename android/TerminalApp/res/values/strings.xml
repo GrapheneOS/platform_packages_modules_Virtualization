@@ -20,35 +20,37 @@
     <!-- Application name of this terminal app shown in the launcher. This app provides computer terminal to connect to virtual machine. [CHAR LIMIT=16] -->
     <string name="app_name">Terminal</string>
 
-    <!-- Description of the entire terminal display showing texts. This is read by talkback. -->
+    <!-- Description of the entire terminal display showing texts. This is read by talkback. [CHAR LIMIT=none] -->
     <string name="terminal_display">Terminal display</string>
-    <!-- Description of the edit box accepting user input. This is read by talkback. -->
+    <!-- Description of the edit box accepting user input. This is read by talkback. [CHAR LIMIT=none] -->
     <string name="terminal_input">Cursor</string>
-    <!-- Description of an empty line in the terminal. This is read by talkback. -->
+    <!-- Description of an empty line in the terminal. This is read by talkback. [CHAR LIMIT=none] -->
     <string name="empty_line">Empty line</string>
+    <!-- Description of the hint supported by the terminal UI elements. This is read by talkback. [CHAR LIMIT=none] -->
+    <string name="double_tap_to_edit_text">Double-tap to go to cursor</string>
 
     <!-- Installer activity title [CHAR LIMIT=none] -->
     <string name="installer_title_text">Install Linux terminal</string>
     <!-- Installer activity description format [CHAR LIMIT=none] -->
-    <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">%1$s</xliff:g> of data over network.\nWould you proceed?</string>
+    <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">%1$s</xliff:g> of data over the network.\nWould you like to proceed?</string>
     <!-- Checkbox at the installer activity to download when Wi-Fi is available to prevent from paying network traffic [CHAR LIMIT=none] -->
-    <string name="installer_wait_for_wifi_checkbox_text">Download when Wi-Fi is available</string>
+    <string name="installer_wait_for_wifi_checkbox_text">Download using Wi-Fi only</string>
     <!-- Button at the installer activity to confirm installation [CHAR LIMIT=16] -->
     <string name="installer_install_button_enabled_text">Install</string>
     <!-- Button at the installer activity to when installation is already in progress [CHAR LIMIT=16] -->
     <string name="installer_install_button_disabled_text">Installing</string>
     <!-- Toast message at installer activity when network doesn't meet[CHAR LIMIT=none] -->
-    <string name="installer_install_network_error_message">Network error. Check connection and retry.</string>
+    <string name="installer_install_network_error_message">Failed to install due to a network error. Check your connection and try again.</string>
     <!-- Notification title for installer [CHAR LIMIT=64] -->
     <string name="installer_notif_title_text">Installing Linux terminal</string>
     <!-- Notification description for installer [CHAR LIMIT=none] -->
-    <string name="installer_notif_desc_text">Linux terminal will be started after finish</string>
+    <string name="installer_notif_desc_text">Linux terminal will start after the installation is finished</string>
     <!-- Toast error message for install failure due to the network issue [CHAR LIMIT=none] -->
-    <string name="installer_error_network">Failed to install due to the network issue</string>
+    <string name="installer_error_network">Failed to install due to a network issue</string>
     <!-- Toast error message for install failure because Wi-Fi isn't available although required [CHAR LIMIT=none] -->
-    <string name="installer_error_no_wifi">Failed to install because Wi-Fi isn\'t available</string>
+    <string name="installer_error_no_wifi">Failed to install because Wi-Fi is not available</string>
     <!-- Toast error message for install failure due to the unidentified issue [CHAR LIMIT=none] -->
-    <string name="installer_error_unknown">Failed to install. Try again.</string>
+    <string name="installer_error_unknown">Failed to install. Please try again</string>
 
     <!-- Action bar icon name for the settings view CHAR LIMIT=none] -->
     <string name="action_settings">Settings</string>
@@ -61,9 +63,9 @@
     <string name="vm_error_message">Terminal crashed</string>
 
     <!-- Settings memu title for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_title">Disk Resize</string>
+    <string name="settings_disk_resize_title">Disk resize</string>
     <!-- Settings memu subtitle for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_sub_title">Resize / Rootfs</string>
+    <string name="settings_disk_resize_sub_title">Resize the root partition size</string>
     <!-- Toast message after new disk size is set. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_resize_message">Disk size set</string>
     <!-- Settings menu option description format of the current disk size. [CHAR LIMIT=none] -->
@@ -72,17 +74,21 @@
     <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">%1$s</xliff:g> max</string>
     <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=16] -->
     <string name="settings_disk_resize_resize_cancel">Cancel</string>
-    <!-- Settings menu button to apply change that requires to restart Terminal app. [CHAR LIMIT=20] -->
-    <string name="settings_disk_resize_resize_restart_vm_to_apply">Restart to apply</string>
+    <!-- Settings menu button to apply change Terminal app. This will launch a confirmation dialog [CHAR LIMIT=16] -->
+    <string name="settings_disk_resize_resize_restart_vm_to_apply">Apply</string>
+    <!-- Dialog description for applying disk resize Terminal app, which requires to restart the terminal [CHAR LIMIT=none] -->
+    <string name="settings_disk_resize_resize_confirm_dialog_message">Terminal will be restarted to resize disk</string>
+    <!-- Dialog confirmation button for restarting the terminal [CHAR LIMIT=16] -->
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm">Confirm</string>
 
     <!-- Settings menu title for 'port forwarding' [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_title">Port Forwarding</string>
+    <string name="settings_port_forwarding_title">Port forwarding</string>
     <!-- Settings menu subtitle for 'port forwarding' [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_sub_title">Configure port forwarding</string>
     <!-- Notification title for new port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_notification_title">Terminal is trying to open a new port</string>
+    <string name="settings_port_forwarding_notification_title">Terminal is requesting to open a new port</string>
     <!-- Notification content for new port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_notification_content">Port requested to be open: <xliff:g id="port_number" example="8080">%d</xliff:g></string>
+    <string name="settings_port_forwarding_notification_content">Port requested: <xliff:g id="port_number" example="8080">%d</xliff:g></string>
     <!-- Notification action accept [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_notification_accept">Accept</string>
     <!-- Notification action deny [CHAR LIMIT=none] -->
@@ -91,36 +97,36 @@
     <!-- Settings menu title for recoverying image [CHAR LIMIT=none] -->
     <string name="settings_recovery_title">Recovery</string>
     <!-- Settings menu subtitle for recoverying image [CHAR LIMIT=none] -->
-    <string name="settings_recovery_sub_title">Partition Recovery options</string>
+    <string name="settings_recovery_sub_title">Partition recovery options</string>
     <!-- Settings menu title for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_title">Change to Initial version</string>
+    <string name="settings_recovery_reset_title">Reset to initial version</string>
     <!-- Settings menu subtitle for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_sub_title">Remove all</string>
+    <string name="settings_recovery_reset_sub_title">Remove all data</string>
     <!-- Dialog title for resetting the terminal [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_dialog_title">Reset terminal</string>
     <!-- Dialog message for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_dialog_message">Data will be deleted</string>
+    <string name="settings_recovery_reset_dialog_message">Data will be removed</string>
     <!-- Dialog button confirm for resetting the terminal [CHAR LIMIT=16] -->
-    <string name="settings_recovery_reset_dialog_confirm">Confirm</string>
+    <string name="settings_recovery_reset_dialog_confirm">Reset</string>
     <!-- Dialog button cancel for resetting the terminal [CHAR LIMIT=16] -->
     <string name="settings_recovery_reset_dialog_cancel">Cancel</string>
     <!-- Dialog option to back up previous image(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_dialog_backup_option">Back up data to <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
     <!-- Snankbar to indicate recovery error due to backup [CHAR LIMIT=none] -->
-    <string name="settings_recovery_error_due_to_backup">Recovery failed because backup failed</string>
+    <string name="settings_recovery_error_due_to_backup">Failed to recover due to a backup error</string>
     <!-- Snankbar to indicate recovery error [CHAR LIMIT=none] -->
     <string name="settings_recovery_error">Recovery failed</string>
     <!-- Snankbar to indicate recovery error during removing backup [CHAR LIMIT=none] -->
-    <string name="settings_recovery_error_during_removing_backup">Cannot remove backup file</string>
+    <string name="settings_recovery_error_during_removing_backup">Failed to remove backup data</string>
     <!-- Settings menu title for removing backup data [CHAR LIMIT=none] -->
     <string name="settings_recovery_remove_backup_title">Remove backup data</string>
     <!-- Settings menu sub title for removing backup data(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
-    <string name="settings_recovery_remove_backup_sub_title">Clean up <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <string name="settings_recovery_remove_backup_sub_title">Remove <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
 
     <!-- Error page that shows error page [CHAR LIMIT=none] -->
-    <string name="error_title">Unrecoverable Error</string>
+    <string name="error_title">Unrecoverable error</string>
     <!-- Error page that shows error page [CHAR LIMIT=none] -->
-    <string name="error_desc">Failed to recover from an error.\nYou can try restart the app, or try one of recovery option.</string>
+    <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.</string>
     <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
     <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
 
@@ -129,7 +135,10 @@
     <!-- Notification title for foreground service notification [CHAR LIMIT=none] -->
     <string name="service_notification_title">Terminal is running</string>
     <!-- Notification content for foreground service notification [CHAR LIMIT=none] -->
-    <string name="service_notification_content">Click to open the terminal</string>
+    <string name="service_notification_content">Click to open terminal</string>
     <!-- Notification action button for closing the virtual machine [CHAR LIMIT=20] -->
     <string name="service_notification_quit_action">Close</string>
+
+    <!-- This string is for toast message to notify that VirGL is enabled. [CHAR LIMIT=40] -->
+    <string name="virgl_enabled"><xliff:g>VirGL</xliff:g> is enabled</string>
 </resources>

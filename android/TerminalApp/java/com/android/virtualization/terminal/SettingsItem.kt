@@ -16,13 +16,14 @@
 package com.android.virtualization.terminal
 
 enum class SettingsItemEnum {
-    DiskResize, PortForwarding, Recovery
+    DiskResize,
+    PortForwarding,
+    Recovery,
 }
 
 class SettingsItem(
     val title: String,
     val subTitle: String,
     val icon: Int,
-    val settingsItemEnum: SettingsItemEnum
-) {
-}
+    val settingsItemEnum: SettingsItemEnum,
+) {}

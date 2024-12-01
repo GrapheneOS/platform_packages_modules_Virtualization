@@ -450,6 +450,18 @@ kernel][soong-udroid]).
 
 [soong-udroid]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/microdroid/Android.bp;l=425;drc=b94a5cf516307c4279f6c16a63803527a8affc6d
 
+#### VBMeta Properties
+
+AVF defines special keys for AVB VBMeta descriptor properties that pvmfw
+recognizes, allowing VM owners to ensure that pvmfw performs its role in a way
+that is compatible with their guest kernel. These are:
+
+- `"com.android.virt.cap"`: a `|`-separated list of "capabilities" from
+  - `remote_attest`: pvmfw uses a hard-coded index for rollback protection
+  - `secretkeeper_protection`: pvmfw defers rollback protection to the guest
+  - `supports_uefi_boot`: pvmfw boots the VM as a EFI payload (experimental)
+  - `trusty_security_vm`: pvmfw skips rollback protection
+
 ## Development
 
 For faster iteration, you can build pvmfw, adb-push it to the device, and use

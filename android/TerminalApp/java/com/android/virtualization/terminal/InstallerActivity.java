@@ -16,6 +16,8 @@
 
 package com.android.virtualization.terminal;
 
+import static com.android.virtualization.terminal.MainActivity.TAG;
+
 import android.annotation.MainThread;
 import android.content.ComponentName;
 import android.content.Context;
@@ -39,11 +41,10 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 public class InstallerActivity extends BaseActivity {
-    private static final String TAG = "LinuxInstaller";
-
     private static final long ESTIMATED_IMG_SIZE_BYTES = FileUtils.parseSize("550MB");
 
     private CheckBox mWaitForWifiCheckbox;
@@ -63,12 +64,8 @@ public class InstallerActivity extends BaseActivity {
         mInstallProgressListener = new InstallProgressListener(this);
 
         setContentView(R.layout.activity_installer);
-
-        TextView desc = (TextView) findViewById(R.id.installer_desc);
-        desc.setText(
-                getString(
-                        R.string.installer_desc_text_format,
-                        Formatter.formatShortFileSize(this, ESTIMATED_IMG_SIZE_BYTES)));
+        updateSizeEstimation(ESTIMATED_IMG_SIZE_BYTES);
+        measureImageSizeAndUpdateDescription();
 
         mWaitForWifiCheckbox = (CheckBox) findViewById(R.id.installer_wait_for_wifi_checkbox);
         mInstallButton = (TextView) findViewById(R.id.installer_install_button);
@@ -85,11 +82,38 @@ public class InstallerActivity extends BaseActivity {
         }
     }
 
+    private void updateSizeEstimation(long est) {
+        String desc =
+                getString(
+                        R.string.installer_desc_text_format,
+                        Formatter.formatShortFileSize(this, est));
+        runOnUiThread(
+                () -> {
+                    TextView view = (TextView) findViewById(R.id.installer_desc);
+                    view.setText(desc);
+                });
+    }
+
+    private void measureImageSizeAndUpdateDescription() {
+        new Thread(
+                        () -> {
+                            long est;
+                            try {
+                                est = ImageArchive.getDefault().getSize();
+                            } catch (IOException e) {
+                                Log.w(TAG, "Failed to measure image size.", e);
+                                return;
+                            }
+                            updateSizeEstimation(est);
+                        })
+                .start();
+    }
+
     @Override
     public void onResume() {
         super.onResume();
 
-        if (Build.isDebuggable() && InstallUtils.payloadFromExternalStorageExists()) {
+        if (Build.isDebuggable() && ImageArchive.fromSdCard().exists()) {
             showSnackbar("Auto installing", Snackbar.LENGTH_LONG);
             requestInstall();
         }

@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"Terminalskärm"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"Markör"</string>
+    <string name="empty_line" msgid="5012067143408427178">"Tom rad"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Installera Linux-terminalen"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"Om du vill starta Linux-terminalen måste du ladda ned ungefär <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data via nätverket.\nVill du fortsätta?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Ladda ned när wifi är tillgängligt"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"Installerar Linux-terminalen"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux-terminalen startas när processen är klar"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"Det gick inte att installera på grund av nätverksproblemet"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Installeringen misslyckades eftersom wifi inte är tillgängligt"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"Installationen misslyckades. Försök igen."</string>
     <string name="action_settings" msgid="5729342767795123227">"Inställningar"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Terminalen förbereds"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> har tilldelats"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Max <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Avbryt"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Starta om för att tillämpa"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Port­vidare­befordran"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurera portvidarebefordran"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminalen försöker öppna en ny port"</string>
@@ -49,15 +52,23 @@
     <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Återställningsalternativ för partition"</string>
     <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Ändra till ursprunglig version"</string>
     <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Ta bort alla"</string>
-    <!-- no translation found for settings_recovery_reset_dialog_title (874946981716251094) -->
-    <skip />
-    <!-- no translation found for settings_recovery_reset_dialog_message (6392681199895696206) -->
-    <skip />
+    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Återställ terminalen"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Data raderas"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Bekräfta"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Avbryt"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Säkerhetskopiera data till <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Återställningen misslyckades eftersom säkerhetskopieringen misslyckades"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"Återställningen misslyckades"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Det går inte att ta bort säkerhetskopian"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Ta bort säkerhetskopierad data"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Rensa <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"Allvarligt fel"</string>
+    <string name="error_desc" msgid="1939028888570920661">"Det gick inte att återställa ett fel.\nDu kan försöka starta om appen eller prova ett av återställningsalternativen."</string>
+    <string name="error_code" msgid="3585291676855383649">"Felkod: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Inställningar"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen körs"</string>
-    <!-- no translation found for service_notification_content (3579923802797824545) -->
-    <skip />
+    <string name="service_notification_content" msgid="3579923802797824545">"Klicka för att öppna terminalen"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Stäng"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>

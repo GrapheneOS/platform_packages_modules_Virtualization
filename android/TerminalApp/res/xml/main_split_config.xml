@@ -45,7 +45,7 @@
         window:splitLayoutDirection="locale"
         window:splitMaxAspectRatioInPortrait="alwaysAllow"
         window:splitMinWidthDp="@integer/split_min_width"
-        window:splitRatio="@dimen/activity_split_ratio">
+        window:splitRatio="@dimen/activity_split_ratio"
         window:stickyPlaceholder="false">
         <ActivityFilter
             window:activityName="com.android.virtualization.terminal.SettingsActivity"/>

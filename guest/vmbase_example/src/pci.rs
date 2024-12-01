@@ -120,6 +120,11 @@ pub fn get_bar_region(pci_info: &PciInfo) -> MemoryRegion {
     MemoryRegion::new(pci_info.bar_range.start as usize, pci_info.bar_range.end as usize)
 }
 
+/// Gets the PCI CAM memory region.
+pub fn get_cam_region(pci_info: &PciInfo) -> MemoryRegion {
+    MemoryRegion::new(pci_info.cam_range.start, pci_info.cam_range.end)
+}
+
 struct HalImpl;
 
 /// SAFETY: See the 'Implementation Safety' comments on methods below for how they fulfill the

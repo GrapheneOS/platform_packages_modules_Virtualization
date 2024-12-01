@@ -21,9 +21,12 @@ use core::ops::Range;
 /// The start address of MMIO space.
 pub const MMIO_START: usize = 0x0;
 /// The end address of MMIO space.
-pub const MMIO_END: usize = 0x4000_0000;
+pub const MMIO_END: usize = PVMFW_START;
 /// MMIO range.
 pub const MMIO_RANGE: Range<usize> = MMIO_START..MMIO_END;
+
+/// Start pvmfw region.
+pub const PVMFW_START: usize = 0x7fc00000;
 
 /// The start of the system's contiguous "main" memory.
 pub const MEM_START: usize = 0x8000_0000;

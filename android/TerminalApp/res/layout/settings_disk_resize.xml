@@ -57,23 +57,26 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
-        <com.google.android.material.slider.Slider
+        <SeekBar
             android:id="@+id/settings_disk_resize_disk_size_slider"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_width="match_parent"
             android:layout_marginBottom="36dp"
-            app:tickVisible="false"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
+
+        <androidx.constraintlayout.widget.Group
+            android:id="@+id/buttons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            app:constraint_referenced_ids="settings_disk_resize_cancel_button,settings_disk_resize_resize_button" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/settings_disk_resize_cancel_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="150sp"
-            android:hyphenationFrequency="full"
             android:text="@string/settings_disk_resize_resize_cancel"
-            android:visibility="invisible"
             android:layout_marginTop="48dp"
             android:layout_marginHorizontal="8dp"
             app:layout_constraintTop_toTopOf="@+id/settings_disk_resize_disk_size_slider"
@@ -84,10 +87,7 @@
             android:id="@+id/settings_disk_resize_resize_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="150sp"
-            android:hyphenationFrequency="full"
             android:text="@string/settings_disk_resize_resize_restart_vm_to_apply"
-            android:visibility="invisible"
             android:layout_marginTop="48dp"
             app:layout_constraintTop_toTopOf="@+id/settings_disk_resize_disk_size_slider"
             app:layout_constraintBottom_toBottomOf="parent"

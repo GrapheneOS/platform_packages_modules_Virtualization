@@ -17,6 +17,9 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ទែមីណាល់"</string>
+    <string name="terminal_display" msgid="4810127497644015237">"ផ្ទាំងអេក្រង់ទែមីណាល់"</string>
+    <string name="terminal_input" msgid="4602512831433433551">"ទស្សន៍ទ្រនិច"</string>
+    <string name="empty_line" msgid="5012067143408427178">"ជួរទទេ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"ដំឡើងទែមីណាល់ Linux"</string>
     <string name="installer_desc_text_format" msgid="2734224805682171826">"ដើម្បីបើកដំណើរការទែមីណាល់ Linux អ្នកត្រូវទាញយកទិន្នន័យប្រហែលជា <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> នៅលើបណ្តាញ។\nតើអ្នកចង់បន្តដែរឬទេ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"ទាញ​យកនៅពេលមាន Wi-Fi"</string>
@@ -26,6 +29,7 @@
     <string name="installer_notif_title_text" msgid="471160690081159042">"កំពុងដំឡើងទែមីណាល់ Linux"</string>
     <string name="installer_notif_desc_text" msgid="6746098106305899060">"ទែមីណាល់ Linux នឹងត្រូវបានចាប់ផ្ដើមបន្ទាប់ពីបញ្ចប់"</string>
     <string name="installer_error_network" msgid="3265100678310833813">"មិនអាច​ដំឡើងបានទេ ដោយសារបញ្ហាបណ្ដាញ"</string>
+    <string name="installer_error_no_wifi" msgid="8631584648989718121">"មិនអាចដំឡើងបានទេ ដោយសារមិនមាន Wi-Fi"</string>
     <string name="installer_error_unknown" msgid="1991780204241177455">"មិនអាច​ដំឡើងបានទេ។ សូមព្យាយាមម្ដងទៀត។"</string>
     <string name="action_settings" msgid="5729342767795123227">"ការកំណត់"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"កំពុងរៀបចំទែមីណាល់"</string>
@@ -37,8 +41,7 @@
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"បានកំណត់ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"អតិបរមា <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"បោះបង់"</string>
-    <!-- no translation found for settings_disk_resize_resize_restart_vm_to_apply (83303619015991908) -->
-    <skip />
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"ចាប់ផ្ដើមឡើងវិញដើម្បីដាក់ប្រើ"</string>
     <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ការបញ្ជូនច្រកបន្ត"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"កំណត់រចនាសម្ព័ន្ធ​ការបញ្ជូនច្រកបន្ត"</string>
     <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ទែមីណាល់កំពុងព្យាយាមបើកច្រកថ្មី"</string>
@@ -53,8 +56,19 @@
     <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ទិន្នន័យនឹងត្រូវបានលុប"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"បញ្ជាក់"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"បោះបង់"</string>
+    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"បម្រុងទុកទិន្នន័យទៅ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"ការស្ដារឡើងវិញមិនបានសម្រេច ដោយសារការបម្រុងទុកមិនបានសម្រេច"</string>
+    <string name="settings_recovery_error" msgid="2451912941535666379">"ការស្ដារឡើងវិញមិនបានសម្រេច"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"មិនអាចដកឯកសារបម្រុង​ទុកចេញបានទេ"</string>
+    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ដកទិន្នន័យបម្រុងទុកចេញ"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"សម្អាត <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="7196464038692913778">"បញ្ហា​ដែលបណ្ដាលឱ្យមិនអាច​ស្ដារបាន"</string>
+    <string name="error_desc" msgid="1939028888570920661">"មិនអាចស្ដារឡើងវិញពីបញ្ហាបានទេ។\nអ្នកអាចសាកល្បងចាប់ផ្ដើមកម្មវិធីឡើងវិញ ឬសាកល្បងប្រើជម្រើសមួយក្នុងចំណោមជម្រើសស្ដារ។"</string>
+    <string name="error_code" msgid="3585291676855383649">"លេខ​កូដ​បញ្ហា៖ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ការកំណត់"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ទែមីណាល់កំពុងដំណើរការ"</string>
     <string name="service_notification_content" msgid="3579923802797824545">"ចុចដើម្បីបើកទែមីណាល់"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"បិទ"</string>
+    <!-- no translation found for virgl_enabled (5466273280705345122) -->
+    <skip />
 </resources>
