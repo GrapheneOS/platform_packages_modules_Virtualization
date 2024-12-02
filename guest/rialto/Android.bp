@@ -60,6 +60,8 @@ filegroup {
     srcs: [":avb_testkey_rsa4096"],
 }
 
+// This name is reserved and recognized by pvmfw; see guest/pvmfw/README.md.
+SERVICE_VM_NAME = "rkp_vm"
 // Both SERVICE_VM_VERSION and SERVICE_VM_VERSION_STRING should represent the
 // same version number for the service VM.
 SERVICE_VM_VERSION = 2
@@ -94,6 +96,10 @@ avb_add_hash_footer {
         {
             name: "com.android.virt.cap",
             value: "remote_attest",
+        },
+        {
+            name: "com.android.virt.name",
+            value: SERVICE_VM_NAME,
         },
     ],
     enabled: false,

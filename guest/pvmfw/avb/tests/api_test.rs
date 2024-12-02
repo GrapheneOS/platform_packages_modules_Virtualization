@@ -37,7 +37,7 @@ const TEST_IMG_WITH_4K_PAGE_SIZE_PATH: &str = "test_image_with_4k_page_size.img"
 const TEST_IMG_WITH_9K_PAGE_SIZE_PATH: &str = "test_image_with_9k_page_size.img";
 const TEST_IMG_WITH_16K_PAGE_SIZE_PATH: &str = "test_image_with_16k_page_size.img";
 const TEST_IMG_WITH_ROLLBACK_INDEX_5: &str = "test_image_with_rollback_index_5.img";
-const TEST_IMG_WITH_SERVICE_VM_PROP_PATH: &str = "test_image_with_service_vm_prop.img";
+const TEST_IMG_WITH_SERVICE_VM_NAME_PATH: &str = "test_image_with_service_vm_name.img";
 const TEST_IMG_WITH_UNKNOWN_VM_TYPE_PROP_PATH: &str = "test_image_with_unknown_vm_type_prop.img";
 const TEST_IMG_WITH_DUPLICATED_CAP_PATH: &str = "test_image_with_duplicated_capability.img";
 const TEST_IMG_WITH_NON_INITRD_HASHDESC_PATH: &str = "test_image_with_non_initrd_hashdesc.img";
@@ -132,10 +132,10 @@ fn payload_with_non_initrd_descriptor_fails_verification_with_initrd() -> Result
 }
 
 #[test]
-fn payload_expecting_no_initrd_passes_verification_with_service_vm_prop() -> Result<()> {
+fn payload_expecting_no_initrd_passes_verification_with_service_vm_name() -> Result<()> {
     let public_key = load_trusted_public_key()?;
     let verified_boot_data = verify_payload(
-        &fs::read(TEST_IMG_WITH_SERVICE_VM_PROP_PATH)?,
+        &fs::read(TEST_IMG_WITH_SERVICE_VM_NAME_PATH)?,
         /* initrd= */ None,
         &public_key,
     )
@@ -150,7 +150,7 @@ fn payload_expecting_no_initrd_passes_verification_with_service_vm_prop() -> Res
         capabilities: vec![Capability::RemoteAttest],
         rollback_index: 0,
         page_size: None,
-        name: None,
+        name: Some(String::from(VerifiedBootData::RKP_VM_NAME)),
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 
@@ -260,6 +260,12 @@ fn kernel_has_expected_valid_name() {
 fn kernel_has_expected_missing_name() {
     let kernel = fs::read(TEST_IMG_WITH_ONE_HASHDESC_PATH).unwrap();
     assert_eq!(read_name(&kernel), Ok(None));
+}
+
+#[test]
+fn service_vm_has_expected_name() {
+    let kernel = fs::read(TEST_IMG_WITH_SERVICE_VM_NAME_PATH).unwrap();
+    assert_eq!(read_name(&kernel), Ok(Some(String::from(VerifiedBootData::RKP_VM_NAME))));
 }
 
 #[test]

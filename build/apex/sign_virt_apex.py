@@ -644,13 +644,13 @@ def resign_rialto(args, key, rialto_path):
 
     # Verify the new AVB footer.
     updated_info, updated_descriptors = AvbInfo(args, rialto_path)
-    EXPECTED_DESC_COUNT = 2
+    EXPECTED_DESC_COUNT = 3
     assert len(updated_descriptors) == EXPECTED_DESC_COUNT, \
         f"There should be {EXPECTED_DESC_COUNT} descriptor(s) for rialto. " \
         f"Updated descriptors: {updated_descriptors}"
 
     updated_prop = find_all_values_by_key(updated_descriptors, "Prop")
-    EXPECTED_PROP_COUNT = 1
+    EXPECTED_PROP_COUNT = 2
     assert len(updated_prop) == EXPECTED_PROP_COUNT, \
         f"There should be {EXPECTED_PROP_COUNT} Prop descriptor(s) for rialto. " \
         f"Updated descriptors: {updated_descriptors}"
