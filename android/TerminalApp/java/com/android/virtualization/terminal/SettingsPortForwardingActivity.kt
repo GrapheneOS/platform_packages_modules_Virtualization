@@ -22,27 +22,50 @@ import androidx.recyclerview.widget.RecyclerView
 
 class SettingsPortForwardingActivity : AppCompatActivity() {
     private lateinit var mPortsStateManager: PortsStateManager
-    private lateinit var mAdapter: SettingsPortForwardingAdapter
+    private lateinit var mPortsStateListener: Listener
+    private lateinit var mActivePortsAdapter: SettingsPortForwardingActiveAdapter
+    private lateinit var mInactivePortsAdapter: SettingsPortForwardingInactiveAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_port_forwarding)
 
         mPortsStateManager = PortsStateManager.getInstance(this)
-        mAdapter = SettingsPortForwardingAdapter(mPortsStateManager)
 
-        val recyclerView: RecyclerView = findViewById(R.id.settings_port_forwarding_recycler_view)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = mAdapter
+        mActivePortsAdapter = SettingsPortForwardingActiveAdapter(mPortsStateManager)
+        val activeRecyclerView: RecyclerView =
+            findViewById(R.id.settings_port_forwarding_active_recycler_view)
+        activeRecyclerView.layoutManager = LinearLayoutManager(this)
+        activeRecyclerView.adapter = mActivePortsAdapter
+
+        mInactivePortsAdapter = SettingsPortForwardingInactiveAdapter(mPortsStateManager, this)
+        val inactiveRecyclerView: RecyclerView =
+            findViewById(R.id.settings_port_forwarding_inactive_recycler_view)
+        inactiveRecyclerView.layoutManager = LinearLayoutManager(this)
+        inactiveRecyclerView.adapter = mInactivePortsAdapter
+
+        mPortsStateListener = Listener()
+    }
+
+    private fun refreshAdapters() {
+        mActivePortsAdapter.refreshItems()
+        mInactivePortsAdapter.refreshItems()
     }
 
     override fun onResume() {
         super.onResume()
-        mAdapter.registerPortsStateListener()
+        mPortsStateManager.registerListener(mPortsStateListener)
+        refreshAdapters()
     }
 
     override fun onPause() {
-        mAdapter.unregisterPortsStateListener()
+        mPortsStateManager.unregisterListener(mPortsStateListener)
         super.onPause()
+    }
+
+    private inner class Listener : PortsStateManager.Listener {
+        override fun onPortsStateUpdated(oldActivePorts: Set<Int>, newActivePorts: Set<Int>) {
+            refreshAdapters()
+        }
     }
 }
