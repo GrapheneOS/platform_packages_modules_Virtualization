@@ -153,6 +153,11 @@
     <!-- Notification action button for closing the virtual machine [CHAR LIMIT=20] -->
     <string name="service_notification_quit_action">Close</string>
 
+    <!-- Notification title for foreground service notification during closing [CHAR LIMIT=none] -->
+    <string name="service_notification_close_title">Terminal is closing</string>
+    <!-- Notification action button for force-closing the virtual machine [CHAR LIMIT=30] -->
+    <string name="service_notification_force_quit_action">Force close</string>
+
     <!-- This string is for toast message to notify that VirGL is enabled. [CHAR LIMIT=40] -->
     <string name="virgl_enabled"><xliff:g>VirGL</xliff:g> is enabled</string>
 </resources>
