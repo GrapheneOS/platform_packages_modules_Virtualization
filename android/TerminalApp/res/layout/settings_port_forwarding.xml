@@ -31,9 +31,33 @@
         android:hyphenationFrequency="full"
         android:layout_marginBottom="24dp"/>
 
+    <TextView
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="@string/settings_port_forwarding_active_ports_title"
+        android:textSize="24sp"
+        android:hyphenationFrequency="full"
+        android:layout_marginBottom="24dp"/>
+
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/settings_port_forwarding_recycler_view"
+        android:id="@+id/settings_port_forwarding_active_recycler_view"
         android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="24dp"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="@string/settings_port_forwarding_other_enabled_ports_title"
+        android:textSize="24sp"
+        android:hyphenationFrequency="full"
+        android:layout_marginBottom="24dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/settings_port_forwarding_inactive_recycler_view"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 </LinearLayout>
