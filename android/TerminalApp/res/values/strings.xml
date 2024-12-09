@@ -89,6 +89,8 @@
     <string name="settings_port_forwarding_active_ports_title">Listening ports</string>
     <!-- Title for other enabled ports setting in port forwarding [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_other_enabled_ports_title">Saved allowed ports</string>
+    <!-- Description of close button for other enabled ports. Used for talkback. [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_other_enabled_port_close_button">Delete <xliff:g id="port_number" example="8000">%d</xliff:g></string>
 
     <!-- Dialog title for enabling a new port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_dialog_title">Allow a new port</string>
