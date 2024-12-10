@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Терминалдын дисплейи"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Курсор"</string>
     <string name="empty_line" msgid="5012067143408427178">"Бош сап"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux терминалын орнотуу"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux терминалын иштетүү үчүн болжол менен <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> жүктөп алышыңыз керек.\nУлантасызбы?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Wi-Fi жеткиликтүү болгондо жүктөп алуу"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux терминалын иштетүү үчүн болжол менен <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> маалыматты жүктөп алышыңыз керек.\nУлантасызбы?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi аркылуу гана жүктөп алуу"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Орнотуу"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Орнотулууда"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Тармакта ката кетти. Байланышты текшерип, кайра аракет кылыңыз."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Тармак катасынан улам орнотулбай калды. Туташууңузду текшерип, кайталап көрүңүз."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux терминалы орнотулууда"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Бүткөндөн кийин Linux терминалы иштеп баштайт"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Тармактагы маселеден улам орнотулбай калды"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Wi-Fi жеткиликсиз болгондуктан, орнотулбай калды"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Орнотулган жок. Кайра аракет кылыңыз."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Linux терминалы орнотуу процесси аяктагандан кийин иштеп баштайт"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Тармактагы маселеден улам орнотулбай калды"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi жеткиликсиз болгондуктан, орнотулбай калды"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Орнотулган жок. Кайталап көрүңүз"</string>
     <string name="action_settings" msgid="5729342767795123227">"Параметрлер"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Терминал даярдалууда"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Терминал токтотулууда"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Терминал бузулду"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Дисктин өлчөмүн өзгөртүү"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Өлчөмүн өзгөртүү / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Дисктин өлчөмүн өзгөртүү"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Катуу дисктин негизги бөлүгүнүн өлчөмүн өзгөртүү"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Дисктин өлчөмү коюлду"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> дайындалды"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Эң көп <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Жокко чыгаруу"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Колдонуу үчүн өчүрүп күйгүзүү"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Оюкчаны багыттоо"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Оюкчаны багыттоону конфигурациялоо"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Терминал жаңы портту ачканы жатат"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Төмөнкү портту ачуу сурамы жөнөтүлдү: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Колдонуу"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Дисктин өлчөмүн өзгөртүү үчүн терминал өчүрүлүп күйгүзүлөт"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Ырастоо"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Терминал жаңы оюкчаны ачууну суранып жатат"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Оюкча суралды: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Кабыл алуу"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Четке кагуу"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Калыбына келтирүү"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Катуу диск бөлүгүн калыбына келтирүү параметрлери"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Баштапкы версияга өзгөртүү"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Баарын өчүрүү"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Катуу диск бөлүгүн калыбына келтирүү жолдору"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Баштапкы версияга кайтаруу"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Бардык маалыматты өчүрүү"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Терминалды баштапкы абалга келтирүү"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Маалымат өчүрүлөт"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Ырастоо"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Маалымат өчүрүлөт"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Кайра коюу"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Жокко чыгаруу"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Маалыматтын камдык көчүрмөсүн төмөнкүгө сактоо: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Камдык көчүрмө сакталбагандыктан калыбына келтирилген жок"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Камдык көчүрмөнү сактоо катасынан улам калыбына келтирилген жок"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Калыбына келтирилген жок"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Камдык көчүрмө файлы өчпөй жатат"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Маалыматтын камдык көчүрмөсү өчүрүлгөн жок"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Маалыматтын камдык көчүрмөсүн өчүрүү"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Тазалоо: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"Оңдолбос ката"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Катадан кийин калыбына келтирилген жок.\nКолдонмону кайрадан ачып же аккаунтту калыбына келтирүү жолдорунун бирин колдонуп көрүңүз."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Өчүрүү: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"Оңдолбос ката"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Катадан кийин калыбына келтирилген жок.\nТерминалды өчүрүп күйгүзүп же калыбына келтирүү жолдорунун бирин колдонуп көрүңүз."</string>
     <string name="error_code" msgid="3585291676855383649">"Ката коду: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Параметрлер"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал иштеп жатат"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Терминалды ачуу үчүн чыкылдатыңыз"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Терминалды ачуу үчүн басыңыз"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Жабуу"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> иштетилди"</string>
 </resources>

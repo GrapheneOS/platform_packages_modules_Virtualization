@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"ტერმინალის წარმოჩენა"</string>
     <string name="terminal_input" msgid="4602512831433433551">"კურსორი"</string>
     <string name="empty_line" msgid="5012067143408427178">"ცარიელი სტრიქონი"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux ტერმინალის ინსტალაცია"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ტერმინალის გაშვებისთვის საჭიროა ქსელიდან ჩამოტვირთოთ დაახლოებით <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ზომის მონაცემები.\nგსურთ გაგრძელება?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"ჩამოტვირთვა Wi-Fi კავშირის ხელმისაწვდომობისას"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ტერმინალის გაშვებისთვის საჭიროა ქსელიდან ჩამოტვირთოთ დაახლოებით <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ზომის მონაცემები.\nგსურთ გაგრძელება?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"ჩამოტვირთვა მხოლოდ Wi-Fi-ს გამოყენებით"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ინსტალაცია"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ინსტალირდება"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"ქსელის შეცდომა. შეამოწმეთ კავშირი და ცადეთ ხელახლა."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"ქსელის შეცდომის გამო ვერ მოხერხდა ინსტალაცია. შეამოწმეთ კავშირი და ცადეთ ხელახლა."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"მიმდინარეობს Linux ტერმინალის ინსტალაცია"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"დასრულების შემდეგ დაიწყება Linux ტერმინალის ინსტალაცია"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"ქსელის შეცდომის გამო ვერ მოხერხდა ინსტალაცია"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Wi-Fi მიუწვდომელია, ამიტომ ინსტალაცია ვერ მოხერხდა"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"ვერ მოახერხდა ინსტალაცია. ცადეთ ხელახლა."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"ინსტალაციის დასრულების შემდეგ გაეშვება Linux ტერმინალი"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"ქსელის პრობლემის გამო ვერ მოხერხდა ინსტალაცია"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi მიუწვდომელია, ამიტომ ინსტალაცია ვერ მოხერხდა"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"ვერ მოახერხდა ინსტალაცია. გთხოვთ, ცადოთ ხელახლა"</string>
     <string name="action_settings" msgid="5729342767795123227">"პარამეტრები"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"მიმდინარეობს ტერმინალის მომზადება"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"მიმდინარეობს ტერმინალის შეწყვეტა"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ტერმინალი გაჭედილია"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"დისკის ზომის შეცვლა"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"ზომის შეცვლა / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"დისკის ზომის შეცვლა"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ძირეული დანაყოფის ზომის შეცვლა"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"დისკის ზომა დაყენებულია"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> მიმაგრებულია"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"მაქსიმალური ზომა: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"გაუქმება"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"ასამოქმედებლად გადატვირთეთ"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"პორტის გადამისამართება"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"პორტის გადამისამართების კონფიგურაცია"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ტერმინალი ცდილობს ახალი პორტის გახსნას"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"პორტმა მოითხოვა, რომ იყოს გახსნილი: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"გამოყენება"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"დისკის ზომის შესაცვლელად გადაიტვირთება ტერმინალი"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"დადასტურება"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ტერმინალი ითხოვს ახალი პორტის გახსნას"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"მოთხოვნილი პორტი: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"დათანხმება"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"უარყოფა"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"აღდგენა"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"დანაყოფის აღდგენის ვარიანტები"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"საწყის ვერსიაზე შეცვლა"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ყველას ამოშლა"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"დანაყოფის აღდგენის ვარიანტები"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"საწყის ვერსიაზე გადაყენება"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"ყველა მონაცემის ამოშლა"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ტერმინალის გადაყენება"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"მონაცემები წაიშლება"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"დადასტურება"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"მონაცემები ამოიშლება"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"გადაყენება"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"გაუქმება"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"მონაცემების სარეზერვო ასლის შექმნა <xliff:g id="PATH">/mnt/backup</xliff:g>-ზე"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"აღდგენა ვერ მოხერხდა, რადგან სარეზერვო კოპირება ვერ განხორციელდა"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"სარეზერვო ასლის შეცდომის გამო აღდგენა ვერ მოხერხდა"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"აღდგენა ვერ მოხერხდა"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"სარეზერვო ასლის ფაილის ამოშლა ვერ ხერხდება"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"სარეზერვო ასლის მონაცემების ამოშლა ვერ მოხერხდა"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"სარეზერვო ასლის მონაცემების ამოშლა"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"<xliff:g id="PATH">/mnt/backup</xliff:g>-ის გასუფთავება"</string>
-    <string name="error_title" msgid="7196464038692913778">"გამოუსწორებელი შეცდომა"</string>
-    <string name="error_desc" msgid="1939028888570920661">"შეცდომა ვერ გამოსწორდა.\nშეგიძლიათ აპი გადატვირთოთ ან აღდგენის სხვა ვარიანტი ცადოთ."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g>-ის ამოშლა"</string>
+    <string name="error_title" msgid="405150657301906598">"გამოუსწორებელი შეცდომა"</string>
+    <string name="error_desc" msgid="1984714179775053347">"შეცდომა ვერ გამოსწორდა.\nშეგიძლიათ ცადოთ ტერმინალის გადატვირთვა ან აღდგენის ვარიანტებიდან ერთ-ერთი."</string>
     <string name="error_code" msgid="3585291676855383649">"შეცდომის კოდი: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"პარამეტრები"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ტერმინალი გაშვებულია"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"დააწკაპუნეთ ტერმინალის გასახსნელად"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"ტერმინალის გასახსნელად დააწკაპუნეთ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"დახურვა"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ჩართულია"</string>
 </resources>

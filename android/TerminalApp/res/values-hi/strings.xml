@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"टर्मिनल डिसप्ले"</string>
     <string name="terminal_input" msgid="4602512831433433551">"कर्सर."</string>
     <string name="empty_line" msgid="5012067143408427178">"खाली लाइन"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux टर्मिनल ऐप्लिकेशन इंस्टॉल करें"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux टर्मिनल ऐप्लिकेशन को लॉन्च करने के लिए, आपको इंटरनेट से <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> डेटा डाउनलोड करना होगा.\nक्या आपको आगे बढ़ना है?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"वाई-फ़ाई उपलब्ध होने पर डाउनलोड करें"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux टर्मिनल ऐप्लिकेशन को लॉन्च करने के लिए, आपको इंटरनेट का इस्तेमाल करके <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> डेटा डाउनलोड करना होगा.\nक्या आपको आगे बढ़ना है?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"सिर्फ़ वाई-फ़ाई का इस्तेमाल करके डाउनलोड करें"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"इंस्टॉल करें"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"इंस्टॉल हो रहा"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"नेटवर्क की गड़बड़ी हुई. इंटरनेट कनेक्शन की जांच करें और फिर से कोशिश करें."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"नेटवर्क की किसी गड़बड़ी की वजह से, ऐप्लिकेशन को इंस्टॉल नहीं किया जा सका. अपने इंटरनेट कनेक्शन की जांच करें और दोबारा कोशिश करें."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux टर्मिनल ऐप्लिकेशन इंस्टॉल हो रहा है"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"प्रोसेस पूरी होने के बाद, Linux टर्मिनल ऐप्लिकेशन, इस्तेमाल किया जा सकेगा"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"नेटवर्क की समस्या की वजह से, इंस्टॉल नहीं किया जा सका"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"वाई-फ़ाई उपलब्ध न होने की वजह से, इंस्टॉल नहीं किया जा सका"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"इंस्टॉल नहीं किया जा सका. फिर से कोशिश करें."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"इंस्टॉल पूरा होने के बाद, Linux टर्मिनल चालू हो जाएगा"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"नेटवर्क की किसी समस्या की वजह से, इंस्टॉल नहीं किया जा सका"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"वाई-फ़ाई उपलब्ध न होने की वजह से, इंस्टॉल नहीं किया जा सका"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"इंस्टॉल नहीं किया जा सका. कृपया फिर से कोशिश करें"</string>
     <string name="action_settings" msgid="5729342767795123227">"सेटिंग"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"टर्मिनल तैयार किया जा रहा है"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"टर्मिनल को रोका जा रहा है"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"टर्मिनल क्रैश हो गया"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"डिस्क का साइज़ बदलें"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"साइज़ बदलें / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"डिस्क का साइज़ बदलें"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"रूट पार्टिशन का साइज़ बदलें"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्क का साइज़ सेट किया गया"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> असाइन किया गया"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"मैक्सिमम <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द करें"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"लागू करने के लिए रीस्टार्ट करें"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"पोर्ट फ़ॉरवर्डिंग"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"पोर्ट फ़ॉरवर्डिंग को कॉन्फ़िगर करें"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"टर्मिनल, एक नया पोर्ट खोलने की कोशिश कर रहा है"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"पोर्ट को खोलने का अनुरोध किया गया: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"लागू करें"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"डिस्क का साइज़ बदलने के लिए, टर्मिनल को रीस्टार्ट किया जाएगा"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"पुष्टि करें"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"टर्मिनल, एक नया पोर्ट खोलने का अनुरोध कर रहा है"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"पोर्ट खोलने का अनुरोध किया गया: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकार करें"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"अस्वीकार करें"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"इमेज रिकवर करें"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"इमेज के हिस्से को रिकवर करने के विकल्प"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"शुरुआती वर्शन पर स्विच करें"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"सभी हटाएं"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"इमेज के हिस्से को रिकवर करने के विकल्प"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"रीसेट करके शुरुआती वर्शन पर जाएं"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"सारा डेटा हटाएं"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"टर्मिनल रीसेट करें"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"डेटा मिटा दिया जाएगा"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"पुष्टि करें"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"डेटा हटा दिया जाएगा"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"रीसेट करें"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"अभी नहीं"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"<xliff:g id="PATH">/mnt/backup</xliff:g> पर डेटा का बैक अप लें"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"बैकअप पूरा न होने की वजह से, रिकवर नहीं किया जा सका"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"बैकअप लेने में हुई गड़बड़ी की वजह से, डेटा वापस नहीं पाया जा सका"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"रिकवर नहीं किया जा सका"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"बैकअप फ़ाइल को हटाया नहीं जा सकता"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"बैकअप डेटा नहीं हटाया जा सका"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"बैकअप डेटा हटाएं"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"<xliff:g id="PATH">/mnt/backup</xliff:g> का बैकअप डेटा हटाएं"</string>
-    <string name="error_title" msgid="7196464038692913778">"वह गड़बड़ी जिसकी वजह से डेटा वापस नहीं पाया जा सकता"</string>
-    <string name="error_desc" msgid="1939028888570920661">"गड़बड़ी ठीक नहीं की जा सकी.\nऐप्लिकेशन को रीस्टार्ट करने की कोशिश करें या गड़बड़ी ठीक करने का कोई विकल्प आज़माएं."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> को हटाएं"</string>
+    <string name="error_title" msgid="405150657301906598">"ऐसी गड़बड़ी जिसकी वजह से डेटा वापस नहीं पाया जा सकता"</string>
+    <string name="error_desc" msgid="1984714179775053347">"इस गड़बड़ी की वजह से डेटा वापस नहीं पाया जा सका.\nटर्मिनल ऐप्लिकेशन को रीस्टार्ट करने की कोशिश करें या गड़बड़ी ठीक करने का कोई विकल्प आज़माएं."</string>
     <string name="error_code" msgid="3585291676855383649">"गड़बड़ी का कोड: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिंग"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चालू है"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"टर्मिनल खोलने के लिए क्लिक करें"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"टर्मिनल खोलने के लिए क्लिक करें"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"बंद करें"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> चालू है"</string>
 </resources>

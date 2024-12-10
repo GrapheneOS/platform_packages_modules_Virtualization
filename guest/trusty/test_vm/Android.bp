@@ -1,0 +1,76 @@
+// Copyright (C) 2024 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+    default_team: "trendy_team_trusty",
+}
+
+// python -c "import hashlib; print(hashlib.sha256(b'trusty_test_vm_salt').hexdigest())"
+trusty_test_vm_salt = "5ce3eab1a08540e1334c83f54b8608aa6c23feee6939693cac41441449c5a51f"
+
+TRUSTY_TEST_VM_VERSION = 1
+
+avb_add_hash_footer {
+    name: "trusty_test_vm_signed",
+    filename: "trusty_test_vm_signed",
+    partition_name: "boot",
+    private_key: ":trusty_vm_sign_key",
+    salt: trusty_test_vm_salt,
+    rollback_index: TRUSTY_TEST_VM_VERSION,
+    src: ":empty_file",
+    enabled: false,
+    arch: {
+        x86_64: {
+            src: ":trusty-test-lk.elf",
+            enabled: true,
+        },
+    },
+}
+
+prebuilt_etc {
+    name: "trusty_test_vm_config",
+    enabled: false,
+    arch: {
+        x86_64: {
+            src: "vm_config_lk_x86_64.json",
+            enabled: true,
+        },
+    },
+    filename: "trusty-test_vm-config.json",
+}
+
+sh_test {
+    name: "TrustyTestVM_UnitTests",
+    src: "trusty-ut-ctrl.sh",
+    filename_from_src: true,
+    data: [
+        ":trusty_test_vm_signed",
+        ":trusty_test_vm_config",
+        "trusty-vm-launcher.sh",
+        "trusty-wait-ready.sh",
+    ],
+    // TODO(b/378367793) use the AndroidTest.xml generated from the trusty
+    // test-map for test_vm payload
+    test_config_template: "AndroidTest.xml",
+    test_suites: [
+        "general-tests",
+    ],
+    enabled: false,
+    arch: {
+        x86_64: {
+            enabled: true,
+        },
+    },
+}

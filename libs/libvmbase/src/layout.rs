@@ -14,10 +14,12 @@
 
 //! Memory layout.
 
+#![allow(unused_unsafe)]
+
 pub mod crosvm;
 
 use crate::linker::__stack_chk_guard;
-use crate::memory::{page_4kb_of, PAGE_SIZE};
+use crate::memory::{max_stack_size, page_4kb_of, PAGE_SIZE};
 use aarch64_paging::paging::VirtualAddress;
 use core::ops::Range;
 use core::ptr::addr_of;
@@ -70,6 +72,11 @@ pub fn rodata_range() -> Range<VirtualAddress> {
     linker_region!(rodata_begin, rodata_end)
 }
 
+/// Region which may contain a footer appended to the binary at load time.
+pub fn image_footer_range() -> Range<VirtualAddress> {
+    linker_region!(image_footer_begin, image_footer_end)
+}
+
 /// Initialised writable data.
 pub fn data_range() -> Range<VirtualAddress> {
     linker_region!(data_begin, data_end)
@@ -80,18 +87,29 @@ pub fn bss_range() -> Range<VirtualAddress> {
     linker_region!(bss_begin, bss_end)
 }
 
+/// Writable data region for .data and .bss.
+pub fn data_bss_range() -> Range<VirtualAddress> {
+    linker_region!(data_begin, bss_end)
+}
+
 /// Writable data region for the stack.
-pub fn stack_range(stack_size: usize) -> Range<VirtualAddress> {
+pub fn stack_range() -> Range<VirtualAddress> {
     let end = linker_addr!(init_stack_pointer);
-    let start = VirtualAddress(end.0.checked_sub(stack_size).unwrap());
-    assert!(start >= linker_addr!(stack_limit));
+    let start = if let Some(stack_size) = max_stack_size() {
+        assert_eq!(stack_size % PAGE_SIZE, 0);
+        let start = VirtualAddress(end.0.checked_sub(stack_size).unwrap());
+        assert!(start >= linker_addr!(stack_limit));
+        start
+    } else {
+        linker_addr!(stack_limit)
+    };
 
     start..end
 }
 
-/// All writable sections, excluding the stack.
-pub fn scratch_range() -> Range<VirtualAddress> {
-    linker_region!(eh_stack_limit, bss_end)
+/// Writable data region for the exception handler stack.
+pub fn eh_stack_range() -> Range<VirtualAddress> {
+    linker_region!(eh_stack_limit, init_eh_stack_pointer)
 }
 
 /// Range of the page at UART_PAGE_ADDR of PAGE_SIZE.

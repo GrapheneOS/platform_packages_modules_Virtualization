@@ -124,6 +124,7 @@ fn try_main() -> Result<()> {
         &idsig_manifest_ext_apk,
         &VmParameters {
             name: String::from("ComposVerify"),
+            os: String::from("microdroid"),
             cpu_topology: VmCpuTopology::OneCpu, // This VM runs very little work at boot
             debug_mode: args.debug,
             ..Default::default()

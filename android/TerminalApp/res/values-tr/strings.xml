@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminal ekranı"</string>
     <string name="terminal_input" msgid="4602512831433433551">"İmleç"</string>
     <string name="empty_line" msgid="5012067143408427178">"Boş satır"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux terminalini yükleyin"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux terminalini başlatmak için ağ üzerinden yaklaşık <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> veri indirmeniz gerekir.\nDevam etmek istiyor musunuz?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Kablosuz bağlantı olduğunda indir"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux terminalini başlatmak için ağ üzerinden yaklaşık <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> veri indirmeniz gerekir.\nDevam etmek istiyor musunuz?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Yalnızca kablosuz bağlantıyla indir"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Yükle"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Yükleniyor"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Ağ hatası. Bağlantıyı kontrol edip tekrar deneyin."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Bir ağ hatası nedeniyle yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux terminali yükleniyor"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux terminali, işlem tamamlandıktan sonra başlatılacak"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Ağ sorunu nedeniyle yüklenemedi."</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Kablosuz bağlantı olmadığından yükleme işlemi başarısız oldu"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Yüklenemedi. Tekrar deneyin."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Linux terminali, yükleme işlemi tamamlandıktan sonra başlatılacak"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Ağ sorunu nedeniyle yüklenemedi"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Kablosuz bağlantı olmadığından yükleme işlemi başarısız oldu"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Yüklenemedi. Lütfen tekrar deneyin"</string>
     <string name="action_settings" msgid="5729342767795123227">"Ayarlar"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Terminal hazırlanıyor"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Terminal durduruluyor"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminal kilitlendi"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Diski yeniden boyutlandır"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Yeniden boyutlandır/Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Diski yeniden boyutlandır"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Kök bölüm boyutunu yeniden ayarlayın"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Disk boyutu ayarlandı"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> atandı"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> maks."</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"İptal"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Uygulamak için yeniden başlatın"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Bağlantı noktası yönlendirme"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Bağlantı noktası yönlendirmeyi yapılandır"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal yeni bir bağlantı noktası açmaya çalışıyor"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Açılması istenen bağlantı noktası: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Uygula"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminal, diski yeniden boyutlandırmak için yeniden başlatılacak"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Onayla"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Terminal yeni bir bağlantı noktası açmak istiyor"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"İstenilen bağlantı noktası: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Kabul et"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Reddet"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Kurtarma"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Bölüm kurtarma seçenekleri"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"İlk sürüme geç"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Tümünü kaldır"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Bölüm kurtarma seçenekleri"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"İlk sürüme sıfırla"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Verilerin tümünü kaldır"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Terminali sıfırla"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Veriler silinecek"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Onayla"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Veriler kaldırılacak"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Sıfırla"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"İptal"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Verileri <xliff:g id="PATH">/mnt/backup</xliff:g> konumuna yedekle"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Yedekleme işlemi başarısız olduğu için kurtarma işlemi tamamlanamadı"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Yedekleme hatası nedeniyle kurtarılamadı"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Kurtarma işlemi başarısız oldu"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Yedek dosyası kaldırılamıyor"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Yedek veriler kaldırılamadı"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Yedek verileri kaldır"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"<xliff:g id="PATH">/mnt/backup</xliff:g> konumundaki verileri temizle"</string>
-    <string name="error_title" msgid="7196464038692913778">"Düzeltilemeyen Hata"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Bir hatayı düzeltme işlemi başarısız oldu.\nUygulamayı yeniden başlatmayı veya kurtarma seçeneklerinden birini uygulamayı deneyebilirsiniz."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> etiketini kaldır"</string>
+    <string name="error_title" msgid="405150657301906598">"Düzeltilemeyen hata"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Bir hatayı düzeltme işlemi başarısız oldu.\nTerminali yeniden başlatmayı veya kurtarma seçeneklerinden birini uygulamayı deneyebilirsiniz."</string>
     <string name="error_code" msgid="3585291676855383649">"Hata kodu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Ayarlar"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal çalışıyor"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Terminali açmak için tıklayın"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Terminali açmak için tıklayın"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Kapat"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> etkinleştirildi"</string>
 </resources>

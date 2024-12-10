@@ -20,54 +20,63 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminal display"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Cursor"</string>
     <string name="empty_line" msgid="5012067143408427178">"Empty line"</string>
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Double-tap to type input"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Install Linux terminal"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"To launch Linux terminal, you need to download roughly <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> of data over network.\nWould you proceed?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Download when Wi-Fi is available"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"To launch Linux terminal, you need to download roughly <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> of data over the network.\nWould you like to proceed?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Download using Wi-Fi only"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Install"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installing"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Network error. Check connection and retry."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Failed to install due to a network error. Check your connection and try again."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Installing Linux terminal"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux terminal will be started after finish"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Failed to install due to the network issue"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Failed to install because Wi-Fi isn\'t available"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Failed to install. Try again."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Linux terminal will start after the installation is finished"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Failed to install due to a network issue"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Failed to install because Wi-Fi is not available"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Failed to install. Please try again"</string>
     <string name="action_settings" msgid="5729342767795123227">"Settings"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Preparing terminal"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Stopping terminal"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminal crashed"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Disk Resize"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Resize / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Disk resize"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Resize the root partition size"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Disk size set"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> assigned"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> max"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancel"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Restart to apply"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Port Forwarding"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Configure port forwarding"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminal is trying to open a new port"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Port requested to be open: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Apply"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminal will be restarted to resize disk"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Confirm"</string>
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Port control"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Allow/deny listening ports"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Listening ports"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Saved allowed ports"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Allow a new port"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Enter a new port number"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Save"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Cancel"</string>
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Terminal is requesting to open a new port"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Port requested: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Accept"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Deny"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Recovery"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Partition Recovery options"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Change to Initial version"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Remove all"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Partition recovery options"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Reset to initial version"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Remove all data"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Reset terminal"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Data will be deleted"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Confirm"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Data will be removed"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Reset"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Cancel"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Back up data to <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Recovery failed because backup failed"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Failed to recover due to a backup error"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Recovery failed"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Cannot remove backup file"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Failed to remove backup data"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Remove backup data"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Clean up <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"Unrecoverable Error"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Failed to recover from an error.\nYou can try restart the app, or try one of recovery option."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Remove <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"Unrecoverable error"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options."</string>
     <string name="error_code" msgid="3585291676855383649">"Error code: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Settings"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal is running"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Click to open the terminal"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Click to open terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Close"</string>
-    <string name="virgl_enabled" msgid="5466273280705345122">"VirGL is enabled"</string>
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> is enabled"</string>
 </resources>

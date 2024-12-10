@@ -17,7 +17,7 @@
 <!--TODO(b/376813452): we might want tablet UI for that-->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/keyboard_container"
+    android:id="@+id/modifier_keys"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical" >

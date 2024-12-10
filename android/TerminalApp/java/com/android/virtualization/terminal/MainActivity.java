@@ -21,7 +21,7 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Icon;
@@ -32,6 +32,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.ConditionVariable;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -52,6 +53,7 @@ import android.webkit.WebViewClient;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
 
@@ -66,19 +68,24 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends BaseActivity
         implements VmLauncherService.VmLauncherServiceCallback, AccessibilityStateChangeListener {
     static final String TAG = "VmTerminalApp";
+    static final String KEY_DISK_SIZE = "disk_size";
     private static final String VM_ADDR = "192.168.0.2";
     private static final int TTYD_PORT = 7681;
+    private static final int TERMINAL_CONNECTION_TIMEOUT_MS = 10_000;
     private static final int REQUEST_CODE_INSTALLER = 0x33;
     private static final int FONT_SIZE_DEFAULT = 13;
 
+    private ExecutorService mExecutorService;
     private InstalledImage mImage;
     private X509Certificate[] mCertificates;
     private PrivateKey mPrivateKey;
-    private WebView mWebView;
+    private TerminalView mTerminalView;
     private AccessibilityManager mAccessibilityManager;
     private ConditionVariable mBootCompleted = new ConditionVariable();
     private static final int POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 101;
@@ -101,6 +108,7 @@ public class MainActivity extends BaseActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        lockOrientationIfNecessary();
 
         mImage = InstalledImage.getDefault(this);
 
@@ -110,12 +118,12 @@ public class MainActivity extends BaseActivity
 
         MaterialToolbar toolbar = (MaterialToolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        mWebView = (WebView) findViewById(R.id.webview);
-        mWebView.getSettings().setDatabaseEnabled(true);
-        mWebView.getSettings().setDomStorageEnabled(true);
-        mWebView.getSettings().setJavaScriptEnabled(true);
-        mWebView.getSettings().setCacheMode(LOAD_NO_CACHE);
-        mWebView.setWebChromeClient(new WebChromeClient());
+        mTerminalView = (TerminalView) findViewById(R.id.webview);
+        mTerminalView.getSettings().setDatabaseEnabled(true);
+        mTerminalView.getSettings().setDomStorageEnabled(true);
+        mTerminalView.getSettings().setJavaScriptEnabled(true);
+        mTerminalView.getSettings().setCacheMode(LOAD_NO_CACHE);
+        mTerminalView.setWebChromeClient(new WebChromeClient());
 
         setupModifierKeys();
 
@@ -135,9 +143,14 @@ public class MainActivity extends BaseActivity
                 .getRootView()
                 .setOnApplyWindowInsetsListener(
                         (v, insets) -> {
-                            updateKeyboardContainerVisibility();
+                            updateModifierKeysVisibility();
                             return insets;
                         });
+
+        mExecutorService =
+                Executors.newSingleThreadExecutor(
+                        new TerminalThreadFactory(getApplicationContext()));
+
         // if installer is launched, it will be handled in onActivityResult
         if (!launchInstaller) {
             if (!Environment.isExternalStorageManager()) {
@@ -148,21 +161,38 @@ public class MainActivity extends BaseActivity
         }
     }
 
+    private void lockOrientationIfNecessary() {
+        boolean hasHwQwertyKeyboard =
+                getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY;
+        if (hasHwQwertyKeyboard) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        } else if (getResources().getBoolean(R.bool.terminal_portrait_only)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        lockOrientationIfNecessary();
+        updateModifierKeysVisibility();
+    }
+
     private void setupModifierKeys() {
         // Only ctrl key is special, it communicates with xtermjs to modify key event with ctrl key
         findViewById(R.id.btn_ctrl)
                 .setOnClickListener(
                         (v) -> {
-                            mWebView.loadUrl(TerminalView.CTRL_KEY_HANDLER);
-                            mWebView.loadUrl(TerminalView.ENABLE_CTRL_KEY);
+                            mTerminalView.mapCtrlKey();
+                            mTerminalView.enableCtrlKey();
                         });
 
         View.OnClickListener modifierButtonClickListener =
                 v -> {
                     if (BTN_KEY_CODE_MAP.containsKey(v.getId())) {
                         int keyCode = BTN_KEY_CODE_MAP.get(v.getId());
-                        mWebView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-                        mWebView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+                        mTerminalView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+                        mTerminalView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
                     }
                 };
 
@@ -226,7 +256,7 @@ public class MainActivity extends BaseActivity
 
     private void connectToTerminalService() {
         Log.i(TAG, "URL=" + getTerminalServiceUrl().toString());
-        mWebView.setWebViewClient(
+        mTerminalView.setWebViewClient(
                 new WebViewClient() {
                     private boolean mLoadFailed = false;
                     private long mRequestId = 0;
@@ -279,12 +309,8 @@ public class MainActivity extends BaseActivity
                                             findViewById(R.id.webview_container)
                                                     .setVisibility(View.VISIBLE);
                                             mBootCompleted.open();
-                                            // TODO(b/376813452): support talkback as well
-                                            int keyVisibility =
-                                                    mAccessibilityManager.isEnabled()
-                                                            ? View.GONE
-                                                            : View.VISIBLE;
-                                            updateKeyboardContainerVisibility();
+                                            updateModifierKeysVisibility();
+                                            mTerminalView.mapTouchToMouseEvent();
                                         }
                                     }
                                 });
@@ -307,13 +333,12 @@ public class MainActivity extends BaseActivity
                         handler.proceed();
                     }
                 });
-        new Thread(
-                        () -> {
-                            waitUntilVmStarts();
-                            runOnUiThread(
-                                    () -> mWebView.loadUrl(getTerminalServiceUrl().toString()));
-                        })
-                .start();
+        mExecutorService.execute(
+                () -> {
+                    // TODO(b/376793781): Remove polling
+                    waitUntilVmStarts();
+                    runOnUiThread(() -> mTerminalView.loadUrl(getTerminalServiceUrl().toString()));
+                });
     }
 
     private static void waitUntilVmStarts() {
@@ -323,17 +348,33 @@ public class MainActivity extends BaseActivity
         } catch (UnknownHostException e) {
             // this can never happen.
         }
-        try {
-            while (!addr.isReachable(10000)) {}
-        } catch (IOException e) {
-            // give up on network error
-            throw new RuntimeException(e);
+
+        long startTime = SystemClock.elapsedRealtime();
+        while (true) {
+            int remainingTime =
+                    TERMINAL_CONNECTION_TIMEOUT_MS
+                            - (int) (SystemClock.elapsedRealtime() - startTime);
+            if (remainingTime <= 0) {
+                throw new RuntimeException("Connection to terminal timedout");
+            }
+            try {
+                // Note: this quits immediately if VM is unreachable.
+                if (addr.isReachable(remainingTime)) {
+                    return;
+                }
+            } catch (IOException e) {
+                // give up on network error
+                throw new RuntimeException(e);
+            }
         }
-        return;
     }
 
     @Override
     protected void onDestroy() {
+        if (mExecutorService != null) {
+            mExecutorService.shutdown();
+        }
+
         getSystemService(AccessibilityManager.class).removeAccessibilityStateChangeListener(this);
         VmLauncherService.stop(this);
         super.onDestroy();
@@ -384,14 +425,15 @@ public class MainActivity extends BaseActivity
         connectToTerminalService();
     }
 
-    private void updateKeyboardContainerVisibility() {
-        boolean imeVisible =
-                this.getWindow()
-                        .getDecorView()
-                        .getRootWindowInsets()
-                        .isVisible(WindowInsets.Type.ime());
-        View keyboardContainer = findViewById(R.id.keyboard_container);
-        keyboardContainer.setVisibility(!imeVisible ? View.GONE : View.VISIBLE);
+    private void updateModifierKeysVisibility() {
+        boolean imeShown =
+                getWindow().getDecorView().getRootWindowInsets().isVisible(WindowInsets.Type.ime());
+        boolean hasHwQwertyKeyboard =
+                getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY;
+        boolean showModifierKeys = imeShown && !hasHwQwertyKeyboard;
+
+        View modifierKeys = findViewById(R.id.modifier_keys);
+        modifierKeys.setVisibility(showModifierKeys ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -452,6 +494,7 @@ public class MainActivity extends BaseActivity
         Icon icon = Icon.createWithResource(getResources(), R.drawable.ic_launcher_foreground);
         Notification notification =
                 new Notification.Builder(this, this.getPackageName())
+                        .setSilent(true)
                         .setSmallIcon(R.drawable.ic_launcher_foreground)
                         .setContentTitle(
                                 getResources().getString(R.string.service_notification_title))
@@ -490,17 +533,11 @@ public class MainActivity extends BaseActivity
     }
 
     private void resizeDiskIfNecessary(InstalledImage image) {
-        String prefKey = getString(R.string.preference_file_key);
-        String key = getString(R.string.preference_disk_size_key);
-        SharedPreferences sharedPref = this.getSharedPreferences(prefKey, Context.MODE_PRIVATE);
         try {
-            // Use current size as default value to ensure if its size is multiple of 4096
-            long newSize = sharedPref.getLong(key, image.getSize());
-            Log.d(TAG, "Resizing disk to " + newSize + " bytes");
-            newSize = image.resize(newSize);
-            sharedPref.edit().putLong(key, newSize).apply();
+            // TODO(b/382190982): Show snackbar message instead when it's recoverable.
+            image.resize(getIntent().getLongExtra(KEY_DISK_SIZE, image.getSize()));
         } catch (IOException e) {
-            Log.e(TAG, "Failed to resize disk", e);
+            ErrorActivity.start(this, new Exception("Failed to resize disk", e));
             return;
         }
     }

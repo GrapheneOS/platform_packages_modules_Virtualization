@@ -235,6 +235,8 @@ pub struct SharedPathConfig {
     pub mask: i32,
     pub tag: String,
     pub socket_path: String,
+    pub socket_fd: Option<File>,
+    pub app_domain: bool,
 }
 
 /// virtio-input device configuration from `external/crosvm/src/crosvm/config.rs`
@@ -912,6 +914,9 @@ fn vfio_argument_for_platform_device(device: &VfioDevice) -> Result<String, Erro
 
 fn run_virtiofs(config: &CrosvmConfig) -> io::Result<()> {
     for shared_path in &config.shared_paths {
+        if shared_path.app_domain {
+            continue;
+        }
         let ugid_map_value = format!(
             "{} {} {} {} {} /",
             shared_path.guest_uid,
@@ -1267,12 +1272,23 @@ fn run_vm(
     }
 
     for shared_path in &config.shared_paths {
-        if let Err(e) = wait_for_file(&shared_path.socket_path, 5) {
-            bail!("Error waiting for file: {}", e);
+        if shared_path.app_domain {
+            if let Some(socket_fd) = &shared_path.socket_fd {
+                let socket_path =
+                    add_preserved_fd(&mut preserved_fds, socket_fd.try_clone().unwrap());
+                let raw_fd: i32 = socket_path.rsplit_once('/').unwrap().1.parse().unwrap();
+                command
+                    .arg("--vhost-user-fs")
+                    .arg(format!("tag={},socket-fd={}", &shared_path.tag, raw_fd));
+            }
+        } else {
+            if let Err(e) = wait_for_file(&shared_path.socket_path, 5) {
+                bail!("Error waiting for file: {}", e);
+            }
+            command
+                .arg("--vhost-user-fs")
+                .arg(format!("{},tag={}", &shared_path.socket_path, &shared_path.tag));
         }
-        command
-            .arg("--vhost-user-fs")
-            .arg(format!("{},tag={}", &shared_path.socket_path, &shared_path.tag));
     }
 
     debug!("Preserving FDs {:?}", preserved_fds);

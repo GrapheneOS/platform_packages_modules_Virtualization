@@ -108,6 +108,7 @@ apex_defaults {
                 "rialto_bin",
                 "android_bootloader_crosvm_aarch64",
             ],
+            native_shared_libs: ["libavf"],
         },
         x86_64: {
             binaries: [
@@ -128,6 +129,7 @@ apex_defaults {
             prebuilts: [
                 "android_bootloader_crosvm_x86_64",
             ],
+            native_shared_libs: ["libavf"],
         },
     },
     binaries: [

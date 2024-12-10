@@ -15,8 +15,6 @@
  */
 package com.android.virtualization.terminal
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,14 +24,11 @@ import androidx.recyclerview.widget.SortedList
 import androidx.recyclerview.widget.SortedListAdapterCallback
 import com.google.android.material.materialswitch.MaterialSwitch
 
-class SettingsPortForwardingAdapter(
-    private val sharedPref: SharedPreferences?,
-    private val context: Context,
-) :
-    RecyclerView.Adapter<SettingsPortForwardingAdapter.ViewHolder>(),
-    SharedPreferences.OnSharedPreferenceChangeListener {
+class SettingsPortForwardingAdapter(private val mPortsStateManager: PortsStateManager) :
+    RecyclerView.Adapter<SettingsPortForwardingAdapter.ViewHolder>() {
 
     private var mItems: SortedList<SettingsPortForwardingItem>
+    private val mPortsStateListener: Listener
 
     init {
         mItems =
@@ -63,24 +58,24 @@ class SettingsPortForwardingAdapter(
                 },
             )
         mItems.addAll(getCurrentSettingsPortForwardingItem())
+        mPortsStateListener = Listener()
+    }
+
+    fun registerPortsStateListener() {
+        mPortsStateManager.registerListener(mPortsStateListener)
+        mItems.replaceAll(getCurrentSettingsPortForwardingItem())
+    }
+
+    fun unregisterPortsStateListener() {
+        mPortsStateManager.unregisterListener(mPortsStateListener)
     }
 
     private fun getCurrentSettingsPortForwardingItem(): ArrayList<SettingsPortForwardingItem> {
-        val items = ArrayList<SettingsPortForwardingItem>()
-        val ports =
-            sharedPref!!.getStringSet(
-                context.getString(R.string.preference_forwarding_ports),
-                HashSet<String>(),
-            )
-        for (port in ports!!) {
-            val enabled =
-                sharedPref.getBoolean(
-                    context.getString(R.string.preference_forwarding_port_is_enabled) + port,
-                    false,
-                )
-            items.add(SettingsPortForwardingItem(port.toInt(), enabled))
-        }
-        return items
+        val enabledPorts = mPortsStateManager.getEnabledPorts()
+        return mPortsStateManager
+            .getActivePorts()
+            .map { SettingsPortForwardingItem(it, enabledPorts.contains(it)) }
+            .toCollection(ArrayList())
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -97,32 +92,19 @@ class SettingsPortForwardingAdapter(
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
-        viewHolder.port.text = mItems[position].port.toString()
+        val port = mItems[position].port
+        viewHolder.port.text = port.toString()
         viewHolder.enabledSwitch.contentDescription = viewHolder.port.text
         viewHolder.enabledSwitch.isChecked = mItems[position].enabled
         viewHolder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val sharedPref: SharedPreferences =
-                context.getSharedPreferences(
-                    context.getString(R.string.preference_file_key),
-                    Context.MODE_PRIVATE,
-                )
-            val editor = sharedPref.edit()
-            editor.putBoolean(
-                context.getString(R.string.preference_forwarding_port_is_enabled) +
-                    viewHolder.port.text,
-                isChecked,
-            )
-            editor.apply()
+            mPortsStateManager.updateEnabledPort(port, isChecked)
         }
     }
 
     override fun getItemCount() = mItems.size()
 
-    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        if (
-            key == context.getString(R.string.preference_forwarding_ports) ||
-                key!!.startsWith(context.getString(R.string.preference_forwarding_port_is_enabled))
-        ) {
+    private inner class Listener : PortsStateManager.Listener {
+        override fun onPortsStateUpdated(oldActivePorts: Set<Int>, newActivePorts: Set<Int>) {
             mItems.replaceAll(getCurrentSettingsPortForwardingItem())
         }
     }

@@ -297,7 +297,9 @@ fn is_sk_present() -> bool {
 mod tests {
     use super::*;
     use android_hardware_security_authgraph::aidl::android::hardware::security::authgraph;
-    use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper;
+    use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
+        self, PublicKey::PublicKey,
+    };
     use authgraph::IAuthGraphKeyExchange::IAuthGraphKeyExchange;
     use secretkeeper::ISecretkeeper::BnSecretkeeper;
     use std::sync::{Arc, Mutex};
@@ -334,6 +336,10 @@ mod tests {
         fn deleteAll(&self) -> binder::Result<()> {
             self.history.lock().unwrap().push(SkOp::DeleteAll);
             Ok(())
+        }
+
+        fn getSecretkeeperIdentity(&self) -> binder::Result<PublicKey> {
+            unimplemented!()
         }
     }
     impl binder::Interface for FakeSk {}

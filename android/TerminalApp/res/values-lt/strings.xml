@@ -20,54 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminalo ekranas"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Žymeklis"</string>
     <string name="empty_line" msgid="5012067143408427178">"Tuščia eilutė"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"„Linux“ terminalo diegimas"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Norėdami paleisti „Linux“ terminalą, per tinklą turite atsisiųsti apytiksliai <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> duomenų.\nAr norite tęsti?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Atsisiųsti, kai pasiekiamas „Wi-Fi“"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Norėdami paleisti „Linux“ terminalą, per tinklą turite atsisiųsti apytiksliai <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> duomenų.\nAr norite tęsti?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Atsisiuntimas naudojant tik „Wi-Fi“"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Įdiegti"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Diegiama"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Tinklo klaida. Patikrinkite ryšį ir bandykite dar kartą."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Nepavyko įdiegti dėl tinklo klaidos. Patikrinkite ryšį ir bandykite dar kartą."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Diegiamas „Linux“ terminalas"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"„Linux“ terminalas bus paleistas pabaigus"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Nepavyko įdiegti dėl tinklo problemos"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Nepavyko įdiegti, nes „Wi-Fi“ nepasiekiamas"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Nepavyko įdiegti Bandykite dar kartą."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"„Linux“ terminalas bus paleistas, kai diegimas bus baigtas"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Nepavyko įdiegti dėl tinklo problemos"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Nepavyko įdiegti, nes „Wi-Fi“ nepasiekiamas"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Nepavyko įdiegti. Bandykite dar kartą"</string>
     <string name="action_settings" msgid="5729342767795123227">"Nustatymai"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Ruošiamas terminalas"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Terminalas sustabdomas"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminalas užstrigo"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Disko dydžio keitimas"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Dydžio keitimas / „Rootfs“"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Disko dydžio keitimas"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Pakeisti šakninio skaidinio dydį"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Disko dydis nustatytas"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Priskirta <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maks. <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Atšaukti"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Iš naujo pritaikyti"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Prievado numerio persiuntimas"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Prievado numerio persiuntimo konfigūravimas"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminalas bando atidaryti naują prievadą"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Prievadas, dėl kurio atidarymo pateikta užklausa: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Taikyti"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminalas bus paleistas iš naujo, kad būtų galima pakeisti disko dydį"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Patvirtinti"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Terminalas bando atidaryti naują prievadą"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Prievadas, kurio užklausa pateikta: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Sutikti"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Atmesti"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Atkūrimas"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Skaidinio atkūrimo parinktys"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Keitimas į pradinę versiją"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Pašalinti viską"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Skaidinio atkūrimo parinktys"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Iš naujo nustatyti pradinę versiją"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Pašalinti visus duomenis"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Terminalo nustatymas iš naujo"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Duomenys bus ištrinti"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Patvirtinti"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Duomenys bus pašalinti"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Nustatyti iš naujo"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Atšaukti"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Sukurti atsarginę duomenų kopiją čia: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Nepavyko atkurti, nes nepavyko sukurti atsarginės kopijos"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Nepavyko atkurti dėl atsarginės kopijos klaidos"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Nepavyko atkurti"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Nepavyko pašalinti atsarginės kopijos failo"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Nepavyko pašalinti atsarginės kopijos duomenų"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Pašalinti atsarginės kopijos duomenis"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Išvalyti <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"Nepataisoma klaida"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Nepavyko atkurti po klaidos.\nGalite bandyti iš naujo paleisti programą arba išbandyti vieną iš atkūrimo parinkčių."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Pašalinti <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"Nepataisoma klaida"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Nepavyko atkurti po klaidos.\nGalite bandyti iš naujo paleisti terminalą arba išbandyti vieną iš atkūrimo parinkčių."</string>
     <string name="error_code" msgid="3585291676855383649">"Klaidos kodas: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Nustatymai"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalas veikia"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Spustelėkite, kad atidarytumėte terminalą"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Spustelėkite, kad atidarytumėte terminalą"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Uždaryti"</string>
-    <string name="virgl_enabled" msgid="5466273280705345122">"„VirGL“ įgalintas"</string>
+    <string name="virgl_enabled" msgid="5242525588039698086">"„<xliff:g id="ID_1">VirGL</xliff:g>“ įgalinta"</string>
 </resources>

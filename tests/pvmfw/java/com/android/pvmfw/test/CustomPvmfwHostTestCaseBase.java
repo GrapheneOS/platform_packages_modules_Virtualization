@@ -52,6 +52,7 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     public static final String VM_REFERENCE_DT_PATH = "/data/local/tmp/pvmfw/reference_dt.dtb";
 
     @NonNull public static final String MICRODROID_LOG_PATH = TEST_ROOT + "log.txt";
+    @NonNull public static final String MICRODROID_CONSOLE_PATH = TEST_ROOT + "console.txt";
     public static final int BOOT_COMPLETE_TIMEOUT_MS = 30000; // 30 seconds
     public static final int BOOT_FAILURE_WAIT_TIME_MS = 10000; // 10 seconds
     public static final int CONSOLE_OUTPUT_WAIT_MS = 5000; // 5 seconds

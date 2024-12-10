@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"终端显示内容"</string>
     <string name="terminal_input" msgid="4602512831433433551">"光标"</string>
     <string name="empty_line" msgid="5012067143408427178">"空行"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"安装 Linux 终端"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> 的数据。\n要继续吗？"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"连接到 WLAN 时下载"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> 的数据。\n要继续吗？"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"仅通过 WLAN 下载"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"安装"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"正在安装"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"网络错误。请检查网络连接，然后重试。"</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"由于网络连接错误，安装失败。请检查网络连接状态，然后重试。"</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"正在安装 Linux 终端"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"完成后将启动 Linux 终端"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"由于网络问题，安装失败"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"无法安装，因为 WLAN 不可用"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"安装失败。请重试。"</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"安装完成后将启动 Linux 终端"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"由于网络问题，安装失败"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"由于 WLAN 不可用，安装失败"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"安装失败，请重试"</string>
     <string name="action_settings" msgid="5729342767795123227">"设置"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"正在准备终端"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"正在停止终端"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"终端已崩溃"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"调整磁盘大小"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"调整大小/Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"调整磁盘大小"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"调整根分区的大小"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"重启以应用"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"端口转发"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"配置端口转发"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"终端正在尝试打开新端口"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"请求打开的端口：<xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"应用"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"确认"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"终端正在请求打开新端口"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"请求的端口：<xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"接受"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"拒绝"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"恢复"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"分区恢复选项"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"更改为初始版本"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"全部移除"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"分区恢复选项"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"重置为初始版本"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"移除所有数据"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"重置终端"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"数据将被删除"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"确认"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"数据将被移除"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"重置"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"取消"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"将数据备份到 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"备份失败，因此无法恢复"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"由于备份错误，无法恢复"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"恢复失败"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"无法移除备份文件"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"未能移除备份数据"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"移除备份数据"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"清理 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"不可恢复的错误"</string>
-    <string name="error_desc" msgid="1939028888570920661">"未能从错误中恢复。\n您可以尝试重新启动该应用，或尝试某一恢复选项。"</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"移除 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"不可恢复的错误"</string>
+    <string name="error_desc" msgid="1984714179775053347">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。"</string>
     <string name="error_code" msgid="3585291676855383649">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"设置"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"终端正在运行"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"点按即可打开终端"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"点击即可打开终端"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"关闭"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> 已启用"</string>
 </resources>

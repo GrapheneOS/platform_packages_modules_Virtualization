@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"ಟರ್ಮಿನಲ್‌ ಪ್ರದರ್ಶನ"</string>
     <string name="terminal_input" msgid="4602512831433433551">"ಕರ್ಸರ್‌"</string>
     <string name="empty_line" msgid="5012067143408427178">"ಖಾಲಿ ಸಾಲು"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನೀವು ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಸುಮಾರು <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ಡೇಟಾವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.\nನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"ವೈ-ಫೈ ಲಭ್ಯವಿದ್ದಾಗ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನೀವು ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಸುಮಾರು <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ಡೇಟಾವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.\nನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"ವೈ-ಫೈ ಅನ್ನು ಮಾತ್ರ ಬಳಸಿ ಡೌನ್ ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ಇನ್‌ಸ್ಟಾಲ್"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"ನೆಟ್‌ವರ್ಕ್ ದೋಷ. ಕನೆಕ್ಷನ್ ಅನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"ನೆಟ್‌ವರ್ಕ್ ದೋಷದಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ನಿಮ್ಮ ಕನೆಕ್ಷನ್ ಅನ್ನು ಪರಿಶೀಲಿಸಿ ಹಾಗೂ ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"ಮುಗಿದ ಮೇಲೆ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆಯಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"ವೈ-ಫೈ ಲಭ್ಯವಿಲ್ಲದ ಕಾರಣ ಇನ್‌ಸ್ಟಾಲ್‌ ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"ಇನ್‌ಸ್ಟಾಲೇಶನ್ ಮುಗಿದ ನಂತರ Linux ಟರ್ಮಿನಲ್ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆಯಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"ವೈ-ಫೈ ಲಭ್ಯವಿಲ್ಲದ ಕಾರಣ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ಪುನಃ ಪ್ರಯತ್ನಿಸಿ"</string>
     <string name="action_settings" msgid="5729342767795123227">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"ಟರ್ಮಿನಲ್ ಅನ್ನು ನಿಲ್ಲಿಸಲಾಗುತ್ತಿದೆ"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ಟರ್ಮಿನಲ್ ಕ್ರ್ಯಾಶ್ ಆಗಿದೆ"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"ಮರುಗಾತ್ರಗೊಳಿಸಿ / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ರೂಟ್ ಪಾರ್ಟಿಶನ್ ಗಾತ್ರವನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ಡಿಸ್ಕ್ ಗಾತ್ರವನ್ನು ಸೆಟ್ ಮಾಡಲಾಗಿದೆ"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ರದ್ದುಮಾಡಿ"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"ಅನ್ವಯಿಸಲು ಮರುಪ್ರಾರಂಭಿಸಿ"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"ಪೋರ್ಟ್ ಫಾರ್ವರ್ಡ್ ಮಾಡುವಿಕೆ"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"ಪೋರ್ಟ್ ಫಾರ್ವರ್ಡ್ ಮಾಡುವಿಕೆಯನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದೆ"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ಅನ್ವಯಿಸಿ"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"ದೃಢೀಕರಿಸಿ"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸುತ್ತಿದೆ"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"ಪೋರ್ಟ್ ಅನ್ನು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ಸಮ್ಮತಿಸಿ"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"ನಿರಾಕರಿಸಿ"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ರಿಕವರಿ"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"ಪಾರ್ಟಿಶನ್ ರಿಕವರಿ ಆಯ್ಕೆಗಳು"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"ಆರಂಭಿಕ ಆವೃತ್ತಿಗೆ ಬದಲಾಯಿಸಿ"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"ಎಲ್ಲವನ್ನೂ ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"ಪಾರ್ಟಿಶನ್ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳು"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"ಆರಂಭಿಕ ಆವೃತ್ತಿಗೆ ರೀಸೆಟ್ ಮಾಡಿ"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ರೀಸೆಟ್‌ ಮಾಡಿ"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ಡೇಟಾವನ್ನು ಅಳಿಸಲಾಗುತ್ತದೆ"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"ದೃಢೀಕರಿಸಿ"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಲಾಗುತ್ತದೆ"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"ರೀಸೆಟ್ ಮಾಡಿ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ರದ್ದುಮಾಡಿ"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"ಡೇಟಾವನ್ನು <xliff:g id="PATH">/mnt/backup</xliff:g> ಗೆ ಬ್ಯಾಕಪ್‌ ಮಾಡಿ"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"ಬ್ಯಾಕಪ್‌ ವಿಫಲವಾದ ಕಾರಣ ರಿಕವರಿ ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"ಬ್ಯಾಕಪ್ ದೋಷದಿಂದಾಗಿ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"ರಿಕವರಿ ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"ಬ್ಯಾಕಪ್‌ ಫೈಲ್‌ ಅನ್ನು ತೆಗೆದುಹಾಕಲು ಸಾಧ್ಯವಿಲ್ಲ"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"ಬ್ಯಾಕಪ್ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಲು ವಿಫಲವಾಗಿದೆ"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ಬ್ಯಾಕಪ್‌ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"<xliff:g id="PATH">/mnt/backup</xliff:g> ಅನ್ನು ಕ್ಲೀನ್‌ ಅಪ್‌ ಮಾಡಿ"</string>
-    <string name="error_title" msgid="7196464038692913778">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ ಎದುರಾಗಿದೆ"</string>
-    <string name="error_desc" msgid="1939028888570920661">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\nನೀವು ಆ್ಯಪ್‌ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="error_title" msgid="405150657301906598">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ"</string>
+    <string name="error_desc" msgid="1984714179775053347">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\n ನೀವು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು."</string>
     <string name="error_code" msgid="3585291676855383649">"ದೋಷ ಕೋಡ್‌: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್‌ ಮಾಡಿ"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ಮುಚ್ಚಿರಿ"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ"</string>
 </resources>

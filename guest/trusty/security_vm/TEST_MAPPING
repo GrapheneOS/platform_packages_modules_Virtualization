@@ -1,0 +1,15 @@
+{
+  "trusty-security_vm-presubmit": [
+  ],
+  "trusty-security_vm-postsubmit": [
+    {
+      "name": "VtsAidlKeyMintTargetTest"
+    },
+    {
+      "name": "VtsAidlSharedSecretTargetTest"
+    },
+    {
+      "name": "VtsHalRemotelyProvisionedComponentTargetTest"
+    }
+  ]
+}

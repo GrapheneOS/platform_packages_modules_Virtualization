@@ -23,12 +23,9 @@ mod pci;
 
 extern crate alloc;
 
-use crate::layout::{boot_stack_range, print_addresses};
-use crate::pci::{check_pci, get_bar_region, get_cam_region};
-use aarch64_paging::paging::VirtualAddress;
-use aarch64_paging::MapError;
+use crate::layout::print_addresses;
+use crate::pci::check_pci;
 use alloc::{vec, vec::Vec};
-use core::mem;
 use core::ptr::addr_of_mut;
 use cstr::cstr;
 use libfdt::Fdt;
@@ -37,9 +34,9 @@ use vmbase::{
     bionic, configure_heap,
     fdt::pci::PciInfo,
     generate_image_header,
-    layout::{console_uart_page, crosvm::FDT_MAX_SIZE, rodata_range, scratch_range, text_range},
+    layout::crosvm::FDT_MAX_SIZE,
     linker, logger, main,
-    memory::{PageTable, SIZE_64KB},
+    memory::{deactivate_dynamic_page_tables, map_data, SIZE_64KB},
 };
 
 static INITIALISED_DATA: [u32; 4] = [1, 2, 3, 4];
@@ -49,24 +46,6 @@ static mut MUTABLE_DATA: [u32; 4] = [1, 2, 3, 4];
 generate_image_header!();
 main!(main);
 configure_heap!(SIZE_64KB);
-
-fn init_page_table(page_table: &mut PageTable) -> Result<(), MapError> {
-    page_table.map_device(&console_uart_page().into())?;
-    page_table.map_code(&text_range().into())?;
-    page_table.map_rodata(&rodata_range().into())?;
-    page_table.map_data(&scratch_range().into())?;
-    page_table.map_data(&boot_stack_range().into())?;
-
-    info!("Activating IdMap...");
-    // SAFETY: page_table duplicates the static mappings for everything that the Rust code is
-    // aware of so activating it shouldn't have any visible effect.
-    unsafe {
-        page_table.activate();
-    }
-    info!("Activated.");
-
-    Ok(())
-}
 
 /// Entry point for VM bootloader.
 pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
@@ -78,15 +57,11 @@ pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
     check_data();
     check_stack_guard();
 
-    let mut page_table = PageTable::default();
-    init_page_table(&mut page_table).unwrap();
-
     info!("Checking FDT...");
     let fdt_addr = usize::try_from(arg0).unwrap();
     // SAFETY: The DTB range is valid, writable memory, and we don't construct any aliases to it.
     let fdt = unsafe { core::slice::from_raw_parts_mut(fdt_addr as *mut u8, FDT_MAX_SIZE) };
-    let fdt_region = (VirtualAddress(fdt_addr)..VirtualAddress(fdt_addr + fdt.len())).into();
-    page_table.map_data(&fdt_region).unwrap();
+    map_data(fdt_addr, FDT_MAX_SIZE.try_into().unwrap()).unwrap();
     let fdt = Fdt::from_mut_slice(fdt).unwrap();
     info!("FDT passed verification.");
     check_fdt(fdt);
@@ -97,23 +72,16 @@ pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
     modify_fdt(fdt);
 
     check_alloc();
-
-    let cam_region = get_cam_region(&pci_info);
-    page_table.map_device(&cam_region).unwrap();
-    let bar_region = get_bar_region(&pci_info);
-    page_table.map_device(&bar_region).unwrap();
-
     check_data();
     check_dice();
 
-    // SAFETY: This is the only place where `make_pci_root` is called.
-    let mut pci_root = unsafe { pci_info.make_pci_root() };
+    let mut pci_root = vmbase::virtio::pci::initialize(pci_info).unwrap();
     check_pci(&mut pci_root);
 
     emit_suppressed_log();
 
     info!("De-activating IdMap...");
-    mem::drop(page_table); // Release PageTable and switch back to idmap.S
+    deactivate_dynamic_page_tables();
     info!("De-activated.");
 }
 

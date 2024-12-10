@@ -18,7 +18,7 @@ use crate::{
     bionic, console, heap,
     layout::{UART_ADDRESSES, UART_PAGE_ADDR},
     logger,
-    memory::{PAGE_SIZE, SIZE_16KB, SIZE_4KB},
+    memory::{switch_to_dynamic_page_tables, PAGE_SIZE, SIZE_16KB, SIZE_4KB},
     power::{reboot, shutdown},
     rand,
 };
@@ -81,6 +81,8 @@ extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
     }
 
     bionic::__get_tls().stack_guard = u64::from_ne_bytes(stack_guard);
+
+    switch_to_dynamic_page_tables();
 
     // Note: If rust_entry ever returned (which it shouldn't by being -> !), the compiler-injected
     // stack guard comparison would detect a mismatch and call __stack_chk_fail.

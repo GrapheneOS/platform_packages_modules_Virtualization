@@ -3,6 +3,7 @@
 chmod +x $target/usr/local/bin/forwarder_guest
 chmod +x $target/usr/local/bin/forwarder_guest_launcher
 chmod +x $target/usr/local/bin/ip_addr_reporter
+chmod +x $target/usr/local/bin/shutdown_runner
 chmod +x $target/usr/local/bin/ttyd
 ln -s /etc/systemd/system/ttyd.service $target/etc/systemd/system/multi-user.target.wants/ttyd.service
 ln -s /etc/systemd/system/ip_addr_reporter.service $target/etc/systemd/system/multi-user.target.wants/ip_addr_reporter.service
@@ -10,5 +11,6 @@ ln -s /etc/systemd/system/virtiofs.service $target/etc/systemd/system/multi-user
 ln -s /etc/systemd/system/forwarder_guest_launcher.service $target/etc/systemd/system/multi-user.target.wants/forwarder_guest_launcher.service
 ln -s /etc/systemd/system/virtiofs_internal.service $target/etc/systemd/system/multi-user.target.wants/virtiofs_internal.service
 ln -s /etc/systemd/system/backup_mount.service $target/etc/systemd/system/multi-user.target.wants/backup_mount.service
+ln -s /etc/systemd/system/shutdown_runner.service $target/etc/systemd/system/multi-user.target.wants/shutdown_runner.service
 
 sed -i 's/#LLMNR=yes/LLMNR=no/' $target/etc/systemd/resolved.conf

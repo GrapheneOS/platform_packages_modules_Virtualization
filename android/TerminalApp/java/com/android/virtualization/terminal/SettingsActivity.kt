@@ -16,9 +16,6 @@
 package com.android.virtualization.terminal
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -29,12 +26,6 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_activity)
-
-        Handler(Looper.getMainLooper()).post {
-            val lp: WindowManager.LayoutParams = getWindow().getAttributes()
-            lp.accessibilityTitle = getString(R.string.action_settings)
-            getWindow().setAttributes(lp)
-        }
 
         val toolbar: MaterialToolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)

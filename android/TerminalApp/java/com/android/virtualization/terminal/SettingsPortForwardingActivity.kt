@@ -15,25 +15,21 @@
  */
 package com.android.virtualization.terminal
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 class SettingsPortForwardingActivity : AppCompatActivity() {
-    private lateinit var mSharedPref: SharedPreferences
+    private lateinit var mPortsStateManager: PortsStateManager
     private lateinit var mAdapter: SettingsPortForwardingAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_port_forwarding)
 
-        mSharedPref =
-            this.getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
-
-        mAdapter = SettingsPortForwardingAdapter(mSharedPref, this)
+        mPortsStateManager = PortsStateManager.getInstance(this)
+        mAdapter = SettingsPortForwardingAdapter(mPortsStateManager)
 
         val recyclerView: RecyclerView = findViewById(R.id.settings_port_forwarding_recycler_view)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -42,11 +38,11 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        mSharedPref.registerOnSharedPreferenceChangeListener(mAdapter)
+        mAdapter.registerPortsStateListener()
     }
 
     override fun onPause() {
-        mSharedPref.unregisterOnSharedPreferenceChangeListener(mAdapter)
+        mAdapter.unregisterPortsStateListener()
         super.onPause()
     }
 }

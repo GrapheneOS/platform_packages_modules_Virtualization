@@ -243,6 +243,11 @@ impl VmInstance {
         self.vm.start()
     }
 
+    /// Stops the VM.
+    pub fn stop(&self) -> BinderResult<()> {
+        self.vm.stop()
+    }
+
     /// Returns the CID used for vsock connections to the VM.
     pub fn cid(&self) -> i32 {
         self.cid

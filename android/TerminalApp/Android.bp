@@ -8,6 +8,7 @@ android_app {
         "java/**/*.java",
         "java/**/*.kt",
     ],
+    asset_dirs: ["assets"],
     resource_dirs: ["res"],
     static_libs: [
         "androidx-constraintlayout_constraintlayout",

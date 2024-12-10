@@ -200,6 +200,7 @@ mod tests {
         public_key: b"public key",
         capabilities: vec![],
         rollback_index: 42,
+        page_size: None,
     };
     const HASH: Hash = *b"sixtyfourbyteslongsentencearerarebutletsgiveitatrycantbethathard";
 

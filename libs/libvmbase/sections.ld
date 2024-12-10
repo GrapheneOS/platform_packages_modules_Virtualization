@@ -56,17 +56,6 @@ SECTIONS
 	} >image
 	rodata_end = .;
 
-	.eh_stack (NOLOAD) : ALIGN(4096) {
-		/*
-		 * Get stack overflow guard from the previous page being from
-		 * .rodata and mapped read-only or left unmapped.
-		 */
-		eh_stack_limit = .;
-		. += 4096;
-		. = ALIGN(4096);
-		init_eh_stack_pointer = .;
-	} >writable_data
-
 	/*
 	 * Collect together the read-write data including .bss at the end which
 	 * will be zero'd by the entry code. This is page aligned so it can be
@@ -87,6 +76,13 @@ SECTIONS
 	/* Everything beyond this point will not be included in the binary. */
 	bin_end = data_lma + SIZEOF(.data);
 
+	/* Data may be appended at load time to our binary. */
+	.image_footer (NOLOAD) : ALIGN(4096) {
+		image_footer_begin = .;
+		. = ALIGN(LENGTH(image));
+		image_footer_end = .;
+	} >image
+
 	/* The entry point code assumes that .bss is 16-byte aligned. */
 	.bss : ALIGN(16)  {
 		bss_begin = .;
@@ -94,6 +90,18 @@ SECTIONS
 		*(COMMON)
 		. = ALIGN(16);
 		bss_end = .;
+	} >writable_data
+
+	/* Left unmapped, to catch overflows of the exception handler stack. */
+	.eh_stack_guard_page (NOLOAD) : ALIGN(4096) {
+		. += 4096;
+	} >writable_data
+
+	/* Exception handler stack, mapped read-write. */
+	.eh_stack (NOLOAD) : ALIGN(4096) {
+		eh_stack_limit = .;
+		. += 4096;
+		init_eh_stack_pointer = .;
 	} >writable_data
 
 	/* Left unmapped, to catch overflows of the stack. */
@@ -124,3 +132,10 @@ SECTIONS
 		*(.note.gnu.build-id)
 	}
 }
+
+/*
+ * Make calling the limit_stack_size!() macro optional by providing a default.
+ */
+PROVIDE(vmbase_stack_limit = DEFINED(vmbase_stack_limit_client) ?
+                                     vmbase_stack_limit_client :
+                                     vmbase_stack_limit_default);

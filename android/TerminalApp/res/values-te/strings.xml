@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminal డిస్‌ప్లే"</string>
     <string name="terminal_input" msgid="4602512831433433551">"కర్సర్"</string>
     <string name="empty_line" msgid="5012067143408427178">"ఖాళీ లైన్"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux టెర్మినల్‌ను ఇన్‌స్టాల్ చేయండి"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux టెర్మినల్‌ను ప్రారంభించడానికి, మీరు నెట్‌వర్క్ ద్వారా దాదాపు <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> డేటాను డౌన్‌లోడ్ చేసుకోవాలి.\nమీరు కొనసాగిస్తారా?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Wi-Fi అందుబాటులో ఉన్నప్పుడు డౌన్‌లోడ్ చేయండి"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux టెర్మినల్‌ను ప్రారంభించడానికి, మీరు నెట్‌వర్క్ ద్వారా దాదాపు <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> డేటాను డౌన్‌లోడ్ చేసుకోవాలి.\nమీరు కొనసాగించాలనుకుంటున్నారా?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fiని ఉపయోగించి మాత్రమే డౌన్‌లోడ్ చేయండి"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ఇన్‌స్టాల్ చేయి"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ఇన్‌స్టాల్ చేస్తోంది"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"నెట్‌వర్క్ ఎర్రర్. కనెక్షన్‌ను చెక్ చేసి, మళ్లీ ట్రై చేయండి."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"నెట్‌వర్క్ ఎర్రర్ కారణంగా ఇన్‌స్టాల్ చేయడం విఫలమైంది. మీ కనెక్షన్‌ను చెక్ చేసి మళ్లీ ట్రై చేయండి."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux టెర్మినల్‌ను ఇన్‌స్టాల్ చేస్తోంది"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"పూర్తయిన తర్వాత Linux టెర్మినల్ ప్రారంభమవుతుంది"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"నెట్‌వర్క్ సమస్య కారణంగా ఇన్‌స్టాల్ చేయడం విఫలమైంది"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Wi-Fi అందుబాటులో లేని కారణంగా ఇన్‌స్టాల్ చేయడం విఫలమైంది"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"ఇన్‌స్టాల్ చేయడం విఫలమైంది. మళ్లీ ట్రై చేయండి."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"ఇన్‌స్టాలేషన్ పూర్తయిన తర్వాత Linux టెర్మినల్ ప్రారంభమవుతుంది"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"నెట్‌వర్క్ సమస్య కారణంగా ఇన్‌స్టాల్ చేయడం విఫలమైంది"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi అందుబాటులో లేని కారణంగా ఇన్‌స్టాల్ చేయడం విఫలమైంది"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"ఇన్‌స్టాల్ చేయడం విఫలమైంది. దయచేసి మళ్లీ ట్రై చేయండి"</string>
     <string name="action_settings" msgid="5729342767795123227">"సెట్టింగ్‌లు"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"టెర్మినల్‌ను సిద్ధం చేస్తోంది"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"టెర్మినల్‌ను ఆపివేస్తోంది"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"టెర్మినల్ క్రాష్ అయింది"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"డిస్క్ సైజ్ మార్చడం"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"సైజ్ మార్చండి / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"డిస్క్ సైజ్ మార్చడం"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"రూట్ పార్టిషన్ సైజ్‌ను మార్చండి"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"డిస్క్ సైజ్ సెట్ చేయబడింది"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> కేటాయించబడింది"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"గరిష్ఠంగా <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"రద్దు చేయండి"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"వర్తించేందుకు రీస్టార్ట్ చేయండి"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"పోర్ట్ ఫార్వర్డింగ్"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"పోర్ట్ ఫార్వర్డింగ్‌ను కాన్ఫిగర్ చేయండి"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"టెర్మినల్ ఒక కొత్త పోర్ట్‌ను తెరవడానికి ట్రై చేస్తోంది"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"పోర్ట్ తెరవాలని రిక్వెస్ట్ చేశారు: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"వర్తింపజేయండి"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"డిస్క్ సైజ్‌ను మార్చడానికి టెర్మినల్ రీస్టార్ట్ అవుతుంది"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"నిర్ధారించండి"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"టెర్మినల్ ఒక కొత్త పోర్ట్‌ను తెరవడానికి రిక్వెస్ట్ చేస్తోంది"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"పోర్ట్ రిక్వెస్ట్ చేయబడింది: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ఆమోదించండి"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"తిరస్కరించండి"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"రికవరీ"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"పార్టిషన్ రికవరీ ఆప్షన్‌లు"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"మొదటి వెర్షన్‌కు మార్చండి"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"అన్నీ తీసివేయండి"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"పార్టిషన్ రికవరీ ఆప్షన్‌లు"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"మొదటి వెర్షన్‌కు రీసెట్ చేయండి"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"మొత్తం డేటాను తీసివేయండి"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"టెర్మినల్‌ను రీసెట్ చేయండి"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"డేటా తొలగించబడుతుంది"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"నిర్ధారించండి"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"డేటా తీసివేయబడుతుంది"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"రీసెట్ చేయండి"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"రద్దు చేయండి"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"<xliff:g id="PATH">/mnt/backup</xliff:g>‌లో డేటాను బ్యాకప్ చేయండి"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"బ్యాకప్ విఫలమైనందున రికవరీ విఫలమైంది"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"బ్యాకప్ ఎర్రర్ కారణంగా రికవర్ చేయడం విఫలమైంది"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"రికవరీ విఫలమైంది"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"బ్యాకప్ ఫైల్‌ను తీసివేయడం సాధ్యపడదు"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"బ్యాకప్ డేటాను తీసివేయడం విఫలమైంది"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"బ్యాకప్ డేటాను తీసివేయండి"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"క్లీనప్ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"రికవరీని అసాధ్యం చేసే ఎర్రర్"</string>
-    <string name="error_desc" msgid="1939028888570920661">"ఎర్రర్‌ను రికవర్ చేయడంలో విఫలమైంది.\nమీరు యాప్‌ను రీస్టార్ట్ చేసి ట్రై చేయవచ్చు లేదా రికవరీ ఆప్షన్‌లలో ఒకదాన్ని ట్రై చేయవచ్చు."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g>‌ను తీసివేయండి"</string>
+    <string name="error_title" msgid="405150657301906598">"రికవరీని అసాధ్యం చేసే ఎర్రర్"</string>
+    <string name="error_desc" msgid="1984714179775053347">"ఎర్రర్‌ను రికవర్ చేయడంలో విఫలమైంది.\nమీరు టెర్మినల్‌ను రీస్టార్ట్ చేసి ట్రై చేయవచ్చు లేదా రికవరీ ఆప్షన్‌లలో ఒకదాన్ని ట్రై చేయవచ్చు."</string>
     <string name="error_code" msgid="3585291676855383649">"ఎర్రర్ కోడ్: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"సెట్టింగ్‌లు"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"టెర్మినల్ రన్ అవుతోంది"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"టెర్మినల్‌ను తెరవడానికి క్లిక్ చేయండి"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"టెర్మినల్‌ను తెరవడానికి క్లిక్ చేయండి"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"మూసివేయండి"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ప్రారంభించబడింది"</string>
 </resources>

@@ -38,6 +38,8 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.webkit.WebView;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 public class TerminalView extends WebView
@@ -46,38 +48,9 @@ public class TerminalView extends WebView
     // arbitrarily set. We may want to adjust this in the future.
     private static final int TEXT_TOO_LONG_TO_ANNOUNCE = 200;
 
-    // keyCode 229 means composing text, so get the last character in e.target.value.
-    // keycode 64(@)-95(_) is mapped to a ctrl code
-    // keycode 97(A)-122(Z) is converted to a small letter, and mapped to ctrl code
-    public static final String CTRL_KEY_HANDLER =
-            """
-javascript: (function() {
-  window.term.attachCustomKeyEventHandler((e) => {
-      if (window.ctrl) {
-          keyCode = e.keyCode;
-          if (keyCode === 229) {
-              keyCode = e.target.value.charAt(e.target.selectionStart - 1).charCodeAt();
-          }
-          if (64 <= keyCode && keyCode <= 95) {
-              input = String.fromCharCode(keyCode - 64);
-          } else if (97 <= keyCode && keyCode <= 122) {
-              input = String.fromCharCode(keyCode - 96);
-          } else {
-              return true;
-          }
-          if (e.type === 'keyup') {
-              window.term.input(input);
-              e.target.value = e.target.value.slice(0, -1);
-              window.ctrl = false;
-          }
-          return false;
-      } else {
-          return true;
-      }
-  });
-})();
-""";
-    public static final String ENABLE_CTRL_KEY = "javascript:(function(){window.ctrl=true;})();";
+    private final String CTRL_KEY_HANDLER;
+    private final String ENABLE_CTRL_KEY;
+    private final String TOUCH_TO_MOUSE_HANDLER;
 
     private final AccessibilityManager mA11yManager;
 
@@ -88,6 +61,32 @@ javascript: (function() {
         mA11yManager.addTouchExplorationStateChangeListener(this);
         mA11yManager.addAccessibilityStateChangeListener(this);
         adjustToA11yStateChange();
+        try {
+            CTRL_KEY_HANDLER = readAssetAsString(context, "js/ctrl_key_handler.js");
+            ENABLE_CTRL_KEY = readAssetAsString(context, "js/enable_ctrl_key.js");
+            TOUCH_TO_MOUSE_HANDLER = readAssetAsString(context, "js/touch_to_mouse_handler.js");
+        } catch (IOException e) {
+            // It cannot happen
+            throw new IllegalArgumentException("cannot read code from asset", e);
+        }
+    }
+
+    private String readAssetAsString(Context context, String filePath) throws IOException {
+        try (InputStream is = context.getAssets().open(filePath)) {
+            return new String(is.readAllBytes());
+        }
+    }
+
+    public void mapTouchToMouseEvent() {
+        this.evaluateJavascript(TOUCH_TO_MOUSE_HANDLER, null);
+    }
+
+    public void mapCtrlKey() {
+        this.evaluateJavascript(CTRL_KEY_HANDLER, null);
+    }
+
+    public void enableCtrlKey() {
+        this.evaluateJavascript(ENABLE_CTRL_KEY, null);
     }
 
     @Override
@@ -257,7 +256,7 @@ javascript: (function() {
                             // ttyd name it as "Terminal input" but it's not i18n'ed. Override it
                             // here for better i18n.
                             info.setText(null);
-                            info.setHintText(null);
+                            info.setHintText(getString(R.string.double_tap_to_edit_text));
                             info.setContentDescription(getString(R.string.terminal_input));
                             info.setScreenReaderFocusable(true);
                             info.addAction(AccessibilityAction.ACTION_FOCUS);
@@ -307,10 +306,7 @@ javascript: (function() {
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
         InputConnection inputConnection = super.onCreateInputConnection(outAttrs);
         if (outAttrs != null) {
-            // TODO(b/378642568): consider using InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            // here..
-            outAttrs.inputType =
-                    InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+            outAttrs.inputType |= InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
         }
         return inputConnection;
     }

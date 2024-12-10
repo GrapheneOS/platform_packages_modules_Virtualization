@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminalskjerm"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Markør"</string>
     <string name="empty_line" msgid="5012067143408427178">"Tom linje"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Installer Linux-terminalen"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"For å starte Linux-terminalen må du laste ned omtrent <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data via nettverket.\nVil du fortsette?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Last ned når wifi er tilgjengelig"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"For å starte Linux-terminalen må du laste ned omtrent <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> data via nettverket.\nVil du fortsette?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Last ned bare via wifi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Installer"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installerer"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Nettverksfeil. Sjekk tilkoblingen og prøv på nytt."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Kunne ikke installere på grunn av en nettverksfeil. Sjekk tilkoblingen, og prøv igjen."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Installerer Linux-terminalen"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Linux-terminalen startes når prosessen er ferdig"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Kunne ikke installere på grunn av et nettverksproblem"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Kunne ikke installere fordi wifi ikke er tilgjengelig"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Installasjonen mislyktes. Prøv på nytt."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Linux-terminalen startes når installasjonen er ferdig"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Kunne ikke installere på grunn av et nettverksproblem"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Kunne ikke installere fordi wifi ikke er tilgjengelig"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Installasjonen mislyktes. Prøv igjen"</string>
     <string name="action_settings" msgid="5729342767795123227">"Innstillinger"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Forbereder terminalen"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Stopper terminalen"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminalen krasjet"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Endre diskstørrelse"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Endre størrelse / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Endre diskstørrelse"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Endre størrelsen på rotpartisjonen"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Diskstørrelsen er angitt"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> er tildelt"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> maks"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Avbryt"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Omstart for å bruke"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Viderekobling av porter"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Konfigurer viderekobling av porter"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Terminalen prøver å åpne en ny port"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Porten som er forespurt åpnet: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Bruk"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminalen starter på nytt for å endre størrelsen på disken"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Bekreft"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Terminalen prøver å åpne en ny port"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Forespurt port: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Godta"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Avvis"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Gjenoppretting"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Gjenopprettingsalternativer for partisjoner"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Bytt til første versjon"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Fjern alle"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Gjenopprettingsalternativer for partisjoner"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Tilbakestill til den opprinnelige versjonen"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Fjern alle dataene"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Tilbakestill terminalen"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Dataene slettes"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Bekreft"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Dataene blir fjernet"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Tilbakestill"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Avbryt"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Sikkerhetskopier data til <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Gjenopprettingen mislyktes fordi sikkerhetskopieringen mislyktes"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Kunne ikke gjenopprette på grunn av en sikkerhetskopieringsfeil"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Gjenopprettingen mislyktes"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Kan ikke fjerne sikkerhetskopifilen"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Kunne ikke fjerne sikkerhetskopierte data"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Fjern sikkerhetskopierte data"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Rydd opp <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"Ugjenopprettelig feil"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Kunne ikke gjenopprette etter en feil.\nDu kan prøve å starte appen på nytt eller prøve et av gjenopprettingsalternativene."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Fjern <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"Ugjenopprettelig feil"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Kunne ikke gjenopprette etter en feil.\nDu kan prøve å starte terminalen på nytt eller prøve et av gjenopprettingsalternativene."</string>
     <string name="error_code" msgid="3585291676855383649">"Feilkode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Innstillinger"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen kjører"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Klikk for å åpne terminalen"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Klikk for å åpne terminalen"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Lukk"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> er aktivert"</string>
 </resources>

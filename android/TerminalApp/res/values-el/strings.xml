@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Προβολή τερματικού"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Δείκτης"</string>
     <string name="empty_line" msgid="5012067143408427178">"Κενή γραμμή"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Εγκατάσταση τερματικού Linux"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Για την εκκίνηση του τερματικού Linux, πρέπει να κατεβάσετε περίπου <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> δεδομένων μέσω δικτύου.\nΘέλετε να συνεχίσετε;"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Λήψη όταν υπάρχει διαθέσιμο Wi-Fi"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Για την εκκίνηση του τερματικού Linux, πρέπει να κατεβάσετε περίπου <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> δεδομένων μέσω δικτύου.\nΘέλετε να συνεχίσετε;"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Λήψη μόνο μέσω Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Εγκατάσταση"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Εγκατάσταση"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Σφάλμα δικτύου. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Η εγκατάσταση απέτυχε λόγω σφάλματος δικτύου. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Γίνεται εγκατάσταση τερματικού Linux"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Το τερματικό Linux θα ξεκινήσει μετά την ολοκλήρωση"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Η εγκατάσταση απέτυχε λόγω προβλήματος δικτύου"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Η εγκατάσταση απέτυχε, επειδή το Wi-Fi δεν είναι διαθέσιμο"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Η εγκατάσταση απέτυχε. Δοκιμάστε ξανά."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Το τερματικό Linux θα ξεκινήσει μετά την ολοκλήρωση της εγκατάστασης"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Η εγκατάσταση απέτυχε λόγω προβλήματος δικτύου"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Η εγκατάσταση απέτυχε, επειδή το Wi-Fi δεν είναι διαθέσιμο"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Η εγκατάσταση απέτυχε. Δοκιμάστε ξανά"</string>
     <string name="action_settings" msgid="5729342767795123227">"Ρυθμίσεις"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Προετοιμασία τερματικού σε εξέλιξη"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Διακοπή τερματικού σε εξέλιξη"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Το τερματικό παρουσίασε σφάλμα"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Αλλαγή μεγέθους δίσκου"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Αλλαγή μεγέθους/Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Αλλαγή μεγέθους δίσκου"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Αλλαγή μεγέθους κύριου διαμερίσματος"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Το μέγεθος δίσκου έχει οριστεί"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Ανατέθηκαν <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Έως <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Ακύρωση"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Επανεκ. για εφαρμογή"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Προώθηση θύρας"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Διαμόρφωση προώθησης θύρας"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Το τερματικό προσπαθεί να ανοίξει μια νέα θύρα"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Υποβλήθηκε αίτημα για άνοιγμα της θύρας: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Εφαρμογή"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Θα γίνει επανεκκίνηση του τερματικού για αλλαγή μεγέθους δίσκου"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Επιβεβαίωση"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Το τερματικό ζητά να ανοίξει μια νέα θύρα"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Ζητήθηκε θύρα: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Αποδοχή"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Απόρριψη"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Ανάκτηση"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Επιλογές ανάκτησης διαμερισμάτων"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Αλλαγή σε αρχική έκδοση"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Κατάργηση όλων"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Επιλογές ανάκτησης διαμερισμάτων"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Επαναφορά στην αρχική έκδοση"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Κατάργηση όλων των δεδομένων"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Επαναφορά τερματικού"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Τα δεδομένα θα διαγραφούν"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Επιβεβαίωση"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Τα δεδομένα θα καταργηθούν"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Επαναφορά"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Ακύρωση"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Δημιουργία αντιγράφου ασφαλείας δεδομένων στο <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Αποτυχία ανάκτησης λόγω αποτυχίας δημιουργίας αντιγράφου ασφαλείας"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Η ανάκτηση απέτυχε λόγω σφάλματος δημιουργίας αντιγράφου ασφαλείας"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Αποτυχία ανάκτησης"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Δεν είναι δυνατή η κατάργηση του αρχείου αντιγράφου ασφαλείας"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Η κατάργηση των δεδομένων αντιγράφου ασφαλείας απέτυχε"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Κατάργηση δεδομένων αντιγράφου ασφαλείας"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Διαγραφή <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"Ανεπανόρθωτο σφάλμα"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Αποτυχία ανάκτησης από σφάλμα.\nΜπορείτε να δοκιμάσετε να επανεκκινήσετε την εφαρμογή ή να δοκιμάσετε μία από τις επιλογές ανάκτησης."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Κατάργηση <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"Ανεπανόρθωτο σφάλμα"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Αποτυχία ανάκτησης από σφάλμα.\nΜπορείτε να δοκιμάσετε να επανεκκινήσετε το τερματικό ή να δοκιμάσετε μια από τις επιλογές ανάκτησης."</string>
     <string name="error_code" msgid="3585291676855383649">"Κωδικός σφάλματος: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Ρυθμίσεις"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Το τερματικό εκτελείται"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Κάντε κλικ για άνοιγμα του τερματικού"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Κάντε κλικ για άνοιγμα του τερματικού"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Κλείσιμο"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"Το <xliff:g id="ID_1">VirGL</xliff:g> είναι ενεργοποιημένο"</string>
 </resources>

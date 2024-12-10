@@ -39,5 +39,11 @@ parcelable SharedPath {
     String tag;
 
     /** socket name for vhost-user-fs */
-    String socket;
+    String socketPath;
+
+    /** socket fd for crosvm to connect */
+    @nullable ParcelFileDescriptor socketFd;
+
+    /** crosvm started from appDomain */
+    boolean appDomain;
 }

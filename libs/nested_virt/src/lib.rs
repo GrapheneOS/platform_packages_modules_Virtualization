@@ -21,12 +21,21 @@ use rustutils::system_properties;
 
 /// Return whether we will be running our VM in a VM, which causes the nested VM to run very slowly.
 pub fn is_nested_virtualization() -> Result<bool> {
-    // Currently nested virtualization only occurs when we run KVM inside the cuttlefish VM.
-    // So we just need to check for vsoc.
-    if let Some(value) = system_properties::read("ro.product.vendor.device")? {
-        // Fuzzy matching to allow for vsoc_x86, vsoc_x86_64, vsoc_x86_64_only, ...
-        Ok(value.starts_with("vsoc_"))
-    } else {
-        Ok(false)
+    // Nested virtualization occurs when we run KVM inside the cuttlefish VM or when
+    // we run trusty within qemu.
+    let checks = [
+        ("ro.product.vendor.device", "vsoc_"), // vsoc_x86, vsoc_x86_64, vsoc_x86_64_only, ...
+        ("ro.hardware", "qemu_"),              // qemu_trusty, ...
+    ];
+
+    for (property, prefix) in checks {
+        if let Some(value) = system_properties::read(property)? {
+            if value.starts_with(prefix) {
+                return Ok(true);
+            }
+        }
     }
+
+    // No match -> not nested
+    Ok(false)
 }

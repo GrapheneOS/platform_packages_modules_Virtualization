@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"ટર્મિનલ ડિસ્પ્લે"</string>
     <string name="terminal_input" msgid="4602512831433433551">"કર્સર"</string>
     <string name="empty_line" msgid="5012067143408427178">"ખાલી લાઇન"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux ટર્મિનલ ઇન્સ્ટૉલ કરો"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Linux ટર્મિનલ લૉન્ચ કરવા માટે, તમારે નેટવર્ક પર આશરે <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ડેટા ડાઉનલોડ કરવાની જરૂર છે.\nશું તમારે આગળ વધવું છે?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"જ્યારે વાઇ-ફાઇ ઉપલબ્ધ હોય, ત્યારે ડાઉનલોડ કરો"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ટર્મિનલ લૉન્ચ કરવા માટે, તમારે નેટવર્ક પર આશરે <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ડેટા ડાઉનલોડ કરવાની જરૂર છે.\nશું તમે આગળ વધવા માગો છો?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"માત્ર વાઇ-ફાઇનો ઉપયોગ કરીને ડાઉનલોડ કરો"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ઇન્સ્ટૉલ કરો"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ઇન્સ્ટૉલ કરી રહ્યાં છીએ"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"નેટવર્ક ભૂલ. કનેક્શન ચેક કરો અને ફરી પ્રયાસ કરો."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"નેટવર્ક ભૂલને કારણે ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં. તમારું ઇન્ટરનેટ કનેક્શન ચેક કરો અને ફરી પ્રયાસ કરો."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ટર્મિનલ ઇન્સ્ટૉલ કરી રહ્યાં છીએ"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"પ્રક્રિયા સમાપ્ત થયા પછી Linux ટર્મિનલ શરૂ થશે"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"નેટવર્કની સમસ્યાને કારણે ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"વાઇ-ફાઇ ઉપલબ્ધ ન હોવાથી ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં. ફરી પ્રયાસ કરો."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"ઇન્સ્ટૉલેશનની પ્રક્રિયા સમાપ્ત થયા પછી Linux ટર્મિનલ શરૂ થશે"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"નેટવર્ક સંબંધી કોઈ સમસ્યાને કારણે ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"વાઇ-ફાઇ ઉપલબ્ધ ન હોવાથી ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"ઇન્સ્ટૉલ કરવામાં નિષ્ફળ રહ્યાં. કૃપા કરીને ફરી પ્રયાસ કરો"</string>
     <string name="action_settings" msgid="5729342767795123227">"સેટિંગ"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ટર્મિનલ તૈયાર કરી રહ્યાં છીએ"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"ટર્મિનલ બંધ કરી રહ્યાં છીએ"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ટર્મિનલ ક્રૅશ થયું"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"ડિસ્કનું કદ બદલવું"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"કદ બદલો / Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"ડિસ્કનું કદ બદલવું"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"રૂટ પાર્ટિશનનું કદ બદલો"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ડિસ્કનું કદ સેટ કર્યું"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> સોંપ્યું છે"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"મહત્તમ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"રદ કરો"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"લાગુ કરવા ફરી શરૂ કરો"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"પોર્ટ ફૉરવર્ડિંગ"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"પોર્ટ ફૉરવર્ડિંગનું કન્ફિગ્યુરેશન કરો"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"ટર્મિનલ નવું પોર્ટ ખોલવાનો પ્રયાસ કરી રહ્યું છે"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"પોર્ટને ખોલવાની વિનંતી કરવામાં આવી: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"લાગુ કરો"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ડિસ્કનું કદ બદલવા માટે ટર્મિનલને ફરી શરુ કરવામાં આવશે"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"કન્ફર્મ કરો"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ટર્મિનલ નવું પોર્ટ ખોલવા માટે વિનંતી કરી રહ્યું છે"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"પોર્ટની વિનંતી કરવામાં આવી: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"સ્વીકારો"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"નકારો"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"રિકવરી"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"પાર્ટિશન રિકવરીના વિકલ્પો"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"બદલીને પ્રારંભિક વર્ઝન કરો"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"તમામ કાઢી નાખો"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"પાર્ટિશન રિકવરીના વિકલ્પો"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"પ્રારંભિક વર્ઝન પર રીસેટ કરો"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"બધો ડેટા કાઢી નાખો"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ટર્મિનલ રીસેટ કરો"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"ડેટા ડિલીટ કરવામાં આવશે"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"કન્ફર્મ કરો"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"ડેટા કાઢી નાખવામાં આવશે"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"રીસેટ કરો"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"રદ કરો"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"<xliff:g id="PATH">/mnt/backup</xliff:g> પર ડેટાનું બૅકઅપ લો"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"બૅકઅપ નિષ્ફળ જવાને લીધે રિકવરી નિષ્ફળ રહી"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"બૅકઅપમાં ભૂલને કારણે રિકવર કરવામાં નિષ્ફળ રહ્યાં"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"રિકવરી નિષ્ફળ રહી"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"બૅકઅપ ફાઇલ કાઢી શકતા નથી"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"બૅકઅપ ડેટા કાઢી નાખવામાં નિષ્ફળ રહ્યાં"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"બૅકઅપ ડેટા કાઢી નાખો"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"ક્લિન અપ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"ભૂલને કારણે રિકવર કરવો અશક્ય"</string>
-    <string name="error_desc" msgid="1939028888570920661">"ભૂલમાંથી રિકવર કરવામાં નિષ્ફળ રહ્યાં.\nતમે ઍપ રિફ્રેશ કરવાનો પ્રયાસ કરી શકો છો અથવા રિકવરીના વિકલ્પમાંથી કોઈ એક અજમાવી શકો છો."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> કાઢી નાખો"</string>
+    <string name="error_title" msgid="405150657301906598">"ભૂલને કારણે રિકવર કરવો અશક્ય"</string>
+    <string name="error_desc" msgid="1984714179775053347">"ભૂલમાંથી રિકવર કરવામાં નિષ્ફળ રહ્યાં.\nતમે ટર્મિનલને ફરી શરૂ કરવાનો પ્રયાસ કરી શકો છો અથવા રિકવરીના વિકલ્પોમાંથી કોઈ એક અજમાવી શકો છો."</string>
     <string name="error_code" msgid="3585291676855383649">"ભૂલનો કોડ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"સેટિંગ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ટર્મિનલ ચાલી રહ્યું છે"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"ટર્મિનલ ખોલવા માટે ક્લિક કરો"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"ટર્મિનલ ખોલવા માટે ક્લિક કરો"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"બંધ કરો"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ચાલુ કરેલું છે"</string>
 </resources>

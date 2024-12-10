@@ -16,7 +16,7 @@
 
 use crate::{
     fdt::pci::PciInfo,
-    memory::{MemoryTracker, MemoryTrackerError},
+    memory::{map_device, MemoryTrackerError},
 };
 use alloc::boxed::Box;
 use core::fmt;
@@ -65,16 +65,19 @@ impl fmt::Display for PciError {
 /// 2. Stores the `PciInfo` for the VirtIO HAL to use later.
 /// 3. Creates and returns a `PciRoot`.
 ///
-/// This must only be called once; it will panic if it is called a second time.
-pub fn initialize(pci_info: PciInfo, memory: &mut MemoryTracker) -> Result<PciRoot, PciError> {
+/// This must only be called once and after having switched to the dynamic page tables.
+pub fn initialize(pci_info: PciInfo) -> Result<PciRoot, PciError> {
     PCI_INFO.set(Box::new(pci_info.clone())).map_err(|_| PciError::DuplicateInitialization)?;
 
-    memory.map_mmio_range(pci_info.cam_range.clone()).map_err(PciError::CamMapFailed)?;
-    let bar_range = pci_info.bar_range.start as usize..pci_info.bar_range.end as usize;
-    memory.map_mmio_range(bar_range).map_err(PciError::BarMapFailed)?;
+    let cam_start = pci_info.cam_range.start;
+    let cam_size = pci_info.cam_range.len().try_into().unwrap();
+    map_device(cam_start, cam_size).map_err(PciError::CamMapFailed)?;
 
-    // Safety: This is the only place where we call make_pci_root, and `PCI_INFO.set` above will
-    // panic if it is called a second time.
+    let bar_start = pci_info.bar_range.start.try_into().unwrap();
+    let bar_size = pci_info.bar_range.len().try_into().unwrap();
+    map_device(bar_start, bar_size).map_err(PciError::BarMapFailed)?;
+
+    // SAFETY: This is the only place where we call make_pci_root, validated by `PCI_INFO.set`.
     Ok(unsafe { pci_info.make_pci_root() })
 }
 

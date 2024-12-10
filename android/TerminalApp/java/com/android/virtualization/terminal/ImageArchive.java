@@ -16,8 +16,11 @@
 
 package com.android.virtualization.terminal;
 
+import static com.android.virtualization.terminal.MainActivity.TAG;
+
 import android.os.Build;
 import android.os.Environment;
+import android.util.Log;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -43,7 +46,8 @@ import java.util.function.Function;
 class ImageArchive {
     private static final String DIR_IN_SDCARD = "linux";
     private static final String ARCHIVE_NAME = "images.tar.gz";
-    private static final String HOST_URL = "https://dl.google.com/android/ferrochrome/latest";
+    private static final String BUILD_TAG = Integer.toString(Build.VERSION.SDK_INT_FULL);
+    private static final String HOST_URL = "https://dl.google.com/android/ferrochrome/" + BUILD_TAG;
 
     // Only one can be non-null
     private final URL mUrl;
@@ -138,6 +142,8 @@ class ImageArchive {
      * an additional input stream which will be used during the installation.
      */
     public void installTo(Path dir, Function<InputStream, InputStream> filter) throws IOException {
+        String source = mPath != null ? mPath.toString() : mUrl.toString();
+        Log.d(TAG, "Installing. source: " + source + ", destination: " + dir.toString());
         try (InputStream stream = getInputStream(filter);
                 GzipCompressorInputStream gzStream = new GzipCompressorInputStream(stream);
                 TarArchiveInputStream tarStream = new TarArchiveInputStream(gzStream)) {
@@ -148,9 +154,9 @@ class ImageArchive {
                 Path to = dir.resolve(entry.getName());
                 if (Files.isDirectory(to)) {
                     Files.createDirectories(to);
-                } else {
-                    Files.copy(tarStream, to, StandardCopyOption.REPLACE_EXISTING);
+                    continue;
                 }
+                Files.copy(tarStream, to, StandardCopyOption.REPLACE_EXISTING);
             }
         }
         commitInstallationAt(dir);

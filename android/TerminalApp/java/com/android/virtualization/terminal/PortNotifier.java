@@ -27,7 +27,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.drawable.Icon;
-import android.util.Log;
 
 import java.util.HashSet;
 import java.util.Locale;
@@ -45,35 +44,39 @@ class PortNotifier {
     private final Context mContext;
     private final NotificationManager mNotificationManager;
     private final BroadcastReceiver mReceiver;
+    private final PortsStateManager mPortsStateManager;
+    private final PortsStateManager.Listener mPortsStateListener;
 
     public PortNotifier(Context context) {
         mContext = context;
         mNotificationManager = mContext.getSystemService(NotificationManager.class);
         mReceiver = new PortForwardingRequestReceiver();
 
+        mPortsStateManager = PortsStateManager.getInstance(mContext);
+        mPortsStateListener =
+                new PortsStateManager.Listener() {
+                    @Override
+                    public void onPortsStateUpdated(
+                            Set<Integer> oldActivePorts, Set<Integer> newActivePorts) {
+                        Set<Integer> union = new HashSet<>(oldActivePorts);
+                        union.addAll(newActivePorts);
+                        for (int port : union) {
+                            if (!oldActivePorts.contains(port)) {
+                                showNotificationFor(port);
+                            } else if (!newActivePorts.contains(port)) {
+                                discardNotificationFor(port);
+                            }
+                        }
+                    }
+                };
+        mPortsStateManager.registerListener(mPortsStateListener);
+
         IntentFilter intentFilter = new IntentFilter(ACTION_PORT_FORWARDING);
         mContext.registerReceiver(mReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
-    public void onActivePortsChanged(Set<String> oldPorts, Set<String> newPorts) {
-        Set<String> union = new HashSet<>(oldPorts);
-        union.addAll(newPorts);
-        for (String portStr : union) {
-            try {
-                int port = Integer.parseInt(portStr);
-                if (!oldPorts.contains(portStr)) {
-                    showNotificationFor(port);
-                } else if (!newPorts.contains(portStr)) {
-                    discardNotificationFor(port);
-                }
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "Failed to parse port: " + portStr);
-                throw e;
-            }
-        }
-    }
-
     public void stop() {
+        mPortsStateManager.unregisterListener(mPortsStateListener);
         mContext.unregisterReceiver(mReceiver);
     }
 
@@ -134,16 +137,9 @@ class PortNotifier {
         }
 
         private void performActionPortForwarding(Context context, Intent intent) {
-            String prefKey = context.getString(R.string.preference_file_key);
             int port = intent.getIntExtra(KEY_PORT, 0);
-            String key = context.getString(R.string.preference_forwarding_port_is_enabled) + port;
             boolean enabled = intent.getBooleanExtra(KEY_ENABLED, false);
-
-            context.getSharedPreferences(prefKey, Context.MODE_PRIVATE)
-                    .edit()
-                    .putBoolean(key, enabled)
-                    .apply();
-
+            mPortsStateManager.updateEnabledPort(port, enabled);
             discardNotificationFor(port);
         }
     }

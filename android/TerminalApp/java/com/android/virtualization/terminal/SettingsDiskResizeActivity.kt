@@ -15,14 +15,13 @@
  */
 package com.android.virtualization.terminal
 
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.icu.text.MeasureFormat
 import android.icu.text.NumberFormat
 import android.icu.util.Measure
 import android.icu.util.MeasureUnit
 import android.os.Bundle
+import android.os.Environment
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.TextUtils
@@ -37,12 +36,11 @@ import java.util.Locale
 import java.util.regex.Pattern
 
 class SettingsDiskResizeActivity : AppCompatActivity() {
-    private val maxDiskSizeMb: Long = 16 shl 10
     private val numberPattern: Pattern = Pattern.compile("[\\d]*[\\٫.,]?[\\d]+")
+    private val defaultMaxDiskSizeMb: Long = 16 shl 10
 
     private var diskSizeStepMb: Long = 0
     private var diskSizeMb: Long = 0
-    private lateinit var sharedPref: SharedPreferences
     private lateinit var buttons: View
     private lateinit var cancelButton: View
     private lateinit var resizeButton: View
@@ -71,14 +69,13 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
 
         diskSizeStepMb = 1L shl resources.getInteger(R.integer.disk_size_round_up_step_size_in_mb)
 
-        sharedPref =
-            this.getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
-        diskSizeMb =
-            bytesToMb(
-                sharedPref.getLong(getString(R.string.preference_disk_size_key), /* defValue= */ 0)
-            )
         val image = InstalledImage.getDefault(this)
+        diskSizeMb = bytesToMb(image.getSize())
         val minDiskSizeMb = bytesToMb(image.getSmallestSizePossible()).coerceAtMost(diskSizeMb)
+        val usableSpaceMb =
+            bytesToMb(Environment.getDataDirectory().getUsableSpace()) and
+                (diskSizeStepMb - 1).inv()
+        val maxDiskSizeMb = defaultMaxDiskSizeMb.coerceAtMost(diskSizeMb + usableSpaceMb)
 
         diskSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_assigned)!!
         val diskMaxSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_max)
@@ -139,16 +136,14 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
             .show()
     }
 
-    fun resize() {
+    private fun resize() {
         diskSizeMb = progressToMb(diskSizeSlider.progress)
         buttons.isVisible = false
-        val editor = sharedPref.edit()
-        editor.putLong(getString(R.string.preference_disk_size_key), mbToBytes(diskSizeMb))
-        editor.apply()
 
         // Restart terminal
         val intent = baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
         intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        intent?.putExtra(MainActivity.KEY_DISK_SIZE, mbToBytes(diskSizeMb))
         finish()
         startActivity(intent)
     }

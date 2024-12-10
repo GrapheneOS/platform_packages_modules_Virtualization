@@ -41,17 +41,11 @@ import java.lang.ref.WeakReference;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class InstallerService extends Service {
     private static final int NOTIFICATION_ID = 1313; // any unique number among notifications
-
-    private static final String IMAGE_URL =
-            Arrays.asList(Build.SUPPORTED_ABIS).contains("x86_64")
-                    ? "https://dl.google.com/android/ferrochrome/latest/x86_64/images.tar.gz"
-                    : "https://dl.google.com/android/ferrochrome/latest/aarch64/images.tar.gz";
 
     private final Object mLock = new Object();
 
@@ -80,6 +74,7 @@ public class InstallerService extends Service {
                         this, /* requestCode= */ 0, intent, PendingIntent.FLAG_IMMUTABLE);
         mNotification =
                 new Notification.Builder(this, this.getPackageName())
+                        .setSilent(true)
                         .setSmallIcon(R.drawable.ic_launcher_foreground)
                         .setContentTitle(getString(R.string.installer_notif_title_text))
                         .setContentText(getString(R.string.installer_notif_desc_text))
@@ -87,7 +82,9 @@ public class InstallerService extends Service {
                         .setContentIntent(pendingIntent)
                         .build();
 
-        mExecutorService = Executors.newSingleThreadExecutor();
+        mExecutorService =
+                Executors.newSingleThreadExecutor(
+                        new TerminalThreadFactory(getApplicationContext()));
 
         mConnectivityManager = getSystemService(ConnectivityManager.class);
         Network defaultNetwork = mConnectivityManager.getBoundNetworkForProcess();
@@ -191,8 +188,6 @@ public class InstallerService extends Service {
 
     // TODO(b/374015561): Support pause/resume download
     private boolean downloadFromUrl(boolean isWifiOnly) {
-        Log.i(TAG, "trying to download from " + IMAGE_URL);
-
         if (!checkForWifiOnly(isWifiOnly)) {
             Log.e(TAG, "Install isn't started because Wifi isn't available");
             notifyError(getString(R.string.installer_error_no_wifi));

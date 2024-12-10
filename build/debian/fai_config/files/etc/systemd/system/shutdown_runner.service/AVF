@@ -1,0 +1,11 @@
+[Unit]
+After=syslog.target
+After=network.target
+After=virtiofs_internal.service
+[Service]
+ExecStart=/usr/bin/bash -c '/usr/local/bin/shutdown_runner --grpc_port $(cat /mnt/internal/debian_service_port)'
+Type=simple
+User=root
+Group=root
+[Install]
+WantedBy=multi-user.target

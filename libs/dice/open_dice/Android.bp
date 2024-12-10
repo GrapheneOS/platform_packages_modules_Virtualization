@@ -156,7 +156,7 @@ rust_defaults {
         "--allowlist-var=DICE_INLINE_CONFIG_SIZE",
         "--allowlist-var=DICE_PRIVATE_KEY_SEED_SIZE",
         "--allowlist-var=DICE_ID_SIZE",
-        "--allowlist-var=DICE_PRIVATE_KEY_SIZE",
+        "--allowlist-var=DICE_PRIVATE_KEY_BUFFER_SIZE",
     ],
 }
 

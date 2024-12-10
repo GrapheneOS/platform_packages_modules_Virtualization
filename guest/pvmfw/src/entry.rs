@@ -17,21 +17,20 @@
 use crate::config;
 use crate::memory;
 use core::arch::asm;
-use core::mem::{drop, size_of};
+use core::mem::size_of;
 use core::ops::Range;
 use core::slice;
-use hypervisor_backends::get_mmio_guard;
 use log::error;
-use log::info;
 use log::warn;
 use log::LevelFilter;
 use vmbase::util::RangeExt as _;
 use vmbase::{
     arch::aarch64::min_dcache_line_size,
-    configure_heap, console_writeln,
-    layout::{self, crosvm, UART_PAGE_ADDR},
-    main,
-    memory::{MemoryTracker, MEMORY, SIZE_128KB, SIZE_4KB},
+    configure_heap, console_writeln, layout, limit_stack_size, main,
+    memory::{
+        deactivate_dynamic_page_tables, map_image_footer, unshare_all_memory,
+        unshare_all_mmio_except_uart, unshare_uart, MemoryTrackerError, SIZE_128KB, SIZE_4KB,
+    },
     power::reboot,
 };
 use zeroize::Zeroize;
@@ -73,6 +72,7 @@ impl RebootReason {
 
 main!(start);
 configure_heap!(SIZE_128KB);
+limit_stack_size!(SIZE_4KB * 12);
 
 /// Entry point for pVM firmware.
 pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64) {
@@ -81,7 +81,9 @@ pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64
     // - can't access MMIO (except the console, already configured by vmbase)
 
     match main_wrapper(fdt_address as usize, payload_start as usize, payload_size as usize) {
-        Ok((entry, bcc)) => jump_to_payload(fdt_address, entry.try_into().unwrap(), bcc),
+        Ok((entry, bcc, keep_uart)) => {
+            jump_to_payload(fdt_address, entry.try_into().unwrap(), bcc, keep_uart)
+        }
         Err(e) => {
             const REBOOT_REASON_CONSOLE: usize = 1;
             console_writeln!(REBOOT_REASON_CONSOLE, "{}", e.as_avf_reboot_string());
@@ -100,7 +102,7 @@ fn main_wrapper(
     fdt: usize,
     payload: usize,
     payload_size: usize,
-) -> Result<(usize, Range<usize>), RebootReason> {
+) -> Result<(usize, Range<usize>, bool), RebootReason> {
     // Limitations in this function:
     // - only access MMIO once (and while) it has been mapped and configured
     // - only perform logging once the logger has been initialized
@@ -108,14 +110,10 @@ fn main_wrapper(
 
     log::set_max_level(LevelFilter::Info);
 
-    let page_table = memory::init_page_table().map_err(|e| {
-        error!("Failed to set up the dynamic page tables: {e}");
+    let appended_data = get_appended_data_slice().map_err(|e| {
+        error!("Failed to map the appended data: {e}");
         RebootReason::InternalError
     })?;
-
-    // SAFETY: We only get the appended payload from here, once. The region was statically mapped,
-    // then remapped by `init_page_table()`.
-    let appended_data = unsafe { get_appended_data_slice() };
 
     let appended = AppendedPayload::new(appended_data).ok_or_else(|| {
         error!("No valid configuration found");
@@ -124,21 +122,7 @@ fn main_wrapper(
 
     let config_entries = appended.get_entries();
 
-    // Up to this point, we were using the built-in static (from .rodata) page tables.
-    MEMORY.lock().replace(MemoryTracker::new(
-        page_table,
-        crosvm::MEM_START..layout::MAX_VIRT_ADDR,
-        crosvm::MMIO_RANGE,
-        Some(memory::appended_payload_range()),
-    ));
-
-    let slices = memory::MemorySlices::new(
-        fdt,
-        payload,
-        payload_size,
-        config_entries.vm_dtbo,
-        config_entries.vm_ref_dt,
-    )?;
+    let slices = memory::MemorySlices::new(fdt, payload, payload_size)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
     let (next_bcc, debuggable_payload) = crate::main(
@@ -147,37 +131,31 @@ fn main_wrapper(
         slices.ramdisk,
         config_entries.bcc,
         config_entries.debug_policy,
+        config_entries.vm_dtbo,
+        config_entries.vm_ref_dt,
     )?;
+    // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
+    let keep_uart = cfg!(debuggable_vms_improvements) && debuggable_payload;
 
     // Writable-dirty regions will be flushed when MemoryTracker is dropped.
     config_entries.bcc.zeroize();
 
-    info!("Expecting a bug making MMIO_GUARD_UNMAP return NOT_SUPPORTED on success");
-    MEMORY.lock().as_mut().unwrap().unshare_all_mmio().map_err(|e| {
+    unshare_all_mmio_except_uart().map_err(|e| {
         error!("Failed to unshare MMIO ranges: {e}");
         RebootReason::InternalError
     })?;
-    // Call unshare_all_memory here (instead of relying on the dtor) while UART is still mapped.
-    MEMORY.lock().as_mut().unwrap().unshare_all_memory();
+    unshare_all_memory();
 
-    if let Some(mmio_guard) = get_mmio_guard() {
-        if cfg!(debuggable_vms_improvements) && debuggable_payload {
-            // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
-        } else {
-            mmio_guard.unmap(UART_PAGE_ADDR).map_err(|e| {
-                error!("Failed to unshare the UART: {e}");
-                RebootReason::InternalError
-            })?;
-        }
-    }
-
-    // Drop MemoryTracker and deactivate page table.
-    drop(MEMORY.lock().take());
-
-    Ok((slices.kernel.as_ptr() as usize, next_bcc))
+    Ok((slices.kernel.as_ptr() as usize, next_bcc, keep_uart))
 }
 
-fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> ! {
+fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>, keep_uart: bool) -> ! {
+    if !keep_uart {
+        unshare_uart().unwrap();
+    }
+
+    deactivate_dynamic_page_tables();
+
     const ASM_STP_ALIGN: usize = size_of::<u64>() * 2;
     const SCTLR_EL1_RES1: u64 = (0b11 << 28) | (0b101 << 20) | (0b1 << 11);
     // Stage 1 instruction access cacheability is unaffected.
@@ -189,7 +167,7 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
 
     const SCTLR_EL1_VAL: u64 = SCTLR_EL1_RES1 | SCTLR_EL1_ITD | SCTLR_EL1_SED | SCTLR_EL1_I;
 
-    let scratch = layout::scratch_range();
+    let scratch = layout::data_bss_range();
 
     assert_ne!(scratch.end - scratch.start, 0, "scratch memory is empty.");
     assert_eq!(scratch.start.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
@@ -199,11 +177,17 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
     assert_eq!(bcc.start % ASM_STP_ALIGN, 0, "Misaligned guest BCC.");
     assert_eq!(bcc.end % ASM_STP_ALIGN, 0, "Misaligned guest BCC.");
 
-    let stack = memory::stack_range();
+    let stack = layout::stack_range();
 
     assert_ne!(stack.end - stack.start, 0, "stack region is empty.");
     assert_eq!(stack.start.0 % ASM_STP_ALIGN, 0, "Misaligned stack region.");
     assert_eq!(stack.end.0 % ASM_STP_ALIGN, 0, "Misaligned stack region.");
+
+    let eh_stack = layout::eh_stack_range();
+
+    assert_ne!(eh_stack.end - eh_stack.start, 0, "EH stack region is empty.");
+    assert_eq!(eh_stack.start.0 % ASM_STP_ALIGN, 0, "Misaligned EH stack region.");
+    assert_eq!(eh_stack.end.0 % ASM_STP_ALIGN, 0, "Misaligned EH stack region.");
 
     // Zero all memory that could hold secrets and that can't be safely written to from Rust.
     // Disable the exception vector, caches and page table and then jump to the payload at the
@@ -250,6 +234,18 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
             "cmp {cache_line}, {stack_end}",
             "b.lo 0b",
 
+            "mov {cache_line}, {eh_stack}",
+            // Zero EH stack region.
+            "0: stp xzr, xzr, [{eh_stack}], 16",
+            "cmp {eh_stack}, {eh_stack_end}",
+            "b.lo 0b",
+
+            // Flush d-cache over EH stack region.
+            "0: dc cvau, {cache_line}",
+            "add {cache_line}, {cache_line}, {dcache_line_size}",
+            "cmp {cache_line}, {eh_stack_end}",
+            "b.lo 0b",
+
             "msr sctlr_el1, {sctlr_el1_val}",
             "isb",
             "mov x1, xzr",
@@ -293,6 +289,8 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
             scratch_end = in(reg) u64::try_from(scratch.end.0).unwrap(),
             stack = in(reg) u64::try_from(stack.start.0).unwrap(),
             stack_end = in(reg) u64::try_from(stack.end.0).unwrap(),
+            eh_stack = in(reg) u64::try_from(eh_stack.start.0).unwrap(),
+            eh_stack_end = in(reg) u64::try_from(eh_stack.end.0).unwrap(),
             dcache_line_size = in(reg) u64::try_from(min_dcache_line_size()).unwrap(),
             in("x0") fdt_address,
             in("x30") payload_start,
@@ -301,15 +299,11 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
     };
 }
 
-/// # Safety
-///
-/// This must only be called once, since we are returning a mutable reference.
-/// The appended data region must be mapped.
-unsafe fn get_appended_data_slice() -> &'static mut [u8] {
-    let range = memory::appended_payload_range();
-    // SAFETY: This region is mapped and the linker script prevents it from overlapping with other
-    // objects.
-    unsafe { slice::from_raw_parts_mut(range.start.0 as *mut u8, range.end - range.start) }
+fn get_appended_data_slice() -> Result<&'static mut [u8], MemoryTrackerError> {
+    let range = map_image_footer()?;
+    // SAFETY: This region was just mapped for the first time (as map_image_footer() didn't fail)
+    // and the linker script prevents it from overlapping with other objects.
+    Ok(unsafe { slice::from_raw_parts_mut(range.start as *mut u8, range.len()) })
 }
 
 enum AppendedPayload<'a> {

@@ -83,7 +83,7 @@ do_release() {
 	local image=$(get_image_path ${arch} ${build_id})
 
 	local tag=${tag:-${build_id}}
-	local serving_url=/android/ferrochrome/${arch}/${tag}/${image_filename}
+	local serving_url=/android/ferrochrome/${tag}/${arch}/${image_filename}
 	echo "Releasing ${image} to ${serving_url}"
 
 	local request='payload : { url_path: '"\"${serving_url}\""' source_path : '"\"${image}\""' }'

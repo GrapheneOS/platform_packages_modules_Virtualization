@@ -14,15 +14,8 @@
 
 //! Memory layout.
 
-use aarch64_paging::paging::VirtualAddress;
-use core::ops::Range;
 use log::info;
-use vmbase::{layout, memory::PAGE_SIZE};
-
-/// Writable data region for the stack.
-pub fn boot_stack_range() -> Range<VirtualAddress> {
-    layout::stack_range(40 * PAGE_SIZE)
-}
+use vmbase::layout;
 
 pub fn print_addresses() {
     let text = layout::text_range();
@@ -40,7 +33,7 @@ pub fn print_addresses() {
     );
     let bss = layout::bss_range();
     info!("bss:        {}..{} ({} bytes)", bss.start, bss.end, bss.end - bss.start);
-    let boot_stack = boot_stack_range();
+    let boot_stack = layout::stack_range();
     info!(
         "boot_stack: {}..{} ({} bytes)",
         boot_stack.start,

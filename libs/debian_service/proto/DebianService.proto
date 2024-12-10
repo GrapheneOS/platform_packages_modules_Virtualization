@@ -25,6 +25,7 @@ service DebianService {
   rpc ReportVmActivePorts (ReportVmActivePortsRequest) returns (ReportVmActivePortsResponse) {}
   rpc ReportVmIpAddr (IpAddr) returns (ReportVmIpAddrResponse) {}
   rpc OpenForwardingRequestQueue (QueueOpeningRequest) returns (stream ForwardingRequestItem) {}
+  rpc OpenShutdownRequestQueue (ShutdownQueueOpeningRequest) returns (stream ShutdownRequestItem) {}
 }
 
 message QueueOpeningRequest {
@@ -51,3 +52,7 @@ message ForwardingRequestItem {
   int32 guest_tcp_port = 1;
   int32 vsock_port = 2;
 }
+
+message ShutdownQueueOpeningRequest {}
+
+message ShutdownRequestItem {}

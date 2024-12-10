@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminálkijelző"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Kurzor"</string>
     <string name="empty_line" msgid="5012067143408427178">"Üres sor"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Linux-terminál telepítése"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"A Linux-terminál elindításához körülbelül <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> adatmennyiséget kell letöltenie a hálózaton keresztül.\nFolytatja?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Letöltés, ha rendelkezésre áll Wi-Fi-kapcsolat"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"A Linux-terminál elindításához körülbelül <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> adatmennyiséget kell letöltenie a hálózaton keresztül.\nFolytatja?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Letöltés csak Wi-Fi-kapcsolattal"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Telepítés"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Telepítés…"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Hálózati hiba. Ellenőrizze a kapcsolatot, majd próbálja újra."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Hálózati hiba miatt nem sikerült a telepítés. Ellenőrizze a kapcsolatot, majd próbálkozzon újra."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux-terminál telepítése…"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"A Linux-terminál a befejezés után indul el"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Hálózati probléma miatt nem sikerült a telepítés"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Nem sikerült a telepítés, mert nincs Wi-Fi-kapcsolat"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Nem sikerült a telepítés. Próbálkozzon újra."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"A Linux-terminál a telepítés befejezése után indul el"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Hálózati probléma miatt nem sikerült a telepítés"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Nem sikerült a telepítés, mert nincs Wi-Fi-kapcsolat"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Nem sikerült a telepítés. Próbálkozzon újra."</string>
     <string name="action_settings" msgid="5729342767795123227">"Beállítások"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"A terminál előkészítése…"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"A terminál leállítása…"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"A terminál összeomlott"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Lemez átméretezése"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Átméretezés/Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Lemez átméretezése"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"A gyökérpartíció átméretezése"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Lemezméret beállítva"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> hozzárendelve"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maximum: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Mégse"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Újraindítás az alkalmazáshoz"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Portátirányítás"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Portátirányítás konfigurálása"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"A Terminal új portot próbál megnyitni"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"A megnyitni kívánt port: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Alkalmazás"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"A lemez átméretezése miatt a terminál újraindul"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Megerősítés"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"A terminál új port megnyitását kéri"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Kért port: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Elfogadás"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Elutasítás"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Helyreállítás"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Partíció-helyreállítási lehetőségek"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Váltás az eredeti verzióra"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Az összes eltávolítása"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Partíció-helyreállítási lehetőségek"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Visszaállítás az eredeti verzióra"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Összes adat eltávolítása"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Terminál visszaállítása"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Az adatok törlődni fognak"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Megerősítés"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Az adatok el lesznek távolítva"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Visszaállítás"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Mégse"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Adatok biztonsági mentése ide: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"A helyreállítás sikertelen volt, mert a biztonsági mentés nem sikerült"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"A helyreállítás a biztonsági mentés hibája miatt sikertelen volt"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Sikertelen helyreállítás"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Nem sikerült eltávolítani a biztonságimentés-fájlt"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"A biztonsági másolat adatainak eltávolítása sikertelen volt"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Biztonsági másolat adatainak eltávolítása"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"A(z) <xliff:g id="PATH">/mnt/backup</xliff:g> útvonalon lévő adatok eltávolítása"</string>
-    <string name="error_title" msgid="7196464038692913778">"Helyrehozhatatlan hiba"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Nem sikerült a hiba utáni helyreállítás.\nPróbálkozhat az alkalmazás újraindításával, vagy kipróbálhatja valamelyik helyreállítási lehetőséget."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> eltávolítása"</string>
+    <string name="error_title" msgid="405150657301906598">"Helyrehozhatatlan hiba"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Nem sikerült a hiba utáni helyreállítás.\nPróbálkozhat a terminál újraindításával, vagy kipróbálhatja valamelyik helyreállítási lehetőséget."</string>
     <string name="error_code" msgid="3585291676855383649">"Hibakód: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Beállítások"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"A terminál fut"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Kattintson a terminál megnyitásához"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Kattintson a terminál megnyitásához"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Bezárás"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"A(z) <xliff:g id="ID_1">VirGL</xliff:g> engedélyezve van"</string>
 </resources>

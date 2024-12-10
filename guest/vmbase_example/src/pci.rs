@@ -14,7 +14,6 @@
 
 //! Functions to scan the PCI bus for VirtIO device.
 
-use aarch64_paging::paging::MemoryRegion;
 use alloc::alloc::{alloc_zeroed, dealloc, handle_alloc_error, Layout};
 use core::{mem::size_of, ptr::NonNull};
 use log::{debug, info};
@@ -26,10 +25,7 @@ use virtio_drivers::{
     },
     BufferDirection, Error, Hal, PhysAddr, PAGE_SIZE,
 };
-use vmbase::{
-    fdt::pci::PciInfo,
-    virtio::pci::{self, PciTransportIterator},
-};
+use vmbase::virtio::pci::{self, PciTransportIterator};
 
 /// The standard sector size of a VirtIO block device, in bytes.
 const SECTOR_SIZE_BYTES: usize = 512;
@@ -113,16 +109,6 @@ fn check_virtio_console_device(transport: PciTransport) {
         console.send(c).expect("Failed to send character to VirtIO console device");
     }
     info!("Wrote to VirtIO console.");
-}
-
-/// Gets the memory region in which BARs are allocated.
-pub fn get_bar_region(pci_info: &PciInfo) -> MemoryRegion {
-    MemoryRegion::new(pci_info.bar_range.start as usize, pci_info.bar_range.end as usize)
-}
-
-/// Gets the PCI CAM memory region.
-pub fn get_cam_region(pci_info: &PciInfo) -> MemoryRegion {
-    MemoryRegion::new(pci_info.cam_range.start, pci_info.cam_range.end)
 }
 
 struct HalImpl;

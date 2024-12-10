@@ -20,55 +20,72 @@
     <string name="terminal_display" msgid="4810127497644015237">"Écran du terminal"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Curseur"</string>
     <string name="empty_line" msgid="5012067143408427178">"La ligne est vide"</string>
+    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
+    <skip />
     <string name="installer_title_text" msgid="500663060973466805">"Installer le terminal Linux"</string>
-    <string name="installer_desc_text_format" msgid="2734224805682171826">"Pour lancer un terminal Linux, vous devez télécharger environ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> de données sur le réseau.\nSouhaitez-vous continuer?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="487720664098014506">"Télécharger lorsque le Wi-Fi est accessible"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Pour lancer un terminal Linux, vous devez télécharger environ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> de données sur le réseau.\nSouhaitez-vous continuer?"</string>
+    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Télécharger par Wi-Fi seulement"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Installer"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installation…"</string>
-    <string name="installer_install_network_error_message" msgid="2450409107529774410">"Erreur de réseau. Vérifiez la connexion et réessayez."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Échec de l\'installation en raison d\'une erreur de réseau. Vérifiez votre connexion, puis réessayez."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Installation du terminal Linux en cours…"</string>
-    <string name="installer_notif_desc_text" msgid="6746098106305899060">"Le terminal Linux démarrera une fois l\'installation terminée"</string>
-    <string name="installer_error_network" msgid="3265100678310833813">"Échec de l\'installation en raison d\'un problème de réseau"</string>
-    <string name="installer_error_no_wifi" msgid="8631584648989718121">"Échec de l\'installation parce que le Wi-Fi n\'est pas disponible"</string>
-    <string name="installer_error_unknown" msgid="1991780204241177455">"Échec de l\'installation. Réessayez."</string>
+    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Le terminal Linux démarrera une fois l\'installation terminée"</string>
+    <string name="installer_error_network" msgid="5627330072955876676">"Échec de l\'installation en raison d\'un problème de réseau"</string>
+    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Échec de l\'installation parce que le Wi-Fi n\'est pas disponible"</string>
+    <string name="installer_error_unknown" msgid="5657920711470180224">"Échec de l\'installation. Veuillez réessayer"</string>
     <string name="action_settings" msgid="5729342767795123227">"Paramètres"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Préparation du terminal en cours…"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Arrêt du terminal en cours…"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Le terminal a planté"</string>
-    <string name="settings_disk_resize_title" msgid="1545791169419914600">"Redimensionnement du disque"</string>
-    <string name="settings_disk_resize_sub_title" msgid="149418971610906138">"Redimensionnement/Rootfs"</string>
+    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Redimensionnement du disque"</string>
+    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Redimensionnez la taille de la partition racine"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Taille du disque définie"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> attribués"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> maximum"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Annuler"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="83303619015991908">"Redémarrer pour appliquer"</string>
-    <string name="settings_port_forwarding_title" msgid="4867439149919324784">"Redirection de port"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6848040752531535488">"Configurez la redirection de port"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="2822798067500254704">"Le terminal tente d\'ouvrir un nouveau port"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="2167103177775323330">"Port dont l\'ouverture est demandée : <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Appliquer"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Le terminal sera redémarré pour redimensionner le disque"</string>
+    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Confirmer"</string>
+    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
+    <skip />
+    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Le terminal demande d\'ouvrir un nouveau port"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Port demandé : <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Accepter"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Refuser"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Récupération"</string>
-    <string name="settings_recovery_sub_title" msgid="1067782421529340576">"Options de récupération de partition"</string>
-    <string name="settings_recovery_reset_title" msgid="8785305518694186025">"Passer à la version initiale"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="5656572074090728544">"Tout retirer"</string>
+    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Options de récupération de partition"</string>
+    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Réinitialiser à la version initiale"</string>
+    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Retirez toutes les données"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Réinitialiser le terminal"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="6392681199895696206">"Les données seront supprimées"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="431718610013947861">"Confirmer"</string>
+    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Les données seront retirées"</string>
+    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Réinitialiser"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Annuler"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Sauvegarder les données sur <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="2129959464075410607">"Échec de la récupération en raison de l\'échec de la sauvegarde"</string>
+    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Échec de la récupération en raison d\'une erreur de sauvegarde"</string>
     <string name="settings_recovery_error" msgid="2451912941535666379">"Échec de la récupération"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="6515615177661212463">"Impossible de retirer le fichier de sauvegarde"</string>
+    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Échec du retrait des données de sauvegarde"</string>
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Retirer les données de sauvegarde"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="212161719832573475">"Nettoyage de <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="error_title" msgid="7196464038692913778">"Erreur irrécupérable"</string>
-    <string name="error_desc" msgid="1939028888570920661">"Échec de la récupération suite à une erreur.\nVous pouvez essayer de redémarrer l\'appli ou essayer l\'une des options de récupération."</string>
+    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Retirez <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="error_title" msgid="405150657301906598">"Erreur irrécupérable"</string>
+    <string name="error_desc" msgid="1984714179775053347">"Échec de la récupération à la suite d\'une erreur.\nVous pouvez essayer de redémarrer le terminal ou essayer l\'une des options de récupération."</string>
     <string name="error_code" msgid="3585291676855383649">"Code d\'erreur : <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Paramètres"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Le terminal fonctionne"</string>
-    <string name="service_notification_content" msgid="3579923802797824545">"Cliquez pour ouvrir le terminal"</string>
+    <string name="service_notification_content" msgid="5772901142342308273">"Cliquez pour ouvrir le terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Fermer"</string>
-    <!-- no translation found for virgl_enabled (5466273280705345122) -->
-    <skip />
+    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> est activé"</string>
 </resources>

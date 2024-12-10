@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2024 The Android Open Source Project
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+    <configuration description="Runs {MODULE}">
+    <!-- object type="module_controller" class="com.android.tradefed.testtype.suite.module.CommandSuccessModuleController" -->
+        <!--Skip the test when trusty VM is not enabled. -->
+        <!--option name="run-command" value="getprop trusty.test_vm.nonsecure_vm_ready | grep 1" /-->
+    <!--/object-->
+    <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer" />
+    <!-- Target Preparers - Run Shell Commands -->
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="cleanup" value="true" />
+        <option name="push-file" key="trusty-ut-ctrl.sh" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh" />
+        <option name="push-file" key="trusty-vm-launcher.sh" value="/data/local/tmp/trusty_test_vm/trusty-vm-launcher.sh" />
+        <option name="push-file" key="trusty-wait-ready.sh" value="/data/local/tmp/trusty_test_vm/trusty-wait-ready.sh" />
+        <option name="push-file" key="trusty-test_vm-config.json" value="/data/local/tmp/trusty_test_vm/trusty-test_vm-config.json" />
+        <option name="push-file" key="trusty_test_vm_signed" value="/data/local/tmp/trusty_test_vm/trusty_test_vm_signed" />
+    </target_preparer>
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="throw-if-cmd-fail" value="true" />
+        <!--Note: the first run-command shall not expect the background command to have started -->
+        <option name="run-bg-command" value="sh /data/local/tmp/trusty_test_vm/trusty-vm-launcher.sh" />
+        <option name="run-command" value="sh /data/local/tmp/trusty_test_vm/trusty-wait-ready.sh" />
+        <option name="run-command" value="start storageproxyd_test_system" />
+        <option name="teardown-command" value="stop storageproxyd_test_system" />
+        <option name="teardown-command" value="killall storageproxyd_test_system || true" />
+    </target_preparer>
+    <test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >
+        <option name="parse-gtest" value="true" />
+        <option name="abort-if-device-lost" value="true"/>
+        <option name="abort-if-root-lost" value="true" />
+        <option name="per-binary-timeout" value="10m" />
+        <option name="test-command-line" key="com.android.kernel.mmutest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.mmutest"/>
+        <option name="test-command-line" key="com.android.kernel.threadtest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.threadtest"/>
+        <option name="test-command-line" key="com.android.kernel.iovectest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.iovectest"/>
+        <option name="test-command-line" key="com.android.kernel.timertest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.timertest"/>
+        <option name="test-command-line" key="com.android.kernel.btitest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.btitest"/>
+        <option name="test-command-line" key="com.android.kernel.cachetest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.cachetest"/>
+        <option name="test-command-line" key="com.android.kernel.console-unittest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.console-unittest"/>
+        <option name="test-command-line" key="com.android.kernel.dpc-unittest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.dpc-unittest"/>
+        <option name="test-command-line" key="com.android.kernel.iovectest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.iovectest"/>
+        <option name="test-command-line" key="com.android.kernel.ktipc.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.ktipc.test"/>
+        <option name="test-command-line" key="com.android.kernel.memorytest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.memorytest"/>
+        <option name="test-command-line" key="com.android.kernel.pactest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.pactest"/>
+        <option name="test-command-line" key="com.android.kernel.uirq-unittest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.uirq-unittest"/>
+        <option name="test-command-line" key="com.android.kernel.usercopy-unittest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.usercopy-unittest"/>
+        <option name="test-command-line" key="com.android.kernel.userscstest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.kernel.userscstest"/>
+        <option name="test-command-line" key="com.android.trusty.rust.keymint.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.keymint.test"/>
+        <option name="test-command-line" key="com.android.manifesttest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.manifesttest"/>
+        <option name="test-command-line" key="com.android.memref.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.memref.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.memref.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.memref.test"/>
+        <option name="test-command-line" key="com.android.timer-unittest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.timer-unittest"/>
+        <option name="test-command-line" key="com.android.ipc-unittest.ctrl" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.ipc-unittest.ctrl"/>
+        <!--option name="test-command-line" key="com.android.trusty.cfitest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.cfitest"/-->
+        <option name="test-command-line" key="com.android.trusty.crashtest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.crashtest"/>
+        <option name="test-command-line" key="com.android.trusty.dlmalloctest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.dlmalloctest"/>
+        <option name="test-command-line" key="com.android.trusty.hwaes.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.hwaes.test"/>
+        <option name="test-command-line" key="com.android.trusty.hwbcc.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.hwbcc.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.tipc.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.tipc.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.hwkey.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwkey.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.hwbcc.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwbcc.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.hwwsk.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwwsk.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.storage.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.storage.test"/>
+        <option name="test-command-line" key="com.android.trusty.smc.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.smc.test"/>
+        <option name="test-command-line" key="com.android.uirq-unittest" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.uirq-unittest"/>
+        <!-- Unit tests for legacy hwcrypto services - these hwcrypto services are used by hwcryptohal /-->
+        <option name="test-command-line" key="com.android.trusty.hwcrypto.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.hwcrypto.test"/>
+        <option name="test-command-line" key="com.android.trusty.hwrng.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.hwrng.test"/>
+        <!-- Unit tests for hwcryptohal (exposing IHWCryptoKey/IHWCryptoOperations AIDL) - Note: VTS tests are defined alongside the interface /-->
+        <option name="test-command-line" key="com.android.trusty.rust.hwcryptohalserver.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwcryptohalserver.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.hwcryptohal_common.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwcryptohal_common.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.hwcryptokey_test.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwcryptokey_test.test"/>
+    </test>
+    <!-- disabling storage test as they are redundant with the VTS -->
+    <!--test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >
+        <option name="parse-gtest" value="true" />
+        <option name="abort-if-device-lost" value="true" />
+        <option name="abort-if-root-lost" value="true" />
+        <option name="per-binary-timeout" value="40m" />
+        <option name="test-command-line" key="com.android.trusty.rust.storage_unittest_aidl.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.storage_unittest_aidl.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.storage_unittest_aidl_ns.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.storage_unittest_aidl_ns.test"/>
+        <option name="test-command-line" key="com.android.storage-unittest.tp" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.storage-unittest.tp"/>
+        <option name="test-command-line" key="com.android.storage-unittest.tdea" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.storage-unittest.tdea"/>
+        <option name="test-command-line" key="com.android.storage-unittest.nsp" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.storage-unittest.nsp"/>
+        <option name="test-command-line" key="com.android.storage-unittest.td" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.storage-unittest.td"/>
+        <option name="test-command-line" key="com.android.storage-unittest.tdp" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.storage-unittest.tdp"/>
+    </test-->
+    <test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >
+        <option name="parse-gtest" value="true" />
+        <!--option name="abort-if-device-lost" value="true" /-->
+        <!--option name="abort-if-root-lost" value="true" /-->
+        <option name="per-binary-timeout" value="40m" />
+        <option name="test-command-line" key="com.android.trusty.rust.binder_rpc_test.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.binder_rpc_test.test"/>
+        <option name="test-command-line" key="com.android.trusty.binder.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.binder.test"/>
+    </test>
+    </configuration>

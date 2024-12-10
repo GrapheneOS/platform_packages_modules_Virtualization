@@ -54,7 +54,6 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -144,14 +143,18 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (Objects.equals(intent.getAction(), ACTION_STOP_VM_LAUNCHER_SERVICE)) {
-            stopSelf();
+            // If there is no Debian service or it fails to shutdown, just stop the service.
+            if (mDebianService == null || !mDebianService.shutdownDebian()) {
+                stopSelf();
+            }
             return START_NOT_STICKY;
         }
         if (mVirtualMachine != null) {
             Log.d(TAG, "VM instance is already started");
             return START_NOT_STICKY;
         }
-        mExecutorService = Executors.newCachedThreadPool();
+        mExecutorService =
+                Executors.newCachedThreadPool(new TerminalThreadFactory(getApplicationContext()));
 
         InstalledImage image = InstalledImage.getDefault(this);
         ConfigJson json = ConfigJson.from(this, image.getConfigPath());
@@ -170,9 +173,7 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
             android.os.Trace.endSection();
             android.os.Trace.beginAsyncSection("debianBoot", 0);
         } catch (VirtualMachineException e) {
-            Log.e(TAG, "cannot create runner", e);
-            stopSelf();
-            return START_NOT_STICKY;
+            throw new RuntimeException("cannot create runner", e);
         }
         mVirtualMachine = runner.getVm();
         mResultReceiver =
@@ -291,19 +292,17 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         mResultReceiver.send(VmLauncherService.RESULT_IPADDR, b);
     }
 
-    @Override
-    public void onActivePortsChanged(Set<String> oldPorts, Set<String> newPorts) {
-        mPortNotifier.onActivePortsChanged(oldPorts, newPorts);
-    }
-
     public static void stop(Context context) {
         Intent i = getMyIntent(context);
-        context.stopService(i);
+        i.setAction(VmLauncherService.ACTION_STOP_VM_LAUNCHER_SERVICE);
+        context.startService(i);
     }
 
     @Override
     public void onDestroy() {
-        mPortNotifier.stop();
+        if (mPortNotifier != null) {
+            mPortNotifier.stop();
+        }
         getSystemService(NotificationManager.class).cancelAll();
         stopDebianServer();
         if (mVirtualMachine != null) {

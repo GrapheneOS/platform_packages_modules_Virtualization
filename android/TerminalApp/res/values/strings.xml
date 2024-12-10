@@ -27,7 +27,7 @@
     <!-- Description of an empty line in the terminal. This is read by talkback. [CHAR LIMIT=none] -->
     <string name="empty_line">Empty line</string>
     <!-- Description of the hint supported by the terminal UI elements. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="double_tap_to_edit_text">Double-tap to go to cursor</string>
+    <string name="double_tap_to_edit_text">Double-tap to type input</string>
 
     <!-- Installer activity title [CHAR LIMIT=none] -->
     <string name="installer_title_text">Install Linux terminal</string>
@@ -81,17 +81,31 @@
     <!-- Dialog confirmation button for restarting the terminal [CHAR LIMIT=16] -->
     <string name="settings_disk_resize_resize_confirm_dialog_confirm">Confirm</string>
 
-    <!-- Settings menu title for 'port forwarding' [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_title">Port forwarding</string>
-    <!-- Settings menu subtitle for 'port forwarding' [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_sub_title">Configure port forwarding</string>
-    <!-- Notification title for new port forwarding [CHAR LIMIT=none] -->
+    <!-- Settings menu title for port forwarding [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_title">Port control</string>
+    <!-- Settings menu subtitle for port forwarding [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_sub_title">Allow/deny listening ports</string>
+    <!-- Title for active ports setting in port forwarding [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_active_ports_title">Listening ports</string>
+    <!-- Title for other enabled ports setting in port forwarding [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_other_enabled_ports_title">Saved allowed ports</string>
+
+    <!-- Dialog title for enabling a new port [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_dialog_title">Allow a new port</string>
+    <!-- Dialog hint for enabling a new port [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_dialog_textview_hint">Enter a new port number</string>
+    <!-- Dialog save action for enabling a new port [CHAR LIMIT=16] -->
+    <string name="settings_port_forwarding_dialog_save">Save</string>
+    <!-- Dialog cancel action for enabling a new port [CHAR LIMIT=16] -->
+    <string name="settings_port_forwarding_dialog_cancel">Cancel</string>
+
+    <!-- Notification title for a new active port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_notification_title">Terminal is requesting to open a new port</string>
-    <!-- Notification content for new port forwarding [CHAR LIMIT=none] -->
+    <!-- Notification content for a new active port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_notification_content">Port requested: <xliff:g id="port_number" example="8080">%d</xliff:g></string>
-    <!-- Notification action accept [CHAR LIMIT=none] -->
+    <!-- Notification action accept [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_notification_accept">Accept</string>
-    <!-- Notification action deny [CHAR LIMIT=none] -->
+    <!-- Notification action deny [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_notification_deny">Deny</string>
 
     <!-- Settings menu title for recoverying image [CHAR LIMIT=none] -->

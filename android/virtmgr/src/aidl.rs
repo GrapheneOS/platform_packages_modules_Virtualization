@@ -53,6 +53,7 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 };
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::{BnSecretkeeper, ISecretkeeper};
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::SecretId::SecretId;
+use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::PublicKey::PublicKey;
 use android_hardware_security_authgraph::aidl::android::hardware::security::authgraph::{
     Arc::Arc as AuthgraphArc, IAuthGraphKeyExchange::IAuthGraphKeyExchange,
     IAuthGraphKeyExchange::BnAuthGraphKeyExchange, Identity::Identity, KeInitResult::KeInitResult,
@@ -888,7 +889,7 @@ fn maybe_create_device_tree_overlay(
         .context("Failed to extract vendor hashtree digest")
         .or_service_specific_exception(-1)?;
 
-    let trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
+    let mut trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
         info!(
             "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
                 match the trusted digest in the pvmfw config, causing the VM to fail to start."
@@ -899,6 +900,7 @@ fn maybe_create_device_tree_overlay(
     };
 
     let instance_id;
+    let key_material;
     let mut untrusted_props = Vec::with_capacity(2);
     if cfg!(llpvm_changes) {
         instance_id = extract_instance_id(config);
@@ -907,7 +909,14 @@ fn maybe_create_device_tree_overlay(
         if want_updatable && is_secretkeeper_supported() {
             // Let guest know that it can defer rollback protection to Secretkeeper by setting
             // an empty property in untrusted node in DT. This enables Updatable VMs.
-            untrusted_props.push((cstr!("defer-rollback-protection"), &[]))
+            untrusted_props.push((cstr!("defer-rollback-protection"), &[]));
+            let sk: Strong<dyn ISecretkeeper> =
+                binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
+            if sk.getInterfaceVersion()? >= 2 {
+                let PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
+                key_material = keyMaterial;
+                trusted_props.push((cstr!("secretkeeper_public_key"), key_material.as_slice()));
+            }
         }
     }
 
@@ -1018,7 +1027,12 @@ fn assemble_shared_paths(
                 guest_gid: path.guestGid,
                 mask: path.mask,
                 tag: path.tag.clone(),
-                socket_path: temporary_directory.join(&path.socket).to_string_lossy().to_string(),
+                socket_path: temporary_directory
+                    .join(&path.socketPath)
+                    .to_string_lossy()
+                    .to_string(),
+                socket_fd: maybe_clone_file(&path.socketFd)?,
+                app_domain: path.appDomain,
             })
         })
         .collect()
@@ -2036,6 +2050,14 @@ impl ISecretkeeper for SecretkeeperProxy {
 
     fn deleteAll(&self) -> binder::Result<()> {
         self.0.deleteAll()
+    }
+
+    fn getSecretkeeperIdentity(&self) -> binder::Result<PublicKey> {
+        // SecretkeeperProxy is really a RPC binder service for PVM (It is called by
+        // MicrodroidManager). PVMs do not & must not (for security reason) rely on
+        // getSecretKeeperIdentity, so we throw an exception if someone attempts to
+        // use this API from the proxy.
+        Err(ExceptionCode::SECURITY.into())
     }
 }
 

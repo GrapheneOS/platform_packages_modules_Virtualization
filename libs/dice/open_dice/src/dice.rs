@@ -21,7 +21,7 @@ pub use open_dice_cbor_bindgen::DiceMode;
 use open_dice_cbor_bindgen::{
     DiceConfigType, DiceDeriveCdiCertificateId, DiceDeriveCdiPrivateKeySeed, DiceInputValues,
     DiceMainFlow, DICE_CDI_SIZE, DICE_HASH_SIZE, DICE_HIDDEN_SIZE, DICE_ID_SIZE,
-    DICE_INLINE_CONFIG_SIZE, DICE_PRIVATE_KEY_SEED_SIZE, DICE_PRIVATE_KEY_SIZE,
+    DICE_INLINE_CONFIG_SIZE, DICE_PRIVATE_KEY_BUFFER_SIZE, DICE_PRIVATE_KEY_SEED_SIZE,
 };
 #[cfg(feature = "multialg")]
 use open_dice_cbor_bindgen::{DiceContext_, DiceKeyAlgorithm};
@@ -41,7 +41,7 @@ pub const CDI_SIZE: usize = DICE_CDI_SIZE as usize;
 /// The size of a private key seed.
 pub const PRIVATE_KEY_SEED_SIZE: usize = DICE_PRIVATE_KEY_SEED_SIZE as usize;
 /// The size of a private key.
-pub const PRIVATE_KEY_SIZE: usize = DICE_PRIVATE_KEY_SIZE as usize;
+pub const PRIVATE_KEY_SIZE: usize = DICE_PRIVATE_KEY_BUFFER_SIZE as usize;
 /// The size of an ID.
 pub const ID_SIZE: usize = DICE_ID_SIZE as usize;
 

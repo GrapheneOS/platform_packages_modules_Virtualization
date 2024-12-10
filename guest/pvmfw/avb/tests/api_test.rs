@@ -51,6 +51,7 @@ fn latest_normal_payload_passes_verification() -> Result<()> {
         &load_latest_initrd_normal()?,
         b"initrd_normal",
         DebugLevel::None,
+        None,
     )
 }
 
@@ -63,6 +64,7 @@ fn latest_trusty_security_vm_kernel_passes_verification() -> Result<()> {
         salt,
         expected_rollback_index,
         vec![Capability::TrustySecurityVm],
+        None,
     )
 }
 
@@ -72,6 +74,7 @@ fn latest_debug_payload_passes_verification() -> Result<()> {
         &load_latest_initrd_debug()?,
         b"initrd_debug",
         DebugLevel::Full,
+        None,
     )
 }
 
@@ -93,6 +96,7 @@ fn payload_expecting_no_initrd_passes_verification_with_no_initrd() -> Result<()
         public_key: &public_key,
         capabilities: vec![],
         rollback_index: 0,
+        page_size: None,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 
@@ -137,6 +141,7 @@ fn payload_expecting_no_initrd_passes_verification_with_service_vm_prop() -> Res
         public_key: &public_key,
         capabilities: vec![Capability::RemoteAttest],
         rollback_index: 0,
+        page_size: None,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 
@@ -412,6 +417,7 @@ fn payload_with_rollback_index() -> Result<()> {
         public_key: &public_key,
         capabilities: vec![],
         rollback_index: 5,
+        page_size: None,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
     Ok(())

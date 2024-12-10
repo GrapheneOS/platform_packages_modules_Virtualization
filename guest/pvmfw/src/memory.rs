@@ -15,56 +15,17 @@
 //! Low-level allocation and tracking of main memory.
 
 use crate::entry::RebootReason;
-use crate::fdt;
-use crate::helpers::PVMFW_PAGE_SIZE;
-use aarch64_paging::paging::VirtualAddress;
-use aarch64_paging::MapError;
+use crate::fdt::{read_initrd_range_from, read_kernel_range_from};
 use core::num::NonZeroUsize;
-use core::ops::Range;
-use core::result;
 use core::slice;
-use hypervisor_backends::get_mem_sharer;
 use log::debug;
 use log::error;
 use log::info;
 use log::warn;
 use vmbase::{
-    layout::{self, crosvm},
-    memory::{PageTable, MEMORY, SIZE_2MB, SIZE_4KB},
-    util::align_up,
+    layout::crosvm,
+    memory::{map_data, map_rodata, resize_available_memory},
 };
-
-/// Returns memory range reserved for the appended payload.
-pub fn appended_payload_range() -> Range<VirtualAddress> {
-    let start = align_up(layout::binary_end().0, SIZE_4KB).unwrap();
-    // pvmfw is contained in a 2MiB region so the payload can't be larger than the 2MiB alignment.
-    let end = align_up(start, SIZE_2MB).unwrap();
-    VirtualAddress(start)..VirtualAddress(end)
-}
-
-/// Region allocated for the stack.
-pub fn stack_range() -> Range<VirtualAddress> {
-    const STACK_PAGES: usize = 12;
-
-    layout::stack_range(STACK_PAGES * PVMFW_PAGE_SIZE)
-}
-
-pub fn init_page_table() -> result::Result<PageTable, MapError> {
-    let mut page_table = PageTable::default();
-
-    // Stack and scratch ranges are explicitly zeroed and flushed before jumping to payload,
-    // so dirty state management can be omitted.
-    page_table.map_data(&layout::scratch_range().into())?;
-    page_table.map_data(&stack_range().into())?;
-    page_table.map_code(&layout::text_range().into())?;
-    page_table.map_rodata(&layout::rodata_range().into())?;
-    page_table.map_data_dbm(&appended_payload_range().into())?;
-    if let Err(e) = page_table.map_device(&layout::console_uart_page().into()) {
-        error!("Failed to remap the UART as a dynamic page table entry: {e}");
-        return Err(e);
-    }
-    Ok(page_table)
-}
 
 pub(crate) struct MemorySlices<'a> {
     pub fdt: &'a mut libfdt::Fdt,
@@ -73,101 +34,83 @@ pub(crate) struct MemorySlices<'a> {
 }
 
 impl<'a> MemorySlices<'a> {
-    pub fn new(
-        fdt: usize,
-        kernel: usize,
-        kernel_size: usize,
-        vm_dtbo: Option<&mut [u8]>,
-        vm_ref_dt: Option<&[u8]>,
-    ) -> Result<Self, RebootReason> {
+    pub fn new(fdt: usize, kernel: usize, kernel_size: usize) -> Result<Self, RebootReason> {
         let fdt_size = NonZeroUsize::new(crosvm::FDT_MAX_SIZE).unwrap();
         // TODO - Only map the FDT as read-only, until we modify it right before jump_to_payload()
         // e.g. by generating a DTBO for a template DT in main() and, on return, re-map DT as RW,
         // overwrite with the template DT and apply the DTBO.
-        let range = MEMORY.lock().as_mut().unwrap().alloc_mut(fdt, fdt_size).map_err(|e| {
+        map_data(fdt, fdt_size).map_err(|e| {
             error!("Failed to allocate the FDT range: {e}");
             RebootReason::InternalError
         })?;
 
-        // SAFETY: The tracker validated the range to be in main memory, mapped, and not overlap.
-        let fdt = unsafe { slice::from_raw_parts_mut(range.start as *mut u8, range.len()) };
-
-        let info = fdt::sanitize_device_tree(fdt, vm_dtbo, vm_ref_dt)?;
-        let fdt = libfdt::Fdt::from_mut_slice(fdt).map_err(|e| {
-            error!("Failed to load sanitized FDT: {e}");
+        // SAFETY: map_data validated the range to be in main memory, mapped, and not overlap.
+        let untrusted_fdt = unsafe { slice::from_raw_parts_mut(fdt as *mut u8, fdt_size.into()) };
+        let untrusted_fdt = libfdt::Fdt::from_mut_slice(untrusted_fdt).map_err(|e| {
+            error!("Failed to load input FDT: {e}");
             RebootReason::InvalidFdt
         })?;
-        debug!("Fdt passed validation!");
 
-        let memory_range = info.memory_range;
+        let memory_range = untrusted_fdt.first_memory_range().map_err(|e| {
+            error!("Failed to read memory range from DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
         debug!("Resizing MemoryTracker to range {memory_range:#x?}");
-        MEMORY.lock().as_mut().unwrap().shrink(&memory_range).map_err(|e| {
+        resize_available_memory(&memory_range).map_err(|e| {
             error!("Failed to use memory range value from DT: {memory_range:#x?}: {e}");
             RebootReason::InvalidFdt
         })?;
 
-        if let Some(mem_sharer) = get_mem_sharer() {
-            let granule = mem_sharer.granule().map_err(|e| {
-                error!("Failed to get memory protection granule: {e}");
-                RebootReason::InternalError
-            })?;
-            MEMORY.lock().as_mut().unwrap().init_dynamic_shared_pool(granule).map_err(|e| {
-                error!("Failed to initialize dynamically shared pool: {e}");
-                RebootReason::InternalError
-            })?;
-        } else {
-            let range = info.swiotlb_info.fixed_range().ok_or_else(|| {
-                error!("Pre-shared pool range not specified in swiotlb node");
-                RebootReason::InvalidFdt
-            })?;
-
-            MEMORY.lock().as_mut().unwrap().init_static_shared_pool(range).map_err(|e| {
-                error!("Failed to initialize pre-shared pool {e}");
-                RebootReason::InvalidFdt
-            })?;
-        }
-
-        let kernel_range = if let Some(r) = info.kernel_range {
-            MEMORY.lock().as_mut().unwrap().alloc_range(&r).map_err(|e| {
-                error!("Failed to obtain the kernel range with DT range: {e}");
-                RebootReason::InternalError
-            })?
+        let kernel_range = read_kernel_range_from(untrusted_fdt).map_err(|e| {
+            error!("Failed to read kernel range: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        let (kernel_start, kernel_size) = if let Some(r) = kernel_range {
+            (r.start, r.len())
         } else if cfg!(feature = "legacy") {
             warn!("Failed to find the kernel range in the DT; falling back to legacy ABI");
-
-            let kernel_size = NonZeroUsize::new(kernel_size).ok_or_else(|| {
-                error!("Invalid kernel size: {kernel_size:#x}");
-                RebootReason::InvalidPayload
-            })?;
-
-            MEMORY.lock().as_mut().unwrap().alloc(kernel, kernel_size).map_err(|e| {
-                error!("Failed to obtain the kernel range with legacy range: {e}");
-                RebootReason::InternalError
-            })?
+            (kernel, kernel_size)
         } else {
             error!("Failed to locate the kernel from the DT");
             return Err(RebootReason::InvalidPayload);
         };
+        let kernel_size = kernel_size.try_into().map_err(|_| {
+            error!("Invalid kernel size: {kernel_size:#x}");
+            RebootReason::InvalidPayload
+        })?;
 
-        let kernel = kernel_range.start as *const u8;
-        // SAFETY: The tracker validated the range to be in main memory, mapped, and not overlap.
-        let kernel = unsafe { slice::from_raw_parts(kernel, kernel_range.len()) };
+        map_rodata(kernel_start, kernel_size).map_err(|e| {
+            error!("Failed to map kernel range: {e}");
+            RebootReason::InternalError
+        })?;
 
-        let ramdisk = if let Some(r) = info.initrd_range {
+        let kernel = kernel_start as *const u8;
+        // SAFETY: map_rodata validated the range to be in main memory, mapped, and not overlap.
+        let kernel = unsafe { slice::from_raw_parts(kernel, kernel_size.into()) };
+
+        let initrd_range = read_initrd_range_from(untrusted_fdt).map_err(|e| {
+            error!("Failed to read initrd range: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        let ramdisk = if let Some(r) = initrd_range {
             debug!("Located ramdisk at {r:?}");
-            let r = MEMORY.lock().as_mut().unwrap().alloc_range(&r).map_err(|e| {
+            let ramdisk_size = r.len().try_into().map_err(|_| {
+                error!("Invalid ramdisk size: {:#x}", r.len());
+                RebootReason::InvalidRamdisk
+            })?;
+            map_rodata(r.start, ramdisk_size).map_err(|e| {
                 error!("Failed to obtain the initrd range: {e}");
                 RebootReason::InvalidRamdisk
             })?;
 
-            // SAFETY: The region was validated by memory to be in main memory, mapped, and
-            // not overlap.
+            // SAFETY: map_rodata validated the range to be in main memory, mapped, and not
+            // overlap.
             Some(unsafe { slice::from_raw_parts(r.start as *const u8, r.len()) })
         } else {
             info!("Couldn't locate the ramdisk from the device tree");
             None
         };
 
-        Ok(Self { fdt, kernel, ramdisk })
+        Ok(Self { fdt: untrusted_fdt, kernel, ramdisk })
     }
 }

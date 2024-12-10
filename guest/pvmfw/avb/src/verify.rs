@@ -45,6 +45,8 @@ pub struct VerifiedBootData<'a> {
     pub capabilities: Vec<Capability>,
     /// Rollback index of kernel.
     pub rollback_index: u64,
+    /// Page size of kernel, if present.
+    pub page_size: Option<usize>,
 }
 
 impl VerifiedBootData<'_> {
@@ -279,6 +281,7 @@ pub fn verify_payload<'a>(
     let descriptors = vbmeta_image.descriptors()?;
     let hash_descriptors = HashDescriptors::get(&descriptors)?;
     let capabilities = verify_property_and_get_capabilities(&descriptors)?;
+    let page_size = None; // TODO(ptosi): Read from payload.
 
     if initrd.is_none() {
         hash_descriptors.verify_no_initrd()?;
@@ -289,6 +292,7 @@ pub fn verify_payload<'a>(
             public_key: trusted_public_key,
             capabilities,
             rollback_index,
+            page_size,
         });
     }
 
@@ -309,5 +313,6 @@ pub fn verify_payload<'a>(
         public_key: trusted_public_key,
         capabilities,
         rollback_index,
+        page_size,
     })
 }

@@ -23,7 +23,9 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.FileDescriptor;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
@@ -36,6 +38,7 @@ class InstalledImage {
     private static final String ROOTFS_FILENAME = "root_part";
     private static final String BACKUP_FILENAME = "root_part_backup";
     private static final String CONFIG_FILENAME = "vm_config.json";
+    private static final String BUILD_ID_FILENAME = "build_id";
     static final String MARKER_FILENAME = "completed";
 
     public static final long RESIZE_STEP_BYTES = 4 << 20; // 4 MiB
@@ -45,6 +48,7 @@ class InstalledImage {
     private final Path mBackup;
     private final Path mConfig;
     private final Path mMarker;
+    private String mBuildId;
 
     /** Returns InstalledImage for a given app context */
     public static InstalledImage getDefault(Context context) {
@@ -77,6 +81,26 @@ class InstalledImage {
     /** Returns the path to the VM config file. */
     public Path getConfigPath() {
         return mConfig;
+    }
+
+    /** Returns the build ID of the installed image */
+    public String getBuildId() {
+        if (mBuildId == null) {
+            mBuildId = readBuildId();
+        }
+        return mBuildId;
+    }
+
+    private String readBuildId() {
+        Path file = mDir.resolve(BUILD_ID_FILENAME);
+        if (!Files.exists(file)) {
+            return "<no build id>";
+        }
+        try (BufferedReader r = new BufferedReader(new FileReader(file.toFile()))) {
+            return r.readLine();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read build ID", e);
+        }
     }
 
     public Path uninstallAndBackup() throws IOException {

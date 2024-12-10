@@ -1,0 +1,58 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_bindgen {
+    name: "libavf_bindgen",
+    wrapper_src: "include/android/virtualization.h",
+    crate_name: "avf_bindgen",
+    defaults: ["avf_build_flags_rust"],
+    source_stem: "bindings",
+    bindgen_flags: ["--default-enum-style rust"],
+    apex_available: ["com.android.virt"],
+}
+
+rust_defaults {
+    name: "libavf.default",
+    crate_name: "avf",
+    defaults: ["avf_build_flags_rust"],
+    srcs: ["src/lib.rs"],
+    edition: "2021",
+    rustlibs: [
+        "libvmclient",
+        "android.system.virtualizationcommon-rust",
+        "android.system.virtualizationservice-rust",
+        "libavf_bindgen",
+        "libbinder_rs",
+        "liblibc",
+        "liblog_rust",
+        "librpcbinder_rs",
+    ],
+    apex_available: ["com.android.virt"],
+}
+
+rust_ffi_static {
+    name: "libavf_impl",
+    defaults: ["libavf.default"],
+    export_include_dirs: ["include"],
+}
+
+cc_library {
+    name: "libavf",
+    llndk: {
+        symbol_file: "libavf.map.txt",
+        moved_to_apex: true,
+    },
+    whole_static_libs: ["libavf_impl"],
+    shared_libs: [
+        "libbinder_ndk",
+        "libbinder_rpc_unstable",
+        "liblog",
+    ],
+    export_static_lib_headers: ["libavf_impl"],
+    apex_available: ["com.android.virt"],
+    version_script: "libavf.map.txt",
+    stubs: {
+        symbol_file: "libavf.map.txt",
+    },
+}
