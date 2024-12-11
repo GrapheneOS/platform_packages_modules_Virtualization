@@ -598,6 +598,12 @@ avb_add_hash_footer {
             src: ":microdroid_kernel_prebuilt-x86_64",
         },
     },
+    props: [
+        {
+            name: "com.android.virt.page_size",
+            value: "16",
+        },
+    ],
     include_descriptors_from_images: [
         ":microdroid_16k_initrd_normal_hashdesc",
         ":microdroid_16k_initrd_debug_hashdesc",

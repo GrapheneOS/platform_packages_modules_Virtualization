@@ -173,6 +173,16 @@ pub fn assert_payload_without_initrd_passes_verification(
     Ok(())
 }
 
+pub fn read_page_size(kernel: &[u8]) -> Result<Option<usize>, PvmfwVerifyError> {
+    let public_key = load_trusted_public_key().unwrap();
+    let verified_boot_data = verify_payload(
+        kernel,
+        None, // initrd
+        &public_key,
+    )?;
+    Ok(verified_boot_data.page_size)
+}
+
 pub fn hash(inputs: &[&[u8]]) -> Digest {
     let mut digester = sha::Sha256::new();
     inputs.iter().for_each(|input| digester.update(input));

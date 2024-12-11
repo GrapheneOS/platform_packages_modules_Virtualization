@@ -83,7 +83,6 @@ import com.google.common.truth.BooleanSubject;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
@@ -1931,30 +1930,27 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(checkVmOutputIsRedirectedToLogcat(true)).isTrue();
     }
 
-    private boolean setSystemProperties(String name, String value) {
+    private boolean isDebugPolicyEnabled(String entry) {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         UiAutomation uiAutomation = instrumentation.getUiAutomation();
-        String cmd = "setprop " + name + " " + (value.isEmpty() ? "\"\"" : value);
-        return runInShellWithStderr(TAG, uiAutomation, cmd).trim().isEmpty();
+        String cmd = "/apex/com.android.virt/bin/vm info";
+        String output = runInShellWithStderr(TAG, uiAutomation, cmd).trim();
+        for (String line : output.split("\\v")) {
+            if (line.matches("^.*Debug policy.*" + entry + ": true.*$")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Test
-    @Ignore("b/372874464")
     public void outputIsNotRedirectedToLogcatIfNotDebuggable() throws Exception {
         assumeSupportedDevice();
 
-        // Disable debug policy to ensure no log output.
-        String sysprop = "hypervisor.virtualizationmanager.debug_policy.path";
-        String old = SystemProperties.get(sysprop);
-        assumeTrue(
-                "Can't disable debug policy. Perhapse user build?",
-                setSystemProperties(sysprop, ""));
+        // Debug policy shouldn't enable log
+        assumeFalse(isDebugPolicyEnabled("log"));
 
-        try {
-            assertThat(checkVmOutputIsRedirectedToLogcat(false)).isFalse();
-        } finally {
-            assertThat(setSystemProperties(sysprop, old)).isTrue();
-        }
+        assertThat(checkVmOutputIsRedirectedToLogcat(false)).isFalse();
     }
 
     @Test

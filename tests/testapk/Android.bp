@@ -15,11 +15,6 @@ android_app_certificate {
 
 java_defaults {
     name: "MicrodroidTestAppsDefaults",
-    test_suites: [
-        "cts",
-        "vts",
-        "general-tests",
-    ],
     static_libs: [
         "com.android.microdroid.testservice-java",
         "com.android.microdroid.test.vmshare_service-java",
@@ -64,17 +59,60 @@ java_defaults {
     min_sdk_version: "33",
 }
 
+DATA = [
+    ":MicrodroidTestAppUpdated",
+    ":MicrodroidVmShareApp",
+    ":test_microdroid_vendor_image",
+    ":test_microdroid_vendor_image_unsigned",
+]
+
 android_test {
     name: "MicrodroidTestApp",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV5.xml",
-    // Defined in ../vmshareapp/Android.bp
-    data: [
-        ":MicrodroidTestAppUpdated",
-        ":MicrodroidVmShareApp",
-        ":test_microdroid_vendor_image",
-        ":test_microdroid_vendor_image_unsigned",
-    ],
+    test_suites: ["general-tests"],
+    test_config: "AndroidTest.xml",
+    data: DATA,
+}
+
+android_test {
+    name: "MicrodroidTestApp.CTS",
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
+    manifest: "AndroidManifestV5.xml",
+    test_suites: ["cts"],
+    test_config: ":MicrodroidTestApp.CTS.config",
+    data: DATA,
+}
+
+android_test {
+    name: "MicrodroidTestApp.VTS",
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
+    manifest: "AndroidManifestV5.xml",
+    test_suites: ["vts"],
+    test_config: ":MicrodroidTestApp.VTS.config",
+    data: DATA,
+}
+
+genrule {
+    name: "MicrodroidTestApp.CTS.config",
+    srcs: ["AndroidTest.xml"],
+    out: ["out.xml"],
+    cmd: "sed " +
+        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
+        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.CddTest\" \\/>/' " +
+        "-e 's/MicrodroidTestApp.apk/MicrodroidTestApp.CTS.apk/' " +
+        "$(in) > $(out)",
+}
+
+genrule {
+    name: "MicrodroidTestApp.VTS.config",
+    srcs: ["AndroidTest.xml"],
+    out: ["out.xml"],
+    cmd: "sed " +
+        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
+        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.VsrTest\" \\/>/' " +
+        "-e 's/MicrodroidTestApp.apk/MicrodroidTestApp.VTS.apk/' " +
+        "$(in) > $(out)",
 }
 
 android_test_helper_app {

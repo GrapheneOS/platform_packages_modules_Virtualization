@@ -483,6 +483,9 @@ fn command_info() -> Result<(), Error> {
     let os_list = get_service()?.getSupportedOSList()?;
     println!("Available OS list: {}", serde_json::to_string(&os_list)?);
 
+    let debug_policy = get_service()?.getDebugPolicy()?;
+    println!("Debug policy: {}", debug_policy);
+
     Ok(())
 }
 

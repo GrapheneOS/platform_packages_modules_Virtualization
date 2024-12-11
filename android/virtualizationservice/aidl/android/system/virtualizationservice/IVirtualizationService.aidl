@@ -82,6 +82,11 @@ interface IVirtualizationService {
      */
     String[] getSupportedOSList();
 
+    /**
+     * Get installed debug policy for test and debugging purpose.
+     */
+    String getDebugPolicy();
+
     /** Returns whether given feature is enabled. */
     boolean isFeatureEnabled(in String feature);
 

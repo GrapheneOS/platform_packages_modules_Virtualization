@@ -28,6 +28,8 @@ pub enum PvmfwVerifyError {
     InvalidDescriptors(DescriptorError),
     /// Unknown vbmeta property.
     UnknownVbmetaProperty,
+    /// VBMeta has invalid page_size property.
+    InvalidPageSize,
 }
 
 impl From<SlotVerifyError<'_>> for PvmfwVerifyError {
@@ -51,6 +53,7 @@ impl fmt::Display for PvmfwVerifyError {
                 write!(f, "VBMeta has invalid descriptors. Error: {:?}", e)
             }
             Self::UnknownVbmetaProperty => write!(f, "Unknown vbmeta property"),
+            Self::InvalidPageSize => write!(f, "Invalid page_size property"),
         }
     }
 }

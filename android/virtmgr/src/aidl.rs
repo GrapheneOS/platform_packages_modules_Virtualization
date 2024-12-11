@@ -18,7 +18,7 @@ use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, SharedPathConfig, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, UsbConfig, VmContext, VmInstance, VmState};
-use crate::debug_config::DebugConfig;
+use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
 use crate::selinux::{check_tee_service_permission, getfilecon, getprevcon, SeContext};
@@ -317,6 +317,12 @@ impl IVirtualizationService for VirtualizationService {
     /// Get a list of supported OSes.
     fn getSupportedOSList(&self) -> binder::Result<Vec<String>> {
         Ok(Vec::from_iter(SUPPORTED_OS_NAMES.iter().cloned()))
+    }
+
+    /// Get printable debug policy for testing and debugging
+    fn getDebugPolicy(&self) -> binder::Result<String> {
+        let debug_policy = DebugPolicy::from_host();
+        Ok(format!("{debug_policy:?}"))
     }
 
     /// Returns whether given feature is enabled
