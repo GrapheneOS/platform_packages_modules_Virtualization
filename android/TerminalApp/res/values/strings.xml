@@ -89,7 +89,9 @@
     <string name="settings_port_forwarding_active_ports_title">Listening ports</string>
     <!-- Title for other enabled ports setting in port forwarding [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_other_enabled_ports_title">Saved allowed ports</string>
-    <!-- Description of close button for other enabled ports. Used for talkback. [CHAR LIMIT=none] -->
+    <!-- Description of add button for other enabled ports. Used for talkback. [CHAR LIMIT=16] -->
+    <string name="settings_port_forwarding_other_enabled_port_add_button">Add</string>
+    <!-- Description of close button for other enabled ports. Used for talkback. [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_other_enabled_port_close_button">Delete <xliff:g id="port_number" example="8000">%d</xliff:g></string>
 
     <!-- Dialog title for enabling a new port [CHAR LIMIT=none] -->
@@ -100,6 +102,12 @@
     <string name="settings_port_forwarding_dialog_save">Save</string>
     <!-- Dialog cancel action for enabling a new port [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_dialog_cancel">Cancel</string>
+    <!-- Dialog error message for non number format input [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_dialog_error_invalid_input">Please enter a number</string>
+    <!-- Dialog error message for invalid port number [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range">Invalid port number</string>
+    <!-- Dialog error message for existing port [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_dialog_error_existing_port">Port already exists</string>
 
     <!-- Notification title for a new active port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_notification_title">Terminal is requesting to open a new port</string>
