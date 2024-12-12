@@ -76,6 +76,7 @@ class ConfigJson {
     private SharedPathJson[] sharedPath;
     private DisplayJson display;
     private GpuJson gpu;
+    private boolean auto_memory_balloon;
 
     /** Parses JSON file at jsonPath */
     static ConfigJson from(Context context, Path jsonPath) {
@@ -145,7 +146,8 @@ class ConfigJson {
                 .setBootloaderPath(bootloader)
                 .setKernelPath(kernel)
                 .setInitrdPath(initrd)
-                .useNetwork(network);
+                .useNetwork(network)
+                .useAutoMemoryBalloon(auto_memory_balloon);
 
         if (input != null) {
             builder.useTouch(input.touchscreen)

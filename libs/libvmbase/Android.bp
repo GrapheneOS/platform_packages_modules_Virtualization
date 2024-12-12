@@ -91,7 +91,7 @@ rust_library_rlib {
         "libtinyvec_nostd",
         "libuuid_nostd",
         "libvirtio_drivers",
-        "libzerocopy_nostd",
+        "libzerocopy-0.7.35_nostd",
         "libzeroize_nostd",
     ],
     whole_static_libs: [

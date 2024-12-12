@@ -36,6 +36,8 @@ use secretkeeper_comm::data_types::request_response_impl::{
 use secretkeeper_comm::data_types::error::SecretkeeperError;
 use std::fs;
 use zeroize::Zeroizing;
+use std::sync::Mutex;
+use std::sync::Arc;
 
 const ENCRYPTEDSTORE_KEY_IDENTIFIER: &str = "encryptedstore_key";
 const AUTHORITY_HASH: i64 = -4670549;
@@ -98,27 +100,20 @@ impl VmSecret {
 
         let explicit_dice = OwnedDiceArtifactsWithExplicitKey::from_owned_artifacts(dice_artifacts)
             .context("Failed to get Dice artifacts in explicit key format")?;
-        // For pVM, skp_secret are stored in Secretkeeper. For non-protected it is all 0s.
+        let session = SkVmSession::new(vm_service, &explicit_dice)?;
+        let id = super::get_instance_id()?.ok_or(anyhow!("Missing instance_id"))?;
+        let explicit_dice_chain = explicit_dice
+            .explicit_key_dice_chain()
+            .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
+        let policy = sealing_policy(explicit_dice_chain)
+            .map_err(|e| anyhow!("Failed to build a sealing_policy: {e}"))?;
         let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
-        if super::is_strict_boot() {
-            let sk_service = get_secretkeeper_service(vm_service)?;
-            let mut session =
-                SkSession::new(sk_service, &explicit_dice, Some(get_secretkeeper_identity()?))?;
-            let id = super::get_instance_id()?.ok_or(anyhow!("Missing instance_id"))?;
-            let explicit_dice_chain = explicit_dice
-                .explicit_key_dice_chain()
-                .ok_or(anyhow!("Missing explicit dice chain, this is unusual"))?;
-            let policy = sealing_policy(explicit_dice_chain)
-                .map_err(|e| anyhow!("Failed to build a sealing_policy: {e}"))?;
-            if let Some(secret) = get_secret(&mut session, id, Some(policy.clone()))? {
-                *skp_secret = secret;
-            } else {
-                log::warn!(
-                    "No entry found in Secretkeeper for this VM instance, creating new secret."
-                );
-                *skp_secret = rand::random();
-                store_secret(&mut session, id, skp_secret.clone(), policy)?;
-            }
+        if let Some(secret) = session.get_secret(id, Some(policy.clone()))? {
+            *skp_secret = secret
+        } else {
+            log::warn!("No entry found in Secretkeeper for this VM instance, creating new secret.");
+            *skp_secret = rand::random();
+            session.store_secret(id, skp_secret.clone(), policy)?;
         }
         Ok(Self::V2 {
             dice_artifacts: explicit_dice,
@@ -231,48 +226,67 @@ fn sealing_policy(dice: &[u8]) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("DicePolicy construction failed {e:?}"))
 }
 
-fn store_secret(
-    session: &mut SkSession,
-    id: [u8; ID_SIZE],
-    secret: Zeroizing<[u8; SECRET_SIZE]>,
-    sealing_policy: Vec<u8>,
-) -> Result<()> {
-    let store_request = StoreSecretRequest { id: Id(id), secret: Secret(*secret), sealing_policy };
-    log::info!("Secretkeeper operation: {:?}", store_request);
+// The secure session between VM & Secretkeeper
+struct SkVmSession(Arc<Mutex<SkSession>>);
+impl SkVmSession {
+    fn new(
+        vm_service: &Strong<dyn IVirtualMachineService>,
+        dice: &OwnedDiceArtifactsWithExplicitKey,
+    ) -> Result<Self> {
+        let secretkeeper_proxy = get_secretkeeper_service(vm_service)?;
+        let secure_session =
+            SkSession::new(secretkeeper_proxy, dice, Some(get_secretkeeper_identity()?))?;
+        let secure_session = Arc::new(Mutex::new(secure_session));
+        Ok(Self(secure_session))
+    }
 
-    let store_request = store_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
-    let store_response = session.secret_management_request(&store_request)?;
-    let store_response = ResponsePacket::from_slice(&store_response).map_err(anyhow_err)?;
-    let response_type = store_response.response_type().map_err(anyhow_err)?;
-    ensure!(
-        response_type == ResponseType::Success,
-        "Secretkeeper store failed with error: {:?}",
-        *SecretkeeperError::deserialize_from_packet(store_response).map_err(anyhow_err)?
-    );
-    Ok(())
-}
+    fn store_secret(
+        &self,
+        id: [u8; ID_SIZE],
+        secret: Zeroizing<[u8; SECRET_SIZE]>,
+        sealing_policy: Vec<u8>,
+    ) -> Result<()> {
+        let store_request =
+            StoreSecretRequest { id: Id(id), secret: Secret(*secret), sealing_policy };
+        log::info!("Secretkeeper operation: {:?}", store_request);
 
-fn get_secret(
-    session: &mut SkSession,
-    id: [u8; ID_SIZE],
-    updated_sealing_policy: Option<Vec<u8>>,
-) -> Result<Option<[u8; SECRET_SIZE]>> {
-    let get_request = GetSecretRequest { id: Id(id), updated_sealing_policy };
-    log::info!("Secretkeeper operation: {:?}", get_request);
-    let get_request = get_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
-    let get_response = session.secret_management_request(&get_request)?;
-    let get_response = ResponsePacket::from_slice(&get_response).map_err(anyhow_err)?;
-    let response_type = get_response.response_type().map_err(anyhow_err)?;
-    if response_type == ResponseType::Success {
-        let get_response =
-            *GetSecretResponse::deserialize_from_packet(get_response).map_err(anyhow_err)?;
-        Ok(Some(get_response.secret.0))
-    } else {
-        let error = SecretkeeperError::deserialize_from_packet(get_response).map_err(anyhow_err)?;
-        if *error == SecretkeeperError::EntryNotFound {
-            return Ok(None);
+        let store_request = store_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
+        let session = &mut *self.0.lock().unwrap();
+        let store_response = session.secret_management_request(&store_request)?;
+        let store_response = ResponsePacket::from_slice(&store_response).map_err(anyhow_err)?;
+        let response_type = store_response.response_type().map_err(anyhow_err)?;
+        ensure!(
+            response_type == ResponseType::Success,
+            "Secretkeeper store failed with error: {:?}",
+            *SecretkeeperError::deserialize_from_packet(store_response).map_err(anyhow_err)?
+        );
+        Ok(())
+    }
+
+    fn get_secret(
+        &self,
+        id: [u8; ID_SIZE],
+        updated_sealing_policy: Option<Vec<u8>>,
+    ) -> Result<Option<[u8; SECRET_SIZE]>> {
+        let get_request = GetSecretRequest { id: Id(id), updated_sealing_policy };
+        log::info!("Secretkeeper operation: {:?}", get_request);
+        let get_request = get_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
+        let session = &mut *self.0.lock().unwrap();
+        let get_response = session.secret_management_request(&get_request)?;
+        let get_response = ResponsePacket::from_slice(&get_response).map_err(anyhow_err)?;
+        let response_type = get_response.response_type().map_err(anyhow_err)?;
+        if response_type == ResponseType::Success {
+            let get_response =
+                *GetSecretResponse::deserialize_from_packet(get_response).map_err(anyhow_err)?;
+            Ok(Some(get_response.secret.0))
+        } else {
+            let error =
+                SecretkeeperError::deserialize_from_packet(get_response).map_err(anyhow_err)?;
+            if *error == SecretkeeperError::EntryNotFound {
+                return Ok(None);
+            }
+            Err(anyhow!("Secretkeeper get failed: {error:?}"))
         }
-        Err(anyhow!("Secretkeeper get failed: {error:?}"))
     }
 }
 

@@ -31,6 +31,7 @@ pub(crate) struct MemorySlices<'a> {
     pub fdt: &'a mut libfdt::Fdt,
     pub kernel: &'a [u8],
     pub ramdisk: Option<&'a [u8]>,
+    pub dice_chain: Option<&'a [u8]>,
 }
 
 impl<'a> MemorySlices<'a> {
@@ -111,6 +112,12 @@ impl<'a> MemorySlices<'a> {
             None
         };
 
-        Ok(Self { fdt: untrusted_fdt, kernel, ramdisk })
+        let dice_chain = None;
+
+        Ok(Self { fdt: untrusted_fdt, kernel, ramdisk, dice_chain })
+    }
+
+    pub fn add_dice_chain(&mut self, dice_chain: &'a [u8]) {
+        self.dice_chain = Some(dice_chain)
     }
 }

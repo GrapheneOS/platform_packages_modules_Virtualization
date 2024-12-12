@@ -18,6 +18,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/cdefs.h>
+#include <time.h>
 
 __BEGIN_DECLS
 
@@ -40,9 +42,9 @@ typedef struct AVirtualMachineRawConfig AVirtualMachineRawConfig;
  * VM by calling {@link AVirtualMachine_createRaw} or releasing it by calling
  * {@link AVirtualMachineRawConfig_destroy}.
  *
- * \return A new virtual machine raw config object.
+ * \return A new virtual machine raw config object. On failure (such as out of memory), it aborts.
  */
-AVirtualMachineRawConfig* AVirtualMachineRawConfig_create();
+AVirtualMachineRawConfig* _Nonnull AVirtualMachineRawConfig_create() __INTRODUCED_IN(36);
 
 /**
  * Destroy a virtual machine config object.
@@ -52,61 +54,69 @@ AVirtualMachineRawConfig* AVirtualMachineRawConfig_create();
  * `AVirtualMachineRawConfig_destroy` does nothing if `config` is null. A destroyed config object
  * must not be reused.
  */
-void AVirtualMachineRawConfig_destroy(AVirtualMachineRawConfig* config);
+void AVirtualMachineRawConfig_destroy(AVirtualMachineRawConfig* _Nullable config)
+        __INTRODUCED_IN(36);
 
 /**
  * Set a name of a virtual machine.
  *
  * \param config a virtual machine config object.
- * \param name a pointer to a null-terminated string for the name.
+ * \param name a pointer to a null-terminated, UTF-8 encoded string for the name.
  *
- * \return If successful, it returns 0.
+ * \return If successful, it returns 0. If `name` is not a null-terminated UTF-8 encoded string,
+ *   it returns -EINVAL.
  */
-int AVirtualMachineRawConfig_setName(AVirtualMachineRawConfig* config, const char* name);
+int AVirtualMachineRawConfig_setName(AVirtualMachineRawConfig* _Nonnull config,
+                                     const char* _Nonnull name) __INTRODUCED_IN(36);
 
 /**
  * Set an instance ID of a virtual machine.
  *
  * \param config a virtual machine config object.
  * \param instanceId a pointer to a 64-byte buffer for the instance ID.
+ * \param instanceIdSize the number of bytes in `instanceId`.
  *
- * \return If successful, it returns 0.
+ * \return If successful, it returns 0. If `instanceIdSize` is incorrect, it returns -EINVAL.
  */
-int AVirtualMachineRawConfig_setInstanceId(AVirtualMachineRawConfig* config,
-                                           const int8_t* instanceId);
+int AVirtualMachineRawConfig_setInstanceId(AVirtualMachineRawConfig* _Nonnull config,
+                                           const int8_t* _Nonnull instanceId, size_t instanceIdSize)
+        __INTRODUCED_IN(36);
 
 /**
  * Set a kernel image of a virtual machine.
  *
  * \param config a virtual machine config object.
- * \param fd a readable file descriptor containing the kernel image, or -1 to unset.
- *   `AVirtualMachineRawConfig_setKernel` takes ownership of `fd`.
- *
- * \return If successful, it returns 0.
+ * \param fd a readable, seekable, and sized (i.e. report a valid size using fstat()) file
+ *   descriptor containing the kernel image, or -1 to unset. `AVirtualMachineRawConfig_setKernel`
+ *   takes ownership of `fd`.
  */
-int AVirtualMachineRawConfig_setKernel(AVirtualMachineRawConfig* config, int fd);
+void AVirtualMachineRawConfig_setKernel(AVirtualMachineRawConfig* _Nonnull config, int fd)
+        __INTRODUCED_IN(36);
 
 /**
  * Set an init rd of a virtual machine.
  *
  * \param config a virtual machine config object.
- * \param fd a readable file descriptor containing the kernel image, or -1 to unset.
- *   `AVirtualMachineRawConfig_setInitRd` takes ownership of `fd`.
- *
- * \return If successful, it returns 0.
+ * \param fd a readable, seekable, and sized (i.e. report a valid size using fstat()) file
+ *   descriptor containing the init rd image, or -1 to unset. `AVirtualMachineRawConfig_setInitRd`
+ *   takes ownership of `fd`.
  */
-int AVirtualMachineRawConfig_setInitRd(AVirtualMachineRawConfig* config, int fd);
+void AVirtualMachineRawConfig_setInitRd(AVirtualMachineRawConfig* _Nonnull config, int fd)
+        __INTRODUCED_IN(36);
 
 /**
  * Add a disk for a virtual machine.
  *
  * \param config a virtual machine config object.
- * \param fd a readable file descriptor containing the disk image.
- * `AVirtualMachineRawConfig_addDisk` takes ownership of `fd`.
+ * \param fd a readable, seekable, and sized (i.e. report a valid size using fstat()) file
+ *   descriptor containing the disk. `fd` must be writable if If `writable` is true.
+ *   `AVirtualMachineRawConfig_addDisk` takes ownership of `fd`.
+ * \param writable whether this disk should be writable by the virtual machine.
  *
  * \return If successful, it returns 0. If `fd` is invalid, it returns -EINVAL.
  */
-int AVirtualMachineRawConfig_addDisk(AVirtualMachineRawConfig* config, int fd);
+int AVirtualMachineRawConfig_addDisk(AVirtualMachineRawConfig* _Nonnull config, int fd,
+                                     bool writable) __INTRODUCED_IN(36);
 
 /**
  * Set how much memory will be given to a virtual machine.
@@ -114,40 +124,41 @@ int AVirtualMachineRawConfig_addDisk(AVirtualMachineRawConfig* config, int fd);
  * \param config a virtual machine config object.
  * \param memoryMib the amount of RAM to give the virtual machine, in MiB. 0 or negative to use the
  *   default.
- *
- * \return If successful, it returns 0.
  */
-int AVirtualMachineRawConfig_setMemoryMib(AVirtualMachineRawConfig* config, int32_t memoryMib);
+void AVirtualMachineRawConfig_setMemoryMib(AVirtualMachineRawConfig* _Nonnull config,
+                                           int32_t memoryMib) __INTRODUCED_IN(36);
 
 /**
- * Set whether a virtual machine is protected or not.
+ * Set whether the virtual machine's memory will be protected from the host, so the host can't
+ * access its memory.
  *
  * \param config a virtual machine config object.
  * \param protectedVm whether the virtual machine should be protected.
- *
- * \return If successful, it returns 0.
  */
-int AVirtualMachineRawConfig_setProtectedVm(AVirtualMachineRawConfig* config, bool protectedVm);
+void AVirtualMachineRawConfig_setProtectedVm(AVirtualMachineRawConfig* _Nonnull config,
+                                             bool protectedVm) __INTRODUCED_IN(36);
 
 /**
- * Set whether a virtual machine uses memory ballooning or not.
+ * Set whether a virtual machine uses memory ballooning.
  *
  * \param config a virtual machine config object.
  * \param balloon whether the virtual machine should use memory ballooning.
- *
- * \return If successful, it returns 0.
  */
-int AVirtualMachineRawConfig_setBalloon(AVirtualMachineRawConfig* config, bool balloon);
+void AVirtualMachineRawConfig_setBalloon(AVirtualMachineRawConfig* _Nonnull config, bool balloon)
+        __INTRODUCED_IN(36);
 
 /**
  * Set whether to use an alternate, hypervisor-specific authentication method
- * for protected VMs. You don't want to use this.
+ * for protected VMs.
+ *
+ * This option is discouraged. Prefer to use the default authentication method, which is better
+ * tested and integrated into Android. This option must only be used from the vendor partition.
  *
  * \return If successful, it returns 0. It returns `-ENOTSUP` if the hypervisor doesn't have an
  *   alternate auth mode.
  */
-int AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod(AVirtualMachineRawConfig* config,
-                                                             bool enable);
+int AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod(
+        AVirtualMachineRawConfig* _Nonnull config, bool enable) __INTRODUCED_IN(36);
 
 /**
  * Use the specified fd as the backing memfd for a range of the guest
@@ -155,14 +166,15 @@ int AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod(AVirtualMachineRawC
  *
  * \param config a virtual machine config object.
  * \param fd a memfd
- * \param rangeStart range start IPA
- * \param rangeEnd range end IPA
+ * \param rangeStart range start of guest memory addresses
+ * \param rangeEnd range end of guest memory addresses
  *
  * \return If successful, it returns 0. It returns `-ENOTSUP` if the hypervisor doesn't support
  *   backing memfd.
  */
-int AVirtualMachineRawConfig_addCustomMemoryBackingFile(AVirtualMachineRawConfig* config, int fd,
-                                                        size_t rangeStart, size_t rangeEnd);
+int AVirtualMachineRawConfig_addCustomMemoryBackingFile(AVirtualMachineRawConfig* _Nonnull config,
+                                                        int fd, uint64_t rangeStart,
+                                                        uint64_t rangeEnd) __INTRODUCED_IN(36);
 
 /**
  * Represents a handle on a virtualization service, responsible for managing virtual machines.
@@ -176,8 +188,10 @@ typedef struct AVirtualizationService AVirtualizationService;
  * The caller takes ownership of the returned service object, and is responsible for releasing it
  * by calling {@link AVirtualizationService_destroy}.
  *
- * \param early set to true when running a service for early virtual machines. See
- *   [`early_vm.md`](../../../../docs/early_vm.md) for more details on early virtual machines.
+ * \param early set to true when running a service for early virtual machines. Early VMs are
+ *   specialized virtual machines that can run even before the `/data` partition is mounted.
+ *   Early VMs must be pre-defined in XML files located at `{partition}/etc/avf/early_vms*.xml`, and
+ *   clients of early VMs must be pre-installed under the same partition.
  * \param service an out parameter that will be set to the service handle.
  *
  * \return
@@ -187,7 +201,8 @@ typedef struct AVirtualizationService AVirtualizationService;
  *   - If it fails to connect to the spawned `virtmgr`, it leaves `service` untouched and returns
  *     `-ECONNREFUSED`.
  */
-int AVirtualizationService_create(AVirtualizationService** service, bool early);
+int AVirtualizationService_create(AVirtualizationService* _Null_unspecified* _Nonnull service,
+                                  bool early) __INTRODUCED_IN(36);
 
 /**
  * Destroy a VirtualizationService object.
@@ -197,7 +212,7 @@ int AVirtualizationService_create(AVirtualizationService** service, bool early);
  *
  * \param service a handle on a virtualization service.
  */
-void AVirtualizationService_destroy(AVirtualizationService* service);
+void AVirtualizationService_destroy(AVirtualizationService* _Nullable service) __INTRODUCED_IN(36);
 
 /**
  * Represents a handle on a virtual machine.
@@ -208,55 +223,55 @@ typedef struct AVirtualMachine AVirtualMachine;
  * The reason why a virtual machine stopped.
  * @see AVirtualMachine_waitForStop
  */
-enum StopReason : int32_t {
+enum AVirtualMachineStopReason : int32_t {
     /**
      * VirtualizationService died.
      */
-    VIRTUALIZATION_SERVICE_DIED = 1,
+    AVIRTUAL_MACHINE_VIRTUALIZATION_SERVICE_DIED = 1,
     /**
      * There was an error waiting for the virtual machine.
      */
-    INFRASTRUCTURE_ERROR = 2,
+    AVIRTUAL_MACHINE_INFRASTRUCTURE_ERROR = 2,
     /**
      * The virtual machine was killed.
      */
-    KILLED = 3,
+    AVIRTUAL_MACHINE_KILLED = 3,
     /**
      * The virtual machine stopped for an unknown reason.
      */
-    UNKNOWN = 4,
+    AVIRTUAL_MACHINE_UNKNOWN = 4,
     /**
      * The virtual machine requested to shut down.
      */
-    SHUTDOWN = 5,
+    AVIRTUAL_MACHINE_SHUTDOWN = 5,
     /**
      * crosvm had an error starting the virtual machine.
      */
-    START_FAILED = 6,
+    AVIRTUAL_MACHINE_START_FAILED = 6,
     /**
      * The virtual machine requested to reboot, possibly as the result of a kernel panic.
      */
-    REBOOT = 7,
+    AVIRTUAL_MACHINE_REBOOT = 7,
     /**
      * The virtual machine or crosvm crashed.
      */
-    CRASH = 8,
+    AVIRTUAL_MACHINE_CRASH = 8,
     /**
      * The pVM firmware failed to verify the VM because the public key doesn't match.
      */
-    PVM_FIRMWARE_PUBLIC_KEY_MISMATCH = 9,
+    AVIRTUAL_MACHINE_PVM_FIRMWARE_PUBLIC_KEY_MISMATCH = 9,
     /**
      * The pVM firmware failed to verify the VM because the instance image changed.
      */
-    PVM_FIRMWARE_INSTANCE_IMAGE_CHANGED = 10,
+    AVIRTUAL_MACHINE_PVM_FIRMWARE_INSTANCE_IMAGE_CHANGED = 10,
     /**
      * The virtual machine was killed due to hangup.
      */
-    HANGUP = 11,
+    AVIRTUAL_MACHINE_HANGUP = 11,
     /**
      * VirtualizationService sent a stop reason which was not recognised by the client library.
      */
-    UNRECOGNISED = 0,
+    AVIRTUAL_MACHINE_UNRECOGNISED = 0,
 };
 
 /**
@@ -282,45 +297,67 @@ enum StopReason : int32_t {
  * \return If successful, it sets `vm` and returns 0. Otherwise, it leaves `vm` untouched and
  *   returns `-EIO`.
  */
-int AVirtualMachine_createRaw(const AVirtualizationService* service,
-                              AVirtualMachineRawConfig* config, int consoleOutFd, int consoleInFd,
-                              int logFd, AVirtualMachine** vm);
+int AVirtualMachine_createRaw(const AVirtualizationService* _Nonnull service,
+                              AVirtualMachineRawConfig* _Nonnull config, int consoleOutFd,
+                              int consoleInFd, int logFd,
+                              AVirtualMachine* _Null_unspecified* _Nonnull vm) __INTRODUCED_IN(36);
 
 /**
- * Start a virtual machine.
+ * Start a virtual machine. `AVirtualMachine_start` is synchronous and blocks until the virtual
+ * machine is initialized and free to start executing code, or until an error happens.
  *
  * \param vm a handle on a virtual machine.
  *
  * \return If successful, it returns 0. Otherwise, it returns `-EIO`.
  */
-int AVirtualMachine_start(AVirtualMachine* vm);
+int AVirtualMachine_start(AVirtualMachine* _Nonnull vm) __INTRODUCED_IN(36);
 
 /**
- * Stop a virtual machine.
+ * Stop a virtual machine. Stopping a virtual machine is like pulling the plug on a real computer;
+ * the machine halts immediately. Software running on the virtual machine is not notified of the
+ * event, the instance might be left in an inconsistent state.
+ *
+ * For a graceful shutdown, you could request the virtual machine to exit itself, and wait for the
+ * virtual machine to stop by `AVirtualMachine_waitForStop`.
+ *
+ * A stopped virtual machine can be re-started by calling `AVirtualMachine_start`.
+ *
+ * `AVirtualMachine_stop` stops a virtual machine by sending a signal to the process. This operation
+ * is synchronous and `AVirtualMachine_stop` may block.
  *
  * \param vm a handle on a virtual machine.
  *
  * \return If successful, it returns 0. Otherwise, it returns `-EIO`.
  */
-int AVirtualMachine_stop(AVirtualMachine* vm);
+int AVirtualMachine_stop(AVirtualMachine* _Nonnull vm) __INTRODUCED_IN(36);
 
 /**
- * Wait until a virtual machine stops.
+ * Wait until a virtual machine stops or the given timeout elapses.
  *
  * \param vm a handle on a virtual machine.
+ * \param timeout the timeout, or null to wait indefinitely.
+ * \param reason An out parameter that will be set to the reason why the virtual machine stopped.
  *
- * \return The reason why the virtual machine stopped.
+ * \return
+ *   - If the virtual machine stops within the timeout (or indefinitely if `timeout` is null), it
+ *     sets `reason` and returns true.
+ *   - If the timeout expired, it returns `false`.
  */
-enum StopReason AVirtualMachine_waitForStop(AVirtualMachine* vm);
+bool AVirtualMachine_waitForStop(AVirtualMachine* _Nonnull vm,
+                                 const struct timespec* _Nullable timeout,
+                                 enum AVirtualMachineStopReason* _Nonnull reason)
+        __INTRODUCED_IN(36);
 
 /**
- * Destroy a virtual machine.
+ * Destroy a virtual machine object. If the virtual machine is still running,
+ * `AVirtualMachine_destroy` first stops the virtual machine by sending a signal to the process.
+ * This operation is synchronous and `AVirtualMachine_destroy` may block.
  *
  * `AVirtualMachine_destroy` does nothing if `vm` is null. A destroyed virtual machine must not be
  * reused.
  *
  * \param vm a handle on a virtual machine.
  */
-void AVirtualMachine_destroy(AVirtualMachine* vm);
+void AVirtualMachine_destroy(AVirtualMachine* _Nullable vm) __INTRODUCED_IN(36);
 
 __END_DECLS

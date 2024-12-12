@@ -6,23 +6,28 @@ show_help() {
   echo "Options:"
   echo "-h         Print usage and this help message and exit."
   echo "-a ARCH    Architecture of the image [default is host arch: $(uname -m)]"
+  echo "-k         Build and use our custom kernel [default is cloud kernel]"
   echo "-r         Release mode build"
   echo "-s         Leave a shell open [default: only if the build fails]"
   echo "-w         Save temp work directory in the container [for debugging]"
 }
 
 arch="$(uname -m)"
+kernel_flag=
 release_flag=
 save_workdir_flag=
 shell_condition="||"
 
-while getopts "a:rsw" option; do
+while getopts "a:hkrsw" option; do
   case ${option} in
     a)
       arch="$OPTARG"
       ;;
     h)
       show_help ; exit
+      ;;
+    k)
+      kernel_flag="-k"
       ;;
     r)
       release_flag="-r"
@@ -53,4 +58,4 @@ docker run --privileged -it -v /dev:/dev \
   -v "$ANDROID_BUILD_TOP/packages/modules/Virtualization:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
   ubuntu:22.04 \
-  bash -c "/root/Virtualization/build/debian/build.sh -a $arch $release_flag $save_workdir_flag $shell_condition bash"
+  bash -c "/root/Virtualization/build/debian/build.sh -a $arch $release_flag $kernel_flag $save_workdir_flag $shell_condition bash"

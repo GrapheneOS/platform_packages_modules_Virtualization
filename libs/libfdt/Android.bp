@@ -38,7 +38,7 @@ rust_defaults {
         "libcstr",
         "liblibfdt_bindgen",
         "libstatic_assertions",
-        "libzerocopy_nostd",
+        "libzerocopy-0.7.35_nostd",
     ],
 }
 

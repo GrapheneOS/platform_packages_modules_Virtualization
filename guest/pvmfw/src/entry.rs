@@ -15,10 +15,9 @@
 //! Low-level entry and exit points of pvmfw.
 
 use crate::config;
-use crate::memory;
+use crate::memory::MemorySlices;
 use core::arch::asm;
 use core::mem::size_of;
-use core::ops::Range;
 use core::slice;
 use log::error;
 use log::warn;
@@ -88,14 +87,14 @@ pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64
 
     let reboot_reason = match main_wrapper(fdt_address, payload_start, payload_size) {
         Err(r) => r,
-        Ok((next_stage, bcc)) => match next_stage {
-            NextStage::LinuxBootWithUart(ep) => jump_to_payload(fdt_address, ep, bcc),
+        Ok((next_stage, slices)) => match next_stage {
+            NextStage::LinuxBootWithUart(ep) => jump_to_payload(ep, &slices),
             NextStage::LinuxBoot(ep) => {
                 if let Err(e) = unshare_uart() {
                     error!("Failed to unmap UART: {e}");
                     RebootReason::InternalError
                 } else {
-                    jump_to_payload(fdt_address, ep, bcc)
+                    jump_to_payload(ep, &slices)
                 }
             }
         },
@@ -112,11 +111,11 @@ pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64
 ///
 /// Provide the abstractions necessary for start() to abort the pVM boot and for main() to run with
 /// the assumption that its environment has been properly configured.
-fn main_wrapper(
+fn main_wrapper<'a>(
     fdt: usize,
     payload: usize,
     payload_size: usize,
-) -> Result<(NextStage, Range<usize>), RebootReason> {
+) -> Result<(NextStage, MemorySlices<'a>), RebootReason> {
     // Limitations in this function:
     // - only access MMIO once (and while) it has been mapped and configured
     // - only perform logging once the logger has been initialized
@@ -136,7 +135,7 @@ fn main_wrapper(
 
     let config_entries = appended.get_entries();
 
-    let slices = memory::MemorySlices::new(fdt, payload, payload_size)?;
+    let mut slices = MemorySlices::new(fdt, payload, payload_size)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
     let (next_bcc, debuggable_payload) = crate::main(
@@ -148,6 +147,7 @@ fn main_wrapper(
         config_entries.vm_dtbo,
         config_entries.vm_ref_dt,
     )?;
+    slices.add_dice_chain(next_bcc);
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
     let keep_uart = cfg!(debuggable_vms_improvements) && debuggable_payload;
 
@@ -162,7 +162,7 @@ fn main_wrapper(
 
     let next_stage = select_next_stage(slices.kernel, keep_uart);
 
-    Ok((next_stage, next_bcc))
+    Ok((next_stage, slices))
 }
 
 fn select_next_stage(kernel: &[u8], keep_uart: bool) -> NextStage {
@@ -173,7 +173,16 @@ fn select_next_stage(kernel: &[u8], keep_uart: bool) -> NextStage {
     }
 }
 
-fn jump_to_payload(fdt_address: usize, payload_start: usize, bcc: Range<usize>) -> ! {
+fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
+    let fdt_address = slices.fdt.as_ptr() as usize;
+    let bcc = slices
+        .dice_chain
+        .map(|slice| {
+            let r = slice.as_ptr_range();
+            (r.start as usize)..(r.end as usize)
+        })
+        .expect("Missing DICE chain");
+
     deactivate_dynamic_page_tables();
 
     const ASM_STP_ALIGN: usize = size_of::<u64>() * 2;
@@ -313,7 +322,7 @@ fn jump_to_payload(fdt_address: usize, payload_start: usize, bcc: Range<usize>) 
             eh_stack_end = in(reg) u64::try_from(eh_stack.end.0).unwrap(),
             dcache_line_size = in(reg) u64::try_from(min_dcache_line_size()).unwrap(),
             in("x0") u64::try_from(fdt_address).unwrap(),
-            in("x30") u64::try_from(payload_start).unwrap(),
+            in("x30") u64::try_from(entrypoint).unwrap(),
             options(noreturn),
         );
     };

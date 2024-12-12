@@ -16,7 +16,7 @@ rust_defaults {
         "libhex",
         "libnix",
         "libuuid",
-        "libzerocopy",
+        "libzerocopy-0.7.35",
     ],
     multilib: {
         lib32: {
