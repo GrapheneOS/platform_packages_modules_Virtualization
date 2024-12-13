@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"Προβολή τερματικού"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Δείκτης"</string>
     <string name="empty_line" msgid="5012067143408427178">"Κενή γραμμή"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Πατήστε δύο φορές, για να πληκτρολογήσετε είσοδο"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Εγκατάσταση τερματικού Linux"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Για την εκκίνηση του τερματικού Linux, πρέπει να κατεβάσετε περίπου <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> δεδομένων μέσω δικτύου.\nΘέλετε να συνεχίσετε;"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Λήψη μόνο μέσω Wi-Fi"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Εφαρμογή"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Θα γίνει επανεκκίνηση του τερματικού για αλλαγή μεγέθους δίσκου"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Επιβεβαίωση"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Έλεγχος θυρών"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Να επιτρέπονται/μην επιτρέπονται οι θύρες ακρόασης"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Θύρες ακρόασης"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Αποθηκευμένες επιτρεπόμενες θύρες"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Να επιτρέπεται νέα θύρα"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Καταχωρίστε νέο αριθμό θύρας"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Αποθήκευση"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Ακύρωση"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Το τερματικό ζητά να ανοίξει μια νέα θύρα"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Ζητήθηκε θύρα: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Αποδοχή"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"Το τερματικό εκτελείται"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Κάντε κλικ για άνοιγμα του τερματικού"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Κλείσιμο"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"Το <xliff:g id="ID_1">VirGL</xliff:g> είναι ενεργοποιημένο"</string>
 </resources>

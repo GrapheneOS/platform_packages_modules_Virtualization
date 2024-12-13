@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"ಟರ್ಮಿನಲ್‌ ಪ್ರದರ್ಶನ"</string>
     <string name="terminal_input" msgid="4602512831433433551">"ಕರ್ಸರ್‌"</string>
     <string name="empty_line" msgid="5012067143408427178">"ಖಾಲಿ ಸಾಲು"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ಇನ್‌ಪುಟ್ ಟೈಪ್ ಮಾಡಲು ಡಬಲ್-ಟ್ಯಾಪ್ ಮಾಡಿ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನೀವು ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಸುಮಾರು <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ಡೇಟಾವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.\nನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"ವೈ-ಫೈ ಅನ್ನು ಮಾತ್ರ ಬಳಸಿ ಡೌನ್ ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ಅನ್ವಯಿಸಿ"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"ದೃಢೀಕರಿಸಿ"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"ಪೋರ್ಟ್ ನಿಯಂತ್ರಣ"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ಅನುಮತಿಸಲಾದ ಪೋರ್ಟ್‌ಗಳನ್ನು ಸೇವ್ ಮಾಡಲಾಗಿದೆ"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"ಹೊಸ ಪೋರ್ಟ್ ಅನ್ನು ಅನುಮತಿಸಿ"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"ಹೊಸ ಪೋರ್ಟ್ ಸಂಖ್ಯೆವೊಂದನ್ನು ನಮೂದಿಸಿ"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"ಸೇವ್ ಮಾಡಿ"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"ರದ್ದುಮಾಡಿ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸುತ್ತಿದೆ"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"ಪೋರ್ಟ್ ಅನ್ನು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ಸಮ್ಮತಿಸಿ"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ಮುಚ್ಚಿರಿ"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ"</string>
 </resources>

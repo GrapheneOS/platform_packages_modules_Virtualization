@@ -312,6 +312,11 @@ impl VmInstance {
             }
         })
     }
+
+    /// Opens a vsock connection to the CID of the VM on the given vsock port.
+    pub fn connect_vsock(&self, port: u32) -> BinderResult<ParcelFileDescriptor> {
+        self.vm.connectVsock(port as i32)
+    }
 }
 
 impl Debug for VmInstance {

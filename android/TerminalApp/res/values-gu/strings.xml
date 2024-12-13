@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"ટર્મિનલ ડિસ્પ્લે"</string>
     <string name="terminal_input" msgid="4602512831433433551">"કર્સર"</string>
     <string name="empty_line" msgid="5012067143408427178">"ખાલી લાઇન"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ઇનપુટ ટાઇપ કરવા માટે બે વાર ટૅપ કરો"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ટર્મિનલ ઇન્સ્ટૉલ કરો"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ટર્મિનલ લૉન્ચ કરવા માટે, તમારે નેટવર્ક પર આશરે <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ડેટા ડાઉનલોડ કરવાની જરૂર છે.\nશું તમે આગળ વધવા માગો છો?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"માત્ર વાઇ-ફાઇનો ઉપયોગ કરીને ડાઉનલોડ કરો"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"લાગુ કરો"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ડિસ્કનું કદ બદલવા માટે ટર્મિનલને ફરી શરુ કરવામાં આવશે"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"કન્ફર્મ કરો"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"પોર્ટ નિયંત્રણ"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"સાંભળનાર પોર્ટને મંજૂરી આપો/નકારો"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"સાંભળનાર પોર્ટ"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"સાચવેલા મંજૂરીપ્રાપ્ત પોર્ટ"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"નવા પોર્ટને મંજૂરી આપો"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"નવો પોર્ટ નંબર દાખલ કરો"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"સાચવો"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"રદ કરો"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ટર્મિનલ નવું પોર્ટ ખોલવા માટે વિનંતી કરી રહ્યું છે"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"પોર્ટની વિનંતી કરવામાં આવી: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"સ્વીકારો"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"ટર્મિનલ ચાલી રહ્યું છે"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ટર્મિનલ ખોલવા માટે ક્લિક કરો"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"બંધ કરો"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ચાલુ કરેલું છે"</string>
 </resources>

@@ -65,11 +65,3 @@ ifdef RELEASE_AVF_ENABLE_NETWORK
     $(error RELEASE_AVF_ENABLE_LLPVM_CHANGES must also be enabled)
   endif
 endif
-
-ifdef RELEASE_AVF_ENABLE_EARLY_VM
-  # We can't query TARGET_RELEASE from here, so we use RELEASE_AIDL_USE_UNFROZEN as a proxy value of
-  # whether we are building -next release.
-  ifneq ($(RELEASE_AIDL_USE_UNFROZEN),true)
-    $(error RELEASE_AVF_ENABLE_EARLY_VM can only be enabled in trunk_staging until b/357025924 is fixed)
-  endif
-endif

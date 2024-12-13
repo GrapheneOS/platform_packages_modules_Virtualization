@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"ടെർമിനൽ ഡിസ്‌പ്ലേ"</string>
     <string name="terminal_input" msgid="4602512831433433551">"കഴ്‌സർ"</string>
     <string name="empty_line" msgid="5012067143408427178">"ശൂന്യമായ ലൈൻ"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ഇൻപുട്ട് ടൈപ്പ് ചെയ്യാൻ ഡബിൾ ടാപ്പ് ചെയ്യുക"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ടെർമിനൽ ഇൻസ്റ്റാൾ ചെയ്യുക"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ടെർമിനൽ ലോഞ്ച് ചെയ്യാൻ, നിങ്ങൾക്ക് നെറ്റ്‌വർക്കിലൂടെ ഏകദേശം <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ഡാറ്റ ഡൗൺലോഡ് ചെയ്യേണ്ടതുണ്ട്.\nനിങ്ങൾക്ക് തുടരണമെന്നുണ്ടോ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"വൈഫൈ മാത്രം ഉപയോഗിച്ച് ഡൗൺലോഡ് ചെയ്യുക"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ബാധകമാക്കുക"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ഡിസ്കിന്റെ വലുപ്പം മാറ്റുന്നതിനായി ടെർമിനൽ റീസ്റ്റാർട്ട് ചെയ്യും"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"സ്ഥിരീകരിക്കുക"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"പോർട്ട് നിയന്ത്രണം"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ശ്രവണ പോർട്ടുകൾ അനുവദിക്കുക/നിരസിക്കുക"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ശ്രവണ പോർട്ടുകൾ"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"സംരക്ഷിച്ച അനുവദനീയമായ പോർട്ടുകൾ"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"പുതിയ പോർട്ട് അനുവദിക്കുക"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"പുതിയ പോർട്ട് നമ്പർ നൽകുക"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"സംരക്ഷിക്കുക"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"റദ്ദാക്കുക"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ഒരു പുതിയ പോർട്ട് തുറക്കാൻ ടെർമിനൽ അഭ്യർത്ഥിക്കുന്നു"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"പോർട്ട് അഭ്യർത്ഥിച്ചു: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"അംഗീകരിക്കുക"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"ടെർമിനൽ റൺ ചെയ്യുന്നു"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ടെർമിനൽ തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"അടയ്ക്കുക"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> പ്രവർത്തനക്ഷമമാക്കി"</string>
 </resources>

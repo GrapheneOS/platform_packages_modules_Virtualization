@@ -22,6 +22,7 @@ import static android.os.ParcelFileDescriptor.MODE_READ_WRITE;
 
 import static java.util.Objects.requireNonNull;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
@@ -48,6 +49,8 @@ import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 import android.system.virtualizationservice.VirtualMachineRawConfig;
 import android.text.TextUtils;
 import android.util.Log;
+
+import com.android.system.virtualmachine.flags.Flags;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -601,6 +604,18 @@ public final class VirtualMachineConfig {
     }
 
     /**
+     * Returns whether this VM enabled the hint to use transparent huge pages.
+     *
+     * @see Builder#setShouldUseHugepages
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_PROMOTE_SET_SHOULD_USE_HUGEPAGES_TO_SYSTEM_API)
+    public boolean shouldUseHugepages() {
+        return mShouldUseHugepages;
+    }
+
+    /**
      * Tests if this config is compatible with other config. Being compatible means that the configs
      * can be interchangeably used for the same virtual machine; they do not change the VM identity
      * or secrets. Such changes include varying the number of CPUs or the size of the RAM. Changes
@@ -798,7 +813,7 @@ public final class VirtualMachineConfig {
                 Optional.ofNullable(customImageConfig.getAudioConfig())
                         .map(ac -> ac.toParcelable())
                         .orElse(null);
-        config.noBalloon = !customImageConfig.useAutoMemoryBalloon();
+        config.balloon = customImageConfig.useAutoMemoryBalloon();
         config.usbConfig =
                 Optional.ofNullable(customImageConfig.getUsbConfig())
                         .map(
@@ -1364,7 +1379,26 @@ public final class VirtualMachineConfig {
             return this;
         }
 
-        /** @hide */
+        /**
+         * Hints whether the VM should make use of the transparent huge pages feature.
+         *
+         * <p>Note: this API just provides a hint, whether the VM will actually use transparent huge
+         * pages additionally depends on the following:
+         *
+         * <ul>
+         *   <li>{@code /sys/kernel/mm/transparent_hugepages/shmem_enabled} should be configured
+         *       with the value {@code 'advise'}.
+         *   <li>Android host kernel version should be at least {@code android15-5.15}
+         * </ul>
+         *
+         * @see https://docs.kernel.org/admin-guide/mm/transhuge.html
+         * @see
+         *     https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/hugepages.md
+         * @hide
+         */
+        @SystemApi
+        @FlaggedApi(Flags.FLAG_PROMOTE_SET_SHOULD_USE_HUGEPAGES_TO_SYSTEM_API)
+        @NonNull
         public Builder setShouldUseHugepages(boolean shouldUseHugepages) {
             mShouldUseHugepages = shouldUseHugepages;
             return this;

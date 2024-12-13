@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"Приказ терминала"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Курсор"</string>
     <string name="empty_line" msgid="5012067143408427178">"Празан ред"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Двапут додирните да бисте унели текст"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Инсталирајте Linux терминал"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Да бисте покренули Linux терминал, треба да преузмете око <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> података преко мреже.\nЖелите ли да наставите?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Преузимај само преко WiFi мреже"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Примени"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Терминал ће се рестартовати да би се променила величина диска"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Потврди"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Контрола порта"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Дозволите или забраните портове за слушање"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Портови за слушање"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Сачувани дозвољени портови"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Дозволите нови порт"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Унесите нови број порта"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Сачувај"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Откажи"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Терминал тражи да отвори нови порт"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Обавезан порт: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Прихвати"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал је активан"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Кликните да бисте отворили терминал"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Затвори"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> је омогућен"</string>
 </resources>

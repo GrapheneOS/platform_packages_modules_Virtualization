@@ -66,6 +66,7 @@ package android.system.virtualmachine {
     method public boolean isEncryptedStorageEnabled();
     method public boolean isProtectedVm();
     method public boolean isVmOutputCaptured();
+    method @FlaggedApi("com.android.system.virtualmachine.flags.promote_set_should_use_hugepages_to_system_api") public boolean shouldUseHugepages();
     field public static final int CPU_TOPOLOGY_MATCH_HOST = 1; // 0x1
     field public static final int CPU_TOPOLOGY_ONE_CPU = 0; // 0x0
     field public static final int DEBUG_LEVEL_FULL = 1; // 0x1
@@ -82,6 +83,7 @@ package android.system.virtualmachine {
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setMemoryBytes(@IntRange(from=1) long);
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setPayloadBinaryName(@NonNull String);
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setProtectedVm(boolean);
+    method @FlaggedApi("com.android.system.virtualmachine.flags.promote_set_should_use_hugepages_to_system_api") @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setShouldUseHugepages(boolean);
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setVmOutputCaptured(boolean);
   }
 

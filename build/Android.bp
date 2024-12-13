@@ -75,3 +75,20 @@ genrule_defaults {
     tools: ["dtc"],
     cmd: "FILES=($(in)) && $(location dtc) -@ -I dts -O dtb $${FILES[-1]} -o $(out)",
 }
+
+// This is a temporary workaround until b/343795511 is implemented.
+aconfig_declarations {
+    name: "avf_aconfig_flags",
+    package: "com.android.system.virtualmachine.flags",
+    container: "com.android.virt",
+    srcs: [
+        "avf_flags.aconfig",
+    ],
+}
+
+java_aconfig_library {
+    name: "avf_aconfig_flags_java",
+    aconfig_declarations: "avf_aconfig_flags",
+    sdk_version: "module_current",
+    apex_available: ["com.android.virt"],
+}

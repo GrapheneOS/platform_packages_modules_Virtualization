@@ -787,7 +787,7 @@ impl VirtualizationService {
             boost_uclamp: config.boostUclamp,
             gpu_config,
             audio_config,
-            no_balloon: config.noBalloon,
+            balloon: config.balloon,
             usb_config,
             dump_dt_fd,
         };

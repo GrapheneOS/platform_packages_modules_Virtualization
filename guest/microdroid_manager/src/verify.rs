@@ -14,7 +14,7 @@
 
 use crate::instance::{ApexData, ApkData, MicrodroidData};
 use crate::payload::{get_apex_data_from_payload, to_metadata};
-use crate::{is_strict_boot, MicrodroidError};
+use crate::MicrodroidError;
 use anyhow::{anyhow, ensure, Context, Result};
 use apkmanifest::get_manifest_info;
 use apkverify::{extract_signed_data, verify, V4Signature};
@@ -23,7 +23,6 @@ use itertools::sorted;
 use log::{info, warn};
 use microdroid_metadata::{write_metadata, Metadata};
 use openssl::sha::sha512;
-use rand::Fill;
 use rustutils::system_properties;
 use std::fs::OpenOptions;
 use std::path::Path;
@@ -168,21 +167,7 @@ pub fn verify_payload(
     // verified is consistent with the root hash) or because we have the saved APK data which will
     // be checked as identical to the data we have verified.
 
-    let salt = if cfg!(llpvm_changes) || is_strict_boot() {
-        // Salt is obsolete with llpvm_changes.
-        vec![0u8; 64]
-    } else if let Some(saved_data) = saved_data {
-        // Use the salt from a verified instance.
-        saved_data.salt.clone()
-    } else {
-        // Generate a salt for a new instance.
-        let mut salt = vec![0u8; 64];
-        salt.as_mut_slice().try_fill(&mut rand::thread_rng())?;
-        salt
-    };
-
     Ok(MicrodroidData {
-        salt,
         apk_data: main_apk_data,
         extra_apks_data,
         apex_data: apex_data_from_payload,

@@ -16,7 +16,7 @@
 
 use std::ffi::CStr;
 use std::fs::File;
-use std::os::fd::FromRawFd;
+use std::os::fd::{FromRawFd, IntoRawFd};
 use std::os::raw::{c_char, c_int};
 use std::ptr;
 use std::time::Duration;
@@ -205,21 +205,6 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_setProtectedVm(
     config.protectedVm = protected_vm;
 }
 
-/// Set whether a virtual machine uses memory ballooning or not.
-///
-/// # Safety
-/// `config` must be a pointer returned by `AVirtualMachineRawConfig_create`.
-#[no_mangle]
-pub unsafe extern "C" fn AVirtualMachineRawConfig_setBalloon(
-    config: *mut VirtualMachineRawConfig,
-    balloon: bool,
-) {
-    // SAFETY: `config` is assumed to be a valid, non-null pointer returned by
-    // AVirtualMachineRawConfig_create. It's the only reference to the object.
-    let config = unsafe { &mut *config };
-    config.noBalloon = !balloon;
-}
-
 /// NOT IMPLEMENTED.
 ///
 /// # Returns
@@ -364,6 +349,21 @@ pub unsafe extern "C" fn AVirtualMachine_stop(vm: *const VmInstance) -> c_int {
     let vm = unsafe { &*vm };
     match vm.stop() {
         Ok(_) => 0,
+        Err(_) => -libc::EIO,
+    }
+}
+
+/// Open a vsock connection to the CID of the virtual machine on the given vsock port.
+///
+/// # Safety
+/// `vm` must be a pointer returned by `AVirtualMachine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachine_connectVsock(vm: *const VmInstance, port: u32) -> c_int {
+    // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
+    // `AVirtualMachine_createRaw`. It's the only reference to the object.
+    let vm = unsafe { &*vm };
+    match vm.connect_vsock(port) {
+        Ok(pfd) => pfd.into_raw_fd(),
         Err(_) => -libc::EIO,
     }
 }

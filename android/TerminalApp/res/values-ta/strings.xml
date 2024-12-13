@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"டெர்மினல் டிஸ்ப்ளே"</string>
     <string name="terminal_input" msgid="4602512831433433551">"கர்சர்"</string>
     <string name="empty_line" msgid="5012067143408427178">"வெற்று வரி"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"உள்ளீட்டை டைப் செய்ய இருமுறை தட்டுங்கள்"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux டெர்மினலை நிறுவுதல்"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux டெர்மினலைத் தொடங்க, நெட்வொர்க் மூலம் நீங்கள் சுமார் <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> தரவைப் பதிவிறக்க வேண்டும்.\nதொடர விரும்புகிறீர்களா?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"வைஃபையைப் பயன்படுத்தி மட்டும் பதிவிறக்கு"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"பயன்படுத்து"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"டிஸ்க் அளவை மாற்ற டெர்மினல் மீண்டும் தொடங்கப்படும்"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"உறுதிசெய்"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"போர்ட் கட்டுப்பாடு"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"லிஸனிங் போர்ட்டுகளை அனுமதித்தல்/நிராகரித்தல்"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"லிஸனிங் போர்ட்டுகள்"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"சேமித்த அனுமதிக்கப்பட்ட போர்ட்டுகள்"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"புதிய போர்ட்டை அனுமதித்தல்"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"புதிய போர்ட் எண்ணை டைப் செய்யுங்கள்"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"சேமி"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"ரத்துசெய்"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"டெர்மினல் புதிய போர்ட்டைத் திறக்குமாறு கேட்கிறது"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"போர்ட் கேட்கப்பட்டுள்ளது: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ஏற்கிறேன்"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"டெர்மினல் இயக்கத்தில் உள்ளது"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"டெர்மினலைத் திறக்க கிளிக் செய்யுங்கள்"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"மூடு"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> இயக்கப்பட்டது"</string>
 </resources>

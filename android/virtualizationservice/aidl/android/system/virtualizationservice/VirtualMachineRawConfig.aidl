@@ -106,7 +106,7 @@ parcelable VirtualMachineRawConfig {
 
     @nullable AudioConfig audioConfig;
 
-    boolean noBalloon;
+    boolean balloon;
 
     /** Enable or disable USB passthrough support */
     @nullable UsbConfig usbConfig;

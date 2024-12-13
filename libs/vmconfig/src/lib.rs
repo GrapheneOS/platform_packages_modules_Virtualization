@@ -133,6 +133,7 @@ impl VmConfig {
                 .collect::<Result<_>>()?,
             consoleInputDevice: self.console_input_device.clone(),
             usbConfig: usb_config,
+            balloon: true,
             ..Default::default()
         })
     }

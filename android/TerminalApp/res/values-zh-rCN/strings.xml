@@ -20,8 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"终端显示内容"</string>
     <string name="terminal_input" msgid="4602512831433433551">"光标"</string>
     <string name="empty_line" msgid="5012067143408427178">"空行"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"点按两次即可输入"</string>
     <string name="installer_title_text" msgid="500663060973466805">"安装 Linux 终端"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> 的数据。\n要继续吗？"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"仅通过 WLAN 下载"</string>
@@ -46,22 +45,14 @@
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"应用"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"确认"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"端口控制"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"允许/拒绝使用监听端口"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"监听端口"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"已保存的获准端口"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"允许使用新端口"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"输入新端口号"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"保存"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"取消"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"终端正在请求打开新端口"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"请求的端口：<xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"接受"</string>
@@ -87,5 +78,9 @@
     <string name="service_notification_title" msgid="2918088850910713393">"终端正在运行"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"点击即可打开终端"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"关闭"</string>
+    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
+    <skip />
+    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
+    <skip />
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> 已启用"</string>
 </resources>

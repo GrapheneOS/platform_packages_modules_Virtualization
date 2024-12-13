@@ -9,7 +9,6 @@ LIBAVF {
     AVirtualMachineRawConfig_addDisk; # apex llndk
     AVirtualMachineRawConfig_setMemoryMib; # apex llndk
     AVirtualMachineRawConfig_setProtectedVm; # apex llndk
-    AVirtualMachineRawConfig_setBalloon; # apex llndk
     AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod; # apex llndk
     AVirtualMachineRawConfig_addCustomMemoryBackingFile; # apex llndk
     AVirtualizationService_create; # apex llndk
@@ -17,6 +16,7 @@ LIBAVF {
     AVirtualMachine_createRaw; # apex llndk
     AVirtualMachine_start; # apex llndk
     AVirtualMachine_stop; # apex llndk
+    AVirtualMachine_connectVsock; # apex llndk
     AVirtualMachine_waitForStop; # apex llndk
     AVirtualMachine_destroy; # apex llndk
   local:

@@ -486,7 +486,6 @@ public class VirtualMachineCustomImageConfig {
         private boolean network;
         private GpuConfig gpuConfig;
         private boolean trackpad;
-        // TODO(b/363985291): balloon breaks Linux VM behavior
         private boolean autoMemoryBalloon = false;
         private UsbConfig usbConfig;
 

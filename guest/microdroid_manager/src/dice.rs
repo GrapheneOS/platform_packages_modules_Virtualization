@@ -53,11 +53,7 @@ pub fn dice_derivation(
     let debuggable = is_debuggable()?;
 
     // Send the details to diced
-    let hidden = if cfg!(llpvm_changes) {
-        hidden_input_from_instance_id()?
-    } else {
-        instance_data.salt.clone().try_into().unwrap()
-    };
+    let hidden = hidden_input_from_instance_id()?;
     dice.derive(code_hash, &config_descriptor, authority_hash, debuggable, hidden)
 }
 

@@ -86,6 +86,7 @@ impl InstanceStarter {
             platformVersion: "1.0.0".into(),
             #[cfg(enable_console)]
             consoleInputDevice: Some("ttyS0".into()),
+            balloon: true,
             ..Default::default()
         });
         let vm_instance = VmInstance::create(

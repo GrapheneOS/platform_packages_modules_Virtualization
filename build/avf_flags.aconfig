@@ -1,0 +1,11 @@
+package: "com.android.system.virtualmachine.flags"
+container: "com.android.virt"
+
+flag {
+  name: "promote_set_should_use_hugepages_to_system_api"
+  is_exported: true
+  namespace: "virtualization"
+  description: "Flag used in @FlaggedApi annotation for setShouldUseHugepages"
+  bug: "383347947"
+  is_fixed_read_only: true
+}
