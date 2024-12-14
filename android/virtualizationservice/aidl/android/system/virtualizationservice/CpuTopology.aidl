@@ -22,4 +22,6 @@ enum CpuTopology {
     ONE_CPU = 0,
     /** Match physical CPU topology of the host. */
     MATCH_HOST = 1,
+    /** Number of vCPUs specified in the config. */
+    CUSTOM = 2,
 }

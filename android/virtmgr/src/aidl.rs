@@ -653,6 +653,14 @@ impl VirtualizationService {
         let (cpus, host_cpu_topology) = match config.cpuTopology {
             CpuTopology::MATCH_HOST => (None, true),
             CpuTopology::ONE_CPU => (NonZeroU32::new(1), false),
+            CpuTopology::CUSTOM => (
+                NonZeroU32::new(
+                    u32::try_from(config.customVcpuCount)
+                        .context("bad customVcpuCount")
+                        .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?,
+                ),
+                false,
+            ),
             val => {
                 return Err(anyhow!("Failed to parse CPU topology value {:?}", val))
                     .with_log()
@@ -1228,6 +1236,9 @@ fn load_app_config(
     vm_config.name.clone_from(&config.name);
     vm_config.protectedVm = config.protectedVm;
     vm_config.cpuTopology = config.cpuTopology;
+    if config.cpuTopology == CpuTopology::CUSTOM {
+        bail!("AppConfig doesn't support CpuTopology::CUSTOM");
+    }
     vm_config.hugePages = config.hugePages || vm_payload_config.hugepages;
     vm_config.boostUclamp = config.boostUclamp;
 
