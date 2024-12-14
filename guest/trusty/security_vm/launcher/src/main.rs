@@ -32,6 +32,10 @@ pub struct Args {
     #[arg(long)]
     kernel: PathBuf,
 
+    // Whether the kernel should be loaded as a bootloader
+    #[arg(long)]
+    load_kernel_as_bootloader: bool,
+
     /// Whether the VM is protected or not.
     #[arg(long)]
     protected: bool,
@@ -70,10 +74,16 @@ fn main() -> Result<()> {
 
     let kernel =
         File::open(&args.kernel).with_context(|| format!("Failed to open {:?}", &args.kernel))?;
+    let kernel = ParcelFileDescriptor::new(kernel);
+
+    // If --load-kernel-as-bootloader option is present, then load kernel as bootloader
+    let (kernel, bootloader) =
+        if args.load_kernel_as_bootloader { (None, Some(kernel)) } else { (Some(kernel), None) };
 
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: args.name.to_owned(),
-        kernel: Some(ParcelFileDescriptor::new(kernel)),
+        kernel,
+        bootloader,
         protectedVm: args.protected,
         memoryMib: args.memory_size_mib,
         cpuTopology: args.cpu_topology,

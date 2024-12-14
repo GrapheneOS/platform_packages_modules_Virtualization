@@ -29,7 +29,6 @@ use std::path::{Path, PathBuf};
 use rustutils::system_properties;
 use zerocopy::{
     byteorder::{BigEndian, U32},
-    FromZeroes,
     FromBytes,
 };
 
@@ -131,7 +130,7 @@ const DEFAULT_DRIVER: &str = "\n";
 /// The structure of DT table header in dtbo.img.
 /// https://source.android.com/docs/core/architecture/dto/partitions
 #[repr(C)]
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes)]
 struct DtTableHeader {
     /// DT_TABLE_MAGIC
     magic: U32<BigEndian>,
@@ -155,7 +154,7 @@ struct DtTableHeader {
 /// The structure of each DT table entry (v0) in dtbo.img.
 /// https://source.android.com/docs/core/architecture/dto/partitions
 #[repr(C)]
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes)]
 struct DtTableEntry {
     /// size of each DT
     dt_size: U32<BigEndian>,

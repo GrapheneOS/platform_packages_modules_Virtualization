@@ -21,7 +21,7 @@ use crate::result::FdtRawResult;
 use crate::{FdtError, Result};
 
 use zerocopy::byteorder::big_endian;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::FromBytes;
 
 macro_rules! assert_offset_eq {
     // TODO(const_feature(assert_eq)): assert_eq!()
@@ -32,7 +32,7 @@ macro_rules! assert_offset_eq {
 
 /// Thin wrapper around `libfdt_bindgen::fdt_header` for transparent endianness handling.
 #[repr(C)]
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes)]
 pub struct FdtHeader {
     /// magic word FDT_MAGIC
     pub magic: big_endian::U32,

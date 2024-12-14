@@ -32,7 +32,7 @@ use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant};
-use zerocopy::FromZeroes;
+use zerocopy::FromZeros;
 
 use crate::loopdevice::sys::*;
 
@@ -184,7 +184,7 @@ mod tests {
         let a_file = a_dir.path().join("test");
         let a_size = 4096u64;
         create_empty_file(&a_file, a_size);
-        let dev = attach(a_file, 0, a_size, /*direct_io*/ true, /*writable*/ false).unwrap();
+        let dev = attach(a_file, 0, a_size, /* direct_io */ true, /* writable */ false).unwrap();
         scopeguard::defer! {
             detach(&dev).unwrap();
         }
@@ -197,7 +197,7 @@ mod tests {
         let a_file = a_dir.path().join("test");
         let a_size = 4096u64;
         create_empty_file(&a_file, a_size);
-        let dev = attach(a_file, 0, a_size, /*direct_io*/ false, /*writable*/ false).unwrap();
+        let dev = attach(a_file, 0, a_size, /* direct_io */ false, /* writable */ false).unwrap();
         scopeguard::defer! {
             detach(&dev).unwrap();
         }
@@ -210,7 +210,7 @@ mod tests {
         let a_file = a_dir.path().join("test");
         let a_size = 4096u64;
         create_empty_file(&a_file, a_size);
-        let dev = attach(a_file, 0, a_size, /*direct_io*/ true, /*writable*/ true).unwrap();
+        let dev = attach(a_file, 0, a_size, /* direct_io */ true, /* writable */ true).unwrap();
         scopeguard::defer! {
             detach(&dev).unwrap();
         }

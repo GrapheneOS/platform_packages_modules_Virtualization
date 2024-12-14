@@ -22,11 +22,14 @@ use core::result;
 use log::{info, warn};
 use static_assertions::const_assert_eq;
 use vmbase::util::RangeExt;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::FromBytes;
+use zerocopy::Immutable;
+use zerocopy::KnownLayout;
+use zerocopy::Ref;
 
 /// Configuration data header.
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug, FromZeroes, FromBytes)]
+#[derive(Clone, Copy, Debug, FromBytes, Immutable, KnownLayout)]
 struct Header {
     /// Magic number; must be `Header::MAGIC`.
     magic: u32,
@@ -145,14 +148,14 @@ pub struct Entries<'a> {
 }
 
 #[repr(packed)]
-#[derive(Clone, Copy, Debug, FromZeroes, FromBytes)]
+#[derive(Clone, Copy, Debug, FromBytes, Immutable, KnownLayout)]
 struct HeaderEntry {
     offset: u32,
     size: u32,
 }
 
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug, Eq, FromZeroes, FromBytes, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, FromBytes, Immutable, KnownLayout, PartialEq)]
 pub struct Version {
     minor: u16,
     major: u16,
@@ -209,8 +212,8 @@ impl<'a> Config<'a> {
         }
 
         let (header, rest) =
-            zerocopy::Ref::<_, Header>::new_from_prefix(bytes).ok_or(Error::HeaderMisaligned)?;
-        let header = header.into_ref();
+            Ref::<_, Header>::new_from_prefix(bytes).ok_or(Error::HeaderMisaligned)?;
+        let header = Ref::into_ref(header);
 
         if header.magic != Header::MAGIC {
             return Err(Error::InvalidMagic);

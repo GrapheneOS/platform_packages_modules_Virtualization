@@ -26,7 +26,6 @@ use virtio_drivers::device::blk::SECTOR_SIZE;
 use vmbase::util::ceiling_div;
 use vmbase::virtio::{pci, HalImpl};
 use zerocopy::FromBytes;
-use zerocopy::FromZeroes;
 
 type VirtIOBlk = pci::VirtIOBlk<HalImpl>;
 
@@ -105,7 +104,7 @@ impl Partitions {
     fn new(mut device: VirtIOBlk) -> Result<Self> {
         let mut blk = [0; Self::LBA_SIZE];
         device.read_blocks(Header::LBA, &mut blk).map_err(Error::FailedRead)?;
-        let header = Header::read_from_prefix(blk.as_slice()).unwrap();
+        let header = Header::read_from_prefix(blk.as_slice()).unwrap().0;
         if !header.is_valid() {
             return Err(Error::InvalidHeader);
         }
@@ -157,7 +156,7 @@ impl Partitions {
 type Lba = u64;
 
 /// Structure as defined in release 2.10 of the UEFI Specification (5.3.2 GPT Header).
-#[derive(FromZeroes, FromBytes)]
+#[derive(FromBytes)]
 #[repr(C, packed)]
 struct Header {
     signature: u64,

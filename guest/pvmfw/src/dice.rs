@@ -24,7 +24,9 @@ use diced_open_dice::{
     bcc_handover_main_flow, hash, Config, DiceContext, DiceMode, Hash, InputValues, HIDDEN_SIZE,
 };
 use pvmfw_avb::{Capability, DebugLevel, Digest, VerifiedBootData};
-use zerocopy::AsBytes;
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
+use zerocopy::KnownLayout;
 
 // pVM firmware (like other VM components) is expected to populate some fields in DICE
 // Configuration Descriptor. See dice_for_avf_guest.cddl
@@ -134,7 +136,7 @@ impl PartialInputs {
         // descriptor do not).
         // Since the hidden input has to be a fixed size, create it as a hash of the values we
         // want included.
-        #[derive(AsBytes)]
+        #[derive(Immutable, IntoBytes, KnownLayout)]
         #[repr(C, packed)]
         struct HiddenInput {
             rkp_vm_marker: bool,

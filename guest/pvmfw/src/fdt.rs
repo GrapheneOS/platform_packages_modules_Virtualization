@@ -50,7 +50,7 @@ use vmbase::fdt::SwiotlbInfo;
 use vmbase::layout::{crosvm::MEM_START, MAX_VIRT_ADDR};
 use vmbase::memory::SIZE_4KB;
 use vmbase::util::RangeExt as _;
-use zerocopy::AsBytes as _;
+use zerocopy::IntoBytes as _;
 
 // SAFETY: The template DT is automatically generated through DTC, which should produce valid DTBs.
 const FDT_TEMPLATE: &Fdt = unsafe { Fdt::unchecked_from_slice(pvmfw_fdt_template::RAW) };

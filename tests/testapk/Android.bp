@@ -16,9 +16,11 @@ android_app_certificate {
 java_defaults {
     name: "MicrodroidTestAppsDefaults",
     static_libs: [
+        "avf_aconfig_flags_java",
         "com.android.microdroid.testservice-java",
         "com.android.microdroid.test.vmshare_service-java",
         "com.android.virt.vm_attestation.testservice-java",
+        "platform-test-annotations",
     ],
     certificate: ":MicrodroidTestAppCert",
     sdk_version: "test_current",

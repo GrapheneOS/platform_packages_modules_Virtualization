@@ -22,7 +22,6 @@ rust_defaults {
         "libnum_traits",
         "libscopeguard",
         "libuuid",
-        "libzerocopy-0.7.35",
     ],
     proc_macros: ["libnum_derive"],
     multilib: {

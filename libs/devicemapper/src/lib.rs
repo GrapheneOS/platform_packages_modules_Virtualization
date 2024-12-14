@@ -37,8 +37,9 @@ use std::io::Write;
 use std::mem::size_of;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
-use zerocopy::AsBytes;
-use zerocopy::FromZeroes;
+use zerocopy::FromZeros;
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
 
 /// Exposes DmCryptTarget & related builder
 pub mod crypt;
@@ -88,7 +89,7 @@ fn dm_dev_remove(dm: &DeviceMapper, ioctl: *mut DmIoctl) -> Result<i32> {
 // `DmTargetSpec` is the header of the data structure for a device-mapper target. When doing the
 // ioctl, one of more `DmTargetSpec` (and its body) are appened to the `DmIoctl` struct.
 #[repr(C)]
-#[derive(Copy, Clone, AsBytes, FromZeroes)]
+#[derive(Copy, Clone, Immutable, IntoBytes, FromZeros)]
 struct DmTargetSpec {
     sector_start: u64,
     length: u64, // number of 512 sectors

@@ -22,9 +22,9 @@ use std::io::ErrorKind;
 use std::os::unix::fs::FileExt;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
-use zerocopy::AsBytes;
 use zerocopy::FromBytes;
-use zerocopy::FromZeroes;
+use zerocopy::FromZeros;
+use zerocopy::IntoBytes;
 
 use uuid::Uuid;
 
@@ -132,7 +132,7 @@ fn get_partition_size(file: &File) -> Result<u64, Error> {
         ImageType::AndroidSparse => {
             // Source: system/core/libsparse/sparse_format.h
             #[repr(C)]
-            #[derive(Clone, Copy, Debug, AsBytes, FromZeroes, FromBytes)]
+            #[derive(Clone, Copy, Debug, IntoBytes, FromBytes)]
             struct SparseHeader {
                 magic: u32,
                 major_version: u16,

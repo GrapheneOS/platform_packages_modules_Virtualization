@@ -30,9 +30,10 @@ use virtio_drivers::transport::{pci::bus::PciRoot, DeviceType, Transport};
 use vmbase::util::ceiling_div;
 use vmbase::virtio::pci::{PciTransportIterator, VirtIOBlk};
 use vmbase::virtio::HalImpl;
-use zerocopy::AsBytes;
 use zerocopy::FromBytes;
-use zerocopy::FromZeroes;
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
+use zerocopy::KnownLayout;
 
 pub enum Error {
     /// Unexpected I/O error while accessing the underlying disk.
@@ -154,7 +155,7 @@ pub(crate) fn record_instance_entry(
     Ok(())
 }
 
-#[derive(FromZeroes, FromBytes)]
+#[derive(Clone, Debug, FromBytes, Immutable, KnownLayout)]
 #[repr(C, packed)]
 struct Header {
     magic: [u8; Header::MAGIC.len()],
@@ -208,7 +209,7 @@ fn locate_entry(partition: &mut Partition) -> Result<PvmfwEntry> {
     let header_index = indices.next().ok_or(Error::MissingInstanceImageHeader)?;
     partition.read_block(header_index, &mut blk).map_err(Error::FailedIo)?;
     // The instance.img header is only used for discovery/validation.
-    let header = Header::read_from_prefix(blk.as_slice()).unwrap();
+    let header = Header::read_from_prefix(blk.as_slice()).unwrap().0;
     if !header.is_valid() {
         return Err(Error::InvalidInstanceImageHeader);
     }
@@ -216,7 +217,7 @@ fn locate_entry(partition: &mut Partition) -> Result<PvmfwEntry> {
     while let Some(header_index) = indices.next() {
         partition.read_block(header_index, &mut blk).map_err(Error::FailedIo)?;
 
-        let header = EntryHeader::read_from_prefix(blk.as_slice()).unwrap();
+        let header = EntryHeader::read_from_prefix(blk.as_slice()).unwrap().0;
         match (header.uuid(), header.payload_size()) {
             (uuid, _) if uuid.is_nil() => return Ok(PvmfwEntry::New { header_index }),
             (PvmfwEntry::UUID, payload_size) => {
@@ -238,7 +239,7 @@ fn locate_entry(partition: &mut Partition) -> Result<PvmfwEntry> {
 /// Marks the start of an instance.img entry.
 ///
 /// Note: Virtualization/guest/microdroid_manager/src/instance.rs uses the name "partition".
-#[derive(AsBytes, FromZeroes, FromBytes)]
+#[derive(Clone, Debug, FromBytes, Immutable, IntoBytes, KnownLayout)]
 #[repr(C, packed)]
 struct EntryHeader {
     uuid: u128,
@@ -259,7 +260,7 @@ impl EntryHeader {
     }
 }
 
-#[derive(AsBytes, FromZeroes, FromBytes)]
+#[derive(Clone, Debug, FromBytes, Immutable, IntoBytes, KnownLayout)]
 #[repr(C)]
 pub(crate) struct EntryBody {
     pub code_hash: Hash,

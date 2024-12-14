@@ -22,7 +22,7 @@ use anyhow::{bail, Context, Result};
 use std::io::Write;
 use std::mem::size_of;
 use std::path::Path;
-use zerocopy::AsBytes;
+use zerocopy::IntoBytes;
 
 use crate::DmTargetSpec;
 

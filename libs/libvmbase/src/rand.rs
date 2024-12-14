@@ -18,7 +18,7 @@ use crate::hvc;
 use core::fmt;
 use core::mem::size_of;
 use smccc::{self, Hvc};
-use zerocopy::AsBytes as _;
+use zerocopy::IntoBytes as _;
 
 type Entropy = [u8; size_of::<u64>() * 3];
 

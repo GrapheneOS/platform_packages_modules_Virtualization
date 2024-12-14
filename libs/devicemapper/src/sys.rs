@@ -15,8 +15,9 @@
  */
 
 use bitflags::bitflags;
-use zerocopy::AsBytes;
-use zerocopy::FromZeroes;
+use zerocopy::FromZeros;
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
 
 // UAPI for device mapper can be found at include/uapi/linux/dm-ioctl.h
 
@@ -45,7 +46,7 @@ pub enum Cmd {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, AsBytes, FromZeroes)]
+#[derive(Copy, Clone, Immutable, IntoBytes, FromZeros)]
 pub struct DmIoctl {
     pub version: [u32; 3],
     pub data_size: u32,
@@ -70,7 +71,9 @@ pub const DM_UUID_LEN: usize = 129;
 pub const DM_MAX_TYPE_NAME: usize = 16;
 
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, AsBytes, FromZeroes)]
+#[derive(
+    Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Immutable, IntoBytes, FromZeros,
+)]
 pub struct Flag(u32);
 
 bitflags! {
