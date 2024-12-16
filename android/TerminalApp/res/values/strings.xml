@@ -142,7 +142,7 @@
     <!-- Error page that shows error page [CHAR LIMIT=none] -->
     <string name="error_title">Unrecoverable error</string>
     <!-- Error page that shows error page [CHAR LIMIT=none] -->
-    <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.</string>
+    <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
     <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
     <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
 
