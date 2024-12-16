@@ -90,6 +90,7 @@ public class TerminalAppTest {
 
     @After
     public void tearDown() throws IOException {
+        PortsStateManager.getInstance(mTargetContext).clearEnabledPorts();
         InstalledImage.getDefault(mTargetContext).uninstallFully();
     }
 }
