@@ -116,6 +116,18 @@ public class PortsStateManager {
         notifyPortsStateUpdated(activePorts, activePorts);
     }
 
+    void clearEnabledPorts() {
+        Set<Integer> activePorts;
+        synchronized (mLock) {
+            SharedPreferences.Editor editor = mSharedPref.edit();
+            editor.clear();
+            editor.apply();
+            mEnabledPorts.clear();
+            activePorts = mActivePorts;
+        }
+        notifyPortsStateUpdated(activePorts, activePorts);
+    }
+
     void registerListener(Listener listener) {
         synchronized (mLock) {
             mListeners.add(listener);
