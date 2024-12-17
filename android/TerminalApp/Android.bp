@@ -18,6 +18,7 @@ android_app {
         "debian-service-grpclib-lite",
         "gson",
         "VmTerminalApp.aidl-java",
+        "MicrodroidTestHelper", // for DeviceProperties class
     ],
     jni_libs: [
         "libforwarder_host_jni",
