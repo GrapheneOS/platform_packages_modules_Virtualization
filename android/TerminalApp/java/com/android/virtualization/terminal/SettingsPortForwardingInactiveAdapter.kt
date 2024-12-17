@@ -38,7 +38,7 @@ class SettingsPortForwardingInactiveAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val closeButton: ImageButton =
-            view.findViewById(R.id.settings_port_forwarding_active_item_close_button)
+            view.findViewById(R.id.settings_port_forwarding_inactive_item_close_button)
         val port: TextView = view.findViewById(R.id.settings_port_forwarding_inactive_item_port)
     }
 

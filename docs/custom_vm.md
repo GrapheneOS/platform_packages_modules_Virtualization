@@ -44,6 +44,6 @@ Or, `novnc`(https://github.com/novnc/noVNC/releases). For `novnc` you need to in
 `weston` with VNC backend might be another option, but it isn't available in
 Debian package repository for bookworm.
 
-## Hardware accelration
+## Hardware acceleration
 If the file `/sdcard/linux/virglrenderer` exists on the device, it enables VirGL for VM.
 This requires enabling ANGLE for the Terminal app. (https://chromium.googlesource.com/angle/angle.git/+/HEAD/doc/DevSetupAndroid.md)

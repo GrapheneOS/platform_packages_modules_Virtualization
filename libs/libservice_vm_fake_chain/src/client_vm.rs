@@ -99,6 +99,7 @@ pub fn fake_client_vm_dice_artifacts() -> Result<OwnedDiceArtifacts> {
         component_name: Some(cstr!("vm_entry")),
         component_version: Some(12),
         resettable: true,
+        security_version: Some(13),
         ..Default::default()
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;

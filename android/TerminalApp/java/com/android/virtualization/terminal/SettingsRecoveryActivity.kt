@@ -103,6 +103,7 @@ class SettingsRecoveryActivity : AppCompatActivity() {
                 image.uninstallAndBackup()
                 backupDone = true
             } else {
+                PortsStateManager.getInstance(this).clearEnabledPorts()
                 image.uninstallFully()
             }
         } catch (e: IOException) {

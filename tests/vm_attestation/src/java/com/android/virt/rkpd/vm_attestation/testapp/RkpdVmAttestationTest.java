@@ -26,7 +26,6 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineConfig;
-import android.system.virtualmachine.VirtualMachineManager;
 
 import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
@@ -86,10 +85,7 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         assume().withMessage("RKP Integration tests rely on network availability.")
                 .that(isNetworkConnected(getContext()))
                 .isTrue();
-        assumeFeatureEnabled(VirtualMachineManager.FEATURE_REMOTE_ATTESTATION);
-        assume().withMessage("Test needs Remote Attestation support")
-                .that(getVirtualMachineManager().isRemoteAttestationSupported())
-                .isTrue();
+        ensureVmAttestationSupported();
 
         if (mOs == "microdroid") {
             // We don't need this permission to use the microdroid kernel.

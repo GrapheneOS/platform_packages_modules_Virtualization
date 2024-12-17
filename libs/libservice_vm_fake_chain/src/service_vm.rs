@@ -117,7 +117,7 @@ pub(crate) fn fake_dice_artifacts_up_to_pvmfw() -> Result<(CdiValues, Vec<u8>)> 
         component_version: Some(1),
         resettable: true,
         rkp_vm_marker: true,
-        ..Default::default()
+        security_version: Some(20),
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;
     let input_values = InputValues::new(
@@ -160,7 +160,7 @@ pub fn fake_service_vm_dice_artifacts() -> Result<OwnedDiceArtifacts> {
         component_version: Some(12),
         resettable: true,
         rkp_vm_marker: true,
-        ..Default::default()
+        security_version: Some(10),
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;
     let input_values = InputValues::new(

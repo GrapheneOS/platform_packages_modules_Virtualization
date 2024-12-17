@@ -21,6 +21,7 @@ import static android.content.pm.PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK
 import static android.content.pm.PackageManager.FEATURE_WATCH;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
 import static org.junit.Assume.assumeFalse;
@@ -257,6 +258,14 @@ public abstract class MicrodroidDeviceTestBase {
         return SystemProperties.getInt("ro.board.api_level", 0);
     }
 
+    /**
+     * @return The first vendor API level when the vendor images for an SoC that is qualified for
+     *     vendor freeze are first released with this property, or 0 if the property is not set.
+     */
+    protected static int getFirstVendorApiLevel() {
+        return SystemProperties.getInt("ro.board.first_api_level", 0);
+    }
+
     protected void assumeSupportedDevice() {
         assume().withMessage("Skip on 5.4 kernel. b/218303240")
                 .that(KERNEL_VERSION)
@@ -275,6 +284,24 @@ public abstract class MicrodroidDeviceTestBase {
         assume().withMessage("Secretkeeper not supported")
                 .that(getVirtualMachineManager().isUpdatableVmSupported())
                 .isFalse();
+    }
+
+    protected void ensureVmAttestationSupported() throws Exception {
+        // The first vendor API level is checked because VM attestation requires the VM DICE chain
+        // to be ROM-rooted.
+        int firstVendorApiLevel = getFirstVendorApiLevel();
+        boolean isRemoteAttestationSupported =
+                getVirtualMachineManager().isRemoteAttestationSupported();
+        if (firstVendorApiLevel >= 202504) {
+            assertWithMessage(
+                            "First vendor API '"
+                                    + firstVendorApiLevel
+                                    + "' (>=202504) must support VM remote attestation")
+                    .that(isRemoteAttestationSupported)
+                    .isTrue();
+        } else {
+            assumeTrue("Skip on VM remote attestation not supported", isRemoteAttestationSupported);
+        }
     }
 
     public abstract static class VmEventListener implements VirtualMachineCallback {

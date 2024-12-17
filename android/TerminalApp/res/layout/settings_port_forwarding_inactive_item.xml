@@ -34,7 +34,7 @@
         app:layout_constraintStart_toStartOf="parent"/>
 
     <ImageButton
-        android:id="@+id/settings_port_forwarding_active_item_close_button"
+        android:id="@+id/settings_port_forwarding_inactive_item_close_button"
         android:src="@drawable/ic_close"
         android:background="@android:color/transparent"
         android:contentDescription="@null"

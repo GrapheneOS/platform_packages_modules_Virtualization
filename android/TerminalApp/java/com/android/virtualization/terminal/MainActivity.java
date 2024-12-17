@@ -77,7 +77,7 @@ public class MainActivity extends BaseActivity
     static final String KEY_DISK_SIZE = "disk_size";
     private static final String VM_ADDR = "192.168.0.2";
     private static final int TTYD_PORT = 7681;
-    private static final int TERMINAL_CONNECTION_TIMEOUT_MS = 10_000;
+    private static final int TERMINAL_CONNECTION_TIMEOUT_MS = 20_000;
     private static final int REQUEST_CODE_INSTALLER = 0x33;
     private static final int FONT_SIZE_DEFAULT = 13;
 
@@ -348,14 +348,18 @@ public class MainActivity extends BaseActivity
         } catch (UnknownHostException e) {
             // this can never happen.
         }
-
         long startTime = SystemClock.elapsedRealtime();
         while (true) {
             int remainingTime =
                     TERMINAL_CONNECTION_TIMEOUT_MS
                             - (int) (SystemClock.elapsedRealtime() - startTime);
+
+            if (Thread.interrupted()) {
+                Log.d(TAG, "the waiting thread is interrupted");
+                return;
+            }
             if (remainingTime <= 0) {
-                throw new RuntimeException("Connection to terminal timedout");
+                throw new RuntimeException("Connection to terminal timeout");
             }
             try {
                 // Note: this quits immediately if VM is unreachable.

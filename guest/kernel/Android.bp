@@ -31,6 +31,7 @@ filegroup {
     // Below are properties that are conditionally set depending on value of build flags.
     srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
         "android15_66": ["android15-6.6/arm64/kernel-6.6"],
+        "android16_612": ["android16-6.12/arm64/kernel-6.12"],
         default: [],
     }),
 }
@@ -40,6 +41,7 @@ filegroup {
     // Below are properties that are conditionally set depending on value of build flags.
     srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
         "android15_66": ["android15-6.6/x86_64/kernel-6.6"],
+        "android16_612": ["android16-6.12/x86_64/kernel-6.12"],
         default: [],
     }),
 }
@@ -49,6 +51,7 @@ filegroup {
     // Below are properties that are conditionally set depending on value of build flags.
     srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
         "android15_66": ["android15-6.6/arm64/16k/kernel-6.6"],
+        "android16_612": ["android16-6.12/arm64/16k/kernel-6.12"],
         default: [],
     }),
 }

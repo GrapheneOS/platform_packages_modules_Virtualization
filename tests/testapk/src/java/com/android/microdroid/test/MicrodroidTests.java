@@ -253,7 +253,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void vmAttestationWhenRemoteAttestationIsNotSupported() throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
-        assumeFeatureEnabled(VirtualMachineManager.FEATURE_REMOTE_ATTESTATION);
         assume().withMessage(
                         "This test does not apply to a device that supports Remote Attestation")
                 .that(getVirtualMachineManager().isRemoteAttestationSupported())
@@ -282,7 +281,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void vmAttestationWithVendorPartitionWhenSupported() throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
-        assumeFeatureEnabled(VirtualMachineManager.FEATURE_REMOTE_ATTESTATION);
         assume().withMessage("Test needs Remote Attestation support")
                 .that(getVirtualMachineManager().isRemoteAttestationSupported())
                 .isTrue();
@@ -301,10 +299,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void vmAttestationWhenRemoteAttestationIsSupported() throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
-        assumeFeatureEnabled(VirtualMachineManager.FEATURE_REMOTE_ATTESTATION);
-        assume().withMessage("Test needs Remote Attestation support")
-                .that(getVirtualMachineManager().isRemoteAttestationSupported())
-                .isTrue();
+        ensureVmAttestationSupported();
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary(VM_ATTESTATION_PAYLOAD_PATH)
                         .setProtectedVm(mProtectedVm)
