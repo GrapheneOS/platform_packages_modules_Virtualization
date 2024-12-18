@@ -207,9 +207,6 @@ public abstract class MicrodroidDeviceTestBase {
             assume().withMessage("Skip where protected VMs aren't supported")
                     .that(capabilities & VirtualMachineManager.CAPABILITY_PROTECTED_VM)
                     .isNotEqualTo(0);
-            assume().withMessage("Testing protected VMs on GSI isn't supported. b/272443823")
-                    .that(isGsi())
-                    .isFalse();
             // TODO(b/376870129): remove this
             assume().withMessage("pVMs with 16k kernel are not supported yet :(")
                     .that(mOs)

@@ -180,7 +180,7 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_addDisk(
 /// # Safety
 /// `config` must be a pointer returned by `AVirtualMachineRawConfig_create`.
 #[no_mangle]
-pub unsafe extern "C" fn AVirtualMachineRawConfig_setMemoryMib(
+pub unsafe extern "C" fn AVirtualMachineRawConfig_setMemoryMiB(
     config: *mut VirtualMachineRawConfig,
     memory_mib: i32,
 ) {
@@ -188,6 +188,21 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_setMemoryMib(
     // AVirtualMachineRawConfig_create. It's the only reference to the object.
     let config = unsafe { &mut *config };
     config.memoryMib = memory_mib;
+}
+
+/// Set how much swiotlb will be given to a virtual machine.
+///
+/// # Safety
+/// `config` must be a pointer returned by `AVirtualMachineRawConfig_create`.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachineRawConfig_setSwiotlbMiB(
+    config: *mut VirtualMachineRawConfig,
+    swiotlb_mib: i32,
+) {
+    // SAFETY: `config` is assumed to be a valid, non-null pointer returned by
+    // AVirtualMachineRawConfig_create. It's the only reference to the object.
+    let config = unsafe { &mut *config };
+    config.swiotlbMib = swiotlb_mib;
 }
 
 /// Set whether a virtual machine is protected or not.

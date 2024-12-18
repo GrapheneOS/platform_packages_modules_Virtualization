@@ -112,6 +112,7 @@ pub struct CrosvmConfig {
     pub protected: bool,
     pub debug_config: DebugConfig,
     pub memory_mib: NonZeroU32,
+    pub swiotlb_mib: Option<NonZeroU32>,
     pub cpus: Option<NonZeroU32>,
     pub host_cpu_topology: bool,
     pub console_out_fd: Option<File>,
@@ -1000,11 +1001,18 @@ fn run_vm(
             _ => command.arg("--protected-vm"),
         };
 
-        // 3 virtio-console devices + vsock = 4.
-        let virtio_pci_device_count = 4 + config.disks.len();
-        // crosvm virtio queue has 256 entries, so 2 MiB per device (2 pages per entry) should be
-        // enough.
-        let swiotlb_size_mib = 2 * virtio_pci_device_count as u32;
+        let swiotlb_size_mib = config.swiotlb_mib.map(u32::from).unwrap_or({
+            // 3 virtio-console devices + vsock = 4.
+            // TODO: Count more device types, like balloon, input, and sound.
+            let virtio_pci_device_count = 4 + config.disks.len();
+            // crosvm virtio queue has 256 entries, so 2 MiB per device (2 pages per entry) should
+            // be enough.
+            // NOTE: The above explanation isn't completely accurate, e.g., circa 2024q4, each
+            // virtio-block has 16 queues with 256 entries each and each virito-console has 2
+            // queues of 256 entries each. So, it is allocating less than 2 pages per entry, but
+            // seems to work well enough in practice.
+            2 * virtio_pci_device_count as u32
+        });
         command.arg("--swiotlb").arg(swiotlb_size_mib.to_string());
 
         // b/346770542 for consistent "usable" memory across protected and non-protected VMs.

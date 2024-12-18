@@ -99,6 +99,9 @@ Result<void> run_echo_reverse_server(borrowed_fd listening_fd) {
         char* line = nullptr;
         size_t size = 0;
         if (getline(&line, &size, input) < 0) {
+            if (errno == 0) {
+                return {}; // the input was closed
+            }
             return ErrnoError() << "Failed to read";
         }
 
@@ -136,12 +139,12 @@ Result<void> start_echo_reverse_server() {
     }
 
     std::thread accept_thread{[listening_fd = std::move(server_fd)] {
-        auto result = run_echo_reverse_server(listening_fd);
-        if (!result.ok()) {
-            __android_log_write(ANDROID_LOG_ERROR, TAG, result.error().message().c_str());
-            // Make sure the VM exits so the test will fail solidly
-            exit(1);
+        Result<void> result;
+        while ((result = run_echo_reverse_server(listening_fd)).ok()) {
         }
+        __android_log_write(ANDROID_LOG_ERROR, TAG, result.error().message().c_str());
+        // Make sure the VM exits so the test will fail solidly
+        exit(1);
     }};
     accept_thread.detach();
 

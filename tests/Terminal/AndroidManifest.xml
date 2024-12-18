@@ -21,6 +21,6 @@
     </application>
 
     <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
-        android:targetPackage="com.google.android.virtualization.terminal"
+        android:targetPackage="com.android.virtualization.terminal"
 	    android:label="Test for Linux Terminal"/>
 </manifest>
