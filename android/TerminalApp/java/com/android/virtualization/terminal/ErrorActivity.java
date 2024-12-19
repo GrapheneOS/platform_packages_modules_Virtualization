@@ -25,6 +25,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 public class ErrorActivity extends BaseActivity {
     private static final String EXTRA_CAUSE = "cause";
 
@@ -59,7 +63,8 @@ public class ErrorActivity extends BaseActivity {
         Exception e = intent.getParcelableExtra(EXTRA_CAUSE, Exception.class);
         TextView cause = findViewById(R.id.cause);
         if (e != null) {
-            cause.setText(getString(R.string.error_code, e.toString()));
+            String stackTrace = getStackTrace(e);
+            cause.setText(getString(R.string.error_code, stackTrace));
         } else {
             cause.setText(null);
         }
@@ -68,5 +73,16 @@ public class ErrorActivity extends BaseActivity {
     private void launchRecoveryActivity() {
         Intent intent = new Intent(this, SettingsRecoveryActivity.class);
         startActivity(intent);
+    }
+
+    private static String getStackTrace(Exception e) {
+        try (StringWriter sWriter = new StringWriter();
+                PrintWriter pWriter = new PrintWriter(sWriter)) {
+            e.printStackTrace(pWriter);
+            return sWriter.toString();
+        } catch (IOException ex) {
+            // This shall never happen
+            throw new RuntimeException(ex);
+        }
     }
 }
