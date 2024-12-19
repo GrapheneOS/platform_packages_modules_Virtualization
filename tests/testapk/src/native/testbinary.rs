@@ -26,7 +26,6 @@ use com_android_microdroid_testservice::{
 };
 use cstr::cstr;
 use log::{error, info};
-use std::panic;
 use std::process::exit;
 use std::string::String;
 use std::vec::Vec;
@@ -40,10 +39,6 @@ fn main() {
             .with_tag("microdroid_testlib_rust")
             .with_max_level(log::LevelFilter::Debug),
     );
-    // Redirect panic messages to logcat.
-    panic::set_hook(Box::new(|panic_info| {
-        error!("{panic_info}");
-    }));
     if let Err(e) = try_main() {
         error!("failed with {:?}", e);
         exit(1);

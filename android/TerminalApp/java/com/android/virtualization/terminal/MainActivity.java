@@ -33,6 +33,7 @@ import android.os.Bundle;
 import android.os.ConditionVariable;
 import android.os.Environment;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -56,6 +57,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.microdroid.test.common.DeviceProperties;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
@@ -77,9 +79,18 @@ public class MainActivity extends BaseActivity
     static final String KEY_DISK_SIZE = "disk_size";
     private static final String VM_ADDR = "192.168.0.2";
     private static final int TTYD_PORT = 7681;
-    private static final int TERMINAL_CONNECTION_TIMEOUT_MS = 20_000;
+    private static final int TERMINAL_CONNECTION_TIMEOUT_MS;
     private static final int REQUEST_CODE_INSTALLER = 0x33;
     private static final int FONT_SIZE_DEFAULT = 13;
+
+    static {
+        DeviceProperties prop = DeviceProperties.create(SystemProperties::get);
+        if (prop.isCuttlefish() || prop.isGoldfish()) {
+            TERMINAL_CONNECTION_TIMEOUT_MS = 180_000; // 3 minutes
+        } else {
+            TERMINAL_CONNECTION_TIMEOUT_MS = 20_000; // 20 sec
+        }
+    }
 
     private ExecutorService mExecutorService;
     private InstalledImage mImage;

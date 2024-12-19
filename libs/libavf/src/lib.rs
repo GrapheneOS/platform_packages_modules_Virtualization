@@ -23,14 +23,15 @@ use std::time::Duration;
 
 use android_system_virtualizationservice::{
     aidl::android::system::virtualizationservice::{
-        DiskImage::DiskImage, IVirtualizationService::IVirtualizationService,
-        VirtualMachineConfig::VirtualMachineConfig,
+        CpuTopology::CpuTopology, DiskImage::DiskImage,
+        IVirtualizationService::IVirtualizationService, VirtualMachineConfig::VirtualMachineConfig,
         VirtualMachineRawConfig::VirtualMachineRawConfig,
     },
     binder::{ParcelFileDescriptor, Strong},
 };
 use avf_bindgen::AVirtualMachineStopReason;
 use libc::timespec;
+use log::error;
 use vmclient::{DeathReason, VirtualizationService, VmInstance};
 
 /// Create a new virtual machine config object with no properties.
@@ -205,6 +206,22 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_setSwiotlbMiB(
     config.swiotlbMib = swiotlb_mib;
 }
 
+/// Set vCPU count.
+///
+/// # Safety
+/// `config` must be a pointer returned by `AVirtualMachineRawConfig_create`.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachineRawConfig_setVCpuCount(
+    config: *mut VirtualMachineRawConfig,
+    n: i32,
+) {
+    // SAFETY: `config` is assumed to be a valid, non-null pointer returned by
+    // AVirtualMachineRawConfig_create. It's the only reference to the object.
+    let config = unsafe { &mut *config };
+    config.cpuTopology = CpuTopology::CUSTOM;
+    config.customVcpuCount = n;
+}
+
 /// Set whether a virtual machine is protected or not.
 ///
 /// # Safety
@@ -334,7 +351,10 @@ pub unsafe extern "C" fn AVirtualMachine_createRaw(
             }
             0
         }
-        Err(_) => -libc::EIO,
+        Err(e) => {
+            error!("AVirtualMachine_createRaw failed: {e:?}");
+            -libc::EIO
+        }
     }
 }
 
@@ -349,7 +369,10 @@ pub unsafe extern "C" fn AVirtualMachine_start(vm: *const VmInstance) -> c_int {
     let vm = unsafe { &*vm };
     match vm.start() {
         Ok(_) => 0,
-        Err(_) => -libc::EIO,
+        Err(e) => {
+            error!("AVirtualMachine_start failed: {e:?}");
+            -libc::EIO
+        }
     }
 }
 
@@ -364,7 +387,10 @@ pub unsafe extern "C" fn AVirtualMachine_stop(vm: *const VmInstance) -> c_int {
     let vm = unsafe { &*vm };
     match vm.stop() {
         Ok(_) => 0,
-        Err(_) => -libc::EIO,
+        Err(e) => {
+            error!("AVirtualMachine_stop failed: {e:?}");
+            -libc::EIO
+        }
     }
 }
 
@@ -379,7 +405,10 @@ pub unsafe extern "C" fn AVirtualMachine_connectVsock(vm: *const VmInstance, por
     let vm = unsafe { &*vm };
     match vm.connect_vsock(port) {
         Ok(pfd) => pfd.into_raw_fd(),
-        Err(_) => -libc::EIO,
+        Err(e) => {
+            error!("AVirtualMachine_connectVsock failed: {e:?}");
+            -libc::EIO
+        }
     }
 }
 

@@ -27,7 +27,7 @@ use std::{
     collections::{HashSet, VecDeque},
     fs::File,
     io::{self, BufRead, BufReader, Read, Write},
-    panic, thread,
+    thread,
 };
 use vmclient::{DeathReason, VmInstance};
 
@@ -57,11 +57,6 @@ fn run_test(
             .with_tag("vmbase")
             .with_max_level(log::LevelFilter::Debug),
     );
-
-    // Redirect panic messages to logcat.
-    panic::set_hook(Box::new(|panic_info| {
-        log::error!("{}", panic_info);
-    }));
 
     // We need to start the thread pool for Binder to work properly, especially link_to_death.
     ProcessState::start_thread_pool();

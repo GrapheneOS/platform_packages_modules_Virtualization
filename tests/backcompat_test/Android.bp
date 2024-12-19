@@ -1,0 +1,36 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_test {
+    name: "avf_backcompat_tests",
+    crate_name: "backcompat_test",
+    srcs: ["src/main.rs"],
+    prefer_rlib: true,
+    edition: "2021",
+    rustlibs: [
+        "android.system.virtualizationservice-rust",
+        "libandroid_logger",
+        "libanyhow",
+        "liblibc",
+        "libnix",
+        "libvmclient",
+        "liblog_rust",
+    ],
+    test_config: "AndroidTest.xml",
+    data: [
+        "goldens/dt_dump_*",
+        ":vmbase_example_kernel_bin",
+    ],
+    data_bins: [
+        "dtc_static",
+        "dtcompare",
+    ],
+    test_suites: ["general-tests"],
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+}

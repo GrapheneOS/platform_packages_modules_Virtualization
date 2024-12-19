@@ -9,6 +9,7 @@ LIBAVF {
     AVirtualMachineRawConfig_addDisk; # apex llndk
     AVirtualMachineRawConfig_setMemoryMiB; # apex llndk
     AVirtualMachineRawConfig_setSwiotlbMiB; # apex llndk
+    AVirtualMachineRawConfig_setVCpuCount; # apex llndk
     AVirtualMachineRawConfig_setProtectedVm; # apex llndk
     AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod; # apex llndk
     AVirtualMachineRawConfig_addCustomMemoryBackingFile; # apex llndk

@@ -1,0 +1,18 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_binary {
+    name: "dtcompare",
+    crate_root: "src/main.rs",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    rustlibs: [
+        "libanyhow",
+        "libclap",
+        "libhex_nostd",
+        "liblibfdt_nostd",
+        "liblog_rust",
+    ],
+    visibility: ["//packages/modules/Virtualization:__subpackages__"],
+}

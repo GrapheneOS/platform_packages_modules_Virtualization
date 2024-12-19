@@ -44,7 +44,7 @@ typedef struct AVirtualMachineRawConfig AVirtualMachineRawConfig;
  *
  * \return A new virtual machine raw config object. On failure (such as out of memory), it aborts.
  */
-AVirtualMachineRawConfig* _Nonnull AVirtualMachineRawConfig_create() __INTRODUCED_IN(36);
+AVirtualMachineRawConfig* _Nonnull AVirtualMachineRawConfig_create(void) __INTRODUCED_IN(36);
 
 /**
  * Destroy a virtual machine config object.
@@ -145,6 +145,15 @@ void AVirtualMachineRawConfig_setMemoryMiB(AVirtualMachineRawConfig* _Nonnull co
  */
 void AVirtualMachineRawConfig_setSwiotlbMiB(AVirtualMachineRawConfig* _Nonnull config,
                                             int32_t swiotlbMiB) __INTRODUCED_IN(36);
+
+/**
+ * Set vCPU count. The default is 1.
+ *
+ * \param config a virtual machine config object.
+ * \param n number of vCPUs. Must be positive.
+ */
+void AVirtualMachineRawConfig_setVCpuCount(AVirtualMachineRawConfig* _Nonnull config, int32_t n)
+        __INTRODUCED_IN(36);
 
 /**
  * Set whether the virtual machine's memory will be protected from the host, so the host can't

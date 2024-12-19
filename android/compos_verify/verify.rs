@@ -34,7 +34,6 @@ use log::error;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::panic;
 use std::path::Path;
 
 const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024;
@@ -64,11 +63,6 @@ fn main() {
             .with_max_level(log::LevelFilter::Info)
             .with_log_buffer(LogId::System), // Needed to log successfully early in boot
     );
-
-    // Redirect panic messages to logcat.
-    panic::set_hook(Box::new(|panic_info| {
-        error!("{}", panic_info);
-    }));
 
     if let Err(e) = try_main() {
         error!("{:?}", e);

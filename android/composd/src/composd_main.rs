@@ -28,7 +28,6 @@ use crate::instance_manager::InstanceManager;
 use anyhow::{Context, Result};
 use binder::{register_lazy_service, ProcessState};
 use log::{error, info};
-use std::panic;
 use std::sync::Arc;
 
 #[allow(clippy::eq_op)]
@@ -38,11 +37,6 @@ fn try_main() -> Result<()> {
     android_logger::init_once(
         android_logger::Config::default().with_tag("composd").with_max_level(log_level),
     );
-
-    // Redirect panic messages to logcat.
-    panic::set_hook(Box::new(|panic_info| {
-        log::error!("{}", panic_info);
-    }));
 
     ProcessState::start_thread_pool();
 

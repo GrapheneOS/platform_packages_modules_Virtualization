@@ -40,7 +40,6 @@ use service_vm_fake_chain::client_vm::{
 use service_vm_manager::{ServiceVm, VM_MEMORY_MB};
 use std::fs;
 use std::fs::File;
-use std::panic;
 use std::path::PathBuf;
 use std::str::FromStr;
 use vmclient::VmInstance;
@@ -300,10 +299,6 @@ fn start_service_vm(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<Servic
             .with_tag("rialto")
             .with_max_level(log::LevelFilter::Debug),
     );
-    // Redirect panic messages to logcat.
-    panic::set_hook(Box::new(|panic_info| {
-        log::error!("{}", panic_info);
-    }));
     // We need to start the thread pool for Binder to work properly, especially link_to_death.
     ProcessState::start_thread_pool();
     ServiceVm::start_vm(vm_instance(vm_type, vm_memory_mb)?, vm_type)

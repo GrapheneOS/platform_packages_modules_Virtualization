@@ -48,15 +48,19 @@ const PACKAGE_MANAGER_NATIVE_SERVICE: &str = "package_native";
 
 /// Represents the list of APEXes
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-struct ApexInfoList {
+pub(crate) struct ApexInfoList {
+    /// The list of APEXes
     #[serde(rename = "apex-info")]
-    list: Vec<ApexInfo>,
+    pub(crate) list: Vec<ApexInfo>,
 }
 
+/// Represents info of an APEX
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-struct ApexInfo {
+pub(crate) struct ApexInfo {
+    /// Name of APEX
     #[serde(rename = "moduleName")]
-    name: String,
+    pub(crate) name: String,
+
     #[serde(rename = "versionCode")]
     version: u64,
     #[serde(rename = "modulePath")]
@@ -80,11 +84,15 @@ struct ApexInfo {
 
     #[serde(rename = "preinstalledModulePath")]
     preinstalled_path: PathBuf,
+
+    /// Partition of APEX
+    #[serde(default)]
+    pub(crate) partition: String,
 }
 
 impl ApexInfoList {
     /// Loads ApexInfoList
-    fn load() -> Result<&'static ApexInfoList> {
+    pub(crate) fn load() -> Result<&'static ApexInfoList> {
         static INSTANCE: OnceCell<ApexInfoList> = OnceCell::new();
         INSTANCE.get_or_try_init(|| {
             let apex_info_list = File::open(APEX_INFO_LIST_PATH)

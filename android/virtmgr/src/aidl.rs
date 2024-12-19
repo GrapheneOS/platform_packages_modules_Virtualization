@@ -20,7 +20,7 @@ use crate::composite::make_composite_image;
 use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, SharedPathConfig, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, UsbConfig, VmContext, VmInstance, VmState};
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
-use crate::payload::{add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
+use crate::payload::{ApexInfoList, add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
 use crate::selinux::{check_tee_service_permission, getfilecon, getprevcon, SeContext};
 use android_os_permissions_aidl::aidl::android::os::IPermissionController;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
@@ -136,6 +136,21 @@ pub static GLOBAL_SERVICE: LazyLock<Strong<dyn IVirtualizationServiceInternal>> 
     });
 static SUPPORTED_OS_NAMES: LazyLock<HashSet<String>> =
     LazyLock::new(|| get_supported_os_names().expect("Failed to get list of supported os names"));
+
+static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
+    let calling_exe_link = format!("/proc/{}/exe", get_calling_pid());
+    match fs::read_link(&calling_exe_link) {
+        Ok(calling_exe_path) => Some(calling_exe_path),
+        Err(e) => {
+            // virtmgr forked from apps fails to read /proc probably due to hidepid=2. As we
+            // discourage vendor apps, regarding such cases as system is safer.
+            // TODO(b/383969737): determine if this is okay. Or find a way how to track origins of
+            // apps.
+            warn!("can't read_link '{calling_exe_link}': {e:?}; regarding as system");
+            None
+        }
+    }
+});
 
 fn create_or_update_idsig_file(
     input_fd: &ParcelFileDescriptor,
@@ -406,10 +421,38 @@ impl IGlobalVmContext for EarlyVmContext {
     }
 }
 
-fn find_partition(path: &Path) -> binder::Result<String> {
-    match path.components().nth(1) {
+fn find_partition(path: Option<&Path>) -> binder::Result<String> {
+    let path = match path {
+        Some(path) => path,
+        None => return Ok("system".to_owned()),
+    };
+    let mut components = path.components();
+    match components.nth(1) {
         Some(std::path::Component::Normal(partition)) => {
-            Ok(partition.to_string_lossy().into_owned())
+            if partition != "apex" {
+                return Ok(partition.to_string_lossy().into_owned());
+            }
+
+            // If path is under /apex, find a partition of the preinstalled .apex path
+            let apex_name = match components.next() {
+                Some(std::path::Component::Normal(name)) => name.to_string_lossy(),
+                _ => {
+                    return Err(anyhow!("Can't find apex name for '{}'", path.display()))
+                        .or_service_specific_exception(-1)
+                }
+            };
+
+            let apex_info_list = ApexInfoList::load()
+                .context("Failed to get apex info list")
+                .or_service_specific_exception(-1)?;
+
+            for apex_info in apex_info_list.list.iter() {
+                if apex_info.name == apex_name {
+                    return Ok(apex_info.partition.to_lowercase());
+                }
+            }
+
+            Err(anyhow!("Can't find apex info for '{apex_name}'")).or_service_specific_exception(-1)
         }
         _ => Err(anyhow!("Can't find partition in '{}'", path.display()))
             .or_service_specific_exception(-1),
@@ -424,24 +467,27 @@ impl VirtualizationService {
     fn create_early_vm_context(
         &self,
         config: &VirtualMachineConfig,
+        calling_exe_path: Option<&Path>,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
-        let calling_exe_path = format!("/proc/{}/exe", get_calling_pid());
-        let link = fs::read_link(&calling_exe_path)
-            .context(format!("can't read_link '{calling_exe_path}'"))
-            .or_service_specific_exception(-1)?;
-        let partition = find_partition(&link)?;
-
         let name = match config {
             VirtualMachineConfig::RawConfig(config) => &config.name,
             VirtualMachineConfig::AppConfig(config) => &config.name,
         };
-        let early_vm =
-            find_early_vm_for_partition(&partition, name).or_service_specific_exception(-1)?;
-        if Path::new(&early_vm.path) != link {
+        let calling_partition = find_partition(calling_exe_path)?;
+        let early_vm = find_early_vm_for_partition(&calling_partition, name)
+            .or_service_specific_exception(-1)?;
+        let calling_exe_path = match calling_exe_path {
+            Some(path) => path,
+            None => {
+                return Err(anyhow!("Can't verify the path of PID {}", get_calling_pid()))
+                    .or_service_specific_exception(-1)
+            }
+        };
+        if Path::new(&early_vm.path) != calling_exe_path {
             return Err(anyhow!(
-                "VM '{name}' in partition '{partition}' must be created with '{}', not '{}'",
+                "VM '{name}' in partition '{calling_partition}' must be created with '{}', not '{}'",
                 &early_vm.path,
-                link.display()
+                calling_exe_path.display()
             ))
             .or_service_specific_exception(-1);
         }
@@ -525,7 +571,7 @@ impl VirtualizationService {
 
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
         let (vm_context, cid, temporary_directory) = if cfg!(early) {
-            self.create_early_vm_context(config)?
+            self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref())?
         } else {
             self.create_vm_context(requester_debug_pid, config)?
         };
@@ -625,7 +671,8 @@ impl VirtualizationService {
         // Check if files for payloads and bases are NOT coming from /vendor and /odm, as they may
         // have unstable interfaces.
         // TODO(b/316431494): remove once Treble interfaces are stabilized.
-        check_partitions_for_files(config).or_service_specific_exception(-1)?;
+        check_partitions_for_files(config, &find_partition(CALLING_EXE_PATH.as_deref())?)
+            .or_service_specific_exception(-1)?;
 
         let zero_filler_path = temporary_directory.join("zero.img");
         write_zero_filler(&zero_filler_path)
@@ -1261,7 +1308,7 @@ fn load_app_config(
     Ok(vm_config)
 }
 
-fn check_partition_for_file(fd: &ParcelFileDescriptor) -> Result<()> {
+fn check_partition_for_file(fd: &ParcelFileDescriptor, calling_partition: &str) -> Result<()> {
     let path = format!("/proc/self/fd/{}", fd.as_raw_fd());
     let link = fs::read_link(&path).context(format!("can't read_link {path}"))?;
 
@@ -1271,24 +1318,39 @@ fn check_partition_for_file(fd: &ParcelFileDescriptor) -> Result<()> {
         return Ok(());
     }
 
-    if link.starts_with("/vendor") || link.starts_with("/odm") {
-        bail!("vendor or odm file {} can't be used for VM", link.display());
+    let is_fd_vendor = link.starts_with("/vendor") || link.starts_with("/odm");
+    let is_caller_vendor = calling_partition == "vendor" || calling_partition == "odm";
+
+    if is_fd_vendor != is_caller_vendor {
+        bail!("{} can't be used for VM client in {calling_partition}", link.display());
     }
 
     Ok(())
 }
 
-fn check_partitions_for_files(config: &VirtualMachineRawConfig) -> Result<()> {
+fn check_partitions_for_files(
+    config: &VirtualMachineRawConfig,
+    calling_partition: &str,
+) -> Result<()> {
     config
         .disks
         .iter()
         .flat_map(|disk| disk.partitions.iter())
         .filter_map(|partition| partition.image.as_ref())
-        .try_for_each(check_partition_for_file)?;
+        .try_for_each(|fd| check_partition_for_file(fd, calling_partition))?;
 
-    config.kernel.as_ref().map_or(Ok(()), check_partition_for_file)?;
-    config.initrd.as_ref().map_or(Ok(()), check_partition_for_file)?;
-    config.bootloader.as_ref().map_or(Ok(()), check_partition_for_file)?;
+    config
+        .disks
+        .iter()
+        .filter_map(|disk| disk.image.as_ref())
+        .try_for_each(|fd| check_partition_for_file(fd, calling_partition))?;
+
+    config.kernel.as_ref().map_or(Ok(()), |fd| check_partition_for_file(fd, calling_partition))?;
+    config.initrd.as_ref().map_or(Ok(()), |fd| check_partition_for_file(fd, calling_partition))?;
+    config
+        .bootloader
+        .as_ref()
+        .map_or(Ok(()), |fd| check_partition_for_file(fd, calling_partition))?;
 
     Ok(())
 }
@@ -2139,6 +2201,7 @@ fn range_for_partition(partition: &str) -> Result<Range<Cid>> {
     match partition {
         "system" => Ok(100..200),
         "system_ext" | "product" => Ok(200..300),
+        "vendor" | "odm" => Ok(300..400),
         _ => Err(anyhow!("Early VMs are not supported for {partition}")),
     }
 }

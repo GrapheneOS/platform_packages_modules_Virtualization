@@ -14,6 +14,7 @@
 
 //! Rust types related to the libfdt C integer results.
 
+use core::error;
 use core::ffi::{c_int, c_uint};
 use core::fmt;
 use core::result;
@@ -90,6 +91,8 @@ impl fmt::Display for FdtError {
         }
     }
 }
+
+impl error::Error for FdtError {}
 
 /// Result type with FdtError enum.
 pub type Result<T> = result::Result<T, FdtError>;

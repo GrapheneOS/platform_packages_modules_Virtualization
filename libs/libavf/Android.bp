@@ -34,7 +34,6 @@ rust_defaults {
 rust_ffi_static {
     name: "libavf_impl",
     defaults: ["libavf.default"],
-    export_include_dirs: ["include"],
 }
 
 cc_library {
@@ -49,7 +48,7 @@ cc_library {
         "libbinder_rpc_unstable",
         "liblog",
     ],
-    export_static_lib_headers: ["libavf_impl"],
+    export_include_dirs: ["include"],
     apex_available: ["com.android.virt"],
     version_script: "libavf.map.txt",
     stubs: {
