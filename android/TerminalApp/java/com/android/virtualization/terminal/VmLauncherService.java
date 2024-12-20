@@ -25,6 +25,8 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -205,7 +207,33 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         mResultReceiver.send(RESULT_START, null);
 
         mPortNotifier = new PortNotifier(this);
-        startDebianServer();
+
+        // TODO: dedup this part
+        NsdManager nsdManager = getSystemService(NsdManager.class);
+        NsdServiceInfo info = new NsdServiceInfo();
+        info.setServiceType("_http._tcp");
+        info.setServiceName("ttyd");
+        nsdManager.registerServiceInfoCallback(
+                info,
+                mExecutorService,
+                new NsdManager.ServiceInfoCallback() {
+                    @Override
+                    public void onServiceInfoCallbackRegistrationFailed(int errorCode) {}
+
+                    @Override
+                    public void onServiceInfoCallbackUnregistered() {}
+
+                    @Override
+                    public void onServiceLost() {}
+
+                    @Override
+                    public void onServiceUpdated(NsdServiceInfo info) {
+                        nsdManager.unregisterServiceInfoCallback(this);
+                        Log.i(TAG, "Service found: " + info.toString());
+                        String ipAddress = info.getHostAddresses().get(0).getHostAddress();
+                        startDebianServer(ipAddress);
+                    }
+                });
 
         return START_NOT_STICKY;
     }
@@ -263,7 +291,7 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         return changed;
     }
 
-    private void startDebianServer() {
+    private void startDebianServer(String ipAddress) {
         ServerInterceptor interceptor =
                 new ServerInterceptor() {
                     @Override
@@ -271,16 +299,13 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
                             ServerCall<ReqT, RespT> call,
                             Metadata headers,
                             ServerCallHandler<ReqT, RespT> next) {
-                        // Refer to VirtualizationSystemService.TetheringService
-                        final String VM_STATIC_IP_ADDR = "192.168.0.2";
                         InetSocketAddress remoteAddr =
                                 (InetSocketAddress)
                                         call.getAttributes().get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR);
 
                         if (remoteAddr != null
                                 && Objects.equals(
-                                        remoteAddr.getAddress().getHostAddress(),
-                                        VM_STATIC_IP_ADDR)) {
+                                        remoteAddr.getAddress().getHostAddress(), ipAddress)) {
                             // Allow the request only if it is from VM
                             return next.startCall(call, headers);
                         }
