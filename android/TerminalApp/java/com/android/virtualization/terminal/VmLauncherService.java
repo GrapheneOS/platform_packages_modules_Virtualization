@@ -61,7 +61,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class VmLauncherService extends Service implements DebianServiceImpl.DebianServiceCallback {
+public class VmLauncherService extends Service {
     private static final String EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION";
     private static final String ACTION_START_VM_LAUNCHER_SERVICE =
             "android.virtualization.START_VM_LAUNCHER_SERVICE";
@@ -72,8 +72,6 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
     private static final int RESULT_START = 0;
     private static final int RESULT_STOP = 1;
     private static final int RESULT_ERROR = 2;
-    private static final int RESULT_IPADDR = 3;
-    private static final String KEY_VM_IP_ADDR = "ip_addr";
 
     private ExecutorService mExecutorService;
     private VirtualMachine mVirtualMachine;
@@ -92,8 +90,6 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         void onVmStop();
 
         void onVmError();
-
-        void onIpAddrAvailable(String ipAddr);
     }
 
     public static void run(
@@ -118,9 +114,6 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
                                 return;
                             case RESULT_ERROR:
                                 callback.onVmError();
-                                return;
-                            case RESULT_IPADDR:
-                                callback.onIpAddrAvailable(resultData.getString(KEY_VM_IP_ADDR));
                                 return;
                         }
                     }
@@ -317,7 +310,7 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
         try {
             // TODO(b/372666638): gRPC for java doesn't support vsock for now.
             int port = 0;
-            mDebianService = new DebianServiceImpl(this, this);
+            mDebianService = new DebianServiceImpl(this);
             mServer =
                     OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
                             .intercept(interceptor)
@@ -340,14 +333,6 @@ public class VmLauncherService extends Service implements DebianServiceImpl.Debi
                         Log.d(TAG, "cannot write grpc port number", e);
                     }
                 });
-    }
-
-    @Override
-    public void onIpAddressAvailable(String ipAddr) {
-        android.os.Trace.endAsyncSection("debianBoot", 0);
-        Bundle b = new Bundle();
-        b.putString(VmLauncherService.KEY_VM_IP_ADDR, ipAddr);
-        mResultReceiver.send(VmLauncherService.RESULT_IPADDR, b);
     }
 
     public static void stop(Context context) {
