@@ -403,11 +403,6 @@ public class MainActivity extends BaseActivity
     }
 
     @Override
-    public void onIpAddrAvailable(String ipAddr) {
-        // TODO: remove this
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
         return true;

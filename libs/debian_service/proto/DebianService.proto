@@ -23,21 +23,12 @@ option java_multiple_files = true;
 
 service DebianService {
   rpc ReportVmActivePorts (ReportVmActivePortsRequest) returns (ReportVmActivePortsResponse) {}
-  rpc ReportVmIpAddr (IpAddr) returns (ReportVmIpAddrResponse) {}
   rpc OpenForwardingRequestQueue (QueueOpeningRequest) returns (stream ForwardingRequestItem) {}
   rpc OpenShutdownRequestQueue (ShutdownQueueOpeningRequest) returns (stream ShutdownRequestItem) {}
 }
 
 message QueueOpeningRequest {
   int32 cid = 1;
-}
-
-message IpAddr {
-  string addr = 1;
-}
-
-message ReportVmIpAddrResponse {
-  bool success = 1;
 }
 
 message ReportVmActivePortsRequest {
