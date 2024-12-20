@@ -125,7 +125,7 @@ pub struct CrosvmConfig {
     pub gdb_port: Option<NonZeroU16>,
     pub vfio_devices: Vec<VfioDevice>,
     pub dtbo: Option<File>,
-    pub device_tree_overlay: Option<File>,
+    pub device_tree_overlays: Vec<File>,
     pub display_config: Option<DisplayConfig>,
     pub input_device_options: Vec<InputDeviceOption>,
     pub hugepages: bool,
@@ -1157,9 +1157,10 @@ fn run_vm(
         .context("failed to create control listener")?;
     command.arg("--socket").arg(add_preserved_fd(&mut preserved_fds, control_sock));
 
-    if let Some(dt_overlay) = config.device_tree_overlay {
-        command.arg("--device-tree-overlay").arg(add_preserved_fd(&mut preserved_fds, dt_overlay));
-    }
+    config.device_tree_overlays.into_iter().for_each(|dt_overlay| {
+        let arg = add_preserved_fd(&mut preserved_fds, dt_overlay);
+        command.arg("--device-tree-overlay").arg(arg);
+    });
 
     if cfg!(paravirtualized_devices) {
         if let Some(gpu_config) = &config.gpu_config {

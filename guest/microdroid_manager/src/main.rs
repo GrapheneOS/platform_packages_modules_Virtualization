@@ -670,9 +670,20 @@ fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Resul
         });
     }
 
-    if !is_debuggable()? {
-        command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
-    }
+    // Never accept input from outside
+    command.stdin(Stdio::null());
+
+    // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
+    let (stdout, stderr) = if is_debuggable()? {
+        use std::os::fd::FromRawFd;
+        let kmsg_fd = env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap();
+        // SAFETY: no one closes kmsg_fd
+        unsafe { (Stdio::from_raw_fd(kmsg_fd), Stdio::from_raw_fd(kmsg_fd)) }
+    } else {
+        (Stdio::null(), Stdio::null())
+    };
+    command.stdout(stdout);
+    command.stderr(stderr);
 
     info!("notifying payload started");
     service.notifyPayloadStarted()?;

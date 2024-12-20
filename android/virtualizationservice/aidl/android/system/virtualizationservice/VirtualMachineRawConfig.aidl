@@ -15,6 +15,7 @@
  */
 package android.system.virtualizationservice;
 
+import android.system.virtualizationservice.AssignedDevices;
 import android.system.virtualizationservice.AudioConfig;
 import android.system.virtualizationservice.CpuTopology;
 import android.system.virtualizationservice.DiskImage;
@@ -91,8 +92,8 @@ parcelable VirtualMachineRawConfig {
      */
     boolean hugePages;
 
-    /** List of SysFS nodes of devices to be assigned */
-    String[] devices;
+    /** Assigned devices */
+    AssignedDevices devices;
 
     @nullable DisplayConfig displayConfig;
 

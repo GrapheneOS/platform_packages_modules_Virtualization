@@ -13,6 +13,7 @@ LIBAVF {
     AVirtualMachineRawConfig_setProtectedVm; # apex llndk
     AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod; # apex llndk
     AVirtualMachineRawConfig_addCustomMemoryBackingFile; # apex llndk
+    AVirtualMachineRawConfig_setDeviceTreeOverlay; # apex llndk
     AVirtualizationService_create; # apex llndk
     AVirtualizationService_destroy; # apex llndk
     AVirtualMachine_createRaw; # apex llndk

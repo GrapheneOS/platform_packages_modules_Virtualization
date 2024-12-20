@@ -88,7 +88,6 @@ fn main() -> Result<()> {
         memoryMib: args.memory_size_mib,
         cpuTopology: args.cpu_topology,
         platformVersion: "~1.0".to_owned(),
-        balloon: true, // TODO: probably don't want ballooning.
         // TODO: add instanceId
         ..Default::default()
     });

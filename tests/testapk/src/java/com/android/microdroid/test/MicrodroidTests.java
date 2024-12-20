@@ -1298,6 +1298,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-7"})
+    @VsrTest(requirements = {"VSR-7.1-001.005"})
     public void bccIsSuperficiallyWellFormed() throws Exception {
         assumeSupportedDevice();
 
@@ -1342,7 +1343,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @VsrTest(requirements = {"VSR-7.1-001.004"})
+    @VsrTest(requirements = {"VSR-7.1-001.005"})
     public void protectedVmHasValidDiceChain() throws Exception {
         // This test validates two things regarding the pVM DICE chain:
         // 1. The DICE chain is well-formed that all the entries conform to the DICE spec.

@@ -238,8 +238,7 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
         memoryMib: VM_MEMORY_MB,
         cpuTopology: CpuTopology::ONE_CPU,
         platformVersion: "~1.0".to_string(),
-        gdbPort: 0,    // No gdb
-        balloon: true, // TODO: probably don't want ballooning.
+        gdbPort: 0, // No gdb
         ..Default::default()
     });
     let console_out = Some(android_log_fd()?);

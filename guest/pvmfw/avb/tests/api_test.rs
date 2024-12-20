@@ -190,7 +190,7 @@ fn payload_with_empty_public_key_fails_verification() -> Result<()> {
         &load_latest_signed_kernel()?,
         &load_latest_initrd_normal()?,
         /* trusted_public_key= */ &[0u8; 0],
-        SlotVerifyError::PublicKeyRejected.into(),
+        SlotVerifyError::PublicKeyRejected(None).into(),
     )
 }
 
@@ -200,7 +200,7 @@ fn payload_with_an_invalid_public_key_fails_verification() -> Result<()> {
         &load_latest_signed_kernel()?,
         &load_latest_initrd_normal()?,
         /* trusted_public_key= */ &[0u8; 512],
-        SlotVerifyError::PublicKeyRejected.into(),
+        SlotVerifyError::PublicKeyRejected(None).into(),
     )
 }
 
@@ -210,7 +210,7 @@ fn payload_with_a_different_valid_public_key_fails_verification() -> Result<()> 
         &load_latest_signed_kernel()?,
         &load_latest_initrd_normal()?,
         &fs::read(PUBLIC_KEY_RSA2048_PATH)?,
-        SlotVerifyError::PublicKeyRejected.into(),
+        SlotVerifyError::PublicKeyRejected(None).into(),
     )
 }
 

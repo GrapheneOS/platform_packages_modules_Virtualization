@@ -15,6 +15,7 @@
 //! Struct for VM configuration with JSON (de)serialization and AIDL parcelables
 
 use android_system_virtualizationservice::{
+    aidl::android::system::virtualizationservice::AssignedDevices::AssignedDevices,
     aidl::android::system::virtualizationservice::CpuTopology::CpuTopology,
     aidl::android::system::virtualizationservice::DiskImage::DiskImage as AidlDiskImage,
     aidl::android::system::virtualizationservice::Partition::Partition as AidlPartition,
@@ -124,13 +125,16 @@ impl VmConfig {
             memoryMib: memory_mib,
             cpuTopology: cpu_topology,
             platformVersion: self.platform_version.to_string(),
-            devices: self
-                .devices
-                .iter()
-                .map(|x| {
-                    x.to_str().map(String::from).ok_or(anyhow!("Failed to convert {x:?} to String"))
-                })
-                .collect::<Result<_>>()?,
+            devices: AssignedDevices::Devices(
+                self.devices
+                    .iter()
+                    .map(|x| {
+                        x.to_str()
+                            .map(String::from)
+                            .ok_or(anyhow!("Failed to convert {x:?} to String"))
+                    })
+                    .collect::<Result<_>>()?,
+            ),
             consoleInputDevice: self.console_input_device.clone(),
             usbConfig: usb_config,
             balloon: true,
