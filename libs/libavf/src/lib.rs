@@ -237,16 +237,21 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_setProtectedVm(
     config.protectedVm = protected_vm;
 }
 
-/// NOT IMPLEMENTED.
+/// Set whether to use an alternate, hypervisor-specific authentication method for protected VMs.
 ///
-/// # Returns
-/// It always returns `-ENOTSUP`.
+/// # Safety
+/// `config` must be a pointer returned by `AVirtualMachineRawConfig_create`.
 #[no_mangle]
-pub extern "C" fn AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod(
-    _config: *mut VirtualMachineRawConfig,
-    _enable: bool,
+pub unsafe extern "C" fn AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod(
+    config: *mut VirtualMachineRawConfig,
+    enable: bool,
 ) -> c_int {
-    -libc::ENOTSUP
+    // SAFETY: `config` is assumed to be a valid, non-null pointer returned by
+    // AVirtualMachineRawConfig_create. It's the only reference to the object.
+    let config = unsafe { &mut *config };
+    config.enableHypervisorSpecificAuthMethod = enable;
+    // We don't validate whether this is supported until later, when the VM is started.
+    0
 }
 
 /// NOT IMPLEMENTED.

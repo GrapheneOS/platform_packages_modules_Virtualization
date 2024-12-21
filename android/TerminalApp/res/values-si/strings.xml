@@ -49,10 +49,20 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"සවන්දීමේ පෝටයන්ට ඉඩ දෙන්න/ප්‍රතික්ෂේප කරන්න"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"සවන්දීමේ පෝටයන්"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"සුරකින ලද ඉඩ දුන් පෝටයන්"</string>
+    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_port_close_button (8475029060852721339) -->
+    <skip />
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"නව පෝටයකට ඉඩ දෙන්න"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"නව පෝට අංකයක් ඇතුළු කරන්න"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"සුරකින්න"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"අවලංගු කරන්න"</string>
+    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
+    <skip />
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ටර්මිනලය නව පෝටයක් විවෘත කිරීමට ඉල්ලීම් කරයි"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"පෝටය ඉල්ලා ඇත: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"පිළිගන්න"</string>
@@ -72,15 +82,14 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"උපස්ථ දත්ත ඉවත් කරන්න"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ඉවත් කරන්න"</string>
     <string name="error_title" msgid="405150657301906598">"ප්‍රතිසාධනය කළ නොහැකි දෝෂය"</string>
-    <string name="error_desc" msgid="1984714179775053347">"දෝෂයකින් ප්‍රතිසාධනය කිරීමට අසමත් විය.\nඔබට ටර්මිනලය නැවත ආරම්භ කිරීමට උත්සාහ කළ හැක, නැතහොත් ප්‍රතිසාධන විකල්ප වලින් එකක් උත්සාහ කරන්න."</string>
+    <!-- no translation found for error_desc (4588252235686826721) -->
+    <skip />
     <string name="error_code" msgid="3585291676855383649">"දෝෂ කේතය: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"සැකසීම්"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"පර්යන්තය ධාවනය වේ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ටර්මිනලය විවෘත කිරීමට ක්ලික් කරන්න"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"වසන්න"</string>
-    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
-    <skip />
-    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
-    <skip />
+    <string name="service_notification_close_title" msgid="1442526433361428844">"ටර්මිනලය වැසෙමින් පවතී"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"බලෙන් වසන්න"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> සබලයි"</string>
 </resources>

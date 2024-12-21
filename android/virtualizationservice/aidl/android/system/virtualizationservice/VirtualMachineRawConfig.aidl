@@ -120,4 +120,10 @@ parcelable VirtualMachineRawConfig {
 
     /** List of tee services this VM wants to access */
     String[] teeServices;
+
+    /**
+     * Set whether to use an alternate, hypervisor-specific authentication method for protected
+     * VMs.
+     */
+    boolean enableHypervisorSpecificAuthMethod;
 }

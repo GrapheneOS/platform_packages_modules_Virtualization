@@ -49,10 +49,20 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ऐकण्याच्या पोर्टना अनुमती द्या/नाकारा"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ऐकण्याचे पोर्ट"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"सेव्ह केलेले व अनुमती असलेले पोर्ट"</string>
+    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_other_enabled_port_close_button (8475029060852721339) -->
+    <skip />
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"नवीन पोर्टला अनुमती द्या"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"नवीन पोर्ट नंबर एंटर करा"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"सेव्ह करा"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"रद्द करा"</string>
+    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
+    <skip />
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"टर्मिनल नवीन पोर्ट उघडण्याची विनंती करत आहे"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"विनंती केलेला पोर्ट: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकारा"</string>
@@ -72,15 +82,14 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"बॅकअप डेटा काढून टाका"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> काढून टाका"</string>
     <string name="error_title" msgid="405150657301906598">"रिकव्‍हर न करता येणारी एरर"</string>
-    <string name="error_desc" msgid="1984714179775053347">"एरर रिकव्हर करता आली नाही.\nतुम्ही टर्मिनल रीस्टार्ट करण्याचा प्रयत्न करू शकता किंवा एखादा रिकव्हरी पर्याय वापरून पाहू शकता."</string>
+    <!-- no translation found for error_desc (4588252235686826721) -->
+    <skip />
     <string name="error_code" msgid="3585291676855383649">"एरर कोड: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिंग्ज"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल रन होत आहे"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"टर्मिनल उघडण्यासाठी क्लिक करा"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"बंद करा"</string>
-    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
-    <skip />
-    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
-    <skip />
+    <string name="service_notification_close_title" msgid="1442526433361428844">"टर्मिनल बंद होत आहे"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"सक्तीने बंद करा"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> सुरू केले आहे"</string>
 </resources>

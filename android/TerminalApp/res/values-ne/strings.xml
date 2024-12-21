@@ -49,10 +49,19 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"लिसनिङ पोर्टहरू हाल्ने अनुमति दिनुहोस्/नदिनुहोस्"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"लिसनिङ पोर्टहरू"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"सेभ गरिएका अनुमति दिइएका पोर्टहरू"</string>
+    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
+    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> मेटाउनुहोस्"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"नयाँ पोर्ट नम्बर हाल्ने अनुमति दिनुहोस्"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"नयाँ पोर्ट नम्बर हाल्नुहोस्"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"सेभ गर्नुहोस्"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"रद्द गर्नुहोस्"</string>
+    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
+    <skip />
+    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
+    <skip />
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"टर्मिनलले एउटा नयाँ पोर्ट खोल्न अनुरोध गरिरहेको छ"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"निम्न पोर्ट खोल्न अनुरोध गरिएको छ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकार गर्नुहोस्"</string>
@@ -72,15 +81,14 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ब्याकअप डेटा हटाउनुहोस्"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> हटाउनुहोस्"</string>
     <string name="error_title" msgid="405150657301906598">"रिकभर गर्न नदिने त्रुटि"</string>
-    <string name="error_desc" msgid="1984714179775053347">"कुनै त्रुटिका कारण रिकभर गर्न सकिएन।\nतपाईं टर्मिनल रिस्टार्ट गर्न वा रिकभर गर्ने विकल्पहरूमध्ये कुनै एउटा विकल्प अपनाई हेर्न सक्नुहुन्छ।"</string>
+    <!-- no translation found for error_desc (4588252235686826721) -->
+    <skip />
     <string name="error_code" msgid="3585291676855383649">"त्रुटिको कोड: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिङ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चलिरहेको छ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"टर्मिनल खोल्न क्लिक गर्नुहोस्"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"बन्द गर्नुहोस्"</string>
-    <!-- no translation found for service_notification_close_title (1442526433361428844) -->
-    <skip />
-    <!-- no translation found for service_notification_force_quit_action (3462226330416157775) -->
-    <skip />
+    <string name="service_notification_close_title" msgid="1442526433361428844">"टर्मिनल एप बन्द हुँदै छ"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"बलपूर्वक बन्द गर्नुहोस्"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> अन गरिएको छ"</string>
 </resources>
