@@ -52,10 +52,6 @@ struct TcpStateRow {
 #[derive(Parser)]
 /// Flags for running command
 pub struct Args {
-    /// Host IP address
-    #[arg(long)]
-    #[arg(alias = "host")]
-    host_addr: String,
     /// grpc port number
     #[arg(long)]
     #[arg(alias = "grpc_port")]
@@ -171,7 +167,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     debug!("Starting forwarder_guest_launcher");
     let args = Args::parse();
-    let addr = format!("https://{}:{}", args.host_addr, args.grpc_port);
+    let gateway_ip_addr = netdev::get_default_gateway()?.ipv4[0];
+    let addr = format!("https://{}:{}", gateway_ip_addr.to_string(), args.grpc_port);
     let channel = Endpoint::from_shared(addr)?.connect().await?;
     let client = DebianServiceClient::new(channel);
 

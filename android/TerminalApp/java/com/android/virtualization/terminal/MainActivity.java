@@ -28,11 +28,12 @@ import android.graphics.drawable.Icon;
 import android.graphics.fonts.FontStyle;
 import android.net.Uri;
 import android.net.http.SslError;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ConditionVariable;
 import android.os.Environment;
-import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.provider.Settings;
 import android.util.Log;
@@ -62,10 +63,8 @@ import com.android.microdroid.test.common.DeviceProperties;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -77,8 +76,6 @@ public class MainActivity extends BaseActivity
         implements VmLauncherService.VmLauncherServiceCallback, AccessibilityStateChangeListener {
     static final String TAG = "VmTerminalApp";
     static final String KEY_DISK_SIZE = "disk_size";
-    private static final String VM_ADDR = "192.168.0.2";
-    private static final int TTYD_PORT = 7681;
     private static final int TERMINAL_CONNECTION_TIMEOUT_MS;
     private static final int REQUEST_CODE_INSTALLER = 0x33;
     private static final int FONT_SIZE_DEFAULT = 13;
@@ -234,7 +231,7 @@ public class MainActivity extends BaseActivity
         activityResultLauncher.launch(intent);
     }
 
-    private URL getTerminalServiceUrl() {
+    private URL getTerminalServiceUrl(String ipAddress, int port) {
         Configuration config = getResources().getConfiguration();
 
         String query =
@@ -249,8 +246,9 @@ public class MainActivity extends BaseActivity
                         + "&titleFixed="
                         + getString(R.string.app_name);
 
+
         try {
-            return new URL("https", VM_ADDR, TTYD_PORT, "/" + query);
+            return new URL("https", ipAddress, port, "/" + query);
         } catch (MalformedURLException e) {
             // this cannot happen
             return null;
@@ -266,7 +264,6 @@ public class MainActivity extends BaseActivity
     }
 
     private void connectToTerminalService() {
-        Log.i(TAG, "URL=" + getTerminalServiceUrl().toString());
         mTerminalView.setWebViewClient(
                 new WebViewClient() {
                     private boolean mLoadFailed = false;
@@ -344,44 +341,36 @@ public class MainActivity extends BaseActivity
                         handler.proceed();
                     }
                 });
-        mExecutorService.execute(
-                () -> {
-                    // TODO(b/376793781): Remove polling
-                    waitUntilVmStarts();
-                    runOnUiThread(() -> mTerminalView.loadUrl(getTerminalServiceUrl().toString()));
+
+        // TODO: refactor this block as a method
+        NsdManager nsdManager = getSystemService(NsdManager.class);
+        NsdServiceInfo info = new NsdServiceInfo();
+        info.setServiceType("_http._tcp");
+        info.setServiceName("ttyd");
+        nsdManager.registerServiceInfoCallback(
+                info,
+                mExecutorService,
+                new NsdManager.ServiceInfoCallback() {
+                    @Override
+                    public void onServiceInfoCallbackRegistrationFailed(int errorCode) {}
+
+                    @Override
+                    public void onServiceInfoCallbackUnregistered() {}
+
+                    @Override
+                    public void onServiceLost() {}
+
+                    @Override
+                    public void onServiceUpdated(NsdServiceInfo info) {
+                        nsdManager.unregisterServiceInfoCallback(this);
+
+                        Log.i(TAG, "Service found: " + info.toString());
+                        String ipAddress = info.getHostAddresses().get(0).getHostAddress();
+                        int port = info.getPort();
+                        URL url = getTerminalServiceUrl(ipAddress, port);
+                        runOnUiThread(() -> mTerminalView.loadUrl(url.toString()));
+                    }
                 });
-    }
-
-    private static void waitUntilVmStarts() {
-        InetAddress addr = null;
-        try {
-            addr = InetAddress.getByName(VM_ADDR);
-        } catch (UnknownHostException e) {
-            // this can never happen.
-        }
-        long startTime = SystemClock.elapsedRealtime();
-        while (true) {
-            int remainingTime =
-                    TERMINAL_CONNECTION_TIMEOUT_MS
-                            - (int) (SystemClock.elapsedRealtime() - startTime);
-
-            if (Thread.interrupted()) {
-                Log.d(TAG, "the waiting thread is interrupted");
-                return;
-            }
-            if (remainingTime <= 0) {
-                throw new RuntimeException("Connection to terminal timeout");
-            }
-            try {
-                // Note: this quits immediately if VM is unreachable.
-                if (addr.isReachable(remainingTime)) {
-                    return;
-                }
-            } catch (IOException e) {
-                // give up on network error
-                throw new RuntimeException(e);
-            }
-        }
     }
 
     @Override
@@ -411,11 +400,6 @@ public class MainActivity extends BaseActivity
         Log.i(TAG, "onVmError()");
         // TODO: error cause is too simple.
         ErrorActivity.start(this, new Exception("onVmError"));
-    }
-
-    @Override
-    public void onIpAddrAvailable(String ipAddr) {
-        // TODO: remove this
     }
 
     @Override

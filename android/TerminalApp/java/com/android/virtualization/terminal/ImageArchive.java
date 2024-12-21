@@ -46,7 +46,7 @@ import java.util.function.Function;
 class ImageArchive {
     private static final String DIR_IN_SDCARD = "linux";
     private static final String ARCHIVE_NAME = "images.tar.gz";
-    private static final String BUILD_TAG = Integer.toString(Build.VERSION.SDK_INT_FULL);
+    private static final String BUILD_TAG = "latest";
     private static final String HOST_URL = "https://dl.google.com/android/ferrochrome/" + BUILD_TAG;
 
     // Only one can be non-null

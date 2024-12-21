@@ -25,11 +25,9 @@ import androidx.annotation.Keep;
 
 import com.android.virtualization.terminal.proto.DebianServiceGrpc;
 import com.android.virtualization.terminal.proto.ForwardingRequestItem;
-import com.android.virtualization.terminal.proto.IpAddr;
 import com.android.virtualization.terminal.proto.QueueOpeningRequest;
 import com.android.virtualization.terminal.proto.ReportVmActivePortsRequest;
 import com.android.virtualization.terminal.proto.ReportVmActivePortsResponse;
-import com.android.virtualization.terminal.proto.ReportVmIpAddrResponse;
 import com.android.virtualization.terminal.proto.ShutdownQueueOpeningRequest;
 import com.android.virtualization.terminal.proto.ShutdownRequestItem;
 
@@ -42,16 +40,14 @@ final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     private final Context mContext;
     private final PortsStateManager mPortsStateManager;
     private PortsStateManager.Listener mPortsStateListener;
-    private final DebianServiceCallback mCallback;
     private Runnable mShutdownRunnable;
 
     static {
         System.loadLibrary("forwarder_host_jni");
     }
 
-    DebianServiceImpl(Context context, DebianServiceCallback callback) {
+    DebianServiceImpl(Context context) {
         super();
-        mCallback = callback;
         mContext = context;
         mPortsStateManager = PortsStateManager.getInstance(mContext);
     }
@@ -64,16 +60,6 @@ final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
         mPortsStateManager.updateActivePorts(new HashSet<>(request.getPortsList()));
         ReportVmActivePortsResponse reply =
                 ReportVmActivePortsResponse.newBuilder().setSuccess(true).build();
-        responseObserver.onNext(reply);
-        responseObserver.onCompleted();
-    }
-
-    @Override
-    public void reportVmIpAddr(
-            IpAddr request, StreamObserver<ReportVmIpAddrResponse> responseObserver) {
-        Log.d(TAG, "reportVmIpAddr: " + request.toString());
-        mCallback.onIpAddressAvailable(request.getAddr());
-        ReportVmIpAddrResponse reply = ReportVmIpAddrResponse.newBuilder().setSuccess(true).build();
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
     }
@@ -159,9 +145,5 @@ final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
                         .filter(port -> enabledPorts.contains(port))
                         .mapToInt(Integer::intValue)
                         .toArray());
-    }
-
-    protected interface DebianServiceCallback {
-        void onIpAddressAvailable(String ipAddr);
     }
 }
