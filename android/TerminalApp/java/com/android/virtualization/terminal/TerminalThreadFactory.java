@@ -13,16 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.virtualization.terminal
 
-import android.content.Context
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadFactory
+package com.android.virtualization.terminal;
 
-class TerminalThreadFactory(private val context: Context) : ThreadFactory {
-    override fun newThread(r: Runnable): Thread {
-        return Executors.defaultThreadFactory().newThread(r).also {
-            it.uncaughtExceptionHandler = TerminalExceptionHandler(context)
-        }
+import android.content.Context;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
+public class TerminalThreadFactory implements ThreadFactory {
+    private final Context mContext;
+
+    public TerminalThreadFactory(Context context) {
+        mContext = context;
+    }
+
+    @Override
+    public Thread newThread(Runnable r) {
+        Thread thread = Executors.defaultThreadFactory().newThread(r);
+        thread.setUncaughtExceptionHandler(new TerminalExceptionHandler(mContext));
+        return thread;
     }
 }
