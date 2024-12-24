@@ -142,7 +142,7 @@ internal class ImageArchive {
         private const val HOST_URL = "https://dl.google.com/android/ferrochrome/$BUILD_TAG"
 
         @JvmStatic
-        fun getSdcardPathForTesting(): Path? {
+        fun getSdcardPathForTesting(): Path {
             return Environment.getExternalStoragePublicDirectory(DIR_IN_SDCARD).toPath()
         }
 
@@ -151,7 +151,7 @@ internal class ImageArchive {
          */
         @JvmStatic
         fun fromSdCard(): ImageArchive {
-            return ImageArchive(getSdcardPathForTesting()!!.resolve(ARCHIVE_NAME))
+            return ImageArchive(getSdcardPathForTesting().resolve(ARCHIVE_NAME))
         }
 
         /**
