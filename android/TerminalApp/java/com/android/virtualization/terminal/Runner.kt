@@ -32,7 +32,7 @@ internal class Runner private constructor(val vm: VirtualMachine?, callback: Cal
     val exitStatus = callback.finishedSuccessfully
 
     private class Callback : VirtualMachineCallback {
-        val finishedSuccessfully: CompletableFuture<Boolean?> = CompletableFuture<Boolean?>()
+        val finishedSuccessfully: CompletableFuture<Boolean> = CompletableFuture<Boolean>()
 
         override fun onPayloadStarted(vm: VirtualMachine) {
             // This event is only from Microdroid-based VM. Custom VM shouldn't emit this.
