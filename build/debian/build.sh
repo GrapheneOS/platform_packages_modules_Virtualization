@@ -57,18 +57,16 @@ parse_options() {
 			;;
 	esac
 	if [[ "${*:$OPTIND:1}" ]]; then
-		built_image="${*:$OPTIND:1}"
+		output="${*:$OPTIND:1}"
 	fi
 }
 
 prepare_build_id() {
-	local filename=build_id
 	if [ -z "${KOKORO_BUILD_NUMBER}" ]; then
-		echo eng-$(hostname)-$(date --utc) > ${filename}
+		echo eng-$(hostname)-$(date --utc)
 	else
-		echo ${KOKORO_BUILD_NUMBER} > ${filename}
+		echo ${KOKORO_BUILD_NUMBER}
 	fi
-	echo ${filename}
 }
 
 install_prerequisites() {
@@ -302,17 +300,22 @@ EOF
 }
 
 run_fai() {
-	local out="${built_image}"
+	local out="${raw_disk_image}"
 	make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"
 	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
 }
 
-extract_partitions() {
+generate_output_package() {
+	fdisk -l "${raw_disk_image}"
 	root_partition_num=1
 	bios_partition_num=14
 	efi_partition_num=15
 
-	loop=$(losetup -f --show --partscan $built_image)
+	pushd ${workdir} > /dev/null
+
+	echo ${build_id} > build_id
+
+	loop=$(losetup -f --show --partscan $raw_disk_image)
 	dd if="${loop}p$root_partition_num" of=root_part
 	if [[ "$arch" == "x86_64" ]]; then
 		dd if="${loop}p$bios_partition_num" of=bios_part
@@ -320,11 +323,38 @@ extract_partitions() {
 	dd if="${loop}p$efi_partition_num" of=efi_part
 	losetup -d "${loop}"
 
-	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $built_image $root_partition_num)/g" vm_config.json
+	cp ${vm_config} vm_config.json
+	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
 	if [[ "$arch" == "x86_64" ]]; then
-		sed -i "s/{bios_part_guid}/$(sfdisk --part-uuid $built_image $bios_partition_num)/g" vm_config.json
+		sed -i "s/{bios_part_guid}/$(sfdisk --part-uuid $raw_disk_image $bios_partition_num)/g" vm_config.json
 	fi
-	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $built_image $efi_partition_num)/g" vm_config.json
+	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
+
+	images=()
+	if [[ "$arch" == "aarch64" ]]; then
+		images+=(
+			root_part
+			efi_part
+		)
+	# TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
+	elif [[ "$arch" == "x86_64" ]]; then
+		rm -f vmlinuz initrd.img
+		virt-get-kernel -a "${raw_disk_image}"
+		mv vmlinuz* vmlinuz
+		mv initrd.img* initrd.img
+		images+=(
+			bios_part
+			root_part
+			efi_part
+			vmlinuz
+			initrd.img
+		)
+	fi
+
+	popd > /dev/null
+
+	# --sparse option isn't supported in apache-commons-compress
+	tar czv -f ${output} -C ${workdir} build_id "${images[@]}" vm_config.json
 }
 
 clean_up() {
@@ -334,14 +364,16 @@ clean_up() {
 set -e
 trap clean_up EXIT
 
-built_image=image.raw
+output=images.tar.gz
 workdir=$(mktemp -d)
+raw_disk_image=${workdir}/image.raw
 build_id=$(prepare_build_id)
 debian_cloud_image=${workdir}/debian_cloud_image
 debian_version=bookworm
 config_space=${debian_cloud_image}/config_space/${debian_version}
 resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch="$(uname -m)"
+vm_config="$(realpath $(dirname "$0"))/vm_config.json.${arch}"
 mode=debug
 save_workdir=0
 use_custom_kernel=0
@@ -353,32 +385,4 @@ download_debian_cloud_image
 copy_android_config
 package_custom_kernel
 run_fai
-fdisk -l "${built_image}"
-images=()
-
-cp "$(dirname "$0")/vm_config.json.${arch}" vm_config.json
-
-extract_partitions
-
-if [[ "$arch" == "aarch64" ]]; then
-	images+=(
-		root_part
-		efi_part
-	)
-# TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
-elif [[ "$arch" == "x86_64" ]]; then
-	rm -f vmlinuz initrd.img
-	virt-get-kernel -a "${built_image}"
-	mv vmlinuz* vmlinuz
-	mv initrd.img* initrd.img
-	images+=(
-		bios_part
-		root_part
-		efi_part
-		vmlinuz
-		initrd.img
-	)
-fi
-
-# --sparse option isn't supported in apache-commons-compress
-tar czv -f images.tar.gz ${build_id} "${images[@]}" vm_config.json
+generate_output_package

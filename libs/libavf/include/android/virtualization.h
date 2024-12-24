@@ -70,7 +70,13 @@ int AVirtualMachineRawConfig_setName(AVirtualMachineRawConfig* _Nonnull config,
                                      const char* _Nonnull name) __INTRODUCED_IN(36);
 
 /**
- * Set an instance ID of a virtual machine.
+ * Set an instance ID of a virtual machine. Every virtual machine is identified by a unique
+ * `instanceId` which the virtual machine uses as its persistent identity while performing stateful
+ * operations that are expected to outlast single boot of the VM. For example, some virtual machines
+ * use it as a `Id` for storing secrets in Secretkeeper, which are retrieved on next boot of th VM.
+ *
+ * The `instanceId` is expected to be re-used for the VM instance with an associated state (secret,
+ * encrypted storage) - i.e., rebooting the VM must not change the instanceId.
  *
  * \param config a virtual machine config object.
  * \param instanceId a pointer to a 64-byte buffer for the instance ID.
