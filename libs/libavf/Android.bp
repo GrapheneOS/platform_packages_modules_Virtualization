@@ -10,6 +10,7 @@ rust_bindgen {
     source_stem: "bindings",
     bindgen_flags: ["--default-enum-style rust"],
     apex_available: ["com.android.virt"],
+    visibility: ["//packages/modules/Virtualization/tests/vts"],
 }
 
 rust_defaults {

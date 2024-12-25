@@ -1,0 +1,35 @@
+prebuilt_etc {
+    name: "vts_libavf_test_kernel",
+    filename: "rialto.bin",
+    src: ":empty_file",
+    target: {
+        android_arm64: {
+            src: ":rialto_signed",
+        },
+    },
+    installable: false,
+    visibility: ["//visibility:private"],
+}
+
+rust_test {
+    name: "vts_libavf_test",
+    crate_name: "vts_libavf_test",
+    srcs: ["src/vts_libavf_test.rs"],
+    rustlibs: [
+        "libanyhow",
+        "libavf_bindgen",
+        "libciborium",
+        "liblog_rust",
+        "libscopeguard",
+        "libservice_vm_comm",
+        "libvsock",
+    ],
+    shared_libs: ["libavf"],
+    test_suites: [
+        "general-tests",
+        "vts",
+    ],
+    data: [":vts_libavf_test_kernel"],
+    test_config: "AndroidTest.xml",
+    compile_multilib: "first",
+}
