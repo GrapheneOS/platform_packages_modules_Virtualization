@@ -23,7 +23,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.Icon
-import java.util.HashSet
+import com.android.virtualization.terminal.MainActivity.TAG
 import java.util.Locale
 
 /**
@@ -32,7 +32,7 @@ import java.util.Locale
  */
 internal class PortNotifier(val context: Context) {
     private val notificationManager: NotificationManager =
-        context.getSystemService<NotificationManager?>(NotificationManager::class.java)
+        context.getSystemService<NotificationManager>(NotificationManager::class.java)
     private val receiver: BroadcastReceiver =
         PortForwardingRequestReceiver().also {
             val intentFilter = IntentFilter(ACTION_PORT_FORWARDING)
@@ -41,15 +41,10 @@ internal class PortNotifier(val context: Context) {
     private val portsStateListener: PortsStateManager.Listener =
         object : PortsStateManager.Listener {
             override fun onPortsStateUpdated(oldActivePorts: Set<Int>, newActivePorts: Set<Int>) {
-                val union: MutableSet<Int> = HashSet<Int>(oldActivePorts)
-                union.addAll(newActivePorts)
-                for (port in union) {
-                    if (!oldActivePorts.contains(port)) {
-                        showNotificationFor(port)
-                    } else if (!newActivePorts.contains(port)) {
-                        discardNotificationFor(port)
-                    }
-                }
+                // added active ports
+                (newActivePorts - oldActivePorts).forEach { showNotificationFor(it) }
+                // removed active ports
+                (oldActivePorts - newActivePorts).forEach { discardNotificationFor(it) }
             }
         }
     private val portsStateManager: PortsStateManager =
@@ -64,7 +59,7 @@ internal class PortNotifier(val context: Context) {
         return context.getString(resId)
     }
 
-    private fun getPendingIntentFor(port: Int, enabled: Boolean): PendingIntent? {
+    private fun getPendingIntentFor(port: Int, enabled: Boolean): PendingIntent {
         val intent = Intent(ACTION_PORT_FORWARDING)
         intent.setPackage(context.getPackageName())
         intent.setIdentifier(String.format(Locale.ROOT, "%d_%b", port, enabled))
@@ -109,11 +104,11 @@ internal class PortNotifier(val context: Context) {
                 .addAction(acceptAction)
                 .addAction(denyAction)
                 .build()
-        notificationManager.notify(MainActivity.TAG, port, notification)
+        notificationManager.notify(TAG, port, notification)
     }
 
     private fun discardNotificationFor(port: Int) {
-        notificationManager.cancel(MainActivity.TAG, port)
+        notificationManager.cancel(TAG, port)
     }
 
     private inner class PortForwardingRequestReceiver : BroadcastReceiver() {
