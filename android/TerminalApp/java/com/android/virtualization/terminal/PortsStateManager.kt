@@ -27,7 +27,7 @@ import java.util.HashSet
 class PortsStateManager private constructor(private val sharedPref: SharedPreferences) {
     private val lock = Any()
 
-    @GuardedBy("lock") private var activePorts: MutableSet<Int> = hashSetOf()
+    @GuardedBy("lock") private val activePorts: MutableSet<Int> = hashSetOf()
 
     @GuardedBy("lock")
     private val enabledPorts: MutableSet<Int> =
@@ -42,29 +42,28 @@ class PortsStateManager private constructor(private val sharedPref: SharedPrefer
 
     @GuardedBy("lock") private val listeners: MutableSet<Listener> = hashSetOf()
 
-    fun getActivePorts(): MutableSet<Int> {
+    fun getActivePorts(): Set<Int> {
         synchronized(lock) {
             return HashSet<Int>(activePorts)
         }
     }
 
-    fun getEnabledPorts(): MutableSet<Int> {
+    fun getEnabledPorts(): Set<Int> {
         synchronized(lock) {
             return HashSet<Int>(enabledPorts)
         }
     }
 
-    fun updateActivePorts(ports: MutableSet<Int>) {
-        var oldPorts: MutableSet<Int>
+    fun updateActivePorts(ports: Set<Int>) {
         synchronized(lock) {
-            oldPorts = activePorts
-            activePorts = ports
+            val oldPorts = getActivePorts()
+            activePorts.clear()
+            activePorts.addAll(ports)
+            notifyPortsStateUpdated(oldPorts, getActivePorts())
         }
-        notifyPortsStateUpdated(oldPorts, ports)
     }
 
     fun updateEnabledPort(port: Int, enabled: Boolean) {
-        var activePorts: MutableSet<Int>
         synchronized(lock) {
             val editor = sharedPref.edit()
             editor.putInt(port.toString(), if (enabled) FLAG_ENABLED else 0)
@@ -74,21 +73,18 @@ class PortsStateManager private constructor(private val sharedPref: SharedPrefer
             } else {
                 enabledPorts.remove(port)
             }
-            activePorts = this@PortsStateManager.activePorts
         }
-        notifyPortsStateUpdated(activePorts, activePorts)
+        notifyPortsStateUpdated(getActivePorts(), getActivePorts())
     }
 
     fun clearEnabledPorts() {
-        var activePorts: MutableSet<Int>
         synchronized(lock) {
             val editor = sharedPref.edit()
             editor.clear()
             editor.apply()
             enabledPorts.clear()
-            activePorts = this@PortsStateManager.activePorts
         }
-        notifyPortsStateUpdated(activePorts, activePorts)
+        notifyPortsStateUpdated(getActivePorts(), getActivePorts())
     }
 
     fun registerListener(listener: Listener) {
@@ -99,15 +95,13 @@ class PortsStateManager private constructor(private val sharedPref: SharedPrefer
         synchronized(lock) { listeners.remove(listener) }
     }
 
-    private fun notifyPortsStateUpdated(
-        oldActivePorts: MutableSet<Int>,
-        newActivePorts: MutableSet<Int>,
-    ) {
-        var listeners: MutableSet<Listener>
-        synchronized(lock) { listeners = HashSet<Listener>(this@PortsStateManager.listeners) }
-        for (listener in listeners) {
-            listener.onPortsStateUpdated(HashSet<Int>(oldActivePorts), HashSet<Int>(newActivePorts))
-        }
+    // TODO: it notifies when both enabledPort and activePort are changed, but doesn't provide
+    // enabledPort's value change. Make this callback provide that information as well.
+    private fun notifyPortsStateUpdated(oldActivePorts: Set<Int>, newActivePorts: Set<Int>) {
+        synchronized(lock) { HashSet<Listener>(this@PortsStateManager.listeners) }
+            .forEach {
+                it.onPortsStateUpdated(HashSet<Int>(oldActivePorts), HashSet<Int>(newActivePorts))
+            }
     }
 
     interface Listener {
