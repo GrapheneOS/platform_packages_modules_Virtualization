@@ -2,14 +2,9 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-java_test_host {
-    name: "MicrodroidHostTestCases",
+java_defaults {
+    name: "MicrodroidHostTestCases.default",
     srcs: ["java/**/*.java"],
-    test_suites: [
-        "cts",
-        "general-tests",
-        "pts",
-    ],
     libs: [
         "androidx.annotation_annotation",
         "tradefed",
@@ -21,27 +16,6 @@ java_test_host {
         "microdroid_payload_metadata",
     ],
     per_testcase_directory: true,
-    device_common_data: [
-        ":MicrodroidTestApp",
-        ":MicrodroidTestAppUpdated",
-        ":microdroid_general_sepolicy.conf",
-        ":test.com.android.virt.pem",
-        ":test2.com.android.virt.pem",
-        "java/**/goldens/dt_dump_*",
-    ],
-    data_native_bins: [
-        "sepolicy-analyze",
-        // For re-sign test
-        "avbtool",
-        "img2simg",
-        "initrd_bootconfig",
-        "lpmake",
-        "lpunpack",
-        "lz4",
-        "sign_virt_apex",
-        "simg2img",
-        "dtc",
-    ],
     // java_test_host doesn't have data_native_libs but jni_libs can be used to put
     // native modules under ./lib directory.
     // This works because host tools have rpath (../lib and ./lib).
@@ -57,4 +31,79 @@ java_test_host {
         "libsparse",
         "libz",
     ],
+}
+
+DEVICE_DATA = [
+    ":MicrodroidTestApp",
+    ":MicrodroidTestAppUpdated",
+    ":microdroid_general_sepolicy.conf",
+    ":test.com.android.virt.pem",
+    ":test2.com.android.virt.pem",
+    "java/**/goldens/dt_dump_*",
+]
+
+BINS = [
+    "sepolicy-analyze",
+    // For re-sign test
+    "avbtool",
+    "img2simg",
+    "initrd_bootconfig",
+    "lpmake",
+    "lpunpack",
+    "lz4",
+    "sign_virt_apex",
+    "simg2img",
+    "dtc",
+]
+
+java_test_host {
+    name: "MicrodroidHostTestCases",
+    defaults: ["MicrodroidHostTestCases.default"],
+    test_config: "AndroidTest.xml",
+    test_suites: [
+        "general-tests",
+        "pts",
+    ],
+    device_common_data: DEVICE_DATA,
+    data_native_bins: BINS,
+}
+
+java_test_host {
+    name: "MicrodroidHostTestCases.CTS",
+    defaults: ["MicrodroidHostTestCases.default"],
+    test_config: ":MicrodroidHostTestCases.CTS.config",
+    test_suites: ["cts"],
+    device_common_data: DEVICE_DATA,
+    data_native_bins: BINS,
+}
+
+java_test_host {
+    name: "MicrodroidHostTestCases.VTS",
+    defaults: ["MicrodroidHostTestCases.default"],
+    test_config: ":MicrodroidHostTestCases.VTS.config",
+    test_suites: ["vts"],
+    device_common_data: DEVICE_DATA,
+    data_native_bins: BINS,
+}
+
+genrule {
+    name: "MicrodroidHostTestCases.CTS.config",
+    srcs: ["AndroidTest.xml"],
+    out: ["out.xml"],
+    cmd: "sed " +
+        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
+        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.CddTest\" \\/>/' " +
+        "-e 's/MicrodroidHostTestCases.jar/MicrodroidHostTestCases.CTS.jar/' " +
+        "$(in) > $(out)",
+}
+
+genrule {
+    name: "MicrodroidHostTestCases.VTS.config",
+    srcs: ["AndroidTest.xml"],
+    out: ["out.xml"],
+    cmd: "sed " +
+        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
+        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.VsrTest\" \\/>/' " +
+        "-e 's/MicrodroidHostTestCases.jar/MicrodroidHostTestCases.VTS.jar/' " +
+        "$(in) > $(out)",
 }

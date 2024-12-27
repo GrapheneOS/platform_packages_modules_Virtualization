@@ -49,19 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ಅನುಮತಿಸಲಾದ ಪೋರ್ಟ್‌ಗಳನ್ನು ಸೇವ್ ಮಾಡಲಾಗಿದೆ"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"ಸೇರಿಸಿ"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ಅನ್ನು ಅಳಿಸಿ"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"ಹೊಸ ಪೋರ್ಟ್ ಅನ್ನು ಅನುಮತಿಸಿ"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"ಹೊಸ ಪೋರ್ಟ್ ಸಂಖ್ಯೆವೊಂದನ್ನು ನಮೂದಿಸಿ"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"ಸೇವ್ ಮಾಡಿ"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"ರದ್ದುಮಾಡಿ"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ಅಮಾನ್ಯ ಪೋರ್ಟ್ ಸಂಖ್ಯೆ"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ಪೋರ್ಟ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸುತ್ತಿದೆ"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"ಪೋರ್ಟ್ ಅನ್ನು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ಸಮ್ಮತಿಸಿ"</string>
@@ -81,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ಬ್ಯಾಕಪ್‌ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ತೆಗೆದುಹಾಕಿ"</string>
     <string name="error_title" msgid="405150657301906598">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\nನೀವು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು.\nಎಲ್ಲಾ ಪ್ರಯತ್ನಗಳು ವಿಫಲವಾದರೆ, ಡೆವಲಪರ್ ಆಯ್ಕೆಗಳಿಂದ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಆನ್/ಆಫ್ ಮಾಡುವ ಮೂಲಕ ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸಿಹಾಕು."</string>
     <string name="error_code" msgid="3585291676855383649">"ದೋಷ ಕೋಡ್‌: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>

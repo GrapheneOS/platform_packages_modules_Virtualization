@@ -49,19 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ଶୁଣିବା ପୋର୍ଟଗୁଡ଼ିକୁ ଅନୁମତି ଦିଅନ୍ତୁ/ଅଗ୍ରାହ୍ୟ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ଶୁଣିବା ପୋର୍ଟ"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ଅନୁମତି ଦିଆଯାଇଥିବା ପୋର୍ଟଗୁଡ଼ିକୁ ସେଭ କରାଯାଇଛି"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"ଯୋଗ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g>କୁ ଡିଲିଟ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"ଏକ ନୂଆ ପୋର୍ଟକୁ ଅନୁମତି ଦିଅନ୍ତୁ"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"ଏକ ନୂଆ ପୋର୍ଟ ନମ୍ବର ଲେଖନ୍ତୁ"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"ସେଭ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"ବାତିଲ କରନ୍ତୁ"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"ଦୟାକରି ଗୋଟିଏ ନମ୍ବର ଲେଖନ୍ତୁ"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ଅବୈଧ ପୋର୍ଟ ନମ୍ବର"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ପୋର୍ଟ ପୂର୍ବରୁ ଉପଲବ୍ଧ ଅଛି"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ଏକ ନୂଆ ପୋର୍ଟ ଖୋଲିବାକୁ ଟର୍ମିନାଲ ଅନୁରୋଧ କରୁଛି"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"ପୋର୍ଟ ପାଇଁ ଅନୁରୋଧ କରାଯାଇଛି: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ଗ୍ରହଣ କରନ୍ତୁ"</string>
@@ -81,14 +77,13 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ବେକଅପ ଡାଟାକୁ କାଢ଼ି ଦିଅନ୍ତୁ"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g>କୁ କାଢ଼ି ଦିଅନ୍ତୁ"</string>
     <string name="error_title" msgid="405150657301906598">"ରିକଭର କରିହେଉନଥିବା ତ୍ରୁଟି"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"ଏକ ତ୍ରୁଟିରୁ ରିକଭର କରିବାରେ ବିଫଳ ହୋଇଛି।\nଆପଣ ଟର୍ମିନାଲ ରିଷ୍ଟାର୍ଟ କରିବାକୁ ଚେଷ୍ଟା କରିପାରିବେ କିମ୍ବା ରିକଭରି ବିକଳ୍ପଗୁଡ଼ିକ ମଧ୍ୟରୁ ଗୋଟିଏ ବିକଳ୍ପ ଚେଷ୍ଟା କରିପାରିବେ।\nଯଦି ସମସ୍ତ ପ୍ରଚେଷ୍ଟା ବିଫଳ ହୁଏ, ତେବେ ଡେଭେଲପର ବିକଳ୍ପରୁ Linux ଟର୍ମିନାଲକୁ ଚାଲୁ/ବନ୍ଦ କରି ସମସ୍ତ ଡାଟା ୱାଇପ କରନ୍ତୁ।"</string>
     <string name="error_code" msgid="3585291676855383649">"ତ୍ରୁଟି କୋଡ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ସେଟିଂସ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ଟର୍ମିନାଲ ଚାଲୁ ଅଛି"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ଟର୍ମିନାଲ ଖୋଲିବାକୁ କ୍ଲିକ କରନ୍ତୁ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ବନ୍ଦ କରନ୍ତୁ"</string>
     <string name="service_notification_close_title" msgid="1442526433361428844">"ଟର୍ମିନାଲ ବନ୍ଦ ହେବାକୁ ଯାଉଛି"</string>
-    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"ବଳପୂର୍ବକ ବନ୍ଦ କରନ୍ତୁ"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"ଫୋର୍ସ କ୍ଲୋଜ କରନ୍ତୁ"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g>କୁ ସକ୍ଷମ କରାଯାଇଛି"</string>
 </resources>

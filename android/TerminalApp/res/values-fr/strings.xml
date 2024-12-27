@@ -49,20 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Autoriser/refuser les ports d\'écoute"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Ports d\'écoute"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Ports autorisés enregistrés"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_close_button (8475029060852721339) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"Ajouter"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"Supprimer <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Autoriser un nouveau port"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Saisissez le numéro du nouveau port"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Enregistrer"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Annuler"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"Veuillez saisir un numéro"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"Numéro de port incorrect"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"Le port existe déjà"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Le terminal demande l\'ouverture d\'un nouveau port"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Port demandé : <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Accepter"</string>
@@ -82,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Supprimer les données de sauvegarde"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Supprimer <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="error_title" msgid="405150657301906598">"Erreur irrécupérable"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"Échec de la récupération après une erreur.\nVous pouvez essayer de redémarrer le terminal ou d\'utiliser l\'une des options de récupération.\nSi toutes les tentatives échouent, effacez toutes les données en activant/désactivant le terminal Linux à partir des options pour les développeurs."</string>
     <string name="error_code" msgid="3585291676855383649">"Code d\'erreur : <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Paramètres"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal en cours d\'exécution"</string>

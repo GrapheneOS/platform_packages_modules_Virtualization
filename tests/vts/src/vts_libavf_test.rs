@@ -177,10 +177,20 @@ fn run_rialto(protected_vm: bool) -> Result<()> {
 
 #[test]
 fn test_run_rialto_protected() -> Result<()> {
-    run_rialto(true /* protected_vm */)
+    if hypervisor_props::is_protected_vm_supported()? {
+        run_rialto(true /* protected_vm */)
+    } else {
+        info!("pVMs are not supported on device. skipping test");
+        Ok(())
+    }
 }
 
 #[test]
 fn test_run_rialto_non_protected() -> Result<()> {
-    run_rialto(false /* protected_vm */)
+    if hypervisor_props::is_vm_supported()? {
+        run_rialto(false /* protected_vm */)
+    } else {
+        info!("non-pVMs are not supported on device. skipping test");
+        Ok(())
+    }
 }

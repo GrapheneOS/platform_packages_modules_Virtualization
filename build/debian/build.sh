@@ -307,9 +307,10 @@ run_fai() {
 
 generate_output_package() {
 	fdisk -l "${raw_disk_image}"
-	root_partition_num=1
-	bios_partition_num=14
-	efi_partition_num=15
+	local vm_config="$(realpath $(dirname "$0"))/vm_config.json.${arch}"
+	local root_partition_num=1
+	local bios_partition_num=14
+	local efi_partition_num=15
 
 	pushd ${workdir} > /dev/null
 
@@ -373,7 +374,6 @@ debian_version=bookworm
 config_space=${debian_cloud_image}/config_space/${debian_version}
 resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch="$(uname -m)"
-vm_config="$(realpath $(dirname "$0"))/vm_config.json.${arch}"
 mode=debug
 save_workdir=0
 use_custom_kernel=0

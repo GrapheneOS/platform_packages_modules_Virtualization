@@ -46,23 +46,18 @@
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Терминалот ќе се рестартира за да се промени големината на дискот"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Потврди"</string>
     <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Контрола на портите"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Дозволете/одбијте слушање на портите"</string>
-    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Се слушаат порти"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Дозволете/одбијте порти за примање барања"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Порти за примање барања"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Дозволените порти се зачувани"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_close_button (8475029060852721339) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"Додај"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"Избриши <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Дозволете нова порта"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Внесете нов број на порта"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Зачувај"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Откажи"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"Внесете број"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"Неважечки број на порта"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"Портата веќе постои"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Терминалот бара да отвори нова порта"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Побарана е порта: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Прифати"</string>
@@ -82,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Отстранете ги податоците од бекапот"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Отстранете „<xliff:g id="PATH">/mnt/backup</xliff:g>“"</string>
     <string name="error_title" msgid="405150657301906598">"Непоправлива грешка"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"Грешката не можеше да се поправи.\nМоже да се обидете да го рестартирате терминалот или да испробате некоја од опциите за враќање.\nАко сите обиди се неуспешни, избришете ги сите податоци трајно со вклучување/исклучување на Linux-терминалот од „Програмерски опции“."</string>
     <string name="error_code" msgid="3585291676855383649">"Код за грешка: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Поставки"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминалот е активен"</string>

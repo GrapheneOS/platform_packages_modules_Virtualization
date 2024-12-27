@@ -49,20 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"អនុញ្ញាត/បដិសេធច្រកស្ដាប់"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ច្រកស្ដាប់"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"បានរក្សាទុកច្រកដែលត្រូវបានអនុញ្ញាត"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_close_button (8475029060852721339) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"បញ្ចូល"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"លុប <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"អនុញ្ញាតច្រកថ្មី"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"បញ្ចូលលេខច្រកថ្មី"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"រក្សាទុក"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"បោះបង់"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"សូម​បញ្ចូល​លេខ​"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"លេខច្រកមិនត្រឹមត្រូវ"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"មានច្រករួចហើយ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ទែមីណាល់កំពុងស្នើសុំបើកច្រកថ្មី"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"បានស្នើសុំច្រក៖ <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ទទួលយក"</string>
@@ -82,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ដកទិន្នន័យបម្រុងទុកចេញ"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"ដក <xliff:g id="PATH">/mnt/backup</xliff:g> ចេញ"</string>
     <string name="error_title" msgid="405150657301906598">"បញ្ហា​ដែលបណ្ដាលឱ្យមិនអាច​ស្ដារបាន"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"មិនអាចស្ដារឡើងវិញពីបញ្ហាបានទេ។\nអ្នកអាចសាកល្បងចាប់ផ្ដើមទែមីណាល់ឡើងវិញ ឬសាកល្បងប្រើជម្រើសមួយក្នុងចំណោមជម្រើសស្ដារ។\nប្រសិនបើការព្យាយាមទាំងអស់មិនបានសម្រេច សូមឈូសទិន្នន័យទាំងអស់ដោយបើក/បិទទែមីណាល់ Linux ពីជម្រើសសម្រាប់អ្នក​អភិវឌ្ឍន៍។"</string>
     <string name="error_code" msgid="3585291676855383649">"លេខ​កូដ​បញ្ហា៖ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ការកំណត់"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ទែមីណាល់កំពុងដំណើរការ"</string>

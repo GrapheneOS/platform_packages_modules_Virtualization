@@ -20,6 +20,7 @@ rust_test {
         "libavf_bindgen",
         "libciborium",
         "liblog_rust",
+        "libhypervisor_props",
         "libscopeguard",
         "libservice_vm_comm",
         "libvsock",

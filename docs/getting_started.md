@@ -9,7 +9,7 @@ We support the following devices:
 * aosp\_oriole (Pixel 6)
 * aosp\_raven (Pixel 6 Pro)
 * aosp\_felix (Pixel Fold)
-* aosp\_tangopro (Pixel Tablet)
+* aosp\_tangorpro (Pixel Tablet)
 * aosp\_cf\_x86\_64\_phone (Cuttlefish a.k.a. Cloud Android). Follow [this
   instruction](https://source.android.com/docs/setup/create/cuttlefish-use) to
   use.

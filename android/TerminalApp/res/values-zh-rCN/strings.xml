@@ -49,19 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"允许/拒绝使用监听端口"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"监听端口"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"已保存的获准端口"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"添加"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"删除“<xliff:g id="PORT_NUMBER">%d</xliff:g>”"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"允许使用新端口"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"输入新端口号"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"保存"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"取消"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"请输入数字"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"端口号无效"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"端口已存在"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"终端正在请求打开新端口"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"请求的端口：<xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"接受"</string>
@@ -81,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"移除备份数据"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"移除 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="error_title" msgid="405150657301906598">"不可恢复的错误"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。\n如果所有尝试都失败，请通过在“开发者选项”中开启/关闭 Linux 终端来擦除所有数据。"</string>
     <string name="error_code" msgid="3585291676855383649">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"设置"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"终端正在运行"</string>

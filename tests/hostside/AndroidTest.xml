@@ -32,4 +32,6 @@
     <!-- Controller that will skip the module if a native bridge situation is detected -->
     <!-- For example: module wants to run arm and device is x86 -->
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
+
+    <!-- PLACEHOLDER_FOR_ANNOTATION -->
 </configuration>

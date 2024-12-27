@@ -324,7 +324,7 @@ impl VmState {
             let tap =
                 if let Some(tap_file) = &config.tap { Some(tap_file.try_clone()?) } else { None };
 
-            run_virtiofs(&config)?;
+            let vhost_fs_devices = run_virtiofs(&config)?;
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child =
@@ -339,7 +339,13 @@ impl VmState {
             let child_clone = child.clone();
             let instance_clone = instance.clone();
             let monitor_vm_exit_thread = Some(thread::spawn(move || {
-                instance_clone.monitor_vm_exit(child_clone, failure_pipe_read, vfio_devices, tap);
+                instance_clone.monitor_vm_exit(
+                    child_clone,
+                    failure_pipe_read,
+                    vfio_devices,
+                    tap,
+                    vhost_fs_devices,
+                );
             }));
 
             if detect_hangup {
@@ -486,6 +492,7 @@ impl VmInstance {
         failure_pipe_read: File,
         vfio_devices: Vec<VfioDevice>,
         tap: Option<File>,
+        vhost_user_devices: Vec<SharedChild>,
     ) {
         let failure_reason_thread = std::thread::spawn(move || {
             // Read the pipe to see if any failure reason is written
@@ -509,6 +516,34 @@ impl VmInstance {
                     if exit_status_code == CROSVM_WATCHDOG_REBOOT_STATUS {
                         info!("detected vcpu stall on crosvm");
                     }
+                }
+            }
+        }
+
+        // In crosvm, when vhost_user frontend is dead, vhost_user backend device will detect and
+        // exit. We can safely wait() for vhost user device after waiting crosvm main
+        // process.
+        for device in vhost_user_devices {
+            match device.wait() {
+                Ok(status) => {
+                    info!("Vhost user device({}) exited with status {}", device.id(), status);
+                    if !status.success() {
+                        if let Some(code) = status.code() {
+                            // vhost_user backend device exit with error code
+                            error!(
+                                "vhost user device({}) exited with error code: {}",
+                                device.id(),
+                                code
+                            );
+                        } else {
+                            // The spawned child process of vhost_user backend device is
+                            // killed by signal
+                            error!("vhost user device({}) killed by signal", device.id());
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Error waiting for vhost user device({}) to die: {}", device.id(), e);
                 }
             }
         }
@@ -915,7 +950,8 @@ fn vfio_argument_for_platform_device(device: &VfioDevice) -> Result<String, Erro
     }
 }
 
-fn run_virtiofs(config: &CrosvmConfig) -> io::Result<()> {
+fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
+    let mut devices: Vec<SharedChild> = Vec::new();
     for shared_path in &config.shared_paths {
         if shared_path.app_domain {
             continue;
@@ -947,9 +983,10 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<()> {
 
         let result = SharedChild::spawn(&mut command)?;
         info!("Spawned virtiofs crosvm({})", result.id());
+        devices.push(result);
     }
 
-    Ok(())
+    Ok(devices)
 }
 
 /// Starts an instance of `crosvm` to manage a new VM.

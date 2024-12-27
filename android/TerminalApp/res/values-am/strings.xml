@@ -49,20 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"የማዳመጫ ወደቦችን ይፍቀዱ/ይከልክሉ"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"የማዳመጫ ወደቦች"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"የተቀመጡ የሚፈቀዱ ወደቦች"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_close_button (8475029060852721339) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"አክል"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g>ን ሰርዝ"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"አዲስ ወደብ ይፍቀዱ"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"አዲስ የወደብ ቁጥር ያስገቡ"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"አስቀምጥ"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"ይቅር"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"እባክዎ ቁጥር ያስገቡ"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ልክ ያልሆነ የወደብ ቁጥር"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ወደብ ቀድሞውኑ ይገኛል"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ተርሚናል አዲስ ወደብ ለመክፈት እየጠየቀ ነው"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"የተጠየቀ ወደብ፦ <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ተቀበል"</string>
@@ -82,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ምትኬ ውሂብን አስወግድ"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> አስወግድ"</string>
     <string name="error_title" msgid="405150657301906598">"ሊመለስ የማይችል ስሕተት"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"ከስሕተት መልሶ ማግኘት አልተሳካም።\nተርሚናልን እንደገና ማስጀመርን መሞከር ወይም ከመልሶ ማግኛ አማራጮች አንዱን መሞከር ይችላሉ።\nሁሉም ሙከራዎች ካልተሳኩ Linux ተርሚናልን ከገንቢ አማራጮች ላይ በማብራት/ማጥፋት ሁሉንም ውሂብ ይጥረጉ።"</string>
     <string name="error_code" msgid="3585291676855383649">"የስሕተት ኮድ፦ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ቅንብሮች"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ተርሚናል በመሄድ ላይ ነው"</string>

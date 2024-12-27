@@ -49,19 +49,15 @@
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"စောင့်နေသောပို့တ်များကို ခွင့်ပြုရန်/ငြင်းပယ်ရန်"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"စောင့်နေသောပို့တ်များ"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ခွင့်ပြုထားသောပို့တ်များ သိမ်းပြီးပြီ"</string>
-    <!-- no translation found for settings_port_forwarding_other_enabled_port_add_button (4402301203801949152) -->
-    <skip />
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"ထည့်ရန်"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ကို ဖျက်ရန်"</string>
     <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"ပို့တ်အသစ် ခွင့်ပြုခြင်း"</string>
     <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"ပို့တ်နံပါတ်အသစ် ထည့်ပါ"</string>
     <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"သိမ်းရန်"</string>
     <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"မလုပ်တော့"</string>
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_input (7589299096002468249) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_invalid_port_range (6682935312557379651) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_error_existing_port (768426750758769928) -->
-    <skip />
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"နံပါတ်တစ်ခု ရိုက်ထည့်ပါ"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ပို့တ်နံပါတ် မမှန်ပါ"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ပို့တ်ရှိပြီးသားဖြစ်သည်"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"တာမီနယ်က ပို့တ်အသစ်ဖွင့်ရန် တောင်းဆိုနေသည်"</string>
     <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"တောင်းဆိုထားသော ပို့တ်- <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"လက်ခံရန်"</string>
@@ -81,8 +77,7 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"အရန်ဒေတာ ဖယ်ရှားခြင်း"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ကို ဖယ်ရှားရန်"</string>
     <string name="error_title" msgid="405150657301906598">"ပြန်ပြင်၍မရသော အမှား"</string>
-    <!-- no translation found for error_desc (4588252235686826721) -->
-    <skip />
+    <string name="error_desc" msgid="4588252235686826721">"အမှားကို ပြန်ပြင်၍မရလိုက်ပါ။\nတာမီနယ်ကို ပြန်စနိုင်သည် (သို့) ပြန်ရယူရေး နည်းလမ်းများထဲမှ တစ်ခုကို စမ်းကြည့်နိုင်သည်။\nကြိုးပမ်းမှုအားလုံး အဆင်မပြေပါက ဆော့ဖ်ဝဲရေးသူအတွက် ရွေးစရာများမှနေ၍ Linux တာမီနယ်ကို ဖွင့်ခြင်း/ပိတ်ခြင်းဖြင့် ဒေတာအားလုံး ရှင်းလင်းပါ။"</string>
     <string name="error_code" msgid="3585291676855383649">"အမှားကုဒ်- <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ဆက်တင်များ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"တာမီနယ်ကို ဖွင့်ထားသည်"</string>
