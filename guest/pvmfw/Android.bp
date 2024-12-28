@@ -384,6 +384,8 @@ cc_object {
         "-E",
         "-P",
         "-xassembler-with-cpp", // allow C preprocessor directives
+        // Suppress an error about the unused -c that precedes -S.
+        "-Wno-unused-command-line-argument",
     ],
     visibility: ["//visibility:private"],
 }
