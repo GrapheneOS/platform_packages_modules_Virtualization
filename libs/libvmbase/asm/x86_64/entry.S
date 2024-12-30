@@ -61,6 +61,24 @@ entry:
 	cld
 .Lno_reloc:
 
+	/* Load global descriptor table from the data section. */
+	lgdt gdtr(%rip)
+
+	/* Reload all data segments with the data descriptor from the new GDT. */
+	movw $DATA_SELECTOR, %ax
+	movw %ax, %ss
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %fs
+	movw %ax, %gs
+
+	/* RETF to CODE_SELECTOR:.Lreload_cs to switch CS to the new code descriptor. */
+	leaq .Lreload_cs(%rip), %rax
+	pushq $CODE_SELECTOR
+	pushq %rax
+	lretq
+.Lreload_cs:
+
 	/* Initialize FPU (per Intel SDM, 10.2.1 "Configuring the x87 FPU Environment"). */
 	mov %cr0, %rax
 	and $~CR0_EM, %eax
