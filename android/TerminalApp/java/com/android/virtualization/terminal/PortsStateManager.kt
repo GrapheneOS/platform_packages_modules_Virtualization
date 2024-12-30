@@ -55,12 +55,12 @@ class PortsStateManager private constructor(private val sharedPref: SharedPrefer
     }
 
     fun updateActivePorts(ports: Set<Int>) {
+        val oldPorts = getActivePorts()
         synchronized(lock) {
-            val oldPorts = getActivePorts()
             activePorts.clear()
             activePorts.addAll(ports)
-            notifyPortsStateUpdated(oldPorts, getActivePorts())
         }
+        notifyPortsStateUpdated(oldPorts, getActivePorts())
     }
 
     fun updateEnabledPort(port: Int, enabled: Boolean) {
