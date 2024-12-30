@@ -140,8 +140,10 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
     }
 
     private fun refreshAdapters() {
-        mActivePortsAdapter.refreshItems()
-        mInactivePortsAdapter.refreshItems()
+        runOnUiThread {
+            mActivePortsAdapter.refreshItems()
+            mInactivePortsAdapter.refreshItems()
+        }
     }
 
     override fun onResume() {

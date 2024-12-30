@@ -50,6 +50,7 @@ class SettingsPortForwardingActiveAdapter(private val mPortsStateManager: PortsS
         val port = mItems[position].port
         viewHolder.port.text = port.toString()
         viewHolder.enabledSwitch.contentDescription = viewHolder.port.text
+        viewHolder.enabledSwitch.setOnCheckedChangeListener(null)
         viewHolder.enabledSwitch.isChecked = mItems[position].enabled
         viewHolder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
             mPortsStateManager.updateEnabledPort(port, isChecked)
