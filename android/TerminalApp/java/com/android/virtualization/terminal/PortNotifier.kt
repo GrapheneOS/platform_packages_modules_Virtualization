@@ -100,9 +100,10 @@ internal class PortNotifier(val context: Context) {
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setContentIntent(tapPendingIntent)
+                .setFullScreenIntent(tapPendingIntent, true)
                 .addAction(acceptAction)
                 .addAction(denyAction)
+                .setAutoCancel(true)
                 .build()
         notificationManager.notify(TAG, port, notification)
     }
