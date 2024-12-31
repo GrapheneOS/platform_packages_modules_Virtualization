@@ -114,7 +114,7 @@
     <!-- Notification title for a new active port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_notification_title">Terminal is requesting to open a new port</string>
     <!-- Notification content for a new active port [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_notification_content">Port requested: <xliff:g id="port_number" example="8080">%d</xliff:g></string>
+    <string name="settings_port_forwarding_notification_content">Port requested: <xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
     <!-- Notification action accept [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_notification_accept">Accept</string>
     <!-- Notification action deny [CHAR LIMIT=16] -->
