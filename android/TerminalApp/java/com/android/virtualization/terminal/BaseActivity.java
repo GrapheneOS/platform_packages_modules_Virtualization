@@ -36,7 +36,7 @@ public abstract class BaseActivity extends AppCompatActivity {
                     new NotificationChannel(
                             this.getPackageName(),
                             getString(R.string.app_name),
-                            NotificationManager.IMPORTANCE_DEFAULT);
+                            NotificationManager.IMPORTANCE_HIGH);
             notificationManager.createNotificationChannel(channel);
         }
 

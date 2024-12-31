@@ -18,7 +18,7 @@ use anyhow::{anyhow, Context};
 use clap::Parser;
 use csv_async::AsyncReader;
 use debian_service::debian_service_client::DebianServiceClient;
-use debian_service::{QueueOpeningRequest, ReportVmActivePortsRequest};
+use debian_service::{ActivePort, QueueOpeningRequest, ReportVmActivePortsRequest};
 use futures::stream::StreamExt;
 use log::{debug, error};
 use serde::Deserialize;
@@ -93,7 +93,7 @@ async fn send_active_ports_report(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let res = client
         .report_vm_active_ports(Request::new(ReportVmActivePortsRequest {
-            ports: listening_ports.into_iter().collect(),
+            ports: listening_ports.into_iter().map(|port| ActivePort { port }).collect(),
         }))
         .await?
         .into_inner();
