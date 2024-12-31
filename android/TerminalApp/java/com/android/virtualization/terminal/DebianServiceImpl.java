@@ -34,7 +34,6 @@ import com.android.virtualization.terminal.proto.ShutdownRequestItem;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Set;
-import java.util.stream.Collectors;
 
 final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     private final Context mContext;
@@ -56,11 +55,8 @@ final class DebianServiceImpl extends DebianServiceGrpc.DebianServiceImplBase {
     public void reportVmActivePorts(
             ReportVmActivePortsRequest request,
             StreamObserver<ReportVmActivePortsResponse> responseObserver) {
-        Log.d(TAG, "reportVmActivePorts: " + request.toString());
-        mPortsStateManager.updateActivePorts(
-                request.getPortsList().stream()
-                        .map(activePort -> activePort.getPort())
-                        .collect(Collectors.toSet()));
+        mPortsStateManager.updateActivePorts(request.getPortsList());
+        Log.d(TAG, "reportVmActivePorts: " + mPortsStateManager.getActivePorts());
         ReportVmActivePortsResponse reply =
                 ReportVmActivePortsResponse.newBuilder().setSuccess(true).build();
         responseObserver.onNext(reply);
