@@ -76,7 +76,11 @@ internal class PortNotifier(val context: Context) {
 
         val title = getString(R.string.settings_port_forwarding_notification_title)
         val content =
-            context.getString(R.string.settings_port_forwarding_notification_content, port)
+            context.getString(
+                R.string.settings_port_forwarding_notification_content,
+                port,
+                portsStateManager.getActivePortInfo(port)?.comm,
+            )
         val acceptText = getString(R.string.settings_port_forwarding_notification_accept)
         val denyText = getString(R.string.settings_port_forwarding_notification_deny)
         val icon = Icon.createWithResource(context, R.drawable.ic_launcher_foreground)
