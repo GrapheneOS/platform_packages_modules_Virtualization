@@ -31,9 +31,9 @@ message QueueOpeningRequest {
   int32 cid = 1;
 }
 
-// TODO(b/382998551): Add more information about the port.
 message ActivePort {
   int32 port = 1;
+  string comm = 2;
 }
 
 message ReportVmActivePortsRequest {
