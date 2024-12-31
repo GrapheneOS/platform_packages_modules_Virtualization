@@ -87,6 +87,8 @@
     <string name="settings_port_forwarding_sub_title">Allow/deny listening ports</string>
     <!-- Title for active ports setting in port forwarding [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_active_ports_title">Listening ports</string>
+    <!-- Text content for active ports setting in port forwarding [CHAR LIMIT=none] -->
+    <string name="settings_port_forwarding_active_ports_content"><xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
     <!-- Title for other enabled ports setting in port forwarding [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_other_enabled_ports_title">Saved allowed ports</string>
     <!-- Description of add button for other enabled ports. Used for talkback. [CHAR LIMIT=16] -->
