@@ -18,6 +18,7 @@ package com.android.virtualization.terminal
 import android.content.Context
 import android.content.SharedPreferences
 import com.android.internal.annotations.GuardedBy
+import com.android.virtualization.terminal.proto.ActivePort
 import java.util.HashSet
 
 /**
@@ -27,7 +28,7 @@ import java.util.HashSet
 class PortsStateManager private constructor(private val sharedPref: SharedPreferences) {
     private val lock = Any()
 
-    @GuardedBy("lock") private val activePorts: MutableSet<Int> = hashSetOf()
+    @GuardedBy("lock") private val activePorts: MutableMap<Int, ActivePort> = hashMapOf()
 
     @GuardedBy("lock")
     private val enabledPorts: MutableSet<Int> =
@@ -44,7 +45,13 @@ class PortsStateManager private constructor(private val sharedPref: SharedPrefer
 
     fun getActivePorts(): Set<Int> {
         synchronized(lock) {
-            return HashSet<Int>(activePorts)
+            return HashSet<Int>(activePorts.keys)
+        }
+    }
+
+    fun getActivePortInfo(port: Int): ActivePort? {
+        synchronized(lock) {
+            return activePorts[port]
         }
     }
 
@@ -54,11 +61,11 @@ class PortsStateManager private constructor(private val sharedPref: SharedPrefer
         }
     }
 
-    fun updateActivePorts(ports: Set<Int>) {
+    fun updateActivePorts(ports: List<ActivePort>) {
         val oldPorts = getActivePorts()
         synchronized(lock) {
             activePorts.clear()
-            activePorts.addAll(ports)
+            activePorts.putAll(ports.associateBy { it.port })
         }
         notifyPortsStateUpdated(oldPorts, getActivePorts())
     }

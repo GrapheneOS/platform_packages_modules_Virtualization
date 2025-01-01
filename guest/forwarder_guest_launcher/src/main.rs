@@ -22,7 +22,7 @@ use debian_service::{ActivePort, QueueOpeningRequest, ReportVmActivePortsRequest
 use futures::stream::StreamExt;
 use log::{debug, error};
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::process::Stdio;
 use tokio::io::BufReader;
 use tokio::process::Command;
@@ -46,6 +46,8 @@ struct TcpStateRow {
     ip: i8,
     lport: i32,
     rport: i32,
+    #[serde(alias = "C-COMM")]
+    c_comm: String,
     newstate: String,
 }
 
@@ -88,12 +90,12 @@ async fn process_forwarding_request_queue(
 }
 
 async fn send_active_ports_report(
-    listening_ports: HashSet<i32>,
+    listening_ports: HashMap<i32, ActivePort>,
     client: &mut DebianServiceClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let res = client
         .report_vm_active_ports(Request::new(ReportVmActivePortsRequest {
-            ports: listening_ports.into_iter().map(|port| ActivePort { port }).collect(),
+            ports: listening_ports.values().cloned().collect(),
         }))
         .await?
         .into_inner();
@@ -126,12 +128,16 @@ async fn report_active_ports(
     // TODO(b/340126051): Consider using NETLINK_SOCK_DIAG for the optimization.
     let listeners = listeners::get_all()?;
     // TODO(b/340126051): Support distinguished port forwarding for ipv6 as well.
-    let mut listening_ports: HashSet<_> = listeners
+    let mut listening_ports: HashMap<_, _> = listeners
         .iter()
-        .map(|x| x.socket)
-        .filter(|x| x.is_ipv4())
-        .map(|x| x.port().into())
-        .filter(|x| is_forwardable_port(*x))
+        .filter(|x| x.socket.is_ipv4())
+        .map(|x| {
+            (
+                x.socket.port().into(),
+                ActivePort { port: x.socket.port().into(), comm: x.process.name.to_string() },
+            )
+        })
+        .filter(|(x, _)| is_forwardable_port(*x))
         .collect();
     send_active_ports_report(listening_ports.clone(), &mut client).await?;
 
@@ -149,7 +155,7 @@ async fn report_active_ports(
         }
         match row.newstate.as_str() {
             TCPSTATES_STATE_LISTEN => {
-                listening_ports.insert(row.lport);
+                listening_ports.insert(row.lport, ActivePort { port: row.lport, comm: row.c_comm });
             }
             TCPSTATES_STATE_CLOSE => {
                 listening_ports.remove(&row.lport);
