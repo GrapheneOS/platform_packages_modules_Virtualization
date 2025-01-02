@@ -60,12 +60,12 @@ import java.util.concurrent.Executors
 
 class VmLauncherService : Service() {
     // TODO: using lateinit for some fields to avoid null
-    private var mExecutorService: ExecutorService? = null
-    private var mVirtualMachine: VirtualMachine? = null
-    private var mResultReceiver: ResultReceiver? = null
-    private var mServer: Server? = null
-    private var mDebianService: DebianServiceImpl? = null
-    private var mPortNotifier: PortNotifier? = null
+    private var executorService: ExecutorService? = null
+    private var virtualMachine: VirtualMachine? = null
+    private var resultReceiver: ResultReceiver? = null
+    private var server: Server? = null
+    private var debianService: DebianServiceImpl? = null
+    private var portNotifier: PortNotifier? = null
 
     interface VmLauncherServiceCallback {
         fun onVmStart()
@@ -81,7 +81,7 @@ class VmLauncherService : Service() {
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (intent.action == ACTION_STOP_VM_LAUNCHER_SERVICE) {
-            if (mDebianService != null && mDebianService!!.shutdownDebian()) {
+            if (debianService != null && debianService!!.shutdownDebian()) {
                 // During shutdown, change the notification content to indicate that it's closing
                 val notification = createNotificationForTerminalClose()
                 getSystemService<NotificationManager?>(NotificationManager::class.java)
@@ -92,11 +92,11 @@ class VmLauncherService : Service() {
             }
             return START_NOT_STICKY
         }
-        if (mVirtualMachine != null) {
+        if (virtualMachine != null) {
             Log.d(TAG, "VM instance is already started")
             return START_NOT_STICKY
         }
-        mExecutorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
+        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
 
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
@@ -117,28 +117,28 @@ class VmLauncherService : Service() {
         Trace.endSection()
         Trace.beginAsyncSection("debianBoot", 0)
 
-        mVirtualMachine = runner.vm
-        mResultReceiver =
+        virtualMachine = runner.vm
+        resultReceiver =
             intent.getParcelableExtra<ResultReceiver?>(
                 Intent.EXTRA_RESULT_RECEIVER,
                 ResultReceiver::class.java,
             )
 
         runner.exitStatus.thenAcceptAsync { success: Boolean ->
-            mResultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+            resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logPath = getFileStreamPath(mVirtualMachine!!.name + ".log").toPath()
-        Logger.setup(mVirtualMachine!!, logPath, mExecutorService!!)
+        val logPath = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
+        Logger.setup(virtualMachine!!, logPath, executorService!!)
 
         val notification =
             intent.getParcelableExtra<Notification?>(EXTRA_NOTIFICATION, Notification::class.java)
 
         startForeground(this.hashCode(), notification)
 
-        mResultReceiver!!.send(RESULT_START, null)
+        resultReceiver!!.send(RESULT_START, null)
 
-        mPortNotifier = PortNotifier(this)
+        portNotifier = PortNotifier(this)
 
         // TODO: dedup this part
         val nsdManager = getSystemService<NsdManager?>(NsdManager::class.java)
@@ -147,7 +147,7 @@ class VmLauncherService : Service() {
         info.serviceName = "ttyd"
         nsdManager.registerServiceInfoCallback(
             info,
-            mExecutorService!!,
+            executorService!!,
             object : NsdManager.ServiceInfoCallback {
                 override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {}
 
@@ -245,11 +245,11 @@ class VmLauncherService : Service() {
         try {
             // TODO(b/372666638): gRPC for java doesn't support vsock for now.
             val port = 0
-            mDebianService = DebianServiceImpl(this)
-            mServer =
+            debianService = DebianServiceImpl(this)
+            server =
                 OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
                     .intercept(interceptor)
-                    .addService(mDebianService)
+                    .addService(debianService)
                     .build()
                     .start()
         } catch (e: IOException) {
@@ -257,13 +257,13 @@ class VmLauncherService : Service() {
             return
         }
 
-        mExecutorService!!.execute(
+        executorService!!.execute(
             Runnable {
                 // TODO(b/373533555): we can use mDNS for that.
                 val debianServicePortFile = File(filesDir, "debian_service_port")
                 try {
                     FileOutputStream(debianServicePortFile).use { writer ->
-                        writer.write(mServer!!.port.toString().toByteArray())
+                        writer.write(server!!.port.toString().toByteArray())
                     }
                 } catch (e: IOException) {
                     Log.d(TAG, "cannot write grpc port number", e)
@@ -273,28 +273,28 @@ class VmLauncherService : Service() {
     }
 
     override fun onDestroy() {
-        mPortNotifier?.stop()
+        portNotifier?.stop()
         getSystemService<NotificationManager?>(NotificationManager::class.java).cancelAll()
         stopDebianServer()
-        if (mVirtualMachine != null) {
-            if (mVirtualMachine!!.getStatus() == VirtualMachine.STATUS_RUNNING) {
+        if (virtualMachine != null) {
+            if (virtualMachine!!.getStatus() == VirtualMachine.STATUS_RUNNING) {
                 try {
-                    mVirtualMachine!!.stop()
+                    virtualMachine!!.stop()
                     stopForeground(STOP_FOREGROUND_REMOVE)
                 } catch (e: VirtualMachineException) {
                     Log.e(TAG, "failed to stop a VM instance", e)
                 }
             }
-            mExecutorService?.shutdownNow()
-            mExecutorService = null
-            mVirtualMachine = null
+            executorService?.shutdownNow()
+            executorService = null
+            virtualMachine = null
         }
         super.onDestroy()
     }
 
     private fun stopDebianServer() {
-        mDebianService?.killForwarderHost()
-        mServer?.shutdown()
+        debianService?.killForwarderHost()
+        server?.shutdown()
     }
 
     companion object {
