@@ -20,7 +20,7 @@ import android.os.FileUtils
 import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.BufferedReader
 import java.io.FileReader
 import java.io.IOException
