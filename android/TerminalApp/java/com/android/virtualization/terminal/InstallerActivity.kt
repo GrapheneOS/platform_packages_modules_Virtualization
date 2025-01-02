@@ -36,7 +36,7 @@ import com.android.virtualization.terminal.ImageArchive.Companion.fromSdCard
 import com.android.virtualization.terminal.ImageArchive.Companion.getDefault
 import com.android.virtualization.terminal.InstallerActivity.InstallProgressListener
 import com.android.virtualization.terminal.InstallerActivity.InstallerServiceConnection
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import java.io.IOException

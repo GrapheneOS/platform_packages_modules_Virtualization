@@ -32,7 +32,7 @@ import com.android.virtualization.terminal.ImageArchive.Companion.fromSdCard
 import com.android.virtualization.terminal.InstalledImage.Companion.getDefault
 import com.android.virtualization.terminal.InstallerService.InstallerServiceImpl
 import com.android.virtualization.terminal.InstallerService.WifiCheckInputStream.NoWifiException
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
 import java.io.InputStream
 import java.lang.Exception

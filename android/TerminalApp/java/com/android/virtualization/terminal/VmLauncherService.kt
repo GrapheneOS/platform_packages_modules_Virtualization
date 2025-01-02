@@ -36,7 +36,7 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.Runner.Companion.create
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import io.grpc.Grpc

@@ -22,7 +22,7 @@ import android.system.virtualmachine.VirtualMachineConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.system.virtualmachine.VirtualMachineManager
 import android.util.Log
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ForkJoinPool
 
