@@ -24,14 +24,14 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class SettingsPortForwardingInactiveAdapter(
-    private val mPortsStateManager: PortsStateManager,
-    private val mContext: Context,
+    private val portsStateManager: PortsStateManager,
+    private val context: Context,
 ) : SettingsPortForwardingBaseAdapter<SettingsPortForwardingInactiveAdapter.ViewHolder>() {
 
     override fun getItems(): ArrayList<SettingsPortForwardingItem> {
-        return mPortsStateManager
+        return portsStateManager
             .getEnabledPorts()
-            .subtract(mPortsStateManager.getActivePorts())
+            .subtract(portsStateManager.getActivePorts())
             .map { SettingsPortForwardingItem(it, true) }
             .toCollection(ArrayList())
     }
@@ -50,15 +50,15 @@ class SettingsPortForwardingInactiveAdapter(
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
-        val port = mItems[position].port
+        val port = items[position].port
         viewHolder.port.text = port.toString()
         viewHolder.closeButton.contentDescription =
-            mContext.getString(
+            context.getString(
                 R.string.settings_port_forwarding_other_enabled_port_close_button,
                 port,
             )
         viewHolder.closeButton.setOnClickListener { _ ->
-            mPortsStateManager.updateEnabledPort(port, false)
+            portsStateManager.updateEnabledPort(port, false)
         }
     }
 }
