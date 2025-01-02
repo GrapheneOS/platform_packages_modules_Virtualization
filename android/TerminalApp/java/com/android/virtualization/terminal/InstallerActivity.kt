@@ -130,7 +130,7 @@ class InstallerActivity : BaseActivity() {
     }
 
     private fun showSnackBar(message: String, length: Int) {
-        val snackBar = Snackbar.make(findViewById<View>(R.id.content), message, length)
+        val snackBar = Snackbar.make(findViewById<View>(android.R.id.content), message, length)
         snackBar.anchorView = waitForWifiCheckbox
         snackBar.show()
     }
