@@ -95,13 +95,20 @@ internal class InstalledImage private constructor(val installDir: Path) {
         runE2fsck(rootPartition)
         val p: String = rootPartition.toAbsolutePath().toString()
         val result = runCommand("/system/bin/resize2fs", "-P", p)
-        // The return value is the number of 4k block
-        return try {
-            roundUp(result.lines().first().substring(42).toLong() * 4 * 1024)
-        } catch (e: NumberFormatException) {
-            Log.e(TAG, "Failed to parse min size, p=$p, result=$result")
-            throw IOException(e)
+        val regex = "Estimated minimum size of the filesystem: ([0-9]+)".toRegex()
+        val matchResult = result.lines().firstNotNullOfOrNull { regex.find(it) }
+        if (matchResult != null) {
+            try {
+                val size = matchResult.groupValues[1].toLong()
+                // The return value is the number of 4k block
+                return roundUp(size * 4 * 1024)
+            } catch (e: NumberFormatException) {
+                // cannot happen
+            }
         }
+        val msg = "Failed to get min size, p=$p, result=$result"
+        Log.e(TAG, msg)
+        throw RuntimeException(msg)
     }
 
     @Throws(IOException::class)
