@@ -24,13 +24,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class SettingsPortForwardingActiveAdapter(
-    private val mPortsStateManager: PortsStateManager,
-    private val mContext: Context,
+    private val portsStateManager: PortsStateManager,
+    private val context: Context,
 ) : SettingsPortForwardingBaseAdapter<SettingsPortForwardingActiveAdapter.ViewHolder>() {
 
     override fun getItems(): ArrayList<SettingsPortForwardingItem> {
-        val enabledPorts = mPortsStateManager.getEnabledPorts()
-        return mPortsStateManager
+        val enabledPorts = portsStateManager.getEnabledPorts()
+        return portsStateManager
             .getActivePorts()
             .map { SettingsPortForwardingItem(it, enabledPorts.contains(it)) }
             .toCollection(ArrayList())
@@ -50,18 +50,18 @@ class SettingsPortForwardingActiveAdapter(
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
-        val port = mItems[position].port
+        val port = items[position].port
         viewHolder.port.text =
-            mContext.getString(
+            context.getString(
                 R.string.settings_port_forwarding_active_ports_content,
                 port,
-                mPortsStateManager.getActivePortInfo(port)?.comm,
+                portsStateManager.getActivePortInfo(port)?.comm,
             )
         viewHolder.enabledSwitch.contentDescription = viewHolder.port.text
         viewHolder.enabledSwitch.setOnCheckedChangeListener(null)
-        viewHolder.enabledSwitch.isChecked = mItems[position].enabled
+        viewHolder.enabledSwitch.isChecked = items[position].enabled
         viewHolder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-            mPortsStateManager.updateEnabledPort(port, isChecked)
+            portsStateManager.updateEnabledPort(port, isChecked)
         }
     }
 }
