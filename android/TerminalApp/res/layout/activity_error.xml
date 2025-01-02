@@ -51,7 +51,9 @@
         android:layout_marginTop="24dp"
         android:layout_marginHorizontal="60dp"
         android:layout_below="@id/desc"
-        android:textSize="14sp" />
+        android:textSize="14sp"
+        android:scrollbars="vertical|horizontal"
+        android:scrollHorizontally="true" />
 
     <Button
         android:id="@+id/recovery"
