@@ -4,7 +4,7 @@ package {
 
 android_test {
     name: "TerminalAppTests",
-    srcs: ["src/**/*.java"],
+    srcs: ["src/**/*.kt"],
     libs: [
         "android.test.runner.stubs.system",
         "android.test.base.stubs.system",
