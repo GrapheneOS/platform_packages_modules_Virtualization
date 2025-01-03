@@ -31,7 +31,7 @@ import android.view.accessibility.AccessibilityNodeProvider
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.webkit.WebView
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
 
 class TerminalView(context: Context, attrs: AttributeSet?) :
@@ -94,7 +94,7 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
     // AccessibilityDelegate to the parent view where the events are sent to. And to guarantee that
     // the parent view exists, wait until the WebView is attached to the window by when the parent
     // must exist.
-    private val mA11yEventFilter: AccessibilityDelegate =
+    private val a11yEventFilter: AccessibilityDelegate =
         object : AccessibilityDelegate() {
             override fun onRequestSendAccessibilityEvent(
                 host: ViewGroup,
@@ -122,11 +122,11 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
         super.onAttachedToWindow()
         if (a11yManager.isEnabled) {
             val parent = getParent() as View
-            parent.setAccessibilityDelegate(mA11yEventFilter)
+            parent.setAccessibilityDelegate(a11yEventFilter)
         }
     }
 
-    private val mA11yNodeProvider: AccessibilityNodeProvider =
+    private val a11yNodeProvider: AccessibilityNodeProvider =
         object : AccessibilityNodeProvider() {
             /** Returns the original NodeProvider that WebView implements. */
             private fun getParent(): AccessibilityNodeProvider? {
@@ -262,7 +262,7 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
     override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider? {
         val p = super.getAccessibilityNodeProvider()
         if (p != null && a11yManager.isEnabled) {
-            return mA11yNodeProvider
+            return a11yNodeProvider
         }
         return p
     }

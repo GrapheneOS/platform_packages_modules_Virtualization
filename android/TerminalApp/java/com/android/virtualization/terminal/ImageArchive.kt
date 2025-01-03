@@ -18,7 +18,7 @@ package com.android.virtualization.terminal
 import android.os.Build
 import android.os.Environment
 import android.util.Log
-import com.android.virtualization.terminal.MainActivity.TAG
+import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.IOException
