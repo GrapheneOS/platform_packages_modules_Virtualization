@@ -48,7 +48,6 @@
                 android:layout_height="wrap_content"/>
         </LinearLayout>
         <LinearLayout
-            android:id="@+id/webview_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginBottom="5dp"
@@ -59,7 +58,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
-            <include layout="@layout/layout_modifier_keys" />
         </LinearLayout>
     </FrameLayout>
 
