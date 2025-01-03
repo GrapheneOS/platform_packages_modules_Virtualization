@@ -141,7 +141,6 @@ public class InstalledImage private constructor(val installDir: Path) {
         const val RESIZE_STEP_BYTES: Long = 4 shl 20 // 4 MiB
 
         /** Returns InstalledImage for a given app context */
-        @JvmStatic
         fun getDefault(context: Context): InstalledImage {
             val installDir = context.getFilesDir().toPath().resolve(INSTALL_DIRNAME)
             return InstalledImage(installDir)

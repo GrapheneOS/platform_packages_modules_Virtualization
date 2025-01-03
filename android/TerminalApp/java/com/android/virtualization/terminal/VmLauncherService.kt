@@ -313,7 +313,6 @@ class VmLauncherService : Service() {
             return Intent(context.getApplicationContext(), VmLauncherService::class.java)
         }
 
-        @JvmStatic
         fun run(
             context: Context,
             callback: VmLauncherServiceCallback?,
@@ -345,7 +344,6 @@ class VmLauncherService : Service() {
             return ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() }
         }
 
-        @JvmStatic
         fun stop(context: Context) {
             val i = getMyIntent(context)
             i.setAction(ACTION_STOP_VM_LAUNCHER_SERVICE)
