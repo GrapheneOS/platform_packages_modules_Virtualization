@@ -20,8 +20,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemProperties
-import androidx.test.InstrumentationRegistry
-import androidx.test.runner.AndroidJUnit4
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.android.microdroid.test.common.DeviceProperties
 import com.android.microdroid.test.common.MetricsProcessor
 import java.io.IOException
