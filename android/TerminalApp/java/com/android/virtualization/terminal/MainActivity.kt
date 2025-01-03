@@ -73,7 +73,7 @@ import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity :
+public class MainActivity :
     BaseActivity(),
     VmLauncherServiceCallback,
     AccessibilityManager.AccessibilityStateChangeListener {
@@ -477,7 +477,7 @@ class MainActivity :
     }
 
     @VisibleForTesting
-    fun waitForBootCompleted(timeoutMillis: Long): Boolean {
+    public fun waitForBootCompleted(timeoutMillis: Long): Boolean {
         return bootCompleted.block(timeoutMillis)
     }
 

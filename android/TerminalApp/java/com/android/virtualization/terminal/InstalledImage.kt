@@ -20,6 +20,7 @@ import android.os.FileUtils
 import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.BufferedReader
 import java.io.FileReader
@@ -34,7 +35,8 @@ import java.nio.file.StandardCopyOption
 import kotlin.math.ceil
 
 /** Collection of files that consist of a VM image. */
-internal class InstalledImage private constructor(val installDir: Path) {
+@VisibleForTesting
+public class InstalledImage private constructor(val installDir: Path) {
     private val rootPartition: Path = installDir.resolve(ROOTFS_FILENAME)
     val backupFile: Path = installDir.resolve(BACKUP_FILENAME)
 
