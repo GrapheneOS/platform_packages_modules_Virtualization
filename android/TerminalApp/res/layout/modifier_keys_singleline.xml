@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ * Copyright (C) 2024 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ -->
+<!--TODO(b/376813452): we might want tablet UI for that-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/modifier_keys"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal" >
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_esc"
+        android:textSize="10sp"
+        android:text="@string/btn_esc_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_tab"
+        android:textSize="10sp"
+        android:text="@string/btn_tab_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_ctrl"
+        android:textSize="10sp"
+        android:text="@string/btn_ctrl_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_alt"
+        android:textSize="10sp"
+        android:text="@string/btn_alt_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_home"
+        android:textSize="10sp"
+        android:text="@string/btn_home_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_end"
+        android:textSize="10sp"
+        android:text="@string/btn_end_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_left"
+        android:textSize="10sp"
+        android:text="@string/btn_left_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_down"
+        android:textSize="10sp"
+        android:text="@string/btn_down_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_up"
+        android:textSize="10sp"
+        android:text="@string/btn_up_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_right"
+        android:textSize="10sp"
+        android:text="@string/btn_right_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_pgdn"
+        android:textSize="10sp"
+        android:text="@string/btn_pgdn_text" />
+    <Button
+        style="@style/ModifierKeyStyle"
+        android:id="@+id/btn_pgup"
+        android:textSize="10sp"
+        android:text="@string/btn_pgup_text" />
+</LinearLayout>
