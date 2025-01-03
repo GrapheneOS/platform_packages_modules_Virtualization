@@ -141,7 +141,6 @@ internal class ImageArchive {
         private const val BUILD_TAG = "latest" // TODO: use actual tag name
         private const val HOST_URL = "https://dl.google.com/android/ferrochrome/$BUILD_TAG"
 
-        @JvmStatic
         fun getSdcardPathForTesting(): Path {
             return Environment.getExternalStoragePublicDirectory(DIR_IN_SDCARD).toPath()
         }
@@ -149,7 +148,6 @@ internal class ImageArchive {
         /**
          * Creates ImageArchive which is located in the sdcard. This archive is for testing only.
          */
-        @JvmStatic
         fun fromSdCard(): ImageArchive {
             return ImageArchive(getSdcardPathForTesting().resolve(ARCHIVE_NAME))
         }
@@ -157,7 +155,6 @@ internal class ImageArchive {
         /**
          * Creates ImageArchive which is hosted in the Google server. This is the official archive.
          */
-        @JvmStatic
         fun fromInternet(): ImageArchive {
             val arch =
                 if (listOf<String?>(*Build.SUPPORTED_ABIS).contains("x86_64")) "x86_64"
@@ -174,7 +171,6 @@ internal class ImageArchive {
          * Creates ImageArchive from either SdCard or Internet. SdCard is used only when the build
          * is debuggable and the file actually exists.
          */
-        @JvmStatic
         fun getDefault(): ImageArchive {
             val archive = fromSdCard()
             return if (Build.isDebuggable() && archive.exists()) {
