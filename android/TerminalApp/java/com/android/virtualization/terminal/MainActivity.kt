@@ -40,7 +40,7 @@ import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.WindowInsets
+import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
@@ -81,10 +81,12 @@ public class MainActivity :
     private lateinit var image: InstalledImage
     private var certificates: Array<X509Certificate>? = null
     private var privateKey: PrivateKey? = null
+    private lateinit var terminalContainer: ViewGroup
     private lateinit var terminalView: TerminalView
     private lateinit var accessibilityManager: AccessibilityManager
     private val bootCompleted = ConditionVariable()
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var modifierKeysController: ModifierKeysController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,7 +106,9 @@ public class MainActivity :
         terminalView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE)
         terminalView.setWebChromeClient(WebChromeClient())
 
-        setupModifierKeys()
+        terminalContainer = terminalView.parent as ViewGroup
+
+        modifierKeysController = ModifierKeysController(this, terminalView, terminalContainer)
 
         accessibilityManager =
             getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
@@ -117,11 +121,6 @@ public class MainActivity :
                 StartActivityForResult(),
                 ActivityResultCallback { startVm() },
             )
-        window.decorView.rootView.setOnApplyWindowInsetsListener { _: View?, insets: WindowInsets ->
-            updateModifierKeysVisibility()
-            insets
-        }
-
         executorService =
             Executors.newSingleThreadExecutor(TerminalThreadFactory(applicationContext))
 
@@ -147,30 +146,7 @@ public class MainActivity :
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         lockOrientationIfNecessary()
-        updateModifierKeysVisibility()
-    }
-
-    private fun setupModifierKeys() {
-        // Only ctrl key is special, it communicates with xtermjs to modify key event with ctrl key
-        findViewById<View>(R.id.btn_ctrl)
-            .setOnClickListener(
-                View.OnClickListener {
-                    terminalView.mapCtrlKey()
-                    terminalView.enableCtrlKey()
-                }
-            )
-
-        val modifierButtonClickListener =
-            View.OnClickListener { v: View ->
-                BTN_KEY_CODE_MAP[v.id]?.also { keyCode ->
-                    terminalView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-                    terminalView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
-                }
-            }
-
-        for (btn in BTN_KEY_CODE_MAP.keys) {
-            findViewById<View>(btn).setOnClickListener(modifierButtonClickListener)
-        }
+        modifierKeysController.update()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -276,10 +252,9 @@ public class MainActivity :
                                 if (completedRequestId == requestId) {
                                     Trace.endAsyncSection("executeTerminal", 0)
                                     findViewById<View?>(R.id.boot_progress).visibility = View.GONE
-                                    findViewById<View?>(R.id.webview_container).visibility =
-                                        View.VISIBLE
+                                    terminalContainer.visibility = View.VISIBLE
                                     bootCompleted.open()
-                                    updateModifierKeysVisibility()
+                                    modifierKeysController.update()
                                     terminalView.mapTouchToMouseEvent()
                                 }
                             }
@@ -377,15 +352,6 @@ public class MainActivity :
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
         connectToTerminalService()
-    }
-
-    private fun updateModifierKeysVisibility() {
-        val imeShown = window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime())
-        val hasHwQwertyKeyboard = resources.configuration.keyboard == Configuration.KEYBOARD_QWERTY
-        val showModifierKeys = imeShown && !hasHwQwertyKeyboard
-
-        val modifierKeys = findViewById<View>(R.id.modifier_keys)
-        modifierKeys.visibility = if (showModifierKeys) View.VISIBLE else View.GONE
     }
 
     private val installerLauncher =
