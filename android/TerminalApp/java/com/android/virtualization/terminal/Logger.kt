@@ -37,7 +37,6 @@ import libcore.io.Streams
  * Forwards VM's console output to a file on the Android side, and VM's log output to Android logd.
  */
 internal object Logger {
-    @JvmStatic
     fun setup(vm: VirtualMachine, path: Path, executor: ExecutorService) {
         if (vm.config.debugLevel != VirtualMachineConfig.DEBUG_LEVEL_FULL) {
             return

@@ -58,7 +58,6 @@ class ErrorActivity : BaseActivity() {
     companion object {
         private const val EXTRA_CAUSE = "cause"
 
-        @JvmStatic
         fun start(context: Context, e: Exception) {
             val intent = Intent(context, ErrorActivity::class.java)
             intent.putExtra(EXTRA_CAUSE, e)
