@@ -34,7 +34,7 @@ import java.nio.file.StandardCopyOption
 import kotlin.math.ceil
 
 /** Collection of files that consist of a VM image. */
-internal class InstalledImage private constructor(val installDir: Path) {
+public class InstalledImage private constructor(val installDir: Path) {
     private val rootPartition: Path = installDir.resolve(ROOTFS_FILENAME)
     val backupFile: Path = installDir.resolve(BACKUP_FILENAME)
 
@@ -139,7 +139,6 @@ internal class InstalledImage private constructor(val installDir: Path) {
         const val RESIZE_STEP_BYTES: Long = 4 shl 20 // 4 MiB
 
         /** Returns InstalledImage for a given app context */
-        @JvmStatic
         fun getDefault(context: Context): InstalledImage {
             val installDir = context.getFilesDir().toPath().resolve(INSTALL_DIRNAME)
             return InstalledImage(installDir)

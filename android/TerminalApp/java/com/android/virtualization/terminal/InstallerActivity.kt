@@ -43,7 +43,7 @@ import java.io.IOException
 import java.lang.Exception
 import java.lang.ref.WeakReference
 
-class InstallerActivity : BaseActivity() {
+public class InstallerActivity : BaseActivity() {
     private lateinit var waitForWifiCheckbox: CheckBox
     private lateinit var installButton: TextView
 
@@ -125,7 +125,7 @@ class InstallerActivity : BaseActivity() {
     }
 
     @VisibleForTesting
-    fun waitForInstallCompleted(timeoutMillis: Long): Boolean {
+    public fun waitForInstallCompleted(timeoutMillis: Long): Boolean {
         return installCompleted.block(timeoutMillis)
     }
 

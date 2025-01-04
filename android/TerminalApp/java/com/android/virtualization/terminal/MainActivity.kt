@@ -73,7 +73,7 @@ import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity :
+public class MainActivity :
     BaseActivity(),
     VmLauncherServiceCallback,
     AccessibilityManager.AccessibilityStateChangeListener {
@@ -99,7 +99,6 @@ class MainActivity :
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         terminalView = findViewById<TerminalView>(R.id.webview)
-        terminalView.getSettings().setDatabaseEnabled(true)
         terminalView.getSettings().setDomStorageEnabled(true)
         terminalView.getSettings().setJavaScriptEnabled(true)
         terminalView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE)
@@ -389,10 +388,9 @@ class MainActivity :
         modifierKeys.visibility = if (showModifierKeys) View.VISIBLE else View.GONE
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_CODE_INSTALLER) {
+    private val installerLauncher =
+        registerForActivityResult(StartActivityForResult()) { result ->
+            val resultCode = result.resultCode
             if (resultCode != RESULT_OK) {
                 Log.e(TAG, "Failed to start VM. Installer returned error.")
                 finish()
@@ -403,14 +401,13 @@ class MainActivity :
                 startVm()
             }
         }
-    }
 
     private fun installIfNecessary(): Boolean {
         // If payload from external storage exists(only for debuggable build) or there is no
         // installed image, launch installer activity.
         if (!image.isInstalled()) {
             val intent = Intent(this, InstallerActivity::class.java)
-            startActivityForResult(intent, REQUEST_CODE_INSTALLER)
+            installerLauncher.launch(intent)
             return true
         }
         return false
@@ -477,7 +474,7 @@ class MainActivity :
     }
 
     @VisibleForTesting
-    fun waitForBootCompleted(timeoutMillis: Long): Boolean {
+    public fun waitForBootCompleted(timeoutMillis: Long): Boolean {
         return bootCompleted.block(timeoutMillis)
     }
 
