@@ -48,6 +48,8 @@
     <string name="settings_port_forwarding_title" msgid="4971368519093858377">"ಪೋರ್ಟ್ ನಿಯಂತ್ರಣ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>
+    <!-- no translation found for settings_port_forwarding_active_ports_content (1818090784030797758) -->
+    <skip />
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ಅನುಮತಿಸಲಾದ ಪೋರ್ಟ್‌ಗಳನ್ನು ಸೇವ್ ಮಾಡಲಾಗಿದೆ"</string>
     <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"ಸೇರಿಸಿ"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ಅನ್ನು ಅಳಿಸಿ"</string>
@@ -59,7 +61,8 @@
     <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ಅಮಾನ್ಯ ಪೋರ್ಟ್ ಸಂಖ್ಯೆ"</string>
     <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ಪೋರ್ಟ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸುತ್ತಿದೆ"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"ಪೋರ್ಟ್ ಅನ್ನು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <!-- no translation found for settings_port_forwarding_notification_content (779450349212040908) -->
+    <skip />
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ಸಮ್ಮತಿಸಿ"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"ನಿರಾಕರಿಸಿ"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ರಿಕವರಿ"</string>

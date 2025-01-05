@@ -48,6 +48,8 @@
     <string name="settings_port_forwarding_title" msgid="4971368519093858377">"ପୋର୍ଟ ନିୟନ୍ତ୍ରଣ"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ଶୁଣିବା ପୋର୍ଟଗୁଡ଼ିକୁ ଅନୁମତି ଦିଅନ୍ତୁ/ଅଗ୍ରାହ୍ୟ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ଶୁଣିବା ପୋର୍ଟ"</string>
+    <!-- no translation found for settings_port_forwarding_active_ports_content (1818090784030797758) -->
+    <skip />
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ଅନୁମତି ଦିଆଯାଇଥିବା ପୋର୍ଟଗୁଡ଼ିକୁ ସେଭ କରାଯାଇଛି"</string>
     <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"ଯୋଗ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g>କୁ ଡିଲିଟ କରନ୍ତୁ"</string>
@@ -59,7 +61,8 @@
     <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ଅବୈଧ ପୋର୍ଟ ନମ୍ବର"</string>
     <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ପୋର୍ଟ ପୂର୍ବରୁ ଉପଲବ୍ଧ ଅଛି"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ଏକ ନୂଆ ପୋର୍ଟ ଖୋଲିବାକୁ ଟର୍ମିନାଲ ଅନୁରୋଧ କରୁଛି"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"ପୋର୍ଟ ପାଇଁ ଅନୁରୋଧ କରାଯାଇଛି: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <!-- no translation found for settings_port_forwarding_notification_content (779450349212040908) -->
+    <skip />
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ଗ୍ରହଣ କରନ୍ତୁ"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"ଅଗ୍ରାହ୍ୟ କରନ୍ତୁ"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ରିକଭରି"</string>
