@@ -16,7 +16,6 @@
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use cstr::cstr;
 use dice_driver::DiceDriver;
 use diced_open_dice::{
     hash, retry_bcc_format_config_descriptor, DiceConfigValues, OwnedDiceArtifacts, HIDDEN_SIZE,
@@ -50,7 +49,7 @@ fn is_strict_boot() -> bool {
 // See dice_for_avf_guest.cddl for CDDL of Configuration Descriptor of VM components.
 fn build_descriptor(vbmeta: &VbMetaImage) -> Result<Vec<u8>> {
     let values = DiceConfigValues {
-        component_name: Some(cstr!("Microdroid vendor")),
+        component_name: Some(c"Microdroid vendor"),
         security_version: Some(vbmeta.rollback_index()),
         ..Default::default()
     };

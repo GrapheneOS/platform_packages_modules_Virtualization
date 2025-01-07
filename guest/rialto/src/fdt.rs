@@ -15,24 +15,23 @@
 //! High-level FDT functions.
 
 use core::ops::Range;
-use cstr::cstr;
 use libfdt::{Fdt, FdtError};
 
 /// Reads the DICE data range from the given `fdt`.
 pub fn read_dice_range_from(fdt: &Fdt) -> libfdt::Result<Range<usize>> {
-    let node = fdt.node(cstr!("/reserved-memory"))?.ok_or(FdtError::NotFound)?;
-    let node = node.next_compatible(cstr!("google,open-dice"))?.ok_or(FdtError::NotFound)?;
+    let node = fdt.node(c"/reserved-memory")?.ok_or(FdtError::NotFound)?;
+    let node = node.next_compatible(c"google,open-dice")?.ok_or(FdtError::NotFound)?;
     node.first_reg()?.try_into()
 }
 
 pub(crate) fn read_vendor_hashtree_root_digest(fdt: &Fdt) -> libfdt::Result<Option<&[u8]>> {
-    let node = fdt.node(cstr!("/avf"))?.ok_or(FdtError::NotFound)?;
-    node.getprop(cstr!("vendor_hashtree_descriptor_root_digest"))
+    let node = fdt.node(c"/avf")?.ok_or(FdtError::NotFound)?;
+    node.getprop(c"vendor_hashtree_descriptor_root_digest")
 }
 
 pub(crate) fn read_is_strict_boot(fdt: &Fdt) -> libfdt::Result<bool> {
     match fdt.chosen()? {
-        Some(node) => Ok(node.getprop(cstr!("avf,strict-boot"))?.is_some()),
+        Some(node) => Ok(node.getprop(c"avf,strict-boot")?.is_some()),
         None => Ok(false),
     }
 }

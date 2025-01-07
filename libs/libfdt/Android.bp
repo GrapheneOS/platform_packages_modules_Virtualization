@@ -35,7 +35,6 @@ rust_defaults {
     ],
     edition: "2021",
     rustlibs: [
-        "libcstr",
         "liblibfdt_bindgen",
         "libstatic_assertions",
         "libzerocopy_nostd",
@@ -79,7 +78,6 @@ rust_test {
     ],
     prefer_rlib: true,
     rustlibs: [
-        "libcstr",
         "liblibfdt",
     ],
 }

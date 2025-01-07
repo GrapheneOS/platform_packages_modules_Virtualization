@@ -10,7 +10,6 @@ rust_defaults {
     rustlibs: [
         "libanyhow",
         "libclap",
-        "libcstr",
         "libdice_driver",
         "libdiced_open_dice",
         "libdm_rust",

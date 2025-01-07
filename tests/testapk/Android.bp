@@ -224,7 +224,6 @@ rust_ffi_shared {
         "libandroid_logger",
         "libanyhow",
         "libavflog",
-        "libcstr",
         "liblog_rust",
         "libvm_payload_rs",
     ],

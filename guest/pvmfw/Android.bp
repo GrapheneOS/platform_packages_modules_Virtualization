@@ -17,7 +17,6 @@ rust_ffi_static {
         "libciborium_nostd",
         "libciborium_io_nostd",
         "libcoset_nostd",
-        "libcstr",
         "libdiced_open_dice_nostd",
         "libhypervisor_backends",
         "liblibfdt_nostd",
@@ -52,9 +51,6 @@ rust_defaults {
         unit_test: true,
     },
     prefer_rlib: true,
-    rustlibs: [
-        "libcstr",
-    ],
 }
 
 rust_test {

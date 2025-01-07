@@ -40,7 +40,6 @@ use crate::rollback::perform_rollback_protection;
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use bssl_avf::Digester;
-use cstr::cstr;
 use diced_open_dice::{bcc_handover_parse, DiceArtifacts, DiceContext, Hidden, VM_KEY_ALGORITHM};
 use libfdt::{Fdt, FdtNode};
 use log::{debug, error, info, trace, warn};
@@ -220,7 +219,7 @@ fn salt_from_instance_id(fdt: &Fdt) -> Result<Hidden, RebootReason> {
 
 fn instance_id(fdt: &Fdt) -> Result<&[u8], RebootReason> {
     let node = avf_untrusted_node(fdt)?;
-    let id = node.getprop(cstr!("instance-id")).map_err(|e| {
+    let id = node.getprop(c"instance-id").map_err(|e| {
         error!("Failed to get instance-id in DT: {e}");
         RebootReason::InvalidFdt
     })?;
@@ -231,7 +230,7 @@ fn instance_id(fdt: &Fdt) -> Result<&[u8], RebootReason> {
 }
 
 fn avf_untrusted_node(fdt: &Fdt) -> Result<FdtNode, RebootReason> {
-    let node = fdt.node(cstr!("/avf/untrusted")).map_err(|e| {
+    let node = fdt.node(c"/avf/untrusted").map_err(|e| {
         error!("Failed to get /avf/untrusted node: {e}");
         RebootReason::InvalidFdt
     })?;

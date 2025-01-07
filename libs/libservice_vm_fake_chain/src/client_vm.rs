@@ -22,7 +22,6 @@ use alloc::vec::Vec;
 use ciborium::{cbor, value::Value};
 use core::result;
 use coset::CborSerializable;
-use cstr::cstr;
 use diced_open_dice::{
     hash, retry_bcc_format_config_descriptor, retry_bcc_main_flow, Config, DiceArtifacts,
     DiceConfigValues, DiceError, DiceMode, InputValues, OwnedDiceArtifacts, Result, HASH_SIZE,
@@ -96,7 +95,7 @@ pub fn fake_client_vm_dice_artifacts() -> Result<OwnedDiceArtifacts> {
 
     // Adds an entry describing the Microdroid kernel.
     let config_values = DiceConfigValues {
-        component_name: Some(cstr!("vm_entry")),
+        component_name: Some(c"vm_entry"),
         component_version: Some(12),
         resettable: true,
         security_version: Some(13),

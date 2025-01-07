@@ -38,7 +38,6 @@ rust_defaults {
         "libcfg_if",
         "libclap",
         "libcrosvm_control_static",
-        "libcstr",
         "libcommand_fds",
         "libdisk",
         "libglob",

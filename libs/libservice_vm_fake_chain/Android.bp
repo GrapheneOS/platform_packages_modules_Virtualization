@@ -26,9 +26,6 @@ rust_defaults {
         "//packages/modules/Virtualization/guest/rialto:__subpackages__",
     ],
     prefer_rlib: true,
-    rustlibs: [
-        "libcstr",
-    ],
 }
 
 rust_library {

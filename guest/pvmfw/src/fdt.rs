@@ -28,7 +28,6 @@ use core::ffi::CStr;
 use core::fmt;
 use core::mem::size_of;
 use core::ops::Range;
-use cstr::cstr;
 use hypervisor_backends::get_device_assigner;
 use hypervisor_backends::get_mem_sharer;
 use libfdt::AddressRange;
@@ -83,10 +82,10 @@ impl fmt::Display for FdtValidationError {
 /// Extract from /config the address range containing the pre-loaded kernel. Absence of /config is
 /// not an error.
 pub fn read_kernel_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
-    let addr = cstr!("kernel-address");
-    let size = cstr!("kernel-size");
+    let addr = c"kernel-address";
+    let size = c"kernel-size";
 
-    if let Some(config) = fdt.node(cstr!("/config"))? {
+    if let Some(config) = fdt.node(c"/config")? {
         if let (Some(addr), Some(size)) = (config.getprop_u32(addr)?, config.getprop_u32(size)?) {
             let addr = addr as usize;
             let size = size as usize;
@@ -101,8 +100,8 @@ pub fn read_kernel_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>>
 /// Extract from /chosen the address range containing the pre-loaded ramdisk. Absence is not an
 /// error as there can be initrd-less VM.
 pub fn read_initrd_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
-    let start = cstr!("linux,initrd-start");
-    let end = cstr!("linux,initrd-end");
+    let start = c"linux,initrd-start";
+    let end = c"linux,initrd-end";
 
     if let Some(chosen) = fdt.chosen()? {
         if let (Some(start), Some(end)) = (chosen.getprop_u32(start)?, chosen.getprop_u32(end)?) {
@@ -118,14 +117,14 @@ fn patch_initrd_range(fdt: &mut Fdt, initrd_range: &Range<usize>) -> libfdt::Res
     let end = u32::try_from(initrd_range.end).unwrap();
 
     let mut node = fdt.chosen_mut()?.ok_or(FdtError::NotFound)?;
-    node.setprop(cstr!("linux,initrd-start"), &start.to_be_bytes())?;
-    node.setprop(cstr!("linux,initrd-end"), &end.to_be_bytes())?;
+    node.setprop(c"linux,initrd-start", &start.to_be_bytes())?;
+    node.setprop(c"linux,initrd-end", &end.to_be_bytes())?;
     Ok(())
 }
 
 fn read_bootargs_from(fdt: &Fdt) -> libfdt::Result<Option<CString>> {
     if let Some(chosen) = fdt.chosen()? {
-        if let Some(bootargs) = chosen.getprop_str(cstr!("bootargs"))? {
+        if let Some(bootargs) = chosen.getprop_str(c"bootargs")? {
             // We need to copy the string to heap because the original fdt will be invalidated
             // by the templated DT
             let copy = CString::new(bootargs.to_bytes()).map_err(|_| FdtError::BadValue)?;
@@ -140,7 +139,7 @@ fn patch_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Result<()> {
     // This function is called before the verification is done. So, we just copy the bootargs to
     // the new FDT unmodified. This will be filtered again in the modify_for_next_stage function
     // if the VM is not debuggable.
-    node.setprop(cstr!("bootargs"), bootargs.to_bytes_with_nul())
+    node.setprop(c"bootargs", bootargs.to_bytes_with_nul())
 }
 
 /// Reads and validates the memory range in the DT.
@@ -186,9 +185,9 @@ fn read_and_validate_memory_range(
 fn patch_memory_range(fdt: &mut Fdt, memory_range: &Range<usize>) -> libfdt::Result<()> {
     let addr = u64::try_from(MEM_START).unwrap();
     let size = u64::try_from(memory_range.len()).unwrap();
-    fdt.node_mut(cstr!("/memory"))?
+    fdt.node_mut(c"/memory")?
         .ok_or(FdtError::NotFound)?
-        .setprop_inplace(cstr!("reg"), [addr.to_be(), size.to_be()].as_bytes())
+        .setprop_inplace(c"reg", [addr.to_be(), size.to_be()].as_bytes())
 }
 
 #[derive(Debug, Default)]
@@ -207,7 +206,7 @@ fn read_opp_info_from(
     let mut table = ArrayVec::new();
     let mut opp_nodes = opp_node.subnodes()?;
     for subnode in opp_nodes.by_ref().take(table.capacity()) {
-        let prop = subnode.getprop_u64(cstr!("opp-hz"))?.ok_or(FdtError::NotFound)?;
+        let prop = subnode.getprop_u64(c"opp-hz")?.ok_or(FdtError::NotFound)?;
         table.push(prop);
     }
 
@@ -239,7 +238,7 @@ impl CpuTopology {
 }
 
 fn read_cpu_map_from(fdt: &Fdt) -> libfdt::Result<Option<BTreeMap<Phandle, (usize, usize)>>> {
-    let Some(cpu_map) = fdt.node(cstr!("/cpus/cpu-map"))? else {
+    let Some(cpu_map) = fdt.node(c"/cpus/cpu-map")? else {
         return Ok(None);
     };
 
@@ -254,7 +253,7 @@ fn read_cpu_map_from(fdt: &Fdt) -> libfdt::Result<Option<BTreeMap<Phandle, (usiz
             let Some(core) = cluster.subnode(&name)? else {
                 break;
             };
-            let cpu = core.getprop_u32(cstr!("cpu"))?.ok_or(FdtError::NotFound)?;
+            let cpu = core.getprop_u32(c"cpu")?.ok_or(FdtError::NotFound)?;
             let prev = topology.insert(cpu.try_into()?, (n, m));
             if prev.is_some() {
                 return Err(FdtError::BadValue);
@@ -273,10 +272,10 @@ fn read_cpu_info_from(
     let cpu_map = read_cpu_map_from(fdt)?;
     let mut topology: CpuTopology = Default::default();
 
-    let mut cpu_nodes = fdt.compatible_nodes(cstr!("arm,armv8"))?;
+    let mut cpu_nodes = fdt.compatible_nodes(c"arm,armv8")?;
     for (idx, cpu) in cpu_nodes.by_ref().take(cpus.capacity()).enumerate() {
-        let cpu_capacity = cpu.getprop_u32(cstr!("capacity-dmips-mhz"))?;
-        let opp_phandle = cpu.getprop_u32(cstr!("operating-points-v2"))?;
+        let cpu_capacity = cpu.getprop_u32(c"capacity-dmips-mhz")?;
+        let opp_phandle = cpu.getprop_u32(c"operating-points-v2")?;
         let opptable_info = if let Some(phandle) = opp_phandle {
             let phandle = phandle.try_into()?;
             let node = fdt.node_with_phandle(phandle)?.ok_or(FdtError::NotFound)?;
@@ -313,7 +312,7 @@ fn validate_cpu_info(cpus: &[CpuInfo]) -> Result<(), FdtValidationError> {
 }
 
 fn read_vcpufreq_info(fdt: &Fdt) -> libfdt::Result<Option<VcpufreqInfo>> {
-    let mut nodes = fdt.compatible_nodes(cstr!("virtual,android-v-only-cpufreq"))?;
+    let mut nodes = fdt.compatible_nodes(c"virtual,android-v-only-cpufreq")?;
     let Some(node) = nodes.next() else {
         return Ok(None);
     };
@@ -351,7 +350,7 @@ fn patch_opptable(
     node: FdtNodeMut,
     opptable: Option<ArrayVec<[u64; CpuInfo::MAX_OPPTABLES]>>,
 ) -> libfdt::Result<()> {
-    let oppcompat = cstr!("operating-points-v2");
+    let oppcompat = c"operating-points-v2";
     let next = node.next_compatible(oppcompat)?.ok_or(FdtError::NoSpace)?;
 
     let Some(opptable) = opptable else {
@@ -362,7 +361,7 @@ fn patch_opptable(
 
     for entry in opptable {
         let mut subnode = next_subnode.ok_or(FdtError::NoSpace)?;
-        subnode.setprop_inplace(cstr!("opp-hz"), &entry.to_be_bytes())?;
+        subnode.setprop_inplace(c"opp-hz", &entry.to_be_bytes())?;
         next_subnode = subnode.next_subnode()?;
     }
 
@@ -391,14 +390,14 @@ fn patch_cpus(
     cpus: &[CpuInfo],
     topology: &Option<CpuTopology>,
 ) -> libfdt::Result<()> {
-    const COMPAT: &CStr = cstr!("arm,armv8");
+    const COMPAT: &CStr = c"arm,armv8";
     let mut cpu_phandles = Vec::new();
     for (idx, cpu) in cpus.iter().enumerate() {
         let mut cur = get_nth_compatible(fdt, idx, COMPAT)?.ok_or(FdtError::NoSpace)?;
         let phandle = cur.as_node().get_phandle()?.unwrap();
         cpu_phandles.push(phandle);
         if let Some(cpu_capacity) = cpu.cpu_capacity {
-            cur.setprop_inplace(cstr!("capacity-dmips-mhz"), &cpu_capacity.to_be_bytes())?;
+            cur.setprop_inplace(c"capacity-dmips-mhz", &cpu_capacity.to_be_bytes())?;
         }
         patch_opptable(cur, cpu.opptable_info)?;
     }
@@ -418,7 +417,7 @@ fn patch_cpus(
                     iter = if let Some(core_idx) = core {
                         let phandle = *cpu_phandles.get(core_idx).unwrap();
                         let value = u32::from(phandle).to_be_bytes();
-                        core_node.setprop_inplace(cstr!("cpu"), &value)?;
+                        core_node.setprop_inplace(c"cpu", &value)?;
                         core_node.next_subnode()?
                     } else {
                         core_node.delete_and_next_subnode()?
@@ -430,7 +429,7 @@ fn patch_cpus(
             }
         }
     } else {
-        fdt.node_mut(cstr!("/cpus/cpu-map"))?.unwrap().nop()?;
+        fdt.node_mut(c"/cpus/cpu-map")?.unwrap().nop()?;
     }
 
     Ok(())
@@ -440,7 +439,7 @@ fn patch_cpus(
 /// the guest that don't require being validated by pvmfw.
 fn parse_untrusted_props(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
     let mut props = BTreeMap::new();
-    if let Some(node) = fdt.node(cstr!("/avf/untrusted"))? {
+    if let Some(node) = fdt.node(c"/avf/untrusted")? {
         for property in node.properties()? {
             let name = property.name()?;
             let value = property.value()?;
@@ -457,7 +456,7 @@ fn parse_untrusted_props(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>
 /// Read candidate properties' names from DT which could be overlaid
 fn parse_vm_ref_dt(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
     let mut property_map = BTreeMap::new();
-    if let Some(avf_node) = fdt.node(cstr!("/avf"))? {
+    if let Some(avf_node) = fdt.node(c"/avf")? {
         for property in avf_node.properties()? {
             let name = property.name()?;
             let value = property.value()?;
@@ -471,8 +470,7 @@ fn parse_vm_ref_dt(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
 }
 
 fn validate_untrusted_props(props: &BTreeMap<CString, Vec<u8>>) -> Result<(), FdtValidationError> {
-    const FORBIDDEN_PROPS: &[&CStr] =
-        &[cstr!("compatible"), cstr!("linux,phandle"), cstr!("phandle")];
+    const FORBIDDEN_PROPS: &[&CStr] = &[c"compatible", c"linux,phandle", c"phandle"];
 
     for name in FORBIDDEN_PROPS {
         if props.contains_key(*name) {
@@ -491,9 +489,9 @@ fn validate_vm_ref_dt(
     props_info: &BTreeMap<CString, Vec<u8>>,
 ) -> libfdt::Result<()> {
     let root_vm_dt = vm_dt.root_mut();
-    let mut avf_vm_dt = root_vm_dt.add_subnode(cstr!("avf"))?;
+    let mut avf_vm_dt = root_vm_dt.add_subnode(c"avf")?;
     // TODO(b/318431677): Validate nodes beyond /avf.
-    let avf_node = vm_ref_dt.node(cstr!("/avf"))?.ok_or(FdtError::NotFound)?;
+    let avf_node = vm_ref_dt.node(c"/avf")?.ok_or(FdtError::NotFound)?;
     for (name, value) in props_info.iter() {
         if let Some(ref_value) = avf_node.getprop(name)? {
             if value != ref_value {
@@ -551,14 +549,13 @@ impl<'a, const N: usize> Iterator for CellChunkIterator<'a, N> {
 
 /// Read pci host controller ranges, irq maps, and irq map masks from DT
 fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<PciInfo> {
-    let node =
-        fdt.compatible_nodes(cstr!("pci-host-cam-generic"))?.next().ok_or(FdtError::NotFound)?;
+    let node = fdt.compatible_nodes(c"pci-host-cam-generic")?.next().ok_or(FdtError::NotFound)?;
 
     let mut ranges = node.ranges::<(u32, u64), u64, u64>()?.ok_or(FdtError::NotFound)?;
     let range0 = ranges.next().ok_or(FdtError::NotFound)?;
     let range1 = ranges.next().ok_or(FdtError::NotFound)?;
 
-    let irq_masks = node.getprop_cells(cstr!("interrupt-map-mask"))?.ok_or(FdtError::NotFound)?;
+    let irq_masks = node.getprop_cells(c"interrupt-map-mask")?.ok_or(FdtError::NotFound)?;
     let mut chunks = CellChunkIterator::<{ PciInfo::IRQ_MASK_CELLS }>::new(irq_masks);
     let irq_masks = (&mut chunks).take(PciInfo::MAX_IRQS).collect();
 
@@ -567,7 +564,7 @@ fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<PciInfo> {
         return Err(FdtError::NoSpace);
     }
 
-    let irq_maps = node.getprop_cells(cstr!("interrupt-map"))?.ok_or(FdtError::NotFound)?;
+    let irq_maps = node.getprop_cells(c"interrupt-map")?.ok_or(FdtError::NotFound)?;
     let mut chunks = CellChunkIterator::<{ PciInfo::IRQ_MAP_CELLS }>::new(irq_maps);
     let irq_maps = (&mut chunks).take(PciInfo::MAX_IRQS).collect();
 
@@ -721,16 +718,16 @@ fn validate_pci_irq_map(irq_map: &PciIrqMap, idx: usize) -> Result<(), RebootRea
 
 fn patch_pci_info(fdt: &mut Fdt, pci_info: &PciInfo) -> libfdt::Result<()> {
     let mut node =
-        fdt.root_mut().next_compatible(cstr!("pci-host-cam-generic"))?.ok_or(FdtError::NotFound)?;
+        fdt.root_mut().next_compatible(c"pci-host-cam-generic")?.ok_or(FdtError::NotFound)?;
 
     let irq_masks_size = pci_info.irq_masks.len() * size_of::<PciIrqMask>();
-    node.trimprop(cstr!("interrupt-map-mask"), irq_masks_size)?;
+    node.trimprop(c"interrupt-map-mask", irq_masks_size)?;
 
     let irq_maps_size = pci_info.irq_maps.len() * size_of::<PciIrqMap>();
-    node.trimprop(cstr!("interrupt-map"), irq_maps_size)?;
+    node.trimprop(c"interrupt-map", irq_maps_size)?;
 
     node.setprop_inplace(
-        cstr!("ranges"),
+        c"ranges",
         [pci_info.ranges[0].to_cells(), pci_info.ranges[1].to_cells()].as_flattened(),
     )
 }
@@ -747,7 +744,7 @@ impl SerialInfo {
 fn read_serial_info_from(fdt: &Fdt) -> libfdt::Result<SerialInfo> {
     let mut addrs = ArrayVec::new();
 
-    let mut serial_nodes = fdt.compatible_nodes(cstr!("ns16550a"))?;
+    let mut serial_nodes = fdt.compatible_nodes(c"ns16550a")?;
     for node in serial_nodes.by_ref().take(addrs.capacity()) {
         let reg = node.first_reg()?;
         addrs.push(reg.addr);
@@ -793,7 +790,7 @@ impl WdtInfo {
 }
 
 fn read_wdt_info_from(fdt: &Fdt) -> libfdt::Result<WdtInfo> {
-    let mut node_iter = fdt.compatible_nodes(cstr!("qemu,vcpu-stall-detector"))?;
+    let mut node_iter = fdt.compatible_nodes(c"qemu,vcpu-stall-detector")?;
     let node = node_iter.next().ok_or(FdtError::NotFound)?;
     let mut ranges = node.reg()?.ok_or(FdtError::NotFound)?;
 
@@ -803,7 +800,7 @@ fn read_wdt_info_from(fdt: &Fdt) -> libfdt::Result<WdtInfo> {
         warn!("Discarding extra vmwdt <reg> entries.");
     }
 
-    let interrupts = node.getprop_cells(cstr!("interrupts"))?.ok_or(FdtError::NotFound)?;
+    let interrupts = node.getprop_cells(c"interrupts")?.ok_or(FdtError::NotFound)?;
     let mut chunks = CellChunkIterator::<{ WdtInfo::IRQ_CELLS }>::new(interrupts);
     let irq = chunks.next().ok_or(FdtError::NotFound)?;
 
@@ -831,15 +828,15 @@ fn patch_wdt_info(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
 
     let mut node = fdt
         .root_mut()
-        .next_compatible(cstr!("qemu,vcpu-stall-detector"))?
+        .next_compatible(c"qemu,vcpu-stall-detector")?
         .ok_or(libfdt::FdtError::NotFound)?;
-    node.setprop_inplace(cstr!("interrupts"), interrupts.as_bytes())?;
+    node.setprop_inplace(c"interrupts", interrupts.as_bytes())?;
     Ok(())
 }
 
 /// Patch the DT by deleting the ns16550a compatible nodes whose address are unknown
 fn patch_serial_info(fdt: &mut Fdt, serial_info: &SerialInfo) -> libfdt::Result<()> {
-    let name = cstr!("ns16550a");
+    let name = c"ns16550a";
     let mut next = fdt.root_mut().next_compatible(name);
     while let Some(current) = next? {
         let reg =
@@ -889,27 +886,27 @@ fn validate_swiotlb_info(
 
 fn patch_swiotlb_info(fdt: &mut Fdt, swiotlb_info: &SwiotlbInfo) -> libfdt::Result<()> {
     let mut node =
-        fdt.root_mut().next_compatible(cstr!("restricted-dma-pool"))?.ok_or(FdtError::NotFound)?;
+        fdt.root_mut().next_compatible(c"restricted-dma-pool")?.ok_or(FdtError::NotFound)?;
 
     if let Some(range) = swiotlb_info.fixed_range() {
         node.setprop_addrrange_inplace(
-            cstr!("reg"),
+            c"reg",
             range.start.try_into().unwrap(),
             range.len().try_into().unwrap(),
         )?;
-        node.nop_property(cstr!("size"))?;
-        node.nop_property(cstr!("alignment"))?;
+        node.nop_property(c"size")?;
+        node.nop_property(c"alignment")?;
     } else {
-        node.nop_property(cstr!("reg"))?;
-        node.setprop_inplace(cstr!("size"), &swiotlb_info.size.to_be_bytes())?;
-        node.setprop_inplace(cstr!("alignment"), &swiotlb_info.align.unwrap().to_be_bytes())?;
+        node.nop_property(c"reg")?;
+        node.setprop_inplace(c"size", &swiotlb_info.size.to_be_bytes())?;
+        node.setprop_inplace(c"alignment", &swiotlb_info.align.unwrap().to_be_bytes())?;
     }
 
     Ok(())
 }
 
 fn patch_gic(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
-    let node = fdt.compatible_nodes(cstr!("arm,gic-v3"))?.next().ok_or(FdtError::NotFound)?;
+    let node = fdt.compatible_nodes(c"arm,gic-v3")?.next().ok_or(FdtError::NotFound)?;
     let mut ranges = node.reg()?.ok_or(FdtError::NotFound)?;
     let range0 = ranges.next().ok_or(FdtError::NotFound)?;
     let mut range1 = ranges.next().ok_or(FdtError::NotFound)?;
@@ -927,16 +924,15 @@ fn patch_gic(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
     let (addr1, size1) = range1.to_cells();
     let value = [addr0, size0.unwrap(), addr1, size1.unwrap()];
 
-    let mut node =
-        fdt.root_mut().next_compatible(cstr!("arm,gic-v3"))?.ok_or(FdtError::NotFound)?;
-    node.setprop_inplace(cstr!("reg"), value.as_flattened())
+    let mut node = fdt.root_mut().next_compatible(c"arm,gic-v3")?.ok_or(FdtError::NotFound)?;
+    node.setprop_inplace(c"reg", value.as_flattened())
 }
 
 fn patch_timer(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
     const NUM_INTERRUPTS: usize = 4;
     const CELLS_PER_INTERRUPT: usize = 3;
-    let node = fdt.compatible_nodes(cstr!("arm,armv8-timer"))?.next().ok_or(FdtError::NotFound)?;
-    let interrupts = node.getprop_cells(cstr!("interrupts"))?.ok_or(FdtError::NotFound)?;
+    let node = fdt.compatible_nodes(c"arm,armv8-timer")?.next().ok_or(FdtError::NotFound)?;
+    let interrupts = node.getprop_cells(c"interrupts")?.ok_or(FdtError::NotFound)?;
     let mut value: ArrayVec<[u32; NUM_INTERRUPTS * CELLS_PER_INTERRUPT]> =
         interrupts.take(NUM_INTERRUPTS * CELLS_PER_INTERRUPT).collect();
 
@@ -953,20 +949,19 @@ fn patch_timer(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
 
     let value = value.into_inner();
 
-    let mut node =
-        fdt.root_mut().next_compatible(cstr!("arm,armv8-timer"))?.ok_or(FdtError::NotFound)?;
-    node.setprop_inplace(cstr!("interrupts"), value.as_bytes())
+    let mut node = fdt.root_mut().next_compatible(c"arm,armv8-timer")?.ok_or(FdtError::NotFound)?;
+    node.setprop_inplace(c"interrupts", value.as_bytes())
 }
 
 fn patch_untrusted_props(fdt: &mut Fdt, props: &BTreeMap<CString, Vec<u8>>) -> libfdt::Result<()> {
-    let avf_node = if let Some(node) = fdt.node_mut(cstr!("/avf"))? {
+    let avf_node = if let Some(node) = fdt.node_mut(c"/avf")? {
         node
     } else {
-        fdt.root_mut().add_subnode(cstr!("avf"))?
+        fdt.root_mut().add_subnode(c"avf")?
     };
 
     // The node shouldn't already be present; if it is, return the error.
-    let mut node = avf_node.add_subnode(cstr!("untrusted"))?;
+    let mut node = avf_node.add_subnode(c"untrusted")?;
 
     for (name, value) in props {
         node.setprop(name, value)?;
@@ -982,9 +977,9 @@ struct VcpufreqInfo {
 }
 
 fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt::Result<()> {
-    let mut node = fdt.node_mut(cstr!("/cpufreq"))?.unwrap();
+    let mut node = fdt.node_mut(c"/cpufreq")?.unwrap();
     if let Some(info) = vcpufreq_info {
-        node.setprop_addrrange_inplace(cstr!("reg"), info.addr, info.size)
+        node.setprop_addrrange_inplace(c"reg", info.addr, info.size)
     } else {
         node.nop()
     }
@@ -1304,9 +1299,9 @@ pub fn modify_for_next_stage(
     patch_dice_node(fdt, bcc.as_ptr() as usize, bcc.len())?;
 
     if let Some(mut chosen) = fdt.chosen_mut()? {
-        empty_or_delete_prop(&mut chosen, cstr!("avf,strict-boot"), strict_boot)?;
-        empty_or_delete_prop(&mut chosen, cstr!("avf,new-instance"), new_instance)?;
-        chosen.setprop_inplace(cstr!("kaslr-seed"), &kaslr_seed.to_be_bytes())?;
+        empty_or_delete_prop(&mut chosen, c"avf,strict-boot", strict_boot)?;
+        empty_or_delete_prop(&mut chosen, c"avf,new-instance", new_instance)?;
+        chosen.setprop_inplace(c"kaslr-seed", &kaslr_seed.to_be_bytes())?;
     };
     if !debuggable {
         if let Some(bootargs) = read_bootargs_from(fdt)? {
@@ -1323,13 +1318,13 @@ pub fn modify_for_next_stage(
 fn patch_dice_node(fdt: &mut Fdt, addr: usize, size: usize) -> libfdt::Result<()> {
     // We reject DTs with missing reserved-memory node as validation should have checked that the
     // "swiotlb" subnode (compatible = "restricted-dma-pool") was present.
-    let node = fdt.node_mut(cstr!("/reserved-memory"))?.ok_or(libfdt::FdtError::NotFound)?;
+    let node = fdt.node_mut(c"/reserved-memory")?.ok_or(libfdt::FdtError::NotFound)?;
 
-    let mut node = node.next_compatible(cstr!("google,open-dice"))?.ok_or(FdtError::NotFound)?;
+    let mut node = node.next_compatible(c"google,open-dice")?.ok_or(FdtError::NotFound)?;
 
     let addr: u64 = addr.try_into().unwrap();
     let size: u64 = size.try_into().unwrap();
-    node.setprop_inplace(cstr!("reg"), [addr.to_be_bytes(), size.to_be_bytes()].as_flattened())
+    node.setprop_inplace(c"reg", [addr.to_be_bytes(), size.to_be_bytes()].as_flattened())
 }
 
 fn empty_or_delete_prop(
@@ -1376,7 +1371,7 @@ fn apply_debug_policy(
 }
 
 fn has_common_debug_policy(fdt: &Fdt, debug_feature_name: &CStr) -> libfdt::Result<bool> {
-    if let Some(node) = fdt.node(cstr!("/avf/guest/common"))? {
+    if let Some(node) = fdt.node(c"/avf/guest/common")? {
         if let Some(value) = node.getprop_u32(debug_feature_name)? {
             return Ok(value == 1);
         }
@@ -1385,8 +1380,8 @@ fn has_common_debug_policy(fdt: &Fdt, debug_feature_name: &CStr) -> libfdt::Resu
 }
 
 fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Result<()> {
-    let has_crashkernel = has_common_debug_policy(fdt, cstr!("ramdump"))?;
-    let has_console = has_common_debug_policy(fdt, cstr!("log"))?;
+    let has_crashkernel = has_common_debug_policy(fdt, c"ramdump")?;
+    let has_console = has_common_debug_policy(fdt, c"log")?;
 
     let accepted: &[(&str, Box<dyn Fn(Option<&str>) -> bool>)] = &[
         ("panic", Box::new(|v| if let Some(v) = v { v == "=-1" } else { false })),
@@ -1417,5 +1412,5 @@ fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Resu
     new_bootargs.push(b'\0');
 
     let mut node = fdt.chosen_mut()?.ok_or(FdtError::NotFound)?;
-    node.setprop(cstr!("bootargs"), new_bootargs.as_slice())
+    node.setprop(c"bootargs", new_bootargs.as_slice())
 }

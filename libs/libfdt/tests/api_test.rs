@@ -17,7 +17,6 @@
 //! Integration tests of the library libfdt.
 
 use core::ffi::CStr;
-use cstr::cstr;
 use libfdt::{Fdt, FdtError, FdtNodeMut, Phandle};
 use std::collections::HashSet;
 use std::ffi::CString;
@@ -82,14 +81,14 @@ fn node_name() {
     let fdt = Fdt::from_slice(&data).unwrap();
 
     let root = fdt.root();
-    assert_eq!(root.name(), Ok(cstr!("")));
+    assert_eq!(root.name(), Ok(c""));
 
     let chosen = fdt.chosen().unwrap().unwrap();
-    assert_eq!(chosen.name(), Ok(cstr!("chosen")));
+    assert_eq!(chosen.name(), Ok(c"chosen"));
 
-    let nested_node_path = cstr!("/cpus/PowerPC,970@0");
+    let nested_node_path = c"/cpus/PowerPC,970@0";
     let nested_node = fdt.node(nested_node_path).unwrap().unwrap();
-    assert_eq!(nested_node.name(), Ok(cstr!("PowerPC,970@0")));
+    assert_eq!(nested_node.name(), Ok(c"PowerPC,970@0"));
 }
 
 #[test]
@@ -97,7 +96,7 @@ fn node_subnodes() {
     let data = fs::read(TEST_TREE_WITH_NO_MEMORY_NODE_PATH).unwrap();
     let fdt = Fdt::from_slice(&data).unwrap();
     let root = fdt.root();
-    let expected = [Ok(cstr!("cpus")), Ok(cstr!("randomnode")), Ok(cstr!("chosen"))];
+    let expected = [Ok(c"cpus"), Ok(c"randomnode"), Ok(c"chosen")];
 
     let root_subnodes = root.subnodes().unwrap();
     let subnode_names: Vec<_> = root_subnodes.map(|node| node.name()).collect();
@@ -112,11 +111,11 @@ fn node_properties() {
     let one_be = 0x1_u32.to_be_bytes();
     type Result<T> = core::result::Result<T, FdtError>;
     let expected: Vec<(Result<&CStr>, Result<&[u8]>)> = vec![
-        (Ok(cstr!("model")), Ok(b"MyBoardName\0".as_ref())),
-        (Ok(cstr!("compatible")), Ok(b"MyBoardName\0MyBoardFamilyName\0".as_ref())),
-        (Ok(cstr!("#address-cells")), Ok(&one_be)),
-        (Ok(cstr!("#size-cells")), Ok(&one_be)),
-        (Ok(cstr!("empty_prop")), Ok(&[])),
+        (Ok(c"model"), Ok(b"MyBoardName\0".as_ref())),
+        (Ok(c"compatible"), Ok(b"MyBoardName\0MyBoardFamilyName\0".as_ref())),
+        (Ok(c"#address-cells"), Ok(&one_be)),
+        (Ok(c"#size-cells"), Ok(&one_be)),
+        (Ok(c"empty_prop"), Ok(&[])),
     ];
 
     let properties = root.properties().unwrap();
@@ -129,8 +128,8 @@ fn node_properties() {
 fn node_supernode_at_depth() {
     let data = fs::read(TEST_TREE_WITH_NO_MEMORY_NODE_PATH).unwrap();
     let fdt = Fdt::from_slice(&data).unwrap();
-    let node = fdt.node(cstr!("/cpus/PowerPC,970@1")).unwrap().unwrap();
-    let expected = vec![Ok(cstr!("")), Ok(cstr!("cpus")), Ok(cstr!("PowerPC,970@1"))];
+    let node = fdt.node(c"/cpus/PowerPC,970@1").unwrap().unwrap();
+    let expected = vec![Ok(c""), Ok(c"cpus"), Ok(c"PowerPC,970@1")];
 
     let mut supernode_names = vec![];
     let mut depth = 0;
@@ -187,12 +186,12 @@ fn node_with_phandle() {
     // Test linux,phandle
     let phandle = Phandle::new(0xFF).unwrap();
     let node = fdt.node_with_phandle(phandle).unwrap().unwrap();
-    assert_eq!(node.name(), Ok(cstr!("node_zz")));
+    assert_eq!(node.name(), Ok(c"node_zz"));
 
     // Test phandle
     let phandle = Phandle::new(0x22).unwrap();
     let node = fdt.node_with_phandle(phandle).unwrap().unwrap();
-    assert_eq!(node.name(), Ok(cstr!("node_abc")));
+    assert_eq!(node.name(), Ok(c"node_abc"));
 }
 
 #[test]
@@ -203,12 +202,12 @@ fn node_mut_with_phandle() {
     // Test linux,phandle
     let phandle = Phandle::new(0xFF).unwrap();
     let node: FdtNodeMut = fdt.node_mut_with_phandle(phandle).unwrap().unwrap();
-    assert_eq!(node.as_node().name(), Ok(cstr!("node_zz")));
+    assert_eq!(node.as_node().name(), Ok(c"node_zz"));
 
     // Test phandle
     let phandle = Phandle::new(0x22).unwrap();
     let node: FdtNodeMut = fdt.node_mut_with_phandle(phandle).unwrap().unwrap();
-    assert_eq!(node.as_node().name(), Ok(cstr!("node_abc")));
+    assert_eq!(node.as_node().name(), Ok(c"node_abc"));
 }
 
 #[test]
@@ -217,15 +216,15 @@ fn node_get_phandle() {
     let fdt = Fdt::from_slice(&data).unwrap();
 
     // Test linux,phandle
-    let node = fdt.node(cstr!("/node_z/node_zz")).unwrap().unwrap();
+    let node = fdt.node(c"/node_z/node_zz").unwrap().unwrap();
     assert_eq!(node.get_phandle(), Ok(Phandle::new(0xFF)));
 
     // Test phandle
-    let node = fdt.node(cstr!("/node_a/node_ab/node_abc")).unwrap().unwrap();
+    let node = fdt.node(c"/node_a/node_ab/node_abc").unwrap().unwrap();
     assert_eq!(node.get_phandle(), Ok(Phandle::new(0x22)));
 
     // Test no phandle
-    let node = fdt.node(cstr!("/node_b")).unwrap().unwrap();
+    let node = fdt.node(c"/node_b").unwrap().unwrap();
     assert_eq!(node.get_phandle(), Ok(None));
 }
 
@@ -234,7 +233,7 @@ fn node_nop() {
     let mut data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
     let fdt = Fdt::from_mut_slice(&mut data).unwrap();
     let phandle = Phandle::new(0xFF).unwrap();
-    let path = cstr!("/node_z/node_zz");
+    let path = c"/node_z/node_zz";
 
     fdt.node_with_phandle(phandle).unwrap().unwrap();
     let node = fdt.node_mut(path).unwrap().unwrap();
@@ -259,8 +258,8 @@ fn node_add_subnode_with_namelen() {
     let fdt = Fdt::from_mut_slice(&mut data).unwrap();
     fdt.unpack().unwrap();
 
-    let node_path = cstr!("/node_z/node_zz");
-    let subnode_name = cstr!("123456789");
+    let node_path = c"/node_z/node_zz";
+    let subnode_name = c"123456789";
 
     for len in 0..subnode_name.to_bytes().len() {
         let name = &subnode_name.to_bytes()[0..len];
@@ -289,7 +288,7 @@ fn node_subnode() {
     let data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
     let fdt = Fdt::from_slice(&data).unwrap();
 
-    let name = cstr!("node_a");
+    let name = c"node_a";
     let root = fdt.root();
     let node = root.subnode(name).unwrap();
     assert_ne!(None, node);
@@ -309,7 +308,7 @@ fn node_subnode_with_name_bytes() {
     assert_ne!(None, node);
     let node = node.unwrap();
 
-    assert_eq!(Ok(cstr!("node_a")), node.name());
+    assert_eq!(Ok(c"node_a"), node.name());
 }
 
 #[test]
@@ -317,7 +316,7 @@ fn node_subnode_borrow_checker() {
     let data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
     let fdt = Fdt::from_slice(&data).unwrap();
 
-    let name = cstr!("node_a");
+    let name = c"node_a";
     let node = {
         let root = fdt.root();
         root.subnode(name).unwrap().unwrap()
@@ -332,7 +331,7 @@ fn fdt_symbols() {
     let fdt = Fdt::from_mut_slice(&mut data).unwrap();
 
     let symbols = fdt.symbols().unwrap().unwrap();
-    assert_eq!(symbols.name(), Ok(cstr!("__symbols__")));
+    assert_eq!(symbols.name(), Ok(c"__symbols__"));
 
     // Validates type.
     let _symbols: FdtNodeMut = fdt.symbols_mut().unwrap().unwrap();
@@ -343,14 +342,14 @@ fn node_mut_as_node() {
     let mut data = fs::read(TEST_TREE_WITH_ONE_MEMORY_RANGE_PATH).unwrap();
     let fdt = Fdt::from_mut_slice(&mut data).unwrap();
 
-    let mut memory = fdt.node_mut(cstr!("/memory")).unwrap().unwrap();
+    let mut memory = fdt.node_mut(c"/memory").unwrap().unwrap();
     {
         let memory = memory.as_node();
-        assert_eq!(memory.name(), Ok(cstr!("memory")));
+        assert_eq!(memory.name(), Ok(c"memory"));
     }
 
     // Just check whether borrow checker doesn't complain this.
-    memory.setprop_inplace(cstr!("device_type"), b"MEMORY\0").unwrap();
+    memory.setprop_inplace(c"device_type", b"MEMORY\0").unwrap();
 }
 
 #[test]
@@ -358,18 +357,13 @@ fn node_descendants() {
     let mut data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
     let fdt = Fdt::from_mut_slice(&mut data).unwrap();
 
-    let node_z = fdt.node(cstr!("/node_z")).unwrap().unwrap();
+    let node_z = fdt.node(c"/node_z").unwrap().unwrap();
     let descendants: Vec<_> =
         node_z.descendants().map(|(node, depth)| (node.name().unwrap(), depth)).collect();
 
     assert_eq!(
         descendants,
-        vec![
-            (cstr!("node_za"), 1),
-            (cstr!("node_zb"), 1),
-            (cstr!("node_zz"), 1),
-            (cstr!("node_zzz"), 2)
-        ]
+        vec![(c"node_za", 1), (c"node_zb", 1), (c"node_zz", 1), (c"node_zzz", 2)]
     );
 }
 
@@ -382,7 +376,7 @@ fn node_mut_delete_and_next_subnode() {
     let mut subnode_iter = root.first_subnode().unwrap();
 
     while let Some(subnode) = subnode_iter {
-        if subnode.as_node().name() == Ok(cstr!("node_z")) {
+        if subnode.as_node().name() == Ok(c"node_z") {
             subnode_iter = subnode.delete_and_next_subnode().unwrap();
         } else {
             subnode_iter = subnode.next_subnode().unwrap();
@@ -390,12 +384,7 @@ fn node_mut_delete_and_next_subnode() {
     }
 
     let root = fdt.root();
-    let expected_names = vec![
-        Ok(cstr!("node_a")),
-        Ok(cstr!("node_b")),
-        Ok(cstr!("node_c")),
-        Ok(cstr!("__symbols__")),
-    ];
+    let expected_names = vec![Ok(c"node_a"), Ok(c"node_b"), Ok(c"node_c"), Ok(c"__symbols__")];
     let subnode_names: Vec<_> = root.subnodes().unwrap().map(|node| node.name()).collect();
 
     assert_eq!(expected_names, subnode_names);
@@ -407,19 +396,19 @@ fn node_mut_delete_and_next_node() {
     let fdt = Fdt::from_mut_slice(&mut data).unwrap();
 
     let expected_nodes = vec![
-        (Ok(cstr!("node_b")), 1),
-        (Ok(cstr!("node_c")), 1),
-        (Ok(cstr!("node_z")), 1),
-        (Ok(cstr!("node_za")), 2),
-        (Ok(cstr!("node_zb")), 2),
-        (Ok(cstr!("__symbols__")), 1),
+        (Ok(c"node_b"), 1),
+        (Ok(c"node_c"), 1),
+        (Ok(c"node_z"), 1),
+        (Ok(c"node_za"), 2),
+        (Ok(c"node_zb"), 2),
+        (Ok(c"__symbols__"), 1),
     ];
 
     let mut expected_nodes_iter = expected_nodes.iter();
     let mut iter = fdt.root_mut().next_node(0).unwrap();
     while let Some((node, depth)) = iter {
         let node_name = node.as_node().name();
-        if node_name == Ok(cstr!("node_a")) || node_name == Ok(cstr!("node_zz")) {
+        if node_name == Ok(c"node_a") || node_name == Ok(c"node_zz") {
             iter = node.delete_and_next_node(depth).unwrap();
         } else {
             // Note: Checking name here is easier than collecting names and assert_eq!(),
@@ -464,7 +453,7 @@ fn node_name_lifetime() {
         root.name()
         // Make root to be dropped
     };
-    assert_eq!(Ok(cstr!("")), name);
+    assert_eq!(Ok(c""), name);
 }
 
 #[test]
@@ -473,7 +462,7 @@ fn node_mut_add_subnodes() {
     let fdt = Fdt::create_empty_tree(&mut data).unwrap();
 
     let root = fdt.root_mut();
-    let names = [cstr!("a"), cstr!("b")];
+    let names = [c"a", c"b"];
     root.add_subnodes(&names).unwrap();
 
     let expected: HashSet<_> = names.into_iter().collect();
@@ -492,14 +481,14 @@ fn node_subnode_lifetime() {
     let name = {
         let node_a = {
             let root = fdt.root();
-            root.subnode(cstr!("node_a")).unwrap()
+            root.subnode(c"node_a").unwrap()
             // Make root to be dropped
         };
         assert_ne!(None, node_a);
         node_a.unwrap().name()
         // Make node_a to be dropped
     };
-    assert_eq!(Ok(cstr!("node_a")), name);
+    assert_eq!(Ok(c"node_a"), name);
 }
 
 #[test]
@@ -521,7 +510,7 @@ fn node_subnodess_lifetime() {
         first_subnode.name()
         // Make first_subnode to be dropped
     };
-    assert_eq!(Ok(cstr!("node_a")), first_subnode_name);
+    assert_eq!(Ok(c"node_a"), first_subnode_name);
 }
 
 #[test]
@@ -543,5 +532,5 @@ fn node_descendants_lifetime() {
         first_descendant.name()
         // Make first_descendant to be dropped
     };
-    assert_eq!(Ok(cstr!("node_a")), first_descendant_name);
+    assert_eq!(Ok(c"node_a"), first_descendant_name);
 }

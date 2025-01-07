@@ -108,7 +108,6 @@ impl<'a> Iterator for BootArgsIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cstr::cstr;
 
     fn check(raw: &CStr, expected: Result<&[(&str, Option<&str>)], ()>) {
         let actual = BootArgsIterator::new(raw);
@@ -136,35 +135,35 @@ mod tests {
 
     #[test]
     fn empty() {
-        check(cstr!(""), Ok(&[]));
-        check(cstr!("    "), Ok(&[]));
-        check(cstr!("  \n  "), Ok(&[]));
+        check(c"", Ok(&[]));
+        check(c"    ", Ok(&[]));
+        check(c"  \n  ", Ok(&[]));
     }
 
     #[test]
     fn single() {
-        check(cstr!("foo"), Ok(&[("foo", None)]));
-        check(cstr!("   foo"), Ok(&[("foo", None)]));
-        check(cstr!("foo   "), Ok(&[("foo", None)]));
-        check(cstr!("   foo   "), Ok(&[("foo", None)]));
+        check(c"foo", Ok(&[("foo", None)]));
+        check(c"   foo", Ok(&[("foo", None)]));
+        check(c"foo   ", Ok(&[("foo", None)]));
+        check(c"   foo   ", Ok(&[("foo", None)]));
     }
 
     #[test]
     fn single_with_value() {
-        check(cstr!("foo=bar"), Ok(&[("foo", Some("=bar"))]));
-        check(cstr!("   foo=bar"), Ok(&[("foo", Some("=bar"))]));
-        check(cstr!("foo=bar   "), Ok(&[("foo", Some("=bar"))]));
-        check(cstr!("   foo=bar   "), Ok(&[("foo", Some("=bar"))]));
+        check(c"foo=bar", Ok(&[("foo", Some("=bar"))]));
+        check(c"   foo=bar", Ok(&[("foo", Some("=bar"))]));
+        check(c"foo=bar   ", Ok(&[("foo", Some("=bar"))]));
+        check(c"   foo=bar   ", Ok(&[("foo", Some("=bar"))]));
 
-        check(cstr!("foo="), Ok(&[("foo", Some("="))]));
-        check(cstr!("   foo="), Ok(&[("foo", Some("="))]));
-        check(cstr!("foo=   "), Ok(&[("foo", Some("="))]));
-        check(cstr!("   foo=   "), Ok(&[("foo", Some("="))]));
+        check(c"foo=", Ok(&[("foo", Some("="))]));
+        check(c"   foo=", Ok(&[("foo", Some("="))]));
+        check(c"foo=   ", Ok(&[("foo", Some("="))]));
+        check(c"   foo=   ", Ok(&[("foo", Some("="))]));
     }
 
     #[test]
     fn single_with_quote() {
-        check(cstr!("foo=hello\" \"world"), Ok(&[("foo", Some("=hello\" \"world"))]));
+        check(c"foo=hello\" \"world", Ok(&[("foo", Some("=hello\" \"world"))]));
     }
 
     #[test]
@@ -175,32 +174,32 @@ mod tests {
     #[test]
     fn multiple() {
         check(
-            cstr!(" a=b   c=d   e=  f g  "),
+            c" a=b   c=d   e=  f g  ",
             Ok(&[("a", Some("=b")), ("c", Some("=d")), ("e", Some("=")), ("f", None), ("g", None)]),
         );
         check(
-            cstr!("   a=b  \n c=d      e=  f g"),
+            c"   a=b  \n c=d      e=  f g",
             Ok(&[("a", Some("=b")), ("c", Some("=d")), ("e", Some("=")), ("f", None), ("g", None)]),
         );
     }
 
     #[test]
     fn incomplete_quote() {
-        check(
-            cstr!("foo=incomplete\" quote bar=y"),
-            Ok(&[("foo", Some("=incomplete\" quote bar=y"))]),
-        );
+        check(c"foo=incomplete\" quote bar=y", Ok(&[("foo", Some("=incomplete\" quote bar=y"))]));
     }
 
     #[test]
     fn complex() {
-        check(cstr!("  a  a1=  b=c d=e,f,g x=\"value with quote\" y=val\"ue with \"multiple\" quo\"te  "), Ok(&[
-            ("a", None),
-            ("a1", Some("=")),
-            ("b", Some("=c")),
-            ("d", Some("=e,f,g")),
-            ("x", Some("=\"value with quote\"")),
-            ("y", Some("=val\"ue with \"multiple\" quo\"te")),
-        ]));
+        check(
+            c"  a  a1=  b=c d=e,f,g x=\"value with quote\" y=val\"ue with \"multiple\" quo\"te  ",
+            Ok(&[
+                ("a", None),
+                ("a1", Some("=")),
+                ("b", Some("=c")),
+                ("d", Some("=e,f,g")),
+                ("x", Some("=\"value with quote\"")),
+                ("y", Some("=val\"ue with \"multiple\" quo\"te")),
+            ]),
+        );
     }
 }

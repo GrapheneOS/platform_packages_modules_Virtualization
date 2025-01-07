@@ -31,7 +31,6 @@ pub use safe_types::{FdtHeader, NodeOffset, Phandle, PropOffset, StringOffset};
 
 use core::ffi::{c_void, CStr};
 use core::ops::Range;
-use cstr::cstr;
 use libfdt::get_slice_at_ptr;
 use zerocopy::IntoBytes as _;
 
@@ -167,12 +166,12 @@ impl<'a> FdtNode<'a> {
 
     /// Returns the standard (deprecated) device_type <string> property.
     pub fn device_type(&self) -> Result<Option<&CStr>> {
-        self.getprop_str(cstr!("device_type"))
+        self.getprop_str(c"device_type")
     }
 
     /// Returns the standard reg <prop-encoded-array> property.
     pub fn reg(&self) -> Result<Option<RegIterator<'a>>> {
-        if let Some(cells) = self.getprop_cells(cstr!("reg"))? {
+        if let Some(cells) = self.getprop_cells(c"reg")? {
             let parent = self.parent()?;
 
             let addr_cells = parent.address_cells()?;
@@ -186,7 +185,7 @@ impl<'a> FdtNode<'a> {
 
     /// Returns the standard ranges property.
     pub fn ranges<A, P, S>(&self) -> Result<Option<RangesIterator<'a, A, P, S>>> {
-        if let Some(cells) = self.getprop_cells(cstr!("ranges"))? {
+        if let Some(cells) = self.getprop_cells(c"ranges")? {
             let parent = self.parent()?;
             let addr_cells = self.address_cells()?;
             let parent_addr_cells = parent.address_cells()?;
@@ -320,9 +319,9 @@ impl<'a> FdtNode<'a> {
     /// Returns the phandle
     pub fn get_phandle(&self) -> Result<Option<Phandle>> {
         // This rewrites the fdt_get_phandle() because it doesn't return error code.
-        if let Some(prop) = self.getprop_u32(cstr!("phandle"))? {
+        if let Some(prop) = self.getprop_u32(c"phandle")? {
             Ok(Some(prop.try_into()?))
-        } else if let Some(prop) = self.getprop_u32(cstr!("linux,phandle"))? {
+        } else if let Some(prop) = self.getprop_u32(c"linux,phandle")? {
             Ok(Some(prop.try_into()?))
         } else {
             Ok(None)
@@ -693,8 +692,8 @@ impl Fdt {
     ///
     /// NOTE: This does not support individual "/memory@XXXX" banks.
     pub fn memory(&self) -> Result<MemRegIterator> {
-        let node = self.root().subnode(cstr!("memory"))?.ok_or(FdtError::NotFound)?;
-        if node.device_type()? != Some(cstr!("memory")) {
+        let node = self.root().subnode(c"memory")?.ok_or(FdtError::NotFound)?;
+        if node.device_type()? != Some(c"memory") {
             return Err(FdtError::BadValue);
         }
         node.reg()?.ok_or(FdtError::BadValue).map(MemRegIterator::new)
@@ -707,12 +706,12 @@ impl Fdt {
 
     /// Returns the standard /chosen node.
     pub fn chosen(&self) -> Result<Option<FdtNode>> {
-        self.root().subnode(cstr!("chosen"))
+        self.root().subnode(c"chosen")
     }
 
     /// Returns the standard /chosen node as mutable.
     pub fn chosen_mut(&mut self) -> Result<Option<FdtNodeMut>> {
-        self.node_mut(cstr!("/chosen"))
+        self.node_mut(c"/chosen")
     }
 
     /// Returns the root node of the tree.
@@ -722,12 +721,12 @@ impl Fdt {
 
     /// Returns the standard /__symbols__ node.
     pub fn symbols(&self) -> Result<Option<FdtNode>> {
-        self.root().subnode(cstr!("__symbols__"))
+        self.root().subnode(c"__symbols__")
     }
 
     /// Returns the standard /__symbols__ node as mutable
     pub fn symbols_mut(&mut self) -> Result<Option<FdtNodeMut>> {
-        self.node_mut(cstr!("/__symbols__"))
+        self.node_mut(c"/__symbols__")
     }
 
     /// Returns a tree node by its full path.

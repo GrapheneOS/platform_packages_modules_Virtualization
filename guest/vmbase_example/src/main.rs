@@ -27,7 +27,6 @@ use crate::layout::print_addresses;
 use crate::pci::check_pci;
 use alloc::{vec, vec::Vec};
 use core::ptr::addr_of_mut;
-use cstr::cstr;
 use libfdt::Fdt;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use vmbase::{
@@ -147,7 +146,7 @@ fn check_fdt(reader: &Fdt) {
         info!("memory @ {reg:#x?}");
     }
 
-    let compatible = cstr!("ns16550a");
+    let compatible = c"ns16550a";
 
     for c in reader.compatible_nodes(compatible).unwrap() {
         let reg = c.reg().unwrap().unwrap().next().unwrap();
@@ -159,17 +158,17 @@ fn modify_fdt(writer: &mut Fdt) {
     writer.unpack().unwrap();
     info!("FDT successfully unpacked.");
 
-    let path = cstr!("/memory");
+    let path = c"/memory";
     let node = writer.node_mut(path).unwrap().unwrap();
-    let name = cstr!("child");
+    let name = c"child";
     let mut child = node.add_subnode(name).unwrap();
     info!("Created subnode '{}/{}'.", path.to_str().unwrap(), name.to_str().unwrap());
 
-    let name = cstr!("str-property");
+    let name = c"str-property";
     child.appendprop(name, b"property-value\0").unwrap();
     info!("Appended property '{}'.", name.to_str().unwrap());
 
-    let name = cstr!("pair-property");
+    let name = c"pair-property";
     let addr = 0x0123_4567u64;
     let size = 0x89ab_cdefu64;
     child.appendprop_addrrange(name, addr, size).unwrap();

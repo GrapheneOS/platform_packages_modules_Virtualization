@@ -15,14 +15,13 @@
 //! This module support creating AFV related overlays, that can then be appended to DT by VM.
 
 use anyhow::{anyhow, Result};
-use cstr::cstr;
 use fsfdt::FsFdt;
 use libfdt::Fdt;
 use std::ffi::CStr;
 use std::path::Path;
 
-pub(crate) const AVF_NODE_NAME: &CStr = cstr!("avf");
-pub(crate) const UNTRUSTED_NODE_NAME: &CStr = cstr!("untrusted");
+pub(crate) const AVF_NODE_NAME: &CStr = c"avf";
+pub(crate) const UNTRUSTED_NODE_NAME: &CStr = c"untrusted";
 pub(crate) const VM_DT_OVERLAY_PATH: &str = "vm_dt_overlay.dtbo";
 pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 2000;
 
@@ -63,13 +62,13 @@ pub(crate) fn create_device_tree_overlay<'a>(
         Fdt::create_empty_tree(buffer).map_err(|e| anyhow!("Failed to create empty Fdt: {e:?}"))?;
     let mut fragment = fdt
         .root_mut()
-        .add_subnode(cstr!("fragment@0"))
+        .add_subnode(c"fragment@0")
         .map_err(|e| anyhow!("Failed to add fragment node: {e:?}"))?;
     fragment
-        .setprop(cstr!("target-path"), b"/\0")
+        .setprop(c"target-path", b"/\0")
         .map_err(|e| anyhow!("Failed to set target-path property: {e:?}"))?;
     let overlay = fragment
-        .add_subnode(cstr!("__overlay__"))
+        .add_subnode(c"__overlay__")
         .map_err(|e| anyhow!("Failed to add __overlay__ node: {e:?}"))?;
     let avf =
         overlay.add_subnode(AVF_NODE_NAME).map_err(|e| anyhow!("Failed to add avf node: {e:?}"))?;
@@ -87,12 +86,12 @@ pub(crate) fn create_device_tree_overlay<'a>(
 
     // Read dt_path from host DT and overlay onto fdt.
     if let Some(path) = dt_path {
-        fdt.overlay_onto(cstr!("/fragment@0/__overlay__"), path)?;
+        fdt.overlay_onto(c"/fragment@0/__overlay__", path)?;
     }
 
     if !trusted_props.is_empty() {
         let mut avf = fdt
-            .node_mut(cstr!("/fragment@0/__overlay__/avf"))
+            .node_mut(c"/fragment@0/__overlay__/avf")
             .map_err(|e| anyhow!("Failed to search avf node: {e:?}"))?
             .ok_or(anyhow!("Failed to get avf node"))?;
         for (name, value) in trusted_props {
@@ -120,14 +119,14 @@ mod tests {
     #[test]
     fn untrusted_prop_test() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let prop_name = cstr!("XOXO");
+        let prop_name = c"XOXO";
         let prop_val_input = b"OXOX";
         let fdt =
             create_device_tree_overlay(&mut buffer, None, &[(prop_name, prop_val_input)], &[])
                 .unwrap();
 
         let prop_value_dt = fdt
-            .node(cstr!("/fragment@0/__overlay__/avf/untrusted"))
+            .node(c"/fragment@0/__overlay__/avf/untrusted")
             .unwrap()
             .expect("/avf/untrusted node doesn't exist")
             .getprop(prop_name)
@@ -139,14 +138,14 @@ mod tests {
     #[test]
     fn trusted_prop_test() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let prop_name = cstr!("XOXOXO");
+        let prop_name = c"XOXOXO";
         let prop_val_input = b"OXOXOX";
         let fdt =
             create_device_tree_overlay(&mut buffer, None, &[], &[(prop_name, prop_val_input)])
                 .unwrap();
 
         let prop_value_dt = fdt
-            .node(cstr!("/fragment@0/__overlay__/avf"))
+            .node(c"/fragment@0/__overlay__/avf")
             .unwrap()
             .expect("/avf node doesn't exist")
             .getprop(prop_name)

@@ -17,7 +17,6 @@
 pub mod pci;
 
 use core::ops::Range;
-use cstr::cstr;
 use libfdt::{self, Fdt, FdtError};
 
 /// Represents information about a SWIOTLB buffer.
@@ -34,7 +33,7 @@ pub struct SwiotlbInfo {
 impl SwiotlbInfo {
     /// Creates a `SwiotlbInfo` struct from the given device tree.
     pub fn new_from_fdt(fdt: &Fdt) -> libfdt::Result<Option<SwiotlbInfo>> {
-        let Some(node) = fdt.compatible_nodes(cstr!("restricted-dma-pool"))?.next() else {
+        let Some(node) = fdt.compatible_nodes(c"restricted-dma-pool")?.next() else {
             return Ok(None);
         };
         let (addr, size, align) = if let Some(mut reg) = node.reg()? {
@@ -42,8 +41,8 @@ impl SwiotlbInfo {
             let size = reg.size.ok_or(FdtError::BadValue)?;
             (Some(reg.addr.try_into().unwrap()), size.try_into().unwrap(), None)
         } else {
-            let size = node.getprop_u64(cstr!("size"))?.ok_or(FdtError::NotFound)?;
-            let align = node.getprop_u64(cstr!("alignment"))?.ok_or(FdtError::NotFound)?;
+            let size = node.getprop_u64(c"size")?.ok_or(FdtError::NotFound)?;
+            let align = node.getprop_u64(c"alignment")?.ok_or(FdtError::NotFound)?;
             (None, size.try_into().unwrap(), Some(align.try_into().unwrap()))
         };
         Ok(Some(Self { addr, size, align }))

@@ -24,7 +24,6 @@ use coset::{
     iana::{self, EnumI64},
     Algorithm, AsCborValue, CborSerializable, CoseKey, KeyOperation, KeyType, Label,
 };
-use cstr::cstr;
 use diced_open_dice::{
     derive_cdi_private_key_seed, keypair_from_seed, retry_bcc_format_config_descriptor,
     retry_bcc_main_flow, retry_dice_main_flow, CdiValues, Config, DiceConfigValues, DiceError,
@@ -113,7 +112,7 @@ pub(crate) fn fake_dice_artifacts_up_to_pvmfw() -> Result<(CdiValues, Vec<u8>)> 
 
     // Gets the pvmfw certificate to as the root certificate of DICE chain.
     let config_values = DiceConfigValues {
-        component_name: Some(cstr!("Protected VM firmware")),
+        component_name: Some(c"Protected VM firmware"),
         component_version: Some(1),
         resettable: true,
         rkp_vm_marker: true,
@@ -156,7 +155,7 @@ pub(crate) fn fake_dice_artifacts_up_to_pvmfw() -> Result<(CdiValues, Vec<u8>)> 
 pub fn fake_service_vm_dice_artifacts() -> Result<OwnedDiceArtifacts> {
     let (cdi_values, dice_chain) = fake_dice_artifacts_up_to_pvmfw()?;
     let config_values = DiceConfigValues {
-        component_name: Some(cstr!("vm_entry")),
+        component_name: Some(c"vm_entry"),
         component_version: Some(12),
         resettable: true,
         rkp_vm_marker: true,
