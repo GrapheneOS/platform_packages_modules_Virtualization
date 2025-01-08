@@ -36,6 +36,7 @@ import android.cts.statsdatom.lib.ConfigUtils;
 import android.cts.statsdatom.lib.ReportUtils;
 
 import com.android.compatibility.common.util.CddTest;
+import com.android.compatibility.common.util.GmsTest;
 import com.android.compatibility.common.util.PropertyUtil;
 import com.android.compatibility.common.util.VsrTest;
 import com.android.microdroid.test.common.ProcessUtil;
@@ -415,7 +416,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
     @Test
     @CddTest
-    @VsrTest(requirements = {"VSR-7.1-001.008"})
+    @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
+    @VsrTest(requirements = {"VSR-7.1-001.007"})
     public void UpgradedPackageIsAcceptedWithSecretkeeper() throws Exception {
         // Preconditions
         assumeVmTypeSupported("microdroid", true); // Non-protected VMs may not support upgrades
@@ -433,7 +435,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
     @Test
     @CddTest
-    @VsrTest(requirements = {"VSR-7.1-001.008"})
+    @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
+    @VsrTest(requirements = {"VSR-7.1-001.007"})
     public void DowngradedPackageIsRejectedProtectedVm() throws Exception {
         // Preconditions: Rollback protection is provided only for protected VM.
         assumeVmTypeSupported("microdroid", true);
@@ -482,7 +485,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
-    @CddTest(requirements = {"9.17/C-2-1", "9.17/C-2-2", "9.17/C-2-6"})
+    @GmsTest(requirements = {"GMS-3-7.1-010"})
     public void protectedVmRunsPvmfw(String os) throws Exception {
         // Arrange
         assumeKernelSupported(os);
@@ -515,7 +518,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
-    @CddTest(requirements = {"9.17/C-2-1", "9.17/C-2-2", "9.17/C-2-5", "9.17/C-2-6"})
+    @GmsTest(requirements = {"GMS-3-7.1-003", "GMS-3-7.1-010"})
     public void protectedVmWithImageSignedWithDifferentKeyFailsToVerifyPayload(String os)
             throws Exception {
         assumeKernelSupported(os);
@@ -544,7 +547,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
-    @CddTest(requirements = {"9.17/C-2-2", "9.17/C-2-6"})
+    @GmsTest(requirements = {"GMS-3-7.1-003", "GMS-3-7.1-010"})
     public void testBootSucceedsWhenNonProtectedVmStartsWithImagesSignedWithDifferentKey(String os)
             throws Exception {
         // Preconditions
@@ -572,7 +575,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
-    @CddTest(requirements = {"9.17/C-2-2", "9.17/C-2-5", "9.17/C-2-6"})
+    @GmsTest(requirements = {"GMS-3-7.1-006"})
     public void testBootFailsWhenVbMetaDigestDoesNotMatchBootconfig(String os) throws Exception {
         // protectedVmWithImageSignedWithDifferentKeyRunsPvmfw() is the protected case.
         assumeKernelSupported(os);
@@ -1010,7 +1013,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "params")
     @TestCaseName("{method}_protectedVm_{0}_os_{1}")
-    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-1-2", "9.17/C/1-3"})
+    @CddTest
+    @GmsTest(requirements = {"GMS-3-7.1-001.002"})
     public void testMicrodroidBoots(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
@@ -1097,6 +1101,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
+    @CddTest
     public void testPathToBinaryIsRejected() throws Exception {
         CommandRunner android = new CommandRunner(getDevice());
 
@@ -1145,6 +1150,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
+    @CddTest
     public void testRunEmptyPayload() throws Exception {
         CommandRunner android = new CommandRunner(getDevice());
 
@@ -1198,7 +1204,6 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest(requirements = {"9.17/C-2-2", "9.17/C-2-6"})
     public void testAllVbmetaUseSHA256() throws Exception {
         File virtApexDir = FileUtil.createTempDir("virt_apex");
         // Pull the virt apex's etc/ directory (which contains images)
@@ -1309,6 +1314,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "params")
     @TestCaseName("{method}_protectedVm_{0}_os_{1}")
+    @CddTest
     public void testDeviceAssignment(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
@@ -1364,6 +1370,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
+    @CddTest
+    @GmsTest(requirements = {"GMS-3-7.1-001.002"})
     public void testOsVersions() throws Exception {
         for (String os : getSupportedOSList()) {
             assertWithMessage("Unknown OS \"%s\"", os).that(SUPPORTED_OSES.values()).contains(os);
@@ -1414,6 +1422,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
+    @CddTest
     public void microdroidDeviceTreeCompat(String os) throws Exception {
         assumeArm64Supported();
         final String configPath = "assets/vm_config.json";
@@ -1442,6 +1451,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "osVersions")
     @TestCaseName("{method}_os_{0}")
+    @CddTest
     public void microdroidProtectedDeviceTreeCompat(String os) throws Exception {
         assumeArm64Supported();
         final String configPath = "assets/vm_config.json";

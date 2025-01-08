@@ -129,7 +129,7 @@ fn main<'a>(
         RebootReason::InternalError
     })?;
 
-    let instance_hash = if cfg!(llpvm_changes) { Some(salt_from_instance_id(fdt)?) } else { None };
+    let instance_hash = Some(salt_from_instance_id(fdt)?);
     let (new_instance, salt, defer_rollback_protection) = perform_rollback_protection(
         fdt,
         &verified_boot_data,

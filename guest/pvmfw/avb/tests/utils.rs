@@ -124,8 +124,7 @@ pub fn assert_latest_payload_verification_passes(
     let footer = extract_avb_footer(&kernel)?;
     let kernel_digest =
         hash(&[&hash(&[b"bootloader"]), &kernel[..usize::try_from(footer.original_image_size)?]]);
-    let capabilities =
-        if cfg!(llpvm_changes) { vec![Capability::SecretkeeperProtection] } else { vec![] };
+    let capabilities = vec![Capability::SecretkeeperProtection];
     let initrd_digest = Some(hash(&[&hash(&[initrd_salt]), initrd]));
     let expected_boot_data = VerifiedBootData {
         debug_level: expected_debug_level,
@@ -133,7 +132,7 @@ pub fn assert_latest_payload_verification_passes(
         initrd_digest,
         public_key: &public_key,
         capabilities,
-        rollback_index: if cfg!(llpvm_changes) { 1 } else { 0 },
+        rollback_index: 1,
         page_size,
     };
     assert_eq!(expected_boot_data, verified_boot_data);

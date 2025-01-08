@@ -15,3 +15,8 @@ tonic = "0.12.3"
 
 [build-dependencies]
 tonic-build = "0.12.3"
+
+[package.metadata.deb]
+maintainer = "ferrochrome-dev@google.com"
+copyright = "2024, The Android Open Source Project"
+depends = "$auto"

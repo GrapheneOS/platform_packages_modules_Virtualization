@@ -73,7 +73,8 @@ android_test {
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV5.xml",
     test_suites: ["general-tests"],
-    test_config: "AndroidTest.xml",
+    test_config_template: "AndroidTestTemplate.xml",
+    auto_gen_config: true,
     data: DATA,
 }
 
@@ -81,8 +82,21 @@ android_test {
     name: "MicrodroidTestApp.CTS",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV5.xml",
+    test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["cts"],
-    test_config: ":MicrodroidTestApp.CTS.config",
+    auto_gen_config: true,
+    test_options: {
+        tradefed_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.compatibility.common.util.CddTest",
+            },
+            {
+                name: "test-suite-tag",
+                value: "cts",
+            },
+        ],
+    },
     data: DATA,
 }
 
@@ -90,31 +104,44 @@ android_test {
     name: "MicrodroidTestApp.VTS",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV5.xml",
+    test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["vts"],
-    test_config: ":MicrodroidTestApp.VTS.config",
+    auto_gen_config: true,
+    test_options: {
+        tradefed_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.compatibility.common.util.VsrTest",
+            },
+            {
+                name: "test-suite-tag",
+                value: "vts",
+            },
+        ],
+    },
     data: DATA,
 }
 
-genrule {
-    name: "MicrodroidTestApp.CTS.config",
-    srcs: ["AndroidTest.xml"],
-    out: ["out.xml"],
-    cmd: "sed " +
-        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
-        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.CddTest\" \\/>/' " +
-        "-e 's/MicrodroidTestApp.apk/MicrodroidTestApp.CTS.apk/' " +
-        "$(in) > $(out)",
-}
-
-genrule {
-    name: "MicrodroidTestApp.VTS.config",
-    srcs: ["AndroidTest.xml"],
-    out: ["out.xml"],
-    cmd: "sed " +
-        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
-        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.VsrTest\" \\/>/' " +
-        "-e 's/MicrodroidTestApp.apk/MicrodroidTestApp.VTS.apk/' " +
-        "$(in) > $(out)",
+android_test {
+    name: "MicrodroidTestApp.GTS",
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
+    manifest: "AndroidManifestV5.xml",
+    test_config_template: "AndroidTestTemplate.xml",
+    test_suites: ["gts"],
+    auto_gen_config: true,
+    test_options: {
+        tradefed_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.compatibility.common.util.GmsTest",
+            },
+            {
+                name: "test-suite-tag",
+                value: "gts",
+            },
+        ],
+    },
+    data: DATA,
 }
 
 android_test_helper_app {

@@ -59,7 +59,8 @@ BINS = [
 java_test_host {
     name: "MicrodroidHostTestCases",
     defaults: ["MicrodroidHostTestCases.default"],
-    test_config: "AndroidTest.xml",
+    test_config_template: "AndroidTestTemplate.xml",
+    auto_gen_config: true,
     test_suites: [
         "general-tests",
         "pts",
@@ -71,8 +72,21 @@ java_test_host {
 java_test_host {
     name: "MicrodroidHostTestCases.CTS",
     defaults: ["MicrodroidHostTestCases.default"],
-    test_config: ":MicrodroidHostTestCases.CTS.config",
+    test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["cts"],
+    auto_gen_config: true,
+    test_options: {
+        tradefed_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.compatibility.common.util.CddTest",
+            },
+            {
+                name: "test-suite-tag",
+                value: "cts",
+            },
+        ],
+    },
     device_common_data: DEVICE_DATA,
     data_native_bins: BINS,
 }
@@ -80,30 +94,43 @@ java_test_host {
 java_test_host {
     name: "MicrodroidHostTestCases.VTS",
     defaults: ["MicrodroidHostTestCases.default"],
-    test_config: ":MicrodroidHostTestCases.VTS.config",
+    test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["vts"],
+    auto_gen_config: true,
+    test_options: {
+        tradefed_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.compatibility.common.util.VsrTest",
+            },
+            {
+                name: "test-suite-tag",
+                value: "vts",
+            },
+        ],
+    },
     device_common_data: DEVICE_DATA,
     data_native_bins: BINS,
 }
 
-genrule {
-    name: "MicrodroidHostTestCases.CTS.config",
-    srcs: ["AndroidTest.xml"],
-    out: ["out.xml"],
-    cmd: "sed " +
-        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
-        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.CddTest\" \\/>/' " +
-        "-e 's/MicrodroidHostTestCases.jar/MicrodroidHostTestCases.CTS.jar/' " +
-        "$(in) > $(out)",
-}
-
-genrule {
-    name: "MicrodroidHostTestCases.VTS.config",
-    srcs: ["AndroidTest.xml"],
-    out: ["out.xml"],
-    cmd: "sed " +
-        "-e 's/<!-- PLACEHOLDER_FOR_ANNOTATION -->/" +
-        "<option name=\"include-annotation\" value=\"com.android.compatibility.common.util.VsrTest\" \\/>/' " +
-        "-e 's/MicrodroidHostTestCases.jar/MicrodroidHostTestCases.VTS.jar/' " +
-        "$(in) > $(out)",
+java_test_host {
+    name: "MicrodroidHostTestCases.GTS",
+    defaults: ["MicrodroidHostTestCases.default"],
+    test_config_template: "AndroidTestTemplate.xml",
+    test_suites: ["gts"],
+    auto_gen_config: true,
+    test_options: {
+        tradefed_options: [
+            {
+                name: "include-annotation",
+                value: "com.android.compatibility.common.util.GmsTest",
+            },
+            {
+                name: "test-suite-tag",
+                value: "gts",
+            },
+        ],
+    },
+    device_common_data: DEVICE_DATA,
+    data_native_bins: BINS,
 }

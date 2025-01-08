@@ -40,7 +40,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
     @Test
-    @CddTest(requirements = "9.17/C-1-6")
+    @CddTest(requirements = "9.17/C-1-1")
     public void supportForProtectedOrNonProtectedVms() {
         assumeSupportedDevice();
 
@@ -61,7 +61,7 @@ public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @VsrTest(requirements = "VSR-7.1-001.005")
+    @VsrTest(requirements = "VSR-7.1-001.004")
     public void avfIsRequired() {
         assumeVsrCompliant();
         assume().withMessage("Requirement doesn't apply due to vendor API level")

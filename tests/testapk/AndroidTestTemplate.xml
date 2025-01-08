@@ -14,14 +14,12 @@
      limitations under the License.
 -->
 <configuration description="Runs Microdroid device-side tests.">
-    <option name="test-suite-tag" value="cts" />
-    <option name="test-suite-tag" value="vts" />
     <option name="config-descriptor:metadata" key="component" value="security" />
     <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
     <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
-        <option name="test-file-name" value="MicrodroidTestApp.apk" />
+        <option name="test-file-name" value="{MODULE}.apk" />
         <option name="test-file-name" value="MicrodroidVmShareApp.apk" />
     </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
@@ -44,5 +42,5 @@
     <!-- For example: module wants to run arm and device is x86 -->
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
 
-    <!-- PLACEHOLDER_FOR_ANNOTATION -->
+    {EXTRA_CONFIGS}
 </configuration>

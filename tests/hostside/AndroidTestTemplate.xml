@@ -14,7 +14,6 @@
      limitations under the License.
 -->
 <configuration description="Host driven tests for Microdroid">
-    <option name="test-suite-tag" value="cts" />
     <option name="config-descriptor:metadata" key="component" value="security" />
     <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
@@ -26,12 +25,12 @@
     </target_preparer>
 
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
-        <option name="jar" value="MicrodroidHostTestCases.jar" />
+        <option name="jar" value="{MODULE}.jar" />
     </test>
 
     <!-- Controller that will skip the module if a native bridge situation is detected -->
     <!-- For example: module wants to run arm and device is x86 -->
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
 
-    <!-- PLACEHOLDER_FOR_ANNOTATION -->
+    {EXTRA_CONFIGS}
 </configuration>

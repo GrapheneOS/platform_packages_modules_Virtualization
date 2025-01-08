@@ -30,7 +30,7 @@ use vmbase::rand;
 /// Performs RBP based on the input payload, current DICE chain, and host-controlled platform.
 ///
 /// On success, returns a tuple containing:
-/// - `new_instance`: true if a new entry was created using the legacy instance.img solution;
+/// - `new_instance`: true if the legacy instance.img solution was used and a new entry created;
 /// - `salt`: the salt representing the instance, to be used during DICE derivation;
 /// - `defer_rollback_protection`: if RBP is being deferred.
 pub fn perform_rollback_protection(
@@ -41,67 +41,87 @@ pub fn perform_rollback_protection(
     cdi_seal: &[u8],
     instance_hash: Option<Hidden>,
 ) -> Result<(bool, Hidden, bool), RebootReason> {
-    let defer_rollback_protection = should_defer_rollback_protection(fdt)?
-        && verified_boot_data.has_capability(Capability::SecretkeeperProtection);
-    let (new_instance, salt) = if defer_rollback_protection {
-        info!("Guest OS is capable of Secretkeeper protection, deferring rollback protection");
-        // rollback_index of the image is used as security_version and is expected to be > 0 to
-        // discourage implicit allocation.
-        if verified_boot_data.rollback_index == 0 {
-            error!("Expected positive rollback_index, found 0");
-            return Err(RebootReason::InvalidPayload);
-        };
-        (false, instance_hash.unwrap())
+    if should_defer_rollback_protection(fdt)?
+        && verified_boot_data.has_capability(Capability::SecretkeeperProtection)
+    {
+        perform_deferred_rollback_protection(verified_boot_data)?;
+        Ok((false, instance_hash.unwrap(), true))
     } else if verified_boot_data.has_capability(Capability::RemoteAttest) {
-        info!("Service VM capable of remote attestation detected, performing version checks");
-        if service_vm_version::VERSION != verified_boot_data.rollback_index {
-            // For RKP VM, we only boot if the version in the AVB footer of its kernel matches
-            // the one embedded in pvmfw at build time.
-            // This prevents the pvmfw from booting a roll backed RKP VM.
-            error!(
-                "Service VM version mismatch: expected {}, found {}",
-                service_vm_version::VERSION,
-                verified_boot_data.rollback_index
-            );
-            return Err(RebootReason::InvalidPayload);
-        }
-        (false, instance_hash.unwrap())
+        perform_fixed_index_rollback_protection(verified_boot_data)?;
+        Ok((false, instance_hash.unwrap(), false))
     } else if verified_boot_data.has_capability(Capability::TrustySecurityVm) {
-        // The rollback protection of Trusty VMs are handled by AuthMgr, so we don't need to
-        // handle it here.
-        info!("Trusty Security VM detected");
-        (false, instance_hash.unwrap())
+        skip_rollback_protection()?;
+        Ok((false, instance_hash.unwrap(), false))
     } else {
-        info!("Fallback to instance.img based rollback checks");
-        let (recorded_entry, mut instance_img, header_index) =
-            get_recorded_entry(pci_root, cdi_seal).map_err(|e| {
-                error!("Failed to get entry from instance.img: {e}");
-                RebootReason::InternalError
-            })?;
-        let (new_instance, salt) = if let Some(entry) = recorded_entry {
-            check_dice_measurements_match_entry(dice_inputs, &entry)?;
-            let salt = instance_hash.unwrap_or(entry.salt);
-            (false, salt)
-        } else {
-            // New instance!
-            let salt = instance_hash.map_or_else(rand::random_array, Ok).map_err(|e| {
-                error!("Failed to generated instance.img salt: {e}");
-                RebootReason::InternalError
-            })?;
+        perform_legacy_rollback_protection(dice_inputs, pci_root, cdi_seal, instance_hash)
+    }
+}
 
-            let entry = EntryBody::new(dice_inputs, &salt);
-            record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(
-                |e| {
-                    error!("Failed to get recorded entry in instance.img: {e}");
-                    RebootReason::InternalError
-                },
-            )?;
-            (true, salt)
-        };
-        (new_instance, salt)
+fn perform_deferred_rollback_protection(
+    verified_boot_data: &VerifiedBootData,
+) -> Result<(), RebootReason> {
+    info!("Deferring rollback protection");
+    // rollback_index of the image is used as security_version and is expected to be > 0 to
+    // discourage implicit allocation.
+    if verified_boot_data.rollback_index == 0 {
+        error!("Expected positive rollback_index, found 0");
+        Err(RebootReason::InvalidPayload)
+    } else {
+        Ok(())
+    }
+}
+
+fn perform_fixed_index_rollback_protection(
+    verified_boot_data: &VerifiedBootData,
+) -> Result<(), RebootReason> {
+    info!("Performing fixed-index rollback protection");
+    let fixed_index = service_vm_version::VERSION;
+    let index = verified_boot_data.rollback_index;
+    if index != fixed_index {
+        error!("Rollback index mismatch: expected {fixed_index}, found {index}");
+        Err(RebootReason::InvalidPayload)
+    } else {
+        Ok(())
+    }
+}
+
+fn skip_rollback_protection() -> Result<(), RebootReason> {
+    info!("Skipping rollback protection");
+    Ok(())
+}
+
+/// Performs RBP using instance.img where updates require clearing old entries, causing new CDIs.
+fn perform_legacy_rollback_protection(
+    dice_inputs: &PartialInputs,
+    pci_root: &mut PciRoot,
+    cdi_seal: &[u8],
+    instance_hash: Option<Hidden>,
+) -> Result<(bool, Hidden, bool), RebootReason> {
+    info!("Fallback to instance.img based rollback checks");
+    let (recorded_entry, mut instance_img, header_index) = get_recorded_entry(pci_root, cdi_seal)
+        .map_err(|e| {
+        error!("Failed to get entry from instance.img: {e}");
+        RebootReason::InternalError
+    })?;
+    let (new_instance, salt) = if let Some(entry) = recorded_entry {
+        check_dice_measurements_match_entry(dice_inputs, &entry)?;
+        let salt = instance_hash.unwrap_or(entry.salt);
+        (false, salt)
+    } else {
+        // New instance!
+        let salt = instance_hash.map_or_else(rand::random_array, Ok).map_err(|e| {
+            error!("Failed to generated instance.img salt: {e}");
+            RebootReason::InternalError
+        })?;
+
+        let entry = EntryBody::new(dice_inputs, &salt);
+        record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(|e| {
+            error!("Failed to get recorded entry in instance.img: {e}");
+            RebootReason::InternalError
+        })?;
+        (true, salt)
     };
-
-    Ok((new_instance, salt, defer_rollback_protection))
+    Ok((new_instance, salt, false))
 }
 
 fn check_dice_measurements_match_entry(

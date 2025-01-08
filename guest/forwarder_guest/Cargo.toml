@@ -10,3 +10,8 @@ forwarder = { path = "../../libs/libforwarder" }
 poll_token_derive = "0.1.0"
 remain = "0.2.14"
 vmm-sys-util = "0.12.1"
+
+[package.metadata.deb]
+maintainer = "ferrochrome-dev@google.com"
+copyright = "2024, The Android Open Source Project"
+depends = "$auto"

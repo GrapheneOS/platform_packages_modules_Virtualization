@@ -5,3 +5,6 @@ avahi-utils
 bpfcc-tools
 libnss-mdns
 procps
+forwarder-guest
+forwarder-guest-launcher
+shutdown-runner

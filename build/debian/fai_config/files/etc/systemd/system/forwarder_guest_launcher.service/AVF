@@ -4,7 +4,7 @@ After=syslog.target
 After=network.target
 After=virtiofs_internal.service
 [Service]
-ExecStart=/usr/bin/bash -c '/usr/local/bin/forwarder_guest_launcher --grpc_port $(cat /mnt/internal/debian_service_port)'
+ExecStart=/usr/bin/bash -c '/usr/bin/forwarder_guest_launcher --grpc_port $(cat /mnt/internal/debian_service_port)'
 Type=simple
 Restart=on-failure
 RestartSec=1

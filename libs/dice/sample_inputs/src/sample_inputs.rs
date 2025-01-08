@@ -118,6 +118,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
         component_name: Some(CStr::from_bytes_with_nul(b"ABL\0").unwrap()),
         component_version: Some(1),
         resettable: true,
+        security_version: Some(10),
         ..Default::default()
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;
@@ -150,6 +151,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
         component_name: Some(CStr::from_bytes_with_nul(b"AVB\0").unwrap()),
         component_version: Some(1),
         resettable: true,
+        security_version: Some(11),
         ..Default::default()
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;
@@ -174,6 +176,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
         component_name: Some(CStr::from_bytes_with_nul(b"Android\0").unwrap()),
         component_version: Some(12),
         resettable: true,
+        security_version: Some(12),
         ..Default::default()
     };
     let config_descriptor = retry_bcc_format_config_descriptor(&config_values)?;
