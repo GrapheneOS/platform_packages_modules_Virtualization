@@ -347,6 +347,23 @@ Result<void> start_test_service() {
             return ScopedAStatus::ok();
         }
 
+        ScopedAStatus insecurelyReadPayloadRpData(std::array<uint8_t, 32>* out) override {
+            int32_t ret = AVmPayload_readRollbackProtectedSecret(out->data(), 32);
+            if (ret != 32) {
+                return ScopedAStatus::fromServiceSpecificError(ret);
+            }
+            return ScopedAStatus::ok();
+        }
+
+        ScopedAStatus insecurelyWritePayloadRpData(
+                const std::array<uint8_t, 32>& inputData) override {
+            int32_t ret = AVmPayload_writeRollbackProtectedSecret(inputData.data(), 32);
+            if (ret != 32) {
+                return ScopedAStatus::fromServiceSpecificError(ret);
+            }
+            return ScopedAStatus::ok();
+        }
+
         ScopedAStatus quit() override { exit(0); }
     };
     auto testService = ndk::SharedRefBase::make<TestService>();

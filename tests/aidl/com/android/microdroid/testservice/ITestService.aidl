@@ -80,6 +80,19 @@ interface ITestService {
     String readLineFromConsole();
 
     /**
+     * Read payload's rollback protected data. The `AVmAccessRollbackProtectedSecretStatus` is
+     * wrapped as service_specific error in case of failure. This is _only_ used for testing.
+     */
+    byte[32] insecurelyReadPayloadRpData();
+
+    /**
+     * Request VM to write payload's rollback protected data. The
+     * `AVmAccessRollbackProtectedSecretStatus` is wrapped as service_specific error in case of
+     * failure. This is _only_ used for testing.
+     */
+    void insecurelyWritePayloadRpData(in byte[32] data);
+
+    /**
      * Request the service to exit, triggering the termination of the VM. This may cause any
      * requests in flight to fail.
      */

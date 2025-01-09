@@ -97,6 +97,25 @@ impl IVmPayloadService for VmPayloadService {
             certificateChain: cert_chain,
         })
     }
+
+    fn readPayloadRpData(&self) -> binder::Result<Option<[u8; 32]>> {
+        let data = self
+            .secret
+            .read_payload_data_rp()
+            .context("Failed to read payload's rollback protected data")
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        Ok(data)
+    }
+
+    fn writePayloadRpData(&self, data: &[u8; 32]) -> binder::Result<()> {
+        self.secret
+            .write_payload_data_rp(data)
+            .context("Failed to write payload's rollback protected data")
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        Ok(())
+    }
 }
 
 impl Interface for VmPayloadService {}

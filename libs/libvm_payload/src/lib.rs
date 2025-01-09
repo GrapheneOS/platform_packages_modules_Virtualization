@@ -16,14 +16,14 @@
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload:: IVmPayloadService::{
     IVmPayloadService, ENCRYPTEDSTORE_MOUNTPOINT, VM_APK_CONTENTS_PATH,
-    VM_PAYLOAD_SERVICE_SOCKET_NAME, AttestationResult::AttestationResult,
+    VM_PAYLOAD_SERVICE_SOCKET_NAME, AttestationResult::AttestationResult
 };
 use anyhow::{bail, ensure, Context, Result};
 use binder::{
     unstable_api::{new_spibinder, AIBinder},
     Strong, ExceptionCode,
 };
-use log::{error, info, LevelFilter};
+use log::{error, info, LevelFilter, debug};
 use rpcbinder::{RpcServer, RpcSession};
 use openssl::{ec::EcKey, sha::sha256, ecdsa::EcdsaSig};
 use std::convert::Infallible;
@@ -38,9 +38,12 @@ use std::sync::{
     Mutex,
 };
 use vm_payload_status_bindgen::AVmAttestationStatus;
+use vm_payload_status_bindgen::AVmAccessRollbackProtectedSecretStatus::{AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ENTRY_NOT_FOUND, AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ACCESS_FAILED, AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_BAD_SIZE};
+use std::cmp::min;
 
 /// Maximum size of an ECDSA signature for EC P-256 key is 72 bytes.
 const MAX_ECDSA_P256_SIGNATURE_SIZE: usize = 72;
+const RP_DATA_SIZE: usize = 32;
 
 static VM_APK_CONTENTS_PATH_C: LazyLock<CString> =
     LazyLock::new(|| CString::new(VM_APK_CONTENTS_PATH).expect("CString::new failed"));
@@ -565,4 +568,87 @@ pub extern "C" fn AVmPayload_getEncryptedStoragePath() -> *const c_char {
     } else {
         ptr::null()
     }
+}
+
+/// Writes up to n bytes from buffer starting at `buf`, on behalf of the payload, to rollback
+/// detectable storage and return the number of bytes written or appropriate (negative) status.
+/// For this implementation, the backing storage is Secretkeeper HAL, which allows storing & reading
+/// of 32 bytes secret!
+///
+/// # Safety
+///
+/// Behavior is undefined if any of the following conditions are violated:
+///
+/// * `buf` must be [valid] for reads of n bytes.
+///
+/// [valid]: ptr#safety
+#[no_mangle]
+pub unsafe extern "C" fn AVmPayload_writeRollbackProtectedSecret(buf: *const u8, n: usize) -> i32 {
+    initialize_logging();
+    if n < RP_DATA_SIZE {
+        error!(
+            "Requested writing {} bytes, while Secretkeeper supports only {} bytes",
+            n, RP_DATA_SIZE
+        );
+        return AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_BAD_SIZE as i32;
+    }
+    // Safety: See the requirements on `buf` above and we just checked that n >= RP_DATA_SIZE.
+    let buf = unsafe { std::slice::from_raw_parts(buf, RP_DATA_SIZE) };
+    match try_writing_payload_rollback_protected_data(buf.try_into().unwrap()) {
+        Ok(()) => RP_DATA_SIZE as i32,
+        Err(e) => {
+            error!("Failed to write rollback protected data: {e:?}");
+            AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ACCESS_FAILED as i32
+        }
+    }
+}
+
+/// Read up to n bytes of payload's data in rollback detectable storage into `buf`.
+/// For this implementation, the backing storage is Secretkeeper HAL, which allows storing & reading
+/// of 32 bytes secret!
+///
+/// # Safety
+///
+/// Behavior is undefined if any of the following conditions are violated:
+///
+/// * `buf` must be [valid] for writes of n bytes.
+///
+/// [valid]: ptr#safety
+#[no_mangle]
+pub unsafe extern "C" fn AVmPayload_readRollbackProtectedSecret(buf: *mut u8, n: usize) -> i32 {
+    initialize_logging();
+    match try_read_rollback_protected_data() {
+        Err(e) => {
+            error!("Failed to read rollback protected data: {e:?}");
+            AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ACCESS_FAILED as i32
+        }
+        Ok(stored_data) => {
+            if let Some(stored_data) = stored_data {
+                // SAFETY: See the requirements on `buf` above; `stored_data` is known to have
+                // length `RP_DATA_SIZE`, and cannot overlap `data` because we just allocated
+                // it.
+                unsafe {
+                    ptr::copy_nonoverlapping(stored_data.as_ptr(), buf, min(n, RP_DATA_SIZE));
+                }
+                RP_DATA_SIZE as i32
+            } else {
+                debug!("No relevant entry found in Secretkeeper");
+                AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ENTRY_NOT_FOUND as i32
+            }
+        }
+    }
+}
+
+fn try_writing_payload_rollback_protected_data(data: &[u8; RP_DATA_SIZE]) -> Result<()> {
+    get_vm_payload_service()?
+        .writePayloadRpData(data)
+        .context("Failed to write payload rollback protected data")?;
+    Ok(())
+}
+
+fn try_read_rollback_protected_data() -> Result<Option<[u8; RP_DATA_SIZE]>> {
+    let rp = get_vm_payload_service()?
+        .readPayloadRpData()
+        .context("Failed to read rollback protected data")?;
+    Ok(rp)
 }

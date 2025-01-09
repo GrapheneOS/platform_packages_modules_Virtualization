@@ -126,6 +126,12 @@ impl ITestService for TestService {
     fn readLineFromConsole(&self) -> BinderResult<String> {
         unimplemented()
     }
+    fn insecurelyReadPayloadRpData(&self) -> BinderResult<[u8; 32]> {
+        unimplemented()
+    }
+    fn insecurelyWritePayloadRpData(&self, _: &[u8; 32]) -> BinderResult<()> {
+        unimplemented()
+    }
 }
 
 fn unimplemented<T>() -> BinderResult<T> {

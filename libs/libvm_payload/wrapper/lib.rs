@@ -31,7 +31,9 @@ use std::path::Path;
 use std::ptr;
 use vm_payload_bindgen::{
     AIBinder, AVmPayload_getApkContentsPath, AVmPayload_getEncryptedStoragePath,
-    AVmPayload_getVmInstanceSecret, AVmPayload_notifyPayloadReady, AVmPayload_runVsockRpcServer,
+    AVmPayload_getVmInstanceSecret, AVmPayload_notifyPayloadReady,
+    AVmPayload_readRollbackProtectedSecret, AVmPayload_runVsockRpcServer,
+    AVmPayload_writeRollbackProtectedSecret,
 };
 
 /// The functions declared here are restricted to VMs created with a config file;
@@ -193,4 +195,16 @@ pub fn get_vm_instance_secret(identifier: &[u8], secret: &mut [u8]) {
             secret_size,
         )
     }
+}
+
+/// Read payload's `data` written on behalf of the payload in Secretkeeper.
+pub fn read_rollback_protected_secret(data: &mut [u8]) -> i32 {
+    // SAFETY: The function only reads from`[data]` within its bounds.
+    unsafe { AVmPayload_readRollbackProtectedSecret(data.as_ptr() as *mut c_void, data.len()) }
+}
+
+/// Write `data`, on behalf of the payload, to Secretkeeper.
+pub fn write_rollback_protected_secret(data: &[u8]) -> i32 {
+    // SAFETY: The function only writes to `[data]` within its bounds.
+    unsafe { AVmPayload_writeRollbackProtectedSecret(data.as_ptr() as *const c_void, data.len()) }
 }

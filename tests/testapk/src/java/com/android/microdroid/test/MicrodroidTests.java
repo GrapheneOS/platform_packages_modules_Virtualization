@@ -1866,6 +1866,79 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mFileContent).isEqualTo(EXAMPLE_STRING);
     }
 
+    private boolean deviceCapableOfProtectedVm() {
+        int capabilities = getVirtualMachineManager().getCapabilities();
+        if ((capabilities & CAPABILITY_PROTECTED_VM) != 0) {
+            return true;
+        }
+        return false;
+    }
+
+    private void ensureUpdatableVmSupported() throws Exception {
+        if (getVendorApiLevel() >= 202504 && deviceCapableOfProtectedVm()) {
+            assertTrue(
+                    "Missing Updatable VM support, have you declared Secretkeeper interface?",
+                    isUpdatableVmSupported());
+        } else {
+            assumeTrue("Device does not support Updatable VM", isUpdatableVmSupported());
+        }
+    }
+
+    @Test
+    public void rollbackProtectedDataOfPayload() throws Exception {
+        assumeSupportedDevice();
+        // Rollback protected data is only possible if Updatable VMs is supported -
+        // which implies Secretkeeper support.
+        ensureUpdatableVmSupported();
+        byte[] value1 = new byte[32];
+        Arrays.fill(value1, (byte) 0xcc);
+        byte[] value2 = new byte[32];
+        Arrays.fill(value2, (byte) 0xdd);
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mPayloadRpData = ts.insecurelyReadPayloadRpData();
+                        });
+        // ainsecurelyReadPayloadRpData()` must've failed since no data was ever written!
+        assertWithMessage("The read (unexpectedly) succeeded!")
+                .that(testResults.mException)
+                .isNotNull();
+
+        // Re-run the same VM & write/read th RP data & verify it what we just wrote!
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            ts.insecurelyWritePayloadRpData(value1);
+                            tr.mPayloadRpData = ts.insecurelyReadPayloadRpData();
+                            ts.insecurelyWritePayloadRpData(value2);
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mPayloadRpData).isEqualTo(value1);
+
+        // Re-run the same VM again
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mPayloadRpData = ts.insecurelyReadPayloadRpData();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mPayloadRpData).isEqualTo(value2);
+    }
+
     @Test
     @CddTest
     public void canReadFileFromAssets_debugFull() throws Exception {

@@ -20,3 +20,5 @@ tonic-build = "0.12.3"
 maintainer = "ferrochrome-dev@google.com"
 copyright = "2024, The Android Open Source Project"
 depends = "$auto"
+maintainer-scripts = "debian/"
+systemd-units = { }

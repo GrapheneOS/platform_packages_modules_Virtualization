@@ -1,0 +1,53 @@
+prebuilt_etc {
+    name: "avf_early_vm_test_kernel",
+    filename: "rialto.bin",
+    src: ":empty_file",
+    target: {
+        android_arm64: {
+            src: ":rialto_signed",
+        },
+    },
+    installable: false,
+    system_ext_specific: true,
+    visibility: ["//visibility:private"],
+}
+
+rust_binary {
+    name: "avf_early_vm_test_launcher",
+    crate_name: "avf_early_vm_test_launcher",
+    srcs: ["src/main.rs"],
+    rustlibs: [
+        "android.system.virtualizationservice-rust",
+        "libanyhow",
+        "libclap",
+        "libhypervisor_props",
+        "liblog_rust",
+        "libservice_vm_comm",
+        "libservice_vm_manager",
+        "libvmclient",
+    ],
+    cfgs: select(release_flag("RELEASE_AVF_ENABLE_EARLY_VM"), {
+        true: ["early_vm_enabled"],
+        default: [],
+    }),
+    prefer_rlib: true,
+    system_ext_specific: true,
+    compile_multilib: "first",
+    installable: false,
+}
+
+python_test_host {
+    name: "avf_early_vm_test",
+    main: "avf_early_vm_test.py",
+    srcs: ["avf_early_vm_test.py"],
+    device_first_data: [
+        ":avf_early_vm_test_kernel",
+        ":avf_early_vm_test_launcher",
+    ],
+    data: ["early_vms_rialto_test.xml"],
+    test_suites: ["general-tests"],
+    test_config: "AndroidTest.xml",
+    test_options: {
+        unit_test: false,
+    },
+}

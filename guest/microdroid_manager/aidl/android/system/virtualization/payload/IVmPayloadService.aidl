@@ -78,6 +78,20 @@ interface IVmPayloadService {
     byte[] getVmInstanceSecret(in byte[] identifier, int size);
 
     /**
+     * Write `data`, on behalf of the client, to Secretkeeper.
+     * This is confidential to the pVM and protected via appropriate DICE policy
+     * on the payload's DICE chain.
+     */
+    void writePayloadRpData(in byte[32] data);
+
+    /**
+     * Read payload's `data` written on behalf of the payload in Secretkeeper.
+     * The returned value can be null either due to no value written or because
+     * Android maliciously deleted the value - Secretkeeper deletion are not authenticated.
+     */
+    @nullable byte[32] readPayloadRpData();
+
+    /**
      * Gets the DICE attestation chain for the VM.
      *
      * The DICE chain must not be made available to all VMs as it contains privacy breaking

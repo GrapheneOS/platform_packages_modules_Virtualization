@@ -52,6 +52,22 @@ typedef enum AVmAttestationStatus : int32_t {
 } AVmAttestationStatus;
 
 /**
+ * Introduced in API 36.
+ * Status type used to indicate error while accessing RollbackProtectedSecret.
+ */
+typedef enum AVmAccessRollbackProtectedSecretStatus : int32_t {
+    /**
+     * Relevant Entry not found. This can happen either due to no value was ever written or because
+     * Android maliciously deleted the value (deletions may not be authenticated).
+     */
+    AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ENTRY_NOT_FOUND = -1,
+    /** Requested access size is not supported by the implementation */
+    AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_BAD_SIZE = -2,
+    /** Access failed, this could be due to lacking support from Hardware */
+    AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ACCESS_FAILED = -3,
+} AVmAccessRollbackProtectedSecretStatus;
+
+/**
  * Notifies the host that the payload is ready.
  *
  * If the host app has set a `VirtualMachineCallback` for the VM, its
@@ -259,5 +275,33 @@ size_t AVmAttestationResult_getCertificateCount(const AVmAttestationResult* _Non
 size_t AVmAttestationResult_getCertificateAt(const AVmAttestationResult* _Nonnull result,
                                              size_t index, void* _Nullable data, size_t size)
         __INTRODUCED_IN(__ANDROID_API_V__);
+/**
+ * Writes up to n bytes from buffer starting at `buf`, on behalf of the payload, to rollback
+ * detectable storage. The number of bytes written may be less than n if, for example, the
+ * underlying storage has size constraints. This stored data is confidential to the pVM and
+ * protected via appropriate DICE policy on the payload's DICE chain.
+ *
+ * \param buf A pointer to data to be written. This should have the size of at least n bytes.
+ * \param n The maximum number of bytes to be filled in `buf`.
+ *
+ *  \return On success, the number of bytes written is returned. On error, appropriate
+ * AVmAccessRollbackProtectedSecretStatus (negative number) is returned.
+ */
+
+int32_t AVmPayload_writeRollbackProtectedSecret(const void* _Nonnull buf, size_t n)
+        __INTRODUCED_IN(36);
+/**
+ * Read up to n bytes of payload's data in rollback detectable storage into `buf`.
+ *
+ * \param buf A pointer to buffer where the requested data is written. This should have the size of
+ * at least n bytes.
+ * \param n The maximum number of bytes to be read.
+ *
+ *  \return On success, the number of bytes that would have been written to `buf` if n was
+ * sufficiently large. On error, appropriate AVmAccessRollbackProtectedSecretStatus(a negative
+ * number) is returned.
+ */
+int32_t AVmPayload_readRollbackProtectedSecret(void* _Nullable buf, size_t n) __INTRODUCED_IN(36);
+;
 
 __END_DECLS

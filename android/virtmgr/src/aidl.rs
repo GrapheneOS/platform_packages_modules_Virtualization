@@ -819,6 +819,8 @@ impl VirtualizationService {
             .unwrap_or(Ok(UsbConfig { controller: false }))
             .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?;
 
+        let detect_hangup = is_app_config && gdb_port.is_none();
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -846,7 +848,7 @@ impl VirtualizationService {
             ramdump,
             indirect_files,
             platform_version: parse_platform_version_req(&config.platformVersion)?,
-            detect_hangup: is_app_config,
+            detect_hangup,
             gdb_port,
             vfio_devices,
             dtbo,
