@@ -416,7 +416,7 @@ public class MainActivity :
             )
         val icon = Icon.createWithResource(resources, R.drawable.ic_launcher_foreground)
         val notification: Notification =
-            Notification.Builder(this, this.packageName)
+            Notification.Builder(this, Application.CHANNEL_LONG_RUNNING_ID)
                 .setSilent(true)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(resources.getString(R.string.service_notification_title))
