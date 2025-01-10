@@ -16,9 +16,40 @@
 package com.android.virtualization.terminal
 
 import android.app.Application as AndroidApplication
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 
 public class Application : AndroidApplication() {
     override fun onCreate() {
         super.onCreate()
+        setupNotificationChannels()
+    }
+
+    private fun setupNotificationChannels() {
+        val nm = getSystemService<NotificationManager>(NotificationManager::class.java)
+
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_LONG_RUNNING_ID,
+                getString(R.string.notification_channel_long_running_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
+        )
+
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_SYSTEM_EVENTS_ID,
+                getString(R.string.notification_channel_system_events_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            )
+        )
+    }
+
+    companion object {
+        const val CHANNEL_LONG_RUNNING_ID = "long_running"
+        const val CHANNEL_SYSTEM_EVENTS_ID = "system_events"
+
+        fun getInstance(c: Context): Application = c.getApplicationContext() as Application
     }
 }

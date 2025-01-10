@@ -172,4 +172,10 @@
 
     <!-- This string is for toast message to notify that VirGL is enabled. [CHAR LIMIT=40] -->
     <string name="virgl_enabled"><xliff:g>VirGL</xliff:g> is enabled</string>
+
+    <!-- This is the name of the notification channel for long-runnint tasks [CHAR LIMIT=none] -->
+    <string name="notification_channel_long_running_name">Long running tasks</string>
+
+    <!-- This is the name of the notification channel for system events [CHAR LIMIT=none] -->
+    <string name="notification_channel_system_events_name">System events</string>
 </resources>
