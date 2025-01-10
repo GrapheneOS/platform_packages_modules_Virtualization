@@ -33,6 +33,7 @@ struct VmPayloadService {
     allow_restricted_apis: bool,
     virtual_machine_service: Strong<dyn IVirtualMachineService>,
     secret: VmSecret,
+    is_new_instance: bool,
 }
 
 impl IVmPayloadService for VmPayloadService {
@@ -116,6 +117,10 @@ impl IVmPayloadService for VmPayloadService {
             .or_service_specific_exception(-1)?;
         Ok(())
     }
+
+    fn isNewInstance(&self) -> binder::Result<bool> {
+        Ok(self.is_new_instance)
+    }
 }
 
 impl Interface for VmPayloadService {}
@@ -126,8 +131,9 @@ impl VmPayloadService {
         allow_restricted_apis: bool,
         vm_service: Strong<dyn IVirtualMachineService>,
         secret: VmSecret,
+        is_new_instance: bool,
     ) -> VmPayloadService {
-        Self { allow_restricted_apis, virtual_machine_service: vm_service, secret }
+        Self { allow_restricted_apis, virtual_machine_service: vm_service, secret, is_new_instance }
     }
 
     fn check_restricted_apis_allowed(&self) -> binder::Result<()> {
@@ -147,9 +153,10 @@ pub(crate) fn register_vm_payload_service(
     vm_service: Strong<dyn IVirtualMachineService>,
     secret: VmSecret,
     vm_payload_service_fd: OwnedFd,
+    is_new_instance: bool,
 ) -> Result<()> {
     let vm_payload_binder = BnVmPayloadService::new_binder(
-        VmPayloadService::new(allow_restricted_apis, vm_service, secret),
+        VmPayloadService::new(allow_restricted_apis, vm_service, secret, is_new_instance),
         BinderFeatures::default(),
     );
 

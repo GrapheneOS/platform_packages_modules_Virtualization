@@ -1,0 +1,9 @@
+{
+    "app_name": "diced_open_dice_tests",
+    "uuid": "0b772481-7c24-4b9b-9d7c-441ac10d969b",
+    "min_heap": 32768,
+    "min_stack": 32768,
+    "mgmt_flags": {
+        "non_critical_app": true
+    }
+}

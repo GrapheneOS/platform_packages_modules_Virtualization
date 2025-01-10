@@ -17,6 +17,7 @@ LIBVM_PAYLOAD {
     AVmAttestationResult_getCertificateAt; # systemapi introduced=VanillaIceCream
     AVmPayload_writeRollbackProtectedSecret; # systemapi introduced=36
     AVmPayload_readRollbackProtectedSecret; # systemapi introduced=36
+    AVmPayload_isNewInstance;                # systemapi introduced=36
   local:
     *;
 };

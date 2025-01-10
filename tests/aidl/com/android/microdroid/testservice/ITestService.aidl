@@ -97,4 +97,11 @@ interface ITestService {
      * requests in flight to fail.
      */
     oneway void quit();
+
+    /**
+     * Checks whether the VM instance is new - i.e., if this is the first run of an instance.
+     *
+     * @return true on the first boot of the instance & false on subsequent boot.
+     */
+    boolean isNewInstance();
 }

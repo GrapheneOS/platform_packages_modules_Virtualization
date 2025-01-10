@@ -41,7 +41,7 @@ pub struct DiceConfigValues<'a> {
 }
 
 /// Formats a configuration descriptor following the Android Profile for DICE specification.
-/// See https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/android.md.
+/// See <https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/android.md>.
 pub fn bcc_format_config_descriptor(values: &DiceConfigValues, buffer: &mut [u8]) -> Result<usize> {
     let mut configs = 0;
 

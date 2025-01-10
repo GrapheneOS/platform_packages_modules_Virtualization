@@ -128,7 +128,7 @@ rust_defaults {
 
 rust_defaults {
     name: "libopen_dice_cbor_bindgen.rust_defaults",
-    wrapper_src: "bindgen/dice.h",
+    wrapper_src: "bindgen/dice/dice.h",
     crate_name: "open_dice_cbor_bindgen",
     source_stem: "bindings",
     bindgen_flags: [
@@ -184,7 +184,7 @@ rust_bindgen {
 
 rust_defaults {
     name: "libopen_dice_android_bindgen.rust_defaults",
-    wrapper_src: "bindgen/android.h",
+    wrapper_src: "bindgen/android/android.h",
     crate_name: "open_dice_android_bindgen",
     source_stem: "bindings",
     bindgen_flags: [
@@ -263,4 +263,10 @@ rust_test {
     auto_gen_config: true,
     clippy_lints: "none",
     lints: "none",
+}
+
+dirgroup {
+    name: "trusty_dirgroup_packages_modules_virtualization_libs_open_dice",
+    visibility: ["//trusty/vendor/google/aosp/scripts"],
+    dirs: ["."],
 }

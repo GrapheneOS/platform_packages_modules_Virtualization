@@ -286,5 +286,10 @@ public class VmShareServiceImpl extends Service {
         public void insecurelyWritePayloadRpData(byte[] data) {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public boolean isNewInstance() {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }

@@ -250,7 +250,7 @@ fn verify_payload_with_instance_img(
 
     if is_strict_boot() {
         // Provisioning must happen on the first boot and never again.
-        if is_new_instance() {
+        if is_new_instance_legacy() {
             ensure!(
                 saved_data.is_none(),
                 MicrodroidError::PayloadInvalidConfig(
@@ -297,6 +297,17 @@ fn verify_payload_with_instance_img(
     Ok(instance_data)
 }
 
+// The VM instance run can be
+// 1. Either Newly created - which can happen if this is really a new VM instance (or a malicious
+//    Android has deleted relevant secrets)
+// 2. Or Re-run from an already seen VM instance.
+#[derive(PartialEq, Eq)]
+enum VmInstanceState {
+    Unknown,
+    NewlyCreated,
+    PreviouslySeen,
+}
+
 fn try_run_payload(
     service: &Strong<dyn IVirtualMachineService>,
     vm_payload_service_fd: OwnedFd,
@@ -326,8 +337,25 @@ fn try_run_payload(
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
     let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
-    let vm_secret =
-        VmSecret::new(dice_artifacts, service).context("Failed to create VM secrets")?;
+    let mut state = VmInstanceState::Unknown;
+    let vm_secret = VmSecret::new(dice_artifacts, service, &mut state)
+        .context("Failed to create VM secrets")?;
+
+    let is_new_instance = match state {
+        VmInstanceState::NewlyCreated => true,
+        VmInstanceState::PreviouslySeen => false,
+        VmInstanceState::Unknown => {
+            // VmSecret instantiation was not able to determine the state. This should only happen
+            // for legacy secret mechanism (V1) - in which case fallback to legacy
+            // instance.img based determination of state.
+            ensure!(
+                !should_defer_rollback_protection(),
+                "VmInstanceState is Unknown whilst guest is expected to use V2 based secrets.
+                This should've never happened"
+            );
+            is_new_instance_legacy()
+        }
+    };
 
     if cfg!(dice_changes) {
         // Now that the DICE derivation is done, it's ok to allow payload code to run.
@@ -387,6 +415,7 @@ fn try_run_payload(
         service.clone(),
         vm_secret,
         vm_payload_service_fd,
+        is_new_instance,
     )?;
 
     // Set export_tombstones if enabled
@@ -488,7 +517,7 @@ fn is_strict_boot() -> bool {
     Path::new(AVF_STRICT_BOOT).exists()
 }
 
-fn is_new_instance() -> bool {
+fn is_new_instance_legacy() -> bool {
     Path::new(AVF_NEW_INSTANCE).exists()
 }
 

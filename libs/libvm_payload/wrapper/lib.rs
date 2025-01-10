@@ -31,7 +31,7 @@ use std::path::Path;
 use std::ptr;
 use vm_payload_bindgen::{
     AIBinder, AVmPayload_getApkContentsPath, AVmPayload_getEncryptedStoragePath,
-    AVmPayload_getVmInstanceSecret, AVmPayload_notifyPayloadReady,
+    AVmPayload_getVmInstanceSecret, AVmPayload_isNewInstance, AVmPayload_notifyPayloadReady,
     AVmPayload_readRollbackProtectedSecret, AVmPayload_runVsockRpcServer,
     AVmPayload_writeRollbackProtectedSecret,
 };
@@ -207,4 +207,12 @@ pub fn read_rollback_protected_secret(data: &mut [u8]) -> i32 {
 pub fn write_rollback_protected_secret(data: &[u8]) -> i32 {
     // SAFETY: The function only writes to `[data]` within its bounds.
     unsafe { AVmPayload_writeRollbackProtectedSecret(data.as_ptr() as *const c_void, data.len()) }
+}
+
+/// Checks whether the VM instance is new - i.e., if this is the first run of an instance.
+/// This is an indication of fresh new VM secrets. Payload can use this to setup the fresh
+/// instance if needed.
+pub fn is_new_instance_status() -> bool {
+    // SAFETY: The function returns bool, no arguments are needed.
+    unsafe { AVmPayload_isNewInstance() }
 }

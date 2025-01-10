@@ -1941,6 +1941,44 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
+    public void isNewInstanceTest() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        // TODO(b/325094712): Cuttlefish doesn't support device tree overlays which is required to
+        // find if the VM run is a new instance.
+        assumeFalse(
+                "Cuttlefish/Goldfish doesn't support device tree under /proc/device-tree",
+                isCuttlefish() || isGoldfish());
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_a", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mIsNewInstance = ts.isNewInstance();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mIsNewInstance).isTrue();
+
+        // Re-run the same VM & ensure isNewInstance is false.
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mIsNewInstance = ts.isNewInstance();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mIsNewInstance).isFalse();
+    }
+
+    @Test
+    @CddTest(requirements = {"9.17/C-1-1", "9.17/C-2-1"})
     public void canReadFileFromAssets_debugFull() throws Exception {
         assumeSupportedDevice();
 

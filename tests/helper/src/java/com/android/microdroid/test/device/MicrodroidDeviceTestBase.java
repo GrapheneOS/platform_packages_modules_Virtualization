@@ -615,6 +615,7 @@ public abstract class MicrodroidDeviceTestBase {
         public byte[] mInstanceSecret;
         public int mPageSize;
         public byte[] mPayloadRpData;
+        public boolean mIsNewInstance;
 
         public void assertNoException() {
             if (mException != null) {

@@ -38,6 +38,7 @@ use std::fs;
 use zeroize::Zeroizing;
 use std::sync::Mutex;
 use std::sync::Arc;
+use crate::VmInstanceState;
 
 const ENCRYPTEDSTORE_KEY_IDENTIFIER: &str = "encryptedstore_key";
 const AUTHORITY_HASH: i64 = -4670549;
@@ -99,6 +100,7 @@ impl VmSecret {
     pub fn new(
         dice_artifacts: OwnedDiceArtifacts,
         vm_service: &Strong<dyn IVirtualMachineService>,
+        state: &mut VmInstanceState,
     ) -> Result<Self> {
         ensure!(dice_artifacts.bcc().is_some(), "Dice chain missing");
         if !crate::should_defer_rollback_protection() {
@@ -116,11 +118,13 @@ impl VmSecret {
         let session = SkVmSession::new(vm_service, &explicit_dice, policy)?;
         let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
         if let Some(secret) = session.get_secret(id)? {
-            *skp_secret = secret
+            *skp_secret = secret;
+            *state = VmInstanceState::PreviouslySeen;
         } else {
             log::warn!("No entry found in Secretkeeper for this VM instance, creating new secret.");
             *skp_secret = rand::random();
             session.store_secret(id, skp_secret.clone())?;
+            *state = VmInstanceState::NewlyCreated;
         }
         Ok(Self::V2 {
             instance_id: id,
