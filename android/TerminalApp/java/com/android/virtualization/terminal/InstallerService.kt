@@ -71,7 +71,7 @@ class InstallerService : Service() {
                 PendingIntent.FLAG_IMMUTABLE,
             )
         notification =
-            Notification.Builder(this, this.packageName)
+            Notification.Builder(this, Application.CHANNEL_LONG_RUNNING_ID)
                 .setSilent(true)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(getString(R.string.installer_notif_title_text))
