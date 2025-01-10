@@ -187,7 +187,7 @@ class VmLauncherService : Service() {
             resources.getString(R.string.service_notification_force_quit_action)
         val stopNotificationTitle: String? =
             resources.getString(R.string.service_notification_close_title)
-        return Notification.Builder(this, this.packageName)
+        return Notification.Builder(this, Application.CHANNEL_SYSTEM_EVENTS_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(stopNotificationTitle)
             .setOngoing(true)
