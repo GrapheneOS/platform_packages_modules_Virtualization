@@ -209,7 +209,10 @@ public class MainActivity :
                     view: WebView?,
                     request: WebResourceRequest?,
                 ): Boolean {
-                    return false
+                    val intent = Intent(Intent.ACTION_VIEW, request?.url)
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                    return true
                 }
 
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -293,6 +296,8 @@ public class MainActivity :
             info,
             executorService,
             object : NsdManager.ServiceInfoCallback {
+                var loaded: Boolean = false
+
                 override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {}
 
                 override fun onServiceInfoCallbackUnregistered() {}
@@ -300,13 +305,15 @@ public class MainActivity :
                 override fun onServiceLost() {}
 
                 override fun onServiceUpdated(info: NsdServiceInfo) {
-                    nsdManager.unregisterServiceInfoCallback(this)
-
                     Log.i(TAG, "Service found: $info")
                     val ipAddress = info.hostAddresses[0].hostAddress
                     val port = info.port
                     val url = getTerminalServiceUrl(ipAddress, port)
-                    runOnUiThread(Runnable { terminalView.loadUrl(url.toString()) })
+                    if (!loaded) {
+                        loaded = true
+                        nsdManager.unregisterServiceInfoCallback(this)
+                        runOnUiThread(Runnable { terminalView.loadUrl(url.toString()) })
+                    }
                 }
             },
         )
