@@ -9,3 +9,11 @@ flag {
   bug: "383347947"
   is_fixed_read_only: true
 }
+
+flag {
+  name: "terminal_gui_support"
+  is_exported: true
+  namespace: "virtualization"
+  description: "Flag for GUI support in terminal"
+  bug: "386296118"
+}

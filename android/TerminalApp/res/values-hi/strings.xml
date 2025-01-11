@@ -48,8 +48,7 @@
     <string name="settings_port_forwarding_title" msgid="4971368519093858377">"पोर्ट कंट्रोल"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"लिसनिंग पोर्ट को अनुमति दें या अनुमति न दें"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"लिसनिंग पोर्ट"</string>
-    <!-- no translation found for settings_port_forwarding_active_ports_content (1818090784030797758) -->
-    <skip />
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"अनुमति पा चुके सभी पोर्ट को सेव किया गया"</string>
     <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"जोड़ें"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> को मिटाएं"</string>
@@ -61,8 +60,7 @@
     <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"अमान्य पोर्ट संख्या"</string>
     <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"पोर्ट पहले से मौजूद है"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"टर्मिनल, एक नया पोर्ट खोलने का अनुरोध कर रहा है"</string>
-    <!-- no translation found for settings_port_forwarding_notification_content (779450349212040908) -->
-    <skip />
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"पोर्ट खोलने का अनुरोध किया गया: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकार करें"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"अस्वीकार करें"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"इमेज रिकवर करें"</string>

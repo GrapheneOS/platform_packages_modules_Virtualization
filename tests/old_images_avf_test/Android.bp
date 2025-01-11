@@ -1,0 +1,57 @@
+prebuilt_etc {
+    name: "backcompat_rialto_kernel",
+    filename: "rialto.bin",
+    src: ":empty_file",
+    target: {
+        android_arm64: {
+            src: ":rialto_signed",
+        },
+    },
+    installable: false,
+    visibility: ["//visibility:private"],
+}
+
+prebuilt_etc {
+    name: "android16_rialto_kernel",
+    filename: "android16_rialto.bin",
+    src: ":empty_file",
+    target: {
+        android_arm64: {
+            src: "images/android16_rialto.bin",
+        },
+    },
+    installable: false,
+    visibility: ["//visibility:private"],
+}
+
+rust_test {
+    name: "old_images_avf_test",
+    crate_name: "old_images_avf_test",
+    srcs: ["src/main.rs"],
+    rustlibs: [
+        "libanyhow",
+        "libavf_bindgen",
+        "libciborium",
+        "liblog_rust",
+        "libhypervisor_props",
+        "libscopeguard",
+        "libservice_vm_comm",
+        "libvsock",
+    ],
+    shared_libs: ["libavf"],
+    test_suites: [
+        "general-tests",
+    ],
+    data: [
+        ":android16_rialto_kernel",
+        ":backcompat_rialto_kernel",
+    ],
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+    test_config: "AndroidTest.xml",
+    compile_multilib: "first",
+}

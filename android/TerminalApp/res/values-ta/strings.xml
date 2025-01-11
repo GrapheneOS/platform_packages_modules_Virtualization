@@ -48,8 +48,7 @@
     <string name="settings_port_forwarding_title" msgid="4971368519093858377">"போர்ட் கட்டுப்பாடு"</string>
     <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"லிஸனிங் போர்ட்டுகளை அனுமதித்தல்/நிராகரித்தல்"</string>
     <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"லிஸனிங் போர்ட்டுகள்"</string>
-    <!-- no translation found for settings_port_forwarding_active_ports_content (1818090784030797758) -->
-    <skip />
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"சேமித்த அனுமதிக்கப்பட்ட போர்ட்டுகள்"</string>
     <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"சேர்க்கும்"</string>
     <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ஐ நீக்கும்"</string>
@@ -61,8 +60,7 @@
     <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"தவறான போர்ட் எண்"</string>
     <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"போர்ட் ஏற்கெனவே உள்ளது"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"டெர்மினல் புதிய போர்ட்டைத் திறக்குமாறு கேட்கிறது"</string>
-    <!-- no translation found for settings_port_forwarding_notification_content (779450349212040908) -->
-    <skip />
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"போர்ட் கேட்கப்பட்டுள்ளது: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ஏற்கிறேன்"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"நிராகரி"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"மீட்டெடுத்தல்"</string>
