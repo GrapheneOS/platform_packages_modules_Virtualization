@@ -36,6 +36,7 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
+import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.Runner.Companion.create
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
@@ -214,6 +215,17 @@ class VmLauncherService : Service() {
                     .build()
             )
             Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
+            changed = true
+        }
+
+        // TODO(jeongik): let it configurable
+        if (terminalGuiSupport()) {
+            builder.setDisplayConfig(
+                VirtualMachineCustomImageConfig.DisplayConfig.Builder()
+                    .setWidth(1920)
+                    .setHeight(1080)
+                    .build()
+            )
             changed = true
         }
 
