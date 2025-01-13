@@ -11,12 +11,16 @@ android_app {
     asset_dirs: ["assets"],
     resource_dirs: ["res"],
     static_libs: [
+        // TODO(b/330257000): will be removed when binder RPC is used
+        "android.system.virtualizationservice_internal-java",
         "androidx-constraintlayout_constraintlayout",
         "androidx.window_window",
         "apache-commons-compress",
         "com.google.android.material_material",
         "debian-service-grpclib-lite",
         "gson",
+        // TODO(b/331708504): will be removed when AVF framework handles surface
+        "libcrosvm_android_display_service-java",
         "VmTerminalApp.aidl-java",
         "MicrodroidTestHelper", // for DeviceProperties class
     ],
