@@ -20,7 +20,7 @@
 
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="cleanup" value="true" />
-        <option name="push" value="vts_libavf_test->/data/local/tmp/vts_libavf_test" />
+        <option name="push" value="vts_libavf_test->/data/nativetest64/vendor/vts_libavf_test" />
         <option name="push" value="rialto.bin->/data/local/tmp/rialto.bin" />
     </target_preparer>
 
@@ -29,7 +29,7 @@
     </object>
 
     <test class="com.android.tradefed.testtype.rust.RustBinaryTest" >
-        <option name="test-device-path" value="/data/local/tmp" />
+        <option name="test-device-path" value="/data/nativetest64/vendor" />
         <option name="module-name" value="vts_libavf_test" />
         <!-- rialto uses a fixed port number for the host, can't run two tests at the same time -->
         <option name="native-test-flag" value="--test-threads=1" />

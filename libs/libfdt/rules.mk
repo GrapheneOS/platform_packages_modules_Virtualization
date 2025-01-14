@@ -27,7 +27,6 @@ MODULE_RUST_EDITION := 2021
 
 MODULE_LIBRARY_DEPS += \
 	external/dtc/libfdt \
-	packages/modules/Virtualization/libs/cstr \
 	packages/modules/Virtualization/libs/libfdt/bindgen \
 	$(call FIND_CRATE,zerocopy) \
 	$(call FIND_CRATE,static_assertions) \

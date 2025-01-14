@@ -33,4 +33,5 @@ rust_test {
     data: [":vts_libavf_test_kernel"],
     test_config: "AndroidTest.xml",
     compile_multilib: "first",
+    vendor: true,
 }

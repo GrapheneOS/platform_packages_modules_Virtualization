@@ -185,6 +185,7 @@ mod tests {
     use diced_open_dice::KeyAlgorithm;
     use diced_open_dice::HIDDEN_SIZE;
     use diced_sample_inputs::make_sample_bcc_and_cdis;
+    use hwtrust::{dice, session::Session};
     use pvmfw_avb::Capability;
     use pvmfw_avb::DebugLevel;
     use pvmfw_avb::Digest;
@@ -426,14 +427,11 @@ mod tests {
                 },
             )
             .expect("Failed to derive EcdsaP384 -> Ed25519 BCC");
-        let _bcc_handover3 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
+        let bcc_handover3 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
 
-        // TODO(b/378813154): Check the DICE chain with `hwtrust` once the profile version
-        // is updated.
-        // The check cannot be done now because parsing the chain causes the following error:
-        // Invalid payload at index 3. Caused by:
-        // 0: opendice.example.p256
-        // 1: unknown profile version
+        let mut session = Session::default();
+        session.set_allow_any_mode(true);
+        let _chain = dice::Chain::from_cbor(&session, bcc_handover3.bcc().unwrap()).unwrap();
     }
 
     fn to_bcc_handover(dice_artifacts: &dyn DiceArtifacts) -> Vec<u8> {

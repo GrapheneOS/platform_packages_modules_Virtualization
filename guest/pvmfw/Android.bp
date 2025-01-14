@@ -113,6 +113,7 @@ rust_test {
         "libcbor_util",
         "libciborium",
         "libdiced_open_dice_nostd",
+        "libhwtrust",
         "libpvmfw_avb_nostd",
         "libdiced_sample_inputs_nostd",
         "libzerocopy_nostd",
