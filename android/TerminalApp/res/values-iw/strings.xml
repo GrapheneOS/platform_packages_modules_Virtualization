@@ -20,7 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"תצוגת טרמינל"</string>
     <string name="terminal_input" msgid="4602512831433433551">"סמן"</string>
     <string name="empty_line" msgid="5012067143408427178">"שורה ריקה"</string>
-    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"כדי להקליד טקסט צריך להקיש הקשה כפולה"</string>
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"כדי להקליד טקסט צריך ללחוץ לחיצה כפולה"</string>
     <string name="installer_title_text" msgid="500663060973466805">"התקנה של טרמינל Linux"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"כדי להפעיל את טרמינל Linux, צריך להוריד נתונים בנפח של בערך <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> דרך הרשת.\nלהמשיך?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"הורדה רק באמצעות Wi-Fi"</string>

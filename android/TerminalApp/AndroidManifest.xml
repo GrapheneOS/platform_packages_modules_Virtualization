@@ -35,7 +35,8 @@
         android:theme="@style/VmTerminalAppTheme"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
-        android:enabled="false">
+        android:enabled="false"
+        android:name=".Application">
         <activity android:name=".MainActivity"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
                   android:exported="true">

@@ -101,6 +101,9 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     private static final String INSTANCE_IMG = TEST_ROOT + "instance.img";
     private static final String INSTANCE_ID_FILE = TEST_ROOT + "instance_id";
 
+    private static final String DEBUG_LEVEL_FULL = "full";
+    private static final String DEBUG_LEVEL_NONE = "none";
+
     private static final int MIN_MEM_ARM64 = 170;
     private static final int MIN_MEM_X86_64 = 196;
 
@@ -465,7 +468,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         try {
             microdroid =
                     MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                            .debugLevel("full")
+                            .debugLevel(DEBUG_LEVEL_FULL)
                             .memoryMib(minMemorySize())
                             .cpuTopology("match_host")
                             .protectedVm(true)
@@ -495,7 +498,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Act
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(true)
@@ -644,7 +647,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
@@ -751,7 +754,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                                 VIRT_APEX + "bin/vm",
                                 "run-app",
                                 "--debug",
-                                debuggable ? "full" : "none",
+                                debuggable ? DEBUG_LEVEL_FULL : DEBUG_LEVEL_NONE,
                                 apkPath,
                                 idsigPath,
                                 instanceImgPath));
@@ -871,7 +874,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String configPath = "assets/vm_config_apex.json"; // path inside the APK
         ITestDevice microdroid =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
@@ -1023,7 +1026,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String configPath = "assets/vm_config.json"; // path inside the APK
         testMicrodroidBootsWithBuilder(
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
@@ -1061,7 +1064,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String configPath = "assets/vm_config.json";
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
@@ -1175,7 +1178,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                                 "shell",
                                 VIRT_APEX + "bin/vm",
                                 "run-app",
-                                "--debug full",
+                                "--debug " + DEBUG_LEVEL_FULL,
                                 "--console " + CONSOLE_PATH,
                                 "--payload-binary-name",
                                 "MicrodroidEmptyPayloadJniLib.so",
@@ -1357,7 +1360,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
@@ -1403,7 +1406,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String configPath = "assets/vm_config.json";
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
@@ -1434,7 +1437,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Start the VM with the dump DT option.
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(mem_size)
                         .cpuTopology("one_cpu")
                         .protectedVm(false)
@@ -1464,7 +1467,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Start the VM with the dump DT option.
         mMicrodroidDevice =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
-                        .debugLevel("full")
+                        .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(mem_size)
                         .cpuTopology("one_cpu")
                         .protectedVm(true)

@@ -149,6 +149,8 @@ class VmLauncherService : Service() {
             info,
             executorService!!,
             object : NsdManager.ServiceInfoCallback {
+                var started: Boolean = false
+
                 override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {}
 
                 override fun onServiceInfoCallbackUnregistered() {}
@@ -156,9 +158,12 @@ class VmLauncherService : Service() {
                 override fun onServiceLost() {}
 
                 override fun onServiceUpdated(info: NsdServiceInfo) {
-                    nsdManager.unregisterServiceInfoCallback(this)
                     Log.i(TAG, "Service found: $info")
-                    startDebianServer(info.hostAddresses[0].hostAddress)
+                    if (!started) {
+                        started = true
+                        nsdManager.unregisterServiceInfoCallback(this)
+                        startDebianServer(info.hostAddresses[0].hostAddress)
+                    }
                 }
             },
         )
@@ -182,7 +187,7 @@ class VmLauncherService : Service() {
             resources.getString(R.string.service_notification_force_quit_action)
         val stopNotificationTitle: String? =
             resources.getString(R.string.service_notification_close_title)
-        return Notification.Builder(this, this.packageName)
+        return Notification.Builder(this, Application.CHANNEL_SYSTEM_EVENTS_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(stopNotificationTitle)
             .setOngoing(true)

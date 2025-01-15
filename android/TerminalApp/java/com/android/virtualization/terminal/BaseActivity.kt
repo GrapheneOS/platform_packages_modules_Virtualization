@@ -16,8 +16,6 @@
 package com.android.virtualization.terminal
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -25,18 +23,6 @@ import androidx.appcompat.app.AppCompatActivity
 abstract class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val notificationManager =
-            getSystemService<NotificationManager>(NotificationManager::class.java)
-        if (notificationManager.getNotificationChannel(this.packageName) == null) {
-            val channel =
-                NotificationChannel(
-                    this.packageName,
-                    getString(R.string.app_name),
-                    NotificationManager.IMPORTANCE_HIGH,
-                )
-            notificationManager.createNotificationChannel(channel)
-        }
-
         if (this !is ErrorActivity) {
             val currentThread = Thread.currentThread()
             if (currentThread.uncaughtExceptionHandler !is TerminalExceptionHandler) {
