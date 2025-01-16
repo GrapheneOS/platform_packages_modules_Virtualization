@@ -13,9 +13,9 @@
 // limitations under the License.
 
 //! This module implements a retry version for multiple DICE functions that
-//! require preallocated output buffer. As the retry functions require
-//! memory allocation on heap, currently we only expose these functions in
-//! std environment.
+//! require preallocated output buffer. When running without std the allocation
+//! of this buffer may fail and callers will see Error::MemoryAllocationError.
+//! When running with std, allocation may fail.
 
 use crate::bcc::{bcc_format_config_descriptor, bcc_main_flow, DiceConfigValues};
 use crate::dice::{
@@ -62,6 +62,9 @@ where
     let mut buffer = Vec::new();
     match f(&mut buffer) {
         Err(DiceError::BufferTooSmall(actual_size)) => {
+            #[cfg(not(feature = "std"))]
+            buffer.try_reserve_exact(actual_size).map_err(|_| DiceError::MemoryAllocationError)?;
+
             buffer.resize(actual_size, 0);
             f(&mut buffer)?;
         }

@@ -101,7 +101,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     private static final String INSTANCE_IMG = TEST_ROOT + "instance.img";
     private static final String INSTANCE_ID_FILE = TEST_ROOT + "instance_id";
 
-    private static final String DEBUG_LEVEL_FULL = "full";
+    private static final String DEBUG_LEVEL_FULL = "full --enable-earlycon";
     private static final String DEBUG_LEVEL_NONE = "none";
 
     private static final int MIN_MEM_ARM64 = 170;

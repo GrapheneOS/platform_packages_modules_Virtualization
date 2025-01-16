@@ -26,9 +26,9 @@ extern crate alloc;
 use crate::layout::print_addresses;
 use crate::pci::check_pci;
 use alloc::{vec, vec::Vec};
-use core::ptr::addr_of_mut;
 use libfdt::Fdt;
 use log::{debug, error, info, trace, warn, LevelFilter};
+use spin::mutex::SpinMutex;
 use vmbase::{
     bionic, configure_heap,
     fdt::pci::PciInfo,
@@ -39,8 +39,8 @@ use vmbase::{
 };
 
 static INITIALISED_DATA: [u32; 4] = [1, 2, 3, 4];
-static mut ZEROED_DATA: [u32; 10] = [0; 10];
-static mut MUTABLE_DATA: [u32; 4] = [1, 2, 3, 4];
+static ZEROED_DATA: SpinMutex<[u32; 10]> = SpinMutex::new([0; 10]);
+static MUTABLE_DATA: SpinMutex<[u32; 4]> = SpinMutex::new([1, 2, 3, 4]);
 
 generate_image_header!();
 main!(main);
@@ -103,22 +103,16 @@ fn check_stack_guard() {
 
 fn check_data() {
     info!("INITIALISED_DATA: {:?}", INITIALISED_DATA.as_ptr());
-    // SAFETY: We only print the addresses of the static mutable variable, not actually access it.
-    info!("ZEROED_DATA: {:?}", unsafe { ZEROED_DATA.as_ptr() });
-    // SAFETY: We only print the addresses of the static mutable variable, not actually access it.
-    info!("MUTABLE_DATA: {:?}", unsafe { MUTABLE_DATA.as_ptr() });
 
     assert_eq!(INITIALISED_DATA[0], 1);
     assert_eq!(INITIALISED_DATA[1], 2);
     assert_eq!(INITIALISED_DATA[2], 3);
     assert_eq!(INITIALISED_DATA[3], 4);
 
-    // SAFETY: Nowhere else in the program accesses this static mutable variable, so there is no
-    // chance of concurrent access.
-    let zeroed_data = unsafe { &mut *addr_of_mut!(ZEROED_DATA) };
-    // SAFETY: Nowhere else in the program accesses this static mutable variable, so there is no
-    // chance of concurrent access.
-    let mutable_data = unsafe { &mut *addr_of_mut!(MUTABLE_DATA) };
+    let zeroed_data = &mut *ZEROED_DATA.lock();
+    let mutable_data = &mut *MUTABLE_DATA.lock();
+    info!("ZEROED_DATA: {:?}", zeroed_data.as_ptr());
+    info!("MUTABLE_DATA: {:?}", mutable_data.as_ptr());
 
     for element in zeroed_data.iter() {
         assert_eq!(*element, 0);

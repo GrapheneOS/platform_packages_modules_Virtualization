@@ -49,7 +49,7 @@
         };
 
         chosen {
-                bootargs = "panic=-1 crashkernel=31M";
+                bootargs = "panic=-1 crashkernel=31M earlycon=uart8250,mmio,0x3f8 keep_bootcon";
                 kaslr-seed = <>;
                 linux,initrd-end = <0x81202104>;
                 linux,initrd-start = <0x81000000>;

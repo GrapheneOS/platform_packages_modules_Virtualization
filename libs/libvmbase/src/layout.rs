@@ -22,7 +22,6 @@ use crate::linker::__stack_chk_guard;
 use crate::memory::{max_stack_size, page_4kb_of, PAGE_SIZE};
 use aarch64_paging::paging::VirtualAddress;
 use core::ops::Range;
-use core::ptr::addr_of;
 use static_assertions::const_assert_eq;
 
 /// First address that can't be translated by a level 1 TTBR0_EL1.
@@ -44,9 +43,7 @@ const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[3]));
 #[macro_export]
 macro_rules! linker_addr {
     ($symbol:ident) => {{
-        // SAFETY: We're just getting the address of an extern static symbol provided by the linker,
-        // not dereferencing it.
-        let addr = unsafe { addr_of!($crate::linker::$symbol) as usize };
+        let addr = (&raw const $crate::linker::$symbol) as usize;
         VirtualAddress(addr)
     }};
 }
@@ -132,5 +129,5 @@ pub fn stack_chk_guard() -> u64 {
     // SAFETY: __stack_chk_guard shouldn't have any mutable aliases unless the stack overflows. If
     // it does, then there could be undefined behaviour all over the program, but we want to at
     // least have a chance at catching it.
-    unsafe { addr_of!(__stack_chk_guard).read_volatile() }
+    unsafe { (&raw const __stack_chk_guard).read_volatile() }
 }

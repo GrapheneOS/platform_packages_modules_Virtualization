@@ -348,25 +348,40 @@ Result<void> start_test_service() {
         }
 
         ScopedAStatus insecurelyReadPayloadRpData(std::array<uint8_t, 32>* out) override {
-            int32_t ret = AVmPayload_readRollbackProtectedSecret(out->data(), 32);
-            if (ret != 32) {
-                return ScopedAStatus::fromServiceSpecificError(ret);
+            if (__builtin_available(android 36, *)) {
+                int32_t ret = AVmPayload_readRollbackProtectedSecret(out->data(), 32);
+                if (ret != 32) {
+                    return ScopedAStatus::fromServiceSpecificError(ret);
+                }
+                return ScopedAStatus::ok();
+            } else {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "not available before SDK 36");
             }
-            return ScopedAStatus::ok();
         }
 
         ScopedAStatus insecurelyWritePayloadRpData(
                 const std::array<uint8_t, 32>& inputData) override {
-            int32_t ret = AVmPayload_writeRollbackProtectedSecret(inputData.data(), 32);
-            if (ret != 32) {
-                return ScopedAStatus::fromServiceSpecificError(ret);
+            if (__builtin_available(android 36, *)) {
+                int32_t ret = AVmPayload_writeRollbackProtectedSecret(inputData.data(), 32);
+                if (ret != 32) {
+                    return ScopedAStatus::fromServiceSpecificError(ret);
+                }
+                return ScopedAStatus::ok();
+            } else {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "not available before SDK 36");
             }
-            return ScopedAStatus::ok();
         }
 
         ScopedAStatus isNewInstance(bool* is_new_instance_out) override {
-            *is_new_instance_out = AVmPayload_isNewInstance();
-            return ScopedAStatus::ok();
+            if (__builtin_available(android 36, *)) {
+                *is_new_instance_out = AVmPayload_isNewInstance();
+                return ScopedAStatus::ok();
+            } else {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "not available before SDK 36");
+            }
         }
 
         ScopedAStatus quit() override { exit(0); }

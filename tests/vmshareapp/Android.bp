@@ -13,4 +13,8 @@ android_test_helper_app {
         "MicrodroidPayloadInOtherAppNativeLib",
     ],
     min_sdk_version: "34",
+    sdk_version: "system_current",
+    // Ideally we should set something "latest finalized sdk version" here.
+    // However, soong doesn't seem to provide such functionality.
+    target_sdk_version: "VanillaIceCream",
 }

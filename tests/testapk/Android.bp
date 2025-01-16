@@ -173,6 +173,8 @@ cc_defaults {
         "liblog",
         "libprotobuf-cpp-lite-ndk",
     ],
+    // We've added support for updatable payloads in Android U.
+    min_sdk_version: "UpsideDownCake",
 }
 
 cc_library_shared {

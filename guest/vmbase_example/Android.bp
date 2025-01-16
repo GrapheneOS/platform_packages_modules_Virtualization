@@ -12,6 +12,7 @@ rust_ffi_static {
         "libdiced_open_dice_nostd",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
+        "libspin_nostd",
         "libvirtio_drivers",
         "libvmbase",
     ],

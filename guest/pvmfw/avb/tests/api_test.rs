@@ -23,7 +23,6 @@ use pvmfw_avb::{verify_payload, Capability, DebugLevel, PvmfwVerifyError, Verifi
 use std::{
     fs,
     mem::{offset_of, size_of},
-    ptr,
 };
 use utils::*;
 
@@ -414,9 +413,9 @@ fn vbmeta_with_verification_flag_disabled_fails_verification() -> Result<()> {
     // vbmeta_header is unaligned; copy flags to local variable
     let vbmeta_header_flags = vbmeta_header.flags;
     assert_eq!(0, vbmeta_header_flags, "The disable flag should not be set in the latest kernel.");
-    let flags_addr = ptr::addr_of!(vbmeta_header.flags) as *const u8;
+    let flags_addr = (&raw const vbmeta_header.flags).cast::<u8>();
     // SAFETY: It is safe as both raw pointers `flags_addr` and `vbmeta_header` are not null.
-    let flags_offset = unsafe { flags_addr.offset_from(ptr::addr_of!(vbmeta_header) as *const u8) };
+    let flags_offset = unsafe { flags_addr.offset_from((&raw const vbmeta_header).cast::<u8>()) };
     let flags_offset = usize::try_from(footer.vbmeta_offset)? + usize::try_from(flags_offset)?;
 
     // Act.
