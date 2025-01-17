@@ -816,7 +816,7 @@ impl FileSystem for AuthFs {
                     // FUSE ioctl is limited, thus we can't implement fs-verity ioctls without a
                     // kernel change (see b/196635431). Until it's possible, use
                     // xattr to expose what we need as an authfs specific API.
-                    if name != CStr::from_bytes_with_nul(b"authfs.fsverity.digest\0").unwrap() {
+                    if name != c"authfs.fsverity.digest" {
                         return Err(io::Error::from_raw_os_error(libc::ENODATA));
                     }
 

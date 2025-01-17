@@ -344,7 +344,7 @@ impl<'a> FdtNode<'a> {
     }
 }
 
-impl<'a> PartialEq for FdtNode<'a> {
+impl PartialEq for FdtNode<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.fdt.as_ptr() == other.fdt.as_ptr() && self.offset == other.offset
     }

@@ -18,7 +18,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use ciborium::{de, ser, value::Value};
-use core::ffi::CStr;
 use coset::{iana, Algorithm, AsCborValue, CoseKey, KeyOperation, KeyType, Label};
 use diced_open_dice::{
     derive_cdi_private_key_seed, keypair_from_seed, retry_bcc_format_config_descriptor,
@@ -115,7 +114,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
 
     // Gets the ABL certificate to as the root certificate of DICE chain.
     let config_values = DiceConfigValues {
-        component_name: Some(CStr::from_bytes_with_nul(b"ABL\0").unwrap()),
+        component_name: Some(c"ABL"),
         component_version: Some(1),
         resettable: true,
         security_version: Some(10),
@@ -148,7 +147,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
 
     // Appends AVB certificate to DICE chain.
     let config_values = DiceConfigValues {
-        component_name: Some(CStr::from_bytes_with_nul(b"AVB\0").unwrap()),
+        component_name: Some(c"AVB"),
         component_version: Some(1),
         resettable: true,
         security_version: Some(11),
@@ -173,7 +172,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
 
     // Appends Android certificate to DICE chain.
     let config_values = DiceConfigValues {
-        component_name: Some(CStr::from_bytes_with_nul(b"Android\0").unwrap()),
+        component_name: Some(c"Android"),
         component_version: Some(12),
         resettable: true,
         security_version: Some(12),

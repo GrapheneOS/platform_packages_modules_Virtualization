@@ -16,7 +16,6 @@
 
 use anyhow::{bail, ensure, Context, Result};
 use log::info;
-use std::ffi::CStr;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::os::fd::IntoRawFd;
@@ -87,10 +86,7 @@ fn run_rialto(protected_vm: bool) -> Result<()> {
 
     // SAFETY: config is the only reference to a valid object
     unsafe {
-        AVirtualMachineRawConfig_setName(
-            config,
-            CStr::from_bytes_with_nul(b"vts_libavf_test_rialto\0").unwrap().as_ptr(),
-        );
+        AVirtualMachineRawConfig_setName(config, c"vts_libavf_test_rialto".as_ptr());
         AVirtualMachineRawConfig_setKernel(config, kernel_fd);
         AVirtualMachineRawConfig_setProtectedVm(config, protected_vm);
         AVirtualMachineRawConfig_setMemoryMiB(config, VM_MEMORY_MB);

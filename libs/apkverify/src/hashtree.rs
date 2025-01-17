@@ -84,7 +84,7 @@ pub fn generate_hash_tree<R: Read>(
             let mut level0 = Cursor::new(&mut hash_tree[cur.start..cur.end]);
 
             let mut a_block = vec![0; block_size];
-            let mut num_blocks = (input_size + block_size - 1) / block_size;
+            let mut num_blocks = input_size.div_ceil(block_size);
             while num_blocks > 0 {
                 input.read_exact(&mut a_block)?;
                 let h = hash_one_block(&a_block, salt, block_size, algorithm)?;
@@ -138,7 +138,7 @@ fn calc_hash_levels(input_size: usize, block_size: usize, digest_size: usize) ->
         if input_size <= block_size {
             break;
         }
-        let num_blocks = (input_size + block_size - 1) / block_size;
+        let num_blocks = input_size.div_ceil(block_size);
         let hashes_size = round_to_multiple(num_blocks * digest_size, block_size);
         level_sizes.push(hashes_size);
     }

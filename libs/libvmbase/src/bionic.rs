@@ -86,15 +86,20 @@ fn get_errno() -> c_int {
     unsafe { ERRNO }
 }
 
+/// # Safety
+///
+/// `buffer` must point to an allocation of at least `length` bytes which is valid to write to and
+/// has no concurrent access while this function is running.
 #[no_mangle]
-extern "C" fn getentropy(buffer: *mut c_void, length: usize) -> c_int {
+unsafe extern "C" fn getentropy(buffer: *mut c_void, length: usize) -> c_int {
     if length > 256 {
         // The maximum permitted value for the length argument is 256.
         set_errno(EIO);
         return -1;
     }
 
-    // SAFETY: Just like libc, we need to assume that `ptr` is valid.
+    // SAFETY: The caller promised that `buffer` is a valid pointer to at least `length` bytes with
+    // no concurrent access.
     let buffer = unsafe { slice::from_raw_parts_mut(buffer.cast::<u8>(), length) };
     fill_with_entropy(buffer).unwrap();
 
@@ -167,9 +172,13 @@ static stdout: CFilePtr = CFilePtr::Stdout;
 #[no_mangle]
 static stderr: CFilePtr = CFilePtr::Stderr;
 
+/// # Safety
+///
+/// `c_str` must be a valid pointer to a NUL-terminated string which is not modified before this
+/// function returns.
 #[no_mangle]
-extern "C" fn fputs(c_str: *const c_char, stream: usize) -> c_int {
-    // SAFETY: Just like libc, we need to assume that `s` is a valid NULL-terminated string.
+unsafe extern "C" fn fputs(c_str: *const c_char, stream: usize) -> c_int {
+    // SAFETY: The caller promised that `c_str` is a valid NUL-terminated string.
     let c_str = unsafe { CStr::from_ptr(c_str) };
 
     if let (Ok(s), Ok(f)) = (c_str.to_str(), CFilePtr::try_from(stream)) {
@@ -181,11 +190,16 @@ extern "C" fn fputs(c_str: *const c_char, stream: usize) -> c_int {
     }
 }
 
+/// # Safety
+///
+/// `ptr` must be a valid pointer to an array of at least `size * nmemb` initialised bytes, which
+/// are not modified before this function returns.
 #[no_mangle]
-extern "C" fn fwrite(ptr: *const c_void, size: usize, nmemb: usize, stream: usize) -> usize {
+unsafe extern "C" fn fwrite(ptr: *const c_void, size: usize, nmemb: usize, stream: usize) -> usize {
     let length = size.saturating_mul(nmemb);
 
-    // SAFETY: Just like libc, we need to assume that `ptr` is valid.
+    // SAFETY: The caller promised that `ptr` is a valid pointer to at least `size * nmemb`
+    // initialised bytes, and `length` is no more than that.
     let bytes = unsafe { slice::from_raw_parts(ptr as *const u8, length) };
 
     if let (Ok(s), Ok(f)) = (str::from_utf8(bytes), CFilePtr::try_from(stream)) {
@@ -201,12 +215,16 @@ extern "C" fn strerror(n: c_int) -> *mut c_char {
     cstr_error(n).as_ptr().cast_mut().cast()
 }
 
+/// # Safety
+///
+/// `s` must be a valid pointer to a NUL-terminated string which is not modified before this
+/// function returns.
 #[no_mangle]
-extern "C" fn perror(s: *const c_char) {
+unsafe extern "C" fn perror(s: *const c_char) {
     let prefix = if s.is_null() {
         None
     } else {
-        // SAFETY: Just like libc, we need to assume that `s` is a valid NULL-terminated string.
+        // SAFETY: The caller promised that `s` is a valid NUL-terminated string.
         let c_str = unsafe { CStr::from_ptr(s) };
         if c_str.is_empty() {
             None

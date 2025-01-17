@@ -87,7 +87,7 @@ pub struct DmCryptTargetBuilder<'a> {
     opt_params: Vec<&'a str>,
 }
 
-impl<'a> Default for DmCryptTargetBuilder<'a> {
+impl Default for DmCryptTargetBuilder<'_> {
     fn default() -> Self {
         DmCryptTargetBuilder {
             cipher: CipherType::AES256HCTR2,

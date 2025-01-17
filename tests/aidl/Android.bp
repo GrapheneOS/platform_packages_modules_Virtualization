@@ -17,5 +17,8 @@ aidl_interface {
         cpp: {
             enabled: true,
         },
+        ndk: {
+            min_sdk_version: "UpsideDownCake",
+        },
     },
 }

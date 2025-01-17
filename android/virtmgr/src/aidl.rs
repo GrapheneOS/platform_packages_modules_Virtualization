@@ -2033,7 +2033,7 @@ enum BorrowedOrOwned<'a, T> {
     Owned(T),
 }
 
-impl<'a, T> AsRef<T> for BorrowedOrOwned<'a, T> {
+impl<T> AsRef<T> for BorrowedOrOwned<'_, T> {
     fn as_ref(&self) -> &T {
         match self {
             Self::Borrowed(b) => b,

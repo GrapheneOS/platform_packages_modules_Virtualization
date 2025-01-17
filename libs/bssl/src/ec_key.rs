@@ -471,7 +471,7 @@ impl Drop for EcSignature {
 /// Wrapper of an `EC_GROUP` reference.
 struct EcGroup<'a>(&'a EC_GROUP);
 
-impl<'a> EcGroup<'a> {
+impl EcGroup<'_> {
     /// Returns the NID that identifies the EC group of the key.
     fn curve_nid(&self) -> i32 {
         // SAFETY: It is safe since the inner pointer is valid and points to an initialized
@@ -518,7 +518,7 @@ impl<'a> EcGroup<'a> {
     }
 }
 
-impl<'a> AsRef<EC_GROUP> for EcGroup<'a> {
+impl AsRef<EC_GROUP> for EcGroup<'_> {
     fn as_ref(&self) -> &EC_GROUP {
         self.0
     }

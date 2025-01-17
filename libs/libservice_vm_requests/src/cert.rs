@@ -58,7 +58,7 @@ pub(crate) struct AttestationExtension<'a> {
     vm_components: Vec<VmComponent<'a>>,
 }
 
-impl<'a> AssociatedOid for AttestationExtension<'a> {
+impl AssociatedOid for AttestationExtension<'_> {
     const OID: ObjectIdentifier = AVF_ATTESTATION_EXTENSION_V1;
 }
 

@@ -185,7 +185,6 @@ impl Drop for DiceDriver<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::ffi::CStr;
     use diced_open_dice::{
         hash, retry_bcc_format_config_descriptor, DiceConfigValues, HIDDEN_SIZE,
     };
@@ -233,10 +232,7 @@ mod tests {
 
         let dice = DiceDriver::from_file(&file_path)?;
 
-        let values = DiceConfigValues {
-            component_name: Some(CStr::from_bytes_with_nul(b"test\0")?),
-            ..Default::default()
-        };
+        let values = DiceConfigValues { component_name: Some(c"test"), ..Default::default() };
         let desc = retry_bcc_format_config_descriptor(&values)?;
         let code_hash = hash(&String::from("test code hash").into_bytes())?;
         let authority_hash = hash(&String::from("test authority hash").into_bytes())?;

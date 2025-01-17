@@ -131,8 +131,7 @@ pub fn parse_fsverity_metadata(mut metadata_file: File) -> io::Result<Box<FSVeri
     };
 
     // merkle tree is at the next 4K boundary
-    let merkle_tree_offset =
-        (metadata_file.stream_position()? + CHUNK_SIZE - 1) / CHUNK_SIZE * CHUNK_SIZE;
+    let merkle_tree_offset = (metadata_file.stream_position()?).div_ceil(CHUNK_SIZE) * CHUNK_SIZE;
 
     Ok(Box::new(FSVerityMetadata { header, digest, signature, metadata_file, merkle_tree_offset }))
 }

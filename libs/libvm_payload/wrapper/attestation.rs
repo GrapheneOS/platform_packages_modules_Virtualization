@@ -265,7 +265,7 @@ pub struct CertIterator<'a> {
     current: usize, // Invariant: current <= count
 }
 
-impl<'a> Iterator for CertIterator<'a> {
+impl Iterator for CertIterator<'_> {
     type Item = Vec<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -284,5 +284,5 @@ impl<'a> Iterator for CertIterator<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for CertIterator<'a> {}
-impl<'a> FusedIterator for CertIterator<'a> {}
+impl ExactSizeIterator for CertIterator<'_> {}
+impl FusedIterator for CertIterator<'_> {}

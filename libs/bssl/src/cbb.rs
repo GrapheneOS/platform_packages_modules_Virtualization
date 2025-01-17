@@ -40,13 +40,13 @@ impl<'a> CbbFixed<'a> {
     }
 }
 
-impl<'a> AsRef<CBB> for CbbFixed<'a> {
+impl AsRef<CBB> for CbbFixed<'_> {
     fn as_ref(&self) -> &CBB {
         &self.cbb
     }
 }
 
-impl<'a> AsMut<CBB> for CbbFixed<'a> {
+impl AsMut<CBB> for CbbFixed<'_> {
     fn as_mut(&mut self) -> &mut CBB {
         &mut self.cbb
     }

@@ -72,4 +72,7 @@ rust_library {
     rustlibs: [
         "libstatslog_virtualization_rust_header",
     ],
+    flags: [
+        "-A clippy::needless-lifetimes",
+    ],
 }

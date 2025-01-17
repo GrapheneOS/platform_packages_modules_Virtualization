@@ -27,7 +27,7 @@ use log::{error, info, LevelFilter, debug};
 use rpcbinder::{RpcServer, RpcSession};
 use openssl::{ec::EcKey, sha::sha256, ecdsa::EcdsaSig};
 use std::convert::Infallible;
-use std::ffi::{CString, CStr};
+use std::ffi::CString;
 use std::fmt::Debug;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;
@@ -376,20 +376,16 @@ fn binder_status_to_attestation_status(status: binder::Status) -> AVmAttestation
 #[no_mangle]
 pub extern "C" fn AVmAttestationStatus_toString(status: AVmAttestationStatus) -> *const c_char {
     let message = match status {
-        AVmAttestationStatus::ATTESTATION_OK => {
-            CStr::from_bytes_with_nul(b"The remote attestation completes successfully.\0").unwrap()
-        }
+        AVmAttestationStatus::ATTESTATION_OK => c"The remote attestation completes successfully.",
         AVmAttestationStatus::ATTESTATION_ERROR_INVALID_CHALLENGE => {
-            CStr::from_bytes_with_nul(b"The challenge size is not between 0 and 64.\0").unwrap()
+            c"The challenge size is not between 0 and 64."
         }
         AVmAttestationStatus::ATTESTATION_ERROR_ATTESTATION_FAILED => {
-            CStr::from_bytes_with_nul(b"Failed to attest the VM. Please retry at a later time.\0")
-                .unwrap()
+            c"Failed to attest the VM. Please retry at a later time."
         }
-        AVmAttestationStatus::ATTESTATION_ERROR_UNSUPPORTED => CStr::from_bytes_with_nul(
-            b"Remote attestation is not supported in the current environment.\0",
-        )
-        .unwrap(),
+        AVmAttestationStatus::ATTESTATION_ERROR_UNSUPPORTED => {
+            c"Remote attestation is not supported in the current environment."
+        }
     };
     message.as_ptr()
 }

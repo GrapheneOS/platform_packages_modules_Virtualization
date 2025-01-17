@@ -66,7 +66,7 @@ impl<'a> CellIterator<'a> {
     }
 }
 
-impl<'a> Iterator for CellIterator<'a> {
+impl Iterator for CellIterator<'_> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -118,7 +118,7 @@ impl<'a> RegIterator<'a> {
     }
 }
 
-impl<'a> Iterator for RegIterator<'a> {
+impl Iterator for RegIterator<'_> {
     type Item = Reg<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -161,7 +161,7 @@ impl<'a> MemRegIterator<'a> {
     }
 }
 
-impl<'a> Iterator for MemRegIterator<'a> {
+impl Iterator for MemRegIterator<'_> {
     type Item = Range<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -215,8 +215,8 @@ impl<'a, A, P, S> RangesIterator<'a, A, P, S> {
     }
 }
 
-impl<'a, A: FromAddrCells, P: FromAddrCells, S: FromSizeCells> Iterator
-    for RangesIterator<'a, A, P, S>
+impl<A: FromAddrCells, P: FromAddrCells, S: FromSizeCells> Iterator
+    for RangesIterator<'_, A, P, S>
 {
     type Item = AddressRange<A, P, S>;
 

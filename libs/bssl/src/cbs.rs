@@ -42,13 +42,13 @@ impl<'a> Cbs<'a> {
     }
 }
 
-impl<'a> AsRef<CBS> for Cbs<'a> {
+impl AsRef<CBS> for Cbs<'_> {
     fn as_ref(&self) -> &CBS {
         &self.cbs
     }
 }
 
-impl<'a> AsMut<CBS> for Cbs<'a> {
+impl AsMut<CBS> for Cbs<'_> {
     fn as_mut(&mut self) -> &mut CBS {
         &mut self.cbs
     }

@@ -18,7 +18,7 @@
 pub const CHUNK_SIZE: u64 = 4096;
 
 pub fn divide_roundup(dividend: u64, divisor: u64) -> u64 {
-    (dividend + divisor - 1) / divisor
+    dividend.div_ceil(divisor)
 }
 
 /// Given `offset` and `length`, generates (offset, size) tuples that together form the same length,
