@@ -235,6 +235,7 @@ rdroidtest::test_main!();
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::loopdevice::LoopConfigOptions;
     use crypt::{CipherType, DmCryptTargetBuilder};
     use rdroidtest::{ignore_if, rdroidtest};
     use rustutils::system_properties;
@@ -328,10 +329,10 @@ mod tests {
             backing_file,
             0,
             sz,
-            /* direct_io */ true,
-            /* writable */ true,
+            &LoopConfigOptions { direct_io: true, writable: true, ..Default::default() },
         )
-        .unwrap();
+        .unwrap()
+        .path;
         let device_diff = device.to_owned() + "_diff";
 
         scopeguard::defer! {
@@ -372,10 +373,10 @@ mod tests {
             backing_file,
             0,
             sz,
-            /* direct_io */ true,
-            /* writable */ true,
+            &LoopConfigOptions { direct_io: true, writable: true, ..Default::default() },
         )
-        .unwrap();
+        .unwrap()
+        .path;
         let device_diff = device.to_owned() + "_diff";
         scopeguard::defer! {
             loopdevice::detach(&data_device).unwrap();

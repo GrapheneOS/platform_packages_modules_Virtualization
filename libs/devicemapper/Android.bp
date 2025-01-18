@@ -8,7 +8,6 @@ rust_defaults {
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
     edition: "2021",
-    prefer_rlib: true,
     rustlibs: [
         "libanyhow",
         "libbitflags",
@@ -18,16 +17,12 @@ rust_defaults {
         "libuuid",
         "libzerocopy",
     ],
-    multilib: {
-        lib32: {
-            enabled: false,
-        },
-    },
 }
 
 rust_library {
     name: "libdm_rust",
     defaults: ["libdm_rust.defaults"],
+    host_supported: true,
 }
 
 rust_test {

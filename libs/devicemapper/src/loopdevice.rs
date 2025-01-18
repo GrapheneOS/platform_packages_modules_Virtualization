@@ -59,14 +59,31 @@ pub fn loop_clr_fd(device_file: &File) -> Result<i32> {
     Ok(unsafe { _loop_clr_fd(device_file.as_raw_fd()) }?)
 }
 
+/// LOOP_CONFIGURE ioctl operation flags.
+#[derive(Default)]
+pub struct LoopConfigOptions {
+    /// Whether to use direct I/O
+    pub direct_io: bool,
+    /// Whether the device is writable
+    pub writable: bool,
+    /// Whether to autodestruct the device on last close
+    pub autoclear: bool,
+}
+
+pub struct LoopDevice {
+    /// The loop device file
+    pub file: File,
+    /// Path to the loop device
+    pub path: PathBuf,
+}
+
 /// Creates a loop device and attach the given file at `path` as the backing store.
 pub fn attach<P: AsRef<Path>>(
     path: P,
     offset: u64,
     size_limit: u64,
-    direct_io: bool,
-    writable: bool,
-) -> Result<PathBuf> {
+    options: &LoopConfigOptions,
+) -> Result<LoopDevice> {
     // Attaching a file to a loop device can make a race condition; a loop device number obtained
     // from LOOP_CTL_GET_FREE might have been used by another thread or process. In that case the
     // subsequent LOOP_CONFIGURE ioctl returns with EBUSY. Try until it succeeds.
@@ -80,8 +97,8 @@ pub fn attach<P: AsRef<Path>>(
 
     let begin = Instant::now();
     loop {
-        match try_attach(&path, offset, size_limit, direct_io, writable) {
-            Ok(loop_dev) => return Ok(loop_dev),
+        match try_attach(&path, offset, size_limit, options) {
+            Ok(loop_device) => return Ok(loop_device),
             Err(e) => {
                 if begin.elapsed() > TIMEOUT {
                     return Err(e);
@@ -102,9 +119,8 @@ fn try_attach<P: AsRef<Path>>(
     path: P,
     offset: u64,
     size_limit: u64,
-    direct_io: bool,
-    writable: bool,
-) -> Result<PathBuf> {
+    options: &LoopConfigOptions,
+) -> Result<LoopDevice> {
     // Get a free loop device
     wait_for_path(LOOP_CONTROL)?;
     let ctrl_file = OpenOptions::new()
@@ -117,8 +133,8 @@ fn try_attach<P: AsRef<Path>>(
     // Construct the loop_info64 struct
     let backing_file = OpenOptions::new()
         .read(true)
-        .write(writable)
-        .custom_flags(if direct_io { O_DIRECT } else { 0 })
+        .write(options.writable)
+        .custom_flags(if options.direct_io { O_DIRECT } else { 0 })
         .open(&path)
         .context(format!("failed to open {:?}", path.as_ref()))?;
     let mut config = loop_config::new_zeroed();
@@ -127,12 +143,16 @@ fn try_attach<P: AsRef<Path>>(
     config.info.lo_offset = offset;
     config.info.lo_sizelimit = size_limit;
 
-    if !writable {
+    if !options.writable {
         config.info.lo_flags = Flag::LO_FLAGS_READ_ONLY;
     }
 
-    if direct_io {
+    if options.direct_io {
         config.info.lo_flags.insert(Flag::LO_FLAGS_DIRECT_IO);
+    }
+
+    if options.autoclear {
+        config.info.lo_flags.insert(Flag::LO_FLAGS_AUTOCLEAR);
     }
 
     // Configure the loop device to attach the backing file
@@ -146,7 +166,7 @@ fn try_attach<P: AsRef<Path>>(
     loop_configure(&device_file, &config)
         .context(format!("Failed to configure {:?}", &device_path))?;
 
-    Ok(PathBuf::from(device_path))
+    Ok(LoopDevice { file: device_file, path: PathBuf::from(device_path) })
 }
 
 /// Detaches backing file from the loop device `path`.
@@ -185,7 +205,10 @@ mod tests {
         let a_file = a_dir.path().join("test");
         let a_size = 4096u64;
         create_empty_file(&a_file, a_size);
-        let dev = attach(a_file, 0, a_size, /* direct_io */ true, /* writable */ false).unwrap();
+        let dev =
+            attach(a_file, 0, a_size, &LoopConfigOptions { direct_io: true, ..Default::default() })
+                .unwrap()
+                .path;
         scopeguard::defer! {
             detach(&dev).unwrap();
         }
@@ -198,7 +221,7 @@ mod tests {
         let a_file = a_dir.path().join("test");
         let a_size = 4096u64;
         create_empty_file(&a_file, a_size);
-        let dev = attach(a_file, 0, a_size, /* direct_io */ false, /* writable */ false).unwrap();
+        let dev = attach(a_file, 0, a_size, &LoopConfigOptions::default()).unwrap().path;
         scopeguard::defer! {
             detach(&dev).unwrap();
         }
@@ -211,11 +234,34 @@ mod tests {
         let a_file = a_dir.path().join("test");
         let a_size = 4096u64;
         create_empty_file(&a_file, a_size);
-        let dev = attach(a_file, 0, a_size, /* direct_io */ true, /* writable */ true).unwrap();
+        let dev = attach(
+            a_file,
+            0,
+            a_size,
+            &LoopConfigOptions { direct_io: true, writable: true, ..Default::default() },
+        )
+        .unwrap()
+        .path;
         scopeguard::defer! {
             detach(&dev).unwrap();
         }
         assert!(is_direct_io(&dev));
         assert!(is_direct_io_writable(&dev));
+    }
+
+    #[rdroidtest]
+    fn attach_loop_device_autoclear() {
+        let a_dir = tempfile::TempDir::new().unwrap();
+        let a_file = a_dir.path().join("test");
+        let a_size = 4096u64;
+        create_empty_file(&a_file, a_size);
+        let dev =
+            attach(a_file, 0, a_size, &LoopConfigOptions { autoclear: true, ..Default::default() })
+                .unwrap();
+        drop(dev.file);
+
+        let dev_size_path =
+            Path::new("/sys/block").join(dev.path.file_name().unwrap()).join("size");
+        assert_eq!("0", fs::read_to_string(dev_size_path).unwrap().trim());
     }
 }

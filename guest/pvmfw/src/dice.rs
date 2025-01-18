@@ -156,9 +156,7 @@ impl PartialInputs {
     fn generate_config_descriptor(&self, instance_hash: Option<Hash>) -> Result<Vec<u8>> {
         let mut config = Vec::with_capacity(4);
         config.push((cbor!(COMPONENT_NAME_KEY)?, cbor!("vm_entry")?));
-        if cfg!(dice_changes) {
-            config.push((cbor!(SECURITY_VERSION_KEY)?, cbor!(self.security_version)?));
-        }
+        config.push((cbor!(SECURITY_VERSION_KEY)?, cbor!(self.security_version)?));
         if self.rkp_vm_marker {
             config.push((cbor!(RKP_VM_MARKER_KEY)?, Value::Null))
         }
@@ -245,14 +243,7 @@ mod tests {
         assert_eq!(config_map.get(&COMPONENT_NAME_KEY).unwrap().as_text().unwrap(), "vm_entry");
         assert_eq!(config_map.get(&COMPONENT_VERSION_KEY), None);
         assert_eq!(config_map.get(&RESETTABLE_KEY), None);
-        if cfg!(dice_changes) {
-            assert_eq!(
-                config_map.get(&SECURITY_VERSION_KEY).unwrap().as_integer().unwrap(),
-                42.into()
-            );
-        } else {
-            assert_eq!(config_map.get(&SECURITY_VERSION_KEY), None);
-        }
+        assert_eq!(config_map.get(&SECURITY_VERSION_KEY).unwrap().as_integer().unwrap(), 42.into());
         assert_eq!(config_map.get(&RKP_VM_MARKER_KEY), None);
     }
 
