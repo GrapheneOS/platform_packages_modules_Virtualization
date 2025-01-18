@@ -4,7 +4,10 @@
 -keepattributes Signature
 
 # For using GSON @Expose annotation
--keepattributes *Annotation*
+-keepattributes RuntimeVisibleAnnotations,
+                RuntimeVisibleParameterAnnotations,
+                RuntimeVisibleTypeAnnotations,
+                AnnotationDefault
 
 # Gson specific classes
 -dontwarn sun.misc.**
