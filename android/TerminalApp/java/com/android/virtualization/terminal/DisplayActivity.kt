@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal
 
 import android.os.Bundle
+import android.system.virtualmachine.VirtualMachineManager
 import android.view.SurfaceView
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -31,6 +32,20 @@ class DisplayActivity : BaseActivity() {
         makeFullscreen()
         // Connect the views to the VM
         displayProvider = DisplayProvider(mainView, cursorView)
+        val vmm =
+            applicationContext.getSystemService<VirtualMachineManager>(
+                VirtualMachineManager::class.java
+            )
+        val debianVm = vmm.get("debian")
+        if (debianVm != null) {
+            InputForwarder(
+                this,
+                debianVm,
+                findViewById(R.id.background_touch_view),
+                findViewById(R.id.surface_view),
+                findViewById(R.id.surface_view),
+            )
+        }
     }
 
     override fun onPause() {
