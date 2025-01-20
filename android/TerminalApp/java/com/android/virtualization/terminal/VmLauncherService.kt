@@ -220,12 +220,16 @@ class VmLauncherService : Service() {
 
         // TODO(jeongik): let it configurable
         if (terminalGuiSupport()) {
-            builder.setDisplayConfig(
-                VirtualMachineCustomImageConfig.DisplayConfig.Builder()
-                    .setWidth(1920)
-                    .setHeight(1080)
-                    .build()
-            )
+            builder
+                .setDisplayConfig(
+                    VirtualMachineCustomImageConfig.DisplayConfig.Builder()
+                        .setWidth(1920)
+                        .setHeight(1080)
+                        .build()
+                )
+                .useKeyboard(true)
+                .useMouse(true)
+                .useTouch(true)
             changed = true
         }
 
