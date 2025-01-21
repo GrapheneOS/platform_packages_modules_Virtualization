@@ -55,6 +55,9 @@
     <!-- Action bar icon name for the settings view CHAR LIMIT=none] -->
     <string name="action_settings">Settings</string>
 
+    <!-- Action bar icon name for showing the display activity CHAR LIMIT=none] -->
+    <string name="action_display">Display</string>
+
     <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
     <string name="vm_creation_message">Preparing terminal</string>
     <!-- Toast message to notify that terminal is stopping [CHAR LIMIT=none] -->

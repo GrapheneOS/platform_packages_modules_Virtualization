@@ -27,4 +27,15 @@
     <style name="VmTerminalAppTheme" parent="@style/Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowLightStatusBar" tools:targetApi="m">?android:attr/isLightTheme</item>
     </style>
+    <style name="FullscreenTheme" parent="@style/Theme.Material3.DayNight.NoActionBar">
+        <item name="android:navigationBarColor">
+            @android:color/transparent
+        </item>
+        <item name="android:statusBarColor">
+            @android:color/transparent
+        </item>
+        <item name="android:windowLayoutInDisplayCutoutMode">
+            always
+        </item>
+    </style>
 </resources>

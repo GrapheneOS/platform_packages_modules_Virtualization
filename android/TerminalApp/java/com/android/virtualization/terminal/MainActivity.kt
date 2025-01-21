@@ -56,6 +56,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
+import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.CertificateUtils.createOrGetKey
 import com.android.virtualization.terminal.CertificateUtils.writeCertificateToFile
 import com.android.virtualization.terminal.ErrorActivity.Companion.start
@@ -87,6 +88,7 @@ public class MainActivity :
     private val bootCompleted = ConditionVariable()
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
     private lateinit var modifierKeysController: ModifierKeysController
+    private var displayMenu: MenuItem? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -256,6 +258,10 @@ public class MainActivity :
                                     Trace.endAsyncSection("executeTerminal", 0)
                                     findViewById<View?>(R.id.boot_progress).visibility = View.GONE
                                     terminalContainer.visibility = View.VISIBLE
+                                    if (terminalGuiSupport()) {
+                                        displayMenu?.setVisible(true)
+                                        displayMenu?.setEnabled(true)
+                                    }
                                     bootCompleted.open()
                                     modifierKeysController.update()
                                     terminalView.mapTouchToMouseEvent()
@@ -344,6 +350,11 @@ public class MainActivity :
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        displayMenu =
+            menu?.findItem(R.id.menu_item_display).also {
+                it?.setVisible(terminalGuiSupport())
+                it?.setEnabled(false)
+            }
         return true
     }
 
@@ -351,6 +362,10 @@ public class MainActivity :
         val id = item.getItemId()
         if (id == R.id.menu_item_settings) {
             val intent = Intent(this, SettingsActivity::class.java)
+            this.startActivity(intent)
+            return true
+        } else if (id == R.id.menu_item_display) {
+            val intent = Intent(this, DisplayActivity::class.java)
             this.startActivity(intent)
             return true
         }

@@ -39,7 +39,10 @@ internal class DisplayProvider(
     private val mainView: SurfaceView,
     private val cursorView: SurfaceView,
 ) {
-    private val virtService: IVirtualizationServiceInternal
+    private val virtService: IVirtualizationServiceInternal by lazy {
+        val b = ServiceManager.waitForService("android.system.virtualizationservice")
+        IVirtualizationServiceInternal.Stub.asInterface(b)
+    }
     private var cursorHandler: CursorHandler? = null
 
     init {
@@ -50,14 +53,6 @@ internal class DisplayProvider(
         cursorView.holder.setFormat(PixelFormat.RGBA_8888)
         // TODO: do we need this z-order?
         cursorView.setZOrderMediaOverlay(true)
-        val b = ServiceManager.waitForService("android.system.virtualizationservice")
-        virtService = IVirtualizationServiceInternal.Stub.asInterface(b)
-        try {
-            // To ensure that the previous display service is removed.
-            virtService.clearDisplayService()
-        } catch (e: RemoteException) {
-            throw RuntimeException("Failed to clear prior display service", e)
-        }
     }
 
     fun notifyDisplayIsGoingToInvisible() {

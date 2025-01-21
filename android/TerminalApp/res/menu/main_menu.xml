@@ -20,4 +20,9 @@
         android:icon="@drawable/ic_settings"
         android:title="@string/action_settings"
         app:showAsAction="always"/>
+    <item android:id="@+id/menu_item_display"
+        android:icon="@drawable/ic_display"
+        android:enabled="false"
+        android:title="@string/action_display"
+        app:showAsAction="always"/>
 </menu>
