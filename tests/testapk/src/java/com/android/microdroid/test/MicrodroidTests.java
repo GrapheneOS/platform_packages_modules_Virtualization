@@ -32,14 +32,12 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.stream.Collectors.toList;
 
-import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.UiAutomation;
 import android.content.ComponentName;
@@ -47,7 +45,6 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Build;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
@@ -119,6 +116,7 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -171,11 +169,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void tearDown() {
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
     }
-
-    private static final long ONE_MEBI = 1024 * 1024;
-
-    private static final long MIN_MEM_ARM64 = 170 * ONE_MEBI;
-    private static final long MIN_MEM_X86_64 = 196 * ONE_MEBI;
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
 
     private static final String VM_SHARE_APP_PACKAGE_NAME = "com.android.microdroid.vmshare_app";
@@ -1875,6 +1868,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    @CddTest
     public void rollbackProtectedDataOfPayload() throws Exception {
         assumeSupportedDevice();
         // Rollback protected data is only possible if Updatable VMs is supported -
@@ -1900,7 +1894,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         (ts, tr) -> {
                             tr.mPayloadRpData = ts.insecurelyReadPayloadRpData();
                         });
-        // ainsecurelyReadPayloadRpData()` must've failed since no data was ever written!
+        // `insecurelyReadPayloadRpData()` must've failed since no data was ever written!
         assertWithMessage("The read (unexpectedly) succeeded!")
                 .that(testResults.mException)
                 .isNotNull();
@@ -1928,6 +1922,62 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
         assertThat(testResults.mPayloadRpData).isEqualTo(value2);
+    }
+
+    @Test
+    public void rollbackProtectedDataCanBeAccessedPostConnectionExpiration() throws Exception {
+        final long vmSize = minMemoryRequired();
+        // The reference implementation of Secretkeeper maintains 4 live session keys,
+        // dropping the oldest one when new connections are requested. Therefore we spin 8 VMs
+        // asynchronously.
+        // Within a VM, wait for 5 sec (> Microdroid boot time) and trigger rp data access
+        // hoping at least some of the connection between VM <-> Secretkeeper are expired.
+        final int numVMs = 8;
+        final long availableMem = getAvailableMemory();
+
+        // Let's not use more than half of the available memory
+        assume().withMessage("Available memory (" + availableMem + " bytes) too small")
+                .that((numVMs * vmSize) <= (availableMem / 2))
+                .isTrue();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setMemoryBytes(vmSize)
+                        .build();
+        byte[] data = new byte[32];
+        Arrays.fill(data, (byte) 0xcc);
+
+        CompletableFuture<TestResults>[] resultFutureList = new CompletableFuture[numVMs];
+        for (int i = 0; i < numVMs; i++) {
+            final VirtualMachine vm =
+                    forceCreateNewVirtualMachine("test_sk_session_expiration_vm_" + i, config);
+            resultFutureList[i] =
+                    CompletableFuture.supplyAsync(
+                            () -> {
+                                try {
+                                    TestResults testResults =
+                                            runVmTestService(
+                                                    TAG,
+                                                    vm,
+                                                    (ts, tr) -> {
+                                                        ts.insecurelyWritePayloadRpData(data);
+                                                        Thread.sleep(5 * 1000); // 5 seconds of wait
+                                                        tr.mPayloadRpData =
+                                                                ts.insecurelyReadPayloadRpData();
+                                                    });
+                                    return testResults;
+                                } catch (Exception e) {
+                                    throw new CompletionException(e);
+                                }
+                            });
+        }
+
+        for (int i = 0; i < numVMs; i++) {
+            TestResults testResult = resultFutureList[i].get();
+            testResult.assertNoException();
+            assertThat(testResult.mPayloadRpData).isEqualTo(data);
+        }
     }
 
     @Test
@@ -2464,25 +2514,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    public void kernelVersionRequirement() throws Exception {
-        assumeVsrCompliant();
-        int firstApiLevel = SystemProperties.getInt("ro.product.first_api_level", 0);
-        assume().withMessage("Skip on devices launched before Android 14 (API level 34)")
-                .that(firstApiLevel)
-                .isAtLeast(34);
-
-        String[] tokens = KERNEL_VERSION.split("\\.");
-        int major = Integer.parseInt(tokens[0]);
-        int minor = Integer.parseInt(tokens[1]);
-
-        // Check kernel version >= 5.15
-        assertTrue(major >= 5);
-        if (major == 5) {
-            assertTrue(minor >= 15);
-        }
-    }
-
-    @Test
+    @CddTest
     public void createAndRunRustVm() throws Exception {
         // This test is here mostly to exercise the Rust wrapper around the VM Payload API.
         // We're testing the same functionality as in other tests, the only difference is
@@ -2686,6 +2718,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    @GmsTest(requirements = {"GMS-3-7.1-001.002"})
     public void pageSize() throws Exception {
         assumeSupportedDevice();
 
@@ -2771,13 +2804,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
-    private long getAvailableMemory() {
-        ActivityManager am = getContext().getSystemService(ActivityManager.class);
-        ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
-        am.getMemoryInfo(memoryInfo);
-        return memoryInfo.availMem;
-    }
-
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {
         Parcel parcel = Parcel.obtain();
         descriptor.writeToParcel(parcel, 0);
@@ -2809,18 +2835,5 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             ThrowingRunnable runnable, String expectedContents) {
         Exception e = assertThrows(VirtualMachineException.class, runnable);
         assertThat(e).hasMessageThat().contains(expectedContents);
-    }
-
-    private long minMemoryRequired() {
-        assertThat(Build.SUPPORTED_ABIS).isNotEmpty();
-        String primaryAbi = Build.SUPPORTED_ABIS[0];
-        switch (primaryAbi) {
-            case "x86_64":
-                return MIN_MEM_X86_64;
-            case "arm64-v8a":
-            case "arm64-v8a-hwasan":
-                return MIN_MEM_ARM64;
-        }
-        throw new AssertionError("Unsupported ABI: " + primaryAbi);
     }
 }

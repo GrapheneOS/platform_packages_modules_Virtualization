@@ -12,5 +12,10 @@ cc_binary {
         "libdl_android",
         "liblog",
     ],
+    static_libs: [
+        "libapexutil",
+        "libprotobuf-cpp-lite",
+        "lib_apex_manifest_proto_lite",
+    ],
     header_libs: ["vm_payload_headers"],
 }

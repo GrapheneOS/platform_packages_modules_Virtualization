@@ -8,3 +8,5 @@ procps
 forwarder-guest
 forwarder-guest-launcher
 shutdown-runner
+weston
+xwayland

@@ -16,7 +16,9 @@
 
 #include <android-base/logging.h>
 #include <android-base/result.h>
+#include <android-base/strings.h>
 #include <android/dlext.h>
+#include <apexutil.h>
 #include <dlfcn.h>
 
 #include <cstdlib>
@@ -25,8 +27,11 @@
 
 #include "vm_main.h"
 
+using android::apex::GetActivePackages;
 using android::base::Error;
+using android::base::Join;
 using android::base::Result;
+using android::base::StringReplace;
 
 extern "C" {
 enum {
@@ -43,6 +48,8 @@ extern struct android_namespace_t* android_create_namespace(
 extern bool android_link_namespaces(struct android_namespace_t* from,
                                     struct android_namespace_t* to,
                                     const char* shared_libs_sonames);
+
+extern struct android_namespace_t* android_get_exported_namespace(const char* name);
 } // extern "C"
 
 static Result<void*> load(const std::string& libname);
@@ -106,6 +113,32 @@ Result<void*> load(const std::string& libname) {
     }
     if (!android_link_namespaces(new_ns, nullptr, libs.c_str())) {
         return Error() << "Failed to link namespace: " << dlerror();
+    }
+
+    // Make libraries provided by APEXes available to the payload
+    for (const auto& [_path, manifest] : GetActivePackages("/apex")) {
+        std::string namespace_name = StringReplace(manifest.name(), ".", "_", /* all */ true);
+        android_namespace_t* apex_ns = android_get_exported_namespace(namespace_name.c_str());
+        if (apex_ns == nullptr) {
+            // This means the namespace is configured as 'visible=false'. We can't link to an
+            // invisible namespace.
+            continue;
+        }
+
+        std::vector<std::string> libs = {manifest.providenativelibs().begin(),
+                                         manifest.providenativelibs().end()};
+        if (libs.size() == 0) {
+            continue;
+        }
+        std::string shared_lib_sonames = Join(libs, ':');
+
+        if (!android_link_namespaces(new_ns, apex_ns, shared_lib_sonames.c_str())) {
+            return Error() << "Failed to link APEX namespace " << namespace_name << ": "
+                           << dlerror();
+        }
+
+        LOG(INFO) << "Linked APEX namespace " << namespace_name << " with shared libs "
+                  << shared_lib_sonames;
     }
 
     const android_dlextinfo info = {

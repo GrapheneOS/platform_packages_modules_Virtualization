@@ -49,6 +49,12 @@
     },
     {
       "name": "vm_accessor_test"
+    },
+    {
+      "name": "avf_backcompat_tests"
+    },
+    {
+      "name": "old_images_avf_test"
     }
   ],
   "avf-postsubmit": [

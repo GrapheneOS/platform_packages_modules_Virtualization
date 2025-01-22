@@ -87,4 +87,6 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"Terminal wordt gesloten"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Geforceerd sluiten"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> staat aan"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Langlopende taken"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Systeemgebeurtenissen"</string>
 </resources>

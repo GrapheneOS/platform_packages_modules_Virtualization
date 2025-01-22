@@ -87,4 +87,6 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"टर्मिनल ऐप्लिकेशन बंद हो रहा है"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"ज़बरदस्ती बंद करें"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> चालू है"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"लंबे समय तक चलने वाले टास्क"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"सिस्टम इवेंट"</string>
 </resources>

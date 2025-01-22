@@ -87,4 +87,6 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"ເທີມິນອນກຳລັງຈະປິດ"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"ບັງຄັບປິດ"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"ເປີດການນຳໃຊ້ <xliff:g id="ID_1">VirGL</xliff:g> ແລ້ວ"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ວຽກທີ່ດຳເນີນເປັນເວລາດົນ"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"ກິດຈະກຳລະບົບ"</string>
 </resources>

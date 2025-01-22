@@ -171,7 +171,11 @@ impl VmSecret {
             return Err(anyhow!("Rollback protected data is not available with V1 secrets"));
         };
         let payload_id = sha::sha512(instance_id);
-        secretkeeper_session.get_secret(payload_id)
+        secretkeeper_session.get_secret(payload_id).or_else(|e| {
+            log::info!("Secretkeeper get failed with {e:?}. Refreshing connection & retrying!");
+            secretkeeper_session.refresh()?;
+            secretkeeper_session.get_secret(payload_id)
+        })
     }
 
     pub fn write_payload_data_rp(&self, data: &[u8; SECRET_SIZE]) -> Result<()> {
@@ -180,7 +184,12 @@ impl VmSecret {
             return Err(anyhow!("Rollback protected data is not available with V1 secrets"));
         };
         let payload_id = sha::sha512(instance_id);
-        secretkeeper_session.store_secret(payload_id, data)
+        if let Err(e) = secretkeeper_session.store_secret(payload_id, data.clone()) {
+            log::info!("Secretkeeper store failed with {e:?}. Refreshing connection & retrying!");
+            secretkeeper_session.refresh()?;
+            secretkeeper_session.store_secret(payload_id, data)?;
+        }
+        Ok(())
     }
 }
 
@@ -274,6 +283,11 @@ impl SkVmSession {
         let session = SkSession::new(secretkeeper_proxy, dice, Some(get_secretkeeper_identity()?))?;
         let session = Arc::new(Mutex::new(session));
         Ok(Self { session, sealing_policy })
+    }
+
+    fn refresh(&self) -> Result<()> {
+        let mut session = self.session.lock().unwrap();
+        Ok(session.refresh()?)
     }
 
     fn store_secret(&self, id: [u8; ID_SIZE], secret: Zeroizing<[u8; SECRET_SIZE]>) -> Result<()> {

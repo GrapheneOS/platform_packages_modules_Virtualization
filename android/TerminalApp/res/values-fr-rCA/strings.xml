@@ -87,4 +87,6 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"Le terminal se fermera"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Forcer la fermeture"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> est activé"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tâches de longue durée"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Événements système"</string>
 </resources>

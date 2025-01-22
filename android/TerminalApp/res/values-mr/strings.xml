@@ -87,4 +87,8 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"टर्मिनल बंद होत आहे"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"सक्तीने बंद करा"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> सुरू केले आहे"</string>
+    <!-- no translation found for notification_channel_long_running_name (7916541360369402952) -->
+    <skip />
+    <!-- no translation found for notification_channel_system_events_name (1004951444029742137) -->
+    <skip />
 </resources>
