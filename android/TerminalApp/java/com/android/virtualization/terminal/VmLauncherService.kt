@@ -29,6 +29,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Parcel
+import android.os.Parcelable
 import android.os.ResultReceiver
 import android.os.Trace
 import android.system.virtualmachine.VirtualMachine
@@ -103,7 +104,8 @@ class VmLauncherService : Service() {
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
-        if (overrideConfigIfNecessary(customImageConfigBuilder)) {
+        val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
+        if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
         }
         val config = configBuilder.build()
@@ -198,7 +200,8 @@ class VmLauncherService : Service() {
     }
 
     private fun overrideConfigIfNecessary(
-        builder: VirtualMachineCustomImageConfig.Builder
+        builder: VirtualMachineCustomImageConfig.Builder,
+        displayInfo: DisplayInfo?,
     ): Boolean {
         var changed = false
         // TODO: check if ANGLE is enabled for the app.
@@ -218,13 +221,17 @@ class VmLauncherService : Service() {
             changed = true
         }
 
-        // TODO(jeongik): let it configurable
-        if (terminalGuiSupport()) {
+        // Set the initial display size
+        // TODO(jeongik): set up the display size on demand
+        if (terminalGuiSupport() && displayInfo != null) {
             builder
                 .setDisplayConfig(
                     VirtualMachineCustomImageConfig.DisplayConfig.Builder()
-                        .setWidth(1920)
-                        .setHeight(1080)
+                        .setWidth(displayInfo.width)
+                        .setHeight(displayInfo.height)
+                        .setHorizontalDpi(displayInfo.dpi)
+                        .setVerticalDpi(displayInfo.dpi)
+                        .setRefreshRate(displayInfo.refreshRate)
                         .build()
                 )
                 .useKeyboard(true)
@@ -322,7 +329,7 @@ class VmLauncherService : Service() {
         private const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
         private const val ACTION_START_VM_LAUNCHER_SERVICE =
             "android.virtualization.START_VM_LAUNCHER_SERVICE"
-
+        const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
         const val ACTION_STOP_VM_LAUNCHER_SERVICE: String =
             "android.virtualization.STOP_VM_LAUNCHER_SERVICE"
 
@@ -338,6 +345,7 @@ class VmLauncherService : Service() {
             context: Context,
             callback: VmLauncherServiceCallback?,
             notification: Notification?,
+            displayInfo: DisplayInfo,
         ) {
             val i = getMyIntent(context)
             val resultReceiver: ResultReceiver =
@@ -355,6 +363,7 @@ class VmLauncherService : Service() {
                 }
             i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             i.putExtra(EXTRA_NOTIFICATION, notification)
+            i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
             context.startForegroundService(i)
         }
 
@@ -370,5 +379,31 @@ class VmLauncherService : Service() {
             i.setAction(ACTION_STOP_VM_LAUNCHER_SERVICE)
             context.startService(i)
         }
+    }
+}
+
+data class DisplayInfo(val width: Int, val height: Int, val dpi: Int, val refreshRate: Int) :
+    Parcelable {
+    constructor(
+        source: Parcel
+    ) : this(source.readInt(), source.readInt(), source.readInt(), source.readInt())
+
+    override fun describeContents(): Int = 0
+
+    override fun writeToParcel(dest: Parcel, flags: Int) {
+        dest.writeInt(width)
+        dest.writeInt(height)
+        dest.writeInt(dpi)
+        dest.writeInt(refreshRate)
+    }
+
+    companion object {
+        @JvmField
+        val CREATOR =
+            object : Parcelable.Creator<DisplayInfo> {
+                override fun createFromParcel(source: Parcel): DisplayInfo = DisplayInfo(source)
+
+                override fun newArray(size: Int) = arrayOfNulls<DisplayInfo>(size)
+            }
     }
 }
