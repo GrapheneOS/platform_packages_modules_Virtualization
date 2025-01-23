@@ -152,6 +152,11 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
         .arg("/chosen/kaslr-seed")
         .arg("--ignore-path-value")
         .arg("/chosen/rng-seed")
+        // TODO: b/391420337 Investigate if bootargs may mutate VM
+        .arg("--ignore-path-value")
+        .arg("/chosen/bootargs")
+        .arg("--ignore-path-value")
+        .arg("/config/kernel-size")
         .arg("--ignore-path-value")
         .arg("/avf/untrusted/instance-id")
         .arg("--ignore-path-value")

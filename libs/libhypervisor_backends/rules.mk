@@ -8,6 +8,7 @@ MODULE_LIBRARY_DEPS := \
 	trusty/user/base/lib/liballoc-rust \
 	$(call FIND_CRATE,once_cell) \
 	$(call FIND_CRATE,smccc) \
+	$(call FIND_CRATE,thiserror) \
 	$(call FIND_CRATE,uuid) \
 
 include make/library.mk

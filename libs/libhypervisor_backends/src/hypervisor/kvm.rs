@@ -14,8 +14,6 @@
 
 //! Wrappers around calls to the KVM hypervisor.
 
-use core::fmt::{self, Display, Formatter};
-
 use super::{DeviceAssigningHypervisor, Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
 use crate::{mem::page_4kb_of, Error, Result};
 
@@ -23,16 +21,20 @@ use smccc::{
     error::{positive_or_error_64, success_or_error_32, success_or_error_64},
     hvc64,
 };
+use thiserror::Error;
 use uuid::{uuid, Uuid};
 
 /// Error from a KVM HVC call.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 pub enum KvmError {
     /// The call is not supported by the implementation.
+    #[error("KVM call not supported")]
     NotSupported,
     /// One of the call parameters has a non-supported value.
+    #[error("KVM call received non-supported value")]
     InvalidParameter,
     /// There was an unexpected return value.
+    #[error("Unknown return value from KVM {0} ({0:#x})")]
     Unknown(i64),
 }
 
@@ -49,16 +51,6 @@ impl From<i64> for KvmError {
 impl From<i32> for KvmError {
     fn from(value: i32) -> Self {
         i64::from(value).into()
-    }
-}
-
-impl Display for KvmError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::NotSupported => write!(f, "KVM call not supported"),
-            Self::InvalidParameter => write!(f, "KVM call received non-supported value"),
-            Self::Unknown(e) => write!(f, "Unknown return value from KVM {} ({0:#x})", e),
-        }
     }
 }
 

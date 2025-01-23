@@ -14,8 +14,6 @@
 
 //! Wrappers around calls to the GenieZone hypervisor.
 
-use core::fmt::{self, Display, Formatter};
-
 use super::{Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
 use crate::{mem::page_4kb_of, Error, Result};
 
@@ -23,6 +21,7 @@ use smccc::{
     error::{positive_or_error_64, success_or_error_64},
     hvc64,
 };
+use thiserror::Error;
 use uuid::{uuid, Uuid};
 
 pub(super) struct GeniezoneHypervisor;
@@ -44,15 +43,19 @@ impl GeniezoneHypervisor {
 }
 
 /// Error from a GenieZone HVC call.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 pub enum GeniezoneError {
     /// The call is not supported by the implementation.
+    #[error("GenieZone call not supported")]
     NotSupported,
     /// The call is not required to implement.
+    #[error("GenieZone call not required")]
     NotRequired,
     /// One of the call parameters has a invalid value.
+    #[error("GenieZone call received invalid value")]
     InvalidParameter,
     /// There was an unexpected return value.
+    #[error("Unknown return value from GenieZone {0} ({0:#x})")]
     Unknown(i64),
 }
 
@@ -70,17 +73,6 @@ impl From<i64> for GeniezoneError {
 impl From<i32> for GeniezoneError {
     fn from(value: i32) -> Self {
         i64::from(value).into()
-    }
-}
-
-impl Display for GeniezoneError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::NotSupported => write!(f, "GenieZone call not supported"),
-            Self::NotRequired => write!(f, "GenieZone call not required"),
-            Self::InvalidParameter => write!(f, "GenieZone call received invalid value"),
-            Self::Unknown(e) => write!(f, "Unknown return value from GenieZone {} ({0:#x})", e),
-        }
     }
 }
 

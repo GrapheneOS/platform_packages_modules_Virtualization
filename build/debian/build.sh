@@ -218,35 +218,51 @@ package_custom_kernel() {
 		return
 	fi
 
+	local deb_base_url="https://deb.debian.org/debian"
+	local deb_security_base_url="https://security.debian.org/debian-security"
+
+	local pool_dir="pool/main/l/linux"
+	local ksrc_base_url="${deb_base_url}/${pool_dir}"
+	local ksrc_security_base_url="${deb_security_base_url}/${pool_dir}"
+
 	# NOTE: 6.1 is the latest LTS kernel for which Debian's kernel build scripts
 	#       work on Python 3.10, the default version on our Ubuntu 22.04 builders.
 	local debian_kver="6.1.119-1"
-	local custom_flavour="avf"
-	local ksrc_base_url="https://deb.debian.org/debian/pool/main/l/linux"
 
-	local dsc_url="${ksrc_base_url}/linux_${debian_kver}.dsc"
-	local debian_ksrc_url="${ksrc_base_url}/linux_${debian_kver}.debian.tar.xz"
-	local orig_ksrc_url="${ksrc_base_url}/linux_${debian_kver%-*}.orig.tar.xz"
+	local dsc_file="linux_${debian_kver}.dsc"
+	local orig_ksrc_file="linux_${debian_kver%-*}.orig.tar.xz"
+	local debian_ksrc_file="linux_${debian_kver}.debian.tar.xz"
 
 	# 0. Grab the kernel sources, and the latest debian keyrings
 	mkdir -p "${workdir}/kernel"
 	pushd "${workdir}/kernel" > /dev/null
-	wget "$dsc_url"
-	wget "$orig_ksrc_url"
-	wget "$debian_ksrc_url"
+
+	wget "${ksrc_security_base_url}/${dsc_file}" || \
+	wget "${ksrc_base_url}/${dsc_file}"
+
+	wget "${ksrc_security_base_url}/${orig_ksrc_file}" || \
+	wget "${ksrc_base_url}/${orig_ksrc_file}"
+
+	wget "${ksrc_security_base_url}/${debian_ksrc_file}" || \
+	wget "${ksrc_base_url}/${debian_ksrc_file}"
+
 	rsync -az --progress keyring.debian.org::keyrings/keyrings/ /usr/share/keyrings/
 
 	# 1. Verify, extract and merge patches into the original kernel sources
 	dpkg-source --require-strong-checksums \
 	            --require-valid-signature \
-	            --extract linux_${debian_kver}.dsc
+	            --extract "${dsc_file}"
 	pushd "linux-${debian_kver%-*}" > /dev/null
-	# TODO: Copy our own kernel patches to debian/patches
-	#       and add patch file names in the desired order to debian/patches/series
+
+	local kpatches_src="$(dirname "$0")/kernel_patches"
+	cp -r "${kpatches_src}/avf" debian/patches/
+	cat "${kpatches_src}/series" >> debian/patches/series
 	./debian/rules orig
 
-	local abi_kver="$(sed -nE 's;Package: linux-support-(.*);\1;p' debian/control)"
+	local custom_flavour="avf"
 	local debarch_flavour="${custom_flavour}-${debian_arch}"
+
+	local abi_kver="$(sed -nE 's;Package: linux-support-(.*);\1;p' debian/control)"
 	local abi_flavour="${abi_kver}-${debarch_flavour}"
 
 	# 2. Define our custom flavour and regenerate control file

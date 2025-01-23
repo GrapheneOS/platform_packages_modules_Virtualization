@@ -14,6 +14,7 @@ rust_library_rlib {
     rustlibs: [
         "libonce_cell_nostd",
         "libsmccc",
+        "libthiserror_nostd",
         "libuuid_nostd",
     ],
     enabled: false,

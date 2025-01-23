@@ -14,40 +14,47 @@
 
 //! Library for working with (VirtIO) PCI devices discovered from a device tree.
 
-use core::{
-    ffi::CStr,
-    fmt::{self, Display, Formatter},
-    ops::Range,
-};
+use core::{ffi::CStr, ops::Range};
 use libfdt::{AddressRange, Fdt, FdtError, FdtNode};
 use log::debug;
+use thiserror::Error;
 use virtio_drivers::transport::pci::bus::{Cam, PciRoot};
 
 /// PCI MMIO configuration region size.
 const PCI_CFG_SIZE: usize = 0x100_0000;
 
 /// An error parsing a PCI node from an FDT.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum PciError {
     /// Error getting PCI node from FDT.
+    #[error("Error getting PCI node from FDT: {0}")]
     FdtErrorPci(FdtError),
     /// Failed to find PCI bus in FDT.
+    #[error("Failed to find PCI bus in FDT.")]
     FdtNoPci,
     /// Error getting `reg` property from PCI node.
+    #[error("Error getting reg property from PCI node: {0}")]
     FdtErrorReg(FdtError),
     /// PCI node missing `reg` property.
+    #[error("PCI node missing reg property.")]
     FdtMissingReg,
     /// Empty `reg property on PCI node.
+    #[error("Empty reg property on PCI node.")]
     FdtRegEmpty,
     /// PCI `reg` property missing size.
+    #[error("PCI reg property missing size.")]
     FdtRegMissingSize,
     /// PCI CAM size reported by FDT is not what we expected.
+    #[error("FDT says PCI CAM is {0} bytes but we expected {PCI_CFG_SIZE}.")]
     CamWrongSize(usize),
     /// Error getting `ranges` property from PCI node.
+    #[error("Error getting ranges property from PCI node: {0}")]
     FdtErrorRanges(FdtError),
     /// PCI node missing `ranges` property.
+    #[error("PCI node missing ranges property.")]
     FdtMissingRanges,
     /// Bus address is not equal to CPU physical address in `ranges` property.
+    #[error("bus address {bus_address:#018x} != CPU physical address {cpu_physical:#018x}")]
     RangeAddressMismatch {
         /// A bus address from the `ranges` property.
         bus_address: u64,
@@ -55,37 +62,8 @@ pub enum PciError {
         cpu_physical: u64,
     },
     /// No suitable PCI memory range found.
+    #[error("No suitable PCI memory range found.")]
     NoSuitableRange,
-}
-
-impl Display for PciError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::FdtErrorPci(e) => write!(f, "Error getting PCI node from FDT: {}", e),
-            Self::FdtNoPci => write!(f, "Failed to find PCI bus in FDT."),
-            Self::FdtErrorReg(e) => write!(f, "Error getting reg property from PCI node: {}", e),
-            Self::FdtMissingReg => write!(f, "PCI node missing reg property."),
-            Self::FdtRegEmpty => write!(f, "Empty reg property on PCI node."),
-            Self::FdtRegMissingSize => write!(f, "PCI reg property missing size."),
-            Self::CamWrongSize(cam_size) => write!(
-                f,
-                "FDT says PCI CAM is {} bytes but we expected {}.",
-                cam_size, PCI_CFG_SIZE
-            ),
-            Self::FdtErrorRanges(e) => {
-                write!(f, "Error getting ranges property from PCI node: {}", e)
-            }
-            Self::FdtMissingRanges => write!(f, "PCI node missing ranges property."),
-            Self::RangeAddressMismatch { bus_address, cpu_physical } => {
-                write!(
-                    f,
-                    "bus address {:#018x} != CPU physical address {:#018x}",
-                    bus_address, cpu_physical
-                )
-            }
-            Self::NoSuitableRange => write!(f, "No suitable PCI memory range found."),
-        }
-    }
 }
 
 /// Information about the PCI bus parsed from the device tree.
