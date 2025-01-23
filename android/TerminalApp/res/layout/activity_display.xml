@@ -27,8 +27,8 @@
     <!-- the size should be match_parent -->
     <SurfaceView
         android:id="@+id/surface_view"
-        android:layout_width="1920px"
-        android:layout_height="1080px"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:focusedByDefault="true"
