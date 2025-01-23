@@ -15,6 +15,7 @@
 //! High-level FDT functions.
 
 use crate::bootargs::BootArgsIterator;
+use crate::config::reserved_mem::{ResMemEntryInfo, NO_MAP};
 use crate::device_assignment::{self, DeviceAssignmentInfo, VmDtbo};
 use crate::Box;
 use crate::RebootReason;
@@ -1438,6 +1439,7 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
 }
 
 /// Modifies the input DT according to the fields of the configuration.
+#[allow(clippy::too_many_arguments)]
 pub fn modify_for_next_stage(
     fdt: &mut Fdt,
     dice_handover: Option<&[u8]>,
@@ -1446,6 +1448,7 @@ pub fn modify_for_next_stage(
     debug_policy: Option<&[u8]>,
     debuggable: bool,
     kaslr_seed: u64,
+    reserved_mem: &[ResMemEntryInfo],
 ) -> libfdt::Result<()> {
     if let Some(debug_policy) = debug_policy {
         let backup = Vec::from(fdt.as_slice());
@@ -1472,6 +1475,18 @@ pub fn modify_for_next_stage(
     if !debuggable {
         if let Some(bootargs) = read_bootargs_from(fdt)? {
             filter_out_dangerous_bootargs(fdt, &bootargs)?;
+        }
+    }
+
+    for item in reserved_mem.iter() {
+        let mem_node = fdt.node_mut(c"/reserved-memory")?.ok_or(FdtError::NotFound)?;
+        let name = CString::new(format!("memory@0x{:p}", item.blob.as_ptr())).unwrap();
+        let mut node = mem_node.add_subnode(&name)?;
+
+        node.appendprop(c"compatible", &item.compat.to_bytes_with_nul())?;
+        node.appendprop_addrrange(c"reg", item.blob.as_ptr() as u64, item.blob.len() as u64)?;
+        if item.flags & NO_MAP == NO_MAP {
+            node.setprop_empty(c"no-map")?;
         }
     }
 
