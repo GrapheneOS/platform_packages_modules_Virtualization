@@ -35,12 +35,14 @@ import android.os.Environment
 import android.os.SystemProperties
 import android.os.Trace
 import android.provider.Settings
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
@@ -457,7 +459,7 @@ public class MainActivity :
                 .build()
 
         Trace.beginAsyncSection("executeTerminal", 0)
-        run(this, this, notification)
+        run(this, this, notification, getDisplayInfo())
         connectToTerminalService()
     }
 
@@ -510,5 +512,19 @@ public class MainActivity :
                 R.id.btn_pgup to KeyEvent.KEYCODE_PAGE_UP,
                 R.id.btn_pgdn to KeyEvent.KEYCODE_PAGE_DOWN,
             )
+    }
+
+    fun getDisplayInfo(): DisplayInfo {
+        val wm = getSystemService<WindowManager>(WindowManager::class.java)
+        val metrics = wm.currentWindowMetrics
+        val dispBounds = metrics.bounds
+
+        // For now, display activity runs as landscape mode
+        val height = Math.min(dispBounds.right, dispBounds.bottom)
+        val width = Math.max(dispBounds.right, dispBounds.bottom)
+        var dpi = (DisplayMetrics.DENSITY_DEFAULT * metrics.density).toInt()
+        var refreshRate = display.refreshRate.toInt()
+
+        return DisplayInfo(width, height, dpi, refreshRate)
     }
 }
