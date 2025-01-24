@@ -33,6 +33,8 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi නොමැති නිසා ස්ථාපනය කිරීමට අසමත් විය"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"ස්ථාපනය කිරීමට අසමත් විය. නැවත උත්සාහ කරන්න"</string>
     <string name="action_settings" msgid="5729342767795123227">"සැකසීම්"</string>
+    <!-- no translation found for action_display (8487008779926038139) -->
+    <skip />
     <string name="vm_creation_message" msgid="6594953532721367502">"ටර්මිනලය සූදානම් කිරීම"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"ටර්මිනලය නතර කිරීම"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ටර්මිනලය බිඳ වැටුණි"</string>
@@ -87,8 +89,6 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"ටර්මිනලය වැසෙමින් පවතී"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"බලෙන් වසන්න"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> සබලයි"</string>
-    <!-- no translation found for notification_channel_long_running_name (7916541360369402952) -->
-    <skip />
-    <!-- no translation found for notification_channel_system_events_name (1004951444029742137) -->
-    <skip />
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"දිගු කාලයක් ධාවනය වන කාර්යයන්"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"පද්ධති සිදුවීම්"</string>
 </resources>

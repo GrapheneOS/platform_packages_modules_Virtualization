@@ -227,7 +227,11 @@ package_custom_kernel() {
 
 	# NOTE: 6.1 is the latest LTS kernel for which Debian's kernel build scripts
 	#       work on Python 3.10, the default version on our Ubuntu 22.04 builders.
-	local debian_kver="6.1.119-1"
+	#
+	#       We track the latest Debian stable kernel version for the 6.1 branch,
+	#       which can be found at:
+	#       https://packages.debian.org/stable/linux-source-6.1
+	local debian_kver="6.1.123-1"
 
 	local dsc_file="linux_${debian_kver}.dsc"
 	local orig_ksrc_file="linux_${debian_kver%-*}.orig.tar.xz"

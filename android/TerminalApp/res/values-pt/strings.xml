@@ -33,6 +33,8 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Falha ao instalar porque o Wi-Fi não está disponível"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Falha ao instalar. Tente de novo"</string>
     <string name="action_settings" msgid="5729342767795123227">"Configurações"</string>
+    <!-- no translation found for action_display (8487008779926038139) -->
+    <skip />
     <string name="vm_creation_message" msgid="6594953532721367502">"Preparando o terminal"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Interrompendo o terminal"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"O terminal falhou"</string>
@@ -87,8 +89,6 @@
     <string name="service_notification_close_title" msgid="1442526433361428844">"O terminal está fechando"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Forçar fechamento"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"O <xliff:g id="ID_1">VirGL</xliff:g> está ativado"</string>
-    <!-- no translation found for notification_channel_long_running_name (7916541360369402952) -->
-    <skip />
-    <!-- no translation found for notification_channel_system_events_name (1004951444029742137) -->
-    <skip />
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tarefas de longa duração"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Eventos do sistema"</string>
 </resources>

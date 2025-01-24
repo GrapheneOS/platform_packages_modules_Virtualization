@@ -78,7 +78,7 @@ You can launch a non-protected Microdroid VM with vendor partition by adding the
 `/apex/com.android.virt/bin/vm run-microdroid` CLI commands, e.g.:
 
 ```
-adb shell /apex/com.android.virt/bin/vm/run-microdroid \
+adb shell /apex/com.android.virt/bin/vm run-microdroid \
   --debug full \
   --vendor /vendor/etc/avf/microdroid/microdroid_vendor.img
 ```
@@ -103,7 +103,7 @@ As of now, only **debuggable** Microdroid pVMs support running with the
 Microdroid vendor partition, e.g.:
 
 ```
-adb shell /apex/com.android.virt/bin/vm/run-microdroid \
+adb shell /apex/com.android.virt/bin/vm run-microdroid \
   --debug full \
   --protected \
   --vendor /vendor/etc/avf/microdroid/microdroid_vendor.img

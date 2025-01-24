@@ -1926,6 +1926,11 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     public void rollbackProtectedDataCanBeAccessedPostConnectionExpiration() throws Exception {
+        assumeSupportedDevice();
+        // Rollback protected data is only possible if Updatable VMs is supported -
+        // which implies Secretkeeper support.
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+
         final long vmSize = minMemoryRequired();
         // The reference implementation of Secretkeeper maintains 4 live session keys,
         // dropping the oldest one when new connections are requested. Therefore we spin 8 VMs

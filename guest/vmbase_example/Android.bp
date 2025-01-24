@@ -40,6 +40,9 @@ cc_defaults {
         "-E",
         "-P",
         "-xassembler-with-cpp", // allow C preprocessor directives
+        // Soong passes an implicit -c before -E. Suppress the warning about -c
+        // being unused.
+        "-Wno-unused-command-line-argument",
     ],
     srcs: [":vmbase_image.ld.S.mm"],
     visibility: ["//visibility:private"],

@@ -17,6 +17,8 @@
 mod common;
 mod geniezone;
 mod gunyah;
+#[cfg(target_arch = "aarch64")]
+#[path = "hypervisor/kvm_aarch64.rs"]
 mod kvm;
 
 use super::{Error, Result};
