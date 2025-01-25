@@ -26,7 +26,7 @@ use once_cell::race::OnceBox;
 use virtio_drivers::{
     device::{blk, socket},
     transport::pci::{
-        bus::{BusDeviceIterator, PciRoot},
+        bus::{BusDeviceIterator, ConfigurationAccess, PciRoot},
         virtio_device_type, PciTransport,
     },
     Hal,
@@ -66,7 +66,7 @@ impl fmt::Display for PciError {
 /// 3. Creates and returns a `PciRoot`.
 ///
 /// This must only be called once and after having switched to the dynamic page tables.
-pub fn initialize(pci_info: PciInfo) -> Result<PciRoot, PciError> {
+pub fn initialize(pci_info: PciInfo) -> Result<PciRoot<impl ConfigurationAccess>, PciError> {
     PCI_INFO.set(Box::new(pci_info.clone())).map_err(|_| PciError::DuplicateInitialization)?;
 
     let cam_start = pci_info.cam_range.start;
@@ -90,21 +90,21 @@ pub type VirtIOBlk<T> = blk::VirtIOBlk<T, PciTransport>;
 pub type VirtIOSocket<T> = socket::VirtIOSocket<T, PciTransport>;
 
 /// An iterator that iterates over the PCI transport for each device.
-pub struct PciTransportIterator<'a, T: Hal> {
-    pci_root: &'a mut PciRoot,
-    bus: BusDeviceIterator,
+pub struct PciTransportIterator<'a, T: Hal, C: ConfigurationAccess> {
+    pci_root: &'a mut PciRoot<C>,
+    bus: BusDeviceIterator<C>,
     _hal: PhantomData<T>,
 }
 
-impl<'a, T: Hal> PciTransportIterator<'a, T> {
+impl<'a, T: Hal, C: ConfigurationAccess> PciTransportIterator<'a, T, C> {
     /// Creates a new iterator.
-    pub fn new(pci_root: &'a mut PciRoot) -> Self {
+    pub fn new(pci_root: &'a mut PciRoot<C>) -> Self {
         let bus = pci_root.enumerate_bus(0);
         Self { pci_root, bus, _hal: PhantomData }
     }
 }
 
-impl<'a, T: Hal> Iterator for PciTransportIterator<'a, T> {
+impl<'a, T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'a, T, C> {
     type Item = PciTransport;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -121,7 +121,7 @@ impl<'a, T: Hal> Iterator for PciTransportIterator<'a, T> {
             };
             debug!("  VirtIO {:?}", virtio_type);
 
-            return PciTransport::new::<T>(self.pci_root, device_function).ok();
+            return PciTransport::new::<T, C>(self.pci_root, device_function).ok();
         }
     }
 }

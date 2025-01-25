@@ -67,7 +67,7 @@ impl<H: Hal, T: Transport> VsockStream<H, T> {
                 match event {
                     VsockEventType::Connected => return Ok(()),
                     VsockEventType::Disconnected { .. } => {
-                        return Err(SocketError::ConnectionFailed.into())
+                        return Err(SocketError::NotConnected.into())
                     }
                     // We shouldn't receive the following event before the connection is
                     // established.
@@ -141,7 +141,7 @@ impl<H: Hal, T: Transport> VsockStream<H, T> {
     fn poll(&mut self) -> virtio_drivers::Result<Option<VsockEventType>> {
         if let Some(event) = self.poll_event_from_peer()? {
             match event {
-                VsockEventType::Disconnected { .. } => Err(SocketError::ConnectionFailed.into()),
+                VsockEventType::Disconnected { .. } => Err(SocketError::NotConnected.into()),
                 VsockEventType::Connected | VsockEventType::ConnectionRequest => {
                     Err(SocketError::InvalidOperation.into())
                 }

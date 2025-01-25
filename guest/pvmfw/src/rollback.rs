@@ -25,7 +25,7 @@ use libfdt::Fdt;
 use log::{error, info};
 use pvmfw_avb::Capability;
 use pvmfw_avb::VerifiedBootData;
-use virtio_drivers::transport::pci::bus::PciRoot;
+use virtio_drivers::transport::pci::bus::{ConfigurationAccess, PciRoot};
 use vmbase::fdt::{pci::PciInfo, SwiotlbInfo};
 use vmbase::memory::init_shared_pool;
 use vmbase::rand;
@@ -167,7 +167,9 @@ fn should_defer_rollback_protection(fdt: &Fdt) -> Result<bool, RebootReason> {
 }
 
 /// Set up PCI bus and VirtIO-blk device containing the instance.img partition.
-fn initialize_instance_img_device(fdt: &Fdt) -> Result<PciRoot, RebootReason> {
+fn initialize_instance_img_device(
+    fdt: &Fdt,
+) -> Result<PciRoot<impl ConfigurationAccess>, RebootReason> {
     let pci_info = PciInfo::from_fdt(fdt).map_err(|e| {
         error!("Failed to detect PCI from DT: {e}");
         RebootReason::InvalidFdt

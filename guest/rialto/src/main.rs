@@ -38,7 +38,10 @@ use service_vm_fake_chain::service_vm;
 use service_vm_requests::{process_request, RequestContext};
 use virtio_drivers::{
     device::socket::{VsockAddr, VMADDR_CID_HOST},
-    transport::{pci::bus::PciRoot, DeviceType, Transport},
+    transport::{
+        pci::bus::{ConfigurationAccess, PciRoot},
+        DeviceType, Transport,
+    },
     Hal,
 };
 use vmbase::{
@@ -123,7 +126,6 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     let pci_info = PciInfo::from_fdt(fdt)?;
     debug!("PCI: {pci_info:#x?}");
     let mut pci_root = pci::initialize(pci_info).map_err(Error::PciInitializationFailed)?;
-    debug!("PCI root: {pci_root:#x?}");
     let socket_device = find_socket_device::<HalImpl>(&mut pci_root)?;
     debug!("Found socket device: guest cid = {:?}", socket_device.guest_cid());
     let vendor_hashtree_root_digest = read_vendor_hashtree_root_digest(fdt)?;
@@ -143,8 +145,10 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     Ok(())
 }
 
-fn find_socket_device<T: Hal>(pci_root: &mut PciRoot) -> Result<VirtIOSocket<T>> {
-    PciTransportIterator::<T>::new(pci_root)
+fn find_socket_device<T: Hal>(
+    pci_root: &mut PciRoot<impl ConfigurationAccess>,
+) -> Result<VirtIOSocket<T>> {
+    PciTransportIterator::<T, _>::new(pci_root)
         .find(|t| DeviceType::Socket == t.device_type())
         .map(VirtIOSocket::<T>::new)
         .transpose()

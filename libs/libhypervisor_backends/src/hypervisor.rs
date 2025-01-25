@@ -15,28 +15,42 @@
 //! Wrappers around hypervisor back-ends.
 
 mod common;
+#[cfg(target_arch = "aarch64")]
 mod geniezone;
+#[cfg(target_arch = "aarch64")]
 mod gunyah;
 #[cfg(target_arch = "aarch64")]
 #[path = "hypervisor/kvm_aarch64.rs"]
 mod kvm;
 
-use super::{Error, Result};
+#[cfg(target_arch = "x86_64")]
+#[path = "hypervisor/kvm_x86.rs"]
+mod kvm;
+
+#[cfg(target_arch = "aarch64")]
+use {
+    super::{Error, Result},
+    geniezone::GeniezoneHypervisor,
+    gunyah::GunyahHypervisor,
+    smccc::hvc64,
+    uuid::Uuid,
+};
+
+#[cfg(target_arch = "aarch64")]
+pub use geniezone::GeniezoneError;
+
 use alloc::boxed::Box;
 use common::Hypervisor;
 pub use common::{DeviceAssigningHypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
-pub use geniezone::GeniezoneError;
-use geniezone::GeniezoneHypervisor;
-use gunyah::GunyahHypervisor;
 pub use kvm::KvmError;
 use kvm::{ProtectedKvmHypervisor, RegularKvmHypervisor};
 use once_cell::race::OnceBox;
-use smccc::hvc64;
-use uuid::Uuid;
 
 enum HypervisorBackend {
     RegularKvm,
+    #[cfg(target_arch = "aarch64")]
     Gunyah,
+    #[cfg(target_arch = "aarch64")]
     Geniezone,
     ProtectedKvm,
 }
@@ -45,13 +59,16 @@ impl HypervisorBackend {
     fn get_hypervisor(&self) -> &'static dyn Hypervisor {
         match self {
             Self::RegularKvm => &RegularKvmHypervisor,
+            #[cfg(target_arch = "aarch64")]
             Self::Gunyah => &GunyahHypervisor,
+            #[cfg(target_arch = "aarch64")]
             Self::Geniezone => &GeniezoneHypervisor,
             Self::ProtectedKvm => &ProtectedKvmHypervisor,
         }
     }
 }
 
+#[cfg(target_arch = "aarch64")]
 impl TryFrom<Uuid> for HypervisorBackend {
     type Error = Error;
 
@@ -76,8 +93,10 @@ impl TryFrom<Uuid> for HypervisorBackend {
     }
 }
 
+#[cfg(target_arch = "aarch64")]
 const ARM_SMCCC_VENDOR_HYP_CALL_UID_FUNC_ID: u32 = 0x8600ff01;
 
+#[cfg(target_arch = "aarch64")]
 fn query_vendor_hyp_call_uid() -> Uuid {
     let args = [0u64; 17];
     let res = hvc64(ARM_SMCCC_VENDOR_HYP_CALL_UID_FUNC_ID, args);
@@ -103,7 +122,13 @@ fn query_vendor_hyp_call_uid() -> Uuid {
 }
 
 fn detect_hypervisor() -> HypervisorBackend {
-    query_vendor_hyp_call_uid().try_into().expect("Failed to detect hypervisor")
+    #[cfg(target_arch = "aarch64")]
+    {
+        query_vendor_hyp_call_uid().try_into().expect("Failed to detect hypervisor")
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    kvm::determine_hyp_type().expect("Failed to detect hypervisor")
 }
 
 /// Gets the hypervisor singleton.

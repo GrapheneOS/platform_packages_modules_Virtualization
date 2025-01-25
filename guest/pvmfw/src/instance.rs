@@ -26,7 +26,10 @@ use diced_open_dice::Hash;
 use diced_open_dice::Hidden;
 use log::trace;
 use uuid::Uuid;
-use virtio_drivers::transport::{pci::bus::PciRoot, DeviceType, Transport};
+use virtio_drivers::transport::{
+    pci::bus::{ConfigurationAccess, PciRoot},
+    DeviceType, Transport,
+};
 use vmbase::util::ceiling_div;
 use vmbase::virtio::pci::{PciTransportIterator, VirtIOBlk};
 use vmbase::virtio::HalImpl;
@@ -99,7 +102,7 @@ fn aead_ctx_from_secret(secret: &[u8]) -> Result<AeadContext> {
 /// pvmfw in the instance.img as well as index corresponding to empty header which can be used to
 /// record instance data with `record_instance_entry`.
 pub(crate) fn get_recorded_entry(
-    pci_root: &mut PciRoot,
+    pci_root: &mut PciRoot<impl ConfigurationAccess>,
     secret: &[u8],
 ) -> Result<(Option<EntryBody>, Partition, usize)> {
     let mut instance_img = find_instance_img(pci_root)?;
@@ -175,8 +178,8 @@ impl Header {
     }
 }
 
-fn find_instance_img(pci_root: &mut PciRoot) -> Result<Partition> {
-    for transport in PciTransportIterator::<HalImpl>::new(pci_root)
+fn find_instance_img(pci_root: &mut PciRoot<impl ConfigurationAccess>) -> Result<Partition> {
+    for transport in PciTransportIterator::<HalImpl, _>::new(pci_root)
         .filter(|t| DeviceType::Block == t.device_type())
     {
         let device =

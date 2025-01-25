@@ -20,7 +20,10 @@ use log::{debug, info};
 use virtio_drivers::{
     device::console::VirtIOConsole,
     transport::{
-        pci::{bus::PciRoot, PciTransport},
+        pci::{
+            bus::{ConfigurationAccess, PciRoot},
+            PciTransport,
+        },
         DeviceType, Transport,
     },
     BufferDirection, Error, Hal, PhysAddr, PAGE_SIZE,
@@ -33,11 +36,11 @@ const SECTOR_SIZE_BYTES: usize = 512;
 /// The size in sectors of the test block device we expect.
 const EXPECTED_SECTOR_COUNT: usize = 4;
 
-pub fn check_pci(pci_root: &mut PciRoot) {
+pub fn check_pci(pci_root: &mut PciRoot<impl ConfigurationAccess>) {
     let mut checked_virtio_device_count = 0;
     let mut block_device_count = 0;
     let mut socket_device_count = 0;
-    for mut transport in PciTransportIterator::<HalImpl>::new(pci_root) {
+    for mut transport in PciTransportIterator::<HalImpl, _>::new(pci_root) {
         info!(
             "Detected virtio PCI device with device type {:?}, features {:#018x}",
             transport.device_type(),
@@ -104,7 +107,10 @@ fn check_virtio_socket_device(transport: PciTransport) {
 fn check_virtio_console_device(transport: PciTransport) {
     let mut console = VirtIOConsole::<HalImpl, PciTransport>::new(transport)
         .expect("Failed to create VirtIO console driver");
-    info!("Found console device: {:?}", console.info());
+    info!(
+        "Found console device with size {:?}",
+        console.size().expect("Failed to get size of VirtIO console device")
+    );
     for &c in b"Hello VirtIO console\n" {
         console.send(c).expect("Failed to send character to VirtIO console device");
     }

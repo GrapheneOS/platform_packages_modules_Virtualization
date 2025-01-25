@@ -11,20 +11,27 @@ rust_library_rlib {
     host_supported: false,
     no_stdlibs: true,
     srcs: ["src/lib.rs"],
-    rustlibs: [
-        "libonce_cell_nostd",
-        "libsmccc",
-        "libthiserror_nostd",
-        "libuuid_nostd",
-    ],
     enabled: false,
+    stdlibs: [
+        "libcompiler_builtins.rust_sysroot",
+        "libcore.rust_sysroot",
+    ],
     target: {
         android_arm64: {
-            enabled: true,
-            stdlibs: [
-                "libcompiler_builtins.rust_sysroot",
-                "libcore.rust_sysroot",
+            rustlibs: [
+                "libonce_cell_nostd",
+                "libsmccc",
+                "libthiserror_nostd",
+                "libuuid_nostd",
             ],
+            enabled: true,
+        },
+        android_x86_64: {
+            rustlibs: [
+                "libonce_cell_nostd",
+                "libthiserror_nostd",
+            ],
+            enabled: true,
         },
     },
 }

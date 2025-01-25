@@ -15,6 +15,7 @@
 /// The size of a 4KB memory in bytes.
 pub const SIZE_4KB: usize = 4 << 10;
 
+#[cfg(target_arch = "aarch64")]
 /// Computes the largest multiple of the provided alignment smaller or equal to the address.
 ///
 /// Note: the result is undefined if alignment isn't a power of two.
@@ -22,6 +23,7 @@ pub const fn unchecked_align_down(addr: usize, alignment: usize) -> usize {
     addr & !(alignment - 1)
 }
 
+#[cfg(target_arch = "aarch64")]
 /// Computes the address of the 4KiB page containing a given address.
 pub const fn page_4kb_of(addr: usize) -> usize {
     unchecked_align_down(addr, SIZE_4KB)
