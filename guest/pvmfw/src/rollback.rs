@@ -31,6 +31,12 @@ use vmbase::memory::init_shared_pool;
 use vmbase::rand;
 use vmbase::virtio::pci;
 
+/// Criteria hard-coded into pvmfw, to perform fixed image verification.
+enum FixedRollbackCriterion {
+    /// Image must match the exact rollback index and have been signed with the given public key.
+    RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
+}
+
 /// Performs RBP based on the input payload, current DICE chain, and host-controlled platform.
 ///
 /// On success, returns a tuple containing:
@@ -44,9 +50,9 @@ pub fn perform_rollback_protection(
     cdi_seal: &[u8],
 ) -> Result<(bool, Hidden, bool), RebootReason> {
     let instance_hash = dice_inputs.instance_hash;
-    if let Some(fixed) = get_fixed_rollback_protection_index(verified_boot_data) {
+    if let Some(fixed) = get_fixed_rollback_protection(verified_boot_data) {
         // Prevent attackers from impersonating well-known images.
-        perform_fixed_index_rollback_protection(verified_boot_data, fixed)?;
+        perform_fixed_rollback_protection(verified_boot_data, fixed)?;
         Ok((false, instance_hash.unwrap(), false))
     } else if (should_defer_rollback_protection(fdt)?
         && verified_boot_data.has_capability(Capability::SecretkeeperProtection))
@@ -75,24 +81,40 @@ fn perform_deferred_rollback_protection(
     }
 }
 
-fn get_fixed_rollback_protection_index(verified_boot_data: &VerifiedBootData) -> Option<u64> {
+fn get_fixed_rollback_protection(
+    verified_boot_data: &VerifiedBootData,
+) -> Option<FixedRollbackCriterion> {
     match verified_boot_data.name.as_deref()? {
-        VerifiedBootData::RKP_VM_NAME => Some(service_vm_version::VERSION),
+        VerifiedBootData::RKP_VM_NAME => Some(FixedRollbackCriterion::RollbackIndexPublicKey {
+            index: service_vm_version::VERSION,
+            public_key: pvmfw_embedded_key::PUBLIC_KEY,
+        }),
         _ => None,
     }
 }
 
-fn perform_fixed_index_rollback_protection(
+fn perform_fixed_rollback_protection(
     verified_boot_data: &VerifiedBootData,
-    fixed_index: u64,
+    criterion: FixedRollbackCriterion,
 ) -> Result<(), RebootReason> {
-    info!("Performing fixed-index rollback protection");
-    let index = verified_boot_data.rollback_index;
-    if index != fixed_index {
-        error!("Rollback index mismatch: expected {fixed_index}, found {index}");
-        Err(RebootReason::InvalidPayload)
-    } else {
-        Ok(())
+    info!("Performing fixed rollback protection");
+    match criterion {
+        FixedRollbackCriterion::RollbackIndexPublicKey {
+            index: fixed_index,
+            public_key: expected_key,
+        } => {
+            let index = verified_boot_data.rollback_index;
+            let public_key = verified_boot_data.public_key;
+            if index != fixed_index {
+                error!("Rollback index mismatch: expected {fixed_index}, found {index}");
+                Err(RebootReason::InvalidPayload)
+            } else if public_key != expected_key {
+                error!("Public key mismatch: expected {expected_key:x?}, found {public_key:x?}");
+                Err(RebootReason::InvalidPayload)
+            } else {
+                Ok(())
+            }
+        }
     }
 }
 
