@@ -17,9 +17,12 @@
 #[cfg(test)]
 mod tests {
     use diced_open_dice::{
-        derive_cdi_certificate_id, derive_cdi_private_key_seed, hash, kdf, keypair_from_seed, sign,
-        verify, CDI_SIZE, HASH_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
+        derive_cdi_certificate_id, derive_cdi_private_key_seed, hash, kdf, keypair_from_seed,
+        retry_sign_cose_sign1, retry_sign_cose_sign1_with_cdi_leaf_priv, sign, verify,
+        DiceArtifacts, PrivateKey, CDI_SIZE, HASH_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
     };
+
+    use coset::{CborSerializable, CoseSign1};
 
     // This test initialization is only required for the trusty test harness.
     #[cfg(feature = "trusty")]
@@ -66,7 +69,7 @@ mod tests {
         0x94, 0xd8, 0x8c, 0xa8,
     ];
 
-    const EXPECTED_CDI_ATTEST: &[u8] = &[
+    const EXPECTED_CDI_ATTEST: &[u8; CDI_SIZE] = &[
         0xfa, 0x3c, 0x2f, 0x58, 0x37, 0xf5, 0x8e, 0x96, 0x16, 0x09, 0xf5, 0x22, 0xa1, 0xf1, 0xba,
         0xaa, 0x19, 0x95, 0x01, 0x79, 0x2e, 0x60, 0x56, 0xaf, 0xf6, 0x41, 0xe7, 0xff, 0x48, 0xf5,
         0x3a, 0x08,
@@ -101,6 +104,85 @@ mod tests {
 
     #[test]
     fn hash_derive_sign_verify() {
+        let (pub_key, priv_key) = get_test_key_pair();
+
+        let mut signature = sign(b"MyMessage", priv_key.as_array()).unwrap();
+        assert_eq!(&signature, EXPECTED_SIGNATURE);
+        assert!(verify(b"MyMessage", &signature, &pub_key).is_ok());
+        assert!(verify(b"MyMessage_fail", &signature, &pub_key).is_err());
+        signature[0] += 1;
+        assert!(verify(b"MyMessage", &signature, &pub_key).is_err());
+    }
+
+    #[test]
+    fn sign_cose_sign1_verify() {
+        let (pub_key, priv_key) = get_test_key_pair();
+
+        let signature_res = retry_sign_cose_sign1(b"MyMessage", b"MyAad", priv_key.as_array());
+        assert!(signature_res.is_ok());
+        let signature = signature_res.unwrap();
+        let cose_sign1_res = CoseSign1::from_slice(&signature);
+        assert!(cose_sign1_res.is_ok());
+        let mut cose_sign1 = cose_sign1_res.unwrap();
+
+        let mut verify_result =
+            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(data, sign, &pub_key));
+        assert!(verify_result.is_ok());
+
+        verify_result =
+            cose_sign1.verify_signature(b"BadAad", |sign, data| verify(data, sign, &pub_key));
+        assert!(verify_result.is_err());
+
+        // if we modify the signature, the payload should no longer verify
+        cose_sign1.signature.push(0xAA);
+        verify_result =
+            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(data, sign, &pub_key));
+        assert!(verify_result.is_err());
+    }
+
+    struct TestArtifactsForSigning {}
+
+    impl DiceArtifacts for TestArtifactsForSigning {
+        fn cdi_attest(&self) -> &[u8; CDI_SIZE] {
+            EXPECTED_CDI_ATTEST
+        }
+
+        fn cdi_seal(&self) -> &[u8; CDI_SIZE] {
+            unimplemented!("no test functionality depends on this")
+        }
+
+        fn bcc(&self) -> Option<&[u8]> {
+            unimplemented!("no test functionality depends on this")
+        }
+    }
+
+    #[test]
+    fn sign_cose_sign1_with_cdi_leaf_priv_verify() {
+        let dice = TestArtifactsForSigning {};
+
+        let signature_res = retry_sign_cose_sign1_with_cdi_leaf_priv(b"MyMessage", b"MyAad", &dice);
+        assert!(signature_res.is_ok());
+        let signature = signature_res.unwrap();
+        let cose_sign1_res = CoseSign1::from_slice(&signature);
+        assert!(cose_sign1_res.is_ok());
+        let mut cose_sign1 = cose_sign1_res.unwrap();
+
+        let mut verify_result = cose_sign1
+            .verify_signature(b"MyAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+        assert!(verify_result.is_ok());
+
+        verify_result = cose_sign1
+            .verify_signature(b"BadAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+        assert!(verify_result.is_err());
+
+        // if we modify the signature, the payload should no longer verify
+        cose_sign1.signature.push(0xAA);
+        verify_result = cose_sign1
+            .verify_signature(b"MyAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+        assert!(verify_result.is_err());
+    }
+
+    fn get_test_key_pair() -> (Vec<u8>, PrivateKey) {
         let seed = hash(b"MySeedString").unwrap();
         assert_eq!(seed, EXPECTED_SEED);
         let cdi_attest = &seed[..CDI_SIZE];
@@ -111,11 +193,7 @@ mod tests {
         let (pub_key, priv_key) = keypair_from_seed(cdi_private_key_seed.as_array()).unwrap();
         assert_eq!(&pub_key, EXPECTED_PUB_KEY);
         assert_eq!(priv_key.as_array(), EXPECTED_PRIV_KEY);
-        let mut signature = sign(b"MyMessage", priv_key.as_array()).unwrap();
-        assert_eq!(&signature, EXPECTED_SIGNATURE);
-        assert!(verify(b"MyMessage", &signature, &pub_key).is_ok());
-        assert!(verify(b"MyMessage_fail", &signature, &pub_key).is_err());
-        signature[0] += 1;
-        assert!(verify(b"MyMessage", &signature, &pub_key).is_err());
+
+        (pub_key, priv_key)
     }
 }

@@ -75,6 +75,7 @@ rust_test {
     defaults: ["libdiced_open_dice_test_defaults"],
     rustlibs: [
         "libdiced_open_dice",
+        "libcoset",
     ],
 }
 
@@ -83,6 +84,7 @@ rust_test {
     defaults: ["libdiced_open_dice_test_defaults"],
     rustlibs: [
         "libdiced_open_dice_nostd",
+        "libcoset_nostd",
     ],
 }
 
@@ -146,6 +148,7 @@ rust_defaults {
         "--allowlist-function=DiceKdf",
         "--allowlist-function=DiceKeypairFromSeed",
         "--allowlist-function=DiceSign",
+        "--allowlist-function=DiceCoseSignAndEncodeSign1",
         "--allowlist-function=DiceVerify",
         "--allowlist-function=DiceGenerateCertificate",
 

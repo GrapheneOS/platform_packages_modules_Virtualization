@@ -23,8 +23,8 @@ use crate::dice::{
 use crate::error::{check_result, DiceError, Result};
 use alloc::{vec, vec::Vec};
 use open_dice_cbor_bindgen::{
-    DiceGenerateCertificate, DiceHash, DiceKdf, DiceKeypairFromSeed, DicePrincipal, DiceSign,
-    DiceVerify,
+    DiceCoseSignAndEncodeSign1, DiceGenerateCertificate, DiceHash, DiceKdf, DiceKeypairFromSeed,
+    DicePrincipal, DiceSign, DiceVerify,
 };
 use std::ptr;
 
@@ -114,7 +114,7 @@ pub fn derive_cdi_leaf_priv(dice_artifacts: &dyn DiceArtifacts) -> Result<Privat
     Ok(private_key)
 }
 
-/// Signs the `message` with the give `private_key` using `DiceSign`.
+/// Signs the `message` with the given `private_key` using `DiceSign`.
 pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Vec<u8>> {
     let mut signature = vec![0u8; VM_KEY_ALGORITHM.signature_size()];
     check_result(
@@ -134,6 +134,58 @@ pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Vec<
         signature.len(),
     )?;
     Ok(signature)
+}
+
+/// Signs the `message` with the given `private_key` and places a `CoseSign1` encoded
+/// object in `encoded_signature`. Uses `DiceCoseSignAndEncodeSign1`.
+///
+/// Returns the actual size of encoded_signature on success.
+pub fn sign_cose_sign1(
+    message: &[u8],
+    aad: &[u8],
+    private_key: &[u8; PRIVATE_KEY_SIZE],
+    encoded_signature: &mut [u8],
+) -> Result<usize> {
+    let mut encoded_signature_actual_size = 0;
+
+    check_result(
+        // SAFETY: The function writes to `encoded_signature` and `encoded_signature_actual_size`
+        // within the given bounds. It only reads `message`, `aad`, and `private_key` within their
+        // given bounds.
+        //
+        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
+        // and a null pointer otherwise.
+        unsafe {
+            DiceCoseSignAndEncodeSign1(
+                context(),
+                message.as_ptr(),
+                message.len(),
+                aad.as_ptr(),
+                aad.len(),
+                private_key.as_ptr(),
+                encoded_signature.len(),
+                encoded_signature.as_mut_ptr(),
+                &mut encoded_signature_actual_size,
+            )
+        },
+        encoded_signature_actual_size,
+    )?;
+    Ok(encoded_signature_actual_size)
+}
+
+/// Signs the `message` with a private key derived from the given `dice_artifacts`
+/// CDI Attest. On success, places a `CoseSign1` encoded object in `encoded_signature`.
+/// Uses `DiceCoseSignAndEncodeSign1`.
+///
+/// Returns the actual size of encoded_signature on success.
+pub fn sign_cose_sign1_with_cdi_leaf_priv(
+    message: &[u8],
+    aad: &[u8],
+    dice_artifacts: &dyn DiceArtifacts,
+    encoded_signature: &mut [u8],
+) -> Result<usize> {
+    let private_key = derive_cdi_leaf_priv(dice_artifacts)?;
+    sign_cose_sign1(message, aad, private_key.as_array(), encoded_signature)
 }
 
 /// Verifies the `signature` of the `message` with the given `public_key` using `DiceVerify`.

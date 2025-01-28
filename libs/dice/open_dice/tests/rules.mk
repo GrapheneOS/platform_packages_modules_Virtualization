@@ -23,6 +23,7 @@ MODULE_CRATE_NAME := diced_open_dice_tests
 
 MODULE_LIBRARY_DEPS += \
 	packages/modules/Virtualization/libs/dice/open_dice \
+	$(call FIND_CRATE,coset) \
 
 MODULE_RUST_TESTS := true
 

@@ -44,16 +44,14 @@ pub fn perform_rollback_protection(
     cdi_seal: &[u8],
     instance_hash: Option<Hidden>,
 ) -> Result<(bool, Hidden, bool), RebootReason> {
-    if should_defer_rollback_protection(fdt)?
-        && verified_boot_data.has_capability(Capability::SecretkeeperProtection)
+    if (should_defer_rollback_protection(fdt)?
+        && verified_boot_data.has_capability(Capability::SecretkeeperProtection))
+        || verified_boot_data.has_capability(Capability::TrustySecurityVm)
     {
         perform_deferred_rollback_protection(verified_boot_data)?;
         Ok((false, instance_hash.unwrap(), true))
     } else if verified_boot_data.has_capability(Capability::RemoteAttest) {
         perform_fixed_index_rollback_protection(verified_boot_data)?;
-        Ok((false, instance_hash.unwrap(), false))
-    } else if verified_boot_data.has_capability(Capability::TrustySecurityVm) {
-        skip_rollback_protection()?;
         Ok((false, instance_hash.unwrap(), false))
     } else {
         perform_legacy_rollback_protection(fdt, dice_inputs, cdi_seal, instance_hash)
@@ -86,11 +84,6 @@ fn perform_fixed_index_rollback_protection(
     } else {
         Ok(())
     }
-}
-
-fn skip_rollback_protection() -> Result<(), RebootReason> {
-    info!("Skipping rollback protection");
-    Ok(())
 }
 
 /// Performs RBP using instance.img where updates require clearing old entries, causing new CDIs.
