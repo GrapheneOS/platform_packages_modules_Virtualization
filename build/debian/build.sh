@@ -5,6 +5,8 @@
 # - Add Android-specific packages via a new class
 # - Use a stable release from debian-cloud-images
 
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
 show_help() {
 	echo "Usage: sudo $0 [OPTION]... [FILE]"
 	echo "Builds a debian image and save it to FILE. [sudo is required]"
@@ -170,7 +172,7 @@ download_debian_cloud_image() {
 }
 
 build_rust_as_deb() {
-	pushd "$(dirname "$0")/../../guest/$1" > /dev/null
+	pushd "$SCRIPT_DIR/../../guest/$1" > /dev/null
 	cargo deb \
 		--target "${arch}-unknown-linux-gnu" \
 		--output "${debian_cloud_image}/localdebs"
@@ -180,7 +182,7 @@ build_rust_as_deb() {
 build_ttyd() {
 	local ttyd_version=1.7.7
 	local url="https://github.com/tsl0922/ttyd/archive/refs/tags/${ttyd_version}.tar.gz"
-	cp -r "$(dirname "$0")/ttyd" "${workdir}/ttyd"
+	cp -r "$SCRIPT_DIR/ttyd" "${workdir}/ttyd"
 
 	pushd "${workdir}" > /dev/null
 	wget "${url}" -O - | tar xz
@@ -199,13 +201,13 @@ build_ttyd() {
 copy_android_config() {
 	local src
 	local dst
-	src="$(dirname "$0")/fai_config"
+	src="$SCRIPT_DIR/fai_config"
 	dst="${config_space}"
 
 	cp -R "${src}"/* "${dst}"
-	cp "$(dirname "$0")/image.yaml" "${resources_dir}"
+	cp "$SCRIPT_DIR/image.yaml" "${resources_dir}"
 
-	cp -R "$(dirname "$0")/localdebs/" "${debian_cloud_image}/"
+	cp -R "$SCRIPT_DIR/localdebs/" "${debian_cloud_image}/"
 	build_ttyd
 	build_rust_as_deb forwarder_guest
 	build_rust_as_deb forwarder_guest_launcher
@@ -258,7 +260,7 @@ package_custom_kernel() {
 	            --extract "${dsc_file}"
 	pushd "linux-${debian_kver%-*}" > /dev/null
 
-	local kpatches_src="$(dirname "$0")/kernel_patches"
+	local kpatches_src="$SCRIPT_DIR/kernel_patches"
 	cp -r "${kpatches_src}/avf" debian/patches/
 	cat "${kpatches_src}/series" >> debian/patches/series
 	./debian/rules orig
@@ -316,7 +318,7 @@ run_fai() {
 
 generate_output_package() {
 	fdisk -l "${raw_disk_image}"
-	local vm_config="$(realpath $(dirname "$0"))/vm_config.json.${arch}"
+	local vm_config="$SCRIPT_DIR/vm_config.json.${arch}"
 	local root_partition_num=1
 	local bios_partition_num=14
 	local efi_partition_num=15

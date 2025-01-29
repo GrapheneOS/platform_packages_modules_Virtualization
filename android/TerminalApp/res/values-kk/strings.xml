@@ -33,8 +33,7 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Орнатылмады, себебі Wi-Fi желісі жоқ."</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Орнату мүмкін болмады. Қайталап көріңіз."</string>
     <string name="action_settings" msgid="5729342767795123227">"Параметрлер"</string>
-    <!-- no translation found for action_display (8487008779926038139) -->
-    <skip />
+    <string name="action_display" msgid="8487008779926038139">"Дисплей"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Терминал дайындалып жатыр."</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Терминал тоқтатылып жатыр."</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Терминал бұзылды."</string>

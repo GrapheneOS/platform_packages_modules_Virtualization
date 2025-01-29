@@ -554,7 +554,7 @@ impl<'a, const N: usize> CellChunkIterator<'a, N> {
     }
 }
 
-impl<'a, const N: usize> Iterator for CellChunkIterator<'a, N> {
+impl<const N: usize> Iterator for CellChunkIterator<'_, N> {
     type Item = [u32; N];
     fn next(&mut self) -> Option<Self::Item> {
         let mut ret: Self::Item = [0; N];

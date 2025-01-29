@@ -33,8 +33,7 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Kunne ikke installere fordi wifi ikke er tilgjengelig"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Installasjonen mislyktes. Prøv igjen"</string>
     <string name="action_settings" msgid="5729342767795123227">"Innstillinger"</string>
-    <!-- no translation found for action_display (8487008779926038139) -->
-    <skip />
+    <string name="action_display" msgid="8487008779926038139">"Vis"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Forbereder terminalen"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Stopper terminalen"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminalen krasjet"</string>

@@ -166,7 +166,7 @@ pub struct DtPathTokens<'a> {
     tokens: Vec<&'a [u8]>,
 }
 
-impl<'a> fmt::Debug for DtPathTokens<'a> {
+impl fmt::Debug for DtPathTokens<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut list = f.debug_list();
         for token in &self.tokens {

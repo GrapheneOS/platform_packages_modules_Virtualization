@@ -33,15 +33,14 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Instalēšana neizdevās, jo nav pieejams Wi‑Fi savienojums"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Neizdevās instalēt — mēģiniet vēlreiz"</string>
     <string name="action_settings" msgid="5729342767795123227">"Iestatījumi"</string>
-    <!-- no translation found for action_display (8487008779926038139) -->
-    <skip />
+    <string name="action_display" msgid="8487008779926038139">"Displejs"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Notiek termināļa sagatavošana."</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Notiek termināļa apturēšana."</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminālis avarēja."</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Diska lieluma mainīšana"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Saknes nodalījuma lieluma mainīšana"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Diska lielums ir iestatīts."</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Piešķirtais lielums: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Piešķirts: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksimālais lielums: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Atcelt"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Lietot"</string>

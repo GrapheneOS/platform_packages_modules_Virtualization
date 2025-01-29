@@ -33,8 +33,7 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"ওয়াই-ফাই উপলভ্য না থাকায় ইনস্টল করা যায়নি"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"ইনস্টল করা যায়নি। আবার চেষ্টা করুন"</string>
     <string name="action_settings" msgid="5729342767795123227">"সেটিংস"</string>
-    <!-- no translation found for action_display (8487008779926038139) -->
-    <skip />
+    <string name="action_display" msgid="8487008779926038139">"ডিসপ্লে"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"টার্মিনাল তৈরি করা হচ্ছে"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"টার্মিনাল বন্ধ করা হচ্ছে"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"টার্মিনাল ক্র্যাশ করেছে"</string>

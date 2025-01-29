@@ -14,7 +14,7 @@
 
 //! Library for working with (VirtIO) PCI devices discovered from a device tree.
 
-use core::{ffi::CStr, ops::Range};
+use core::ops::Range;
 use libfdt::{AddressRange, Fdt, FdtError, FdtNode};
 use log::debug;
 use thiserror::Error;
@@ -103,7 +103,7 @@ impl PciInfo {
 
 /// Finds an FDT node with compatible=pci-host-cam-generic.
 fn pci_node(fdt: &Fdt) -> Result<FdtNode, PciError> {
-    fdt.compatible_nodes(CStr::from_bytes_with_nul(b"pci-host-cam-generic\0").unwrap())
+    fdt.compatible_nodes(c"pci-host-cam-generic")
         .map_err(PciError::FdtErrorPci)?
         .next()
         .ok_or(PciError::FdtNoPci)

@@ -58,4 +58,4 @@ docker run --privileged -it -v /dev:/dev \
   -v "$ANDROID_BUILD_TOP/packages/modules/Virtualization:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
   ubuntu:22.04 \
-  bash -c "/root/Virtualization/build/debian/build.sh -a $arch $release_flag $kernel_flag $save_workdir_flag $shell_condition bash"
+  bash -c "./build.sh -a $arch $release_flag $kernel_flag $save_workdir_flag $shell_condition bash"

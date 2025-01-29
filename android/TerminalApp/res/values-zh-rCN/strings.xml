@@ -33,8 +33,7 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"由于 WLAN 不可用，安装失败"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"安装失败，请重试"</string>
     <string name="action_settings" msgid="5729342767795123227">"设置"</string>
-    <!-- no translation found for action_display (8487008779926038139) -->
-    <skip />
+    <string name="action_display" msgid="8487008779926038139">"显示"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"正在准备终端"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"正在停止终端"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"终端已崩溃"</string>

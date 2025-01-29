@@ -60,6 +60,14 @@ impl<'a> Ops<'a> {
         &mut self,
         partition_name: &CStr,
     ) -> SlotVerifyResult<SlotVerifyData<'a>> {
+        // Note that this call manages to verify the initrd images using hashes contained in the
+        // (unique) VBMeta from the end of self.kernel because if
+        //
+        // - read_from_partition("vbmeta") returns AVB_IO_RESULT_ERROR_NO_SUCH_PARTITION and
+        // - we do NOT pass AVB_SLOT_VERIFY_FLAGS_NO_VBMETA_PARTITION to slot_verify()
+        //
+        // then libavb (specifically, avb_slot_verify()) falls back to retrieving VBMeta from the
+        // footer of the "boot" partition i.e. self.kernel (see PartitionName::Kernel).
         slot_verify(
             self,
             &[partition_name],

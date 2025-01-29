@@ -104,7 +104,7 @@ impl<'a, T: Hal, C: ConfigurationAccess> PciTransportIterator<'a, T, C> {
     }
 }
 
-impl<'a, T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'a, T, C> {
+impl<T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'_, T, C> {
     type Item = PciTransport;
 
     fn next(&mut self) -> Option<Self::Item> {

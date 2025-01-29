@@ -356,6 +356,32 @@ fn extended_initrd_fails_verification() -> Result<()> {
 }
 
 #[test]
+fn tampered_normal_initrd_fails_verification() -> Result<()> {
+    let mut initrd = load_latest_initrd_normal()?;
+    initrd[1] = !initrd[1]; // Flip the bits
+
+    assert_payload_verification_with_initrd_fails(
+        &load_latest_signed_kernel()?,
+        &initrd,
+        &load_trusted_public_key()?,
+        SlotVerifyError::Verification(None).into(),
+    )
+}
+
+#[test]
+fn tampered_debug_initrd_fails_verification() -> Result<()> {
+    let mut initrd = load_latest_initrd_debug()?;
+    initrd[1] = !initrd[1]; // Flip the bits
+
+    assert_payload_verification_with_initrd_fails(
+        &load_latest_signed_kernel()?,
+        &initrd,
+        &load_trusted_public_key()?,
+        SlotVerifyError::Verification(None).into(),
+    )
+}
+
+#[test]
 fn tampered_vbmeta_fails_verification() -> Result<()> {
     let mut kernel = load_latest_signed_kernel()?;
     let footer = extract_avb_footer(&kernel)?;
