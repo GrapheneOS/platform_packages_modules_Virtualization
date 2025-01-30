@@ -92,7 +92,8 @@ impl PartialInputs {
         let mode = to_dice_mode(data.debug_level);
         // We use rollback_index from vbmeta as the security_version field in dice certificate.
         let security_version = data.rollback_index;
-        let rkp_vm_marker = data.has_capability(Capability::RemoteAttest);
+        let rkp_vm_marker = data.has_capability(Capability::RemoteAttest)
+            || data.has_capability(Capability::TrustySecurityVm);
 
         Ok(Self { code_hash, auth_hash, mode, security_version, rkp_vm_marker })
     }
@@ -248,9 +249,19 @@ mod tests {
     }
 
     #[test]
-    fn config_descriptor_with_rkp_vm() {
+    fn rkp_vm_config_descriptor_has_rkp_vm_marker() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
+        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let config_map = decode_config_descriptor(&inputs, Some(HASH));
+
+        assert!(config_map.get(&RKP_VM_MARKER_KEY).unwrap().is_null());
+    }
+
+    #[test]
+    fn security_vm_config_descriptor_has_rkp_vm_marker() {
+        let vb_data =
+            VerifiedBootData { capabilities: vec![Capability::TrustySecurityVm], ..BASE_VB_DATA };
         let inputs = PartialInputs::new(&vb_data).unwrap();
         let config_map = decode_config_descriptor(&inputs, Some(HASH));
 
