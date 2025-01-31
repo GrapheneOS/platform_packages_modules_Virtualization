@@ -48,6 +48,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".DisplayActivity"
+            android:taskAffinity="com.android.virtualization.terminal.display"
             android:screenOrientation="landscape"
             android:resizeableActivity="false"
             android:theme="@style/FullscreenTheme"
