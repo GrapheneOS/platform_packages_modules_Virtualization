@@ -368,6 +368,8 @@ public class MainActivity :
             return true
         } else if (id == R.id.menu_item_display) {
             val intent = Intent(this, DisplayActivity::class.java)
+            intent.flags =
+                intent.flags or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             this.startActivity(intent)
             return true
         }
