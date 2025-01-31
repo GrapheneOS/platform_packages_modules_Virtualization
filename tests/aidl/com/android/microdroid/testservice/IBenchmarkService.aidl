@@ -27,6 +27,13 @@ interface IBenchmarkService {
      */
     double measureReadRate(String filename, boolean isRand);
 
+    /**
+     * Measures the write rate for writing the given file, creating the file if necessary
+     *
+     * @return The write rate in MB/s.
+     */
+    double measureWriteRate(String filename, long size_bytes);
+
     /** Returns an entry from /proc/meminfo. */
     long getMemInfoEntry(String name);
 

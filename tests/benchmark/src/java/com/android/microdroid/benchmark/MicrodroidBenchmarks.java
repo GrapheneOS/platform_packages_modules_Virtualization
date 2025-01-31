@@ -101,6 +101,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     private static final double NANO_TO_MICRO = 1_000.0;
     private static final String MICRODROID_IMG_PREFIX = "microdroid_";
     private static final String MICRODROID_IMG_SUFFIX = ".img";
+    static final long ENCRYPTED_STORE_SIZE = 1_073_741_824; // 1G
 
     @Parameterized.Parameters(name = "protectedVm={0},os={1}")
     public static Collection<Object[]> params() {
@@ -1096,5 +1097,59 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                 rpDataAccessWithRefreshingSession(true),
                 "latency/writeRollbackProtectedSecretWithRefreshSession",
                 "us");
+    }
+
+    @Test
+    public void encryptedstoreIoRate() throws Exception {
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_io.json")
+                        .setDebugLevel(DEBUG_LEVEL_NONE)
+                        .setShouldUseHugepages(true)
+                        .setEncryptedStorageBytes(ENCRYPTED_STORE_SIZE)
+                        .build();
+        List<Double> writeThroughput = new ArrayList<>(IO_TEST_TRIAL_COUNT);
+        List<Double> readThroughput = new ArrayList<>(IO_TEST_TRIAL_COUNT);
+
+        for (int i = 0; i < IO_TEST_TRIAL_COUNT; ++i) {
+            String vmName = "vm_encryptedstore_io" + i;
+            VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config);
+            BenchmarkVmListener.create(new EncryptedstoreBenchmarkListener(writeThroughput, true))
+                    .runToFinish(TAG, vm);
+            // Rerun the VM & read the storage!
+            BenchmarkVmListener.create(new EncryptedstoreBenchmarkListener(readThroughput, false))
+                    .runToFinish(TAG, vm);
+        }
+        reportMetrics(writeThroughput, "encryptedstore/sequential_write", "mb_per_sec");
+        reportMetrics(readThroughput, "encryptedstore/sequential_read", "mb_per_sec");
+    }
+
+    private static class EncryptedstoreBenchmarkListener
+            implements BenchmarkVmListener.InnerListener {
+        private static final String FILENAME = "/mnt/encryptedstore/test_file";
+
+        private final List<Double> mIoThroughput;
+        // Set to true iff write is to be measured, read throughput is measured otherwise
+        private final boolean mMeasureWrite;
+
+        EncryptedstoreBenchmarkListener(List<Double> ioThroughput, boolean measureWrite) {
+            mIoThroughput = ioThroughput;
+            mMeasureWrite = measureWrite;
+        }
+
+        @Override
+        public void onPayloadReady(VirtualMachine vm, IBenchmarkService benchmarkService)
+                throws RemoteException {
+            double rate;
+            if (mMeasureWrite) {
+                // Fill 3/4 of the storage by writing (random) data into a file!
+                rate =
+                        benchmarkService.measureWriteRate(
+                                FILENAME, /*sizeBytes */ (ENCRYPTED_STORE_SIZE * 3) / 4);
+            } else {
+                // Sequentially read the file, just written.
+                rate = benchmarkService.measureReadRate(FILENAME, /*isRand */ false);
+            }
+            mIoThroughput.add(rate);
+        }
     }
 }

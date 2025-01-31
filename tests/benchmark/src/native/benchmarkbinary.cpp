@@ -67,6 +67,15 @@ public:
         return resultStatus(res);
     }
 
+    ndk::ScopedAStatus measureWriteRate(const std::string& filename, int64_t size_bytes,
+                                        double* out) override {
+        auto res = measure_write_rate(filename, size_bytes);
+        if (res.ok()) {
+            *out = res.value();
+        }
+        return resultStatus(res);
+    }
+
     ndk::ScopedAStatus getMemInfoEntry(const std::string& name, int64_t* out) override {
         auto value = read_meminfo_entry(name);
         if (!value.ok()) {
@@ -141,6 +150,49 @@ private:
         double elapsed_seconds =
                 finish.tv_sec - start.tv_sec + (finish.tv_nsec - start.tv_nsec) / 1e9;
         double file_size_mb = (double)file_size_bytes / kNumBytesPerMB;
+        return {file_size_mb / elapsed_seconds};
+    }
+
+    /**
+     * Measures the throughput of writing random data to the given file.
+     * @return The write rate in MB/s.
+     */
+    Result<double> measure_write_rate(const std::string& filename, int64_t size_bytes) {
+        struct stat file_stats;
+        const int64_t block_count = size_bytes / kBlockSizeBytes;
+        char buf[kBlockSizeBytes];
+        int fd_rand = open("/dev/urandom", O_RDONLY);
+        read(fd_rand, buf, kBlockSizeBytes);
+
+        struct timespec start;
+        if (clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
+            return ErrnoError() << "failed to clock_gettime";
+        }
+        // TODO(b/390648694): Ideally open with O_SYNC instead of syncfs().
+        unique_fd fd(open(filename.c_str(), O_CREAT | O_WRONLY, 00666));
+        if (fd.get() == -1) {
+            return ErrnoError() << "Write: opening " << filename << " failed";
+        }
+        if (stat(filename.c_str(), &file_stats) == -1) {
+            return Error() << "failed to get file stats";
+        }
+
+        for (auto i = 0; i < block_count; ++i) {
+            auto bytes = write(fd, buf, kBlockSizeBytes);
+            if (bytes == 0) {
+                return Error() << "unexpected end of file";
+            } else if (bytes == -1) {
+                return ErrnoError() << "failed to write";
+            }
+        }
+        syncfs(fd);
+        struct timespec finish;
+        if (clock_gettime(CLOCK_MONOTONIC, &finish) == -1) {
+            return ErrnoError() << "failed to clock_gettime";
+        }
+        double elapsed_seconds =
+                finish.tv_sec - start.tv_sec + (finish.tv_nsec - start.tv_nsec) / 1e9;
+        double file_size_mb = (double)size_bytes / kNumBytesPerMB;
         return {file_size_mb / elapsed_seconds};
     }
 
