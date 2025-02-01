@@ -71,7 +71,7 @@ use binder::{
 use glob::glob;
 use libc::{AF_VSOCK, sa_family_t, sockaddr_vm};
 use log::{debug, error, info, warn};
-use microdroid_payload_config::{ApkConfig, Task, TaskType, VmPayloadConfig};
+use microdroid_payload_config::{ApexConfig, ApkConfig, Task, TaskType, VmPayloadConfig};
 use nix::unistd::pipe;
 use rpcbinder::RpcServer;
 use rustutils::system_properties;
@@ -1409,7 +1409,19 @@ fn create_vm_payload_config(
     let extra_apks =
         (0..extra_apk_count).map(|i| ApkConfig { path: format!("extra-apk-{i}") }).collect();
 
-    Ok(VmPayloadConfig { task: Some(task), extra_apks, ..Default::default() })
+    if check_use_relaxed_microdroid_rollback_protection().is_ok() {
+        // The only payload delivered via Mainline module in this release requires
+        // com.android.i18n apex. However, we are past all the reasonable deadlines to add new
+        // APIs, so we use the fact that the payload is granted
+        // USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission as a signal that we should include
+        // com.android.i18n APEX.
+        // TODO: remove this after we provide a stable @SystemApi to load additional APEXes to
+        // Microdroid pVMs.
+        let apexes = vec![ApexConfig { name: String::from("com.android.i18n") }];
+        Ok(VmPayloadConfig { task: Some(task), apexes, extra_apks, ..Default::default() })
+    } else {
+        Ok(VmPayloadConfig { task: Some(task), extra_apks, ..Default::default() })
+    }
 }
 
 /// Generates a unique filename to use for a composite disk image.
@@ -1467,6 +1479,12 @@ fn check_manage_access() -> binder::Result<()> {
 /// Check whether the caller of the current Binder method is allowed to create custom VMs
 fn check_use_custom_virtual_machine() -> binder::Result<()> {
     check_permission("android.permission.USE_CUSTOM_VIRTUAL_MACHINE")
+}
+
+/// Check whether the caller of the current binder method is allowed to use relaxed microdroid
+/// rollback protection schema.
+fn check_use_relaxed_microdroid_rollback_protection() -> binder::Result<()> {
+    check_permission("android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION")
 }
 
 /// Return whether a partition is exempt from selinux label checks, because we know that it does

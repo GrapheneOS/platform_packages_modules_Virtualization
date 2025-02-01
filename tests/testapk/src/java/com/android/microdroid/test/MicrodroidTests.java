@@ -130,6 +130,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String VM_ATTESTATION_MESSAGE = "Hello RKP from AVF!";
     private static final int ENCRYPTED_STORAGE_BYTES = 4_000_000;
 
+    private static final String USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION =
+            "android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION";
+
     @Rule public Timeout globalTimeout = Timeout.seconds(300);
 
     @Parameterized.Parameters(name = "protectedVm={0},os={1}")
@@ -163,15 +166,19 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             // Tests that rely on the state of the permission should explicitly grant or revoke it.
             revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         }
+        revokePermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
     }
 
     @After
     public void tearDown() {
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        revokePermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
     }
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
 
     private static final String VM_SHARE_APP_PACKAGE_NAME = "com.android.microdroid.vmshare_app";
+    private static final String RELAXED_ROLLBACK_PROTECTION_SCHEME_PACKAGE_NAME =
+            "com.android.microdroid.test_relaxed_rollback_protection_scheme";
 
     private void createAndConnectToVmHelper(int cpuTopology, boolean shouldUseHugepages)
             throws Exception {
@@ -2745,6 +2752,39 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mException).isNull();
         int expectedPageSize = mOs.endsWith("_16k") ? 16384 : 4096;
         assertThat(testResults.mPageSize).isEqualTo(expectedPageSize);
+    }
+
+    @Test
+    public void libIcuIsLoadable() throws Exception {
+        assumeSupportedDevice();
+
+        // This test relies on the test apk having USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+        // permission.
+        grantPermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
+
+        Context otherAppCtx =
+                getContext()
+                        .createPackageContext(RELAXED_ROLLBACK_PROTECTION_SCHEME_PACKAGE_NAME, 0);
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(otherAppCtx)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLibWithLibIcu.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_libicu_is_loadable", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            ts.checkLibIcuIsAccessible();
+                        });
+
+        // checkLibIcuIsAccessible will throw an exception if something goes wrong.
+        assertThat(testResults.mException).isNull();
     }
 
     private static class VmShareServiceConnection implements ServiceConnection {

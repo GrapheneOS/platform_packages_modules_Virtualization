@@ -63,10 +63,21 @@ java_defaults {
 
 DATA = [
     ":MicrodroidTestAppUpdated",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5",
     ":MicrodroidVmShareApp",
     ":test_microdroid_vendor_image",
     ":test_microdroid_vendor_image_unsigned",
 ]
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifestV5_relaxed_rollback_protection.xml",
+    jni_libs: [
+        "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
 
 android_test {
     name: "MicrodroidTestApp",
@@ -185,6 +196,17 @@ cc_library_shared {
 cc_library_shared {
     name: "MicrodroidTestNativeLib",
     defaults: ["MicrodroidTestNativeLibDefaults"],
+}
+
+cc_library_shared {
+    name: "MicrodroidTestNativeLibWithLibIcu",
+    defaults: ["MicrodroidTestNativeLibDefaults"],
+    shared_libs: [
+        "libicu",
+    ],
+    cflags: [
+        "-D__MICRODROID_TEST_PAYLOAD_USES_LIBICU__",
+    ],
 }
 
 cc_library_shared {

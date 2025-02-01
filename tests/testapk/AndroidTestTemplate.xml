@@ -21,6 +21,7 @@
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="{MODULE}.apk" />
         <option name="test-file-name" value="MicrodroidVmShareApp.apk" />
+        <option name="test-file-name" value="MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5.apk" />
     </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="run-command" value="mkdir -p /data/local/tmp/cts/microdroid" />

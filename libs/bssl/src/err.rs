@@ -17,8 +17,8 @@
 use alloc::string::{String, ToString};
 use bssl_avf_error::{CipherError, EcError, EcdsaError, GlobalError, ReasonCode};
 use bssl_sys::{
-    self, ERR_get_error_line, ERR_lib_error_string, ERR_reason_error_string, ERR_GET_LIB_RUST,
-    ERR_GET_REASON_RUST,
+    self, ERR_get_error_line, ERR_lib_error_string, ERR_reason_error_string, ERR_GET_LIB,
+    ERR_GET_REASON,
 };
 use core::ffi::{c_char, CStr};
 use core::ptr;
@@ -102,13 +102,13 @@ unsafe fn cstr_to_string(p: *const c_char, default: &str) -> String {
 
 fn get_reason(packed_error: u32) -> i32 {
     // SAFETY: This function only reads the given error code.
-    unsafe { ERR_GET_REASON_RUST(packed_error) }
+    unsafe { ERR_GET_REASON(packed_error) }
 }
 
 /// Returns the library code for the error.
 fn get_lib(packed_error: u32) -> i32 {
     // SAFETY: This function only reads the given error code.
-    unsafe { ERR_GET_LIB_RUST(packed_error) }
+    unsafe { ERR_GET_LIB(packed_error) }
 }
 
 fn map_to_reason_code(reason: i32, lib: i32) -> ReasonCode {

@@ -6,7 +6,6 @@ After=virtiofs_internal.service
 
 [Service]
 ExecStart=/usr/local/bin/ttyd --ssl --ssl-cert /etc/ttyd/server.crt --ssl-key /etc/ttyd/server.key --ssl-ca /mnt/internal/ca.crt -t disableLeaveAlert=true -W login -f droid
-ExecStartPost=/usr/bin/avahi-publish-service ttyd _http._tcp 7681
 Type=simple
 Restart=always
 User=root

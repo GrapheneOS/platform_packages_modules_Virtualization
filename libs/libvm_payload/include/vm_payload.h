@@ -58,7 +58,7 @@ typedef enum AVmAttestationStatus : int32_t {
 typedef enum AVmAccessRollbackProtectedSecretStatus : int32_t {
     /**
      * Relevant Entry not found. This can happen either due to no value was ever written or because
-     * Android maliciously deleted the value (deletions may not be authenticated).
+     * it was deleted by host.
      */
     AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ENTRY_NOT_FOUND = -1,
     /** Requested access size is not supported by the implementation */
@@ -282,9 +282,9 @@ size_t AVmAttestationResult_getCertificateAt(const AVmAttestationResult* _Nonnul
         __INTRODUCED_IN(__ANDROID_API_V__);
 /**
  * Writes up to n bytes from buffer starting at `buf`, on behalf of the payload, to rollback
- * detectable storage. The number of bytes written may be less than n if, for example, the
- * underlying storage has size constraints. This stored data is confidential to the pVM and
- * protected via appropriate DICE policy on the payload's DICE chain.
+ * detectable storage. The data is written from the start. The number of bytes written may be less
+ * than n if, for example, the underlying storage has size constraints. This stored data is
+ * confidential to the VM instance.
  *
  * \param buf A pointer to data to be written. This should have the size of at least n bytes.
  * \param n The maximum number of bytes to be filled in `buf`.
@@ -296,7 +296,7 @@ size_t AVmAttestationResult_getCertificateAt(const AVmAttestationResult* _Nonnul
 int32_t AVmPayload_writeRollbackProtectedSecret(const void* _Nonnull buf, size_t n)
         __INTRODUCED_IN(36);
 /**
- * Read up to n bytes of payload's data in rollback detectable storage into `buf`.
+ * Read the first n bytes of payload's data in rollback detectable storage into `buf`.
  *
  * \param buf A pointer to buffer where the requested data is written. This should have the size of
  * at least n bytes.
@@ -307,7 +307,6 @@ int32_t AVmPayload_writeRollbackProtectedSecret(const void* _Nonnull buf, size_t
  * number) is returned.
  */
 int32_t AVmPayload_readRollbackProtectedSecret(void* _Nullable buf, size_t n) __INTRODUCED_IN(36);
-;
 
 /**
  * Checks whether the VM instance is new - i.e., if this is the first run of an instance.
@@ -316,6 +315,6 @@ int32_t AVmPayload_readRollbackProtectedSecret(void* _Nullable buf, size_t n) __
  *
  *  \return true if this is the first run of an instance, false otherwise.
  */
-bool AVmPayload_isNewInstance() __INTRODUCED_IN(36);
+bool AVmPayload_isNewInstance(void) __INTRODUCED_IN(36);
 
 __END_DECLS

@@ -2,23 +2,11 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-soong_config_module_type {
-    name: "avf_flag_aware_android_app",
-    module_type: "android_app",
-    config_namespace: "ANDROID",
-    bool_variables: ["release_avf_allow_preinstalled_apps"],
-    properties: ["manifest"],
-}
-
 // Defines our permissions
-avf_flag_aware_android_app {
+android_app {
     name: "android.system.virtualmachine.res",
     installable: true,
     apex_available: ["com.android.virt"],
     platform_apis: true,
-    soong_config_variables: {
-        release_avf_allow_preinstalled_apps: {
-            manifest: "AndroidManifestNext.xml",
-        },
-    },
+    manifest: "AndroidManifest.xml",
 }

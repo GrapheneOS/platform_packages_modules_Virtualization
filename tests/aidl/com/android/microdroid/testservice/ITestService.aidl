@@ -104,4 +104,9 @@ interface ITestService {
      * @return true on the first boot of the instance & false on subsequent boot.
      */
     boolean isNewInstance();
+
+    /**
+     * Checks that libicu is accessible to the payload that has com.android.i18n APEX mounted.
+     */
+    void checkLibIcuIsAccessible();
 }

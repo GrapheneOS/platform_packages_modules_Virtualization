@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include <sys/capability.h>
 #include <sys/system_properties.h>
+#ifdef __MICRODROID_TEST_PAYLOAD_USES_LIBICU__
+#include <unicode/uchar.h>
+#endif
 #include <unistd.h>
 #include <vm_main.h>
 #include <vm_payload_restricted.h>
@@ -382,6 +385,29 @@ Result<void> start_test_service() {
                 return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
                                                                    "not available before SDK 36");
             }
+        }
+
+        ScopedAStatus checkLibIcuIsAccessible() override {
+#ifdef __MICRODROID_TEST_PAYLOAD_USES_LIBICU__
+            static constexpr const char* kLibIcuPath = "/apex/com.android.i18n/lib64/libicu.so";
+            if (access(kLibIcuPath, R_OK) == 0) {
+                if (!u_hasBinaryProperty(U'❤' /* Emoji heart U+2764 */, UCHAR_EMOJI)) {
+                    return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                       "libicu broken!");
+                }
+                return ScopedAStatus::ok();
+            } else {
+                std::string msg = "failed to access " + std::string(kLibIcuPath) + "(" +
+                        std::to_string(errno) + ")";
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   msg.c_str());
+            }
+#else
+            return ScopedAStatus::
+                    fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                 "should be only used together with "
+                                                 "MicrodroidTestNativeLibWithLibIcu.so payload");
+#endif
         }
 
         ScopedAStatus quit() override { exit(0); }

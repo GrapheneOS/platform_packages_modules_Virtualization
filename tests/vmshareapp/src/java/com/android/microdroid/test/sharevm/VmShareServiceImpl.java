@@ -291,5 +291,10 @@ public class VmShareServiceImpl extends Service {
         public boolean isNewInstance() {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public void checkLibIcuIsAccessible() {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }

@@ -14,19 +14,12 @@
      limitations under the License.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="com.android.microdroid.test"
+      package="com.android.microdroid.test_relaxed_rollback_protection_scheme"
       android:versionCode="5">
     <uses-permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_CUSTOM_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION" />
     <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33" />
     <uses-feature android:name="android.software.virtualization_framework" android:required="false" />
-    <queries>
-        <package android:name="com.android.microdroid.vmshare_app" />
-        <package android:name="com.android.microdroid.test_relaxed_rollback_protection_scheme" />
-    </queries>
     <application />
-    <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
-        android:targetPackage="com.android.microdroid.test"
-        android:label="Microdroid Test" />
 </manifest>

@@ -20,11 +20,11 @@
   <!-- @SystemApi Allows an application to create and run a Virtual Machine
        using the Virtualization Framework APIs
        (android.system.virtualmachine.*).
-       <p>Protection level: signature|privileged|development
+       <p>Protection level: signature|preinstalled|development
        @hide
   -->
   <permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE"
-      android:protectionLevel="signature|privileged|development" />
+      android:protectionLevel="signature|preinstalled|development" />
 
   <!-- @hide Allows an application to run a Virtual Machine with a custom
        kernel or a Microdroid configuration file.
@@ -39,6 +39,15 @@
   -->
   <permission android:name="android.permission.DEBUG_VIRTUAL_MACHINE"
       android:protectionLevel="signature" />
+
+  <!-- @hide Makes Microdroid pVM use a more relaxed rollback protection scheme.
+    Should only be used by payloads delivered inside Mainline modules.
+    See packages/modules/Virtualization/docs/mainline_module_payload.md.
+    <p>Protection level: signature|development|privileged
+  -->
+  <permission android:name="android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION"
+      android:protectionLevel="signature|development|privileged" />
+
 
   <application android:hasCode="false" />
 </manifest>

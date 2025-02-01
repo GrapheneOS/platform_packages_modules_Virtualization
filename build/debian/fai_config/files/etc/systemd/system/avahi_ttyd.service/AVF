@@ -1,0 +1,13 @@
+[Unit]
+Description=avahi_TTYD
+After=ttyd.service
+
+[Service]
+ExecStart=/usr/bin/avahi-publish-service ttyd _http._tcp 7681
+Type=simple
+Restart=always
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

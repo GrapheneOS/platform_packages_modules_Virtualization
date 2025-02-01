@@ -35,6 +35,16 @@ on early-init
     # (In Android this happens inside apexd-bootstrap.)
     wait_for_prop ro.cold_boot_done true
 
+    # We need to define ANDROID_TZDATA_ROOT otherwise libicu complains.
+    # For now set it to a non-existent value, because libicu APIs that don't depend on tzdata work
+    # correctly without it.
+    # Once loading tzdata APEX is supported, we can set this value to /apex/com.android.tzdata.
+    # This is no-op for most microdroid VMs, and is only used if com.android.i18n APEX was mounted.
+    export ANDROID_TZDATA_ROOT /does/not/exist
+    # Set ANDROID_I18N_ROOT otherwise libicu will complain.
+    # This is no-op for most microdroid VMs, and is only used if com.android.i18n APEX was mounted.
+    export ANDROID_I18N_ROOT /apex/com.android.i18n
+
 on init
     mkdir /mnt/apk 0755 root root
     mkdir /mnt/extra-apk 0755 root root

@@ -1,0 +1,4 @@
+#!/bin/bash
+sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty7 sleep 1d
+systemctl --user start weston
+export DISPLAY=:0
