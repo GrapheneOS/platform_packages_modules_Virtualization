@@ -149,6 +149,12 @@ apex_defaults {
             "microdroid_gki-android15-6.6_kernel",
             "microdroid_gki-android15-6.6.json",
         ],
+        "android16_612": [
+            "microdroid_gki-android16-6.12_initrd_debuggable",
+            "microdroid_gki-android16-6.12_initrd_normal",
+            "microdroid_gki-android16-6.12_kernel",
+            "microdroid_gki-android16-6.12.json",
+        ],
         // Internal option used by pkvm team while developing new features.
         // Should not be used on production kernels.
         "pkvm_experimental": [

@@ -357,7 +357,7 @@ int AVirtualMachine_start(AVirtualMachine* _Nonnull vm) __INTRODUCED_IN(36);
  * For a graceful shutdown, you could request the virtual machine to exit itself, and wait for the
  * virtual machine to stop by `AVirtualMachine_waitForStop`.
  *
- * A stopped virtual machine can be re-started by calling `AVirtualMachine_start`.
+ * A stopped virtual machine cannot be re-started.
  *
  * `AVirtualMachine_stop` stops a virtual machine by sending a signal to the process. This operation
  * is synchronous and `AVirtualMachine_stop` may block.

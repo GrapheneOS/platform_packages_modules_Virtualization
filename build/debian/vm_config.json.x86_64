@@ -43,5 +43,6 @@
     "debuggable": true,
     "console_out": true,
     "console_input_device": "ttyS0",
-    "network": true
+    "network": true,
+    "auto_memory_balloon": true
 }

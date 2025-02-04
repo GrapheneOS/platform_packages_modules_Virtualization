@@ -633,7 +633,7 @@ prebuilt_etc {
 }
 
 avb_add_hash_footer_defaults {
-    name: "microdroid_gki_kernel_signed_defaults",
+    name: "microdroid_gki-android15-6.6_kernel_signed_defaults",
     defaults: ["microdroid_kernel_signed_defaults"],
     arch: {
         arm64: {
@@ -652,7 +652,7 @@ avb_add_hash_footer_defaults {
 avb_add_hash_footer {
     name: "microdroid_gki-android15-6.6_kernel_signed",
     defaults: [
-        "microdroid_gki_kernel_signed_defaults",
+        "microdroid_gki-android15-6.6_kernel_signed_defaults",
         "microdroid_kernel_cap_defaults",
     ],
     filename: "microdroid_gki-android15-6.6_kernel_signed",
@@ -661,7 +661,7 @@ avb_add_hash_footer {
 avb_add_hash_footer {
     name: "microdroid_gki-android15-6.6_kernel_signed_supports_uefi_boot",
     defaults: [
-        "microdroid_gki_kernel_signed_defaults",
+        "microdroid_gki-android15-6.6_kernel_signed_defaults",
         "microdroid_kernel_cap_with_uefi_defaults",
     ],
     filename: "microdroid_gki-android15-6.6_kernel_signed_supports_uefi_boot",
@@ -709,6 +709,91 @@ avb_gen_vbmeta_image {
     src: ":microdroid_gki-android15-6.6_initrd_debuggable",
 }
 
+///////////////////////////////////////
+// GKI-android16-6.12
+///////////////////////////////////////
+prebuilt_etc {
+    name: "microdroid_gki-android16-6.12.json",
+    src: "microdroid_gki-android16-6.12.json",
+}
+
+avb_add_hash_footer_defaults {
+    name: "microdroid_gki-android16-6.12_kernel_signed_defaults",
+    defaults: ["microdroid_kernel_signed_defaults"],
+    arch: {
+        arm64: {
+            src: ":microdroid_gki_kernel_prebuilts-android16-6.12-arm64",
+        },
+        x86_64: {
+            src: ":microdroid_gki_kernel_prebuilts-android16-6.12-x86_64",
+        },
+    },
+    include_descriptors_from_images: [
+        ":microdroid_gki-android16-6.12_initrd_normal_hashdesc",
+        ":microdroid_gki-android16-6.12_initrd_debug_hashdesc",
+    ],
+}
+
+avb_add_hash_footer {
+    name: "microdroid_gki-android16-6.12_kernel_signed",
+    defaults: [
+        "microdroid_gki-android16-6.12_kernel_signed_defaults",
+        "microdroid_kernel_cap_defaults",
+    ],
+    filename: "microdroid_gki-android16-6.12_kernel_signed",
+}
+
+avb_add_hash_footer {
+    name: "microdroid_gki-android16-6.12_kernel_signed_supports_uefi_boot",
+    defaults: [
+        "microdroid_gki-android16-6.12_kernel_signed_defaults",
+        "microdroid_kernel_cap_with_uefi_defaults",
+    ],
+    filename: "microdroid_gki-android16-6.12_kernel_signed_supports_uefi_boot",
+}
+
+// HACK: use cc_genrule for arch-specific properties
+cc_genrule {
+    name: "microdroid_gki-android16-6.12_kernel_signed-lz4",
+    out: ["microdroid_gki-android16-6.12_kernel_signed-lz4"],
+    srcs: [":empty_file"],
+    arch: {
+        arm64: {
+            srcs: [":microdroid_gki-android16-6.12_kernel_signed"],
+            exclude_srcs: [":empty_file"],
+        },
+    },
+    tools: ["lz4"],
+    cmd: "$(location lz4) -9 $(in) $(out)",
+}
+
+prebuilt_etc {
+    name: "microdroid_gki-android16-6.12_kernel",
+    filename: "microdroid_gki-android16-6.12_kernel",
+    src: ":empty_file",
+    relative_install_path: "fs",
+    arch: {
+        arm64: {
+            src: ":microdroid_gki-android16-6.12_kernel_signed",
+        },
+        x86_64: {
+            src: ":microdroid_gki-android16-6.12_kernel_signed",
+        },
+    },
+}
+
+avb_gen_vbmeta_image {
+    name: "microdroid_gki-android16-6.12_initrd_normal_hashdesc",
+    defaults: ["microdroid_initrd_normal_defaults"],
+    src: ":microdroid_gki-android16-6.12_initrd_normal",
+}
+
+avb_gen_vbmeta_image {
+    name: "microdroid_gki-android16-6.12_initrd_debug_hashdesc",
+    defaults: ["microdroid_initrd_debug_defaults"],
+    src: ":microdroid_gki-android16-6.12_initrd_debuggable",
+}
+
 python_binary_host {
     name: "extract_microdroid_kernel_hashes",
     srcs: ["extract_microdroid_kernel_hashes.py"],
@@ -723,11 +808,13 @@ cc_genrule {
         arm64: {
             srcs: [
                 ":microdroid_gki-android15-6.6_kernel_signed",
+                ":microdroid_gki-android16-6.12_kernel_signed",
             ],
         },
         x86_64: {
             srcs: [
                 ":microdroid_gki-android15-6.6_kernel_signed",
+                ":microdroid_gki-android16-6.12_kernel_signed",
             ],
         },
     },

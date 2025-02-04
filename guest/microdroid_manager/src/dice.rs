@@ -153,7 +153,11 @@ fn format_payload_config_descriptor(
             subcomponents.into_iter().map(Subcomponent::into_value).collect::<Result<Vec<_>>>()?;
         map.push((cbor!(-71002)?, cbor!(values)?));
     }
-    // Add a placeholder security version as it is required by the open-dice profile "Android.16"
+    // Add a placeholder security version as it is required by the open-dice profile "Android.16".
+    // Note: The DICE certificate derived in microdroid_manager primarily describes the APKs/APEXs
+    // loaded by microdroid_manager. Each APK/APEX is described separately with its own security
+    // version as a subcomponent within the certificate's config descriptor.
+    // Therefore, the global security version below (for the entire certificate) is unused.
     map.push((cbor!(-70005)?, cbor!(0)?));
     Ok(Value::Map(map).to_vec()?)
 }

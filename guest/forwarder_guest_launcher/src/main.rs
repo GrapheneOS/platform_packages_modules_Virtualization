@@ -36,14 +36,12 @@ mod debian_service {
 
 const NON_PREVILEGED_PORT_RANGE_START: i32 = 1024;
 const TTYD_PORT: i32 = 7681;
-const TCPSTATES_IP_4: i8 = 4;
 const TCPSTATES_STATE_CLOSE: &str = "CLOSE";
 const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct TcpStateRow {
-    ip: i8,
     lport: i32,
     rport: i32,
     #[serde(alias = "C-COMM")]
@@ -127,10 +125,8 @@ async fn report_active_ports(
 
     // TODO(b/340126051): Consider using NETLINK_SOCK_DIAG for the optimization.
     let listeners = listeners::get_all()?;
-    // TODO(b/340126051): Support distinguished port forwarding for ipv6 as well.
     let mut listening_ports: HashMap<_, _> = listeners
         .iter()
-        .filter(|x| x.socket.is_ipv4())
         .map(|x| {
             (
                 x.socket.port().into(),
@@ -144,9 +140,6 @@ async fn report_active_ports(
     let mut records = csv_reader.records();
     while let Some(record) = records.next().await {
         let row: TcpStateRow = record?.deserialize(Some(&header))?;
-        if row.ip != TCPSTATES_IP_4 {
-            continue;
-        }
         if !is_forwardable_port(row.lport) {
             continue;
         }
