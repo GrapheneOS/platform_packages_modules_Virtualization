@@ -14,14 +14,14 @@
 
 //! Hardware management of the access flag and dirty state.
 
-use super::page_table::PageTable;
+use crate::arch::aarch64::page_table::PageTable;
 use crate::arch::flush_region;
 use crate::{dsb, isb, read_sysreg, tlbi, write_sysreg};
 use aarch64_paging::paging::{Attributes, Descriptor, MemoryRegion};
 
 /// Sets whether the hardware management of access and dirty state is enabled with
 /// the given boolean.
-pub(super) fn set_dbm_enabled(enabled: bool) {
+pub fn set_dbm_enabled(enabled: bool) {
     if !dbm_available() {
         return;
     }
@@ -49,8 +49,9 @@ fn dbm_available() -> bool {
     read_sysreg!("id_aa64mmfr1_el1") & DBM_AVAILABLE != 0
 }
 
+#[allow(clippy::result_unit_err)]
 /// Flushes a memory range the descriptor refers to, if the descriptor is in writable-dirty state.
-pub(super) fn flush_dirty_range(
+pub fn flush_dirty_range(
     va_range: &MemoryRegion,
     desc: &Descriptor,
     _level: usize,
@@ -62,9 +63,10 @@ pub(super) fn flush_dirty_range(
     Ok(())
 }
 
+#[allow(clippy::result_unit_err)]
 /// Clears read-only flag on a PTE, making it writable-dirty. Used when dirty state is managed
 /// in software to handle permission faults on read-only descriptors.
-pub(super) fn mark_dirty_block(
+pub fn mark_dirty_block(
     va_range: &MemoryRegion,
     desc: &mut Descriptor,
     _level: usize,

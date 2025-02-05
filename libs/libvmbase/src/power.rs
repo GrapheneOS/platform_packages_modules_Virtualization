@@ -13,26 +13,18 @@
 // limitations under the License.
 
 //! Functions for shutting down the VM.
+use crate::arch::platform;
 
-use smccc::{
-    psci::{system_off, system_reset},
-    Hvc,
-};
-
-/// Makes a `PSCI_SYSTEM_OFF` call to shutdown the VM.
+/// Call shutdown VM using platform specific code.
 ///
 /// Panics if it returns an error.
 pub fn shutdown() -> ! {
-    system_off::<Hvc>().unwrap();
-    #[allow(clippy::empty_loop)]
-    loop {}
+    platform::shutdown();
 }
 
-/// Makes a `PSCI_SYSTEM_RESET` call to shutdown the VM abnormally.
+/// Call reboot VM using platform specific code.
 ///
 /// Panics if it returns an error.
 pub fn reboot() -> ! {
-    system_reset::<Hvc>().unwrap();
-    #[allow(clippy::empty_loop)]
-    loop {}
+    platform::reboot();
 }

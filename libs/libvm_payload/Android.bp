@@ -3,11 +3,10 @@ package {
 }
 
 // The Rust implementation of the C API.
-rust_ffi_static {
-    name: "libvm_payload_impl",
+rust_ffi {
+    name: "libvm_payload",
     crate_name: "vm_payload",
     defaults: ["avf_build_flags_rust"],
-    visibility: ["//visibility:private"],
     srcs: ["src/lib.rs"],
     include_dirs: ["include"],
     prefer_rlib: true,
@@ -23,6 +22,20 @@ rust_ffi_static {
         "libvm_payload_status_bindgen",
         "libvsock",
     ],
+    shared_libs: [
+        "libbinder_ndk",
+        "libbinder_rpc_unstable",
+        "liblog",
+        "libcrypto",
+    ],
+    no_full_install: true,
+    version_script: "libvm_payload.map.txt",
+    stubs: {
+        symbol_file: "libvm_payload.map.txt",
+        // Implementation is available inside a Microdroid VM.
+        implementation_installable: false,
+    },
+    visibility: ["//visibility:public"],
 }
 
 rust_bindgen {
@@ -73,28 +86,6 @@ rust_library_rlib {
         "libvm_payload_bindgen",
     ],
     apex_available: ["com.android.compos"],
-    visibility: ["//visibility:public"],
-}
-
-// Shared library for clients to link against.
-cc_library_shared {
-    name: "libvm_payload",
-    defaults: ["avf_build_flags_cc"],
-    shared_libs: [
-        "libbinder_ndk",
-        "libbinder_rpc_unstable",
-        "liblog",
-        "libcrypto",
-    ],
-    whole_static_libs: ["libvm_payload_impl"],
-    export_static_lib_headers: ["libvm_payload_impl"],
-    no_full_install: true,
-    version_script: "libvm_payload.map.txt",
-    stubs: {
-        symbol_file: "libvm_payload.map.txt",
-        // Implementation is available inside a Microdroid VM.
-        implementation_installable: false,
-    },
     visibility: ["//visibility:public"],
 }
 

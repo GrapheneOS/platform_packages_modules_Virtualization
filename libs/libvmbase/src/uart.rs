@@ -15,36 +15,33 @@
 //! Minimal driver for an 8250 UART. This only implements enough to work with the emulated 8250
 //! provided by crosvm, and won't work with real hardware.
 
-use crate::arch::write_volatile_u8;
 use core::fmt::{self, Write};
+
+/// The backend for [`Uart`] that abstracts the access to 8250 register map
+pub trait UartBackend {
+    /// Writes a byte value on the offset to the hardware registers.
+    fn write_register_u8(&self, offset: usize, byte: u8);
+}
 
 /// Minimal driver for an 8250 UART. This only implements enough to work with the emulated 8250
 /// provided by crosvm, and won't work with real hardware.
-pub struct Uart {
-    base_address: *mut u8,
+pub struct Uart<Backend: UartBackend> {
+    backend: Backend,
 }
 
-impl Uart {
-    /// Constructs a new instance of the UART driver for a device at the given base address.
-    ///
-    /// # Safety
-    ///
-    /// The given base address must point to the 8 MMIO control registers of an appropriate UART
-    /// device, which must be mapped into the address space of the process as device memory and not
-    /// have any other aliases.
-    pub unsafe fn new(base_address: usize) -> Self {
-        Self { base_address: base_address as *mut u8 }
+impl<Backend: UartBackend> Uart<Backend> {
+    /// Constructs a new instance of the UART driver with given backend.
+    pub(crate) fn create(backend: Backend) -> Self {
+        Self { backend }
     }
 
     /// Writes a single byte to the UART.
     pub fn write_byte(&self, byte: u8) {
-        // SAFETY: We know that the base address points to the control registers of a UART device
-        // which is appropriately mapped.
-        unsafe { write_volatile_u8(self.base_address, byte) }
+        self.backend.write_register_u8(0, byte)
     }
 }
 
-impl Write for Uart {
+impl<Backend: UartBackend> Write for Uart<Backend> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.as_bytes() {
             self.write_byte(*c);
@@ -52,6 +49,3 @@ impl Write for Uart {
         Ok(())
     }
 }
-
-// SAFETY: `Uart` just contains a pointer to device memory, which can be accessed from any context.
-unsafe impl Send for Uart {}

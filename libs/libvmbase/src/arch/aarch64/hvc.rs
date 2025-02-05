@@ -14,6 +14,7 @@
 
 //! Wrappers around calls to the hypervisor.
 
+/// TRNG ARM specific module
 pub mod trng;
 use self::trng::Error;
 use smccc::{
@@ -21,12 +22,18 @@ use smccc::{
     hvc64,
 };
 
+/// ARM HVC call number that will return TRNG version
 const ARM_SMCCC_TRNG_VERSION: u32 = 0x8400_0050;
+/// ARM TRNG feature hypercall number
 const ARM_SMCCC_TRNG_FEATURES: u32 = 0x8400_0051;
 #[allow(dead_code)]
+/// ARM SMCC TRNG get uuid hypercall number
 const ARM_SMCCC_TRNG_GET_UUID: u32 = 0x8400_0052;
 #[allow(dead_code)]
+/// ARM SMCC TRNG 32BIT random hypercall number
 const ARM_SMCCC_TRNG_RND32: u32 = 0x8400_0053;
+
+/// ARM SMCCC 64BIT random hypercall number
 pub const ARM_SMCCC_TRNG_RND64: u32 = 0xc400_0053;
 
 /// Returns the (major, minor) version tuple, as defined by the SMCCC TRNG.
@@ -37,8 +44,10 @@ pub fn trng_version() -> trng::Result<trng::Version> {
     (version as u32 as i32).try_into()
 }
 
+/// Buffer for random number
 pub type TrngRng64Entropy = [u64; 3];
 
+/// Return hardware backed entropy from TRNG
 pub fn trng_rnd64(nbits: u64) -> trng::Result<TrngRng64Entropy> {
     let mut args = [0u64; 17];
     args[0] = nbits;
@@ -49,6 +58,7 @@ pub fn trng_rnd64(nbits: u64) -> trng::Result<TrngRng64Entropy> {
     Ok([regs[1], regs[2], regs[3]])
 }
 
+/// Return TRNG feature
 pub fn trng_features(fid: u32) -> trng::Result<u64> {
     let mut args = [0u64; 17];
     args[0] = fid as u64;

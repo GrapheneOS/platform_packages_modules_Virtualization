@@ -16,34 +16,24 @@
 
 #![allow(unused_unsafe)]
 
-pub mod crosvm;
-
-use crate::linker::__stack_chk_guard;
-use crate::memory::{max_stack_size, page_4kb_of, PAGE_SIZE};
-use aarch64_paging::paging::VirtualAddress;
+#[cfg(target_arch = "aarch64")]
+use crate::arch::aarch64::linker::__stack_chk_guard;
+use crate::arch::VirtualAddress;
+use crate::memory::{max_stack_size, PAGE_SIZE};
 use core::ops::Range;
-use static_assertions::const_assert_eq;
+
+#[cfg(target_arch = "aarch64")]
+pub use crate::arch::aarch64::layout as crosvm;
 
 /// First address that can't be translated by a level 1 TTBR0_EL1.
 pub const MAX_VIRT_ADDR: usize = 1 << 40;
-
-/// Base memory-mapped addresses of the UART devices.
-///
-/// See SERIAL_ADDR in https://crosvm.dev/book/appendix/memory_layout.html#common-layout.
-pub const UART_ADDRESSES: [usize; 4] = [0x3f8, 0x2f8, 0x3e8, 0x2e8];
-
-/// Address of the single page containing all the UART devices.
-pub const UART_PAGE_ADDR: usize = 0;
-const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[0]));
-const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[1]));
-const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[2]));
-const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[3]));
 
 /// Get an address from a linker-defined symbol.
 #[macro_export]
 macro_rules! linker_addr {
     ($symbol:ident) => {{
-        let addr = (&raw const $crate::linker::$symbol) as usize;
+        #[cfg(target_arch = "aarch64")]
+        let addr = (&raw const $crate::arch::aarch64::linker::$symbol) as usize;
         VirtualAddress(addr)
     }};
 }
@@ -54,7 +44,6 @@ macro_rules! linker_region {
     ($begin:ident,$end:ident) => {{
         let start = linker_addr!($begin);
         let end = linker_addr!($end);
-
         start..end
     }};
 }
@@ -110,8 +99,9 @@ pub fn eh_stack_range() -> Range<VirtualAddress> {
 }
 
 /// Range of the page at UART_PAGE_ADDR of PAGE_SIZE.
+#[cfg(target_arch = "aarch64")]
 pub fn console_uart_page() -> Range<VirtualAddress> {
-    VirtualAddress(UART_PAGE_ADDR)..VirtualAddress(UART_PAGE_ADDR + PAGE_SIZE)
+    VirtualAddress(crosvm::UART_PAGE_ADDR)..VirtualAddress(crosvm::UART_PAGE_ADDR + PAGE_SIZE)
 }
 
 /// Read-write data (original).

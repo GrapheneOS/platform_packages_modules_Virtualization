@@ -23,7 +23,7 @@ use aarch64_paging::MapError;
 use core::result;
 
 /// Software bit used to indicate a device that should be lazily mapped.
-pub(super) const MMIO_LAZY_MAP_FLAG: Attributes = Attributes::SWFLAG_0;
+pub const MMIO_LAZY_MAP_FLAG: Attributes = Attributes::SWFLAG_0;
 
 /// We assume that MAIR_EL1.Attr0 = "Device-nGnRE memory" (0b0000_0100)
 const DEVICE_NGNRE: Attributes = Attributes::ATTRIBUTE_INDEX_0;

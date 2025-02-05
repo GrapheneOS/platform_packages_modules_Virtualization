@@ -14,13 +14,11 @@
 
 //! Helper functions and structs for exception handlers.
 
+use crate::memory::{MemoryTrackerError, MEMORY};
 use crate::{
-    eprintln,
-    layout::UART_PAGE_ADDR,
-    memory::{page_4kb_of, MemoryTrackerError, MEMORY},
+    arch::aarch64::layout::UART_PAGE_ADDR, arch::VirtualAddress, eprintln, memory::page_4kb_of,
     read_sysreg,
 };
-use aarch64_paging::paging::VirtualAddress;
 use core::fmt;
 use core::result;
 
@@ -99,6 +97,7 @@ impl fmt::Display for Esr {
         }
     }
 }
+
 /// A struct representing an Armv8 exception.
 pub struct ArmException {
     /// The value of the exception syndrome register.

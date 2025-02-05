@@ -11,7 +11,6 @@ rust_ffi_static {
         "legacy",
     ],
     rustlibs: [
-        "libaarch64_paging",
         "libbssl_avf_nostd",
         "libcbor_util_nostd",
         "libciborium_nostd",
@@ -24,8 +23,6 @@ rust_ffi_static {
         "libpvmfw_avb_nostd",
         "libpvmfw_embedded_key",
         "libpvmfw_fdt_template",
-        "libservice_vm_version",
-        "libsmccc",
         "libstatic_assertions",
         "libtinyvec_nostd",
         "libuuid_nostd",
@@ -34,6 +31,15 @@ rust_ffi_static {
         "libzerocopy_nostd",
         "libzeroize_nostd",
     ],
+    target: {
+        android_arm64: {
+            rustlibs: [
+                "libaarch64_paging",
+                "libsmccc",
+                "libservice_vm_version",
+            ],
+        },
+    },
 }
 
 // Generates an empty file.
@@ -270,17 +276,21 @@ cc_genrule {
 cc_binary {
     name: "pvmfw",
     defaults: ["vmbase_elf_defaults"],
-    srcs: [
-        "idmap.S",
-    ],
     static_libs: [
         "libpvmfw",
         "libvmbase_dice_clear_memory",
     ],
-    linker_scripts: [
-        "image.ld",
-        ":vmbase_sections",
-    ],
+    target: {
+        android_arm64: {
+            srcs: [
+                "asm/aarch64/idmap.S",
+            ],
+            linker_scripts: [
+                "asm/aarch64/image.ld",
+                ":vmbase_sections",
+            ],
+        },
+    },
     // `installable: false` is inherited from vmbase_elf_defaults, and that
     // hides this module from Make, which makes it impossible for the Make world
     // to place the unstripped binary to the symbols directory. Marking back as

@@ -54,12 +54,15 @@ impl From<i64> for Error {
     }
 }
 
+/// Local result alias
 pub type Result<T> = result::Result<T, Error>;
 
 /// A version of the SMCCC TRNG interface.
 #[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Version {
+    /// Version majon number
     pub major: u16,
+    /// Version minor number
     pub minor: u16,
 }
 

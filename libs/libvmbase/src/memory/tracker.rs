@@ -14,15 +14,16 @@
 
 //! Memory management.
 
-use super::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
 use super::error::MemoryTrackerError;
-use super::page_table::{PageTable, MMIO_LAZY_MAP_FLAG};
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
+use crate::arch::aarch64::page_table::{PageTable, MMIO_LAZY_MAP_FLAG};
+use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
+use crate::arch::VirtualAddress;
 use crate::dsb;
 use crate::layout;
 use crate::memory::shared::{MemoryRange, MemorySharer, MmioSharer};
 use crate::util::RangeExt as _;
-use aarch64_paging::paging::{Attributes, Descriptor, MemoryRegion as VaRange, VirtualAddress};
+use aarch64_paging::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
 use alloc::boxed::Box;
 use buddy_system_allocator::LockedFrameAllocator;
 use core::mem::size_of;
@@ -119,7 +120,7 @@ pub fn unshare_all_memory() {
 /// Unshare the UART page, previously shared with the host.
 pub fn unshare_uart() -> Result<()> {
     let Some(mmio_guard) = get_mmio_guard() else { return Ok(()) };
-    Ok(mmio_guard.unmap(layout::UART_PAGE_ADDR)?)
+    Ok(mmio_guard.unmap(layout::crosvm::UART_PAGE_ADDR)?)
 }
 
 /// Map the provided range as normal memory, with R/W permissions.

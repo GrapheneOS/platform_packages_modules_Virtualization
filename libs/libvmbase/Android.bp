@@ -77,14 +77,12 @@ rust_library_rlib {
     crate_name: "vmbase",
     srcs: ["src/lib.rs"],
     rustlibs: [
-        "libaarch64_paging",
         "libbuddy_system_allocator",
         "libcfg_if",
         "libhypervisor_backends",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libonce_cell_nostd",
-        "libsmccc",
         "libspin_nostd",
         "libstatic_assertions",
         "libthiserror_nostd",
@@ -97,21 +95,34 @@ rust_library_rlib {
     whole_static_libs: [
         "librust_baremetal",
     ],
-    // TODO(b/277859415, b/277860860): Drop "compat_android_13".
-    features: [
-        "compat_android_13",
-        "cpu_feat_hafdbs",
-    ],
+    target: {
+        android_arm64: {
+            rustlibs: [
+                "libaarch64_paging",
+                "libsmccc",
+            ],
+            // TODO(b/277859415, b/277860860): Drop "compat_android_13".
+            features: [
+                "compat_android_13",
+                "cpu_feat_hafdbs",
+            ],
+        },
+    },
 }
 
 cc_library_static {
     name: "libvmbase_entry",
     defaults: ["vmbase_cc_defaults"],
-    srcs: [
-        "entry.S",
-        "exceptions.S",
-        "exceptions_panic.S",
-    ],
+    srcs: [],
+    target: {
+        android_arm64: {
+            srcs: [
+                "asm/aarch64/entry.S",
+                "asm/aarch64/exceptions.S",
+                "asm/aarch64/exceptions_panic.S",
+            ],
+        },
+    },
 }
 
 filegroup {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <common.h>
+#include "common.h"
 
 .set .L_MAIR_DEV_nGnRE,	0x04
 .set .L_MAIR_MEM_WBWA,	0xff

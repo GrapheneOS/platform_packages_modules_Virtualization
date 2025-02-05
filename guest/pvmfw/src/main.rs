@@ -19,13 +19,13 @@
 
 extern crate alloc;
 
+mod arch;
 mod bcc;
 mod bootargs;
 mod config;
 mod device_assignment;
 mod dice;
 mod entry;
-mod exceptions;
 mod fdt;
 mod gpt;
 mod instance;

@@ -16,9 +16,10 @@
 
 use super::error::MemoryTrackerError;
 use super::util::virt_to_phys;
+use crate::arch::VirtualAddress;
 use crate::layout;
 use crate::util::unchecked_align_down;
-use aarch64_paging::paging::{MemoryRegion as VaRange, VirtualAddress, PAGE_SIZE};
+use aarch64_paging::paging::{MemoryRegion as VaRange, PAGE_SIZE};
 use alloc::alloc::{alloc_zeroed, dealloc, handle_alloc_error};
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
@@ -74,7 +75,7 @@ impl MmioSharer {
         let base = unchecked_align_down(phys, self.granule);
 
         // TODO(ptosi): Share the UART using this method and remove the hardcoded check.
-        if self.frames.contains(&base) || base == layout::UART_PAGE_ADDR {
+        if self.frames.contains(&base) || base == layout::crosvm::UART_PAGE_ADDR {
             return Err(MemoryTrackerError::DuplicateMmioShare(base));
         }
 

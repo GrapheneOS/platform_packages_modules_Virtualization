@@ -15,54 +15,20 @@
 //! Rust entry point.
 
 use crate::{
-    bionic, console, heap,
-    layout::{UART_ADDRESSES, UART_PAGE_ADDR},
-    logger,
-    memory::{switch_to_dynamic_page_tables, PAGE_SIZE, SIZE_16KB, SIZE_4KB},
-    power::{reboot, shutdown},
+    arch::platform,
+    bionic, heap, logger,
+    memory::{switch_to_dynamic_page_tables, PAGE_SIZE, SIZE_4KB},
+    power::shutdown,
     rand,
 };
 use core::mem::size_of;
-use hypervisor_backends::{get_mmio_guard, Error};
-use static_assertions::const_assert_eq;
-
-fn try_console_init() -> Result<(), Error> {
-    if let Some(mmio_guard) = get_mmio_guard() {
-        mmio_guard.enroll()?;
-
-        // TODO(ptosi): Use MmioSharer::share() to properly track this MMIO_GUARD_MAP.
-        //
-        // The following call shares the UART but also anything else present in 0..granule.
-        //
-        // For 4KiB, that's only the UARTs. For 16KiB, it also covers the RTC and watchdog but, as
-        // neither is used by vmbase clients (and as both are outside of the UART page), they
-        // will never have valid stage-1 mappings to those devices. As a result, this
-        // MMIO_GUARD_MAP isn't affected by the granule size in any visible way. Larger granule
-        // sizes will need to be checked separately, if needed.
-        assert!({
-            let granule = mmio_guard.granule()?;
-            granule == SIZE_4KB || granule == SIZE_16KB
-        });
-        // Validate the assumption above by ensuring that the UART is not moved to another page:
-        const_assert_eq!(UART_PAGE_ADDR, 0);
-        mmio_guard.map(UART_PAGE_ADDR)?;
-    }
-
-    // SAFETY: UART_PAGE is mapped at stage-1 (see entry.S) and was just MMIO-guarded.
-    unsafe { console::init(&UART_ADDRESSES) };
-
-    Ok(())
-}
 
 /// This is the entry point to the Rust code, called from the binary entry point in `entry.S`.
 #[no_mangle]
 extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
     heap::init();
-
-    if try_console_init().is_err() {
-        // Don't panic (or log) here to avoid accessing the console.
-        reboot()
-    }
+    // Initialize platform drivers
+    platform::init_console();
 
     logger::init().expect("Failed to initialize the logger");
     // We initialize the logger to Off (like the log crate) and clients should log::set_max_level.
@@ -72,7 +38,7 @@ extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
     // We keep a null byte at the top of the stack guard to act as a string terminator.
     let random_guard = &mut stack_guard[..(SIZE_OF_STACK_GUARD - 1)];
 
-    if let Err(e) = rand::init() {
+    if let Err(e) = crate::arch::rand::init() {
         panic!("Failed to initialize a source of entropy: {e}");
     }
 

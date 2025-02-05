@@ -30,11 +30,12 @@ use libfdt::Fdt;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use spin::mutex::SpinMutex;
 use vmbase::{
+    arch::linker,
     bionic, configure_heap,
     fdt::pci::PciInfo,
     generate_image_header,
     layout::crosvm::FDT_MAX_SIZE,
-    linker, logger, main,
+    logger, main,
     memory::{deactivate_dynamic_page_tables, map_data, SIZE_64KB},
 };
 
