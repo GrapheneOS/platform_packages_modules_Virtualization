@@ -162,7 +162,7 @@ install_prerequisites() {
 }
 
 download_debian_cloud_image() {
-	local ver=master
+	local ver=38da93fe
 	local prj=debian-cloud-images
 	local url="https://salsa.debian.org/cloud-team/${prj}/-/archive/${ver}/${prj}-${ver}.tar.gz"
 	local outdir="${debian_cloud_image}"

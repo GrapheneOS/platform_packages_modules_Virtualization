@@ -170,6 +170,7 @@ rust_bindgen {
         "libopen_dice_cbor_bindgen.rust_defaults",
     ],
     whole_static_libs: ["libopen_dice_cbor"],
+    shared_libs: ["libcrypto"],
 }
 
 rust_bindgen {

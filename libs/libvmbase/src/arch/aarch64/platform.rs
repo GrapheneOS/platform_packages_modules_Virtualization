@@ -106,7 +106,7 @@ pub fn init_console() {
 ///
 /// Panics if console was not initialized by calling [`init`] first.
 pub fn uart(id: usize) -> &'static spin::mutex::SpinMutex<Uart> {
-    return CONSOLES[id].get().unwrap();
+    CONSOLES[id].get().unwrap()
 }
 
 /// Reinitializes the emergency UART driver and returns it.

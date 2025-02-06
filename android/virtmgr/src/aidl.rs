@@ -1299,13 +1299,6 @@ fn load_app_config(
         vm_config.teeServices.clone_from(&custom_config.teeServices);
     }
 
-    // Unfortunately specifying page_shift = 14 in bootconfig doesn't enable 16k pages emulation,
-    // so we need to provide it in the kernel cmdline.
-    // TODO(b/376901009): remove this after passing page_shift in bootconfig is supported.
-    if os_name.ends_with("_16k") && cfg!(target_arch = "x86_64") {
-        append_kernel_param("page_shift=14", &mut vm_config);
-    }
-
     if config.memoryMib > 0 {
         vm_config.memoryMib = config.memoryMib;
     }

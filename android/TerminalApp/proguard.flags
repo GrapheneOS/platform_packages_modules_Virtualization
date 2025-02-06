@@ -19,10 +19,22 @@
 
 # Prevent proguard from stripping interface information from TypeAdapter, TypeAdapterFactory,
 # JsonSerializer, JsonDeserializer instances (so they can be used in @JsonAdapter)
--keep class * extends com.google.gson.TypeAdapter
--keep class * implements com.google.gson.TypeAdapterFactory
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep class * extends com.google.gson.TypeAdapter {
+  void <init>();
+}
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep class * implements com.google.gson.TypeAdapterFactory {
+  void <init>();
+}
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep class * implements com.google.gson.JsonSerializer {
+  void <init>();
+}
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep class * implements com.google.gson.JsonDeserializer {
+  void <init>();
+}
 
 # Prevent R8 from leaving Data object members always null
 -keepclassmembers,allowobfuscation class * {
@@ -30,7 +42,13 @@
 }
 
 # Retain generic signatures of TypeToken and its subclasses with R8 version 3.0 and higher.
--keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
--keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken {
+  void <init>();
+}
+# TODO(b/373579455): Evaluate if <init> needs to be kept.
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken {
+  void <init>();
+}
 
 ##---------------End: proguard configuration for Gson  ----------
