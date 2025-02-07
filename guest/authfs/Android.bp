@@ -47,8 +47,5 @@ filegroup {
 rust_binary {
     name: "authfs",
     defaults: ["authfs_defaults"],
-    // //apex_available:platform is necessary here to counteract the
-    // com.android.virt in crosvm_defaults and make authfs available
-    // to the platform so it can be embedded in the microdroid image.
-    apex_available: ["//apex_available:platform"],
+    apex_available: ["com.android.virt"],
 }
