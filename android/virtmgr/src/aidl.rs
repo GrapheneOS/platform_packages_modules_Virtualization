@@ -1548,9 +1548,17 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
     ) -> binder::Result<()> {
         // Don't check permission. The owner of the VM might have passed this binder object to
         // others.
-        //
-        // TODO: Should this give an error if the VM is already dead?
-        self.instance.callbacks.add(callback.clone());
+
+        // Only register callback if it may be notified.
+        // This also ensures no cyclic reference between callback and VmInstance after VM is died.
+        let vm_state = self.instance.vm_state.lock().unwrap();
+        if matches!(*vm_state, VmState::Dead) {
+            warn!("Ignoring registerCallback() after VM is died");
+        } else {
+            self.instance.callbacks.add(callback.clone());
+        }
+        drop(vm_state);
+
         Ok(())
     }
 
@@ -1716,12 +1724,17 @@ impl VirtualMachineCallbacks {
 
     /// Call all registered callbacks to say that the VM has died.
     pub fn callback_on_died(&self, cid: Cid, reason: DeathReason) {
-        let callbacks = &*self.0.lock().unwrap();
-        for callback in callbacks {
+        let mut callbacks = self.0.lock().unwrap();
+        for callback in &*callbacks {
             if let Err(e) = callback.onDied(cid as i32, reason) {
                 error!("Error notifying exit of VM CID {}: {:?}", cid, e);
             }
         }
+
+        // Nothing to notify afterward because VM cannot be restarted.
+        // Explicitly clear callbacks to prevent potential cyclic references
+        // between callback and VmInstance.
+        (*callbacks).clear();
     }
 
     /// Add a new callback to the set.
