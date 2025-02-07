@@ -165,7 +165,7 @@ fn patch_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Result<()> {
 /// Only one memory range is expected with the crosvm setup for now.
 fn read_and_validate_memory_range(
     fdt: &Fdt,
-    guest_page_size: usize,
+    alignment: usize,
 ) -> Result<Range<usize>, RebootReason> {
     let mut memory = fdt.memory().map_err(|e| {
         error!("Failed to read memory range from DT: {e}");
@@ -188,8 +188,8 @@ fn read_and_validate_memory_range(
     }
 
     let size = range.len();
-    if size % guest_page_size != 0 {
-        error!("Memory size {:#x} is not a multiple of page size {:#x}", size, guest_page_size);
+    if size % alignment != 0 {
+        error!("Memory size {:#x} is not aligned to {:#x}", size, alignment);
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -871,18 +871,18 @@ fn patch_serial_info(fdt: &mut Fdt, serial_info: &SerialInfo) -> libfdt::Result<
 fn validate_swiotlb_info(
     swiotlb_info: &SwiotlbInfo,
     memory: &Range<usize>,
-    guest_page_size: usize,
+    alignment: usize,
 ) -> Result<(), RebootReason> {
     let size = swiotlb_info.size;
     let align = swiotlb_info.align;
 
-    if size == 0 || (size % guest_page_size) != 0 {
+    if size == 0 || (size % alignment) != 0 {
         error!("Invalid swiotlb size {:#x}", size);
         return Err(RebootReason::InvalidFdt);
     }
 
-    if let Some(align) = align.filter(|&a| a % guest_page_size != 0) {
-        error!("Invalid swiotlb alignment {:#x}", align);
+    if let Some(align) = align.filter(|&a| a % alignment != 0) {
+        error!("Swiotlb alignment {:#x} not aligned to {:#x}", align, alignment);
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -1106,7 +1106,8 @@ fn parse_device_tree(
         RebootReason::InvalidFdt
     })?;
 
-    let memory_range = read_and_validate_memory_range(fdt, guest_page_size)?;
+    let memory_alignment = guest_page_size;
+    let memory_range = read_and_validate_memory_range(fdt, memory_alignment)?;
 
     let bootargs = read_bootargs_from(fdt).map_err(|e| {
         error!("Failed to read bootargs from DT: {e}");
@@ -1159,7 +1160,8 @@ fn parse_device_tree(
             error!("Swiotlb info missing from DT");
             RebootReason::InvalidFdt
         })?;
-    validate_swiotlb_info(&swiotlb_info, &memory_range, guest_page_size)?;
+    let swiotlb_alignment = guest_page_size;
+    validate_swiotlb_info(&swiotlb_info, &memory_range, swiotlb_alignment)?;
 
     let device_assignment = if let Some(vm_dtbo) = vm_dtbo {
         if let Some(hypervisor) = get_device_assigner() {
