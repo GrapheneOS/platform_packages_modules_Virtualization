@@ -21,7 +21,6 @@
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="{MODULE}.apk" />
         <option name="test-file-name" value="MicrodroidVmShareApp.apk" />
-        <option name="test-file-name" value="MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5.apk" />
     </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="run-command" value="mkdir -p /data/local/tmp/cts/microdroid" />
@@ -31,6 +30,11 @@
         <option name="cleanup" value="true" />
         <option name="push" value="test_microdroid_vendor_image.img->/data/local/tmp/cts/microdroid/test_microdroid_vendor_image.img" />
         <option name="push" value="test_microdroid_vendor_image_unsigned.img->/data/local/tmp/cts/microdroid/test_microdroid_vendor_image_unsigned.img" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="com.android.microdroid.test" />
@@ -42,6 +46,9 @@
     <!-- Controller that will skip the module if a native bridge situation is detected -->
     <!-- For example: module wants to run arm and device is x86 -->
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
+    <!-- Test only needs to run on Android U (SDK 34) and above -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.Sdk34ModuleController" />
+
 
     {EXTRA_CONFIGS}
 </configuration>

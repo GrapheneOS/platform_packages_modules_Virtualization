@@ -45,7 +45,7 @@ java_test_host {
     ],
     per_testcase_directory: true,
     data: [
-        "assets/bcc.dat",
+        ":test_avf_bcc_dat",
     ],
     device_common_data: [
         ":MicrodroidTestApp",
@@ -58,4 +58,11 @@ java_test_host {
         ":pvmfw_test",
     ],
     data_device_bins_first: ["dtc_static"],
+}
+
+filegroup {
+    name: "test_avf_bcc_dat",
+    srcs: [
+        "assets/bcc.dat",
+    ],
 }

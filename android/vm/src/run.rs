@@ -17,6 +17,7 @@
 use crate::create_partition::command_create_partition;
 use crate::{get_service, RunAppConfig, RunCustomVmConfig, RunMicrodroidConfig};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
+    CpuOptions::CpuOptions,
     IVirtualizationService::IVirtualizationService,
     PartitionType::PartitionType,
     VirtualMachineAppConfig::{
@@ -160,6 +161,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         ..Default::default()
     };
 
+    let cpu_options = CpuOptions { cpuTopology: config.common.cpu_topology };
     if config.debug.enable_earlycon() {
         if config.debug.debug != DebugLevel::FULL {
             bail!("earlycon is only supported for debuggable VMs")
@@ -188,7 +190,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         debugLevel: config.debug.debug,
         protectedVm: config.common.protected,
         memoryMib: config.common.mem.unwrap_or(0) as i32, // 0 means use the VM default
-        cpuTopology: config.common.cpu_topology,
+        cpuOptions: cpu_options,
         customConfig: Some(custom_config),
         osName: os_name.to_string(),
         hugePages: config.common.hugepages,
@@ -273,7 +275,7 @@ pub fn command_run(config: RunCustomVmConfig) -> Result<(), Error> {
     if let Some(gdb) = config.debug.gdb {
         vm_config.gdbPort = gdb.get() as i32;
     }
-    vm_config.cpuTopology = config.common.cpu_topology;
+    vm_config.cpuOptions = CpuOptions { cpuTopology: config.common.cpu_topology.clone() };
     vm_config.hugePages = config.common.hugepages;
     vm_config.boostUclamp = config.common.boost_uclamp;
     vm_config.teeServices = config.common.tee_services().to_vec();

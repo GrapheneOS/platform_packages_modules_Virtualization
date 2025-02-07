@@ -19,7 +19,8 @@ use crate::crosvm::VmMetric;
 use crate::get_calling_uid;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuTopology::CpuTopology,
+    CpuOptions::CpuOptions,
+    CpuOptions::CpuTopology::CpuTopology,
     IVirtualMachine::IVirtualMachine,
     VirtualMachineAppConfig::{Payload::Payload, VirtualMachineAppConfig},
     VirtualMachineConfig::VirtualMachineConfig,
@@ -92,23 +93,15 @@ pub(crate) fn get_num_cpus() -> Option<usize> {
     }
 }
 
-fn get_num_vcpus(cpu_topology: CpuTopology, custom_vcpu_count: Option<i32>) -> i32 {
-    match cpu_topology {
-        CpuTopology::ONE_CPU => 1,
-        CpuTopology::MATCH_HOST => {
+fn get_num_vcpus(cpu_options: &CpuOptions) -> i32 {
+    match cpu_options.cpuTopology {
+        CpuTopology::MatchHost(_) => {
             get_num_cpus().and_then(|v| v.try_into().ok()).unwrap_or_else(|| {
                 warn!("Failed to determine the number of CPUs in the host");
                 INVALID_NUM_CPUS
             })
         }
-        CpuTopology::CUSTOM => custom_vcpu_count.unwrap_or_else(|| {
-            warn!("AppConfig doesn't support CpuTopology::CUSTOM");
-            INVALID_NUM_CPUS
-        }),
-        _ => {
-            warn!("invalid CpuTopology: {cpu_topology:?}");
-            INVALID_NUM_CPUS
-        }
+        CpuTopology::CpuCount(count) => count,
     }
 }
 
@@ -140,14 +133,14 @@ pub fn write_vm_creation_stats(
         VirtualMachineConfig::AppConfig(config) => (
             config.name.clone(),
             vm_creation_requested::ConfigType::VirtualMachineAppConfig,
-            get_num_vcpus(config.cpuTopology, None),
+            get_num_vcpus(&config.cpuOptions),
             config.memoryMib,
             get_apex_list(config),
         ),
         VirtualMachineConfig::RawConfig(config) => (
             config.name.clone(),
             vm_creation_requested::ConfigType::VirtualMachineRawConfig,
-            get_num_vcpus(config.cpuTopology, Some(config.customVcpuCount)),
+            get_num_vcpus(&config.cpuOptions),
             config.memoryMib,
             String::new(),
         ),

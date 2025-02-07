@@ -22,7 +22,8 @@ use crate::{
     COMPOS_APEX_ROOT, COMPOS_VSOCK_PORT,
 };
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuTopology::CpuTopology,
+    CpuOptions::CpuOptions,
+    CpuOptions::CpuTopology::CpuTopology,
     IVirtualizationService::IVirtualizationService,
     VirtualMachineAppConfig::{
         CustomConfig::CustomConfig, DebugLevel::DebugLevel, Payload::Payload,
@@ -120,9 +121,10 @@ impl ComposClient {
         let debug_level = if parameters.debug_mode { DebugLevel::FULL } else { DebugLevel::NONE };
 
         let cpu_topology = match parameters.cpu_topology {
-            VmCpuTopology::OneCpu => CpuTopology::ONE_CPU,
-            VmCpuTopology::MatchHost => CpuTopology::MATCH_HOST,
+            VmCpuTopology::OneCpu => CpuTopology::CpuCount(1),
+            VmCpuTopology::MatchHost => CpuTopology::MatchHost(true),
         };
+        let cpu_options = CpuOptions { cpuTopology: cpu_topology };
 
         // The CompOS VM doesn't need to be updatable (by design it should run exactly twice,
         // with the same APKs and APEXes each time). And having it so causes some interesting
@@ -141,7 +143,7 @@ impl ComposClient {
             extraIdsigs: extra_idsigs,
             protectedVm: true,
             memoryMib: parameters.memory_mib.unwrap_or(0), // 0 means use the default
-            cpuTopology: cpu_topology,
+            cpuOptions: cpu_options,
             customConfig: custom_config,
             ..Default::default()
         });

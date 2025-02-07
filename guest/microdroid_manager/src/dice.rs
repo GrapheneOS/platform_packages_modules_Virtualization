@@ -100,7 +100,10 @@ impl Subcomponent {
     fn for_apk(apk: &ApkData) -> Self {
         Self {
             name: format!("apk:{}", apk.package_name),
-            version: apk.version_code,
+            // Ideally we would want to log both rollback_index and apk version code in dice. There
+            // is even a separate field called security_version_code, but it looks like it is not
+            // used in subcomponents, so for now log the rollback index as version code.
+            version: apk.rollback_index.map(u64::from).unwrap_or(apk.version_code),
             code_hash: apk.root_hash.clone(),
             authority_hash: apk.cert_hash.clone(),
         }

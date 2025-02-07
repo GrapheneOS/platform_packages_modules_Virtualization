@@ -15,8 +15,9 @@
 //! A client for trusty security VMs during early boot.
 
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuTopology::CpuTopology, IVirtualizationService::IVirtualizationService,
-    VirtualMachineConfig::VirtualMachineConfig, VirtualMachineRawConfig::VirtualMachineRawConfig,
+    CpuOptions::CpuOptions, CpuOptions::CpuTopology::CpuTopology,
+    IVirtualizationService::IVirtualizationService, VirtualMachineConfig::VirtualMachineConfig,
+    VirtualMachineRawConfig::VirtualMachineRawConfig,
 };
 use android_system_virtualizationservice::binder::{ParcelFileDescriptor, Strong};
 use anyhow::{Context, Result};
@@ -61,8 +62,8 @@ fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
 
 fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
     match s {
-        "one-cpu" => Ok(CpuTopology::ONE_CPU),
-        "match-host" => Ok(CpuTopology::MATCH_HOST),
+        "one-cpu" => Ok(CpuTopology::CpuCount(1)),
+        "match-host" => Ok(CpuTopology::MatchHost(true)),
         _ => Err(format!("Invalid cpu topology {}", s)),
     }
 }
@@ -86,7 +87,7 @@ fn main() -> Result<()> {
         bootloader,
         protectedVm: args.protected,
         memoryMib: args.memory_size_mib,
-        cpuTopology: args.cpu_topology,
+        cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
         platformVersion: "~1.0".to_owned(),
         // TODO: add instanceId
         ..Default::default()

@@ -16,7 +16,7 @@ use crate::instance::{ApexData, ApkData, MicrodroidData};
 use crate::payload::{get_apex_data_from_payload, to_metadata};
 use crate::MicrodroidError;
 use anyhow::{anyhow, ensure, Context, Result};
-use apkmanifest::get_manifest_info;
+use apkmanifest::{get_manifest_info, ApkManifestInfo};
 use apkverify::{extract_signed_data, verify, V4Signature};
 use glob::glob;
 use itertools::sorted;
@@ -174,6 +174,14 @@ pub fn verify_payload(
     })
 }
 
+fn validate_manifest_info(info: &ApkManifestInfo) -> Result<()> {
+    ensure!(
+        info.has_relaxed_rollback_protection_permission == info.rollback_index.is_some(),
+        MicrodroidError::PayloadVerificationFailed(String::from("to opt in relaxed rollback protection scheme manifest must request android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission and set the android.system.virtualmachine.ROLLBACK_INDEX property"))
+    );
+    Ok(())
+}
+
 fn get_data_from_apk(
     apk_path: &str,
     root_hash: Box<[u8]>,
@@ -188,11 +196,14 @@ fn get_data_from_apk(
         .map_err(|e| warn!("Failed to read manifest info from APK: {e:?}"))
         .unwrap_or_default();
 
+    validate_manifest_info(&manifest_info)?;
+
     Ok(ApkData {
         root_hash: root_hash.into(),
         cert_hash,
         package_name: manifest_info.package,
         version_code: manifest_info.version_code,
+        rollback_index: manifest_info.rollback_index,
     })
 }
 

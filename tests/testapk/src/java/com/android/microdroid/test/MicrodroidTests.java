@@ -59,6 +59,7 @@ import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineDescriptor;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
+import android.util.Log;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -130,8 +131,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String VM_ATTESTATION_MESSAGE = "Hello RKP from AVF!";
     private static final int ENCRYPTED_STORAGE_BYTES = 4_000_000;
 
-    private static final String USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION =
-            "android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION";
+    private static final String RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME =
+            "com.android.microdroid.test_relaxed_rollback_protection_scheme";
 
     @Rule public Timeout globalTimeout = Timeout.seconds(300);
 
@@ -166,19 +167,18 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             // Tests that rely on the state of the permission should explicitly grant or revoke it.
             revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         }
-        revokePermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
     }
 
     @After
     public void tearDown() {
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
-        revokePermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
+        // Some tests might install additional apks, so we need to clean them up here.
+        uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
     }
+
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
 
     private static final String VM_SHARE_APP_PACKAGE_NAME = "com.android.microdroid.vmshare_app";
-    private static final String RELAXED_ROLLBACK_PROTECTION_SCHEME_PACKAGE_NAME =
-            "com.android.microdroid.test_relaxed_rollback_protection_scheme";
 
     private void createAndConnectToVmHelper(int cpuTopology, boolean shouldUseHugepages)
             throws Exception {
@@ -2754,37 +2754,221 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mPageSize).isEqualTo(expectedPageSize);
     }
 
+    // This test requires MicrodroidTestApp to have USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+    // permission. This means that the permission needs to be declared in the AndroidManifest.xml of
+    // the MicrodroidTestApp.apk. Which in turns leads microdroid_manager to enable the relaxed
+    // rollback protection scheme, which we don't want to be enabled for most of the tests here.
+    // For now comment out this test. It will be un-commented (and probably moved to a separate test
+    // apk) in a follow-up patch.
+    // TODO(ioffe): bring this test back!
+    /*
+        @Test
+        public void libIcuIsLoadable() throws Exception {
+            assumeSupportedDevice();
+            // This test relies on the test apk having USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+            // permission.
+            grantPermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
+
+            // This test requires additional test apk.
+            installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5.apk");
+
+            Context otherAppCtx =
+                    getContext()
+                            .createPackageContext(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME, 0);
+
+            VirtualMachineConfig config =
+                    new VirtualMachineConfig.Builder(otherAppCtx)
+                            .setDebugLevel(DEBUG_LEVEL_FULL)
+                            .setPayloadBinaryName("MicrodroidTestNativeLibWithLibIcu.so")
+                            .setProtectedVm(isProtectedVm())
+                            .setOs(os())
+                            .build();
+
+            VirtualMachine vm = forceCreateNewVirtualMachine("test_libicu_is_loadable", config);
+
+            TestResults testResults =
+                    runVmTestService(
+                            TAG,
+                            vm,
+                            (ts, tr) -> {
+                                ts.checkLibIcuIsAccessible();
+                            });
+
+            // checkLibIcuIsAccessible will throw an exception if something goes wrong.
+            assertThat(testResults.mException).isNull();
+        }
+    */
+
     @Test
-    public void libIcuIsLoadable() throws Exception {
+    public void relaxedRollbackProtectionScheme_apkDoesNotHavePermission_bootFails()
+            throws Exception {
         assumeSupportedDevice();
 
-        // This test relies on the test apk having USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
-        // permission.
-        grantPermission(USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION_PERMISSION);
+        // This test requires additional test apk.
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk");
 
         Context otherAppCtx =
                 getContext()
-                        .createPackageContext(RELAXED_ROLLBACK_PROTECTION_SCHEME_PACKAGE_NAME, 0);
+                        .createPackageContext(
+                                RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME, 0);
+
         VirtualMachineConfig config =
                 new VirtualMachineConfig.Builder(otherAppCtx)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .setPayloadBinaryName("MicrodroidTestNativeLibWithLibIcu.so")
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
                         .setProtectedVm(isProtectedVm())
                         .setOs(os())
                         .build();
 
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_libicu_is_loadable", config);
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine(
+                        "test_relaxed_rollback_protection_scheme_no_permission", config);
+        BootResult bootResult =
+                tryBootVm(TAG, "test_relaxed_rollback_protection_scheme_no_permission");
+        assertThat(bootResult.deathReason)
+                .isEqualTo(
+                        VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_VERIFICATION_FAILED);
+    }
+
+    @Test
+    public void relaxedRollbackProtectionScheme_apkDoesNotHaveRollbackIndex_bootFails()
+            throws Exception {
+        assumeSupportedDevice();
+
+        // This test requires additional test apk.
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk");
+
+        Context otherAppCtx =
+                getContext()
+                        .createPackageContext(
+                                RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME, 0);
+
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(otherAppCtx)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .build();
+
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine(
+                        "test_relaxed_rollback_protection_scheme_no_rollback_index", config);
+        BootResult bootResult =
+                tryBootVm(TAG, "test_relaxed_rollback_protection_scheme_no_rollback_index");
+        assertThat(bootResult.deathReason)
+                .isEqualTo(
+                        VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_VERIFICATION_FAILED);
+    }
+
+    @Test
+    public void relaxedRollbackProtectionScheme_rollbackVersionDoesNotChange() throws Exception {
+        assumeSupportedDevice();
+        // Relaxed rollback protection scheme only makes sense if VM updates are supported.
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk");
+
+        Context testHelperAppCtx =
+                getContext()
+                        .createPackageContext(
+                                RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME, 0);
+
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .build();
+
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("test_rollback_version_does_not_change", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ "/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+
+        // Simulate a rollback by installing a downgraded version of the helper apk.
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk", "-d");
+
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mFileContent = ts.readFromFile("/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mFileContent).isEqualTo(EXAMPLE_STRING);
+    }
+
+    @Test
+    public void relaxedRollbackProtectionScheme_rollbackVersionChanges() throws Exception {
+        assumeSupportedDevice();
+        // Relaxed rollback protection scheme only makes sense if VM updates are supported.
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+        assumeProtectedVM();
+
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk");
+
+        Context testHelperAppCtx =
+                getContext()
+                        .createPackageContext(
+                                RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME, 0);
+
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_rollback_version_changes", config);
 
         TestResults testResults =
                 runVmTestService(
                         TAG,
                         vm,
                         (ts, tr) -> {
-                            ts.checkLibIcuIsAccessible();
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ "/mnt/encryptedstore/test_file");
                         });
+        testResults.assertNoException();
 
-        // checkLibIcuIsAccessible will throw an exception if something goes wrong.
-        assertThat(testResults.mException).isNull();
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mFileContent = ts.readFromFile("/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mFileContent).isEqualTo(EXAMPLE_STRING);
+
+        assertThat(vm.getStatus()).isEqualTo(VirtualMachine.STATUS_STOPPED);
+
+        // Simulate a rollback by installing a downgraded version of the helper apk.
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk", "-d");
+
+        // Now pVM shouldn't boot.
+        BootResult bootResult = tryBootVm(TAG, vm);
+        assertThat(bootResult.deathReason)
+                .isEqualTo(
+                        // TODO(ioffe): this should probably be payload verification error?
+                        VirtualMachineCallback.STOP_REASON_MICRODROID_UNKNOWN_RUNTIME_ERROR);
     }
 
     private static class VmShareServiceConnection implements ServiceConnection {
@@ -2880,5 +3064,42 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             ThrowingRunnable runnable, String expectedContents) {
         Exception e = assertThrows(VirtualMachineException.class, runnable);
         assertThat(e).hasMessageThat().contains(expectedContents);
+    }
+
+    private void installApp(String apkName, String... additionalArgs) throws Exception {
+        String apkFile = new File("/data/local/tmp/cts/microdroid/", apkName).getAbsolutePath();
+        UiAutomation uai = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        Log.i(TAG, "Installing apk " + apkFile);
+        // We read the output of the shell command not only to see if it succeeds, but also to make
+        // sure that the installation finishes. This avoids a race condition when test tries to
+        // create a context of the installed package before the installation finished.
+        String installCmd = "pm install " + String.join(" ", additionalArgs) + " " + apkFile;
+        try (ParcelFileDescriptor pfd = uai.executeShellCommand(installCmd)) {
+            try (InputStream is = new FileInputStream(pfd.getFileDescriptor())) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        Log.i(TAG, line);
+                    }
+                }
+            }
+        }
+    }
+
+    private void uninstallApp(String packageName) {
+        Log.i(TAG, "Uninstalling package " + packageName);
+        UiAutomation uai = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        try (ParcelFileDescriptor pfd = uai.executeShellCommand("pm uninstall " + packageName)) {
+            try (InputStream is = new FileInputStream(pfd.getFileDescriptor())) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        Log.i(TAG, line);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to uninstall " + packageName, e);
+        }
     }
 }

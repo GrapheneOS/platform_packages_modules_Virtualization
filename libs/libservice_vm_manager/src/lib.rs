@@ -17,7 +17,7 @@
 
 use android_system_virtualizationservice::{
     aidl::android::system::virtualizationservice::{
-        CpuTopology::CpuTopology, DiskImage::DiskImage,
+        CpuOptions::CpuOptions, CpuOptions::CpuTopology::CpuTopology, DiskImage::DiskImage,
         IVirtualizationService::IVirtualizationService, Partition::Partition,
         PartitionType::PartitionType, VirtualMachineConfig::VirtualMachineConfig,
         VirtualMachineRawConfig::VirtualMachineRawConfig,
@@ -226,6 +226,7 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
         writable: true,
         guid: None,
     }];
+    let cpu_options = CpuOptions { cpuTopology: CpuTopology::CpuCount(1) };
     let rialto = File::open(RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
     let instance_id_file = Path::new(VIRT_DATA_DIR).join(INSTANCE_ID_FILENAME);
     let instance_id = get_or_allocate_instance_id(service.as_ref(), instance_id_file)?;
@@ -236,7 +237,7 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
         instanceId: instance_id,
         protectedVm: true,
         memoryMib: VM_MEMORY_MB,
-        cpuTopology: CpuTopology::ONE_CPU,
+        cpuOptions: cpu_options,
         platformVersion: "~1.0".to_string(),
         gdbPort: 0, // No gdb
         ..Default::default()

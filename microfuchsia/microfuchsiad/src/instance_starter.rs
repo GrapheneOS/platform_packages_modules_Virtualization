@@ -17,8 +17,9 @@
 //! Responsible for starting an instance of the Microfuchsia VM.
 
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuTopology::CpuTopology, IVirtualizationService::IVirtualizationService,
-    VirtualMachineConfig::VirtualMachineConfig, VirtualMachineRawConfig::VirtualMachineRawConfig,
+    CpuOptions::CpuOptions, CpuOptions::CpuTopology::CpuTopology,
+    IVirtualizationService::IVirtualizationService, VirtualMachineConfig::VirtualMachineConfig,
+    VirtualMachineRawConfig::VirtualMachineRawConfig,
 };
 use anyhow::{ensure, Context, Result};
 use binder::{LazyServiceGuard, ParcelFileDescriptor};
@@ -82,7 +83,7 @@ impl InstanceStarter {
             disks: vec![],
             protectedVm: false,
             memoryMib: 256,
-            cpuTopology: CpuTopology::ONE_CPU,
+            cpuOptions: CpuOptions { cpuTopology: CpuTopology::CpuCount(1) },
             platformVersion: "1.0.0".into(),
             #[cfg(enable_console)]
             consoleInputDevice: Some("ttyS0".into()),

@@ -51,6 +51,30 @@ prebuilt_etc {
     filename: "trusty-test_vm-config.json",
 }
 
+prebuilt_etc {
+    name: "trusty_vm_launcher_sh",
+    enabled: false,
+    arch: {
+        x86_64: {
+            src: "trusty-vm-launcher.sh",
+            enabled: true,
+        },
+    },
+    filename: "trusty-vm-launcher.sh",
+}
+
+prebuilt_etc {
+    name: "trusty_wait_ready_sh",
+    enabled: false,
+    arch: {
+        x86_64: {
+            src: "trusty-wait-ready.sh",
+            enabled: true,
+        },
+    },
+    filename: "trusty-wait-ready.sh",
+}
+
 sh_test {
     name: "TrustyTestVM_UnitTests",
     src: "trusty-ut-ctrl.sh",

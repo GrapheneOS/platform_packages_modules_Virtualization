@@ -19,7 +19,7 @@ mod create_partition;
 mod run;
 
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuTopology::CpuTopology, IVirtualizationService::IVirtualizationService,
+    CpuOptions::CpuTopology::CpuTopology, IVirtualizationService::IVirtualizationService,
     PartitionType::PartitionType, VirtualMachineAppConfig::DebugLevel::DebugLevel,
 };
 #[cfg(not(llpvm_changes))]
@@ -379,8 +379,13 @@ fn parse_partition_type(s: &str) -> Result<PartitionType, String> {
 
 fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
     match s {
-        "one_cpu" => Ok(CpuTopology::ONE_CPU),
-        "match_host" => Ok(CpuTopology::MATCH_HOST),
+        "one_cpu" => Ok(CpuTopology::CpuCount(1)),
+        "match_host" => Ok(CpuTopology::MatchHost(true)),
+        _ if s.starts_with("cpu_count=") => {
+            // Safe to unwrap as it's validated the string starts with cpu_count=
+            let val = s.strip_prefix("cpu_count=").unwrap();
+            Ok(CpuTopology::CpuCount(val.parse().map_err(|e| format!("Invalid CPU Count: {}", e))?))
+        }
         _ => Err(format!("Invalid cpu topology {}", s)),
     }
 }

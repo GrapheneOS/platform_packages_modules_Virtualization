@@ -538,6 +538,11 @@ public abstract class MicrodroidDeviceTestBase {
     public BootResult tryBootVm(String logTag, String vmName)
             throws VirtualMachineException, InterruptedException {
         VirtualMachine vm = getVirtualMachineManager().get(vmName);
+        return tryBootVm(logTag, vm);
+    }
+
+    public BootResult tryBootVm(String logTag, VirtualMachine vm)
+            throws VirtualMachineException, InterruptedException {
         final CompletableFuture<Boolean> payloadStarted = new CompletableFuture<>();
         final CompletableFuture<Integer> deathReason = new CompletableFuture<>();
         final CompletableFuture<Long> endTime = new CompletableFuture<>();

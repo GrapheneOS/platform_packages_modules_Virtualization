@@ -15,13 +15,13 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.android.microdroid.test_relaxed_rollback_protection_scheme"
-      android:versionCode="5" >
+      android:versionCode="7" >
     <uses-permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_CUSTOM_VIRTUAL_MACHINE" />
     <uses-permission android:name="android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION" />
     <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33" />
     <uses-feature android:name="android.software.virtualization_framework" android:required="false" />
     <application>
-        <property android:name="android.system.virtualmachine.ROLLBACK_INDEX" android:value="1" />
+        <property android:name="android.system.virtualmachine.ROLLBACK_INDEX" android:value="2" />
     </application>
 </manifest>

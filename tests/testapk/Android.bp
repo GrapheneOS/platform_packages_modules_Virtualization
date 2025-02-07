@@ -58,22 +58,72 @@ java_defaults {
         // Non-VM payload libraries
         "libhwtrust_jni",
     ],
-    min_sdk_version: "33",
+    // AVF java APIs were introduced in Android U.
+    min_sdk_version: "34",
 }
 
 DATA = [
     ":MicrodroidTestAppUpdated",
-    ":MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_V5",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_V6",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index",
     ":MicrodroidVmShareApp",
     ":test_microdroid_vendor_image",
     ":test_microdroid_vendor_image_unsigned",
 ]
 
 android_test_helper_app {
-    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_correct_V5",
+    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_V5",
     defaults: ["MicrodroidTestAppsDefaults"],
     manifest: "AndroidManifestV5_relaxed_rollback_protection.xml",
     jni_libs: [
+        "MicrodroidTestNativeLib",
+        "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_V6",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifestV6_relaxed_rollback_protection.xml",
+    jni_libs: [
+        "MicrodroidTestNativeLib",
+        "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifestV7_relaxed_rollback_protection_inc_rollback_version.xml",
+    jni_libs: [
+        "MicrodroidTestNativeLib",
+        "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifestV5_relaxed_rollback_protection_no_rollback_index.xml",
+    jni_libs: [
+        "MicrodroidTestNativeLib",
+        "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifestV5_relaxed_rollback_protection_no_permission.xml",
+    jni_libs: [
+        "MicrodroidTestNativeLib",
         "MicrodroidTestNativeLibWithLibIcu",
     ],
     min_sdk_version: "33",

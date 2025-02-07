@@ -22,7 +22,10 @@
 //! things).
 
 use anyhow::{bail, Context, Result};
-use apkmanifest_bindgen::{extractManifestInfo, freeManifestInfo, getPackageName, getVersionCode};
+use apkmanifest_bindgen::{
+    extractManifestInfo, freeManifestInfo, getPackageName, getRollbackIndex, getVersionCode,
+    hasRelaxedRollbackProtectionPermission,
+};
 use std::ffi::CStr;
 use std::fs::File;
 use std::path::Path;
@@ -34,6 +37,12 @@ pub struct ApkManifestInfo {
     pub package: String,
     /// The version code of the app.
     pub version_code: u64,
+    /// Rollback index of the app used in the sealing dice policy.
+    /// This is only set if the apk manifest has USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+    /// permission.
+    pub rollback_index: Option<u32>,
+    /// Whether manifest has USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission.
+    pub has_relaxed_rollback_protection_permission: bool,
 }
 
 const ANDROID_MANIFEST: &str = "AndroidManifest.xml";
@@ -66,5 +75,24 @@ pub fn get_manifest_info<P: AsRef<Path>>(apk_path: P) -> Result<ApkManifestInfo>
     // Safety: It is always safe to call this with a valid native_info, which we have.
     let version_code = unsafe { getVersionCode(native_info) };
 
-    Ok(ApkManifestInfo { package, version_code })
+    // Safety: It is always safe to call this with a valid native_info, which we have.
+    let rollback_index = unsafe {
+        let rollback_index = getRollbackIndex(native_info);
+        if rollback_index.is_null() {
+            None
+        } else {
+            Some(*rollback_index)
+        }
+    };
+
+    // Safety: It is always safe to call this with a valid native_info, which we have.
+    let has_relaxed_rollback_protection_permission =
+        unsafe { hasRelaxedRollbackProtectionPermission(native_info) };
+
+    Ok(ApkManifestInfo {
+        package,
+        version_code,
+        rollback_index,
+        has_relaxed_rollback_protection_permission,
+    })
 }

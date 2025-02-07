@@ -290,6 +290,7 @@ pub struct ApkData {
     pub cert_hash: Vec<u8>,
     pub package_name: String,
     pub version_code: u64,
+    pub rollback_index: Option<u32>,
 }
 
 impl ApkData {

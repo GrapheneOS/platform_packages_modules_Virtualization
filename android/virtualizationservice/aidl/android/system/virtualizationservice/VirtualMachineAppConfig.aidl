@@ -15,7 +15,7 @@
  */
 package android.system.virtualizationservice;
 
-import android.system.virtualizationservice.CpuTopology;
+import android.system.virtualizationservice.CpuOptions;
 import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 
 /** Configuration for running an App in a VM */
@@ -93,8 +93,8 @@ parcelable VirtualMachineAppConfig {
      */
     int memoryMib;
 
-    /** The vCPU topology that will be generated for the VM. Default to 1 vCPU. */
-    CpuTopology cpuTopology = CpuTopology.ONE_CPU;
+    /** The vCPU options that will be generated for the VM. */
+    CpuOptions cpuOptions;
 
     /**
      * Encapsulates parameters that require android.permission.USE_CUSTOM_VIRTUAL_MACHINE.

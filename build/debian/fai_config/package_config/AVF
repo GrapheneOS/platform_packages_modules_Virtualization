@@ -10,3 +10,6 @@ forwarder-guest-launcher
 shutdown-runner
 weston
 xwayland
+mesa-vulkan-drivers
+libvulkan1
+vulkan-tools

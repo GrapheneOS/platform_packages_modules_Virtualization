@@ -41,4 +41,13 @@ const char* getPackageName(const ApkManifestInfo* info);
 
 // Given a valid ApkManifestInfo pointer, return the version code of the APK.
 uint64_t getVersionCode(const ApkManifestInfo* info);
+
+// Given a valid ApkManifestInfo pointer, return the value of the rollback
+// index. If rollback index is not defined in the AndroidManifest.xml returns
+// nullptr.
+const uint32_t* getRollbackIndex(const ApkManifestInfo* info);
+
+// Give a valid ApkManifestInfo pointer, return the value of the
+// has_relaxed_rollback_protection_permission.
+bool hasRelaxedRollbackProtectionPermission(const ApkManifestInfo* info);
 }
