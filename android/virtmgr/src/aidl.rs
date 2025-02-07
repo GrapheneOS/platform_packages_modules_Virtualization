@@ -1991,8 +1991,10 @@ fn clone_or_prepare_logger_fd(
     let mut reader = BufReader::new(File::from(read_fd));
     let write_fd = File::from(write_fd);
 
+    let mut buf = vec![];
     std::thread::spawn(move || loop {
-        let mut buf = vec![];
+        buf.clear();
+        buf.shrink_to(1024);
         match reader.read_until(b'\n', &mut buf) {
             Ok(0) => {
                 // EOF
