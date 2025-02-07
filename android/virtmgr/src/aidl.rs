@@ -2000,9 +2000,13 @@ fn clone_or_prepare_logger_fd(
                 // EOF
                 return;
             }
-            Ok(size) => {
-                if buf[size - 1] == b'\n' {
+            Ok(_size) => {
+                if buf.last() == Some(&b'\n') {
                     buf.pop();
+                    // Logs sent via TTY usually end lines with "\r\n".
+                    if buf.last() == Some(&b'\r') {
+                        buf.pop();
+                    }
                 }
                 info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
             }
