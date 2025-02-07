@@ -79,33 +79,44 @@ impl fmt::Display for FdtValidationError {
     }
 }
 
-/// Extract from /config the address range containing the pre-loaded kernel. Absence of /config is
-/// not an error.
+/// Extract from /config the address range containing the pre-loaded kernel.
+///
+/// Absence of /config is not an error. However, an error is returned if only one of the two
+/// properties is present.
 pub fn read_kernel_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
     let addr = c"kernel-address";
     let size = c"kernel-size";
 
     if let Some(config) = fdt.node(c"/config")? {
-        if let (Some(addr), Some(size)) = (config.getprop_u32(addr)?, config.getprop_u32(size)?) {
-            let addr = addr as usize;
-            let size = size as usize;
-
-            return Ok(Some(addr..(addr + size)));
+        match (config.getprop_u32(addr)?, config.getprop_u32(size)?) {
+            (None, None) => {}
+            (Some(addr), Some(size)) => {
+                let addr = addr as usize;
+                let size = size as usize;
+                return Ok(Some(addr..(addr + size)));
+            }
+            _ => return Err(FdtError::NotFound),
         }
     }
 
     Ok(None)
 }
 
-/// Extract from /chosen the address range containing the pre-loaded ramdisk. Absence is not an
-/// error as there can be initrd-less VM.
+/// Extract from /chosen the address range containing the pre-loaded ramdisk.
+///
+/// Absence is not an error as there can be initrd-less VM. However, an error is returned if only
+/// one of the two properties is present.
 pub fn read_initrd_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
     let start = c"linux,initrd-start";
     let end = c"linux,initrd-end";
 
     if let Some(chosen) = fdt.chosen()? {
-        if let (Some(start), Some(end)) = (chosen.getprop_u32(start)?, chosen.getprop_u32(end)?) {
-            return Ok(Some((start as usize)..(end as usize)));
+        match (chosen.getprop_u32(start)?, chosen.getprop_u32(end)?) {
+            (None, None) => {}
+            (Some(start), Some(end)) => {
+                return Ok(Some((start as usize)..(end as usize)));
+            }
+            _ => return Err(FdtError::NotFound),
         }
     }
 
