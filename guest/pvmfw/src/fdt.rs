@@ -1161,32 +1161,29 @@ fn parse_device_tree(
         })?;
     validate_swiotlb_info(&swiotlb_info, &memory_range, guest_page_size)?;
 
-    let device_assignment = match vm_dtbo {
-        Some(vm_dtbo) => {
-            if let Some(hypervisor) = get_device_assigner() {
-                // TODO(ptosi): Cache the (single?) granule once, in vmbase.
-                let granule = get_mem_sharer()
-                    .ok_or_else(|| {
-                        error!("No MEM_SHARE found during device assignment validation");
-                        RebootReason::InternalError
-                    })?
-                    .granule()
-                    .map_err(|e| {
-                        error!("Failed to get granule for device assignment validation: {e}");
-                        RebootReason::InternalError
-                    })?;
-                DeviceAssignmentInfo::parse(fdt, vm_dtbo, hypervisor, granule).map_err(|e| {
-                    error!("Failed to parse device assignment from DT and VM DTBO: {e}");
-                    RebootReason::InvalidFdt
+    let device_assignment = if let Some(vm_dtbo) = vm_dtbo {
+        if let Some(hypervisor) = get_device_assigner() {
+            // TODO(ptosi): Cache the (single?) granule once, in vmbase.
+            let granule = get_mem_sharer()
+                .ok_or_else(|| {
+                    error!("No MEM_SHARE found during device assignment validation");
+                    RebootReason::InternalError
                 })?
-            } else {
-                warn!(
-                    "Device assignment is ignored because device assigning hypervisor is missing"
-                );
-                None
-            }
+                .granule()
+                .map_err(|e| {
+                    error!("Failed to get granule for device assignment validation: {e}");
+                    RebootReason::InternalError
+                })?;
+            DeviceAssignmentInfo::parse(fdt, vm_dtbo, hypervisor, granule).map_err(|e| {
+                error!("Failed to parse device assignment from DT and VM DTBO: {e}");
+                RebootReason::InvalidFdt
+            })?
+        } else {
+            warn!("Device assignment is ignored because device assigning hypervisor is missing");
+            None
         }
-        None => None,
+    } else {
+        None
     };
 
     let untrusted_props = parse_untrusted_props(fdt).map_err(|e| {
