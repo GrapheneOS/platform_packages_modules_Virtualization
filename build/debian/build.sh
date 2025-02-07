@@ -216,8 +216,17 @@ copy_android_config() {
 
 package_custom_kernel() {
 	if [[ "$use_custom_kernel" != 1 ]]; then
-		echo "linux-headers-generic" >> "${config_space}/package_config/AVF"
+		# NOTE: Install generic headers for the default Debian kernel.
+		cat > "${config_space}/package_config/LAST" <<EOF
+PACKAGES install
+linux-headers-generic
+EOF
 		return
+	else
+		# NOTE: Prevent FAI from installing a default Debian kernel, by removing
+		#       linux-image meta package names from arch-specific class files.
+		sed -i "/linux-image.*-${debian_arch}/d" \
+		    "${config_space}/package_config/${debian_arch^^}"
 	fi
 
 	local deb_base_url="https://deb.debian.org/debian"
