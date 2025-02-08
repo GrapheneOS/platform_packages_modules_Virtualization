@@ -79,33 +79,44 @@ impl fmt::Display for FdtValidationError {
     }
 }
 
-/// Extract from /config the address range containing the pre-loaded kernel. Absence of /config is
-/// not an error.
+/// Extract from /config the address range containing the pre-loaded kernel.
+///
+/// Absence of /config is not an error. However, an error is returned if only one of the two
+/// properties is present.
 pub fn read_kernel_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
     let addr = c"kernel-address";
     let size = c"kernel-size";
 
     if let Some(config) = fdt.node(c"/config")? {
-        if let (Some(addr), Some(size)) = (config.getprop_u32(addr)?, config.getprop_u32(size)?) {
-            let addr = addr as usize;
-            let size = size as usize;
-
-            return Ok(Some(addr..(addr + size)));
+        match (config.getprop_u32(addr)?, config.getprop_u32(size)?) {
+            (None, None) => {}
+            (Some(addr), Some(size)) => {
+                let addr = addr as usize;
+                let size = size as usize;
+                return Ok(Some(addr..(addr + size)));
+            }
+            _ => return Err(FdtError::NotFound),
         }
     }
 
     Ok(None)
 }
 
-/// Extract from /chosen the address range containing the pre-loaded ramdisk. Absence is not an
-/// error as there can be initrd-less VM.
+/// Extract from /chosen the address range containing the pre-loaded ramdisk.
+///
+/// Absence is not an error as there can be initrd-less VM. However, an error is returned if only
+/// one of the two properties is present.
 pub fn read_initrd_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
     let start = c"linux,initrd-start";
     let end = c"linux,initrd-end";
 
     if let Some(chosen) = fdt.chosen()? {
-        if let (Some(start), Some(end)) = (chosen.getprop_u32(start)?, chosen.getprop_u32(end)?) {
-            return Ok(Some((start as usize)..(end as usize)));
+        match (chosen.getprop_u32(start)?, chosen.getprop_u32(end)?) {
+            (None, None) => {}
+            (Some(start), Some(end)) => {
+                return Ok(Some((start as usize)..(end as usize)));
+            }
+            _ => return Err(FdtError::NotFound),
         }
     }
 
@@ -165,7 +176,7 @@ fn patch_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Result<()> {
 /// Only one memory range is expected with the crosvm setup for now.
 fn read_and_validate_memory_range(
     fdt: &Fdt,
-    guest_page_size: usize,
+    alignment: usize,
 ) -> Result<Range<usize>, RebootReason> {
     let mut memory = fdt.memory().map_err(|e| {
         error!("Failed to read memory range from DT: {e}");
@@ -188,8 +199,8 @@ fn read_and_validate_memory_range(
     }
 
     let size = range.len();
-    if size % guest_page_size != 0 {
-        error!("Memory size {:#x} is not a multiple of page size {:#x}", size, guest_page_size);
+    if size % alignment != 0 {
+        error!("Memory size {:#x} is not aligned to {:#x}", size, alignment);
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -871,18 +882,18 @@ fn patch_serial_info(fdt: &mut Fdt, serial_info: &SerialInfo) -> libfdt::Result<
 fn validate_swiotlb_info(
     swiotlb_info: &SwiotlbInfo,
     memory: &Range<usize>,
-    guest_page_size: usize,
+    alignment: usize,
 ) -> Result<(), RebootReason> {
     let size = swiotlb_info.size;
     let align = swiotlb_info.align;
 
-    if size == 0 || (size % guest_page_size) != 0 {
+    if size == 0 || (size % alignment) != 0 {
         error!("Invalid swiotlb size {:#x}", size);
         return Err(RebootReason::InvalidFdt);
     }
 
-    if let Some(align) = align.filter(|&a| a % guest_page_size != 0) {
-        error!("Invalid swiotlb alignment {:#x}", align);
+    if let Some(align) = align.filter(|&a| a % alignment != 0) {
+        error!("Swiotlb alignment {:#x} not aligned to {:#x}", align, alignment);
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -1106,7 +1117,8 @@ fn parse_device_tree(
         RebootReason::InvalidFdt
     })?;
 
-    let memory_range = read_and_validate_memory_range(fdt, guest_page_size)?;
+    let memory_alignment = guest_page_size;
+    let memory_range = read_and_validate_memory_range(fdt, memory_alignment)?;
 
     let bootargs = read_bootargs_from(fdt).map_err(|e| {
         error!("Failed to read bootargs from DT: {e}");
@@ -1159,34 +1171,32 @@ fn parse_device_tree(
             error!("Swiotlb info missing from DT");
             RebootReason::InvalidFdt
         })?;
-    validate_swiotlb_info(&swiotlb_info, &memory_range, guest_page_size)?;
+    let swiotlb_alignment = guest_page_size;
+    validate_swiotlb_info(&swiotlb_info, &memory_range, swiotlb_alignment)?;
 
-    let device_assignment = match vm_dtbo {
-        Some(vm_dtbo) => {
-            if let Some(hypervisor) = get_device_assigner() {
-                // TODO(ptosi): Cache the (single?) granule once, in vmbase.
-                let granule = get_mem_sharer()
-                    .ok_or_else(|| {
-                        error!("No MEM_SHARE found during device assignment validation");
-                        RebootReason::InternalError
-                    })?
-                    .granule()
-                    .map_err(|e| {
-                        error!("Failed to get granule for device assignment validation: {e}");
-                        RebootReason::InternalError
-                    })?;
-                DeviceAssignmentInfo::parse(fdt, vm_dtbo, hypervisor, granule).map_err(|e| {
-                    error!("Failed to parse device assignment from DT and VM DTBO: {e}");
-                    RebootReason::InvalidFdt
+    let device_assignment = if let Some(vm_dtbo) = vm_dtbo {
+        if let Some(hypervisor) = get_device_assigner() {
+            // TODO(ptosi): Cache the (single?) granule once, in vmbase.
+            let granule = get_mem_sharer()
+                .ok_or_else(|| {
+                    error!("No MEM_SHARE found during device assignment validation");
+                    RebootReason::InternalError
                 })?
-            } else {
-                warn!(
-                    "Device assignment is ignored because device assigning hypervisor is missing"
-                );
-                None
-            }
+                .granule()
+                .map_err(|e| {
+                    error!("Failed to get granule for device assignment validation: {e}");
+                    RebootReason::InternalError
+                })?;
+            DeviceAssignmentInfo::parse(fdt, vm_dtbo, hypervisor, granule).map_err(|e| {
+                error!("Failed to parse device assignment from DT and VM DTBO: {e}");
+                RebootReason::InvalidFdt
+            })?
+        } else {
+            warn!("Device assignment is ignored because device assigning hypervisor is missing");
+            None
         }
-        None => None,
+    } else {
+        None
     };
 
     let untrusted_props = parse_untrusted_props(fdt).map_err(|e| {

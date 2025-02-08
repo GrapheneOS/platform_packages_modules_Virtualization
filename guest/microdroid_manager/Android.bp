@@ -33,6 +33,7 @@ rust_defaults {
         "libdice_policy_builder",
         "libdiced_open_dice",
         "libdiced_sample_inputs",
+        "libexplicitkeydice",
         "libglob",
         "libhex",
         "libitertools",

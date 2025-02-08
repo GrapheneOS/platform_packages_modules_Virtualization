@@ -120,6 +120,7 @@ fn enable_crypt(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
         .key(&key)
         .opt_param("sector_size:4096")
         .opt_param("iv_large_sectors")
+        .opt_param("allow_discards") // This allows re-compaction of underlying disk img in host
         .build()
         .context("Couldn't build the DMCrypt target")?;
     let dm = dm::DeviceMapper::new()?;
@@ -176,7 +177,7 @@ fn format_ext4(device: &Path) -> Result<()> {
 fn mount(source: &Path, mountpoint: &Path) -> Result<()> {
     create_dir_all(mountpoint).with_context(|| format!("Failed to create {:?}", &mountpoint))?;
     let mount_options = CString::new(
-        "fscontext=u:object_r:encryptedstore_fs:s0,context=u:object_r:encryptedstore_file:s0",
+        "fscontext=u:object_r:encryptedstore_fs:s0,context=u:object_r:encryptedstore_file:s0,discard",
     )
     .unwrap();
     let source = CString::new(source.as_os_str().as_bytes())?;

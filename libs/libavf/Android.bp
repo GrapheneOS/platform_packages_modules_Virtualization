@@ -40,8 +40,30 @@ rust_ffi_static {
     defaults: ["libavf.default"],
 }
 
+soong_config_module_type {
+    name: "virt_cc_defaults",
+    module_type: "cc_defaults",
+    config_namespace: "ANDROID",
+    bool_variables: [
+        "avf_enabled",
+    ],
+    properties: [
+        "apex_available",
+    ],
+}
+
+virt_cc_defaults {
+    name: "libavf_apex_available_defaults",
+    soong_config_variables: {
+        avf_enabled: {
+            apex_available: ["com.android.virt"],
+        },
+    },
+}
+
 cc_library {
     name: "libavf",
+    defaults: ["libavf_apex_available_defaults"],
     llndk: {
         symbol_file: "libavf.map.txt",
         moved_to_apex: true,
@@ -53,7 +75,6 @@ cc_library {
         "liblog",
     ],
     export_include_dirs: ["include"],
-    apex_available: ["com.android.virt"],
     version_script: "libavf.map.txt",
     stubs: {
         symbol_file: "libavf.map.txt",
