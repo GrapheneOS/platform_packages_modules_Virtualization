@@ -1044,8 +1044,8 @@ fn run_vm(
             // When this mode is enabled, two hypervisor specific IDs are expected to be packed
             // into the instance ID. We extract them here and pass along to crosvm so they can be
             // given to the hypervisor driver via an ioctl.
-            let vm_id = u32::from_le_bytes(config.instance_id[60..64].try_into().unwrap());
-            let pas_id = u16::from_le_bytes(config.instance_id[58..60].try_into().unwrap());
+            let pas_id = u32::from_le_bytes(config.instance_id[60..64].try_into().unwrap());
+            let vm_id = u16::from_le_bytes(config.instance_id[58..60].try_into().unwrap());
             command.arg("--hypervisor").arg(
                 format!("gunyah[device=/dev/gunyah,qcom_trusted_vm_id={vm_id},qcom_trusted_vm_pas_id={pas_id}]"),
             );
