@@ -118,10 +118,9 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
         /* consoleIn */ None,
         None,
         Some(dump_dt),
-        None,
     )
     .context("Failed to create VM")?;
-    vm.start().context("Failed to start VM")?;
+    vm.start(None).context("Failed to start VM")?;
     info!("Started example VM.");
 
     // Wait for VM to finish

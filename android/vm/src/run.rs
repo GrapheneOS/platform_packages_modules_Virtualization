@@ -341,11 +341,10 @@ fn run(
     } else {
         None
     };
+    let vm = VmInstance::create(service, config, console_out, console_in, log, dump_dt)
+        .context("Failed to create VM")?;
     let callback = Box::new(Callback {});
-    let vm =
-        VmInstance::create(service, config, console_out, console_in, log, dump_dt, Some(callback))
-            .context("Failed to create VM")?;
-    vm.start().context("Failed to start VM")?;
+    vm.start(Some(callback)).context("Failed to start VM")?;
 
     let debug_level = get_debug_level(config).unwrap_or(DebugLevel::NONE);
 

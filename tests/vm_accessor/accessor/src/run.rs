@@ -129,10 +129,9 @@ pub fn run_vm() -> Result<VmInstance, Error> {
         None,                    /* console_in */
         Some(android_log_fd()?), /* log */
         None,                    /* dump_dt */
-        Some(Box::new(Callback {})),
     )
     .context("Failed to create VM")?;
-    vm.start().context("Failed to start VM")?;
+    vm.start(Some(Box::new(Callback {}))).context("Failed to start VM")?;
 
     info!("started IAccessor VM with CID {}", vm.cid());
 

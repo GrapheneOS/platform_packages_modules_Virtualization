@@ -150,19 +150,14 @@ impl ComposClient {
 
         // Let logs go to logcat.
         let (console_fd, log_fd) = (None, None);
-        let callback = Box::new(Callback {});
         let instance = VmInstance::create(
-            service,
-            &config,
-            console_fd,
-            /* console_in_fd */ None,
-            log_fd,
+            service, &config, console_fd, /* console_in_fd */ None, log_fd,
             /* dump_dt */ None,
-            Some(callback),
         )
         .context("Failed to create VM")?;
 
-        instance.start()?;
+        let callback = Box::new(Callback {});
+        instance.start(Some(callback))?;
 
         let ready = instance.wait_until_ready(TIMEOUTS.vm_max_time_to_ready);
         if ready == Err(VmWaitError::Finished) && debug_level != DebugLevel::NONE {

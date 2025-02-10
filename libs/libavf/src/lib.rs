@@ -391,7 +391,7 @@ pub unsafe extern "C" fn AVirtualMachine_createRaw(
     let console_in = get_file_from_fd(console_in_fd);
     let log = get_file_from_fd(log_fd);
 
-    match VmInstance::create(service.as_ref(), &config, console_out, console_in, log, None, None) {
+    match VmInstance::create(service.as_ref(), &config, console_out, console_in, log, None) {
         Ok(vm) => {
             // SAFETY: `vm_ptr` is assumed to be a valid, non-null pointer to a mutable raw pointer.
             // `vm` is the only reference here and `vm_ptr` takes ownership.
@@ -416,7 +416,7 @@ pub unsafe extern "C" fn AVirtualMachine_start(vm: *const VmInstance) -> c_int {
     // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
     // `AVirtualMachine_createRaw`. It's the only reference to the object.
     let vm = unsafe { &*vm };
-    match vm.start() {
+    match vm.start(None) {
         Ok(_) => 0,
         Err(e) => {
             error!("AVirtualMachine_start failed: {e:?}");
