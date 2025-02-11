@@ -28,12 +28,12 @@ rust_defaults {
         "liblibfdt",
         "libanyhow",
     ],
-    apex_available: ["com.android.virt"],
 }
 
 rust_library_rlib {
     name: "libfsfdt",
     defaults: ["libfsfdt_default"],
+    apex_available: ["com.android.virt"],
 }
 
 rust_test {

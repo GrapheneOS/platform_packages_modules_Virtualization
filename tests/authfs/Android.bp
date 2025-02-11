@@ -3,6 +3,7 @@ rust_test {
     defaults: ["authfs_defaults"],
     test_suites: ["general-tests"],
     data: [":authfs_test_files"],
+    apex_available: ["//apex_available:platform"],
 }
 
 filegroup {
