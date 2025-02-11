@@ -34,6 +34,7 @@ import android.os.ResultReceiver
 import android.os.Trace
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
+import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
@@ -105,6 +106,13 @@ class VmLauncherService : Service() {
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
         val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
+
+        customImageConfigBuilder.setAudioConfig(
+            AudioConfig.Builder()
+                .setUseSpeaker(true)
+                .setUseMicrophone(true)
+                .build()
+        )
         if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
         }
