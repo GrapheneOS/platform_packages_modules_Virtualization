@@ -568,10 +568,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     }
 
     private void reportMetric(List<Double> data, String name, String unit) {
-        CLog.d("Report metric " + name + "(" + unit + ") : " + data.toString());
         Map<String, Double> stats = mMetricsProcessor.computeStats(data, name, unit);
         for (Map.Entry<String, Double> entry : stats.entrySet()) {
-            CLog.d("Add test metrics " + entry.getKey() + " : " + entry.getValue().toString());
             mMetrics.addTestMetric(entry.getKey(), entry.getValue().toString());
         }
     }
