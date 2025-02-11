@@ -26,13 +26,15 @@ import com.android.tradefed.util.SimpleStats;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import javax.annotation.Nonnull;
 
@@ -159,9 +161,14 @@ public final class KvmHypTracer {
         String cmd = "cd " + mHypTracingRoot + ";";
         String trace_pipes[] = new String[mNrCpus];
         for (int i = 0; i < mNrCpus; i++) {
-            trace_pipes[i] = mRunner.run("mktemp -t trace_pipe.cpu" + i + ".XXXXXXXXXX");
-            cmd += "cat per_cpu/cpu" + i + "/trace_pipe > " + trace_pipes[i] + " &";
-            cmd += "CPU" + i + "_TRACE_PIPE_PID=$!;";
+            /* Toybox's mktemp does not support suffix */
+            trace_pipes[i] =
+                    mRunner.run(
+                            "FILE=$(mktemp -t trace_pipe.cpu"
+                                    + i
+                                    + ".XXXXXXXXXX) && mv $FILE{,.gz} && echo $FILE.gz");
+            cmd += "cat per_cpu/cpu" + i + "/trace_pipe | gzip -c > " + trace_pipes[i] + " &";
+            cmd += "CPU" + i + "_TRACE_PIPE_PID=$(lsof /proc/$!/fd/0 -t | head -n 1);";
         }
 
         String cmd_script = mRunner.run("mktemp -t cmd_script.XXXXXXXXXX");
@@ -179,7 +186,7 @@ public final class KvmHypTracer {
                     "while $(test '$(ps -o S -p $CPU"
                             + i
                             + "_TRACE_PIPE_PID | tail -n 1)' = 'R'); do sleep 1; done;";
-            cmd += "kill -9 $CPU" + i + "_TRACE_PIPE_PID;";
+            cmd += "kill -2 $CPU" + i + "_TRACE_PIPE_PID;";
         }
         cmd += "wait";
 
@@ -228,6 +235,11 @@ public final class KvmHypTracer {
         return event;
     }
 
+    private BufferedReader openTrace(File trace) throws Exception {
+        return new BufferedReader(
+                new InputStreamReader(new GZIPInputStream(new FileInputStream(trace))));
+    }
+
     public SimpleStats getDurationStats() throws Exception {
         String[] reqEvents = {"hyp_enter", "hyp_exit"};
         SimpleStats stats = new SimpleStats();
@@ -237,38 +249,42 @@ public final class KvmHypTracer {
                 .isTrue();
 
         for (File trace : mTraces) {
-            BufferedReader br = new BufferedReader(new FileReader(trace));
-            double last = 0.0, hyp_enter = 0.0;
-            String prev_event = "";
-            KvmHypEvent hypEvent;
+            try (BufferedReader br = openTrace(trace)) {
+                double last = 0.0, hyp_enter = 0.0;
+                String prev_event = "";
+                KvmHypEvent hypEvent;
 
-            while ((hypEvent = getNextEvent(br)) != null) {
-                int cpu = hypEvent.cpu;
-                if (cpu < 0 || cpu >= mNrCpus)
-                    throw new ParseException("Incorrect CPU number: " + cpu, 0);
+                while ((hypEvent = getNextEvent(br)) != null) {
+                    int cpu = hypEvent.cpu;
+                    if (cpu < 0 || cpu >= mNrCpus)
+                        throw new ParseException("Incorrect CPU number: " + cpu, 0);
 
-                double cur = hypEvent.timestamp;
-                if (cur < last) throw new ParseException("Time must not go backward: " + cur, 0);
-                last = cur;
+                    double cur = hypEvent.timestamp;
+                    if (cur < last) {
+                        throw new ParseException("Time must not go backward: " + cur, 0);
+                    }
+                    last = cur;
 
-                String event = hypEvent.name;
-                if (event.equals(prev_event)) {
-                    throw new ParseException(
-                            "Hyp event found twice in a row: " + trace + " - " + hypEvent, 0);
+                    String event = hypEvent.name;
+                    if (event.equals(prev_event)) {
+                        throw new ParseException(
+                                "Hyp event found twice in a row: " + trace + " - " + hypEvent, 0);
+                    }
+
+                    switch (event) {
+                        case "hyp_exit":
+                            if (prev_event.equals("hyp_enter")) stats.add(cur - hyp_enter);
+                            break;
+                        case "hyp_enter":
+                            hyp_enter = cur;
+                            break;
+                        default:
+                            throw new ParseException("Unexpected line in trace " + hypEvent, 0);
+                    }
+                    prev_event = event;
                 }
-
-                switch (event) {
-                    case "hyp_exit":
-                        if (prev_event.equals("hyp_enter")) stats.add(cur - hyp_enter);
-                        break;
-                    case "hyp_enter":
-                        hyp_enter = cur;
-                        break;
-                    default:
-                        throw new ParseException("Unexpected line in trace " + hypEvent, 0);
-                }
-                prev_event = event;
             }
+
         }
 
         return stats;
@@ -286,39 +302,43 @@ public final class KvmHypTracer {
         KvmHypEvent[] next = new KvmHypEvent[mTraces.size()];
 
         for (int i = 0; i < mTraces.size(); i++) {
-            brs[i] = new BufferedReader(new FileReader(mTraces.get(i)));
+            brs[i] = openTrace(mTraces.get(i));
             next[i] = getNextEvent(brs[i]);
         }
 
-        while (true) {
-            double oldest = Double.MAX_VALUE;
-            int oldestIdx = -1;
+        try {
+            while (true) {
+                double oldest = Double.MAX_VALUE;
+                int oldestIdx = -1;
 
-            for (int i = 0; i < mTraces.size(); i++) {
-                if ((next[i] != null) && (next[i].timestamp < oldest)) {
-                    oldest = next[i].timestamp;
-                    oldestIdx = i;
+                for (int i = 0; i < mTraces.size(); i++) {
+                    if ((next[i] != null) && (next[i].timestamp < oldest)) {
+                        oldest = next[i].timestamp;
+                        oldestIdx = i;
+                    }
                 }
+
+                if (oldestIdx < 0) break;
+
+                Pattern pattern = Pattern.compile("count=([0-9]*) was=([0-9]*)");
+                Matcher matcher = pattern.matcher(next[oldestIdx].args);
+                if (!matcher.find()) {
+                    throw new ParseException(
+                            "Unexpected psci_mem_protect event: " + next[oldestIdx], 0);
+                }
+
+                int count = Integer.parseInt(matcher.group(1));
+                int was = Integer.parseInt(matcher.group(2));
+
+                if (psciMemProtect.isEmpty()) {
+                    psciMemProtect.add(was);
+                }
+
+                psciMemProtect.add(count);
+                next[oldestIdx] = getNextEvent(brs[oldestIdx]);
             }
-
-            if (oldestIdx < 0) break;
-
-            Pattern pattern = Pattern.compile("count=([0-9]*) was=([0-9]*)");
-            Matcher matcher = pattern.matcher(next[oldestIdx].args);
-            if (!matcher.find()) {
-                throw new ParseException(
-                        "Unexpected psci_mem_protect event: " + next[oldestIdx], 0);
-            }
-
-            int count = Integer.parseInt(matcher.group(1));
-            int was = Integer.parseInt(matcher.group(2));
-
-            if (psciMemProtect.isEmpty()) {
-                psciMemProtect.add(was);
-            }
-
-            psciMemProtect.add(count);
-            next[oldestIdx] = getNextEvent(brs[oldestIdx]);
+        } finally {
+            for (int i = 0; i < mTraces.size(); i++) brs[i].close();
         }
 
         return psciMemProtect;
