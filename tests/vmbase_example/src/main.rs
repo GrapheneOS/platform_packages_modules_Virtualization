@@ -116,10 +116,9 @@ fn run_test(
         /* consoleIn */ None,
         Some(log_writer),
         /* dump_dt */ None,
-        None,
     )
     .context("Failed to create VM")?;
-    vm.start().context("Failed to start VM")?;
+    vm.start(None).context("Failed to start VM")?;
     info!("Started example VM.");
 
     // Wait for VM to finish, and check that it shut down cleanly.

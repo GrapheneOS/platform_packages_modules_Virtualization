@@ -189,7 +189,7 @@ int AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod(
  * physical memory.
  *
  * \param config a virtual machine config object.
- * \param fd a memfd
+ * \param fd a memfd. Ownership is transferred, even if the function is not successful.
  * \param rangeStart range start of guest memory addresses
  * \param rangeEnd range end of guest memory addresses
  *

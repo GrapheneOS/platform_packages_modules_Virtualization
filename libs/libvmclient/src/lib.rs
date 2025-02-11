@@ -209,7 +209,6 @@ impl VmInstance {
         console_in: Option<File>,
         log: Option<File>,
         dump_dt: Option<File>,
-        callback: Option<Box<dyn VmCallback + Send + Sync>>,
     ) -> BinderResult<Self> {
         let console_out = console_out.map(ParcelFileDescriptor::new);
         let console_in = console_in.map(ParcelFileDescriptor::new);
@@ -226,20 +225,19 @@ impl VmInstance {
 
         let cid = vm.getCid()?;
 
-        // Register callback before starting VM, in case it dies immediately.
         let state = Arc::new(Monitor::new(VmState::default()));
-        let callback = BnVirtualMachineCallback::new_binder(
-            VirtualMachineCallback { state: state.clone(), client_callback: callback },
-            BinderFeatures::default(),
-        );
-        vm.registerCallback(&callback)?;
         let death_recipient = wait_for_binder_death(&mut vm.as_binder(), state.clone())?;
 
         Ok(Self { vm, cid, state, _death_recipient: death_recipient })
     }
 
     /// Starts the VM.
-    pub fn start(&self) -> BinderResult<()> {
+    pub fn start(&self, callback: Option<Box<dyn VmCallback + Send + Sync>>) -> BinderResult<()> {
+        let callback = BnVirtualMachineCallback::new_binder(
+            VirtualMachineCallback { state: self.state.clone(), client_callback: callback },
+            BinderFeatures::default(),
+        );
+        self.vm.registerCallback(&callback)?;
         self.vm.start()
     }
 

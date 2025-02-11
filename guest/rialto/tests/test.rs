@@ -338,7 +338,6 @@ fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
         /* consoleIn */ None,
         log,
         /* dump_dt */ None,
-        None,
     )
     .context("Failed to create VM")
 }
