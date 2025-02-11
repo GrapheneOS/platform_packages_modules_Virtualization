@@ -1,5 +1,16 @@
 PACKAGES install
 
+avahi-daemon
+avahi-utils
 bpfcc-tools
-linux-headers-generic
+libnss-mdns
 procps
+forwarder-guest
+forwarder-guest-launcher
+shutdown-runner
+weston
+xwayland
+mesa-vulkan-drivers
+libvulkan1
+vulkan-tools
+pulseaudio
