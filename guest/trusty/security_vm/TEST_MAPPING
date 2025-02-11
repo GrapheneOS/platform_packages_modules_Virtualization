@@ -1,7 +1,7 @@
 {
-  "trusty-security_vm-presubmit": [
+  "trusty_security_vm_presubmit": [
   ],
-  "trusty-security_vm-postsubmit": [
+  "trusty_security_vm_postsubmit": [
     {
       "name": "VtsAidlKeyMintTargetTest"
     },

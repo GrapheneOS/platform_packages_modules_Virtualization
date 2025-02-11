@@ -17,34 +17,16 @@ package {
     default_team: "trendy_team_trusty",
 }
 
-// python -c "import hashlib; print(hashlib.sha256(b'trusty_test_vm_salt').hexdigest())"
-trusty_test_vm_salt = "5ce3eab1a08540e1334c83f54b8608aa6c23feee6939693cac41441449c5a51f"
-
-TRUSTY_TEST_VM_VERSION = 1
-
-avb_add_hash_footer {
-    name: "trusty_test_vm_signed",
-    filename: "trusty_test_vm_signed",
-    partition_name: "boot",
-    private_key: ":trusty_vm_sign_key",
-    salt: trusty_test_vm_salt,
-    rollback_index: TRUSTY_TEST_VM_VERSION,
-    src: ":empty_file",
-    enabled: false,
-    arch: {
-        x86_64: {
-            src: ":trusty-test-lk.elf",
-            enabled: true,
-        },
-    },
-}
-
 prebuilt_etc {
     name: "trusty_test_vm_config",
     enabled: false,
     arch: {
+        arm64: {
+            src: "trusty-test_vm-config-arm64.json",
+            enabled: true,
+        },
         x86_64: {
-            src: "vm_config_lk_x86_64.json",
+            src: "trusty-test_vm-config-x86_64.json",
             enabled: true,
         },
     },
@@ -55,11 +37,14 @@ prebuilt_etc {
     name: "trusty_vm_launcher_sh",
     enabled: false,
     arch: {
+        arm64: {
+            enabled: true,
+        },
         x86_64: {
-            src: "trusty-vm-launcher.sh",
             enabled: true,
         },
     },
+    src: "trusty-vm-launcher.sh",
     filename: "trusty-vm-launcher.sh",
 }
 
@@ -67,20 +52,32 @@ prebuilt_etc {
     name: "trusty_wait_ready_sh",
     enabled: false,
     arch: {
+        arm64: {
+            enabled: true,
+        },
         x86_64: {
-            src: "trusty-wait-ready.sh",
             enabled: true,
         },
     },
+    src: "trusty-wait-ready.sh",
     filename: "trusty-wait-ready.sh",
 }
 
 sh_test {
     name: "TrustyTestVM_UnitTests",
     src: "trusty-ut-ctrl.sh",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+        x86_64: {
+            enabled: true,
+        },
+    },
     filename_from_src: true,
     data: [
-        ":trusty_test_vm_signed",
+        ":trusty_test_vm_elf",
         ":trusty_test_vm_config",
         "trusty-vm-launcher.sh",
         "trusty-wait-ready.sh",
@@ -91,10 +88,4 @@ sh_test {
     test_suites: [
         "general-tests",
     ],
-    enabled: false,
-    arch: {
-        x86_64: {
-            enabled: true,
-        },
-    },
 }

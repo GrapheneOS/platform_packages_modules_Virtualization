@@ -106,9 +106,9 @@ fn main() -> Result<()> {
     .context("Failed to create VM")?;
     vm.start(None /* callback */).context("Failed to start VM")?;
 
-    println!("started trusty_security_vm_launcher VM");
+    println!("started {} VM", args.name.to_owned());
     let death_reason = vm.wait_for_death();
-    eprintln!("trusty_security_vm_launcher ended: {:?}", death_reason);
+    eprintln!("{} ended: {:?}", args.name.to_owned(), death_reason);
 
     // TODO(b/331320802): we may want to use android logger instead of stdio_to_kmsg?
 

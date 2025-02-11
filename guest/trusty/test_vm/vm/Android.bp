@@ -1,0 +1,119 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+soong_config_module_type_import {
+    from: "packages/modules/Virtualization/guest/trusty/common/Android.bp",
+    module_types: ["trusty_vm_avb_add_hash_footer"],
+}
+
+prebuilt_etc {
+    name: "trusty_test_vm_elf",
+    system_ext_specific: true,
+    relative_install_path: "vm/trusty_vm",
+    filename: "trusty_test_vm.elf",
+    src: select((os(), arch()), {
+        ("android", "arm64"): ":trusty_test_vm_signed",
+        ("android", "x86_64"): ":trusty_test_vm_unsigned",
+        (default, default): ":empty_file",
+    }),
+}
+
+cc_binary {
+    name: "trusty_test_vm_signed",
+    srcs: [
+        ":trusty_test_vm_signed_bin_obj",
+    ],
+    // reuse the common trusty_vm_sections linker script
+    linker_scripts: [
+        ":trusty_vm_sections.ld",
+    ],
+    ldflags: [
+        // Prevent the `trusty_test_vm_signed_bin_obj` segment from being garbage collected.
+        "-Wl,--no-gc-sections",
+        // Prevent the build ID segments from being added, as it would corrupt the integrity
+        // of the original signed image.
+        "-Wl,--build-id=none",
+        // Use a standard page size of 4096, smaller than the default 16384, to avoid padding
+        // with extra bytes.
+        "-Wl,-z,max-page-size=4096",
+    ],
+    nocrt: true,
+    no_libcrt: true,
+    static_executable: true,
+    system_shared_libs: [],
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+    strip: {
+        none: true,
+    },
+}
+
+cc_genrule {
+    name: "test_vm.S",
+    enabled: false,
+    arch: {
+        arm64: {
+            srcs: [":trusty_test_vm_signed_bin"],
+            enabled: true,
+        },
+    },
+    out: ["test_vm.S"],
+    cmd: "(" +
+        "    echo '.section .vm_payload_signed.bin';" +
+        "    echo '.globl vm_payload_signed';" +
+        "    echo 'vm_payload_signed:';" +
+        "    echo '.incbin \"'$(in)'\"';" +
+        ") > $(out)",
+    visibility: ["//visibility:private"],
+}
+
+cc_object {
+    name: "trusty_test_vm_signed_bin_obj",
+    srcs: [
+        ":test_vm.S",
+    ],
+    crt: false,
+    system_shared_libs: [],
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+    visibility: ["//visibility:private"],
+}
+
+// python -c "import hashlib; print(hashlib.sha256(b'trusty_test_vm_salt').hexdigest())"
+trusty_test_vm_salt = "5ce3eab1a08540e1334c83f54b8608aa6c23feee6939693cac41441449c5a51f"
+
+TRUSTY_TEST_VM_VERSION = 1
+
+trusty_vm_avb_add_hash_footer {
+    name: "trusty_test_vm_signed_bin",
+    filename: "trusty_test_vm_signed.bin",
+    partition_name: "boot",
+    private_key: ":trusty_vm_sign_key",
+    salt: trusty_test_vm_salt,
+    rollback_index: TRUSTY_TEST_VM_VERSION,
+    props: [
+        {
+            name: "com.android.virt.cap",
+            value: "trusty_security_vm",
+        },
+    ],
+    src: ":trusty_test_vm_unsigned",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+        x86_64: {
+            enabled: true,
+        },
+    },
+}

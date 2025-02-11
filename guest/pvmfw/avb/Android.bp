@@ -33,7 +33,7 @@ rust_test {
         ":microdroid_kernel_signed",
         ":microdroid_initrd_normal",
         ":microdroid_initrd_debuggable",
-        ":trusty_security_vm_signed",
+        ":trusty_test_vm_signed_bin",
         ":test_image_with_one_hashdesc",
         ":test_image_with_non_initrd_hashdesc",
         ":test_image_with_initrd_and_non_initrd_desc",

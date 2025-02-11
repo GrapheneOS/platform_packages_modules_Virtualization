@@ -1,0 +1,7 @@
+{
+    "name": "trusty_test_vm",
+    "kernel": "/data/local/tmp/trusty_test_vm/trusty_test_vm_.elf",
+    "platform_version": "1.0",
+    "memory_mib": 112,
+    "protected": true
+}

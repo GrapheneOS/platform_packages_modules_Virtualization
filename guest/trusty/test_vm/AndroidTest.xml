@@ -27,7 +27,7 @@
         <option name="push-file" key="trusty-vm-launcher.sh" value="/data/local/tmp/trusty_test_vm/trusty-vm-launcher.sh" />
         <option name="push-file" key="trusty-wait-ready.sh" value="/data/local/tmp/trusty_test_vm/trusty-wait-ready.sh" />
         <option name="push-file" key="trusty-test_vm-config.json" value="/data/local/tmp/trusty_test_vm/trusty-test_vm-config.json" />
-        <option name="push-file" key="trusty_test_vm_signed" value="/data/local/tmp/trusty_test_vm/trusty_test_vm_signed" />
+        <option name="push-file" key="trusty_test_vm.elf" value="/data/local/tmp/trusty_test_vm/trusty_test_vm.elf" />
     </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="throw-if-cmd-fail" value="true" />
