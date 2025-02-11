@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotNull;
 
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
+import com.android.tradefed.util.Pair;
 import com.android.tradefed.util.SimpleStats;
 
 import java.io.BufferedReader;
@@ -77,6 +78,40 @@ class KvmHypEvent {
     }
 }
 
+class KvmHypDurationStats {
+    public Pair<KvmHypEvent, KvmHypEvent> maxSection;
+    public SimpleStats mStats;
+
+    public KvmHypDurationStats() {
+        mStats = new SimpleStats();
+    }
+
+    private boolean isValidEvent(KvmHypEvent e) {
+        return e.name.equals("hyp_enter") || e.name.equals("hyp_exit");
+    }
+
+    private double sectionDuration(Pair<KvmHypEvent, KvmHypEvent> section) {
+        return section.second.timestamp - section.first.timestamp;
+    }
+
+    public void add(KvmHypEvent start, KvmHypEvent end) throws Exception {
+        if (start.cpu != end.cpu
+                || start.timestamp > end.timestamp
+                || !isValidEvent(start)
+                || !isValidEvent(end)) {
+
+            throw new Exception("Unexpected events: " + start + " -> " + end);
+        }
+
+        double duration = end.timestamp - start.timestamp;
+        mStats.add(duration);
+
+        if (maxSection == null || sectionDuration(maxSection) < duration) {
+            maxSection = Pair.create(start, end);
+        }
+    }
+}
+
 /** This class provides utilities to interact with the hyp tracing subsystem */
 public final class KvmHypTracer {
 
@@ -89,6 +124,8 @@ public final class KvmHypTracer {
     private final String mHypEvents[];
 
     private final ArrayList<File> mTraces;
+
+    private KvmHypDurationStats mDurationStats;
 
     private static String getHypTracingRoot(ITestDevice device) throws Exception {
         String legacy = "/sys/kernel/tracing/hyp/";
@@ -240,9 +277,11 @@ public final class KvmHypTracer {
                 new InputStreamReader(new GZIPInputStream(new FileInputStream(trace))));
     }
 
-    public SimpleStats getDurationStats() throws Exception {
+    private void updateDurationStats() throws Exception {
+        if (mDurationStats != null) return;
+
         String[] reqEvents = {"hyp_enter", "hyp_exit"};
-        SimpleStats stats = new SimpleStats();
+        KvmHypDurationStats stats = new KvmHypDurationStats();
 
         assertWithMessage("KvmHypTracer() is missing events " + String.join(",", reqEvents))
                 .that(hasEvents(reqEvents))
@@ -250,44 +289,58 @@ public final class KvmHypTracer {
 
         for (File trace : mTraces) {
             try (BufferedReader br = openTrace(trace)) {
-                double last = 0.0, hyp_enter = 0.0;
-                String prev_event = "";
-                KvmHypEvent hypEvent;
+                KvmHypEvent event, prevEvent = null;
 
-                while ((hypEvent = getNextEvent(br)) != null) {
-                    int cpu = hypEvent.cpu;
+                while ((event = getNextEvent(br)) != null) {
+                    int cpu = event.cpu;
                     if (cpu < 0 || cpu >= mNrCpus)
                         throw new ParseException("Incorrect CPU number: " + cpu, 0);
 
-                    double cur = hypEvent.timestamp;
-                    if (cur < last) {
+                    double cur = event.timestamp;
+                    if (prevEvent != null && prevEvent.timestamp > cur) {
                         throw new ParseException("Time must not go backward: " + cur, 0);
                     }
-                    last = cur;
 
-                    String event = hypEvent.name;
-                    if (event.equals(prev_event)) {
+                    if (prevEvent != null && prevEvent.name.equals(event.name)) {
                         throw new ParseException(
-                                "Hyp event found twice in a row: " + trace + " - " + hypEvent, 0);
+                                "Hyp event found twice in a row: " + trace + " - " + event, 0);
                     }
 
-                    switch (event) {
+                    switch (event.name) {
                         case "hyp_exit":
-                            if (prev_event.equals("hyp_enter")) stats.add(cur - hyp_enter);
+                            if (prevEvent != null && prevEvent.name.equals("hyp_enter")) {
+                                stats.add(prevEvent, event);
+                            }
                             break;
                         case "hyp_enter":
-                            hyp_enter = cur;
                             break;
                         default:
-                            throw new ParseException("Unexpected line in trace " + hypEvent, 0);
+                            throw new ParseException("Unexpected line in trace " + event, 0);
                     }
-                    prev_event = event;
+
+                    prevEvent = event;
                 }
             }
-
         }
 
-        return stats;
+        mDurationStats = stats;
+    }
+
+    public SimpleStats getDurationStats() throws Exception {
+        updateDurationStats();
+        return mDurationStats.mStats;
+    }
+
+    public Pair<Double, Double> getMaxDurationSection() throws Exception {
+        updateDurationStats();
+        return Pair.create(
+                mDurationStats.maxSection.first.timestamp,
+                mDurationStats.maxSection.second.timestamp);
+    }
+
+    public int getMaxDurationCpu() throws Exception {
+        updateDurationStats();
+        return mDurationStats.maxSection.first.cpu;
     }
 
     public List<Integer> getPsciMemProtect() throws Exception {
