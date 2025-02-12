@@ -42,6 +42,7 @@ import android.os.PersistableBundle;
 import android.sysprop.HypervisorProperties;
 import android.system.virtualizationservice.AssignedDevices;
 import android.system.virtualizationservice.CpuOptions;
+import android.system.virtualizationservice.CustomMemoryBackingFile;
 import android.system.virtualizationservice.DiskImage;
 import android.system.virtualizationservice.Partition;
 import android.system.virtualizationservice.SharedPath;
@@ -835,6 +836,7 @@ public final class VirtualMachineConfig {
                                 })
                         .orElse(null);
         config.teeServices = EMPTY_STRING_ARRAY;
+        config.customMemoryBackingFiles = new CustomMemoryBackingFile[0];
         return config;
     }
 
