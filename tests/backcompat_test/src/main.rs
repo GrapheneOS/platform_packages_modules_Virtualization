@@ -25,7 +25,6 @@ use android_system_virtualizationservice::{
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use log::error;
 use log::info;
 use std::fs::read_to_string;
 use std::fs::File;
@@ -188,15 +187,15 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
             return Err(anyhow!("failed to execute dtc"));
         }
         let dt2 = read_to_string("dump_dt_failed.dts")?;
-        error!(
+        eprintln!(
             "Device tree 2 does not match golden DT.\n
                Device Tree 2: {}",
             dt2
         );
         return Err(anyhow!(
-            "stdout: {:?}\n stderr: {:?}",
-            dtcompare_res.stdout,
-            dtcompare_res.stderr
+            "stdout: {}\n stderr: {}",
+            String::from_utf8_lossy(&dtcompare_res.stdout),
+            String::from_utf8_lossy(&dtcompare_res.stderr)
         ));
     }
 
