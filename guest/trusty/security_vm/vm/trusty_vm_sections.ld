@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-ENTRY(security_vm_signed)
+ENTRY(vm_payload_signed)
 
 SECTIONS
 {
     . = 0x0;
     .text : {
-        *(.security_vm_signed.bin)
+        *(.vm_payload_signed.bin)
     }
 }

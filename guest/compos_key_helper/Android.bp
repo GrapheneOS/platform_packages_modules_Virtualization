@@ -5,7 +5,6 @@ package {
 cc_defaults {
     name: "compos_key_defaults",
     defaults: ["avf_build_flags_cc"],
-    apex_available: ["com.android.compos"],
 
     shared_libs: [
         "libbase",
@@ -18,6 +17,7 @@ cc_library {
     defaults: ["compos_key_defaults"],
     srcs: ["compos_key.cpp"],
     export_include_dirs: ["."],
+    apex_available: ["com.android.compos"],
 }
 
 cc_binary {
@@ -33,6 +33,7 @@ cc_binary {
         "libvm_payload#current",
         "libbinder_ndk",
     ],
+    apex_available: ["com.android.compos"],
 }
 
 cc_test {

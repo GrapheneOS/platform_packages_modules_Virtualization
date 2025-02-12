@@ -55,12 +55,12 @@ rust_defaults {
         "libservice_vm_comm",
         "libservice_vm_manager",
     ],
-    apex_available: ["com.android.virt"],
 }
 
 rust_binary {
     name: "virtualizationservice",
     defaults: ["virtualizationservice_defaults"],
+    apex_available: ["com.android.virt"],
 }
 
 xsd_config {

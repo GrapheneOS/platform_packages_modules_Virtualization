@@ -33,7 +33,7 @@ use std::{
 const MICRODROID_KERNEL_IMG_PATH: &str = "microdroid_kernel";
 const INITRD_NORMAL_IMG_PATH: &str = "microdroid_initrd_normal.img";
 const INITRD_DEBUG_IMG_PATH: &str = "microdroid_initrd_debuggable.img";
-const TRUSTY_SECURITY_VM_KERNEL_IMG_PATH: &str = "trusty_security_vm_signed";
+const TRUSTY_TEST_VM_KERNEL_IMG_PATH: &str = "trusty_test_vm_signed.bin";
 const PUBLIC_KEY_RSA4096_PATH: &str = "data/testkey_rsa4096_pub.bin";
 
 pub const PUBLIC_KEY_RSA2048_PATH: &str = "data/testkey_rsa2048_pub.bin";
@@ -61,8 +61,8 @@ pub fn load_latest_signed_kernel() -> Result<Vec<u8>> {
     Ok(fs::read(MICRODROID_KERNEL_IMG_PATH)?)
 }
 
-pub fn load_latest_trusty_security_vm_signed_kernel() -> Result<Vec<u8>> {
-    Ok(fs::read(TRUSTY_SECURITY_VM_KERNEL_IMG_PATH)?)
+pub fn load_latest_trusty_test_vm_signed_kernel() -> Result<Vec<u8>> {
+    Ok(fs::read(TRUSTY_TEST_VM_KERNEL_IMG_PATH)?)
 }
 
 pub fn load_latest_initrd_normal() -> Result<Vec<u8>> {

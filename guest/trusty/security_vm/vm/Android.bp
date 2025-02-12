@@ -2,32 +2,51 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+soong_config_module_type_import {
+    from: "packages/modules/Virtualization/guest/trusty/common/Android.bp",
+    module_types: ["trusty_vm_avb_add_hash_footer"],
+}
+
+// - Trusty VM payloads on arm64 are pvmfw enabled
+//   AVF VM build system uses the raw binary image (:trusty_security_vm_unsigned),
+//   adds pvmfw footer and generates a pvmfw-compliant signed elf file)
+// - Trusty VM payload on x86 are for now loaded in Cuttlefish unsigned
+//   the unsigned generated elf is used directly by AV
+//
+// see packages/modules/Virtualization/guest/trusty
+
 prebuilt_etc {
-    name: "lk_trusty.elf",
+    name: "trusty_security_vm.elf",
+    src: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {
+        ("android", "arm64", true): ":trusty_security_vm_signed",
+        ("android", "x86_64", true): ":trusty_security_vm_unsigned",
+        (default, default, default): ":empty_file",
+    }),
     system_ext_specific: true,
     relative_install_path: "vm/trusty_vm",
-    filename: "lk_trusty.elf",
-    arch: {
-        x86_64: {
-            src: ":trusty_security_vm_signed",
-        },
-        arm64: {
-            src: ":security_vm_elf",
-        },
-    },
-    src: ":empty_file",
+    filename: "trusty_security_vm.elf",
+}
+
+filegroup {
+    name: "trusty_vm_sections.ld",
+    srcs: [
+        "trusty_vm_sections.ld",
+    ],
+    visibility: [
+        "//packages/modules/Virtualization/guest/trusty/test_vm/vm",
+    ],
 }
 
 cc_binary {
-    name: "security_vm_elf",
+    name: "trusty_security_vm_signed",
     srcs: [
-        ":security_vm_signed_obj",
+        ":trusty_security_vm_signed_bin_obj",
     ],
     linker_scripts: [
-        "security_vm_sections.ld",
+        ":trusty_vm_sections.ld",
     ],
     ldflags: [
-        // Prevent the `trusty_security_vm_signed` segment from being garbage collected.
+        // Prevent the `trusty_security_vm_signed_bin_obj` segment from being garbage collected.
         "-Wl,--no-gc-sections",
         // Prevent the build ID segments from being added, as it would corrupt the integrity
         // of the original signed image.
@@ -40,49 +59,48 @@ cc_binary {
     no_libcrt: true,
     static_executable: true,
     system_shared_libs: [],
-    enabled: false,
-    target: {
-        android_arm64: {
-            enabled: true,
-        },
-    },
     strip: {
         none: true,
     },
+    enabled: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {
+        ("android", "arm64", true): true,
+        (default, default, default): false,
+    }),
 }
 
 cc_genrule {
     name: "security_vm.S",
     arch: {
         arm64: {
-            srcs: [":trusty_security_vm_signed"],
+            srcs: [":trusty_security_vm_signed_bin"],
         },
     },
     out: ["security_vm.S"],
     cmd: "(" +
-        "    echo '.section .security_vm_signed.bin';" +
-        "    echo '.globl security_vm_signed';" +
-        "    echo 'security_vm_signed:';" +
+        "    echo '.section .vm_payload_signed.bin';" +
+        "    echo '.globl vm_payload_signed';" +
+        "    echo 'vm_payload_signed:';" +
         "    echo '.incbin \"'$(in)'\"';" +
         ") > $(out)",
     visibility: ["//visibility:private"],
+    enabled: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {
+        ("android", "arm64", true): true,
+        (default, default, default): false,
+    }),
 }
 
 cc_object {
-    name: "security_vm_signed_obj",
+    name: "trusty_security_vm_signed_bin_obj",
     srcs: [
         ":security_vm.S",
     ],
-    static_libs: ["trusty_security_vm_signed"],
     crt: false,
     system_shared_libs: [],
-    enabled: false,
-    target: {
-        android_arm64: {
-            enabled: true,
-        },
-    },
     visibility: ["//visibility:private"],
+    enabled: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {
+        ("android", "arm64", true): true,
+        (default, default, default): false,
+    }),
 }
 
 filegroup {
@@ -95,9 +113,9 @@ trusty_security_vm_salt = "75a71e967c1a1e0f805cca20465e7acf83e6a04e567a67c426d8b
 
 TRUSTY_SECURITY_VM_VERSION = 1
 
-avb_add_hash_footer {
-    name: "trusty_security_vm_signed",
-    filename: "trusty_security_vm_signed",
+trusty_vm_avb_add_hash_footer {
+    name: "trusty_security_vm_signed_bin",
+    filename: "trusty_security_vm_signed.bin",
     partition_name: "boot",
     private_key: ":trusty_vm_sign_key",
     salt: trusty_security_vm_salt,
@@ -108,29 +126,12 @@ avb_add_hash_footer {
             value: "trusty_security_vm",
         },
     ],
-    src: ":empty_file",
-    enabled: false,
-    arch: {
-        x86_64: {
-            src: ":trusty-lk.elf",
-            enabled: true,
-        },
-        arm64: {
-            src: ":trusty_security_vm_unsigned",
-            enabled: true,
-        },
-    },
-}
-
-// TODO(b/379646659): Take the binary generated by trusty instead of extracting
-// it from ELF here.
-raw_binary {
-    name: "trusty_security_vm_unsigned",
-    src: ":trusty-test-lk.elf",
-    enabled: false,
-    arch: {
-        arm64: {
-            enabled: true,
-        },
-    },
+    src: select(soong_config_variable("trusty_system_vm", "enabled"), {
+        true: ":trusty_security_vm_unsigned",
+        default: ":empty_file",
+    }),
+    enabled: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {
+        ("android", "arm64", true): true,
+        (default, default, default): false,
+    }),
 }

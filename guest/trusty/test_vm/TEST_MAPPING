@@ -1,7 +1,7 @@
 {
-  "trusty-test_vm-presubmit": [
+  "trusty_test_vm_presubmit": [
   ],
-  "trusty-test_vm-postsubmit": [
+  "trusty_test_vm_postsubmit": [
     {
         "name": "TrustyTestVM_UnitTests"
     }

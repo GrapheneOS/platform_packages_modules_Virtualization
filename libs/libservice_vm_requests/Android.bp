@@ -9,9 +9,6 @@ rust_defaults {
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
     prefer_rlib: true,
-    apex_available: [
-        "com.android.virt",
-    ],
     no_stdlibs: true,
     stdlibs: [
         "libcore.rust_sysroot",
@@ -37,6 +34,9 @@ rust_defaults {
 rust_library_rlib {
     name: "libservice_vm_requests_nostd",
     defaults: ["libservice_vm_requests_nostd_defaults"],
+    apex_available: [
+        "com.android.virt",
+    ],
 }
 
 rust_test {

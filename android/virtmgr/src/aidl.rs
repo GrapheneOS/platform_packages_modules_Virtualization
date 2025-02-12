@@ -425,6 +425,11 @@ fn find_partition(path: Option<&Path>) -> binder::Result<String> {
         Some(path) => path,
         None => return Ok("system".to_owned()),
     };
+    if path.starts_with("/system/system_ext/") {
+        return Ok("system_ext".to_owned());
+    } else if path.starts_with("/system/product/") {
+        return Ok("product".to_owned());
+    }
     let mut components = path.components();
     match components.nth(1) {
         Some(std::path::Component::Normal(partition)) => {
@@ -482,7 +487,10 @@ impl VirtualizationService {
                     .or_service_specific_exception(-1)
             }
         };
-        if Path::new(&early_vm.path) != calling_exe_path {
+        let expected_exe_path = Path::new(&early_vm.path);
+        if expected_exe_path != calling_exe_path
+            && Path::new("/system").join(expected_exe_path) != calling_exe_path
+        {
             return Err(anyhow!(
                 "VM '{name}' in partition '{calling_partition}' must be created with '{}', not '{}'",
                 &early_vm.path,
@@ -2651,6 +2659,22 @@ mod tests {
             assert!(validate_cid_range(&early_vms, &cid_range).is_err(), "should fail");
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink_to_system_ext_supported() -> Result<()> {
+        let link_path = Path::new("/system/system_ext/file");
+        let partition = find_partition(Some(link_path)).unwrap();
+        assert_eq!("system_ext", partition);
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink_to_product_supported() -> Result<()> {
+        let link_path = Path::new("/system/product/file");
+        let partition = find_partition(Some(link_path)).unwrap();
+        assert_eq!("product", partition);
         Ok(())
     }
 

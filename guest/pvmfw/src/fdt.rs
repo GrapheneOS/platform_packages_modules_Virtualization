@@ -78,27 +78,87 @@ impl fmt::Display for FdtValidationError {
     }
 }
 
+/// For non-standardly sized integer properties, not following <#size-cells> or <#address-cells>.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum DeviceTreeInteger {
+    SingleCell(u32),
+    DoubleCell(u64),
+}
+
+impl DeviceTreeInteger {
+    fn read_from(node: &FdtNode, name: &CStr) -> libfdt::Result<Option<Self>> {
+        if let Some(bytes) = node.getprop(name)? {
+            Ok(Some(Self::from_bytes(bytes).ok_or(FdtError::BadValue)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if let Some(val) = bytes.try_into().ok().map(u32::from_be_bytes) {
+            return Some(Self::SingleCell(val));
+        } else if let Some(val) = bytes.try_into().ok().map(u64::from_be_bytes) {
+            return Some(Self::DoubleCell(val));
+        }
+        None
+    }
+
+    fn write_to(&self, node: &mut FdtNodeMut, name: &CStr) -> libfdt::Result<()> {
+        match self {
+            Self::SingleCell(value) => node.setprop(name, &value.to_be_bytes()),
+            Self::DoubleCell(value) => node.setprop(name, &value.to_be_bytes()),
+        }
+    }
+}
+
+impl From<DeviceTreeInteger> for usize {
+    fn from(i: DeviceTreeInteger) -> Self {
+        match i {
+            DeviceTreeInteger::SingleCell(v) => v.try_into().unwrap(),
+            DeviceTreeInteger::DoubleCell(v) => v.try_into().unwrap(),
+        }
+    }
+}
+
+/// Returns the pair or integers or an error if only one value is present.
+fn read_two_ints(
+    node: &FdtNode,
+    name_a: &CStr,
+    name_b: &CStr,
+) -> libfdt::Result<Option<(DeviceTreeInteger, DeviceTreeInteger)>> {
+    let a = DeviceTreeInteger::read_from(node, name_a)?;
+    let b = DeviceTreeInteger::read_from(node, name_b)?;
+
+    match (a, b) {
+        (Some(a), Some(b)) => Ok(Some((a, b))),
+        (None, None) => Ok(None),
+        _ => Err(FdtError::NotFound),
+    }
+}
+
 /// Extract from /config the address range containing the pre-loaded kernel.
 ///
 /// Absence of /config is not an error. However, an error is returned if only one of the two
 /// properties is present.
 pub fn read_kernel_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
-    let addr = c"kernel-address";
-    let size = c"kernel-size";
-
-    if let Some(config) = fdt.node(c"/config")? {
-        match (config.getprop_u32(addr)?, config.getprop_u32(size)?) {
-            (None, None) => {}
-            (Some(addr), Some(size)) => {
-                let addr = addr as usize;
-                let size = size as usize;
-                return Ok(Some(addr..(addr + size)));
-            }
-            _ => return Err(FdtError::NotFound),
+    if let Some(ref config) = fdt.node(c"/config")? {
+        if let Some((addr, size)) = read_two_ints(config, c"kernel-address", c"kernel-size")? {
+            let addr = usize::from(addr);
+            let size = usize::from(size);
+            return Ok(Some(addr..(addr + size)));
         }
     }
-
     Ok(None)
+}
+
+fn read_initrd_range_props(
+    fdt: &Fdt,
+) -> libfdt::Result<Option<(DeviceTreeInteger, DeviceTreeInteger)>> {
+    if let Some(ref chosen) = fdt.chosen()? {
+        read_two_ints(chosen, c"linux,initrd-start", c"linux,initrd-end")
+    } else {
+        Ok(None)
+    }
 }
 
 /// Extract from /chosen the address range containing the pre-loaded ramdisk.
@@ -106,20 +166,11 @@ pub fn read_kernel_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>>
 /// Absence is not an error as there can be initrd-less VM. However, an error is returned if only
 /// one of the two properties is present.
 pub fn read_initrd_range_from(fdt: &Fdt) -> libfdt::Result<Option<Range<usize>>> {
-    let start = c"linux,initrd-start";
-    let end = c"linux,initrd-end";
-
-    if let Some(chosen) = fdt.chosen()? {
-        match (chosen.getprop_u32(start)?, chosen.getprop_u32(end)?) {
-            (None, None) => {}
-            (Some(start), Some(end)) => {
-                return Ok(Some((start as usize)..(end as usize)));
-            }
-            _ => return Err(FdtError::NotFound),
-        }
+    if let Some((start, end)) = read_initrd_range_props(fdt)? {
+        Ok(Some(usize::from(start)..usize::from(end)))
+    } else {
+        Ok(None)
     }
-
-    Ok(None)
 }
 
 /// Read /avf/untrusted/instance-id, if present.
@@ -140,13 +191,14 @@ fn read_avf_untrusted_prop<'a>(fdt: &'a Fdt, prop: &CStr) -> libfdt::Result<Opti
     }
 }
 
-fn patch_initrd_range(fdt: &mut Fdt, initrd_range: &Range<usize>) -> libfdt::Result<()> {
-    let start = u32::try_from(initrd_range.start).unwrap();
-    let end = u32::try_from(initrd_range.end).unwrap();
-
+fn patch_initrd_range(
+    fdt: &mut Fdt,
+    start: &DeviceTreeInteger,
+    end: &DeviceTreeInteger,
+) -> libfdt::Result<()> {
     let mut node = fdt.chosen_mut()?.ok_or(FdtError::NotFound)?;
-    node.setprop(c"linux,initrd-start", &start.to_be_bytes())?;
-    node.setprop(c"linux,initrd-end", &end.to_be_bytes())?;
+    start.write_to(&mut node, c"linux,initrd-start")?;
+    end.write_to(&mut node, c"linux,initrd-end")?;
     Ok(())
 }
 
@@ -1024,7 +1076,7 @@ fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt
 
 #[derive(Debug)]
 pub struct DeviceTreeInfo {
-    pub initrd_range: Option<Range<usize>>,
+    initrd_range: Option<(DeviceTreeInteger, DeviceTreeInteger)>,
     pub memory_range: Range<usize>,
     bootargs: Option<CString>,
     cpus: ArrayVec<[CpuInfo; DeviceTreeInfo::MAX_CPUS]>,
@@ -1122,7 +1174,7 @@ fn parse_device_tree(
     guest_page_size: usize,
     hyp_page_size: Option<usize>,
 ) -> Result<DeviceTreeInfo, RebootReason> {
-    let initrd_range = read_initrd_range_from(fdt).map_err(|e| {
+    let initrd_range = read_initrd_range_props(fdt).map_err(|e| {
         error!("Failed to read initrd range from DT: {e}");
         RebootReason::InvalidFdt
     })?;
@@ -1236,8 +1288,8 @@ fn parse_device_tree(
 }
 
 fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootReason> {
-    if let Some(initrd_range) = &info.initrd_range {
-        patch_initrd_range(fdt, initrd_range).map_err(|e| {
+    if let Some((start, end)) = &info.initrd_range {
+        patch_initrd_range(fdt, start, end).map_err(|e| {
             error!("Failed to patch initrd range to DT: {e}");
             RebootReason::InvalidFdt
         })?;
