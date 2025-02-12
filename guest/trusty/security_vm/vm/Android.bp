@@ -95,6 +95,7 @@ cc_object {
         ":security_vm.S",
     ],
     crt: false,
+    static_libs: ["trusty_security_vm_signed_bin"],
     system_shared_libs: [],
     visibility: ["//visibility:private"],
     enabled: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {

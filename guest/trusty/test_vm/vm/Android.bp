@@ -78,6 +78,7 @@ cc_object {
         ":test_vm.S",
     ],
     crt: false,
+    static_libs: ["trusty_test_vm_signed_bin"],
     system_shared_libs: [],
     enabled: false,
     target: {
