@@ -1474,12 +1474,6 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         }
     }
 
-    private TestDevice getAndroidDevice() {
-        TestDevice androidDevice = (TestDevice) getDevice();
-        assertThat(androidDevice).isNotNull();
-        return androidDevice;
-    }
-
     // The TradeFed Dockerfile sets LD_LIBRARY_PATH to a directory with an older libc++.so, which
     // breaks binaries that are linked against a newer libc++.so. Binaries commonly use DT_RUNPATH
     // to find an adjacent libc++.so (e.g. `$ORIGIN/../lib64`), but LD_LIBRARY_PATH overrides
@@ -1488,23 +1482,6 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         RunUtil runUtil = new RunUtil();
         runUtil.unsetEnvVariable("LD_LIBRARY_PATH");
         return runUtil;
-    }
-
-    private void assumeKernelSupported(String osKey) throws Exception {
-        String os = SUPPORTED_OSES.get(osKey);
-        assumeTrue(
-                "Skipping test as OS \"" + os + "\" is not supported",
-                getSupportedOSList().contains(os));
-    }
-
-    private void assumeVmTypeSupported(String os, boolean protectedVm) throws Exception {
-        // TODO(b/376870129): remove this check
-        if (protectedVm) {
-            assumeFalse("pVMs with 16k kernel are not supported yet :(", os.endsWith("_16k"));
-        }
-        assumeTrue(
-                "Microdroid is not supported for specific VM protection type",
-                getAndroidDevice().supportsMicrodroid(protectedVm));
     }
 
     private void assumeArm64Supported() throws Exception {

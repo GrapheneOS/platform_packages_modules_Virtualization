@@ -39,7 +39,11 @@ use std::time::Duration;
 #[derive(Parser)]
 enum Actions {
     /// Compile classpath for real. Output can be used after a reboot.
-    StagedApexCompile {},
+    StagedApexCompile {
+        /// OS for the VM.
+        #[clap(long, default_value = "microdroid")]
+        os: String,
+    },
 
     /// Compile classpath in a debugging VM. Output is ignored.
     TestCompile {
@@ -59,7 +63,7 @@ fn main() -> Result<()> {
     ProcessState::start_thread_pool();
 
     match action {
-        Actions::StagedApexCompile {} => run_staged_apex_compile()?,
+        Actions::StagedApexCompile { os } => run_staged_apex_compile(&os)?,
         Actions::TestCompile { prefer_staged, os } => run_test_compile(prefer_staged, &os)?,
     }
 
@@ -116,8 +120,8 @@ impl State {
     }
 }
 
-fn run_staged_apex_compile() -> Result<()> {
-    run_async_compilation(|service, callback| service.startStagedApexCompile(callback))
+fn run_staged_apex_compile(os: &str) -> Result<()> {
+    run_async_compilation(|service, callback| service.startStagedApexCompile(callback, os))
 }
 
 fn run_test_compile(prefer_staged: bool, os: &str) -> Result<()> {

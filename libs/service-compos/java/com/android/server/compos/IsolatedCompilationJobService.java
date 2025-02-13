@@ -174,7 +174,7 @@ public class IsolatedCompilationJobService extends JobService {
             }
 
             try {
-                ICompilationTask composTask = composd.startStagedApexCompile(this);
+                ICompilationTask composTask = composd.startStagedApexCompile(this, "microdroid");
                 mMetrics.onCompilationStarted();
                 mTask.set(composTask);
                 composTask.asBinder().linkToDeath(this, 0);

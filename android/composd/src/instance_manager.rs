@@ -39,10 +39,11 @@ impl InstanceManager {
         Self { service, state: Default::default() }
     }
 
-    pub fn start_current_instance(&self) -> Result<CompOsInstance> {
+    pub fn start_current_instance(&self, os: &str) -> Result<CompOsInstance> {
         let mut vm_parameters = new_vm_parameters()?;
         vm_parameters.name = String::from("Composd");
         vm_parameters.prefer_staged = true;
+        vm_parameters.os = os.to_owned();
         self.start_instance(CURRENT_INSTANCE_DIR, vm_parameters)
     }
 

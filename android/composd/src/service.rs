@@ -51,9 +51,10 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
     fn startStagedApexCompile(
         &self,
         callback: &Strong<dyn ICompilationTaskCallback>,
+        os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
         check_permissions()?;
-        to_binder_result(self.do_start_staged_apex_compile(callback))
+        to_binder_result(self.do_start_staged_apex_compile(callback, os))
     }
 
     fn startTestCompile(
@@ -76,8 +77,10 @@ impl IsolatedCompilationService {
     fn do_start_staged_apex_compile(
         &self,
         callback: &Strong<dyn ICompilationTaskCallback>,
+        os: &str,
     ) -> Result<Strong<dyn ICompilationTask>> {
-        let comp_os = self.instance_manager.start_current_instance().context("Starting CompOS")?;
+        let comp_os =
+            self.instance_manager.start_current_instance(os).context("Starting CompOS")?;
 
         let target_dir_name = PENDING_ARTIFACTS_SUBDIR.to_owned();
         let task = OdrefreshTask::start(

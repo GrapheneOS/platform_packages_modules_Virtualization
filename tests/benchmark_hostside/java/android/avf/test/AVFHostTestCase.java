@@ -19,6 +19,7 @@ package android.avf.test;
 import static com.android.tradefed.device.TestDevice.MicrodroidBuilder;
 import static com.android.tradefed.testtype.DeviceJUnit4ClassRunner.TestMetrics;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
@@ -113,16 +114,78 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
     @Test
     public void testBootWithCompOS() throws Exception {
-        composTestHelper(true);
+        composTestHelper(true, "microdroid");
+    }
+
+    @Test
+    public void testBootWithCompOS_os_android15_66() throws Exception {
+        composTestHelper(true, "android15_66");
+    }
+
+    @Test
+    public void testBootWithCompOS_os_microdroid_16k() throws Exception {
+        composTestHelper(true, "microdroid_16k");
     }
 
     @Test
     public void testBootWithoutCompOS() throws Exception {
-        composTestHelper(false);
+        composTestHelper(false, null);
     }
 
     @Test
     public void testNoLongHypSections() throws Exception {
+        noLongHypSectionsHelper("microdroid");
+    }
+
+    @Test
+    public void testNoLongHypSections_os_android15_66() throws Exception {
+        noLongHypSectionsHelper("android15_66");
+    }
+
+    @Test
+    public void testNoLongHypSections_os_microdroid_16k() throws Exception {
+        noLongHypSectionsHelper("microdroid_16k");
+    }
+
+    @Test
+    public void testPsciMemProtect() throws Exception {
+        psciMemProtectHelper("microdroid");
+    }
+
+    @Test
+    public void testPsciMemProtect_os_android15_66() throws Exception {
+        psciMemProtectHelper("android15_66");
+    }
+
+    @Test
+    public void testPsciMemProtect_os_microdroid_16k() throws Exception {
+        psciMemProtectHelper("microdroid_16k");
+    }
+
+    @Test
+    public void testCameraAppStartupTime() throws Exception {
+        String[] launchIntentPackages = {
+            "com.android.camera2",
+            "com.google.android.GoogleCamera/com.android.camera.CameraLauncher"
+        };
+        String launchIntentPackage = findSupportedPackage(launchIntentPackages);
+        assume().withMessage("No supported camera package").that(launchIntentPackage).isNotNull();
+        appStartupHelper(launchIntentPackage);
+    }
+
+    @Test
+    public void testSettingsAppStartupTime() throws Exception {
+        String[] launchIntentPackages = {"com.android.settings"};
+        String launchIntentPackage = findSupportedPackage(launchIntentPackages);
+        assume().withMessage("No supported settings package").that(launchIntentPackage).isNotNull();
+        appStartupHelper(launchIntentPackage);
+    }
+
+    private void noLongHypSectionsHelper(String osKey) throws Exception {
+        assumeKernelSupported(osKey);
+        assumeVmTypeSupported(osKey, true);
+        String os = SUPPORTED_OSES.get(osKey);
+
         String[] hypEvents = {"hyp_enter", "hyp_exit"};
 
         assumeTrue(
@@ -130,7 +193,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                 KvmHypTracer.isSupported(getDevice(), hypEvents));
 
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hypEvents);
-        String result = tracer.run(COMPOSD_CMD_BIN + " test-compile");
+        String result = tracer.run(COMPOSD_CMD_BIN + " test-compile --os " + os);
         assertWithMessage("Failed to test compilation VM.")
                 .that(result)
                 .ignoringCase()
@@ -141,8 +204,11 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         CLog.i("Hypervisor traces parsed successfully.");
     }
 
-    @Test
-    public void testPsciMemProtect() throws Exception {
+    public void psciMemProtectHelper(String osKey) throws Exception {
+        assumeKernelSupported(osKey);
+        assumeVmTypeSupported(osKey, true);
+        String os = SUPPORTED_OSES.get(osKey);
+
         String[] hypEvents = {"psci_mem_protect"};
 
         assumeTrue(
@@ -151,7 +217,12 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hypEvents);
 
         /* We need to wait for crosvm to die so all the VM pages are reclaimed */
-        String result = tracer.run(COMPOSD_CMD_BIN + " test-compile && killall -w crosvm || true");
+        String result =
+                tracer.run(
+                        COMPOSD_CMD_BIN
+                                + " test-compile --os "
+                                + os
+                                + " && killall -w crosvm || true");
         assertWithMessage("Failed to test compilation VM.")
                 .that(result)
                 .ignoringCase()
@@ -174,25 +245,6 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         assertWithMessage("PSCI MEM_PROTECT counter didn't increment")
                 .that(Collections.max(values))
                 .isGreaterThan(0);
-    }
-
-    @Test
-    public void testCameraAppStartupTime() throws Exception {
-        String[] launchIntentPackages = {
-            "com.android.camera2",
-            "com.google.android.GoogleCamera/com.android.camera.CameraLauncher"
-        };
-        String launchIntentPackage = findSupportedPackage(launchIntentPackages);
-        assume().withMessage("No supported camera package").that(launchIntentPackage).isNotNull();
-        appStartupHelper(launchIntentPackage);
-    }
-
-    @Test
-    public void testSettingsAppStartupTime() throws Exception {
-        String[] launchIntentPackages = {"com.android.settings"};
-        String launchIntentPackage = findSupportedPackage(launchIntentPackages);
-        assume().withMessage("No supported settings package").that(launchIntentPackage).isNotNull();
-        appStartupHelper(launchIntentPackage);
     }
 
     private void appStartupHelper(String launchIntentPackage) throws Exception {
@@ -471,8 +523,14 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         throw new IllegalArgumentException("Failed to get boot time info.");
     }
 
-    private void composTestHelper(boolean isWithCompos) throws Exception {
+    private void composTestHelper(boolean isWithCompos, String osKey) throws Exception {
         assumeFalse("Skip on CF; too slow", isCuttlefish());
+        if (isWithCompos) {
+            assumeKernelSupported(osKey);
+            assumeVmTypeSupported(osKey, true);
+        } else {
+            assertThat(osKey).isNull();
+        }
 
         List<Double> bootDmesgTime = new ArrayList<>(ROUND_COUNT);
 
@@ -480,7 +538,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
             reInstallApex(REINSTALL_APEX_TIMEOUT_SEC);
             try {
                 if (isWithCompos) {
-                    compileStagedApex(COMPILE_STAGED_APEX_TIMEOUT_SEC);
+                    String os = SUPPORTED_OSES.get(osKey);
+                    compileStagedApex(COMPILE_STAGED_APEX_TIMEOUT_SEC, os);
                 }
             } finally {
                 // If compilation fails, we still have a staged APEX, and we need to reboot to
@@ -518,7 +577,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         getDevice().enableAdbRoot();
     }
 
-    private void compileStagedApex(int timeoutSec) throws Exception {
+    private void compileStagedApex(int timeoutSec, String os) throws Exception {
 
         long timeStart = System.currentTimeMillis();
         long timeEnd = timeStart + timeoutSec * 1000L;
@@ -530,7 +589,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
                 String result =
                         android.runWithTimeout(
-                                3 * 60 * 1000, COMPOSD_CMD_BIN + " staged-apex-compile");
+                                3 * 60 * 1000, COMPOSD_CMD_BIN + " staged-apex-compile --os " + os);
                 assertWithMessage("Failed to compile staged APEX. Reason: " + result)
                         .that(result)
                         .ignoringCase()
