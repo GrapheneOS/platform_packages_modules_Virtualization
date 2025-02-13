@@ -269,7 +269,7 @@ EOF
 	            --extract "${dsc_file}"
 	pushd "linux-${debian_kver%-*}" > /dev/null
 
-	local kpatches_src="$SCRIPT_DIR/kernel_patches"
+	local kpatches_src="$SCRIPT_DIR/kernel/patches"
 	cp -r "${kpatches_src}/avf" debian/patches/
 	cat "${kpatches_src}/series" >> debian/patches/series
 	./debian/rules orig
@@ -282,9 +282,8 @@ EOF
 
 	# 2. Define our custom flavour and regenerate control file
 	# NOTE: Our flavour extends Debian's `cloud` config on the `none` featureset.
-	cat > debian/config/${debian_arch}/config.${debarch_flavour} <<EOF
-# TODO: Add our custom kernel config to this file
-EOF
+	cp "$SCRIPT_DIR/kernel/config" \
+	   debian/config/${debian_arch}/config.${debarch_flavour}
 
 	sed -z "s;\[base\]\nflavours:;[base]\nflavours:\n ${debarch_flavour};" \
 	    -i debian/config/${debian_arch}/none/defines
