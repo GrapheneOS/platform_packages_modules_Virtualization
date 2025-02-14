@@ -461,7 +461,12 @@ that is compatible with their guest kernel. These are:
   - `secretkeeper_protection`: pvmfw defers rollback protection to the guest
   - `supports_uefi_boot`: pvmfw boots the VM as a EFI payload (experimental)
   - `trusty_security_vm`: pvmfw skips rollback protection
-- `"com.android.virt.page_size"`: the guest page size in KiB (optional, defaults to 4)
+- `"com.android.virt.page_size"`: (optional) the guest page size in KiB, defaults to 4
+- `"com.android.virt.name"`: (optional) VM name, used as the
+  [`component_name`][dice-comp-name] (defaults to `"vm_entry"`) in the guest
+  DICE certificate and to identify special VMs
+
+[dice-comp-name]: https://cs.android.com/android/platform/superproject/main/+/main:external/open-dice/docs/android.md;l=81;drc=6d511e9533eac05d64d47fcd78ac5d881e72c3de
 
 ## Development
 
