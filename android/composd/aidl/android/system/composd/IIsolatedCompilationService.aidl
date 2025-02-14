@@ -35,7 +35,7 @@ interface IIsolatedCompilationService {
      * callback, unless the returned ICompilationTask is cancelled. The caller should maintain
      * a reference to the ICompilationTask until compilation completes or is cancelled.
      */
-    ICompilationTask startStagedApexCompile(ICompilationTaskCallback callback);
+    ICompilationTask startStagedApexCompile(ICompilationTaskCallback callback, String os);
 
     /**
      * Run odrefresh in a test instance of CompOS until completed or failed.
