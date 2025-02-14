@@ -44,5 +44,8 @@
     "console_out": true,
     "console_input_device": "ttyS0",
     "network": true,
-    "auto_memory_balloon": true
+    "auto_memory_balloon": true,
+    "gpu": {
+        "backend": "2d"
+    }
 }
