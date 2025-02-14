@@ -276,28 +276,16 @@ public class VirtualMachine implements AutoCloseable {
 
         @Override
         public void onTrimMemory(int level) {
-            int percent;
+            /* Treat level < TRIM_MEMORY_UI_HIDDEN as generic low-memory warnings */
+            int percent = 10;
 
-            switch (level) {
-                case ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL:
-                    percent = 50;
-                    break;
-                case ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW:
-                    percent = 30;
-                    break;
-                case ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE:
-                    percent = 10;
-                    break;
-                case ComponentCallbacks2.TRIM_MEMORY_BACKGROUND:
-                case ComponentCallbacks2.TRIM_MEMORY_MODERATE:
-                case ComponentCallbacks2.TRIM_MEMORY_COMPLETE:
-                    /* Release as much memory as we can. The app is on the LMKD LRU kill list. */
-                    percent = 50;
-                    break;
-                default:
-                    /* Treat unrecognised messages as generic low-memory warnings. */
-                    percent = 30;
-                    break;
+            if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+                percent = 30;
+            }
+
+            if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+                /* Release as much memory as we can. The app is on the LMKD LRU kill list. */
+                percent = 50;
             }
 
             synchronized (mLock) {
