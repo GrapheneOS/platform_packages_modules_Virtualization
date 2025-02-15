@@ -420,40 +420,83 @@ impl IGlobalVmContext for EarlyVmContext {
     }
 }
 
-fn find_partition(path: Option<&Path>) -> binder::Result<String> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum CallingPartition {
+    Odm,
+    Product,
+    System,
+    SystemExt,
+    Vendor,
+    Unknown,
+}
+
+impl CallingPartition {
+    fn as_str(&self) -> &'static str {
+        match self {
+            CallingPartition::Odm => "odm",
+            CallingPartition::Product => "product",
+            CallingPartition::System => "system",
+            CallingPartition::SystemExt => "system_ext",
+            CallingPartition::Vendor => "vendor",
+            CallingPartition::Unknown => "[unknown]",
+        }
+    }
+}
+
+impl std::fmt::Display for CallingPartition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+fn find_partition(path: Option<&Path>) -> binder::Result<CallingPartition> {
     let Some(path) = path else {
-        return Ok("system".to_owned());
+        return Ok(CallingPartition::System);
     };
     if path.starts_with("/system/system_ext/") {
-        return Ok("system_ext".to_owned());
-    } else if path.starts_with("/system/product/") {
-        return Ok("product".to_owned());
+        return Ok(CallingPartition::SystemExt);
     }
-    let mut components = path.components();
-    let Some(std::path::Component::Normal(partition)) = components.nth(1) else {
-        return Err(anyhow!("Can't find partition in '{}'", path.display()))
-            .or_service_specific_exception(-1);
-    };
-
-    // If path is under /apex, find a partition of the preinstalled .apex path
-    if partition == "apex" {
-        let Some(std::path::Component::Normal(apex_name)) = components.next() else {
-            return Err(anyhow!("Can't find apex name for '{}'", path.display()))
+    if path.starts_with("/system/product/") {
+        return Ok(CallingPartition::Product);
+    }
+    let partition = {
+        let mut components = path.components();
+        let Some(std::path::Component::Normal(partition)) = components.nth(1) else {
+            return Err(anyhow!("Can't find partition in '{}'", path.display()))
                 .or_service_specific_exception(-1);
         };
-        let apex_info_list = ApexInfoList::load()
-            .context("Failed to get apex info list")
-            .or_service_specific_exception(-1)?;
-        return apex_info_list
-            .list
-            .iter()
-            .find(|apex_info| apex_info.name.as_str() == apex_name)
-            .map(|apex_info| apex_info.partition.to_lowercase())
-            .ok_or(anyhow!("Can't find apex info for {apex_name:?}"))
-            .or_service_specific_exception(-1);
-    }
 
-    Ok(partition.to_string_lossy().into_owned())
+        // If path is under /apex, find a partition of the preinstalled .apex path
+        if partition == "apex" {
+            let Some(std::path::Component::Normal(apex_name)) = components.next() else {
+                return Err(anyhow!("Can't find apex name for '{}'", path.display()))
+                    .or_service_specific_exception(-1);
+            };
+            let apex_info_list = ApexInfoList::load()
+                .context("Failed to get apex info list")
+                .or_service_specific_exception(-1)?;
+            apex_info_list
+                .list
+                .iter()
+                .find(|apex_info| apex_info.name.as_str() == apex_name)
+                .map(|apex_info| apex_info.partition.to_lowercase())
+                .ok_or(anyhow!("Can't find apex info for {apex_name:?}"))
+                .or_service_specific_exception(-1)?
+        } else {
+            partition.to_string_lossy().into_owned()
+        }
+    };
+    Ok(match partition.as_str() {
+        "odm" => CallingPartition::Odm,
+        "product" => CallingPartition::Product,
+        "system" => CallingPartition::System,
+        "system_ext" => CallingPartition::SystemExt,
+        "vendor" => CallingPartition::Vendor,
+        _ => {
+            warn!("unknown partition for '{}'", path.display());
+            CallingPartition::Unknown
+        }
+    })
 }
 
 impl VirtualizationService {
@@ -465,13 +508,13 @@ impl VirtualizationService {
         &self,
         config: &VirtualMachineConfig,
         calling_exe_path: Option<&Path>,
+        calling_partition: CallingPartition,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         let name = match config {
             VirtualMachineConfig::RawConfig(config) => &config.name,
             VirtualMachineConfig::AppConfig(config) => &config.name,
         };
-        let calling_partition = find_partition(calling_exe_path)?;
-        let early_vm = find_early_vm_for_partition(&calling_partition, name)
+        let early_vm = find_early_vm_for_partition(calling_partition, name)
             .or_service_specific_exception(-1)?;
         let calling_exe_path = match calling_exe_path {
             Some(path) => path,
@@ -560,6 +603,8 @@ impl VirtualizationService {
         let requester_uid = get_calling_uid();
         let requester_debug_pid = get_calling_pid();
 
+        let calling_partition = find_partition(CALLING_EXE_PATH.as_deref())?;
+
         check_config_features(config)?;
 
         if cfg!(early) {
@@ -571,7 +616,7 @@ impl VirtualizationService {
 
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
         let (vm_context, cid, temporary_directory) = if cfg!(early) {
-            self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref())?
+            self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref(), calling_partition)?
         } else {
             self.create_vm_context(requester_debug_pid, config)?
         };
@@ -661,7 +706,8 @@ impl VirtualizationService {
 
             // In a protected VM, we require custom kernels to come from a trusted source
             // (b/237054515).
-            check_label_for_kernel_files(&kernel, &initrd).or_service_specific_exception(-1)?;
+            check_label_for_kernel_files(&kernel, &initrd, calling_partition)
+                .or_service_specific_exception(-1)?;
 
             // Check if partition images are labeled incorrectly. This is to prevent random images
             // which are not protected by the Android Verified Boot (e.g. bits downloaded by apps)
@@ -679,15 +725,14 @@ impl VirtualizationService {
                         !is_safe_raw_partition(&partition.label)
                     }
                 })
-                .try_for_each(check_label_for_partition)
+                .try_for_each(|partition| check_label_for_partition(partition, calling_partition))
                 .or_service_specific_exception(-1)?;
         }
 
         // Check if files for payloads and bases are NOT coming from /vendor and /odm, as they may
         // have unstable interfaces.
         // TODO(b/316431494): remove once Treble interfaces are stabilized.
-        check_partitions_for_files(config, &find_partition(CALLING_EXE_PATH.as_deref())?)
-            .or_service_specific_exception(-1)?;
+        check_partitions_for_files(config, calling_partition).or_service_specific_exception(-1)?;
 
         let zero_filler_path = temporary_directory.join("zero.img");
         write_zero_filler(&zero_filler_path)
@@ -1328,7 +1373,10 @@ fn load_app_config(
     Ok(vm_config)
 }
 
-fn check_partition_for_file(fd: &ParcelFileDescriptor, calling_partition: &str) -> Result<()> {
+fn check_partition_for_file(
+    fd: &ParcelFileDescriptor,
+    calling_partition: CallingPartition,
+) -> Result<()> {
     let path = format!("/proc/self/fd/{}", fd.as_raw_fd());
     let link = fs::read_link(&path).context(format!("can't read_link {path}"))?;
 
@@ -1339,7 +1387,8 @@ fn check_partition_for_file(fd: &ParcelFileDescriptor, calling_partition: &str) 
     }
 
     let is_fd_vendor = link.starts_with("/vendor") || link.starts_with("/odm");
-    let is_caller_vendor = calling_partition == "vendor" || calling_partition == "odm";
+    let is_caller_vendor =
+        calling_partition == CallingPartition::Vendor || calling_partition == CallingPartition::Odm;
 
     if is_fd_vendor != is_caller_vendor {
         bail!("{} can't be used for VM client in {calling_partition}", link.display());
@@ -1350,7 +1399,7 @@ fn check_partition_for_file(fd: &ParcelFileDescriptor, calling_partition: &str) 
 
 fn check_partitions_for_files(
     config: &VirtualMachineRawConfig,
-    calling_partition: &str,
+    calling_partition: CallingPartition,
 ) -> Result<()> {
     config
         .disks
@@ -1504,7 +1553,7 @@ fn is_safe_raw_partition(label: &str) -> bool {
 ///
 /// App private data files are deliberately excluded, to avoid arbitrary payloads being run on
 /// user devices (W^X).
-fn check_label_is_allowed(context: &SeContext) -> Result<()> {
+fn check_label_is_allowed(context: &SeContext, calling_partition: CallingPartition) -> Result<()> {
     match context.selinux_type()? {
         | "apk_data_file" // APKs of an installed app
         | "shell_data_file" // test files created via adb shell
@@ -1513,27 +1562,42 @@ fn check_label_is_allowed(context: &SeContext) -> Result<()> {
         | "virtualizationservice_data_file" // files created by VS / VirtMgr
         | "vendor_microdroid_file" // immutable dm-verity protected partition (/vendor/etc/avf/microdroid/.*)
          => Ok(()),
+        // It is difficult to require specific label types for vendor initiated VM's files, so we
+        // allow anything with a vendor prefix.
+        t if calling_partition == CallingPartition::Vendor && t.starts_with("vendor_")  => Ok(()),
         _ => bail!("Label {} is not allowed", context),
     }
 }
 
-fn check_label_for_partition(partition: &Partition) -> Result<()> {
+fn check_label_for_partition(
+    partition: &Partition,
+    calling_partition: CallingPartition,
+) -> Result<()> {
     let file = partition.image.as_ref().unwrap().as_ref();
-    check_label_is_allowed(&getfilecon(file)?)
+    check_label_is_allowed(&getfilecon(file)?, calling_partition)
         .with_context(|| format!("Partition {} invalid", &partition.label))
 }
 
-fn check_label_for_kernel_files(kernel: &Option<File>, initrd: &Option<File>) -> Result<()> {
+fn check_label_for_kernel_files(
+    kernel: &Option<File>,
+    initrd: &Option<File>,
+    calling_partition: CallingPartition,
+) -> Result<()> {
     if let Some(f) = kernel {
-        check_label_for_file(f, "kernel")?;
+        check_label_for_file(f, "kernel", calling_partition)?;
     }
     if let Some(f) = initrd {
-        check_label_for_file(f, "initrd")?;
+        check_label_for_file(f, "initrd", calling_partition)?;
     }
     Ok(())
 }
-fn check_label_for_file(file: &File, name: &str) -> Result<()> {
-    check_label_is_allowed(&getfilecon(file)?).with_context(|| format!("{} file invalid", name))
+fn check_label_for_file(
+    file: &File,
+    name: &str,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    check_label_is_allowed(&getfilecon(file)?, calling_partition)
+        .with_context(|| format!("{} file invalid", name))
 }
 
 /// Implementation of the AIDL `IVirtualMachine` interface. Used as a handle to a VM.
@@ -2251,15 +2315,15 @@ struct EarlyVms {
     early_vm: Vec<EarlyVm>,
 }
 
-static EARLY_VMS_CACHE: LazyLock<Mutex<HashMap<String, Vec<EarlyVm>>>> =
+static EARLY_VMS_CACHE: LazyLock<Mutex<HashMap<CallingPartition, Vec<EarlyVm>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-fn range_for_partition(partition: &str) -> Result<Range<Cid>> {
+fn range_for_partition(partition: CallingPartition) -> Range<Cid> {
     match partition {
-        "system" => Ok(100..200),
-        "system_ext" | "product" => Ok(200..300),
-        "vendor" | "odm" => Ok(300..400),
-        _ => Err(anyhow!("Early VMs are not supported for {partition}")),
+        CallingPartition::System => 100..200,
+        CallingPartition::SystemExt | CallingPartition::Product => 200..300,
+        CallingPartition::Vendor | CallingPartition::Odm => 300..400,
+        CallingPartition::Unknown => 0..0,
     }
 }
 
@@ -2294,10 +2358,10 @@ fn validate_cid_range(early_vms: &[EarlyVm], cid_range: &Range<Cid>) -> Result<(
     Ok(())
 }
 
-fn get_early_vms_in_partition(partition: &str) -> Result<Vec<EarlyVm>> {
+fn get_early_vms_in_partition(partition: CallingPartition) -> Result<Vec<EarlyVm>> {
     let mut cache = EARLY_VMS_CACHE.lock().unwrap();
 
-    if let Some(result) = cache.get(partition) {
+    if let Some(result) = cache.get(&partition) {
         return Ok(result.clone());
     }
 
@@ -2310,10 +2374,10 @@ fn get_early_vms_in_partition(partition: &str) -> Result<Vec<EarlyVm>> {
         }
     }
 
-    validate_cid_range(&early_vms, &range_for_partition(partition)?)
+    validate_cid_range(&early_vms, &range_for_partition(partition))
         .with_context(|| format!("CID validation for {partition} failed"))?;
 
-    cache.insert(partition.to_owned(), early_vms.clone());
+    cache.insert(partition, early_vms.clone());
 
     Ok(early_vms)
 }
@@ -2336,7 +2400,7 @@ fn find_early_vm<'a>(early_vms: &'a [EarlyVm], name: &str) -> Result<&'a EarlyVm
     found_vm.ok_or_else(|| anyhow!("Can't find a VM named '{name}'"))
 }
 
-fn find_early_vm_for_partition(partition: &str, name: &str) -> Result<EarlyVm> {
+fn find_early_vm_for_partition(partition: CallingPartition, name: &str) -> Result<EarlyVm> {
     let early_vms = get_early_vms_in_partition(partition)
         .with_context(|| format!("Failed to get early VMs from {partition}"))?;
 
@@ -2352,23 +2416,30 @@ mod tests {
     #[test]
     fn test_is_allowed_label_for_partition() -> Result<()> {
         let expected_results = vec![
-            ("u:object_r:system_file:s0", true),
-            ("u:object_r:apk_data_file:s0", true),
-            ("u:object_r:app_data_file:s0", false),
-            ("u:object_r:app_data_file:s0:c512,c768", false),
-            ("u:object_r:privapp_data_file:s0:c512,c768", false),
-            ("invalid", false),
-            ("user:role:apk_data_file:severity:categories", true),
-            ("user:role:apk_data_file:severity:categories:extraneous", false),
+            (CallingPartition::System, "u:object_r:system_file:s0", true),
+            (CallingPartition::System, "u:object_r:apk_data_file:s0", true),
+            (CallingPartition::System, "u:object_r:app_data_file:s0", false),
+            (CallingPartition::System, "u:object_r:app_data_file:s0:c512,c768", false),
+            (CallingPartition::System, "u:object_r:privapp_data_file:s0:c512,c768", false),
+            (CallingPartition::System, "invalid", false),
+            (CallingPartition::System, "user:role:apk_data_file:severity:categories", true),
+            (
+                CallingPartition::System,
+                "user:role:apk_data_file:severity:categories:extraneous",
+                false,
+            ),
+            (CallingPartition::System, "u:object_r:vendor_unknowable:s0", false),
+            (CallingPartition::Vendor, "u:object_r:vendor_unknowable:s0", true),
         ];
 
-        for (label, expected_valid) in expected_results {
+        for (calling_partition, label, expected_valid) in expected_results {
             let context = SeContext::new(label)?;
-            let result = check_label_is_allowed(&context);
-            if expected_valid {
-                assert!(result.is_ok(), "Expected label {} to be allowed, got {:?}", label, result);
-            } else if result.is_ok() {
-                bail!("Expected label {} to be disallowed", label);
+            let result = check_label_is_allowed(&context, calling_partition);
+            if expected_valid != result.is_ok() {
+                bail!(
+                    "Expected label {label} to be {} for {calling_partition} partition",
+                    if expected_valid { "allowed" } else { "disallowed" }
+                );
             }
         }
         Ok(())
@@ -2659,7 +2730,7 @@ mod tests {
     fn test_symlink_to_system_ext_supported() -> Result<()> {
         let link_path = Path::new("/system/system_ext/file");
         let partition = find_partition(Some(link_path)).unwrap();
-        assert_eq!("system_ext", partition);
+        assert_eq!(CallingPartition::SystemExt, partition);
         Ok(())
     }
 
@@ -2667,7 +2738,7 @@ mod tests {
     fn test_symlink_to_product_supported() -> Result<()> {
         let link_path = Path::new("/system/product/file");
         let partition = find_partition(Some(link_path)).unwrap();
-        assert_eq!("product", partition);
+        assert_eq!(CallingPartition::Product, partition);
         Ok(())
     }
 
