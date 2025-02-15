@@ -628,6 +628,7 @@ impl VmInstance {
 
     fn monitor_vm_status(&self, child: Arc<SharedChild>) {
         let pid = child.id();
+        let mut metric_countdown = 0;
 
         loop {
             {
@@ -637,23 +638,34 @@ impl VmInstance {
                     break;
                 }
 
-                let mut vm_metric = self.vm_metric.lock().unwrap();
+                if metric_countdown > 0 {
+                    metric_countdown -= 1;
+                } else {
+                    metric_countdown = 10;
+                    let mut vm_metric = self.vm_metric.lock().unwrap();
 
-                // Get CPU Information
-                match get_guest_time(pid) {
-                    Ok(guest_time) => vm_metric.cpu_guest_time = Some(guest_time),
-                    Err(e) => error!("Failed to get guest CPU time: {e:?}"),
-                }
-
-                // Get Memory Information
-                match get_rss(pid) {
-                    Ok(rss) => {
-                        vm_metric.rss = match &vm_metric.rss {
-                            Some(x) => Some(Rss::extract_max(x, &rss)),
-                            None => Some(rss),
+                    // Get CPU Information
+                    match get_guest_time(pid) {
+                        Ok(guest_time) => vm_metric.cpu_guest_time = Some(guest_time),
+                        Err(e) => {
+                            metric_countdown = 0;
+                            error!("Failed to get guest CPU time: {e:?}");
                         }
                     }
-                    Err(e) => error!("Failed to get guest RSS: {}", e),
+
+                    // Get Memory Information
+                    match get_rss(pid) {
+                        Ok(rss) => {
+                            vm_metric.rss = match &vm_metric.rss {
+                                Some(x) => Some(Rss::extract_max(x, &rss)),
+                                None => Some(rss),
+                            }
+                        }
+                        Err(e) => {
+                            metric_countdown = 0;
+                            error!("Failed to get guest RSS: {}", e);
+                        }
+                    }
                 }
             }
 

@@ -17,7 +17,7 @@
 use crate::ops::{Ops, Payload};
 use crate::partition::PartitionName;
 use crate::PvmfwVerifyError;
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use avb::{
     Descriptor, DescriptorError, DescriptorResult, HashDescriptor, PartitionData, SlotVerifyError,
     SlotVerifyNoDataResult, VbmetaData,
@@ -47,6 +47,8 @@ pub struct VerifiedBootData<'a> {
     pub rollback_index: u64,
     /// Page size of kernel, if present.
     pub page_size: Option<usize>,
+    /// Name of the guest payload, if present.
+    pub name: Option<String>,
 }
 
 impl VerifiedBootData<'_> {
@@ -238,6 +240,18 @@ fn read_page_size(vbmeta_data: &VbmetaData) -> Result<Option<usize>, PvmfwVerify
     Ok(Some(size))
 }
 
+/// Returns the indicated payload name, if present.
+fn read_name(vbmeta_data: &VbmetaData) -> Result<Option<String>, PvmfwVerifyError> {
+    let Some(property) = vbmeta_data.get_property_value("com.android.virt.name") else {
+        return Ok(None);
+    };
+    let name = str::from_utf8(property).map_err(|_| PvmfwVerifyError::InvalidVmName)?;
+    if name.is_empty() {
+        return Err(PvmfwVerifyError::InvalidVmName);
+    }
+    Ok(Some(name.into()))
+}
+
 /// Verifies the given initrd partition, and checks that the resulting contents looks like expected.
 fn verify_initrd(
     ops: &mut Ops,
@@ -275,6 +289,7 @@ pub fn verify_payload<'a>(
     let hash_descriptors = HashDescriptors::get(&descriptors)?;
     let capabilities = Capability::get_capabilities(vbmeta_image)?;
     let page_size = read_page_size(vbmeta_image)?;
+    let name = read_name(vbmeta_image)?;
 
     if initrd.is_none() {
         hash_descriptors.verify_no_initrd()?;
@@ -286,6 +301,7 @@ pub fn verify_payload<'a>(
             capabilities,
             rollback_index,
             page_size,
+            name,
         });
     }
 
@@ -307,5 +323,6 @@ pub fn verify_payload<'a>(
         capabilities,
         rollback_index,
         page_size,
+        name,
     })
 }

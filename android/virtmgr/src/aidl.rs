@@ -421,9 +421,8 @@ impl IGlobalVmContext for EarlyVmContext {
 }
 
 fn find_partition(path: Option<&Path>) -> binder::Result<String> {
-    let path = match path {
-        Some(path) => path,
-        None => return Ok("system".to_owned()),
+    let Some(path) = path else {
+        return Ok("system".to_owned());
     };
     if path.starts_with("/system/system_ext/") {
         return Ok("system_ext".to_owned());
@@ -431,36 +430,30 @@ fn find_partition(path: Option<&Path>) -> binder::Result<String> {
         return Ok("product".to_owned());
     }
     let mut components = path.components();
-    match components.nth(1) {
-        Some(std::path::Component::Normal(partition)) => {
-            if partition != "apex" {
-                return Ok(partition.to_string_lossy().into_owned());
-            }
+    let Some(std::path::Component::Normal(partition)) = components.nth(1) else {
+        return Err(anyhow!("Can't find partition in '{}'", path.display()))
+            .or_service_specific_exception(-1);
+    };
 
-            // If path is under /apex, find a partition of the preinstalled .apex path
-            let apex_name = match components.next() {
-                Some(std::path::Component::Normal(name)) => name.to_string_lossy(),
-                _ => {
-                    return Err(anyhow!("Can't find apex name for '{}'", path.display()))
-                        .or_service_specific_exception(-1)
-                }
-            };
-
-            let apex_info_list = ApexInfoList::load()
-                .context("Failed to get apex info list")
-                .or_service_specific_exception(-1)?;
-
-            for apex_info in apex_info_list.list.iter() {
-                if apex_info.name == apex_name {
-                    return Ok(apex_info.partition.to_lowercase());
-                }
-            }
-
-            Err(anyhow!("Can't find apex info for '{apex_name}'")).or_service_specific_exception(-1)
-        }
-        _ => Err(anyhow!("Can't find partition in '{}'", path.display()))
-            .or_service_specific_exception(-1),
+    // If path is under /apex, find a partition of the preinstalled .apex path
+    if partition == "apex" {
+        let Some(std::path::Component::Normal(apex_name)) = components.next() else {
+            return Err(anyhow!("Can't find apex name for '{}'", path.display()))
+                .or_service_specific_exception(-1);
+        };
+        let apex_info_list = ApexInfoList::load()
+            .context("Failed to get apex info list")
+            .or_service_specific_exception(-1)?;
+        return apex_info_list
+            .list
+            .iter()
+            .find(|apex_info| apex_info.name.as_str() == apex_name)
+            .map(|apex_info| apex_info.partition.to_lowercase())
+            .ok_or(anyhow!("Can't find apex info for {apex_name:?}"))
+            .or_service_specific_exception(-1);
     }
+
+    Ok(partition.to_string_lossy().into_owned())
 }
 
 impl VirtualizationService {

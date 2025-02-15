@@ -28,6 +28,7 @@ use pvmfw_avb::{
 use std::{
     fs,
     mem::{size_of, transmute, MaybeUninit},
+    string::String,
 };
 
 const MICRODROID_KERNEL_IMG_PATH: &str = "microdroid_kernel";
@@ -134,6 +135,7 @@ pub fn assert_latest_payload_verification_passes(
         capabilities,
         rollback_index: 1,
         page_size,
+        name: None,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 
@@ -166,10 +168,21 @@ pub fn assert_payload_without_initrd_passes_verification(
         capabilities,
         rollback_index: expected_rollback_index,
         page_size,
+        name: None,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 
     Ok(())
+}
+
+pub fn read_name(kernel: &[u8]) -> Result<Option<String>, PvmfwVerifyError> {
+    let public_key = load_trusted_public_key().unwrap();
+    let verified_boot_data = verify_payload(
+        kernel,
+        None, // initrd
+        &public_key,
+    )?;
+    Ok(verified_boot_data.name)
 }
 
 pub fn read_page_size(kernel: &[u8]) -> Result<Option<usize>, PvmfwVerifyError> {
