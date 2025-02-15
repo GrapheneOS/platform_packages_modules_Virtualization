@@ -508,12 +508,12 @@ impl VirtualizationService {
         &self,
         config: &VirtualMachineConfig,
         calling_exe_path: Option<&Path>,
+        calling_partition: CallingPartition,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         let name = match config {
             VirtualMachineConfig::RawConfig(config) => &config.name,
             VirtualMachineConfig::AppConfig(config) => &config.name,
         };
-        let calling_partition = find_partition(calling_exe_path)?;
         let early_vm = find_early_vm_for_partition(calling_partition, name)
             .or_service_specific_exception(-1)?;
         let calling_exe_path = match calling_exe_path {
@@ -603,6 +603,8 @@ impl VirtualizationService {
         let requester_uid = get_calling_uid();
         let requester_debug_pid = get_calling_pid();
 
+        let calling_partition = find_partition(CALLING_EXE_PATH.as_deref())?;
+
         check_config_features(config)?;
 
         if cfg!(early) {
@@ -614,7 +616,7 @@ impl VirtualizationService {
 
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
         let (vm_context, cid, temporary_directory) = if cfg!(early) {
-            self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref())?
+            self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref(), calling_partition)?
         } else {
             self.create_vm_context(requester_debug_pid, config)?
         };
@@ -704,7 +706,8 @@ impl VirtualizationService {
 
             // In a protected VM, we require custom kernels to come from a trusted source
             // (b/237054515).
-            check_label_for_kernel_files(&kernel, &initrd).or_service_specific_exception(-1)?;
+            check_label_for_kernel_files(&kernel, &initrd, calling_partition)
+                .or_service_specific_exception(-1)?;
 
             // Check if partition images are labeled incorrectly. This is to prevent random images
             // which are not protected by the Android Verified Boot (e.g. bits downloaded by apps)
@@ -722,15 +725,14 @@ impl VirtualizationService {
                         !is_safe_raw_partition(&partition.label)
                     }
                 })
-                .try_for_each(check_label_for_partition)
+                .try_for_each(|partition| check_label_for_partition(partition, calling_partition))
                 .or_service_specific_exception(-1)?;
         }
 
         // Check if files for payloads and bases are NOT coming from /vendor and /odm, as they may
         // have unstable interfaces.
         // TODO(b/316431494): remove once Treble interfaces are stabilized.
-        check_partitions_for_files(config, find_partition(CALLING_EXE_PATH.as_deref())?)
-            .or_service_specific_exception(-1)?;
+        check_partitions_for_files(config, calling_partition).or_service_specific_exception(-1)?;
 
         let zero_filler_path = temporary_directory.join("zero.img");
         write_zero_filler(&zero_filler_path)
@@ -1551,7 +1553,7 @@ fn is_safe_raw_partition(label: &str) -> bool {
 ///
 /// App private data files are deliberately excluded, to avoid arbitrary payloads being run on
 /// user devices (W^X).
-fn check_label_is_allowed(context: &SeContext) -> Result<()> {
+fn check_label_is_allowed(context: &SeContext, calling_partition: CallingPartition) -> Result<()> {
     match context.selinux_type()? {
         | "apk_data_file" // APKs of an installed app
         | "shell_data_file" // test files created via adb shell
@@ -1560,27 +1562,42 @@ fn check_label_is_allowed(context: &SeContext) -> Result<()> {
         | "virtualizationservice_data_file" // files created by VS / VirtMgr
         | "vendor_microdroid_file" // immutable dm-verity protected partition (/vendor/etc/avf/microdroid/.*)
          => Ok(()),
+        // It is difficult to require specific label types for vendor initiated VM's files, so we
+        // allow anything with a vendor prefix.
+        t if calling_partition == CallingPartition::Vendor && t.starts_with("vendor_")  => Ok(()),
         _ => bail!("Label {} is not allowed", context),
     }
 }
 
-fn check_label_for_partition(partition: &Partition) -> Result<()> {
+fn check_label_for_partition(
+    partition: &Partition,
+    calling_partition: CallingPartition,
+) -> Result<()> {
     let file = partition.image.as_ref().unwrap().as_ref();
-    check_label_is_allowed(&getfilecon(file)?)
+    check_label_is_allowed(&getfilecon(file)?, calling_partition)
         .with_context(|| format!("Partition {} invalid", &partition.label))
 }
 
-fn check_label_for_kernel_files(kernel: &Option<File>, initrd: &Option<File>) -> Result<()> {
+fn check_label_for_kernel_files(
+    kernel: &Option<File>,
+    initrd: &Option<File>,
+    calling_partition: CallingPartition,
+) -> Result<()> {
     if let Some(f) = kernel {
-        check_label_for_file(f, "kernel")?;
+        check_label_for_file(f, "kernel", calling_partition)?;
     }
     if let Some(f) = initrd {
-        check_label_for_file(f, "initrd")?;
+        check_label_for_file(f, "initrd", calling_partition)?;
     }
     Ok(())
 }
-fn check_label_for_file(file: &File, name: &str) -> Result<()> {
-    check_label_is_allowed(&getfilecon(file)?).with_context(|| format!("{} file invalid", name))
+fn check_label_for_file(
+    file: &File,
+    name: &str,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    check_label_is_allowed(&getfilecon(file)?, calling_partition)
+        .with_context(|| format!("{} file invalid", name))
 }
 
 /// Implementation of the AIDL `IVirtualMachine` interface. Used as a handle to a VM.
@@ -2399,23 +2416,30 @@ mod tests {
     #[test]
     fn test_is_allowed_label_for_partition() -> Result<()> {
         let expected_results = vec![
-            ("u:object_r:system_file:s0", true),
-            ("u:object_r:apk_data_file:s0", true),
-            ("u:object_r:app_data_file:s0", false),
-            ("u:object_r:app_data_file:s0:c512,c768", false),
-            ("u:object_r:privapp_data_file:s0:c512,c768", false),
-            ("invalid", false),
-            ("user:role:apk_data_file:severity:categories", true),
-            ("user:role:apk_data_file:severity:categories:extraneous", false),
+            (CallingPartition::System, "u:object_r:system_file:s0", true),
+            (CallingPartition::System, "u:object_r:apk_data_file:s0", true),
+            (CallingPartition::System, "u:object_r:app_data_file:s0", false),
+            (CallingPartition::System, "u:object_r:app_data_file:s0:c512,c768", false),
+            (CallingPartition::System, "u:object_r:privapp_data_file:s0:c512,c768", false),
+            (CallingPartition::System, "invalid", false),
+            (CallingPartition::System, "user:role:apk_data_file:severity:categories", true),
+            (
+                CallingPartition::System,
+                "user:role:apk_data_file:severity:categories:extraneous",
+                false,
+            ),
+            (CallingPartition::System, "u:object_r:vendor_unknowable:s0", false),
+            (CallingPartition::Vendor, "u:object_r:vendor_unknowable:s0", true),
         ];
 
-        for (label, expected_valid) in expected_results {
+        for (calling_partition, label, expected_valid) in expected_results {
             let context = SeContext::new(label)?;
-            let result = check_label_is_allowed(&context);
-            if expected_valid {
-                assert!(result.is_ok(), "Expected label {} to be allowed, got {:?}", label, result);
-            } else if result.is_ok() {
-                bail!("Expected label {} to be disallowed", label);
+            let result = check_label_is_allowed(&context, calling_partition);
+            if expected_valid != result.is_ok() {
+                bail!(
+                    "Expected label {label} to be {} for {calling_partition} partition",
+                    if expected_valid { "allowed" } else { "disallowed" }
+                );
             }
         }
         Ok(())
