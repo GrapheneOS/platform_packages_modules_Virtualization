@@ -523,17 +523,7 @@ impl VirtualizationService {
                     .or_service_specific_exception(-1)
             }
         };
-        let expected_exe_path = Path::new(&early_vm.path);
-        if expected_exe_path != calling_exe_path
-            && Path::new("/system").join(expected_exe_path) != calling_exe_path
-        {
-            return Err(anyhow!(
-                "VM '{name}' in partition '{calling_partition}' must be created with '{}', not '{}'",
-                &early_vm.path,
-                calling_exe_path.display()
-            ))
-            .or_service_specific_exception(-1);
-        }
+        early_vm.check_exe_paths_match(calling_exe_path)?;
 
         let cid = early_vm.cid as Cid;
         let temp_dir = PathBuf::from(format!("/mnt/vm/early/{cid}"));
@@ -2315,6 +2305,29 @@ struct EarlyVms {
     early_vm: Vec<EarlyVm>,
 }
 
+impl EarlyVm {
+    /// Verifies that the provided executable path matches the expected path stored in the XML
+    /// configuration.
+    /// If the provided path starts with `/system`, it will be stripped before comparison.
+    fn check_exe_paths_match<P: AsRef<Path>>(&self, calling_exe_path: P) -> binder::Result<()> {
+        let actual_path = calling_exe_path.as_ref();
+        if Path::new(&self.path)
+            == Path::new("/").join(actual_path.strip_prefix("/system").unwrap_or(actual_path))
+        {
+            return Ok(());
+        }
+        Err(Status::new_service_specific_error_str(
+            -1,
+            Some(format!(
+                "Early VM '{}' executable paths do not match. Expected: {}. Found: {:?}.",
+                self.name,
+                self.path,
+                actual_path.display()
+            )),
+        ))
+    }
+}
+
 static EARLY_VMS_CACHE: LazyLock<Mutex<HashMap<CallingPartition, Vec<EarlyVm>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -2740,6 +2753,39 @@ mod tests {
         let partition = find_partition(Some(link_path)).unwrap();
         assert_eq!(CallingPartition::Product, partition);
         Ok(())
+    }
+
+    #[test]
+    fn early_vm_exe_paths_match_succeeds_with_same_paths() {
+        let early_vm = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system_ext/bin/vm_demo_native_early".to_owned(),
+        };
+        let calling_exe_path = "/system_ext/bin/vm_demo_native_early";
+        assert!(early_vm.check_exe_paths_match(calling_exe_path).is_ok())
+    }
+
+    #[test]
+    fn early_vm_exe_paths_match_succeeds_with_calling_exe_path_from_system() {
+        let early_vm = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system_ext/bin/vm_demo_native_early".to_owned(),
+        };
+        let calling_exe_path = "/system/system_ext/bin/vm_demo_native_early";
+        assert!(early_vm.check_exe_paths_match(calling_exe_path).is_ok())
+    }
+
+    #[test]
+    fn early_vm_exe_paths_match_fails_with_unmatched_paths() {
+        let early_vm = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system_ext/bin/vm_demo_native_early".to_owned(),
+        };
+        let calling_exe_path = "/system/etc/system_ext/bin/vm_demo_native_early";
+        assert!(early_vm.check_exe_paths_match(calling_exe_path).is_err())
     }
 
     #[test]
