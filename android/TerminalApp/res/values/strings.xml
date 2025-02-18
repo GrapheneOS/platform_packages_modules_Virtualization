@@ -32,7 +32,7 @@
     <!-- Installer activity title [CHAR LIMIT=none] -->
     <string name="installer_title_text">Install Linux terminal</string>
     <!-- Installer activity description format [CHAR LIMIT=none] -->
-    <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">%1$s</xliff:g> of data over the network.\nWould you like to proceed?</string>
+    <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">\u200E%1$s\u200E</xliff:g> of data over the network.\nWould you like to proceed?</string>
     <!-- Checkbox at the installer activity to download when Wi-Fi is available to prevent from paying network traffic [CHAR LIMIT=none] -->
     <string name="installer_wait_for_wifi_checkbox_text">Download using Wi-Fi only</string>
     <!-- Button at the installer activity to confirm installation [CHAR LIMIT=16] -->
@@ -72,9 +72,9 @@
     <!-- Toast message after new disk size is set. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_resize_message">Disk size set</string>
     <!-- Settings menu option description format of the current disk size. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">%1$s</xliff:g> assigned</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
     <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">%1$s</xliff:g> max</string>
+    <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">\u200E%1$s\u200E</xliff:g> max</string>
     <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=16] -->
     <string name="settings_disk_resize_resize_cancel">Cancel</string>
     <!-- Settings menu button to apply change Terminal app. This will launch a confirmation dialog [CHAR LIMIT=16] -->
