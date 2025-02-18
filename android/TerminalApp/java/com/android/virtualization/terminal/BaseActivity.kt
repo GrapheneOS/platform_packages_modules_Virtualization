@@ -30,10 +30,6 @@ abstract class BaseActivity : AppCompatActivity() {
                     TerminalExceptionHandler(applicationContext)
             }
         }
-    }
-
-    public override fun onResume() {
-        super.onResume()
 
         if (
             applicationContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
