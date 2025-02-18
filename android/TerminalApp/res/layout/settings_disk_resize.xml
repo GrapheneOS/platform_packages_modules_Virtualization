@@ -36,25 +36,30 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <!-- Hardcode LTR to have some gap between assigned size and max size
+             and also match texts with slider -->
         <TextView
             android:id="@+id/settings_disk_resize_resize_gb_assigned"
             android:layout_height="wrap_content"
             android:layout_width="0dp"
             android:textSize="14sp"
             android:singleLine="false"
+            android:gravity="left"
             app:layout_constraintWidth_percent="0.5"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
+        <!-- Hardcode LTR to have some gap between assigned size and max size
+             and also match texts with slider -->
         <TextView
             android:id="@+id/settings_disk_resize_resize_gb_max"
             android:layout_height="wrap_content"
             android:layout_width="0dp"
             android:textSize="14sp"
             android:singleLine="false"
-            android:gravity="end"
+            android:gravity="right"
             app:layout_constraintWidth_percent="0.5"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/settings_disk_resize_disk_size_slider"/>
 
         <SeekBar
