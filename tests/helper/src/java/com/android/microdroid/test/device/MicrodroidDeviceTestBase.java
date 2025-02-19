@@ -58,9 +58,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -73,13 +74,21 @@ public abstract class MicrodroidDeviceTestBase {
     private final String MAX_PERFORMANCE_TASK_PROFILE = "CPUSET_SP_TOP_APP";
 
     protected static final String KERNEL_VERSION = SystemProperties.get("ro.kernel.version");
+
+    private static final List<String> getSupportedOSes() {
+        List<String> ret = new ArrayList<>();
+        ret.add("microdroid");
+        if (Build.VERSION.SDK_INT >= 35) {
+            ret.add("microdroid_gki-android15-6.6");
+        }
+        if (Build.VERSION.SDK_INT >= 36) {
+            ret.add("microdroid_16k");
+        }
+        return ret;
+    }
+
     protected static final Set<String> SUPPORTED_OSES =
-            Collections.unmodifiableSet(
-                    new HashSet<>(
-                            Arrays.asList(
-                                    "microdroid",
-                                    "microdroid_16k",
-                                    "microdroid_gki-android15-6.6")));
+            Collections.unmodifiableSet(new HashSet<>(getSupportedOSes()));
 
     private static final long ONE_MEBI = 1024 * 1024;
     private static final long MIN_MEM_ARM64 = 170 * ONE_MEBI;
@@ -155,10 +164,12 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     public VirtualMachineConfig.Builder newVmConfigBuilderWithPayloadConfig(String configPath) {
-        return new VirtualMachineConfig.Builder(mCtx)
-                .setProtectedVm(mProtectedVm)
-                .setOs(os())
-                .setPayloadConfigPath(configPath);
+        VirtualMachineConfig.Builder builder = new VirtualMachineConfig.Builder(mCtx);
+        builder.setProtectedVm(mProtectedVm).setPayloadConfigPath(configPath);
+        if (Build.VERSION.SDK_INT >= 35) {
+            builder.setOs(os());
+        }
+        return builder;
     }
 
     public VirtualMachineConfig.Builder newVmConfigBuilderWithPayloadBinary(String binaryPath) {
@@ -288,15 +299,18 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     protected boolean isUpdatableVmSupported() throws VirtualMachineException {
-        return getVirtualMachineManager().isUpdatableVmSupported();
+        // Pre-36 OS doesn't have VirtualMachineManager#isUpdatableVmSupported.
+        if (Build.VERSION.SDK_INT >= 35) {
+            return getVirtualMachineManager().isUpdatableVmSupported();
+        }
+        return false;
     }
 
     protected void ensureVmAttestationSupported() throws Exception {
         // The first vendor API level is checked because VM attestation requires the VM DICE chain
         // to be ROM-rooted.
         int firstVendorApiLevel = getFirstVendorApiLevel();
-        boolean isRemoteAttestationSupported =
-                getVirtualMachineManager().isRemoteAttestationSupported();
+        boolean isRemoteAttestationSupported = isRemoteAttestationSupported();
         if (firstVendorApiLevel >= 202504) {
             assertWithMessage(
                             "First vendor API '"
@@ -307,6 +321,14 @@ public abstract class MicrodroidDeviceTestBase {
         } else {
             assumeTrue("Skip on VM remote attestation not supported", isRemoteAttestationSupported);
         }
+    }
+
+    protected boolean isRemoteAttestationSupported() throws VirtualMachineException {
+        // Pre-36 OS doesn't have VirtualMachineManager#isRemoteAttestionSupported
+        if (Build.VERSION.SDK_INT >= 35) {
+            return getVirtualMachineManager().isRemoteAttestationSupported();
+        }
+        return false;
     }
 
     public abstract static class VmEventListener implements VirtualMachineCallback {

@@ -257,7 +257,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeProtectedVM();
         assume().withMessage(
                         "This test does not apply to a device that supports Remote Attestation")
-                .that(getVirtualMachineManager().isRemoteAttestationSupported())
+                .that(isRemoteAttestationSupported())
                 .isFalse();
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary(VM_ATTESTATION_PAYLOAD_PATH)
@@ -285,7 +285,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
         assume().withMessage("Test needs Remote Attestation support")
-                .that(getVirtualMachineManager().isRemoteAttestationSupported())
+                .that(isRemoteAttestationSupported())
                 .isTrue();
         File vendorDiskImage = new File("/vendor/etc/avf/microdroid/microdroid_vendor.img");
         assumeTrue("Microdroid vendor image doesn't exist, skip", vendorDiskImage.exists());
