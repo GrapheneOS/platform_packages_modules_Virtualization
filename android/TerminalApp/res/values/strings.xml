@@ -181,4 +181,7 @@
 
     <!-- This is the name of the notification channel for system events [CHAR LIMIT=none] -->
     <string name="notification_channel_system_events_name">System events</string>
+
+    <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
+    <string name="tab_default_title">Tab</string>
 </resources>
