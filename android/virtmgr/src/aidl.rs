@@ -707,6 +707,12 @@ impl VirtualizationService {
             config
                 .disks
                 .iter()
+                .flat_map(|disk| disk.image.as_ref())
+                .try_for_each(|image| check_label_for_file(image, "disk image", calling_partition))
+                .or_service_specific_exception(-1)?;
+            config
+                .disks
+                .iter()
                 .flat_map(|disk| disk.partitions.iter())
                 .filter(|partition| {
                     if is_app_config {
@@ -1582,7 +1588,7 @@ fn check_label_for_kernel_files(
     Ok(())
 }
 fn check_label_for_file(
-    file: &File,
+    file: &impl AsRawFd,
     name: &str,
     calling_partition: CallingPartition,
 ) -> Result<()> {

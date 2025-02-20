@@ -21,11 +21,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.graphics.drawable.Icon
 import android.graphics.fonts.FontStyle
 import android.net.Uri
-import android.net.http.SslError
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
@@ -38,41 +36,32 @@ import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
-import android.webkit.ClientCertRequest
-import android.webkit.SslErrorHandler
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.HorizontalScrollView
+import android.widget.RelativeLayout
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.lifecycle.ViewModelProvider
+import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
 import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
-import com.android.virtualization.terminal.CertificateUtils.createOrGetKey
-import com.android.virtualization.terminal.CertificateUtils.writeCertificateToFile
 import com.android.virtualization.terminal.ErrorActivity.Companion.start
 import com.android.virtualization.terminal.InstalledImage.Companion.getDefault
 import com.android.virtualization.terminal.VmLauncherService.Companion.run
 import com.android.virtualization.terminal.VmLauncherService.Companion.stop
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
-import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import java.io.IOException
-import java.lang.Exception
 import java.net.MalformedURLException
 import java.net.URL
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -80,17 +69,21 @@ public class MainActivity :
     BaseActivity(),
     VmLauncherServiceCallback,
     AccessibilityManager.AccessibilityStateChangeListener {
+    var displayMenu: Button? = null
+    var tabAddButton: Button? = null
+    val bootCompleted = ConditionVariable()
+    lateinit var modifierKeysController: ModifierKeysController
+    private lateinit var tabScrollView: HorizontalScrollView
     private lateinit var executorService: ExecutorService
     private lateinit var image: InstalledImage
-    private var certificates: Array<X509Certificate>? = null
-    private var privateKey: PrivateKey? = null
-    private lateinit var terminalContainer: ViewGroup
-    private lateinit var terminalView: TerminalView
     private lateinit var accessibilityManager: AccessibilityManager
-    private val bootCompleted = ConditionVariable()
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
-    private lateinit var modifierKeysController: ModifierKeysController
-    private var displayMenu: MenuItem? = null
+    private var ipAddress: String? = null
+    private var port: Int? = null
+    private lateinit var terminalViewModel: TerminalViewModel
+    private lateinit var viewPager: ViewPager2
+    private lateinit var tabLayout: TabLayout
+    private lateinit var terminalTabAdapter: TerminalTabAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,25 +93,11 @@ public class MainActivity :
 
         val launchInstaller = installIfNecessary()
 
-        setContentView(R.layout.activity_headless)
-
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        terminalView = findViewById<TerminalView>(R.id.webview)
-        terminalView.getSettings().setDomStorageEnabled(true)
-        terminalView.getSettings().setJavaScriptEnabled(true)
-        terminalView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE)
-        terminalView.setWebChromeClient(WebChromeClient())
-
-        terminalContainer = terminalView.parent as ViewGroup
-
-        modifierKeysController = ModifierKeysController(this, terminalView, terminalContainer)
+        initializeUi()
 
         accessibilityManager =
             getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
         accessibilityManager.addAccessibilityStateChangeListener(this)
-
-        readClientCertificate()
 
         manageExternalStorageActivityResultLauncher =
             registerForActivityResult<Intent, ActivityResult>(
@@ -136,6 +115,69 @@ public class MainActivity :
                 startVm()
             }
         }
+    }
+
+    private fun initializeUi() {
+        terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
+        setContentView(R.layout.activity_headless)
+        tabLayout = findViewById<TabLayout>(R.id.tab_layout)
+        displayMenu = findViewById<Button>(R.id.display_button)
+        tabAddButton = findViewById<Button>(R.id.tab_add_button)
+        tabScrollView = findViewById<HorizontalScrollView>(R.id.tab_scrollview)
+        val modifierKeysContainerView =
+            findViewById<RelativeLayout>(R.id.modifier_keys_container) as ViewGroup
+
+        findViewById<Button>(R.id.settings_button).setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            this.startActivity(intent)
+        }
+        if (terminalGuiSupport()) {
+            displayMenu?.visibility = View.VISIBLE
+            displayMenu?.setEnabled(false)
+
+            displayMenu!!.setOnClickListener {
+                val intent = Intent(this, DisplayActivity::class.java)
+                intent.flags =
+                    intent.flags or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                this.startActivity(intent)
+            }
+        }
+
+        modifierKeysController = ModifierKeysController(this, modifierKeysContainerView)
+
+        terminalTabAdapter = TerminalTabAdapter(this)
+        viewPager = findViewById(R.id.pager)
+        viewPager.adapter = terminalTabAdapter
+        viewPager.isUserInputEnabled = false
+        viewPager.offscreenPageLimit = 2
+
+        TabLayoutMediator(tabLayout, viewPager, false, false) { _: TabLayout.Tab?, _: Int -> }
+            .attach()
+
+        addTerminalTab()
+
+        tabAddButton?.setOnClickListener { addTerminalTab() }
+    }
+
+    private fun addTerminalTab() {
+        val tab = tabLayout.newTab()
+        tab.setCustomView(R.layout.tabitem_terminal)
+        viewPager.offscreenPageLimit += 1
+        terminalTabAdapter.addTab()
+        tab.customView!!
+            .findViewById<Button>(R.id.tab_close_button)
+            .setOnClickListener(
+                View.OnClickListener { _: View? ->
+                    if (terminalTabAdapter.tabs.size == 1) {
+                        finishAndRemoveTask()
+                    }
+                    viewPager.offscreenPageLimit -= 1
+                    terminalTabAdapter.deleteTab(tab.position)
+                    tabLayout.removeTab(tab)
+                }
+            )
+        // Add and select the tab
+        tabLayout.addTab(tab, true)
     }
 
     private fun lockOrientationIfNecessary() {
@@ -175,7 +217,7 @@ public class MainActivity :
 
     private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {
         val config = resources.configuration
-
+        // TODO: Always enable screenReaderMode (b/395845063)
         val query =
             ("?fontSize=" +
                 (config.fontScale * FONT_SIZE_DEFAULT).toInt() +
@@ -196,105 +238,12 @@ public class MainActivity :
         }
     }
 
-    private fun readClientCertificate() {
-        val pke = createOrGetKey()
-        writeCertificateToFile(this, pke.certificate)
-        privateKey = pke.privateKey
-        certificates = arrayOf<X509Certificate>(pke.certificate as X509Certificate)
-    }
-
-    private fun connectToTerminalService() {
-        terminalView.setWebViewClient(
-            object : WebViewClient() {
-                private var loadFailed = false
-                private var requestId: Long = 0
-
-                override fun shouldOverrideUrlLoading(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                ): Boolean {
-                    val intent = Intent(Intent.ACTION_VIEW, request?.url)
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                    return true
-                }
-
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                    loadFailed = false
-                }
-
-                override fun onReceivedError(
-                    view: WebView,
-                    request: WebResourceRequest,
-                    error: WebResourceError,
-                ) {
-                    loadFailed = true
-                    when (error.getErrorCode()) {
-                        ERROR_CONNECT,
-                        ERROR_HOST_LOOKUP,
-                        ERROR_FAILED_SSL_HANDSHAKE,
-                        ERROR_TIMEOUT -> {
-                            view.reload()
-                            return
-                        }
-
-                        else -> {
-                            val url: String? = request.getUrl().toString()
-                            val msg = error.getDescription()
-                            Log.e(TAG, "Failed to load $url: $msg")
-                        }
-                    }
-                }
-
-                override fun onPageFinished(view: WebView, url: String?) {
-                    if (loadFailed) {
-                        return
-                    }
-
-                    requestId++
-                    view.postVisualStateCallback(
-                        requestId,
-                        object : WebView.VisualStateCallback() {
-                            override fun onComplete(completedRequestId: Long) {
-                                if (completedRequestId == requestId) {
-                                    Trace.endAsyncSection("executeTerminal", 0)
-                                    findViewById<View?>(R.id.boot_progress).visibility = View.GONE
-                                    terminalContainer.visibility = View.VISIBLE
-                                    if (terminalGuiSupport()) {
-                                        displayMenu?.setVisible(true)
-                                        displayMenu?.setEnabled(true)
-                                    }
-                                    bootCompleted.open()
-                                    modifierKeysController.update()
-                                    terminalView.mapTouchToMouseEvent()
-                                }
-                            }
-                        },
-                    )
-                }
-
-                override fun onReceivedClientCertRequest(
-                    view: WebView?,
-                    request: ClientCertRequest,
-                ) {
-                    if (privateKey != null && certificates != null) {
-                        request.proceed(privateKey, certificates)
-                        return
-                    }
-                    super.onReceivedClientCertRequest(view, request)
-                }
-
-                override fun onReceivedSslError(
-                    view: WebView?,
-                    handler: SslErrorHandler,
-                    error: SslError?,
-                ) {
-                    // ttyd uses self-signed certificate
-                    handler.proceed()
-                }
-            }
-        )
-
+    fun connectToTerminalService(terminalView: TerminalView) {
+        if (ipAddress != null && port != null) {
+            val url = getTerminalServiceUrl(ipAddress, port!!)
+            terminalView.loadUrl(url.toString())
+            return
+        }
         // TODO: refactor this block as a method
         val nsdManager = getSystemService<NsdManager>(NsdManager::class.java)
         val info = NsdServiceInfo()
@@ -314,10 +263,10 @@ public class MainActivity :
 
                 override fun onServiceUpdated(info: NsdServiceInfo) {
                     Log.i(TAG, "Service found: $info")
-                    val ipAddress = info.hostAddresses[0].hostAddress
-                    val port = info.port
-                    val url = getTerminalServiceUrl(ipAddress, port)
                     if (!loaded) {
+                        ipAddress = info.hostAddresses[0].hostAddress
+                        port = info.port
+                        val url = getTerminalServiceUrl(ipAddress, port!!)
                         loaded = true
                         nsdManager.unregisterServiceInfoCallback(this)
                         runOnUiThread(Runnable { terminalView.loadUrl(url.toString()) })
@@ -350,34 +299,10 @@ public class MainActivity :
         start(this, Exception("onVmError"))
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        displayMenu =
-            menu?.findItem(R.id.menu_item_display).also {
-                it?.setVisible(terminalGuiSupport())
-                it?.setEnabled(false)
-            }
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val id = item.getItemId()
-        if (id == R.id.menu_item_settings) {
-            val intent = Intent(this, SettingsActivity::class.java)
-            this.startActivity(intent)
-            return true
-        } else if (id == R.id.menu_item_display) {
-            val intent = Intent(this, DisplayActivity::class.java)
-            intent.flags =
-                intent.flags or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            this.startActivity(intent)
-            return true
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     override fun onAccessibilityStateChanged(enabled: Boolean) {
-        connectToTerminalService()
+        terminalViewModel.terminalViews.forEach { terminalView ->
+            connectToTerminalService(terminalView)
+        }
     }
 
     private val installerLauncher =
@@ -462,7 +387,6 @@ public class MainActivity :
 
         Trace.beginAsyncSection("executeTerminal", 0)
         run(this, this, notification, getDisplayInfo())
-        connectToTerminalService()
     }
 
     @VisibleForTesting
@@ -499,21 +423,6 @@ public class MainActivity :
                     20000 // 20 sec
                 }
         }
-
-        private val BTN_KEY_CODE_MAP =
-            mapOf(
-                R.id.btn_tab to KeyEvent.KEYCODE_TAB, // Alt key sends ESC keycode
-                R.id.btn_alt to KeyEvent.KEYCODE_ESCAPE,
-                R.id.btn_esc to KeyEvent.KEYCODE_ESCAPE,
-                R.id.btn_left to KeyEvent.KEYCODE_DPAD_LEFT,
-                R.id.btn_right to KeyEvent.KEYCODE_DPAD_RIGHT,
-                R.id.btn_up to KeyEvent.KEYCODE_DPAD_UP,
-                R.id.btn_down to KeyEvent.KEYCODE_DPAD_DOWN,
-                R.id.btn_home to KeyEvent.KEYCODE_MOVE_HOME,
-                R.id.btn_end to KeyEvent.KEYCODE_MOVE_END,
-                R.id.btn_pgup to KeyEvent.KEYCODE_PAGE_UP,
-                R.id.btn_pgdn to KeyEvent.KEYCODE_PAGE_DOWN,
-            )
     }
 
     fun getDisplayInfo(): DisplayInfo {
