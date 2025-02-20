@@ -6,7 +6,7 @@ show_help() {
   echo "Options:"
   echo "-h         Print usage and this help message and exit."
   echo "-a ARCH    Architecture of the image [default is host arch: $(uname -m)]"
-  echo "-k         Build and use our custom kernel [default is cloud kernel]"
+  echo "-g         Use Debian generic kernel [default is our custom kernel]"
   echo "-r         Release mode build"
   echo "-s         Leave a shell open [default: only if the build fails]"
   echo "-w         Save temp work directory in the container [for debugging]"
@@ -18,16 +18,16 @@ release_flag=
 save_workdir_flag=
 shell_condition="||"
 
-while getopts "a:hkrsw" option; do
+while getopts "a:ghrsw" option; do
   case ${option} in
     a)
       arch="$OPTARG"
       ;;
+    g)
+      kernel_flag="-g"
+      ;;
     h)
       show_help ; exit
-      ;;
-    k)
-      kernel_flag="-k"
       ;;
     r)
       release_flag="-r"
