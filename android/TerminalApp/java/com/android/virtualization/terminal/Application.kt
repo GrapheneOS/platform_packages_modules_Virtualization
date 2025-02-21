@@ -18,12 +18,21 @@ package com.android.virtualization.terminal
 import android.app.Application as AndroidApplication
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 
 public class Application : AndroidApplication() {
     override fun onCreate() {
         super.onCreate()
         setupNotificationChannels()
+        val lifecycleObserver = ApplicationLifecycleObserver()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
     }
 
     private fun setupNotificationChannels() {
@@ -51,5 +60,54 @@ public class Application : AndroidApplication() {
         const val CHANNEL_SYSTEM_EVENTS_ID = "system_events"
 
         fun getInstance(c: Context): Application = c.getApplicationContext() as Application
+    }
+
+    /**
+     * Observes application lifecycle events and interacts with the VmLauncherService to manage
+     * virtual machine state based on application lifecycle transitions. This class binds to the
+     * VmLauncherService and notifies it of application lifecycle events (onStart, onStop), allowing
+     * the service to manage the VM accordingly.
+     */
+    inner class ApplicationLifecycleObserver() : DefaultLifecycleObserver {
+        private var vmLauncherService: VmLauncherService? = null
+        private val connection =
+            object : ServiceConnection {
+                override fun onServiceConnected(className: ComponentName, service: IBinder) {
+                    val binder = service as VmLauncherService.VmLauncherServiceBinder
+                    vmLauncherService = binder.getService()
+                }
+
+                override fun onServiceDisconnected(arg0: ComponentName) {
+                    vmLauncherService = null
+                }
+            }
+
+        override fun onCreate(owner: LifecycleOwner) {
+            super.onCreate(owner)
+            bindToVmLauncherService()
+        }
+
+        override fun onStart(owner: LifecycleOwner) {
+            super.onStart(owner)
+            vmLauncherService?.processAppLifeCycleEvent(ApplicationLifeCycleEvent.APP_ON_START)
+        }
+
+        override fun onStop(owner: LifecycleOwner) {
+            vmLauncherService?.processAppLifeCycleEvent(ApplicationLifeCycleEvent.APP_ON_STOP)
+            super.onStop(owner)
+        }
+
+        override fun onDestroy(owner: LifecycleOwner) {
+            if (vmLauncherService != null) {
+                this@Application.unbindService(connection)
+                vmLauncherService = null
+            }
+            super.onDestroy(owner)
+        }
+
+        fun bindToVmLauncherService() {
+            val intent = Intent(this@Application, VmLauncherService::class.java)
+            this@Application.bindService(intent, connection, 0) // No BIND_AUTO_CREATE
+        }
     }
 }
