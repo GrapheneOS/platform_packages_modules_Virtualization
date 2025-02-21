@@ -90,4 +90,6 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> പ്രവർത്തനക്ഷമമാക്കി"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ദീർഘസമയം റൺ ചെയ്യുന്ന ടാസ്ക്കുകൾ"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"സിസ്റ്റം ഇവന്റുകൾ"</string>
+    <!-- no translation found for tab_default_title (2300417689389397930) -->
+    <skip />
 </resources>
