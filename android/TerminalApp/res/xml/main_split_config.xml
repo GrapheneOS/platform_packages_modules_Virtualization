@@ -17,10 +17,6 @@
 <resources xmlns:window="http://schemas.android.com/apk/res-auto">
 
     <!-- Define a split for the named activities. -->
-    <ActivityRule window:alwaysExpand="true">
-        <ActivityFilter window:activityName=".MainActivity" />
-    </ActivityRule>
-
     <SplitPairRule
         window:clearTop="true"
         window:finishPrimaryWithSecondary="adjacent"
@@ -42,6 +38,7 @@
 
     <SplitPlaceholderRule
         window:placeholderActivityName="com.android.virtualization.terminal.SettingsDiskResizeActivity"
+        window:finishPrimaryWithPlaceholder="adjacent"
         window:splitLayoutDirection="locale"
         window:splitMaxAspectRatioInPortrait="alwaysAllow"
         window:splitMinWidthDp="@integer/split_min_width"
