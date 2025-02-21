@@ -62,6 +62,12 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class VmLauncherService : Service() {
+    inner class VmLauncherServiceBinder : android.os.Binder() {
+        fun getService(): VmLauncherService = this@VmLauncherService
+    }
+
+    private val binder = VmLauncherServiceBinder()
+
     // TODO: using lateinit for some fields to avoid null
     private var executorService: ExecutorService? = null
     private var virtualMachine: VirtualMachine? = null
@@ -79,7 +85,32 @@ class VmLauncherService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        return null
+        return binder
+    }
+
+    /**
+     * Processes application lifecycle events and adjusts the virtual machine's memory balloon
+     * accordingly.
+     *
+     * @param event The application lifecycle event.
+     */
+    fun processAppLifeCycleEvent(event: ApplicationLifeCycleEvent) {
+        when (event) {
+            // When the app starts, reset the memory balloon to 0%.
+            // This gives the app maximum available memory.
+            ApplicationLifeCycleEvent.APP_ON_START -> {
+                virtualMachine?.setMemoryBalloonByPercent(0)
+            }
+            ApplicationLifeCycleEvent.APP_ON_STOP -> {
+                // When the app stops, inflate the memory balloon to 10%.
+                // This allows the system to reclaim memory while the app is in the background.
+                // TODO(b/400590341) Inflate the balloon while the application remains Stop status.
+                virtualMachine?.setMemoryBalloonByPercent(10)
+            }
+            else -> {
+                Log.e(TAG, "unrecognized lifecycle event: $event")
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
