@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_toStartOf="@id/settings_button"
+        android:layout_toStartOf="@id/menu_container"
         android:scrollbars="none">
 
         <LinearLayout
@@ -59,23 +59,27 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <Button
-        android:id="@+id/settings_button"
-        style="?attr/materialIconButtonStyle"
+    <LinearLayout
+        android:id="@+id/menu_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_toStartOf="@id/display_button"
-        app:icon="@drawable/ic_settings" />
-
-    <Button
-        android:id="@+id/display_button"
-        style="?attr/materialIconButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentTop="true"
-        app:icon="@drawable/ic_display" />
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/settings_button"
+            style="?attr/materialIconButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_settings" />
+        <Button
+            android:id="@+id/display_button"
+            style="?attr/materialIconButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:icon="@drawable/ic_display" />
+    </LinearLayout>
 
 
     <androidx.viewpager2.widget.ViewPager2
@@ -84,7 +88,7 @@
         android:layout_height="match_parent"
         android:layout_alignParentStart="true"
         android:layout_above="@+id/modifier_keys_container"
-        android:layout_below="@id/settings_button"/>
+        android:layout_below="@id/menu_container"/>
 
     <LinearLayout
         android:id="@+id/modifier_keys_container"
