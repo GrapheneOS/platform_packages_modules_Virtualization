@@ -13,7 +13,7 @@ show_help() {
 	echo "Options:"
 	echo "-h         Print usage and this help message and exit."
 	echo "-a ARCH    Architecture of the image [default is host arch: $(uname -m)]"
-	echo "-k         Build and use our custom kernel [default is cloud kernel]"
+	echo "-g         Use Debian generic kernel [default is our custom kernel]"
 	echo "-r         Release mode build"
 	echo "-w         Save temp work directory [for debugging]"
 }
@@ -25,7 +25,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:hkrw" option; do
+	while getopts "a:ghrw" option; do
 		case ${option} in
 			h)
 				show_help ; exit
@@ -33,8 +33,8 @@ parse_options() {
 			a)
 				arch="$OPTARG"
 				;;
-			k)
-				use_custom_kernel=1
+			g)
+				use_generic_kernel=1
 				;;
 			r)
 				mode=release
@@ -122,7 +122,7 @@ install_prerequisites() {
 		)
 	fi
 
-	if [[ "$use_custom_kernel" -eq 1 ]]; then
+	if [[ "$use_generic_kernel" != 1 ]]; then
 		packages+=(
 			bc
 			bison
@@ -215,19 +215,19 @@ copy_android_config() {
 }
 
 package_custom_kernel() {
-	if [[ "$use_custom_kernel" != 1 ]]; then
-		# NOTE: Install generic headers for the default Debian kernel.
+	if [[ "$use_generic_kernel" == 1 ]]; then
+		# NOTE: For bpfcc-tools, install generic headers for the generic kernel.
 		cat > "${config_space}/package_config/LAST" <<EOF
 PACKAGES install
 linux-headers-generic
 EOF
 		return
-	else
-		# NOTE: Prevent FAI from installing a default Debian kernel, by removing
-		#       linux-image meta package names from arch-specific class files.
-		sed -i "/linux-image.*-${debian_arch}/d" \
-		    "${config_space}/package_config/${debian_arch^^}"
 	fi
+
+	# NOTE: Prevent FAI from installing a default Debian kernel, by removing
+	#       linux-image meta package names from arch-specific class files.
+	sed -i "/linux-image.*-${debian_arch}/d" \
+	    "${config_space}/package_config/${debian_arch^^}"
 
 	local deb_base_url="https://deb.debian.org/debian"
 	local deb_security_base_url="https://security.debian.org/debian-security"
@@ -344,6 +344,11 @@ generate_output_package() {
 	losetup -d "${loop}"
 
 	cp ${vm_config} vm_config.json
+	# TODO(b/363985291): remove this when ballooning is supported on generic kernel
+	if [[ "$use_generic_kernel" == 1 ]] && [[ "$arch" == "aarch64" ]]; then
+		sed -i 's/"auto_memory_balloon": true/"auto_memory_balloon": false/g' vm_config.json
+	fi
+
 	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
 	if [[ "$arch" == "x86_64" ]]; then
 		sed -i "s/{bios_part_guid}/$(sfdisk --part-uuid $raw_disk_image $bios_partition_num)/g" vm_config.json
@@ -395,7 +400,7 @@ resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch="$(uname -m)"
 mode=debug
 save_workdir=0
-use_custom_kernel=0
+use_generic_kernel=0
 
 parse_options "$@"
 check_sudo
