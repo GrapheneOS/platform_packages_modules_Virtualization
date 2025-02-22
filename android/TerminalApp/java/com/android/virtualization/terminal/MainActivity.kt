@@ -131,15 +131,19 @@ public class MainActivity :
             val intent = Intent(this, SettingsActivity::class.java)
             this.startActivity(intent)
         }
-        if (terminalGuiSupport()) {
-            displayMenu?.visibility = View.VISIBLE
-            displayMenu?.setEnabled(false)
 
-            displayMenu!!.setOnClickListener {
-                val intent = Intent(this, DisplayActivity::class.java)
-                intent.flags =
-                    intent.flags or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                this.startActivity(intent)
+        displayMenu?.also {
+            it.visibility = if (terminalGuiSupport()) View.VISIBLE else View.GONE
+            it.setEnabled(false)
+            if (terminalGuiSupport()) {
+                it.setOnClickListener {
+                    val intent = Intent(this, DisplayActivity::class.java)
+                    intent.flags =
+                        intent.flags or
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    this.startActivity(intent)
+                }
             }
         }
 
