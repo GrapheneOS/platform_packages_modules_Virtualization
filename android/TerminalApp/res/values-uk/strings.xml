@@ -90,4 +90,6 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> увімкнено"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Довготривалі завдання"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Події системи"</string>
+    <!-- no translation found for tab_default_title (2300417689389397930) -->
+    <skip />
 </resources>
