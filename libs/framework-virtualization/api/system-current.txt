@@ -2,6 +2,7 @@
 package android.system.virtualmachine {
 
   public class VirtualMachine implements java.lang.AutoCloseable {
+    method @NonNull @WorkerThread public static android.os.IBinder binderFromPreconnectedClient(@NonNull android.system.virtualmachine.VirtualMachine.VsockConnectionProvider) throws android.system.virtualmachine.VirtualMachineException;
     method public void clearCallback();
     method @WorkerThread public void close();
     method @NonNull @WorkerThread public android.os.IBinder connectToVsockServer(@IntRange(from=android.system.virtualmachine.VirtualMachine.MIN_VSOCK_PORT, to=android.system.virtualmachine.VirtualMachine.MAX_VSOCK_PORT) long) throws android.system.virtualmachine.VirtualMachineException;
@@ -23,6 +24,10 @@ package android.system.virtualmachine {
     field public static final int STATUS_RUNNING = 1; // 0x1
     field public static final int STATUS_STOPPED = 0; // 0x0
     field public static final String USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION = "android.permission.USE_CUSTOM_VIRTUAL_MACHINE";
+  }
+
+  public static interface VirtualMachine.VsockConnectionProvider {
+    method @NonNull public android.os.ParcelFileDescriptor addConnection() throws android.system.virtualmachine.VirtualMachineException;
   }
 
   public interface VirtualMachineCallback {
