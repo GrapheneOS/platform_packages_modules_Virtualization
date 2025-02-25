@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"Празен ред"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Допрете двапати за да внесете текст"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Инсталирајте го Linux-терминалот"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"За да го стартувате Linux-терминалот, треба да преземете податоци од приближно <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> преку мрежата.\nДали сакате да продолжите?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"За да го стартувате Linux-терминалот, треба да преземете податоци од приближно <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> преку мрежата.\nДали сакате да продолжите?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Преземете само преку Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Инсталирај"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Се инсталира"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Променување на големината на дискот"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Променете ја големината на главната партиција"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Големината на дискот е поставена"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Доделено: <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Макс.: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Доделено: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Макс.: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Откажи"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Примени"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Терминалот ќе се рестартира за да се промени големината на дискот"</string>

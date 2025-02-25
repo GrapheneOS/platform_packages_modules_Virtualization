@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"Üres sor"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"A bevitel beírásához koppintson duplán"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux-terminál telepítése"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"A Linux-terminál elindításához körülbelül <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> adatmennyiséget kell letöltenie a hálózaton keresztül.\nFolytatja?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"A Linux-terminál elindításához körülbelül <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> adatmennyiséget kell letöltenie a hálózaton keresztül.\nFolytatja?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Letöltés csak Wi-Fi-kapcsolattal"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Telepítés"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Telepítés…"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Lemez átméretezése"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"A gyökérpartíció átméretezése"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Lemezméret beállítva"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> hozzárendelve"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maximum: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> hozzárendelve"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maximum: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Mégse"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Alkalmazás"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"A lemez átméretezése miatt a terminál újraindul"</string>
