@@ -1958,8 +1958,43 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    @Nullable
-    private static native IBinder nativeConnectToVsockServer(IBinder vmBinder, int port);
+    /**
+     * Abstracts away the task of creating a vsock connection. Normally, in the same process, you'll
+     * make the connection and then promote it to a binder as part of the same API call, but if you
+     * want to pass a connection to another process first, before establishing the RPC binder
+     * connection, you may implement this method by getting a vsock connection from another process.
+     *
+     * <p>It is recommended to convert other types of exceptions (e.g. remote exceptions) to
+     * VirtualMachineException, so that all connection failures will be visible under the same type
+     * of exception.
+     *
+     * @hide
+     */
+    public interface VsockConnectionProvider {
+        @NonNull
+        public ParcelFileDescriptor addConnection() throws VirtualMachineException;
+    }
+
+    /**
+     * Class to make it easy to use JNI, without needing PFD and other classes.
+     *
+     * @hide
+     */
+    private static class NativeProviderWrapper {
+        private VsockConnectionProvider mProvider = null;
+
+        // ensures last FD is owned until get is called again
+        private ParcelFileDescriptor mMoreLifetime = null;
+
+        public NativeProviderWrapper(VsockConnectionProvider provider) {
+            mProvider = provider;
+        }
+
+        int connect() throws VirtualMachineException {
+            mMoreLifetime = mProvider.addConnection();
+            return mMoreLifetime.getFileDescriptor().getInt$();
+        }
+    }
 
     /**
      * Connect to a VM's binder service via vsock and return the root IBinder object. Guest VMs are
@@ -1979,15 +2014,36 @@ public class VirtualMachine implements AutoCloseable {
     public IBinder connectToVsockServer(
             @IntRange(from = MIN_VSOCK_PORT, to = MAX_VSOCK_PORT) long port)
             throws VirtualMachineException {
+        VsockConnectionProvider provider =
+                new VsockConnectionProvider() {
+                    @Override
+                    public ParcelFileDescriptor addConnection() throws VirtualMachineException {
+                        return connectVsock(port);
+                    }
+                };
+        return binderFromPreconnectedClient(provider);
+    }
 
-        synchronized (mLock) {
-            IBinder iBinder =
-                    nativeConnectToVsockServer(getRunningVm().asBinder(), validatePort(port));
-            if (iBinder == null) {
-                throw new VirtualMachineException("Failed to connect to vsock server");
-            }
-            return iBinder;
+    @Nullable
+    private static native IBinder nativeBinderFromPreconnectedClient(
+            NativeProviderWrapper provider);
+
+    /**
+     * Convert existing vsock connection to a binder connection.
+     *
+     * <p>connectToVsockServer = connectToVsock + binderFromPreconnectedClient
+     *
+     * @hide
+     */
+    @WorkerThread
+    @NonNull
+    public static IBinder binderFromPreconnectedClient(@NonNull VsockConnectionProvider provider)
+            throws VirtualMachineException {
+        IBinder binder = nativeBinderFromPreconnectedClient(new NativeProviderWrapper(provider));
+        if (binder == null) {
+            throw new VirtualMachineException("Failed to connect to vsock server");
         }
+        return binder;
     }
 
     /**
