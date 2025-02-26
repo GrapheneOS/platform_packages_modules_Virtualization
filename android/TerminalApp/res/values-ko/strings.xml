@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"빈 줄"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"두 번 탭하여 입력"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux 터미널 설치"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux 터미널을 실행하려면 네트워크를 통해 약 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g>의 데이터를 다운로드해야 합니다.\n계속하시겠습니까?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux 터미널을 실행하려면 네트워크를 통해 약 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g>의 데이터를 다운로드해야 합니다.\n계속하시겠습니까?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi를 통해서만 다운로드"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"설치"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"설치 중"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"디스크 크기 조절"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"루트 파티션 크기 조절"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"디스크 크기 설정됨"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> 할당됨"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"최대 <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> 할당됨"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"최대 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"취소"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"적용"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"디스크 크기를 조절하기 위해 터미널이 다시 시작됩니다."</string>
@@ -90,6 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g>이(가) 사용 설정되었습니다."</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"장기 실행 태스크"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"시스템 이벤트"</string>
-    <!-- no translation found for tab_default_title (2300417689389397930) -->
-    <skip />
+    <string name="tab_default_title" msgid="2300417689389397930">"탭"</string>
 </resources>

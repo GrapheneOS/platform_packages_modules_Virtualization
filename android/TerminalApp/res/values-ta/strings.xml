@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"வெற்று வரி"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"உள்ளீட்டை டைப் செய்ய இருமுறை தட்டுங்கள்"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux டெர்மினலை நிறுவுதல்"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux டெர்மினலைத் தொடங்க, நெட்வொர்க் மூலம் நீங்கள் சுமார் <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> தரவைப் பதிவிறக்க வேண்டும்.\nதொடர விரும்புகிறீர்களா?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux டெர்மினலைத் தொடங்க, நெட்வொர்க் மூலம் நீங்கள் சுமார் <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> தரவைப் பதிவிறக்க வேண்டும்.\nதொடர விரும்புகிறீர்களா?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"வைஃபையைப் பயன்படுத்தி மட்டும் பதிவிறக்கு"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"நிறுவு"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"நிறுவுகிறது"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"டிஸ்க் அளவை மாற்றுதல்"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ரூட் பார்டிஷன் அளவை மாற்றுதல்"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"டிஸ்க் அளவு அமைக்கப்பட்டது"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> ஒதுக்கப்பட்டது"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"அதிகபட்சம் <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ஒதுக்கப்பட்டது"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"அதிகபட்சம் <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ரத்துசெய்"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"பயன்படுத்து"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"டிஸ்க் அளவை மாற்ற டெர்மினல் மீண்டும் தொடங்கப்படும்"</string>
