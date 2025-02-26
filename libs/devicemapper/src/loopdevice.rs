@@ -179,7 +179,6 @@ pub fn detach<P: AsRef<Path>>(path: P) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rdroidtest::rdroidtest;
     use std::fs;
     use std::path::Path;
 
@@ -205,7 +204,7 @@ mod tests {
         "1" == fs::read_to_string(autoclear).unwrap().trim()
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_with_dio() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -221,7 +220,7 @@ mod tests {
         assert!(is_direct_io(&dev));
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_without_dio() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -234,7 +233,7 @@ mod tests {
         assert!(!is_direct_io(&dev));
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_with_dio_writable() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -255,7 +254,7 @@ mod tests {
         assert!(is_direct_io_writable(&dev));
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_autoclear() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
