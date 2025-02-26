@@ -1563,6 +1563,12 @@ public class VirtualMachine implements AutoCloseable {
                                 ? createVirtualMachineConfigForRawFrom(vmConfig)
                                 : createVirtualMachineConfigForAppFrom(vmConfig, service);
 
+                if (vmConfig.isEncryptedStorageEnabled()) {
+                    service.setEncryptedStorageSize(
+                        ParcelFileDescriptor.open(mEncryptedStoreFilePath, MODE_READ_WRITE),
+                        vmConfig.getEncryptedStorageBytes());
+                }
+
                 mVirtualMachine =
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
@@ -1918,6 +1924,8 @@ public class VirtualMachine implements AutoCloseable {
      * <p>The new config must be {@linkplain VirtualMachineConfig#isCompatibleWith compatible with}
      * the existing config.
      *
+     * <p>NOTE: Modification of the encrypted storage size is restricted to expansion only and is an
+     * irreversible operation.
      * <p>NOTE: This method may block and should not be called on the main thread.
      *
      * @return the old config
@@ -1932,7 +1940,9 @@ public class VirtualMachine implements AutoCloseable {
             throws VirtualMachineException {
         synchronized (mLock) {
             VirtualMachineConfig oldConfig = mConfig;
-            if (!oldConfig.isCompatibleWith(newConfig)) {
+            if (!oldConfig.isCompatibleWith(newConfig)
+                    || oldConfig.getEncryptedStorageBytes()
+                            > newConfig.getEncryptedStorageBytes()) {
                 throw new VirtualMachineException("incompatible config");
             }
             checkStopped();

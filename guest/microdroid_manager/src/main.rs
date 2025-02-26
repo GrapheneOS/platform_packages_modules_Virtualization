@@ -368,14 +368,6 @@ fn try_run_payload(
         umount2("/microdroid_resources", MntFlags::MNT_DETACH)?;
     }
 
-    // Run encryptedstore binary to prepare the storage
-    let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        info!("Preparing encryptedstore ...");
-        Some(prepare_encryptedstore(&vm_secret).context("encryptedstore run")?)
-    } else {
-        None
-    };
-
     let mut zipfuse = Zipfuse::default();
 
     // Before reading a file from the APK, start zipfuse
@@ -410,6 +402,19 @@ fn try_run_payload(
     );
     mount_extra_apks(&config, &mut zipfuse)?;
 
+    // Wait until apex config is done. (e.g. linker configuration for apexes)
+    wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
+
+    // Run encryptedstore binary to prepare the storage
+    // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
+    // are accessible.
+    let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
+        info!("Preparing encryptedstore ...");
+        Some(prepare_encryptedstore(&vm_secret).context("encryptedstore run")?)
+    } else {
+        None
+    };
+
     register_vm_payload_service(
         allow_restricted_apis,
         service.clone(),
@@ -424,9 +429,6 @@ fn try_run_payload(
         system_properties::write("microdroid_manager.export_tombstones.enabled", "1")
             .context("set microdroid_manager.export_tombstones.enabled")?;
     }
-
-    // Wait until apex config is done. (e.g. linker configuration for apexes)
-    wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
 
     // Trigger init post-fs-data. This will start authfs if we wask it to.
     if config.enable_authfs {

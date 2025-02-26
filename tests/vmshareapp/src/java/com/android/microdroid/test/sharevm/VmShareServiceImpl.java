@@ -223,6 +223,11 @@ public class VmShareServiceImpl extends Service {
         }
 
         @Override
+        public long getEncryptedStorageSize() throws RemoteException {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
         public void runEchoReverseServer() throws RemoteException {
             throw new UnsupportedOperationException("Not supported");
         }
