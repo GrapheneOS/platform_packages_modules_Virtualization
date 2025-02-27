@@ -114,14 +114,6 @@ install_prerequisites() {
 		)
 	fi
 
-	# TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
-	if [[ "$arch" == "x86_64" ]]; then
-		packages+=(
-			libguestfs-tools
-			linux-image-generic
-		)
-	fi
-
 	if [[ "$use_generic_kernel" != 1 ]]; then
 		packages+=(
 			bc
@@ -355,31 +347,17 @@ generate_output_package() {
 	fi
 	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
 
-	images=()
-	if [[ "$arch" == "aarch64" ]]; then
-		images+=(
-			root_part
-			efi_part
-		)
-	# TODO(b/365955006): remove these lines when uboot supports x86_64 EFI application
-	elif [[ "$arch" == "x86_64" ]]; then
-		rm -f vmlinuz initrd.img
-		virt-get-kernel -a "${raw_disk_image}"
-		mv vmlinuz* vmlinuz
-		mv initrd.img* initrd.img
-		images+=(
-			bios_part
-			root_part
-			efi_part
-			vmlinuz
-			initrd.img
-		)
-	fi
-
 	popd > /dev/null
 
+	contents=(
+		build_id
+		root_part
+		efi_part
+		vm_config.json
+	)
+
 	# --sparse option isn't supported in apache-commons-compress
-	tar czv -f ${output} -C ${workdir} build_id "${images[@]}" vm_config.json
+	tar czv -f ${output} -C ${workdir} "${contents[@]}"
 }
 
 clean_up() {

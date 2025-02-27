@@ -41,7 +41,6 @@ rust_test {
     name: "apkdmverity.test",
     defaults: [
         "apkdmverity.defaults",
-        "rdroidtest.defaults",
     ],
     test_suites: ["general-tests"],
     compile_multilib: "first",

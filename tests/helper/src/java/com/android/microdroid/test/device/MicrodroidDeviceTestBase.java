@@ -641,6 +641,7 @@ public abstract class MicrodroidDeviceTestBase {
         public String mExtraApkTestProp;
         public String mApkContentsPath;
         public String mEncryptedStoragePath;
+        public long mEncryptedStorageSize;
         public String[] mEffectiveCapabilities;
         public int mUid;
         public String mFileContent;

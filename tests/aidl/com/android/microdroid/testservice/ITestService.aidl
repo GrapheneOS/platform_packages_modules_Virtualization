@@ -47,6 +47,9 @@ interface ITestService {
     /* get the encrypted storage path. */
     String getEncryptedStoragePath();
 
+    /* get the size of the encrypted storage in bytes. */
+    long getEncryptedStorageSize();
+
     /* start a simple vsock server on ECHO_REVERSE_PORT that reads a line at a time and echoes
      * each line reverse.
      */

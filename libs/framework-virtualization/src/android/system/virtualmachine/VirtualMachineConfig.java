@@ -635,7 +635,6 @@ public final class VirtualMachineConfig {
         }
         return this.mDebugLevel == other.mDebugLevel
                 && this.mProtectedVm == other.mProtectedVm
-                && this.mEncryptedStorageBytes == other.mEncryptedStorageBytes
                 && this.mVmOutputCaptured == other.mVmOutputCaptured
                 && this.mVmConsoleInputSupported == other.mVmConsoleInputSupported
                 && this.mConnectVmConsole == other.mConnectVmConsole
