@@ -487,6 +487,12 @@ fn find_partition(path: Option<&Path>) -> binder::Result<CallingPartition> {
     if path.starts_with("/system/product/") {
         return Ok(CallingPartition::Product);
     }
+    if path.starts_with("/data/nativetest/vendor/")
+        || path.starts_with("/data/nativetest64/vendor/")
+    {
+        return Ok(CallingPartition::Vendor);
+    }
+
     let partition = {
         let mut components = path.components();
         let Some(std::path::Component::Normal(partition)) = components.nth(1) else {
@@ -2791,6 +2797,14 @@ mod tests {
         let partition = find_partition(Some(link_path)).unwrap();
         assert_eq!(CallingPartition::Product, partition);
         Ok(())
+    }
+
+    #[test]
+    fn test_vendor_in_data() {
+        assert_eq!(
+            CallingPartition::Vendor,
+            find_partition(Some(Path::new("/data/nativetest64/vendor/file"))).unwrap()
+        );
     }
 
     #[test]
