@@ -2166,11 +2166,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeFalse(
                 "Cuttlefish/Goldfish doesn't support device tree under /proc/device-tree",
                 isCuttlefish() || isGoldfish());
-        if (!isUpdatableVmSupported()) {
-            // TODO(b/389611249): Non protected VMs using legacy secret mechanisms do not reliably
-            // implement `AVmPayload_isNewInstance`.
-            assumeProtectedVM();
-        }
         VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_a", config);
         TestResults testResults =
                 runVmTestService(

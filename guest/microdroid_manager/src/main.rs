@@ -244,13 +244,14 @@ fn try_main() -> Result<()> {
 fn verify_payload_with_instance_img(
     metadata: &Metadata,
     dice: &DiceDriver,
+    state: &mut VmInstanceState,
 ) -> Result<MicrodroidData> {
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
     if is_strict_boot() {
         // Provisioning must happen on the first boot and never again.
-        if is_new_instance_legacy() {
+        if Path::new(AVF_NEW_INSTANCE).exists() {
             ensure!(
                 saved_data.is_none(),
                 MicrodroidError::PayloadInvalidConfig(
@@ -286,12 +287,14 @@ fn verify_payload_with_instance_img(
             );
             info!("Saved data is verified.");
         }
+        *state = VmInstanceState::PreviouslySeen;
         saved_data
     } else {
         info!("Saving verified data.");
         instance
             .write_microdroid_data(&extracted_data, dice)
             .context("Failed to write identity data")?;
+        *state = VmInstanceState::NewlyCreated;
         extracted_data
     };
     Ok(instance_data)
@@ -321,13 +324,14 @@ fn try_run_payload(
             .context("Failed to load DICE from driver")?
     };
 
+    let mut state = VmInstanceState::Unknown;
     // Microdroid skips checking payload against instance image iff the device supports
-    // secretkeeper. In that case Microdroid use VmSecret::V2, which provide protection against
-    // rollback of boot images and packages.
+    // secretkeeper. In that case Microdroid use VmSecret::V2, which provides instance state
+    // and protection against rollback of boot images and packages.
     let instance_data = if should_defer_rollback_protection() {
         verify_payload(&metadata, None)?
     } else {
-        verify_payload_with_instance_img(&metadata, &dice)?
+        verify_payload_with_instance_img(&metadata, &dice, &mut state)?
     };
 
     let payload_metadata = metadata.payload.ok_or_else(|| {
@@ -337,7 +341,6 @@ fn try_run_payload(
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
     let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
-    let mut state = VmInstanceState::Unknown;
     let vm_secret = VmSecret::new(dice_artifacts, service, &mut state)
         .context("Failed to create VM secrets")?;
 
@@ -345,15 +348,7 @@ fn try_run_payload(
         VmInstanceState::NewlyCreated => true,
         VmInstanceState::PreviouslySeen => false,
         VmInstanceState::Unknown => {
-            // VmSecret instantiation was not able to determine the state. This should only happen
-            // for legacy secret mechanism (V1) - in which case fallback to legacy
-            // instance.img based determination of state.
-            ensure!(
-                !should_defer_rollback_protection(),
-                "VmInstanceState is Unknown whilst guest is expected to use V2 based secrets.
-                This should've never happened"
-            );
-            is_new_instance_legacy()
+            bail!("Vm instance state is still unknown, this should not have happened");
         }
     };
 
@@ -517,10 +512,6 @@ fn get_vms_rpc_binder() -> Result<Strong<dyn IVirtualMachineService>> {
 
 fn is_strict_boot() -> bool {
     Path::new(AVF_STRICT_BOOT).exists()
-}
-
-fn is_new_instance_legacy() -> bool {
-    Path::new(AVF_NEW_INSTANCE).exists()
 }
 
 fn is_verified_boot() -> bool {
