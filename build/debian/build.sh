@@ -318,9 +318,8 @@ run_fai() {
 
 generate_output_package() {
 	fdisk -l "${raw_disk_image}"
-	local vm_config="$SCRIPT_DIR/vm_config.json.${arch}"
+	local vm_config="$SCRIPT_DIR/vm_config.json"
 	local root_partition_num=1
-	local bios_partition_num=14
 	local efi_partition_num=15
 
 	pushd ${workdir} > /dev/null
@@ -329,9 +328,6 @@ generate_output_package() {
 
 	loop=$(losetup -f --show --partscan $raw_disk_image)
 	dd if="${loop}p$root_partition_num" of=root_part
-	if [[ "$arch" == "x86_64" ]]; then
-		dd if="${loop}p$bios_partition_num" of=bios_part
-	fi
 	dd if="${loop}p$efi_partition_num" of=efi_part
 	losetup -d "${loop}"
 
@@ -342,9 +338,6 @@ generate_output_package() {
 	fi
 
 	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
-	if [[ "$arch" == "x86_64" ]]; then
-		sed -i "s/{bios_part_guid}/$(sfdisk --part-uuid $raw_disk_image $bios_partition_num)/g" vm_config.json
-	fi
 	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
 
 	popd > /dev/null
