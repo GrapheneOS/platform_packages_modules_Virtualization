@@ -1592,9 +1592,8 @@ fn check_label_is_allowed(context: &SeContext, calling_partition: CallingPartiti
         | "virtualizationservice_data_file" // files created by VS / VirtMgr
         | "vendor_microdroid_file" // immutable dm-verity protected partition (/vendor/etc/avf/microdroid/.*)
          => Ok(()),
-        // It is difficult to require specific label types for vendor initiated VM's files, so we
-        // allow anything with a vendor prefix.
-        t if calling_partition == CallingPartition::Vendor && t.starts_with("vendor_")  => Ok(()),
+        // It is difficult to require specific label types for vendor initiated VM's files.
+        _ if calling_partition == CallingPartition::Vendor => Ok(()),
         _ => bail!("Label {} is not allowed", context),
     }
 }
