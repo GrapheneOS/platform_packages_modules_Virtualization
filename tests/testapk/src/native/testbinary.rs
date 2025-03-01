@@ -87,6 +87,10 @@ impl ITestService for TestService {
 
     // Everything below here is unimplemented. Implementations may be added as needed.
 
+    fn getEncryptedStorageSize(&self) -> BinderResult<i64> {
+        unimplemented()
+    }
+
     fn readProperty(&self, _: &str) -> BinderResult<String> {
         unimplemented()
     }

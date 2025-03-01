@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"හිස් රේඛාව"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ආදානය ටයිප් කිරීමට දෙවරක් තට්ටු කරන්න"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ටර්මිනලය ස්ථාපනය කරන්න"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ටර්මිනලය දියත් කිරීමට, ඔබට ජාලය හරහා දත්ත <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> පමණ බාගැනීමට අවශ්‍ය වේ.\nඔබ ඉදිරියට යාමට කැමති ද?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ටර්මිනලය දියත් කිරීමට, ඔබට ජාලය හරහා දත්ත <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> පමණ බාගැනීමට අවශ්‍ය වේ.\nඔබ ඉදිරියට යාමට කැමති ද?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi පමණක් භාවිතා කරමින් බාගන්න"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ස්ථාපනය කරන්න"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ස්ථාපනය කරමින්"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"තැටි ප්‍රමාණය වෙනස් කිරීම"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"මූල කොටස් ප්‍රමාණය ප්‍රතිප්‍රමාණ කරන්න"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"තැටි ප්‍රමාණය සැකසිණි"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> පවරන ලදි"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> උපරිමය"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> පවරන ලදි"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> උපරිමය"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"අවලංගු කරන්න"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"යොදන්න"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"තැටියේ ප්‍රමාණය වෙනස් කිරීමට ටර්මිනලය යළි ඇරඹෙනු ඇත"</string>
@@ -90,4 +90,6 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> සබලයි"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"දිගු කාලයක් ධාවනය වන කාර්යයන්"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"පද්ධති සිදුවීම්"</string>
+    <!-- no translation found for tab_default_title (2300417689389397930) -->
+    <skip />
 </resources>

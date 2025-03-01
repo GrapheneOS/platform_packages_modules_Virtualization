@@ -230,14 +230,10 @@ fn uuid(node_id: &[u8]) -> Result<String> {
 }
 
 #[cfg(test)]
-rdroidtest::test_main!();
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use crate::loopdevice::LoopConfigOptions;
     use crypt::{CipherType, DmCryptTargetBuilder};
-    use rdroidtest::{ignore_if, rdroidtest};
     use rustutils::system_properties;
     use std::fs::{read, File, OpenOptions};
     use std::io::Write;
@@ -294,25 +290,29 @@ mod tests {
         }
     }
 
-    #[rdroidtest]
+    #[test]
     fn mapping_again_keeps_data_xts() {
         mapping_again_keeps_data(&KEY_SET_XTS, "name1");
     }
 
-    #[rdroidtest]
-    #[ignore_if(!is_hctr2_supported())]
+    #[test]
     fn mapping_again_keeps_data_hctr2() {
+        if !is_hctr2_supported() {
+            return;
+        }
         mapping_again_keeps_data(&KEY_SET_HCTR2, "name2");
     }
 
-    #[rdroidtest]
+    #[test]
     fn data_inaccessible_with_diff_key_xts() {
         data_inaccessible_with_diff_key(&KEY_SET_XTS, "name3");
     }
 
-    #[rdroidtest]
-    #[ignore_if(!is_hctr2_supported())]
+    #[test]
     fn data_inaccessible_with_diff_key_hctr2() {
+        if !is_hctr2_supported() {
+            return;
+        }
         data_inaccessible_with_diff_key(&KEY_SET_HCTR2, "name4");
     }
 

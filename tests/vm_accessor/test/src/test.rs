@@ -18,7 +18,6 @@
 
 use com_android_virt_accessor_demo_vm_service::aidl::com::android::virt::accessor_demo::vm_service::IAccessorVmService::IAccessorVmService;
 use binder::{Strong, ProcessState};
-use rdroidtest::rdroidtest;
 
 const VM_SERVICE: &str = "com.android.virt.accessor_demo.vm_service.IAccessorVmService/default";
 
@@ -39,7 +38,7 @@ fn check_interface() -> Strong<dyn IAccessorVmService> {
     binder::check_interface(VM_SERVICE).unwrap()
 }
 
-#[rdroidtest]
+#[test]
 fn test_wait_for_interface() {
     init();
 
@@ -49,7 +48,7 @@ fn test_wait_for_interface() {
     assert_eq!(sum, 23);
 }
 
-#[rdroidtest]
+#[test]
 fn test_wait_for_interface_twice() {
     init();
 
@@ -60,7 +59,7 @@ fn test_wait_for_interface_twice() {
     assert_eq!(service2.add(11, 12).unwrap(), 23);
 }
 
-#[rdroidtest]
+#[test]
 fn test_wait_and_get_interface() {
     init();
 
@@ -71,7 +70,7 @@ fn test_wait_and_get_interface() {
     assert_eq!(service2.add(11, 12).unwrap(), 23);
 }
 
-#[rdroidtest]
+#[test]
 fn test_wait_and_check_interface() {
     init();
 
@@ -81,5 +80,3 @@ fn test_wait_and_check_interface() {
     assert_eq!(service1.add(11, 12).unwrap(), 23);
     assert_eq!(service2.add(11, 12).unwrap(), 23);
 }
-
-rdroidtest::test_main!();

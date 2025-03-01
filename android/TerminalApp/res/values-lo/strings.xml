@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"ແຖວຫວ່າງເປົ່າ"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ແຕະສອງເທື່ອເພື່ອພິມການປ້ອນຂໍ້ມູນ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"ຕິດຕັ້ງເທີມິນອນ Linux"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"ເພື່ອເປີດໃຊ້ເທີມິນອນ Linux, ທ່ານຈະຕ້ອງດາວໂຫຼດຂໍ້ມູນປະມານ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ຜ່ານເຄືອຂ່າຍ.\nທ່ານຕ້ອງການດຳເນີນການຕໍ່ບໍ?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"ເພື່ອເປີດໃຊ້ເທີມິນອນ Linux, ທ່ານຈະຕ້ອງດາວໂຫຼດຂໍ້ມູນປະມານ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ຜ່ານເຄືອຂ່າຍ.\nທ່ານຕ້ອງການດຳເນີນການຕໍ່ບໍ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"ດາວໂຫຼດໂດຍໃຊ້ Wi-Fi ເທົ່ານັ້ນ"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ຕິດຕັ້ງ"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ກຳລັງຕິດຕັ້ງ"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"ການປັບຂະໜາດດິສກ໌"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ປັບຂະໜາດ root ພາທິຊັນ"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ຕັ້ງຂະໜາດດິສ"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"ມອບໝາຍແລ້ວ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ສູງສຸດ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"ມອບໝາຍແລ້ວ <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ສູງສຸດ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ຍົກເລີກ"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ນຳໃຊ້"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ລະບົບຈະຣີສະຕາດເທີມິນອນເພື່ອປັບຂະໜາດດິສກ໌"</string>
@@ -90,4 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"ເປີດການນຳໃຊ້ <xliff:g id="ID_1">VirGL</xliff:g> ແລ້ວ"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ວຽກທີ່ດຳເນີນເປັນເວລາດົນ"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"ກິດຈະກຳລະບົບ"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"ແຖບ"</string>
 </resources>

@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"空行"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"点按两次即可输入"</string>
     <string name="installer_title_text" msgid="500663060973466805">"安装 Linux 终端"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> 的数据。\n要继续吗？"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> 的数据。\n要继续吗？"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"仅通过 WLAN 下载"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"安装"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"正在安装"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"调整磁盘大小"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"调整根分区的大小"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"应用"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
@@ -90,4 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> 已启用"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"长时间运行的任务"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"系统事件"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"标签页"</string>
 </resources>

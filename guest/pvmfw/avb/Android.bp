@@ -37,6 +37,7 @@ rust_test {
         ":test_image_with_one_hashdesc",
         ":test_image_with_non_initrd_hashdesc",
         ":test_image_with_initrd_and_non_initrd_desc",
+        ":test_image_with_name",
         ":test_image_with_invalid_page_size",
         ":test_image_with_negative_page_size",
         ":test_image_with_overflow_page_size",
@@ -120,6 +121,20 @@ avb_add_hash_footer {
             enabled: true,
         },
     },
+}
+
+avb_add_hash_footer {
+    name: "test_image_with_name",
+    src: ":unsigned_test_image",
+    partition_name: "boot",
+    private_key: ":pvmfw_sign_key",
+    salt: "2134",
+    props: [
+        {
+            name: "com.android.virt.name",
+            value: "test_vm_name",
+        },
+    ],
 }
 
 avb_add_hash_footer {

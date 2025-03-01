@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"Пусты радок"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Двойчы націсніце, каб увесці тэкст з клавіятуры"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Усталяванне тэрмінала Linux"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Каб запусціць тэрмінал Linux, трэба спампаваць каля <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> даных па сетцы.\nПрацягнуць?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Каб запусціць тэрмінал Linux, трэба спампаваць каля <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> даных па сетцы.\nПрацягнуць?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Спампоўваць толькі праз сетку Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Усталяваць"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Ідзе ўсталяванне"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Змяніць памер дыска"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Змяніць памер каранёвага раздзела"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Памер дыска зададзены"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Прызначана <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Максімальны памер: <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Прызначана <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Максімальны памер: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Скасаваць"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Прымяніць"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Каб прымяніць змяненне памеру дыска, тэрмінал будзе перазапушчаны"</string>
@@ -90,4 +90,6 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"Модуль <xliff:g id="ID_1">VirGL</xliff:g> уключаны"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Працяглыя задачы"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Сістэмныя падзеі"</string>
+    <!-- no translation found for tab_default_title (2300417689389397930) -->
+    <skip />
 </resources>

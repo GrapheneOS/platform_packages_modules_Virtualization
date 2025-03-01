@@ -77,6 +77,7 @@ pub enum VmSecret {
         dice_artifacts: OwnedDiceArtifactsWithExplicitKey,
         skp_secret: ZVec,
         secretkeeper_session: SkVmSession,
+        virtual_machine_service: Strong<dyn IVirtualMachineService>,
     },
     // V1 secrets are not protected against rollback of boot images.
     // They are reliable only if rollback of images was prevented by verified boot ie,
@@ -131,6 +132,7 @@ impl VmSecret {
             dice_artifacts: explicit_dice,
             skp_secret: ZVec::try_from(skp_secret.to_vec())?,
             secretkeeper_session: session,
+            virtual_machine_service: vm_service.clone(),
         })
     }
 
@@ -180,10 +182,20 @@ impl VmSecret {
 
     pub fn write_payload_data_rp(&self, data: &[u8; SECRET_SIZE]) -> Result<()> {
         let data = Zeroizing::new(*data);
-        let Self::V2 { instance_id, secretkeeper_session, .. } = self else {
+        let Self::V2 { instance_id, secretkeeper_session, virtual_machine_service, .. } = self
+        else {
             return Err(anyhow!("Rollback protected data is not available with V1 secrets"));
         };
         let payload_id = sha::sha512(instance_id);
+        // Claim the Secretkeeper entry - this pings AVF host to account this Secretkeeper entry
+        // correctly.
+        virtual_machine_service.claimSecretkeeperEntry(&payload_id).map_err(|e| {
+            // TODO rename this error!
+            super::MicrodroidError::FailedToConnectToVirtualizationService(format!(
+                "Failed to claim Secretkeeper entry: {e:?}"
+            ))
+        })?;
+
         if let Err(e) = secretkeeper_session.store_secret(payload_id, data.clone()) {
             log::info!("Secretkeeper store failed with {e:?}. Refreshing connection & retrying!");
             secretkeeper_session.refresh()?;

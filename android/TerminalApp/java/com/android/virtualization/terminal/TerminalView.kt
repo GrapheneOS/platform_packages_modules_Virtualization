@@ -40,6 +40,7 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
     AccessibilityManager.TouchExplorationStateChangeListener {
     private val ctrlKeyHandler: String = readAssetAsString(context, "js/ctrl_key_handler.js")
     private val enableCtrlKey: String = readAssetAsString(context, "js/enable_ctrl_key.js")
+    private val disableCtrlKey: String = readAssetAsString(context, "js/disable_ctrl_key.js")
     private val touchToMouseHandler: String =
         readAssetAsString(context, "js/touch_to_mouse_handler.js")
     private val a11yManager =
@@ -63,6 +64,10 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
 
     fun enableCtrlKey() {
         this.evaluateJavascript(enableCtrlKey, null)
+    }
+
+    fun disableCtrlKey() {
+        this.evaluateJavascript(disableCtrlKey, null)
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.android.virtualization.terminal
 
-package {
-    default_team: "trendy_team_virtualization",
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
+import androidx.lifecycle.ViewModel
 
-rust_test {
-    name: "vm_accessor_test",
-    srcs: ["src/test.rs"],
-    test_suites: [
-        "general-tests",
-    ],
-    test_config: "AndroidTest.xml",
-    rustlibs: [
-        "com.android.virt.accessor_demo.vm_service-rust",
-        "libbinder_rs",
-        "liblog_rust",
-    ],
-    data: [":com.android.virt.accessor_demo"],
-    compile_multilib: "first",
+class TerminalViewModel : ViewModel() {
+    val terminalViews: MutableSet<TerminalView> = mutableSetOf()
 }

@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/capability.h>
+#include <sys/statvfs.h>
 #include <sys/system_properties.h>
 #ifdef __MICRODROID_TEST_PAYLOAD_USES_LIBICU__
 #include <unicode/uchar.h>
@@ -229,6 +230,23 @@ Result<void> start_test_service() {
             } else {
                 *out = path_c;
             }
+            return ScopedAStatus::ok();
+        }
+
+        ScopedAStatus getEncryptedStorageSize(int64_t *out) override {
+            const char* path_c = AVmPayload_getEncryptedStoragePath();
+            if (path_c == nullptr) {
+                *out = 0;
+                return ScopedAStatus::ok();
+            }
+            struct statvfs buffer;
+            if (statvfs(path_c, &buffer) != 0) {
+                std::string msg = "statvfs " + std::string(path_c) + " failed :  " +
+                    std::strerror(errno);
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   msg.c_str());
+            }
+            *out= buffer.f_blocks * buffer.f_frsize;
             return ScopedAStatus::ok();
         }
 
