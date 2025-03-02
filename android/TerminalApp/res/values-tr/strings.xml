@@ -90,6 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> etkinleştirildi"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Uzun süredir çalışan görevler"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Sistem etkinlikleri"</string>
-    <!-- no translation found for tab_default_title (2300417689389397930) -->
-    <skip />
+    <string name="tab_default_title" msgid="2300417689389397930">"Sekme"</string>
 </resources>
