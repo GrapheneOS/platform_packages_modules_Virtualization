@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"खाली लाइन"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"इनपुट टाइप करने के लिए, दो बार टैप करें"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux टर्मिनल ऐप्लिकेशन इंस्टॉल करें"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux टर्मिनल ऐप्लिकेशन को लॉन्च करने के लिए, आपको इंटरनेट का इस्तेमाल करके <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> डेटा डाउनलोड करना होगा.\nक्या आपको आगे बढ़ना है?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux टर्मिनल ऐप्लिकेशन को लॉन्च करने के लिए, आपको इंटरनेट का इस्तेमाल करके <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> डेटा डाउनलोड करना होगा.\nक्या आपको आगे बढ़ना है?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"सिर्फ़ वाई-फ़ाई का इस्तेमाल करके डाउनलोड करें"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"इंस्टॉल करें"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"इंस्टॉल हो रहा"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"डिस्क का साइज़ बदलें"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"रूट पार्टिशन का साइज़ बदलें"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्क का साइज़ सेट किया गया"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> असाइन किया गया"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"मैक्सिमम <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> असाइन किया गया"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"मैक्सिमम <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द करें"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"लागू करें"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"डिस्क का साइज़ बदलने के लिए, टर्मिनल को रीस्टार्ट किया जाएगा"</string>
@@ -90,4 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> चालू है"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"लंबे समय तक चलने वाले टास्क"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"सिस्टम इवेंट"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"टैब"</string>
 </resources>

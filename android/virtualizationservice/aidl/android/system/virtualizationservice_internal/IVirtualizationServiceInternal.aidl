@@ -134,4 +134,10 @@ interface IVirtualizationServiceInternal {
      * @param file descriptor of the TAP network interface.
      */
     void deleteTapInterface(in ParcelFileDescriptor tapFd);
+
+    /**
+     * Account the caller for the corresponding Secretkeeper entry.
+     * @param id Identifier for the secret held in Secretkeeper for the caller
+     */
+    void claimSecretkeeperEntry(in byte[64] id);
 }

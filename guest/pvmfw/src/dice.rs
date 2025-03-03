@@ -16,6 +16,7 @@
 extern crate alloc;
 
 use alloc::format;
+use alloc::string::String;
 use alloc::vec::Vec;
 use ciborium::cbor;
 use ciborium::Value;
@@ -83,6 +84,7 @@ pub struct PartialInputs {
     pub mode: DiceMode,
     pub security_version: u64,
     pub rkp_vm_marker: bool,
+    component_name: String,
 }
 
 impl PartialInputs {
@@ -90,12 +92,13 @@ impl PartialInputs {
         let code_hash = to_dice_hash(data)?;
         let auth_hash = hash(data.public_key)?;
         let mode = to_dice_mode(data.debug_level);
+        let component_name = data.name.clone().unwrap_or(String::from("vm_entry"));
         // We use rollback_index from vbmeta as the security_version field in dice certificate.
         let security_version = data.rollback_index;
         let rkp_vm_marker = data.has_capability(Capability::RemoteAttest)
             || data.has_capability(Capability::TrustySecurityVm);
 
-        Ok(Self { code_hash, auth_hash, mode, security_version, rkp_vm_marker })
+        Ok(Self { code_hash, auth_hash, mode, security_version, rkp_vm_marker, component_name })
     }
 
     pub fn write_next_bcc(
@@ -156,7 +159,7 @@ impl PartialInputs {
 
     fn generate_config_descriptor(&self, instance_hash: Option<Hash>) -> Result<Vec<u8>> {
         let mut config = Vec::with_capacity(4);
-        config.push((cbor!(COMPONENT_NAME_KEY)?, cbor!("vm_entry")?));
+        config.push((cbor!(COMPONENT_NAME_KEY)?, cbor!(self.component_name.as_str())?));
         config.push((cbor!(SECURITY_VERSION_KEY)?, cbor!(self.security_version)?));
         if self.rkp_vm_marker {
             config.push((cbor!(RKP_VM_MARKER_KEY)?, Value::Null))
@@ -200,6 +203,7 @@ mod tests {
         kernel_digest: [1u8; size_of::<Digest>()],
         initrd_digest: Some([2u8; size_of::<Digest>()]),
         public_key: b"public key",
+        name: None,
         capabilities: vec![],
         rollback_index: 42,
         page_size: None,
@@ -249,12 +253,13 @@ mod tests {
     }
 
     #[test]
-    fn rkp_vm_config_descriptor_has_rkp_vm_marker() {
+    fn rkp_vm_config_descriptor_has_rkp_vm_marker_and_component_name() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
         let inputs = PartialInputs::new(&vb_data).unwrap();
         let config_map = decode_config_descriptor(&inputs, Some(HASH));
 
+        assert_eq!(config_map.get(&COMPONENT_NAME_KEY).unwrap().as_text().unwrap(), "vm_entry");
         assert!(config_map.get(&RKP_VM_MARKER_KEY).unwrap().is_null());
     }
 

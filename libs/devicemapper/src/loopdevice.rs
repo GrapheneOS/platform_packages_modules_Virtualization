@@ -179,7 +179,6 @@ pub fn detach<P: AsRef<Path>>(path: P) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rdroidtest::rdroidtest;
     use std::fs;
     use std::path::Path;
 
@@ -199,7 +198,13 @@ mod tests {
         "0" == fs::read_to_string(ro).unwrap().trim()
     }
 
-    #[rdroidtest]
+    fn is_autoclear(dev: &Path) -> bool {
+        let autoclear =
+            Path::new("/sys/block").join(dev.file_name().unwrap()).join("loop/autoclear");
+        "1" == fs::read_to_string(autoclear).unwrap().trim()
+    }
+
+    #[test]
     fn attach_loop_device_with_dio() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -215,7 +220,7 @@ mod tests {
         assert!(is_direct_io(&dev));
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_without_dio() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -228,7 +233,7 @@ mod tests {
         assert!(!is_direct_io(&dev));
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_with_dio_writable() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -249,7 +254,7 @@ mod tests {
         assert!(is_direct_io_writable(&dev));
     }
 
-    #[rdroidtest]
+    #[test]
     fn attach_loop_device_autoclear() {
         let a_dir = tempfile::TempDir::new().unwrap();
         let a_file = a_dir.path().join("test");
@@ -258,10 +263,7 @@ mod tests {
         let dev =
             attach(a_file, 0, a_size, &LoopConfigOptions { autoclear: true, ..Default::default() })
                 .unwrap();
-        drop(dev.file);
 
-        let dev_size_path =
-            Path::new("/sys/block").join(dev.path.file_name().unwrap()).join("size");
-        assert_eq!("0", fs::read_to_string(dev_size_path).unwrap().trim());
+        assert!(is_autoclear(&dev.path));
     }
 }

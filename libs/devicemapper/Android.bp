@@ -29,7 +29,6 @@ rust_test {
     name: "libdm_rust.test",
     defaults: [
         "libdm_rust.defaults",
-        "rdroidtest.defaults",
     ],
     test_suites: ["general-tests"],
     rustlibs: [

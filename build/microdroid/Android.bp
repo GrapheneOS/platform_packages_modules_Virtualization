@@ -82,7 +82,9 @@ android_system_image {
         "microdroid_file_contexts",
         "microdroid_manifest",
         "microdroid_property_contexts",
+        "e2fsck.microdroid",
         "mke2fs.microdroid",
+        "resize2fs.microdroid",
         "microdroid_fstab",
 
         "libvm_payload", // used by payload to interact with microdroid manager

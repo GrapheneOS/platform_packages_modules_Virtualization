@@ -259,11 +259,6 @@ python_binary_host {
     srcs: [
         "sign_virt_apex.py",
     ],
-    version: {
-        py3: {
-            embedded_launcher: true,
-        },
-    },
     required: [
         // sign_virt_apex should be runnable from outside the source tree,
         // therefore, any required tool should be listed in build/make/core/Makefile as well.
@@ -332,11 +327,6 @@ python_binary_host {
     srcs: [
         "replace_bytes.py",
     ],
-    version: {
-        py3: {
-            embedded_launcher: true,
-        },
-    },
 }
 
 // Encapsulate the contributions made by the com.android.virt to the bootclasspath.

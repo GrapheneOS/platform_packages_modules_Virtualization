@@ -48,32 +48,30 @@ void throwIOException(JNIEnv *env, const std::string &msg) {
 } // namespace
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_android_system_virtualmachine_VirtualMachine_nativeConnectToVsockServer(
-        JNIEnv *env, [[maybe_unused]] jclass clazz, jobject vmBinder, jint port) {
-    using aidl::android::system::virtualizationservice::IVirtualMachine;
-    using ndk::ScopedFileDescriptor;
-    using ndk::SpAIBinder;
+Java_android_system_virtualmachine_VirtualMachine_nativeBinderFromPreconnectedClient(
+        [[maybe_unused]] JNIEnv *env, [[maybe_unused]] jclass clazz, jobject provider) {
+    ScopedLocalRef<jclass> callback_class(env, env->GetObjectClass(provider));
+    jmethodID mid = env->GetMethodID(callback_class.get(), "connect", "()I");
+    LOG_ALWAYS_FATAL_IF(mid == nullptr, "Could not find method");
 
-    auto vm = IVirtualMachine::fromBinder(SpAIBinder{AIBinder_fromJavaBinder(env, vmBinder)});
+    // TODO(b/398890208): make this memory owned by the connection
+    struct State {
+        JNIEnv *mEnv;
+        jobject mProvider;
+        jmethodID mMid;
+    } state;
 
-    std::tuple args{env, vm.get(), port};
-    using Args = decltype(args);
+    state.mEnv = env;
+    state.mProvider = provider;
+    state.mMid = mid;
 
-    auto requestFunc = [](void *param) {
-        auto [env, vm, port] = *static_cast<Args *>(param);
-
-        ScopedFileDescriptor fd;
-        if (auto status = vm->connectVsock(port, &fd); !status.isOk()) {
-            env->ThrowNew(env->FindClass("android/system/virtualmachine/VirtualMachineException"),
-                          ("Failed to connect vsock: " + status.getDescription()).c_str());
-            return -1;
-        }
-
-        // take ownership
-        int ret = fd.get();
-        *fd.getR() = -1;
-
-        return ret;
+    using RequestFun = int (*)(void *);
+    RequestFun requestFunc = [](void *param) -> int {
+        State *state = reinterpret_cast<State *>(param);
+        int ownedFd = state->mEnv->CallIntMethod(state->mProvider, state->mMid);
+        // FD is owned by PFD in Java layer, need to dupe it so that
+        // ARpcSession_setupPreconnectedClient can take ownership when it calls unique_fd internally
+        return fcntl(ownedFd, F_DUPFD_CLOEXEC, 0);
     };
 
     RpcSessionHandle session;
@@ -82,7 +80,7 @@ Java_android_system_virtualmachine_VirtualMachine_nativeConnectToVsockServer(
     // want too many. The number 1 is chosen after some discussion, and to match
     // the server-side default (mMaxThreads on RpcServer).
     ARpcSession_setMaxIncomingThreads(session.get(), 1);
-    auto client = ARpcSession_setupPreconnectedClient(session.get(), requestFunc, &args);
+    auto client = ARpcSession_setupPreconnectedClient(session.get(), requestFunc, &state);
     return AIBinder_toJavaBinder(env, client);
 }
 

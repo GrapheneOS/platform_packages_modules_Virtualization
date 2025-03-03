@@ -129,6 +129,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String TEST_APP_PACKAGE_NAME = "com.android.microdroid.test";
     private static final String VM_ATTESTATION_PAYLOAD_PATH = "libvm_attestation_test_payload.so";
     private static final String VM_ATTESTATION_MESSAGE = "Hello RKP from AVF!";
+    private static final long TOLERANCE_BYTES = 400_000;
     private static final int ENCRYPTED_STORAGE_BYTES = 4_000_000;
 
     private static final String RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME =
@@ -257,7 +258,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeProtectedVM();
         assume().withMessage(
                         "This test does not apply to a device that supports Remote Attestation")
-                .that(getVirtualMachineManager().isRemoteAttestationSupported())
+                .that(isRemoteAttestationSupported())
                 .isFalse();
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary(VM_ATTESTATION_PAYLOAD_PATH)
@@ -285,7 +286,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
         assume().withMessage("Test needs Remote Attestation support")
-                .that(getVirtualMachineManager().isRemoteAttestationSupported())
+                .that(isRemoteAttestationSupported())
                 .isTrue();
         File vendorDiskImage = new File("/vendor/etc/avf/microdroid/microdroid_vendor.img");
         assumeTrue("Microdroid vendor image doesn't exist, skip", vendorDiskImage.exists());
@@ -740,11 +741,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // Changes that were incompatible but are currently compatible, but not guaranteed to be
         // so in the API spec.
         assertConfigCompatible(baseline, newBaselineBuilder().setApkPath("/different")).isTrue();
-
-        // Changes that are currently incompatible for ease of implementation, but this might change
-        // in the future.
-        assertConfigCompatible(baseline, newBaselineBuilder().setEncryptedStorageBytes(100_000))
-                .isFalse();
 
         VirtualMachineConfig.Builder debuggableBuilder =
                 newBaselineBuilder().setDebugLevel(DEBUG_LEVEL_FULL);
@@ -1866,6 +1862,169 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mFileContent).isEqualTo(EXAMPLE_STRING);
     }
 
+    @Test
+    @CddTest
+    public void encryptedStorageSupportsExpansion() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedStorageSize = ts.getEncryptedStorageSize();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStorageSize)
+            .isWithin(TOLERANCE_BYTES)
+            .of(ENCRYPTED_STORAGE_BYTES);
+
+        // Re-run the VM with more storage size & verify the file persisted.
+        // Note, the previous `runVmTestService` stopped the VM
+        config = newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                    .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES * 2)
+                    .build();
+        vm.setConfig(config);
+        assertThat(vm.getConfig().getEncryptedStorageBytes())
+            .isEqualTo(ENCRYPTED_STORAGE_BYTES * 2);
+
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedStorageSize = ts.getEncryptedStorageSize();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStorageSize)
+            .isWithin(TOLERANCE_BYTES)
+            .of(ENCRYPTED_STORAGE_BYTES * 2);
+    }
+
+    @Test
+    @CddTest
+    public void encryptedStorageExpansionIsPersistent() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ "/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+
+        // Re-run the VM with more storage size & verify the file persisted.
+        // Note, the previous `runVmTestService` stopped the VM
+        config = newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                    .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES * 2)
+                    .build();
+        vm.setConfig(config);
+
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mFileContent = ts.readFromFile("/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mFileContent).isEqualTo(EXAMPLE_STRING);
+    }
+
+    @Test
+    @CddTest
+    public void encryptedStorageSizeUnchanged() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedStorageSize = ts.getEncryptedStorageSize();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStorageSize)
+            .isWithin(TOLERANCE_BYTES)
+            .of(ENCRYPTED_STORAGE_BYTES);
+
+        // Re-run the VM with more storage size & verify the file persisted.
+        // Note, the previous `runVmTestService` stopped the VM
+        config = newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                    .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                    .build();
+        vm.setConfig(config);
+        assertThat(vm.getConfig().getEncryptedStorageBytes())
+            .isEqualTo(ENCRYPTED_STORAGE_BYTES);
+
+        testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedStorageSize = ts.getEncryptedStorageSize();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStorageSize)
+            .isWithin(TOLERANCE_BYTES)
+            .of(ENCRYPTED_STORAGE_BYTES);
+    }
+
+    @Test
+    @CddTest
+    public void encryptedStorageShrinkFails() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedStorageSize = ts.getEncryptedStorageSize();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStorageSize)
+            .isWithin(TOLERANCE_BYTES)
+            .of(ENCRYPTED_STORAGE_BYTES);
+
+        // Re-run the VM with more storage size & verify the file persisted.
+        // Note, the previous `runVmTestService` stopped the VM
+        VirtualMachineConfig newConfig =
+            newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                    .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES / 2)
+                    .build();
+        assertThrowsVmExceptionContaining(
+            () -> vm.setConfig(newConfig), "incompatible config");
+    }
+
     private boolean deviceCapableOfProtectedVm() {
         int capabilities = getVirtualMachineManager().getCapabilities();
         if ((capabilities & CAPABILITY_PROTECTED_VM) != 0) {
@@ -2007,11 +2166,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeFalse(
                 "Cuttlefish/Goldfish doesn't support device tree under /proc/device-tree",
                 isCuttlefish() || isGoldfish());
-        if (!isUpdatableVmSupported()) {
-            // TODO(b/389611249): Non protected VMs using legacy secret mechanisms do not reliably
-            // implement `AVmPayload_isNewInstance`.
-            assumeProtectedVM();
-        }
         VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_a", config);
         TestResults testResults =
                 runVmTestService(

@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"ખાલી લાઇન"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ઇનપુટ ટાઇપ કરવા માટે બે વાર ટૅપ કરો"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ટર્મિનલ ઇન્સ્ટૉલ કરો"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ટર્મિનલ લૉન્ચ કરવા માટે, તમારે નેટવર્ક પર આશરે <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ડેટા ડાઉનલોડ કરવાની જરૂર છે.\nશું તમે આગળ વધવા માગો છો?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ટર્મિનલ લૉન્ચ કરવા માટે, તમારે નેટવર્ક પર આશરે <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ડેટા ડાઉનલોડ કરવાની જરૂર છે.\nશું તમે આગળ વધવા માગો છો?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"માત્ર વાઇ-ફાઇનો ઉપયોગ કરીને ડાઉનલોડ કરો"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ઇન્સ્ટૉલ કરો"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ઇન્સ્ટૉલ કરી રહ્યાં છીએ"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"ડિસ્કનું કદ બદલવું"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"રૂટ પાર્ટિશનનું કદ બદલો"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ડિસ્કનું કદ સેટ કર્યું"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> સોંપ્યું છે"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"મહત્તમ <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> સોંપ્યું છે"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"મહત્તમ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"રદ કરો"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"લાગુ કરો"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ડિસ્કનું કદ બદલવા માટે ટર્મિનલને ફરી શરુ કરવામાં આવશે"</string>
@@ -90,4 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ચાલુ કરેલું છે"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"લાંબો સમય ચાલનારા કાર્યો"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"સિસ્ટમ ઇવેન્ટ"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"ટૅબ"</string>
 </resources>

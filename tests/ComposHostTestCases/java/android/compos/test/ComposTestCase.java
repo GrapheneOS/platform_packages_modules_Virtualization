@@ -34,9 +34,12 @@ import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.LogDataType;
-import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
+import com.android.tradefed.testtype.junit4.DeviceParameterizedRunner;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.RunUtil;
+
+import junitparams.Parameters;
+import junitparams.naming.TestCaseName;
 
 import org.junit.After;
 import org.junit.Before;
@@ -46,9 +49,11 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 
 import java.io.File;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RootPermissionTest
-@RunWith(DeviceJUnit4ClassRunner.class)
+@RunWith(DeviceParameterizedRunner.class)
 public final class ComposTestCase extends MicrodroidHostTestCaseBase {
 
     // Binaries used in test. (These paths are valid both in host and Microdroid.)
@@ -77,6 +82,12 @@ public final class ComposTestCase extends MicrodroidHostTestCaseBase {
     private static final String SYSTEM_SERVER_COMPILER_FILTER_PROP_NAME =
             "dalvik.vm.systemservercompilerfilter";
     private String mBackupSystemServerCompilerFilter;
+
+    public static List<Object[]> osVersions() {
+        return SUPPORTED_OSES.keySet().stream()
+                .map(osKey -> new Object[] {osKey})
+                .collect(Collectors.toList());
+    }
 
     @Rule public TestLogData mTestLogs = new TestLogData();
     @Rule public TestName mTestName = new TestName();
@@ -121,18 +132,24 @@ public final class ComposTestCase extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    public void testOdrefreshSpeed() throws Exception {
+    @Parameters(method = "osVersions")
+    @TestCaseName("{method}_os_{0}")
+    public void testOdrefreshSpeed(String os) throws Exception {
+        assumeKernelSupported(os);
         setPropertyOrThrow(getDevice(), SYSTEM_SERVER_COMPILER_FILTER_PROP_NAME, "speed");
-        testOdrefresh();
+        testOdrefresh(os);
     }
 
     @Test
-    public void testOdrefreshSpeedProfile() throws Exception {
+    @Parameters(method = "osVersions")
+    @TestCaseName("{method}_os_{0}")
+    public void testOdrefreshSpeedProfile(String os) throws Exception {
+        assumeKernelSupported(os);
         setPropertyOrThrow(getDevice(), SYSTEM_SERVER_COMPILER_FILTER_PROP_NAME, "speed-profile");
-        testOdrefresh();
+        testOdrefresh(os);
     }
 
-    private void testOdrefresh() throws Exception {
+    private void testOdrefresh(String os) throws Exception {
         CommandRunner android = new CommandRunner(getDevice());
 
         // Prepare the groundtruth. The compilation on Android should finish successfully.
@@ -157,7 +174,11 @@ public final class ComposTestCase extends MicrodroidHostTestCaseBase {
             long start = System.currentTimeMillis();
             result =
                     android.runForResultWithTimeout(
-                            ODREFRESH_TIMEOUT_MS, COMPOSD_CMD_BIN, "test-compile");
+                            ODREFRESH_TIMEOUT_MS,
+                            COMPOSD_CMD_BIN,
+                            "test-compile",
+                            "--os",
+                            SUPPORTED_OSES.get(os));
             long elapsed = System.currentTimeMillis() - start;
             assertThat(result).exitCode().isEqualTo(0);
             CLog.i("Comp OS compilation took " + elapsed + "ms");
@@ -179,7 +200,7 @@ public final class ComposTestCase extends MicrodroidHostTestCaseBase {
         android.run("test -f " + ODREFRESH_OUTPUT_DIR + "/compos.info.signature");
 
         // Expect the CompOS signature to be valid
-        android.run(COMPOS_VERIFY_BIN + " --debug --instance test");
+        android.run(COMPOS_VERIFY_BIN + " --debug --instance test --os " + SUPPORTED_OSES.get(os));
     }
 
     private void assertVmBccIsValid() throws Exception {

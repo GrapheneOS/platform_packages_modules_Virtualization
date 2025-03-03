@@ -63,4 +63,10 @@ interface IVirtualMachineService {
      * that Secretkeeper is supported from Linux device tree before calling this.
      */
     ISecretkeeper getSecretkeeper();
+
+    /**
+     * Account the caller for the corresponding Secretkeeper entry.
+     * @param id Identifier for the secret held in Secretkeeper for the caller
+     */
+    void claimSecretkeeperEntry(in byte[64] id);
 }

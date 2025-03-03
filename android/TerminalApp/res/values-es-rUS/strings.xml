@@ -22,7 +22,7 @@
     <string name="empty_line" msgid="5012067143408427178">"Línea vacía"</string>
     <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Presiona dos veces para escribir la entrada"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Instala la terminal de Linux"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Para iniciar la terminal de Linux, debes descargar aproximadamente <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> de datos a través de la red.\n¿Quieres continuar?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Para iniciar la terminal de Linux, debes descargar aproximadamente <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> de datos a través de la red.\n¿Quieres continuar?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Descargar solo con Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Instalar"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Instalando"</string>
@@ -40,8 +40,8 @@
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Cambiar el tamaño del disco"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Cambia el tamaño de la partición raíz"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Se estableció el tamaño del disco"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> asignados"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> máx."</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> asignados"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> máx."</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancelar"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Aplicar"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Se reiniciará la terminal para cambiar el tamaño del disco"</string>
@@ -90,4 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"Se habilitó <xliff:g id="ID_1">VirGL</xliff:g>"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tareas extensas"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Eventos del sistema"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
 </resources>

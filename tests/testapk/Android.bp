@@ -28,6 +28,9 @@ java_defaults {
     use_embedded_native_libs: true,
     // We only support 64-bit ABI, but CTS demands all APKs to be multi-ABI.
     compile_multilib: "both",
+    lint: {
+        error_checks: ["NewApi"],
+    },
 }
 
 java_defaults {
