@@ -150,21 +150,26 @@ class InstallerService : Service() {
 
     private fun downloadFromSdcard(): Boolean {
         val archive = fromSdCard()
+        val archive_path = archive.getPath()
 
         // Installing from sdcard is preferred, but only supported only in debuggable build.
-        if (Build.isDebuggable() && archive.exists()) {
-            Log.i(TAG, "trying to install /sdcard/linux/images.tar.gz")
+        if (!Build.isDebuggable()) {
+            Log.i(TAG, "Non-debuggable build doesn't support installation from $archive_path")
+            return false
+        }
+        if (!archive.exists()) {
+            return false
+        }
 
-            val dest = getDefault(this).installDir
-            try {
-                archive.installTo(dest, null)
-                Log.i(TAG, "image is installed from /sdcard/linux/images.tar.gz")
-                return true
-            } catch (e: IOException) {
-                Log.i(TAG, "Failed to install /sdcard/linux/images.tar.gz", e)
-            }
-        } else {
-            Log.i(TAG, "Non-debuggable build doesn't support installation from /sdcard/linux")
+        Log.i(TAG, "trying to install $archive_path")
+
+        val dest = getDefault(this).installDir
+        try {
+            archive.installTo(dest, null)
+            Log.i(TAG, "image is installed from $archive_path")
+            return true
+        } catch (e: IOException) {
+            Log.i(TAG, "Failed to install $archive_path", e)
         }
         return false
     }
