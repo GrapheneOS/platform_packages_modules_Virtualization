@@ -65,6 +65,14 @@ internal class ImageArchive {
         }
     }
 
+    /** Returns path to the archive. */
+    fun getPath(): String {
+        return when (source) {
+            is UrlSource -> source.value.toString()
+            is PathSource -> source.value.toString()
+        }
+    }
+
     /** Returns size of the archive in bytes */
     @Throws(IOException::class)
     fun getSize(): Long {
