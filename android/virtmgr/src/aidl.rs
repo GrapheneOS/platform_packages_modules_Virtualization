@@ -1446,7 +1446,7 @@ fn check_partition_for_file(
     calling_partition: CallingPartition,
 ) -> Result<()> {
     let path = format!("/proc/self/fd/{}", fd.as_raw_fd());
-    let link = fs::read_link(&path).context(format!("can't read_link {path}"))?;
+    let link = fs::read_link(&path).with_context(|| format!("can't read_link {path}"))?;
 
     // microdroid vendor image is OK
     if cfg!(vendor_modules) && link == Path::new("/vendor/etc/avf/microdroid/microdroid_vendor.img")
@@ -1454,7 +1454,10 @@ fn check_partition_for_file(
         return Ok(());
     }
 
-    let is_fd_vendor = link.starts_with("/vendor") || link.starts_with("/odm");
+    let fd_partition = find_partition(Some(&link))
+        .with_context(|| format!("can't find_partition {}", link.display()))?;
+    let is_fd_vendor =
+        fd_partition == CallingPartition::Vendor || fd_partition == CallingPartition::Odm;
     let is_caller_vendor =
         calling_partition == CallingPartition::Vendor || calling_partition == CallingPartition::Odm;
 
