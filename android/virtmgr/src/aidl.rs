@@ -727,7 +727,10 @@ impl VirtualizationService {
         *is_protected = config.protectedVm;
 
         if !config.teeServices.is_empty() {
-            // TODO(ioffe): only pVMs should be able to request access to teeServices.
+            if !config.protectedVm {
+                return Err(anyhow!("only protected VMs can request tee services"))
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+            }
             check_tee_service_permission(&caller_secontext, &config.teeServices)
                 .with_log()
                 .or_binder_exception(ExceptionCode::SECURITY)?;
@@ -750,7 +753,7 @@ impl VirtualizationService {
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
-        // TODO(ioffe): remove this check in a follow-up patch.
+        // TODO(b/391774181): remove this check in a follow-up patch.
         if !system_tee_services.is_empty() {
             return Err(anyhow!("support for system tee services is coming soon!"))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
