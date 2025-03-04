@@ -1,22 +1,3 @@
-soong_config_module_type {
-    name: "trusty_vm_prebuilt_etc",
-    module_type: "prebuilt_etc",
-    config_namespace: "trusty_system_vm",
-    bool_variables: [
-        "enabled",
-        "placeholder_trusted_hal",
-    ],
-    properties: ["src"],
-}
-
-soong_config_module_type {
-    name: "trusty_vm_avb_add_hash_footer",
-    module_type: "avb_add_hash_footer",
-    config_namespace: "trusty_system_vm",
-    bool_variables: ["enabled"],
-    properties: ["src"],
-}
-
 prebuilt_etc {
     name: "early_vms.xml",
     filename: "early_vms.xml",
