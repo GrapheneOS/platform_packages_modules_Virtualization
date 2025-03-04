@@ -22,8 +22,6 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     CpuOptions::CpuTopology::CpuTopology, IVirtualizationService::IVirtualizationService,
     PartitionType::PartitionType, VirtualMachineAppConfig::DebugLevel::DebugLevel,
 };
-#[cfg(not(llpvm_changes))]
-use anyhow::anyhow;
 use anyhow::{bail, Context, Error};
 use binder::{ProcessState, Strong};
 use clap::{Args, Parser};
@@ -220,7 +218,6 @@ pub struct RunAppConfig {
     instance: PathBuf,
 
     /// Path to file containing instance_id. Required iff llpvm feature is enabled.
-    #[cfg(llpvm_changes)]
     #[arg(long = "instance-id-file")]
     instance_id: PathBuf,
 
@@ -255,26 +252,8 @@ impl RunAppConfig {
         }
     }
 
-    fn instance_id(&self) -> Result<PathBuf, Error> {
-        cfg_if::cfg_if! {
-            if #[cfg(llpvm_changes)] {
-                Ok(self.instance_id.clone())
-            } else {
-                Err(anyhow!("LLPVM feature is disabled, --instance_id flag not supported"))
-            }
-        }
-    }
-
-    fn set_instance_id(&mut self, instance_id_file: PathBuf) -> Result<(), Error> {
-        cfg_if::cfg_if! {
-            if #[cfg(llpvm_changes)] {
-                self.instance_id = instance_id_file;
-                Ok(())
-            } else {
-                let _ = instance_id_file;
-                Err(anyhow!("LLPVM feature is disabled, --instance_id flag not supported"))
-            }
-        }
+    fn set_instance_id(&mut self, instance_id_file: PathBuf) {
+        self.instance_id = instance_id_file;
     }
 }
 

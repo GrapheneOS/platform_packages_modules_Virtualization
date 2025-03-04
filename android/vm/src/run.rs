@@ -87,8 +87,8 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         )?;
     }
 
-    let instance_id = if cfg!(llpvm_changes) {
-        let id_file = config.instance_id()?;
+    let instance_id = {
+        let id_file = config.instance_id;
         if id_file.exists() {
             let mut id = [0u8; 64];
             let mut instance_id_file = File::open(id_file)?;
@@ -100,9 +100,6 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
             instance_id_file.write_all(&id)?;
             id
         }
-    } else {
-        // if llpvm feature flag is disabled, instance_id is not used.
-        [0u8; 64]
     };
 
     let storage = if let Some(ref path) = config.microdroid.storage {
@@ -254,10 +251,8 @@ pub fn command_run_microdroid(config: RunMicrodroidConfig) -> Result<(), Error> 
         ..Default::default()
     };
 
-    if cfg!(llpvm_changes) {
-        app_config.set_instance_id(work_dir.join("instance_id"))?;
-        println!("instance_id file path: {}", app_config.instance_id()?.display());
-    }
+    app_config.set_instance_id(work_dir.join("instance_id"));
+    println!("instance_id file path: {}", app_config.instance_id.display());
 
     command_run_app(app_config)
 }
