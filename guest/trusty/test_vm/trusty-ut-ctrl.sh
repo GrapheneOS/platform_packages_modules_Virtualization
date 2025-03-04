@@ -14,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-/system_ext/bin/trusty-ut-ctrl.system -D VSOCK:${2:-$(getprop trusty.test_vm.vm_cid)}:1 $1
+/data/local/tmp/trusty_test_vm/trusty-ut-ctrl -D VSOCK:${2:-$(getprop trusty.test_vm.vm_cid)}:1 $1
