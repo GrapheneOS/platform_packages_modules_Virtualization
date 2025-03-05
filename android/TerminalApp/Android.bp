@@ -15,6 +15,7 @@ android_app {
         "android.system.virtualizationservice_internal-java",
         "androidx-constraintlayout_constraintlayout",
         "androidx.window_window",
+        "androidx.work_work-runtime",
         "apache-commons-compress",
         "com.google.android.material_material",
         "debian-service-grpclib-lite",

@@ -1,0 +1,26 @@
+[package]
+name = "storage_balloon_agent"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "1.0.94"
+clap = { version = "4.5.20", features = ["derive"] }
+env_logger = "0.10.2"
+log = "0.4.22"
+netdev = "0.31.0"
+nix = { version = "0.28.0", features = ["fs"] }
+prost = "0.13.3"
+tokio = { version = "1.40.0", features = ["rt-multi-thread"] }
+tonic = "0.12.3"
+
+[build-dependencies]
+tonic-build = "0.12.3"
+
+[package.metadata.deb]
+maintainer = "ferrochrome-dev@google.com"
+copyright = "2025, The Android Open Source Project"
+depends = "$auto"
+maintainer-scripts = "debian/"
+systemd-units = { }
