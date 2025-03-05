@@ -25,6 +25,7 @@ service DebianService {
   rpc ReportVmActivePorts (ReportVmActivePortsRequest) returns (ReportVmActivePortsResponse) {}
   rpc OpenForwardingRequestQueue (QueueOpeningRequest) returns (stream ForwardingRequestItem) {}
   rpc OpenShutdownRequestQueue (ShutdownQueueOpeningRequest) returns (stream ShutdownRequestItem) {}
+  rpc OpenStorageBalloonRequestQueue (StorageBalloonQueueOpeningRequest) returns (stream StorageBalloonRequestItem) {}
 }
 
 message QueueOpeningRequest {
@@ -52,3 +53,9 @@ message ForwardingRequestItem {
 message ShutdownQueueOpeningRequest {}
 
 message ShutdownRequestItem {}
+
+message StorageBalloonQueueOpeningRequest {}
+
+message StorageBalloonRequestItem {
+  uint64 available_bytes = 1;
+}
