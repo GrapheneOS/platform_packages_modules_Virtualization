@@ -2,11 +2,6 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-soong_config_module_type_import {
-    from: "packages/modules/Virtualization/guest/trusty/common/Android.bp",
-    module_types: ["trusty_vm_avb_add_hash_footer"],
-}
-
 // - Trusty VM payloads on arm64 are pvmfw enabled
 //   AVF VM build system uses the raw binary image (:trusty_security_vm_unsigned),
 //   adds pvmfw footer and generates a pvmfw-compliant signed elf file)
@@ -115,7 +110,7 @@ trusty_security_vm_salt = "75a71e967c1a1e0f805cca20465e7acf83e6a04e567a67c426d8b
 
 TRUSTY_SECURITY_VM_VERSION = 1
 
-trusty_vm_avb_add_hash_footer {
+avb_add_hash_footer {
     name: "trusty_security_vm_signed_bin",
     filename: "trusty_security_vm_signed.bin",
     partition_name: "boot",

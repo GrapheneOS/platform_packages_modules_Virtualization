@@ -20,6 +20,7 @@ package {
 prebuilt_etc {
     name: "trusty_test_vm_config",
     enabled: false,
+    installable: false,
     arch: {
         arm64: {
             src: "trusty-test_vm-config-arm64.json",
@@ -33,38 +34,10 @@ prebuilt_etc {
     filename: "trusty-test_vm-config.json",
 }
 
-prebuilt_etc {
-    name: "trusty_vm_launcher_sh",
-    enabled: false,
-    arch: {
-        arm64: {
-            enabled: true,
-        },
-        x86_64: {
-            enabled: true,
-        },
-    },
-    src: "trusty-vm-launcher.sh",
-    filename: "trusty-vm-launcher.sh",
-}
-
-prebuilt_etc {
-    name: "trusty_wait_ready_sh",
-    enabled: false,
-    arch: {
-        arm64: {
-            enabled: true,
-        },
-        x86_64: {
-            enabled: true,
-        },
-    },
-    src: "trusty-wait-ready.sh",
-    filename: "trusty-wait-ready.sh",
-}
-
 sh_test {
-    name: "TrustyTestVM_UnitTests",
+    // VTS tests for all Trusted HALs defined
+    // under hardware/interfaces/security/see
+    name: "VtsSeeHalTargetTest",
     src: "trusty-ut-ctrl.sh",
     enabled: false,
     arch: {
@@ -81,9 +54,8 @@ sh_test {
         ":trusty_test_vm_config",
         "trusty-vm-launcher.sh",
         "trusty-wait-ready.sh",
+        ":trusty-ut-ctrl.system",
     ],
-    // TODO(b/378367793) use the AndroidTest.xml generated from the trusty
-    // test-map for test_vm payload
     test_config_template: "AndroidTest.xml",
     test_suites: [
         "general-tests",

@@ -1,9 +1,9 @@
-# TODO(b/393848713): use --protected for the vm launcher when issues are fixed
 # TODO(b/393848753): determine whether task_profiles shall be defined
 service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher \
 --name trusty_security_vm_launcher \
 --kernel /system_ext/etc/vm/trusty_vm/trusty_security_vm.elf \
---memory-size-mib 32
+--memory-size-mib 32 \
+--protected
     disabled
     user system
     group system virtualmachine
