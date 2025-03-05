@@ -8,6 +8,7 @@ procps
 forwarder-guest
 forwarder-guest-launcher
 shutdown-runner
+storage-balloon-agent
 weston
 xwayland
 mesa-vulkan-drivers
