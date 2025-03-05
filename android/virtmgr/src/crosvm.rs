@@ -417,6 +417,8 @@ pub struct VmInstance {
     pub vm_service: Mutex<Option<Strong<dyn IVirtualMachineService>>>,
     /// Recorded metrics of VM such as timestamp or cpu / memory usage.
     pub vm_metric: Mutex<VmMetric>,
+    // Whether virtio-balloon is enabled
+    pub balloon_enabled: bool,
     /// The latest lifecycle state which the payload reported itself to be in.
     payload_state: Mutex<PayloadState>,
     /// Represents the condition that payload_state was updated
@@ -449,6 +451,7 @@ impl VmInstance {
         let cid = config.cid;
         let name = config.name.clone();
         let protected = config.protected;
+        let balloon_enabled = config.balloon;
         let requester_uid_name = User::from_uid(Uid::from_raw(requester_uid))
             .ok()
             .flatten()
@@ -469,6 +472,7 @@ impl VmInstance {
             payload_state: Mutex::new(PayloadState::Starting),
             payload_state_updated: Condvar::new(),
             requester_uid_name,
+            balloon_enabled,
         };
         info!("{} created", &instance);
         Ok(instance)
@@ -722,6 +726,9 @@ impl VmInstance {
 
     /// Returns current virtio-balloon size.
     pub fn get_memory_balloon(&self) -> Result<u64, Error> {
+        if !self.balloon_enabled {
+            bail!("virtio-balloon is not enabled");
+        }
         let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
         let mut balloon_actual = 0u64;
         // SAFETY: Pointers are valid for the lifetime of the call. Null `stats` is valid.
@@ -741,6 +748,9 @@ impl VmInstance {
     /// Inflates the virtio-balloon by `num_bytes` to reclaim guest memory. Called in response to
     /// memory-trimming notifications.
     pub fn set_memory_balloon(&self, num_bytes: u64) -> Result<(), Error> {
+        if !self.balloon_enabled {
+            bail!("virtio-balloon is not enabled");
+        }
         let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
         // SAFETY: Pointer is valid for the lifetime of the call.
         let success = unsafe {
@@ -1038,8 +1048,7 @@ fn run_vm(
         .arg("--cid")
         .arg(config.cid.to_string());
 
-    if system_properties::read_bool("hypervisor.memory_reclaim.supported", false)? && config.balloon
-    {
+    if config.balloon {
         command.arg("--balloon-page-reporting");
     } else {
         command.arg("--no-balloon");
