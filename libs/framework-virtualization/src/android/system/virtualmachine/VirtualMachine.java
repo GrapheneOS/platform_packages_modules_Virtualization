@@ -288,17 +288,7 @@ public class VirtualMachine implements AutoCloseable {
                 percent = 50;
             }
 
-            synchronized (mLock) {
-                try {
-                    if (mVirtualMachine != null) {
-                        long bytes = mConfig.getMemoryBytes();
-                        mVirtualMachine.setMemoryBalloon(bytes * percent / 100);
-                    }
-                } catch (Exception e) {
-                    /* Caller doesn't want our exceptions. Log them instead. */
-                    Log.w(TAG, "TrimMemory failed: ", e);
-                }
-            }
+            setMemoryBalloonByPercent(percent);
         }
     }
 
@@ -1387,6 +1377,24 @@ public class VirtualMachine implements AutoCloseable {
                     mVirtualMachine.setMemoryBalloon(bytes);
                 }
             } catch (RemoteException e) {
+                Log.w(TAG, "Cannot setMemoryBalloon", e);
+            }
+        }
+    }
+
+    /** @hide */
+    public void setMemoryBalloonByPercent(int percent) {
+        if (percent < 0 || percent > 100) {
+            Log.e(TAG, String.format("Invalid percent value: %d", percent));
+            return;
+        }
+        synchronized (mLock) {
+            try {
+                if (mVirtualMachine != null && mVirtualMachine.isMemoryBalloonEnabled()) {
+                    long bytes = mConfig.getMemoryBytes();
+                    mVirtualMachine.setMemoryBalloon(bytes * percent / 100);
+                }
+            } catch (RemoteException | ServiceSpecificException e) {
                 Log.w(TAG, "Cannot setMemoryBalloon", e);
             }
         }
