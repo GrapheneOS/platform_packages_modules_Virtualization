@@ -25,6 +25,7 @@ use android_system_virtualizationservice::{
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use log::info;
 use std::fs::read_to_string;
 use std::fs::File;
@@ -46,11 +47,11 @@ fn test_device_tree_compat() -> Result<(), Error> {
 
 /// Runs a protected VM and validates it against a golden device tree.
 #[test]
-fn test_device_tree_protected_compat() -> Result<(), Error> {
+fn test_device_tree_protected_compat() -> Result<()> {
     run_test(true, GOLDEN_DEVICE_TREE_PROTECTED)
 }
 
-fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
+fn run_test(protected: bool, golden_dt: &str) -> Result<()> {
     let kernel = Some(open_payload(VMBASE_EXAMPLE_KERNEL_PATH)?);
     android_logger::init_once(
         android_logger::Config::default()
@@ -142,7 +143,8 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
     {
         return Err(anyhow!("failed to execute dtc"));
     }
-    let dtcompare_res = Command::new("./dtcompare")
+    let mut dtcompare_cmd = Command::new("./dtcompare");
+    dtcompare_cmd
         .arg("--dt1")
         .arg("dump_dt_golden.dtb")
         .arg("--dt2")
@@ -162,12 +164,23 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
         .arg("/chosen/linux,initrd-start")
         .arg("--ignore-path-value")
         .arg("/chosen/linux,initrd-end")
-        .arg("--ignore-path-value")
-        .arg("/avf/secretkeeper_public_key")
         .arg("--ignore-path")
-        .arg("/avf/name")
-        .output()
-        .context("failed to execute dtcompare")?;
+        .arg("/avf/name");
+    // Check if Secretkeeper is advertised. If not, check the vendor API level. Secretkeeper is
+    // required as of 202504, and if missing, the test should fail.
+    // Otherwise, ignore the fields, as they are not required.
+    if service.isUpdatableVmSupported()? {
+        dtcompare_cmd.arg("--ignore-path-value").arg("/avf/secretkeeper_public_key");
+    } else if vsr_api_level()? >= 202504 {
+        return Err(anyhow!("Secretkeeper support missing on vendor API >= 202504. Secretkeeper needs to be implemented."));
+    } else {
+        dtcompare_cmd
+            .arg("--ignore-path")
+            .arg("/avf/secretkeeper_public_key")
+            .arg("--ignore-path")
+            .arg("/avf/untrusted/defer-rollback-protection");
+    }
+    let dtcompare_res = dtcompare_cmd.output().context("failed to execute dtcompare")?;
     if !dtcompare_res.status.success() {
         if !Command::new("./dtc_static")
             .arg("-I")
@@ -202,7 +215,17 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn open_payload(path: &str) -> Result<ParcelFileDescriptor, Error> {
+fn open_payload(path: &str) -> Result<ParcelFileDescriptor> {
     let file = File::open(path).with_context(|| format!("Failed to open VM image {path}"))?;
     Ok(ParcelFileDescriptor::new(file))
+}
+
+fn vsr_api_level() -> Result<i32> {
+    get_sysprop_i32("ro.vendor.api_level")
+}
+
+fn get_sysprop_i32(prop: &str) -> Result<i32> {
+    let res = rustutils::system_properties::read(prop)?;
+    res.map(|val| val.parse::<i32>().with_context(|| format!("Failed to read {prop}")))
+        .unwrap_or(Ok(-1))
 }
