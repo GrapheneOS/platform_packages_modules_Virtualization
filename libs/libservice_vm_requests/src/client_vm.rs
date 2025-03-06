@@ -25,7 +25,7 @@ use ciborium::value::Value;
 use core::result;
 use coset::{AsCborValue, CborSerializable, CoseSign, CoseSign1};
 use der::{Decode, Encode};
-use diced_open_dice::{DiceArtifacts, HASH_SIZE};
+use diced_open_dice::DiceArtifacts;
 use log::{debug, error, info};
 use microdroid_kernel_hashes::{HASH_SIZE as KERNEL_HASH_SIZE, OS_HASHES};
 use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError};
@@ -252,7 +252,7 @@ fn matches_any_kernel_code_hash(actual_code_hash: &[u8], is_debug: bool) -> bssl
     Ok(false)
 }
 
-fn expected_kernel_authority_hash(service_vm_entry: &Value) -> Result<[u8; HASH_SIZE]> {
+fn expected_kernel_authority_hash(service_vm_entry: &Value) -> Result<Vec<u8>> {
     let cose_sign1 = CoseSign1::from_cbor_value(service_vm_entry.clone())?;
     let payload = cose_sign1.payload.ok_or_else(|| {
         error!("No payload found in the service VM DICE chain entry");
