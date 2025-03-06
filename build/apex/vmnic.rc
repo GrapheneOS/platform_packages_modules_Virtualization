@@ -14,7 +14,7 @@
 
 service vmnic /apex/com.android.virt/bin/vmnic
     user root
-    group vpn
+    group vpn inet
     interface aidl android.system.virtualizationservice_internal.IVmnic
     disabled
     oneshot
