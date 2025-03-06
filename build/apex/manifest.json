@@ -3,6 +3,7 @@
   "version": 2,
   "requireNativeLibs": [
     "libEGL.so",
-    "libGLESv2.so"
+    "libGLESv2.so",
+    "libvulkan.so"
   ]
 }

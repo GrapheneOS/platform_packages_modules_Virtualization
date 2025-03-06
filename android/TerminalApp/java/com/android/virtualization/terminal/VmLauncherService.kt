@@ -258,6 +258,21 @@ class VmLauncherService : Service() {
             )
             Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
             changed = true
+        } else if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
+            // TODO: check if the configuration is right. current config comes from cuttlefish's one
+            builder.setGpuConfig(
+                VirtualMachineCustomImageConfig.GpuConfig.Builder()
+                    .setBackend("gfxstream")
+                    .setRendererUseEgl(false)
+                    .setRendererUseGles(false)
+                    .setRendererUseGlx(false)
+                    .setRendererUseSurfaceless(true)
+                    .setRendererUseVulkan(true)
+                    .setContextTypes(arrayOf<String>("gfxstream-vulkan", "gfxstream-composer"))
+                    .build()
+            )
+            Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show()
+            changed = true
         }
 
         // Set the initial display size
