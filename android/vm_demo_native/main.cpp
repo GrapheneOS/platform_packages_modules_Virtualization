@@ -329,11 +329,15 @@ Result<std::shared_ptr<ITestService>> connect_to_vm_payload(std::shared_ptr<IVir
                                                                       &ARpcSession_free);
     ARpcSession_setMaxIncomingThreads(session.get(), 1);
 
+    auto param = std::make_unique<std::shared_ptr<IVirtualMachine>>(std::move(vm));
+    auto paramDeleteFd = [](void* param) {
+        delete static_cast<std::shared_ptr<IVirtualMachine>*>(param);
+    };
+
     AIBinder* binder = ARpcSession_setupPreconnectedClient(
             session.get(),
             [](void* param) {
-                std::shared_ptr<IVirtualMachine> vm =
-                        *static_cast<std::shared_ptr<IVirtualMachine>*>(param);
+                IVirtualMachine* vm = static_cast<std::shared_ptr<IVirtualMachine>*>(param)->get();
                 ScopedFileDescriptor sock_fd;
                 ScopedAStatus ret = vm->connectVsock(ITestService::PORT, &sock_fd);
                 if (!ret.isOk()) {
@@ -341,7 +345,7 @@ Result<std::shared_ptr<ITestService>> connect_to_vm_payload(std::shared_ptr<IVir
                 }
                 return sock_fd.release();
             },
-            &vm);
+            param.release(), paramDeleteFd);
     if (binder == nullptr) {
         return Error() << "Failed to connect to vm payload";
     }
