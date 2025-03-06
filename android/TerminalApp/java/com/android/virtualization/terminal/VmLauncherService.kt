@@ -139,10 +139,7 @@ class VmLauncherService : Service() {
         val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
 
         customImageConfigBuilder.setAudioConfig(
-            AudioConfig.Builder()
-                .setUseSpeaker(true)
-                .setUseMicrophone(true)
-                .build()
+            AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
         if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
