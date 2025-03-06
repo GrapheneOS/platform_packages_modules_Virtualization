@@ -124,9 +124,9 @@ public class MainActivity :
         }
 
         displayMenu?.also {
-            it.visibility = if (terminalGuiSupport()) View.VISIBLE else View.GONE
+            it.visibility = if (Flags.terminalGuiSupport()) View.VISIBLE else View.GONE
             it.setEnabled(false)
-            if (terminalGuiSupport()) {
+            if (Flags.terminalGuiSupport()) {
                 it.setOnClickListener {
                     val intent = Intent(this, DisplayActivity::class.java)
                     intent.flags =
