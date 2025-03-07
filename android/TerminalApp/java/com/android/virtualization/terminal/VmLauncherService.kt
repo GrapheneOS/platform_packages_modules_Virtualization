@@ -216,8 +216,8 @@ class VmLauncherService : Service() {
             resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logPath = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
-        Logger.setup(virtualMachine!!, logPath, executorService!!)
+        val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
+        Logger.setup(virtualMachine!!, logDir, executorService!!)
 
         val notification =
             intent.getParcelableExtra<Notification?>(EXTRA_NOTIFICATION, Notification::class.java)
