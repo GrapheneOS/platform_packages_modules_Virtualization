@@ -139,10 +139,7 @@ class VmLauncherService : Service() {
         val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
 
         customImageConfigBuilder.setAudioConfig(
-            AudioConfig.Builder()
-                .setUseSpeaker(true)
-                .setUseMicrophone(true)
-                .build()
+            AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
         if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
@@ -257,6 +254,21 @@ class VmLauncherService : Service() {
                     .build()
             )
             Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
+            changed = true
+        } else if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
+            // TODO: check if the configuration is right. current config comes from cuttlefish's one
+            builder.setGpuConfig(
+                VirtualMachineCustomImageConfig.GpuConfig.Builder()
+                    .setBackend("gfxstream")
+                    .setRendererUseEgl(false)
+                    .setRendererUseGles(false)
+                    .setRendererUseGlx(false)
+                    .setRendererUseSurfaceless(true)
+                    .setRendererUseVulkan(true)
+                    .setContextTypes(arrayOf<String>("gfxstream-vulkan", "gfxstream-composer"))
+                    .build()
+            )
+            Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show()
             changed = true
         }
 
