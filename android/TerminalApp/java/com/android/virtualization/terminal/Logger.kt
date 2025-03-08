@@ -30,7 +30,6 @@ import java.lang.RuntimeException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.time.LocalDateTime
 import java.util.concurrent.ExecutorService
 import libcore.io.Streams
 
@@ -38,21 +37,14 @@ import libcore.io.Streams
  * Forwards VM's console output to a file on the Android side, and VM's log output to Android logd.
  */
 internal object Logger {
-    fun setup(vm: VirtualMachine, dir: Path, executor: ExecutorService) {
-        val tag = vm.name
-
+    fun setup(vm: VirtualMachine, path: Path, executor: ExecutorService) {
         if (vm.config.debugLevel != VirtualMachineConfig.DEBUG_LEVEL_FULL) {
-            Log.i(tag, "Logs are not captured. Non-debuggable VM.")
             return
         }
 
         try {
-            Files.createDirectories(dir)
-            deleteOldLogs(dir, 10)
-            val logPath = dir.resolve(LocalDateTime.now().toString())
             val console = vm.getConsoleOutput()
-            val file =
-                Files.newOutputStream(logPath, StandardOpenOption.SYNC, StandardOpenOption.APPEND)
+            val file = Files.newOutputStream(path, StandardOpenOption.CREATE)
             executor.submit<Int?> {
                 console.use { console ->
                     LineBufferedOutputStream(file).use { fileOutput ->
@@ -62,7 +54,7 @@ internal object Logger {
             }
 
             val log = vm.getLogOutput()
-            executor.submit<Unit> { log.use { writeToLogd(it, tag) } }
+            executor.submit<Unit> { log.use { writeToLogd(it, vm.name) } }
         } catch (e: VirtualMachineException) {
             throw RuntimeException(e)
         } catch (e: IOException) {
@@ -70,32 +62,12 @@ internal object Logger {
         }
     }
 
-    fun deleteOldLogs(dir: Path, numLogsToKeep: Long) {
-        Files.list(dir)
-            .filter { Files.isRegularFile(it) }
-            .sorted(
-                Comparator.comparingLong { f: Path ->
-                        // for some reason, type inference didn't work here!
-                        Files.getLastModifiedTime(f).toMillis()
-                    }
-                    .reversed()
-            )
-            .skip(numLogsToKeep)
-            .forEach {
-                try {
-                    Files.delete(it)
-                } catch (e: IOException) {
-                    // don't bother
-                }
-            }
-    }
-
     @Throws(IOException::class)
-    private fun writeToLogd(input: InputStream?, tag: String?) {
+    private fun writeToLogd(input: InputStream?, vmName: String?) {
         val reader = BufferedReader(InputStreamReader(input))
         reader
             .useLines { lines -> lines.takeWhile { !Thread.interrupted() } }
-            .forEach { Log.d(tag, it) }
+            .forEach { Log.d(vmName, it) }
     }
 
     private class LineBufferedOutputStream(out: OutputStream?) : BufferedOutputStream(out) {
