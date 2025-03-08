@@ -38,6 +38,7 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
+import com.android.internal.annotations.GuardedBy
 import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.Runner.Companion.create
@@ -55,6 +56,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.lang.RuntimeException
+import java.lang.Math.min
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 import java.nio.file.Files
@@ -75,6 +77,40 @@ class VmLauncherService : Service() {
     private var server: Server? = null
     private var debianService: DebianServiceImpl? = null
     private var portNotifier: PortNotifier? = null
+    private var mLock = Object()
+    @GuardedBy("mLock")
+    private var currentMemBalloonPercent = 0;
+
+    @GuardedBy("mLock")
+    private val inflateMemBalloonHandler = Handler(Looper.getMainLooper())
+    private val inflateMemBalloonTask: Runnable = object : Runnable {
+        override fun run() {
+            synchronized(mLock) {
+                if (currentMemBalloonPercent < INITIAL_MEM_BALLOON_PERCENT
+                    || currentMemBalloonPercent > MAX_MEM_BALLOON_PERCENT
+                ) {
+                    Log.e(
+                        TAG, "currentBalloonPercent=$currentMemBalloonPercent is invalid," +
+                                " should be in range: " +
+                                "$INITIAL_MEM_BALLOON_PERCENT~$MAX_MEM_BALLOON_PERCENT"
+                    )
+                    return
+                }
+                // Increases the balloon size by MEM_BALLOON_PERCENT_STEP% every time
+                if (currentMemBalloonPercent < MAX_MEM_BALLOON_PERCENT) {
+                    currentMemBalloonPercent =
+                        min(
+                            MAX_MEM_BALLOON_PERCENT,
+                            currentMemBalloonPercent + MEM_BALLOON_PERCENT_STEP
+                        )
+                    virtualMachine?.setMemoryBalloonByPercent(currentMemBalloonPercent)
+                    inflateMemBalloonHandler.postDelayed(this,
+                        MEM_BALLOON_INFLATE_INTERVAL_MILLIS)
+                }
+            }
+        }
+    }
+
 
     interface VmLauncherServiceCallback {
         fun onVmStart()
@@ -99,13 +135,26 @@ class VmLauncherService : Service() {
             // When the app starts, reset the memory balloon to 0%.
             // This gives the app maximum available memory.
             ApplicationLifeCycleEvent.APP_ON_START -> {
-                virtualMachine?.setMemoryBalloonByPercent(0)
+                synchronized(mLock) {
+                    inflateMemBalloonHandler.removeCallbacks(inflateMemBalloonTask);
+                    currentMemBalloonPercent = 0;
+                    virtualMachine?.setMemoryBalloonByPercent(currentMemBalloonPercent)
+                }
             }
             ApplicationLifeCycleEvent.APP_ON_STOP -> {
-                // When the app stops, inflate the memory balloon to 10%.
-                // This allows the system to reclaim memory while the app is in the background.
-                // TODO(b/400590341) Inflate the balloon while the application remains Stop status.
-                virtualMachine?.setMemoryBalloonByPercent(10)
+                // When the app stops, inflate the memory balloon to INITIAL_MEM_BALLOON_PERCENT.
+                // Inflate the balloon by MEM_BALLOON_PERCENT_STEP every
+                // MEM_BALLOON_INFLATE_INTERVAL_MILLIS milliseconds until reaching
+                // MAX_MEM_BALLOON_PERCENT of total memory. This allows the system to reclaim
+                // memory while the app is in the background.
+                synchronized(mLock) {
+                    currentMemBalloonPercent = INITIAL_MEM_BALLOON_PERCENT;
+                    virtualMachine?.setMemoryBalloonByPercent(currentMemBalloonPercent)
+                    inflateMemBalloonHandler.postDelayed(
+                        inflateMemBalloonTask,
+                        MEM_BALLOON_INFLATE_INTERVAL_MILLIS
+                    );
+                }
             }
             else -> {
                 Log.e(TAG, "unrecognized lifecycle event: $event")
@@ -387,6 +436,11 @@ class VmLauncherService : Service() {
         private const val RESULT_START = 0
         private const val RESULT_STOP = 1
         private const val RESULT_ERROR = 2
+
+        private const val INITIAL_MEM_BALLOON_PERCENT = 10
+        private const val MAX_MEM_BALLOON_PERCENT = 50
+        private const val MEM_BALLOON_INFLATE_INTERVAL_MILLIS = 60000L
+        private const val MEM_BALLOON_PERCENT_STEP = 5;
 
         private fun getMyIntent(context: Context): Intent {
             return Intent(context.getApplicationContext(), VmLauncherService::class.java)

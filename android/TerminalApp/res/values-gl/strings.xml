@@ -90,5 +90,5 @@
     <string name="virgl_enabled" msgid="5242525588039698086">"Activouse <xliff:g id="ID_1">VirGL</xliff:g>"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tarefas de longa duración"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Eventos do sistema"</string>
-    <string name="tab_default_title" msgid="2300417689389397930">"Tabulador"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"Pestana"</string>
 </resources>

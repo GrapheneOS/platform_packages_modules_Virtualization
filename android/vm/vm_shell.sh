@@ -50,15 +50,13 @@ function connect_vm() {
 }
 
 function list_cids() {
-    local selected_cid=$1
-    local available_cids=$(adb shell /apex/com.android.virt/bin/vm list | awk 'BEGIN { FS="[:,]" } /cid/ { print $2; }')
-    echo "${available_cids}"
+    adb shell /apex/com.android.virt/bin/vm list | awk 'BEGIN { FS="[:,]" } /cid/ { print $2; }'
 }
 
 function handle_connect_cmd() {
     selected_cid=$1
 
-    available_cids=$(list_cids)
+    available_cids=($(list_cids))
 
     if [ -z "${available_cids}" ]; then
         echo No VM is available
@@ -66,11 +64,11 @@ function handle_connect_cmd() {
     fi
 
     if [ ! -n "${selected_cid}" ]; then
-        if [ ${#selected_cid[@]} -eq 1 ]; then
+        if [ ${#available_cids[@]} -eq 1 ]; then
             selected_cid=${available_cids[0]}
         else
             PS3="Select CID of VM to adb-shell into: "
-            select cid in ${available_cids}
+            select cid in ${available_cids[@]}
             do
                 selected_cid=${cid}
                 break
