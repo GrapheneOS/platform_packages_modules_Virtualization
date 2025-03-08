@@ -111,6 +111,7 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<()> {
         .truncate(true)
         .open("dump_dt.dtb")
         .with_context(|| "Failed to open device tree dump file dump_dt.dtb")?;
+    let is_updatable = service.isUpdatableVmSupported()?;
     let vm = VmInstance::create(
         service.as_ref(),
         &config,
@@ -169,7 +170,7 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<()> {
     // Check if Secretkeeper is advertised. If not, check the vendor API level. Secretkeeper is
     // required as of 202504, and if missing, the test should fail.
     // Otherwise, ignore the fields, as they are not required.
-    if service.isUpdatableVmSupported()? {
+    if is_updatable {
         dtcompare_cmd.arg("--ignore-path-value").arg("/avf/secretkeeper_public_key");
     } else if vsr_api_level()? >= 202504 {
         return Err(anyhow!("Secretkeeper support missing on vendor API >= 202504. Secretkeeper needs to be implemented."));
@@ -225,7 +226,8 @@ fn vsr_api_level() -> Result<i32> {
 }
 
 fn get_sysprop_i32(prop: &str) -> Result<i32> {
-    let res = rustutils::system_properties::read(prop)?;
-    res.map(|val| val.parse::<i32>().with_context(|| format!("Failed to read {prop}")))
-        .unwrap_or(Ok(-1))
+    let Some(val) = rustutils::system_properties::read(prop)? else {
+        return Ok(-1);
+    };
+    val.parse::<i32>().with_context(|| format!("Failed to read {prop}"))
 }
