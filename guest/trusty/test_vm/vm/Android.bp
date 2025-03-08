@@ -2,11 +2,6 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-soong_config_module_type_import {
-    from: "packages/modules/Virtualization/guest/trusty/common/Android.bp",
-    module_types: ["trusty_vm_avb_add_hash_footer"],
-}
-
 prebuilt_etc {
     name: "trusty_test_vm_elf",
     system_ext_specific: true,
@@ -94,7 +89,7 @@ trusty_test_vm_salt = "5ce3eab1a08540e1334c83f54b8608aa6c23feee6939693cac4144144
 
 TRUSTY_TEST_VM_VERSION = 1
 
-trusty_vm_avb_add_hash_footer {
+avb_add_hash_footer {
     name: "trusty_test_vm_signed_bin",
     filename: "trusty_test_vm_signed.bin",
     partition_name: "boot",

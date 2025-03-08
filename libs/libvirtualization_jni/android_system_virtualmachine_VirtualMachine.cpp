@@ -59,20 +59,20 @@ Java_android_system_virtualmachine_VirtualMachine_nativeBinderFromPreconnectedCl
         JNIEnv *mEnv;
         jobject mProvider;
         jmethodID mMid;
-    } state;
+    };
 
-    state.mEnv = env;
-    state.mProvider = provider;
-    state.mMid = mid;
+    auto state = std::make_unique<State>(env, provider, mid);
 
     using RequestFun = int (*)(void *);
     RequestFun requestFunc = [](void *param) -> int {
-        State *state = reinterpret_cast<State *>(param);
+        State *state = static_cast<State *>(param);
         int ownedFd = state->mEnv->CallIntMethod(state->mProvider, state->mMid);
         // FD is owned by PFD in Java layer, need to dupe it so that
         // ARpcSession_setupPreconnectedClient can take ownership when it calls unique_fd internally
         return fcntl(ownedFd, F_DUPFD_CLOEXEC, 0);
     };
+
+    auto paramDeleteFunc = [](void *param) { delete static_cast<State *>(param); };
 
     RpcSessionHandle session;
     // We need a thread pool to be able to support linkToDeath, or callbacks
@@ -80,7 +80,8 @@ Java_android_system_virtualmachine_VirtualMachine_nativeBinderFromPreconnectedCl
     // want too many. The number 1 is chosen after some discussion, and to match
     // the server-side default (mMaxThreads on RpcServer).
     ARpcSession_setMaxIncomingThreads(session.get(), 1);
-    auto client = ARpcSession_setupPreconnectedClient(session.get(), requestFunc, &state);
+    auto client = ARpcSession_setupPreconnectedClient(session.get(), requestFunc, state.release(),
+                                                      paramDeleteFunc);
     return AIBinder_toJavaBinder(env, client);
 }
 

@@ -1463,7 +1463,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     private void ensureUpdatableVmSupported() throws DeviceNotAvailableException {
-        if (PropertyUtil.isVendorApiLevelAtLeast(getAndroidDevice(), 202504)) {
+        if (PropertyUtil.getVsrApiLevel(getAndroidDevice()) >= 202504) {
             assertTrue(
                     "Missing Updatable VM support, have you declared Secretkeeper interface?",
                     isUpdatableVmSupported());
