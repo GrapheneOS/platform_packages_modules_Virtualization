@@ -19,8 +19,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use bssl_avf::{ed25519_verify, Digester, EcKey};
 use cbor_util::{
-    cbor_value_type, get_label_value, get_label_value_as_bytes, value_to_array,
-    value_to_byte_array, value_to_bytes, value_to_map, value_to_num, value_to_text,
+    cbor_value_type, get_label_value, get_label_value_as_bytes, value_to_array, value_to_bytes,
+    value_to_map, value_to_num, value_to_text,
 };
 use ciborium::value::Value;
 use core::cell::OnceCell;
@@ -31,7 +31,7 @@ use coset::{
     Algorithm, AsCborValue, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType,
     Label,
 };
-use diced_open_dice::{DiceMode, HASH_SIZE};
+use diced_open_dice::DiceMode;
 use log::{debug, error, info};
 use service_vm_comm::RequestProcessingError;
 
@@ -288,8 +288,8 @@ impl PublicKey {
 pub(crate) struct DiceChainEntryPayload {
     pub(crate) subject_public_key: PublicKey,
     mode: DiceMode,
-    pub(crate) code_hash: [u8; HASH_SIZE],
-    pub(crate) authority_hash: [u8; HASH_SIZE],
+    pub(crate) code_hash: Vec<u8>,
+    pub(crate) authority_hash: Vec<u8>,
     config_descriptor: ConfigDescriptor,
 }
 
@@ -327,12 +327,12 @@ impl DiceChainEntryPayload {
                 }
                 MODE => builder.mode(to_mode(value)?)?,
                 CODE_HASH => {
-                    let code_hash = value_to_byte_array(value, "DiceChainEntryPayload code_hash")?;
+                    let code_hash = value_to_bytes(value, "DiceChainEntryPayload code_hash")?;
                     builder.code_hash(code_hash)?;
                 }
                 AUTHORITY_HASH => {
                     let authority_hash =
-                        value_to_byte_array(value, "DiceChainEntryPayload authority_hash")?;
+                        value_to_bytes(value, "DiceChainEntryPayload authority_hash")?;
                     builder.authority_hash(authority_hash)?;
                 }
                 CONFIG_DESC => {
@@ -524,8 +524,8 @@ fn to_mode(value: Value) -> Result<DiceMode> {
 struct PayloadBuilder {
     subject_public_key: OnceCell<PublicKey>,
     mode: OnceCell<DiceMode>,
-    code_hash: OnceCell<[u8; HASH_SIZE]>,
-    authority_hash: OnceCell<[u8; HASH_SIZE]>,
+    code_hash: OnceCell<Vec<u8>>,
+    authority_hash: OnceCell<Vec<u8>>,
     config_descriptor: OnceCell<ConfigDescriptor>,
 }
 
@@ -552,11 +552,11 @@ impl PayloadBuilder {
         set_once(&self.mode, mode, "mode")
     }
 
-    fn code_hash(&mut self, code_hash: [u8; HASH_SIZE]) -> Result<()> {
+    fn code_hash(&mut self, code_hash: Vec<u8>) -> Result<()> {
         set_once(&self.code_hash, code_hash, "code_hash")
     }
 
-    fn authority_hash(&mut self, authority_hash: [u8; HASH_SIZE]) -> Result<()> {
+    fn authority_hash(&mut self, authority_hash: Vec<u8>) -> Result<()> {
         set_once(&self.authority_hash, authority_hash, "authority_hash")
     }
 
@@ -570,7 +570,9 @@ impl PayloadBuilder {
         // the Open Profile for DICE spec.
         let mode = self.mode.take().unwrap_or(DiceMode::kDiceModeNotInitialized);
         let code_hash = take_value(&mut self.code_hash, "code_hash")?;
+        validate_hash_size(code_hash.len(), "code_hash")?;
         let authority_hash = take_value(&mut self.authority_hash, "authority_hash")?;
+        validate_hash_size(authority_hash.len(), "authority_hash")?;
         let config_descriptor = take_value(&mut self.config_descriptor, "config_descriptor")?;
         Ok(DiceChainEntryPayload {
             subject_public_key,
@@ -579,5 +581,20 @@ impl PayloadBuilder {
             authority_hash,
             config_descriptor,
         })
+    }
+}
+
+fn validate_hash_size(len: usize, name: &str) -> Result<()> {
+    // According to the Android Profile for DICE specification, SHA-256, SHA-384, and SHA-512
+    // are all acceptable hash algorithms.
+    const ACCEPTABLE_HASH_SIZES: [usize; 3] = [32, 48, 64];
+    if ACCEPTABLE_HASH_SIZES.contains(&len) {
+        Ok(())
+    } else {
+        error!(
+            "Invalid hash size for {}: {}. Acceptable hash sizes are: {:?}",
+            name, len, ACCEPTABLE_HASH_SIZES
+        );
+        Err(RequestProcessingError::InvalidDiceChain)
     }
 }

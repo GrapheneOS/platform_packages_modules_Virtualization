@@ -75,7 +75,7 @@ fn listen_from_guest(port: u32) -> Result<VsockStream> {
 
 fn run_rialto(protected_vm: bool) -> Result<()> {
     let kernel_file =
-        File::open("/data/local/tmp/rialto.bin").context("Failed to open kernel file")?;
+        File::open("/data/nativetest64/vendor/rialto.bin").context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
 
     // SAFETY: AVirtualMachineRawConfig_create() isn't unsafe but rust_bindgen forces it to be seen

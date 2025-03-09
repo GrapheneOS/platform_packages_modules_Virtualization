@@ -151,6 +151,17 @@ static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
     }
 });
 
+// TODO(ioffe): add service for guest-ffa.
+const KNOWN_TEE_SERVICES: [&str; 0] = [];
+
+fn check_known_tee_service(tee_service: &str) -> binder::Result<()> {
+    if !KNOWN_TEE_SERVICES.contains(&tee_service) {
+        return Err(anyhow!("unknown tee_service {tee_service}"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+    }
+    Ok(())
+}
+
 fn create_or_update_idsig_file(
     input_fd: &ParcelFileDescriptor,
     idsig_fd: &ParcelFileDescriptor,
@@ -716,9 +727,36 @@ impl VirtualizationService {
         *is_protected = config.protectedVm;
 
         if !config.teeServices.is_empty() {
+            if !config.protectedVm {
+                return Err(anyhow!("only protected VMs can request tee services"))
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+            }
             check_tee_service_permission(&caller_secontext, &config.teeServices)
                 .with_log()
                 .or_binder_exception(ExceptionCode::SECURITY)?;
+        }
+
+        let mut system_tee_services = Vec::new();
+        let mut vendor_tee_services = Vec::new();
+        for tee_service in config.teeServices.clone() {
+            if !tee_service.starts_with("vendor.") {
+                check_known_tee_service(&tee_service)?;
+                system_tee_services.push(tee_service);
+            } else {
+                vendor_tee_services.push(tee_service);
+            }
+        }
+
+        // TODO(b/391774181): handle vendor tee services (which require talking to HAL) as well.
+        if !vendor_tee_services.is_empty() {
+            return Err(anyhow!("support for vendor tee services is coming soon!"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+
+        // TODO(b/391774181): remove this check in a follow-up patch.
+        if !system_tee_services.is_empty() {
+            return Err(anyhow!("support for system tee services is coming soon!"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
         let kernel = maybe_clone_file(&config.kernel)?;
@@ -897,6 +935,20 @@ impl VirtualizationService {
             })
             .collect::<binder::Result<_>>()?;
 
+        let memory_reclaim_supported =
+            system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
+                .unwrap_or(false);
+
+        let balloon = config.balloon && memory_reclaim_supported;
+
+        if !balloon {
+            warn!(
+                "Memory balloon not enabled:
+                config.balloon={},hypervisor.memory_reclaim.supported={}",
+                config.balloon, memory_reclaim_supported
+            );
+        }
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -936,7 +988,7 @@ impl VirtualizationService {
             boost_uclamp: config.boostUclamp,
             gpu_config,
             audio_config,
-            balloon: config.balloon,
+            balloon,
             usb_config,
             dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
@@ -1408,7 +1460,7 @@ fn check_partition_for_file(
     calling_partition: CallingPartition,
 ) -> Result<()> {
     let path = format!("/proc/self/fd/{}", fd.as_raw_fd());
-    let link = fs::read_link(&path).context(format!("can't read_link {path}"))?;
+    let link = fs::read_link(&path).with_context(|| format!("can't read_link {path}"))?;
 
     // microdroid vendor image is OK
     if cfg!(vendor_modules) && link == Path::new("/vendor/etc/avf/microdroid/microdroid_vendor.img")
@@ -1416,7 +1468,10 @@ fn check_partition_for_file(
         return Ok(());
     }
 
-    let is_fd_vendor = link.starts_with("/vendor") || link.starts_with("/odm");
+    let fd_partition = find_partition(Some(&link))
+        .with_context(|| format!("can't find_partition {}", link.display()))?;
+    let is_fd_vendor =
+        fd_partition == CallingPartition::Vendor || fd_partition == CallingPartition::Odm;
     let is_caller_vendor =
         calling_partition == CallingPartition::Vendor || calling_partition == CallingPartition::Odm;
 
@@ -1690,6 +1745,10 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
             .with_context(|| format!("Error stopping VM with CID {}", self.instance.cid))
             .with_log()
             .or_service_specific_exception(-1)
+    }
+
+    fn isMemoryBalloonEnabled(&self) -> binder::Result<bool> {
+        Ok(self.instance.balloon_enabled)
     }
 
     fn getMemoryBalloon(&self) -> binder::Result<i64> {
