@@ -29,6 +29,7 @@ filegroup {
     ],
     visibility: [
         "//packages/modules/Virtualization/guest/trusty/test_vm/vm",
+        "//packages/modules/Virtualization/guest/trusty/test_vm_os/vm",
         "//vendor:__subpackages__",
     ],
 }
