@@ -97,14 +97,6 @@ public class Application : AndroidApplication() {
             super.onStop(owner)
         }
 
-        override fun onDestroy(owner: LifecycleOwner) {
-            if (vmLauncherService != null) {
-                this@Application.unbindService(connection)
-                vmLauncherService = null
-            }
-            super.onDestroy(owner)
-        }
-
         fun bindToVmLauncherService() {
             val intent = Intent(this@Application, VmLauncherService::class.java)
             this@Application.bindService(intent, connection, 0) // No BIND_AUTO_CREATE
