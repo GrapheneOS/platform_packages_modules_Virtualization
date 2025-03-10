@@ -39,7 +39,6 @@ import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
 import com.android.internal.annotations.GuardedBy
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.Runner.Companion.create
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
