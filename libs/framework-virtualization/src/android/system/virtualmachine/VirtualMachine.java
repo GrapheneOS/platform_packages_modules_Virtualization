@@ -1400,6 +1400,11 @@ public class VirtualMachine implements AutoCloseable {
             Log.e(TAG, String.format("Invalid percent value: %d", percent));
             return;
         }
+        if (true) {
+            Log.d(TAG, "ignored setMemoryBalloonByPercent: " + percent);
+            return;
+        }
+        /*
         synchronized (mLock) {
             try {
                 if (mVirtualMachine != null && mVirtualMachine.isMemoryBalloonEnabled()) {
@@ -1410,6 +1415,7 @@ public class VirtualMachine implements AutoCloseable {
                 Log.w(TAG, "Cannot setMemoryBalloon", e);
             }
         }
+         */
     }
 
     private boolean writeEventsToSock(ParcelFileDescriptor sock, List<InputEvent> evtList) {
