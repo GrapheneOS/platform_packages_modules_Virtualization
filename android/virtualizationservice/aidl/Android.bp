@@ -113,6 +113,7 @@ aidl_interface {
     imports: [
         "android.hardware.security.secretkeeper-V2",
         "android.system.virtualizationcommon",
+        "rpc_servicemanager_aidl",
     ],
     unstable: true,
     backend: {
