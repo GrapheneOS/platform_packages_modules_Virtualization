@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminal displeyi"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Kursor"</string>
     <string name="empty_line" msgid="5012067143408427178">"Boş sətir"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Mətn daxil etmək üçün iki dəfə toxunun"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux terminalını quraşdırın"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux terminalını işə salmaq üçün şəbəkə vasitəsilə təxminən <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> həcmində data endirməlisiniz.\nDavam etmək istəyirsiniz?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux terminalını işə salmaq üçün şəbəkə vasitəsilə təxminən <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> həcmində data endirməlisiniz.\nDavam etmək istəyirsiniz?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Yalnız Wi-Fi istifadə edərək endirin"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Quraşdırın"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Quraşdırılır"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi əlçatan olmadığı üçün quraşdırmaq alınmadı"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Quraşdırmaq alınmadı. Yenidən cəhd edin"</string>
     <string name="action_settings" msgid="5729342767795123227">"Ayarlar"</string>
+    <string name="action_display" msgid="8487008779926038139">"Göstərin"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Terminal hazırlanır"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Terminal dayandırılır"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminal çökdü"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Disk ölçüsünün dəyişdirilməsi"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Kök bölməsinin ölçüsünü dəyişin"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Disk ölçüsü ayarlandı"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> təyin edildi"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"maks <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> təyin edildi"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"maks <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Ləğv edin"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Tətbiq edin"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Diskin ölçüsünü dəyişmək üçün terminal yenidən başladılacaq"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Təsdiq edin"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Port nəzarəti"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Dinləmə portlarına icazə verin/imtina edin"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Dinləmə portları"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Yadda saxlanılmış icazə verilən portlar"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"Əlavə edin"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"Silin: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Yeni porta icazə verin"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Yeni port nömrəsi daxil edin"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Yadda saxlayın"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Ləğv edin"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"Nömrə daxil edin"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"Yanlış port nömrəsi"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"Port artıq mövcuddur"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Terminal yeni port açmağı tələb edir"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Port tələb edildi: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"Port tələb edildi: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Qəbul edin"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Rədd edin"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Bərpa"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Yedək datanı silin"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Silin: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="error_title" msgid="405150657301906598">"Düzəldilməyən xəta"</string>
-    <string name="error_desc" msgid="1984714179775053347">"Xətanı bərpa etmək alınmadı.\nTerminalı yenidən başlatmağa cəhd edə və ya bərpa seçimlərindən birini sınaya bilərsiniz."</string>
+    <string name="error_desc" msgid="4588252235686826721">"Xətanı bərpa edilmədi.\nTerminalı yenidən başlatmağa cəhd edə və ya bərpa seçimlərindən birini sınaya bilərsiniz.\nBütün cəhdlər uğursuz olarsa, Linux terminalını developer seçimlərindən yandırıb-söndürməklə bütün datanı silin."</string>
     <string name="error_code" msgid="3585291676855383649">"Xəta kodu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Ayarlar"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal işləyir"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Terminalı açmaq üçün klikləyin"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Bağlayın"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"Terminal bağlanır"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Məcburi bağlanma"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> aktivləşdirilib"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Uzunmüddətli tapşırıqlar"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Sistem tədbirləri"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
 </resources>
