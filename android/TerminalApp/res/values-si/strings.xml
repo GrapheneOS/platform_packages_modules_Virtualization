@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"ටර්මිනල සංදර්ශකය"</string>
     <string name="terminal_input" msgid="4602512831433433551">"කර්සරය"</string>
     <string name="empty_line" msgid="5012067143408427178">"හිස් රේඛාව"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ආදානය ටයිප් කිරීමට දෙවරක් තට්ටු කරන්න"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux ටර්මිනලය ස්ථාපනය කරන්න"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ටර්මිනලය දියත් කිරීමට, ඔබට ජාලය හරහා දත්ත <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> පමණ බාගැනීමට අවශ්‍ය වේ.\nඔබ ඉදිරියට යාමට කැමති ද?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux ටර්මිනලය දියත් කිරීමට, ඔබට ජාලය හරහා දත්ත <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> පමණ බාගැනීමට අවශ්‍ය වේ.\nඔබ ඉදිරියට යාමට කැමති ද?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi පමණක් භාවිතා කරමින් බාගන්න"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ස්ථාපනය කරන්න"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ස්ථාපනය කරමින්"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi නොමැති නිසා ස්ථාපනය කිරීමට අසමත් විය"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"ස්ථාපනය කිරීමට අසමත් විය. නැවත උත්සාහ කරන්න"</string>
     <string name="action_settings" msgid="5729342767795123227">"සැකසීම්"</string>
+    <string name="action_display" msgid="8487008779926038139">"සංදර්ශකය"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ටර්මිනලය සූදානම් කිරීම"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"ටර්මිනලය නතර කිරීම"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ටර්මිනලය බිඳ වැටුණි"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"තැටි ප්‍රමාණය වෙනස් කිරීම"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"මූල කොටස් ප්‍රමාණය ප්‍රතිප්‍රමාණ කරන්න"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"තැටි ප්‍රමාණය සැකසිණි"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> පවරන ලදි"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">%1$s</xliff:g> උපරිමය"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> පවරන ලදි"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> උපරිමය"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"අවලංගු කරන්න"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"යොදන්න"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"තැටියේ ප්‍රමාණය වෙනස් කිරීමට ටර්මිනලය යළි ඇරඹෙනු ඇත"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"තහවුරු කරන්න"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"පෝටය පාලනය"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"සවන්දීමේ පෝටයන්ට ඉඩ දෙන්න/ප්‍රතික්ෂේප කරන්න"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"සවන්දීමේ පෝටයන්"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> <xliff:g id="PROCESS_NAME">%2$s</xliff:g>"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"සුරකින ලද ඉඩ දුන් පෝටයන්"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"එක් කරන්න"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> මකන්න"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"නව පෝටයකට ඉඩ දෙන්න"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"නව පෝට අංකයක් ඇතුළු කරන්න"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"සුරකින්න"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"අවලංගු කරන්න"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"අංකයක් ඇතුළු කරන්න"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"වලංගු නොවන පෝට අංකය"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"පෝටය දැනටමත් පවතී"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ටර්මිනලය නව පෝටයක් විවෘත කිරීමට ඉල්ලීම් කරයි"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"පෝටය ඉල්ලා ඇත: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"පෝටය ඉල්ලා ඇත: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"පිළිගන්න"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"ප්‍රතික්ෂේප කරන්න"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ප්‍රතිසාධනය"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"උපස්ථ දත්ත ඉවත් කරන්න"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ඉවත් කරන්න"</string>
     <string name="error_title" msgid="405150657301906598">"ප්‍රතිසාධනය කළ නොහැකි දෝෂය"</string>
-    <string name="error_desc" msgid="1984714179775053347">"දෝෂයකින් ප්‍රතිසාධනය කිරීමට අසමත් විය.\nඔබට ටර්මිනලය නැවත ආරම්භ කිරීමට උත්සාහ කළ හැක, නැතහොත් ප්‍රතිසාධන විකල්ප වලින් එකක් උත්සාහ කරන්න."</string>
+    <string name="error_desc" msgid="4588252235686826721">"දෝෂයකින් ප්‍රතිසාධනය කිරීමට අසමත් විය.\nඔබට ටර්මිනලය නැවත ආරම්භ කිරීමට උත්සාහ කළ හැක, නැතහොත් ප්‍රතිසාධන විකල්ප වලින් එකක් උත්සාහ කරන්න.\nසියලු උත්සාහයන් අසමත් වුවහොත්, සංවර්ධක විකල්ප වලින් Linux පර්යන්තය ක්‍රියාත්මක/ක්‍රියාවිරහිත කිරීමෙන් සියලු දත්ත පිස දමන්න."</string>
     <string name="error_code" msgid="3585291676855383649">"දෝෂ කේතය: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"සැකසීම්"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"පර්යන්තය ධාවනය වේ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ටර්මිනලය විවෘත කිරීමට ක්ලික් කරන්න"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"වසන්න"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"ටර්මිනලය වැසෙමින් පවතී"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"බලෙන් වසන්න"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> සබලයි"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"දිගු කාලයක් ධාවනය වන කාර්යයන්"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"පද්ධති සිදුවීම්"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"පටිත්ත"</string>
 </resources>

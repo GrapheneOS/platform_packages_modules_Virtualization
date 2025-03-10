@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"Терминал дисплейі"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Курсор"</string>
     <string name="empty_line" msgid="5012067143408427178">"Бос жол"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Теру үшін екі рет түртіңіз."</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux терминалын орнату"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux терминалын іске қосу үшін желі арқылы шамамен <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> деректі жүктеп алу қажет.\nЖалғастырғыңыз келе ме?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux терминалын іске қосу үшін желі арқылы шамамен <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> деректі жүктеп алу қажет.\nЖалғастырғыңыз келе ме?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Тек Wi-Fi арқылы жүктеп алу"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Орнату"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Орнатылып жатыр"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Орнатылмады, себебі Wi-Fi желісі жоқ."</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Орнату мүмкін болмады. Қайталап көріңіз."</string>
     <string name="action_settings" msgid="5729342767795123227">"Параметрлер"</string>
+    <string name="action_display" msgid="8487008779926038139">"Дисплей"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Терминал дайындалып жатыр."</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Терминал тоқтатылып жатыр."</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Терминал бұзылды."</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Диск өлшемін өзгерту"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Root бөлігінің өлшемін өзгерту"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Диск көлемі орнатылды."</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> тағайындалды"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Ең көбі <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> тағайындалды"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Ең көбі <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Бас тарту"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Қолдану"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Диск өлшемін өзгерту үшін терминал өшіріліп қосылады."</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Растау"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Портты басқару"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Тыңдау порттарына рұқсат беру/тыйым салу"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Тыңдау порттары"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Рұқсат берілген порттар сақталды"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"Қосу"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> портты жою"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Жаңа портқа рұқсат беру"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Жаңа порт нөмірін енгізіңіз."</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Сақтау"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Бас тарту"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"Нөмірді енгізіңіз."</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"Порт нөмірі жарамсыз."</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"Порт бұрыннан бар."</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Терминал жаңа порт ашуды сұрайды"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Қажетті порт: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"Қажетті порт: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Қабылдау"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Қабылдамау"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Қалпына келтіру"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Сақтық көшірме дерегін өшіру"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> жолын өшіру"</string>
     <string name="error_title" msgid="405150657301906598">"Қалпына келтіруге жол бермейтін қате"</string>
-    <string name="error_desc" msgid="1984714179775053347">"Қатеден кейін қалпына келтіру мүмкін болмады.\nТерминалды өшіріп, қайтадан қосып көріңіз немесе қалпына келтіру опцияларының бірін пайдаланып көріңіз."</string>
+    <string name="error_desc" msgid="4588252235686826721">"Қатеден кейін қалпына келтіру мүмкін болмады.\nТерминалды өшіріп қосып көріңіз немесе қалпына келтіру опцияларының бірін пайдаланып көріңіз.\nБарлық әрекет сәтсіз аяқталса, әзірлеуші опцияларынан Linux терминалын қосу/өшіру арқылы барлық деректі тазартыңыз."</string>
     <string name="error_code" msgid="3585291676855383649">"Қате коды: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Параметрлер"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал іске қосылып тұр"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Терминалды ашу үшін түртіңіз."</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Жабу"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"Терминал жабылып жатыр"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Қолмен жабу"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> қосылды."</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Ұзақ орындалатын тапсырмалар"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Жүйе оқиғалары"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"Қойынды"</string>
 </resources>

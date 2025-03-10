@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"Ekran terminala"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Kursor"</string>
     <string name="empty_line" msgid="5012067143408427178">"Pusty wiersz"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Kliknij dwukrotnie, aby wpisać"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Zainstaluj terminal Linuxa"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Aby uruchomić terminal Linuxa, musisz pobrać przez sieć około <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> danych.\nChcesz kontynuować?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Aby uruchomić terminal Linuxa, musisz pobrać przez sieć około <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> danych.\nChcesz kontynuować?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Pobieraj tylko przez Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Zainstaluj"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Instaluję"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Nie udało się zainstalować, ponieważ Wi-Fi jest niedostępne"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Nie udało się zainstalować. Spróbuj jeszcze raz"</string>
     <string name="action_settings" msgid="5729342767795123227">"Ustawienia"</string>
+    <string name="action_display" msgid="8487008779926038139">"Wyświetlacz"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Przygotowuję terminal"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"Zatrzymuję terminal"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminal uległ awarii"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Zmiana rozmiaru dysku"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Zmień rozmiar partycji poziomu głównego"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Rozmiar dysku został ustawiony"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Przypisano <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksymalny rozmiar <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Przypisano <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksymalny rozmiar <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Anuluj"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Zastosuj"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Aby zmienić rozmiar dysku, terminal zostanie uruchomiony ponownie"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Potwierdź"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Kontrola portów"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Zezwalaj/odrzucaj porty nasłuchujące"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Porty nasłuchujące"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Zapisane dozwolone porty"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"Dodaj"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"Usuń port <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Zezwól na nowy port"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Wpisz nowy numer portu"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Zapisz"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Anuluj"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"Podaj numer"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"Nieprawidłowy numer portu"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"Port już istnieje"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Terminal wysłał żądanie otwarcia nowego portu"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"Żądany port: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"Żądany port: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Zaakceptuj"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Odrzuć"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Odzyskiwanie"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Usuń dane kopii zapasowej"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Usuń: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="error_title" msgid="405150657301906598">"Nieodwracalny błąd"</string>
-    <string name="error_desc" msgid="1984714179775053347">"Nie udało się przywrócić aplikacji po błędzie.\nMożesz spróbować ponownie uruchomić terminal lub skorzystać z jednej z opcji odzyskiwania."</string>
+    <string name="error_desc" msgid="4588252235686826721">"Nie udało się przywrócić aplikacji po błędzie.\nMożesz spróbować ponownie uruchomić terminal lub skorzystać z jednej z opcji odzyskiwania.\nJeśli wszystkie próby zawiodą, wyczyść dane, włączając/wyłączając terminal Linuxa w opcjach dla programistów."</string>
     <string name="error_code" msgid="3585291676855383649">"Kod błędu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Ustawienia"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal jest uruchomiony"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Kliknij, aby otworzyć terminal"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Zamknij"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"Terminal się zamyka"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Wymuś zamknięcie"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"Układ <xliff:g id="ID_1">VirGL</xliff:g> jest włączony"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Długotrwałe zadania"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Zdarzenia systemowe"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"Karta"</string>
 </resources>
