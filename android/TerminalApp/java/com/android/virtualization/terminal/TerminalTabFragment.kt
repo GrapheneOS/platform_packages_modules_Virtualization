@@ -34,7 +34,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.CertificateUtils.createOrGetKey
 import com.android.virtualization.terminal.CertificateUtils.writeCertificateToFile
 import java.security.PrivateKey

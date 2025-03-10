@@ -51,7 +51,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.ErrorActivity.Companion.start
 import com.android.virtualization.terminal.InstalledImage.Companion.getDefault
 import com.android.virtualization.terminal.VmLauncherService.Companion.run
