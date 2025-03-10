@@ -12,22 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
+use android_frameworks_stats::aidl::android::frameworks::stats::{
+    IStats::{BnStats, BpStats, IStats},
+    VendorAtom::VendorAtom,
+};
+use anyhow::{anyhow, Context};
 use avflog::LogResult;
-use binder::{ExceptionCode, IntoBinderResult, SpIBinder};
+use binder::{BinderFeatures, ExceptionCode, Interface, IntoBinderResult, SpIBinder, Strong};
 use libc::VMADDR_PORT_ANY;
 use log::info;
 use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::Vsock::Vsock;
 use rpcbinder::RpcServer;
+use std::sync::Mutex;
 
-pub fn get_service_connection_info(_name: &str, _cid: u32) -> binder::Result<Vsock> {
-    Err(anyhow!("No supported host services"))
-        .with_log()
-        .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+pub fn get_service_connection_info(name: &str, cid: u32) -> binder::Result<Vsock> {
+    // We currently only support the stats service. It can be used as an example
+    // to support more host services with this proxy pattern.
+    let stats_service_instance = <BpStats as IStats>::get_descriptor().to_owned() + "/default";
+    if name != stats_service_instance {
+        return Err(anyhow!("Unknown service"))
+            .with_log()
+            .or_binder_exception(ExceptionCode::SECURITY);
+    }
+
+    // don't block this service while attempting to get a service for the client in the VM.
+    let local_svc: Strong<dyn IStats> = binder::check_interface(name)
+        .context("Failed to get {name} from IVirtualMachineService")
+        .or_service_specific_exception(-1)?;
+
+    // Setup a delegator that wraps the service so we can proxy calls.
+    // This is needed because we can't use a kernel binder from
+    // another process for a new RpcServer.
+    let service = BnStats::new_binder(
+        StatsDelegator { delegate: local_svc.into() },
+        BinderFeatures::default(),
+    );
+
+    start_delegator_vsock_service(service.as_binder(), name, cid)
 }
 
-// TODO Supported service added in the next commit
-#[allow(dead_code)]
+// TODO(b/198785815) create a rust/ndk delegator and use that instead of writing our own.
+struct StatsDelegator {
+    delegate: Mutex<Strong<dyn IStats>>,
+}
+
+impl Interface for StatsDelegator {}
+
+impl IStats for StatsDelegator {
+    fn reportVendorAtom(&self, atom: &VendorAtom) -> binder::Result<()> {
+        self.delegate.lock().unwrap().reportVendorAtom(atom)
+    }
+}
+
 fn start_delegator_vsock_service(binder: SpIBinder, name: &str, cid: u32) -> binder::Result<Vsock> {
     match RpcServer::new_vsock(binder, cid, VMADDR_PORT_ANY) {
         Ok((vm_server, assigned_port)) => {
