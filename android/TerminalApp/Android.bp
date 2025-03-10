@@ -16,7 +16,6 @@ android_app {
         "androidx-constraintlayout_constraintlayout",
         "androidx.window_window",
         "apache-commons-compress",
-        "avf_aconfig_flags_java",
         "com.google.android.material_material",
         "debian-service-grpclib-lite",
         "gson",
