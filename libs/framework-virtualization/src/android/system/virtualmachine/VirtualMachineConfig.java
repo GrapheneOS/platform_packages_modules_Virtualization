@@ -836,6 +836,8 @@ public final class VirtualMachineConfig {
                         .orElse(null);
         config.teeServices = EMPTY_STRING_ARRAY;
         config.customMemoryBackingFiles = new CustomMemoryBackingFile[0];
+        config.hostServices = EMPTY_STRING_ARRAY;
+
         return config;
     }
 
@@ -906,6 +908,7 @@ public final class VirtualMachineConfig {
 
         vsConfig.boostUclamp = mShouldBoostUclamp;
         vsConfig.hugePages = mShouldUseHugepages;
+        vsConfig.hostServices = EMPTY_STRING_ARRAY;
 
         return vsConfig;
     }

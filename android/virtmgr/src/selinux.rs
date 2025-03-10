@@ -15,6 +15,8 @@
 //! Wrapper to libselinux
 
 use anyhow::{anyhow, bail, Context, Result};
+use binder::check_service_access;
+use libc::{pid_t, uid_t};
 use std::ffi::{c_int, CStr, CString};
 use std::fmt;
 use std::io;
@@ -237,7 +239,43 @@ pub fn check_tee_service_permission(caller_ctx: &SeContext, tee_services: &[Stri
         check_access(caller_ctx, &tee_service_ctx, "tee_service", "use")
             .with_context(|| format!("permission denied for {:?}", tee_service))?;
     }
+    Ok(())
+}
 
+pub fn check_host_service_permission(
+    caller_ctx: &SeContext,
+    services: &[String],
+    caller_debug_pid: pid_t,
+    caller_uid: uid_t,
+) -> Result<()> {
+    init_logger_once();
+    for service in services {
+        servicemanager_delegate_check_access(
+            caller_ctx,
+            service,
+            "find",
+            caller_debug_pid,
+            caller_uid,
+        )
+        .with_context(|| format!("permission denied for {:?}", service))?
+    }
+    Ok(())
+}
+
+fn servicemanager_delegate_check_access(
+    caller_ctx: &SeContext,
+    service_name: &str,
+    permission: &str,
+    caller_debug_pid: pid_t,
+    caller_uid: uid_t,
+) -> Result<()> {
+    let selinux_type = caller_ctx.deref().to_str().context("Label is not valid")?;
+    let res =
+        check_service_access(selinux_type, caller_debug_pid, caller_uid, service_name, permission)
+            .context("{selinux_type} failed to check access for {service_name}")?;
+    if !res {
+        return Err(anyhow!("{selinux_type} access value for {service_name} is denied"));
+    }
     Ok(())
 }
 

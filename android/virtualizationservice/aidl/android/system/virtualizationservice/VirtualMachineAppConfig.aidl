@@ -152,4 +152,7 @@ parcelable VirtualMachineAppConfig {
 
     /** Enable boost UClamp for less variance during testing/benchmarking */
     boolean boostUclamp;
+
+    /** List of host services this VM wants to access */
+    String[] hostServices;
 }
