@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"တာမီနယ် ပြကွက်"</string>
     <string name="terminal_input" msgid="4602512831433433551">"ကာဆာ"</string>
     <string name="empty_line" msgid="5012067143408427178">"လိုင်းကို ရှင်းရန်"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"စာရိုက်ထည့်သွင်းရန် နှစ်ချက်တို့ပါ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux တာမီနယ် ထည့်သွင်းခြင်း"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux တာမီနယ် စတင်ရန် ကွန်ရက်ပေါ်တွင် ဒေတာ <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> ခန့်ကို ဒေါင်းလုဒ်လုပ်ရမည်။\nရှေ့ဆက်လိုပါသလား။"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux တာမီနယ် စတင်ရန် ကွန်ရက်ပေါ်တွင် ဒေတာ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ခန့်ကို ဒေါင်းလုဒ်လုပ်ရမည်။\nရှေ့ဆက်လိုပါသလား။"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi ဖြင့်သာ ဒေါင်းလုဒ်လုပ်ရန်"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ထည့်သွင်းရန်"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ထည့်သွင်းနေသည်"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi မရနိုင်သောကြောင့် ထည့်သွင်း၍မရလိုက်ပါ"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"ထည့်သွင်း၍ မရလိုက်ပါ။ ထပ်စမ်းကြည့်ပါ"</string>
     <string name="action_settings" msgid="5729342767795123227">"ဆက်တင်များ"</string>
+    <string name="action_display" msgid="8487008779926038139">"ဖန်သားပြင်"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"တာမီနယ်ကို ပြင်ဆင်နေသည်"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"တာမီနယ်ကို ရပ်နေသည်"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"တာမီနယ် ရပ်တန့်သွားသည်"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"ဒစ်ခ်အရွယ်ပြင်ခြင်း"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ရုအကန့်အရွယ် ပြင်ရန်"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ဒစ်ခ်အရွယ်အစား သတ်မှတ်လိုက်သည်"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> သတ်မှတ်ထားသည်"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"အများဆုံး <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> သတ်မှတ်ထားသည်"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"အများဆုံး <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"မလုပ်တော့"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"သုံးရန်"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ဒစ်ခ်ကို အရွယ်ပြင်ရန် တာမီနယ်ပြန်စပါမည်"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"အတည်ပြုရန်"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"ပို့တ်ထိန်းချုပ်မှု"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"စောင့်နေသောပို့တ်များကို ခွင့်ပြုရန်/ငြင်းပယ်ရန်"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"စောင့်နေသောပို့တ်များ"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"ခွင့်ပြုထားသောပို့တ်များ သိမ်းပြီးပြီ"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"ထည့်ရန်"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ကို ဖျက်ရန်"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"ပို့တ်အသစ် ခွင့်ပြုခြင်း"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"ပို့တ်နံပါတ်အသစ် ထည့်ပါ"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"သိမ်းရန်"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"မလုပ်တော့"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"နံပါတ်တစ်ခု ရိုက်ထည့်ပါ"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"ပို့တ်နံပါတ် မမှန်ပါ"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"ပို့တ်ရှိပြီးသားဖြစ်သည်"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"တာမီနယ်က ပို့တ်အသစ်ဖွင့်ရန် တောင်းဆိုနေသည်"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"တောင်းဆိုထားသော ပို့တ်- <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"တောင်းဆိုထားသော ပို့တ်- <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"လက်ခံရန်"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"ငြင်းပယ်ရန်"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ပြန်လည်ရယူခြင်း"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"အရန်ဒေတာ ဖယ်ရှားခြင်း"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ကို ဖယ်ရှားရန်"</string>
     <string name="error_title" msgid="405150657301906598">"ပြန်ပြင်၍မရသော အမှား"</string>
-    <string name="error_desc" msgid="1984714179775053347">"အမှားကို ပြန်ပြင်၍မရလိုက်ပါ။\nတာမီနယ်ကို ပြန်စနိုင်သည် (သို့) ပြန်ရယူရေး နည်းလမ်းများထဲမှ တစ်ခုကို စမ်းကြည့်နိုင်သည်။"</string>
+    <string name="error_desc" msgid="4588252235686826721">"အမှားကို ပြန်ပြင်၍မရလိုက်ပါ။\nတာမီနယ်ကို ပြန်စနိုင်သည် (သို့) ပြန်ရယူရေး နည်းလမ်းများထဲမှ တစ်ခုကို စမ်းကြည့်နိုင်သည်။\nကြိုးပမ်းမှုအားလုံး အဆင်မပြေပါက ဆော့ဖ်ဝဲရေးသူအတွက် ရွေးစရာများမှနေ၍ Linux တာမီနယ်ကို ဖွင့်ခြင်း/ပိတ်ခြင်းဖြင့် ဒေတာအားလုံး ရှင်းလင်းပါ။"</string>
     <string name="error_code" msgid="3585291676855383649">"အမှားကုဒ်- <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ဆက်တင်များ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"တာမီနယ်ကို ဖွင့်ထားသည်"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"တာမီနယ်ဖွင့်ရန် နှိပ်ပါ"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ပိတ်ရန်"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"တာမီနယ် ပိတ်နေသည်"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"မဖြစ်မနေပိတ်ရန်"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ဖွင့်ထားသည်"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"အချိန်ကြာသော လုပ်ဆောင်စရာများ"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"စနစ်ဖြစ်စဉ်များ"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"တဘ်"</string>
 </resources>

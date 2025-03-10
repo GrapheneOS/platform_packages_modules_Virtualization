@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"终端显示内容"</string>
     <string name="terminal_input" msgid="4602512831433433551">"光标"</string>
     <string name="empty_line" msgid="5012067143408427178">"空行"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"点按两次即可输入"</string>
     <string name="installer_title_text" msgid="500663060973466805">"安装 Linux 终端"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> 的数据。\n要继续吗？"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> 的数据。\n要继续吗？"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"仅通过 WLAN 下载"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"安装"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"正在安装"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"由于 WLAN 不可用，安装失败"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"安装失败，请重试"</string>
     <string name="action_settings" msgid="5729342767795123227">"设置"</string>
+    <string name="action_display" msgid="8487008779926038139">"显示"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"正在准备终端"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"正在停止终端"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"终端已崩溃"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"调整磁盘大小"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"调整根分区的大小"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"应用"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"确认"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"端口控制"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"允许/拒绝使用监听端口"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"监听端口"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"已保存的获准端口"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"添加"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"删除“<xliff:g id="PORT_NUMBER">%d</xliff:g>”"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"允许使用新端口"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"输入新端口号"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"保存"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"取消"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"请输入数字"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"端口号无效"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"端口已存在"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"终端正在请求打开新端口"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"请求的端口：<xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"请求的端口：<xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"接受"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"拒绝"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"恢复"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"移除备份数据"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"移除 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="error_title" msgid="405150657301906598">"不可恢复的错误"</string>
-    <string name="error_desc" msgid="1984714179775053347">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。"</string>
+    <string name="error_desc" msgid="4588252235686826721">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。\n如果所有尝试都失败，请通过在“开发者选项”中开启/关闭 Linux 终端来擦除所有数据。"</string>
     <string name="error_code" msgid="3585291676855383649">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"设置"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"终端正在运行"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"点击即可打开终端"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"关闭"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"终端即将关闭"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"强行关闭"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> 已启用"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"长时间运行的任务"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"系统事件"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"标签页"</string>
 </resources>

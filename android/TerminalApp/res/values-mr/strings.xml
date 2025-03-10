@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"टर्मिनल डिस्प्ले"</string>
     <string name="terminal_input" msgid="4602512831433433551">"कर्सर"</string>
     <string name="empty_line" msgid="5012067143408427178">"रिकामी ओळ"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"इनपुट टाइप करण्यासाठी दोनदा टॅप करा"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Linux टर्मिनल इंस्टॉल करा"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux टर्मिनल लाँच करण्यासाठी, तुम्ही नेटवर्कवरून अंदाजे <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> डेटा डाउनलोड करणे आवश्यक आहे.\nतुम्हाला पुढे सुरू ठेवायचे आहे का?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"Linux टर्मिनल लाँच करण्यासाठी, तुम्ही नेटवर्कवरून अंदाजे <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> डेटा डाउनलोड करणे आवश्यक आहे.\nतुम्हाला पुढे सुरू ठेवायचे आहे का?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"फक्त वाय-फाय वापरून डाउनलोड करा"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"इंस्टॉल करा"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"इंस्टॉल करत आहे"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"वाय-फाय उपलब्ध नसल्यामुळे इंस्टॉल करता आले नाही"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"इंस्टॉल करता आले नाही. कृपया पुन्हा प्रयत्न करा"</string>
     <string name="action_settings" msgid="5729342767795123227">"सेटिंग्ज"</string>
+    <string name="action_display" msgid="8487008779926038139">"डिस्प्ले"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"टर्मिनल तयार करत आहे"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"टर्मिनल थांबवत आहे"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"टर्मिनल क्रॅश झाले आहे"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"डिस्कचा आकार बदला"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"रूट पार्टिशनचा आकार बदला"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्कचा आकार सेट केला आहे"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g> असाइन केले आहे"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"कमाल <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> असाइन केले आहे"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"कमाल <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द करा"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"लागू करा"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"डिस्कचा आकार बदलण्यासाठी टर्मिनल पुन्हा सुरू केले जाईल"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"कन्फर्म करा"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"पोर्ट नियंत्रण"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"ऐकण्याच्या पोर्टना अनुमती द्या/नाकारा"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ऐकण्याचे पोर्ट"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"सेव्ह केलेले व अनुमती असलेले पोर्ट"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"जोडा"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> हटवा"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"नवीन पोर्टला अनुमती द्या"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"नवीन पोर्ट नंबर एंटर करा"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"सेव्ह करा"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"रद्द करा"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"कृपया नंबर एंटर करा"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"पोर्ट नंबर चुकीचा आहे"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"पोर्ट आधीपासून अस्तित्वात आहे"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"टर्मिनल नवीन पोर्ट उघडण्याची विनंती करत आहे"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"विनंती केलेला पोर्ट: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"पोर्टसंबंधित विनंती केली: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"स्वीकारा"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"नकार द्या"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"रिकव्हरी"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"बॅकअप डेटा काढून टाका"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> काढून टाका"</string>
     <string name="error_title" msgid="405150657301906598">"रिकव्‍हर न करता येणारी एरर"</string>
-    <string name="error_desc" msgid="1984714179775053347">"एरर रिकव्हर करता आली नाही.\nतुम्ही टर्मिनल रीस्टार्ट करण्याचा प्रयत्न करू शकता किंवा एखादा रिकव्हरी पर्याय वापरून पाहू शकता."</string>
+    <string name="error_desc" msgid="4588252235686826721">"एररमधून रिकव्हर करता आले नाही.\nतुम्ही टर्मिनल रीस्टार्ट करण्याचा प्रयत्न करू शकता किंवा रिकव्हरी पर्यायांपैकी एखादा पर्याय वापरून पाहू शकता.\nसर्व प्रयत्न अयशस्वी झाल्यास, डेव्हलपर पर्यायांमधून Linux टर्मिनल सुरू/बंद करून सर्व डेटा पुसून टाका."</string>
     <string name="error_code" msgid="3585291676855383649">"एरर कोड: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिंग्ज"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल रन होत आहे"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"टर्मिनल उघडण्यासाठी क्लिक करा"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"बंद करा"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"टर्मिनल बंद होत आहे"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"सक्तीने बंद करा"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> सुरू केले आहे"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"दीर्घवेळ रन होणाऱ्या टास्क"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"सिस्टीम इव्‍हेंट"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"टॅब"</string>
 </resources>

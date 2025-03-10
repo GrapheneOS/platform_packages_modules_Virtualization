@@ -20,10 +20,9 @@
     <string name="terminal_display" msgid="4810127497644015237">"ផ្ទាំងអេក្រង់ទែមីណាល់"</string>
     <string name="terminal_input" msgid="4602512831433433551">"ទស្សន៍ទ្រនិច"</string>
     <string name="empty_line" msgid="5012067143408427178">"ជួរទទេ"</string>
-    <!-- no translation found for double_tap_to_edit_text (2344363097580051316) -->
-    <skip />
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"ចុចពីរដងដើម្បីវាយបញ្ចូលខ្លឹមសារ"</string>
     <string name="installer_title_text" msgid="500663060973466805">"ដំឡើងទែមីណាល់ Linux"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"ដើម្បីបើកដំណើរការទែមីណាល់ Linux, អ្នកត្រូវទាញយកទិន្នន័យប្រហែលជា <xliff:g id="EXPECTED_SIZE">%1$s</xliff:g> នៅលើបណ្ដាញ។\nតើអ្នកចង់បន្តដែរឬទេ?"</string>
+    <string name="installer_desc_text_format" msgid="5935117404303982823">"ដើម្បីបើកដំណើរការទែមីណាល់ Linux, អ្នកត្រូវទាញយកទិន្នន័យប្រហែលជា <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> នៅលើបណ្ដាញ។\nតើអ្នកចង់បន្តដែរឬទេ?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"ទាញ​យក​ដោយ​ប្រើ​តែ​ Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ដំឡើង"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"កំពុងដំឡើង"</string>
@@ -34,36 +33,35 @@
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"មិនអាចដំឡើងបានទេ ដោយសារមិនមាន Wi-Fi"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"មិនអាច​ដំឡើងបានទេ។ សូមព្យាយាមម្ដងទៀត"</string>
     <string name="action_settings" msgid="5729342767795123227">"ការកំណត់"</string>
+    <string name="action_display" msgid="8487008779926038139">"បង្ហាញ"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"កំពុងរៀបចំទែមីណាល់"</string>
     <string name="vm_stop_message" msgid="3978349856095529255">"កំពុងបញ្ឈប់ទែមីណាល់"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ទែមីណាល់បានគាំង"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"ប្ដូរ​ទំហំថាស"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ប្ដូរ​ទំហំផ្នែកឫស"</string>
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"បានកំណត់ទំហំ​ថាស"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"បានកំណត់ <xliff:g id="ASSIGNED_SIZE">%1$s</xliff:g>"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"អតិបរមា <xliff:g id="MAX_SIZE">%1$s</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"បានកំណត់ <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"អតិបរមា <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"បោះបង់"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ដាក់ប្រើ"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ទែមីណាល់នឹងត្រូវបានចាប់ផ្ដើមឡើងវិញ ដើម្បីប្ដូរ​ទំហំថាស"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"បញ្ជាក់"</string>
-    <!-- no translation found for settings_port_forwarding_title (4971368519093858377) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_sub_title (6547942778715654953) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_active_ports_title (1841436780635889858) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_other_enabled_ports_title (2644381842623436676) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_title (2734992099990516463) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_textview_hint (3514035855169269600) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_save (1097831033824718393) -->
-    <skip />
-    <!-- no translation found for settings_port_forwarding_dialog_cancel (1972597831318470889) -->
-    <skip />
+    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"ការគ្រប់គ្រងច្រក"</string>
+    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"អនុញ្ញាត/បដិសេធច្រកស្ដាប់"</string>
+    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"ច្រកស្ដាប់"</string>
+    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"បានរក្សាទុកច្រកដែលត្រូវបានអនុញ្ញាត"</string>
+    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"បញ្ចូល"</string>
+    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"លុប <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"អនុញ្ញាតច្រកថ្មី"</string>
+    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"បញ្ចូលលេខច្រកថ្មី"</string>
+    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"រក្សាទុក"</string>
+    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"បោះបង់"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"សូម​បញ្ចូល​លេខ​"</string>
+    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"លេខច្រកមិនត្រឹមត្រូវ"</string>
+    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"មានច្រករួចហើយ"</string>
     <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"ទែមីណាល់កំពុងស្នើសុំបើកច្រកថ្មី"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="5072621159244211971">"បានស្នើសុំច្រក៖ <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"បានស្នើសុំច្រក៖ <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
     <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"ទទួលយក"</string>
     <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"បដិសេធ"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ស្ដារ"</string>
@@ -81,11 +79,16 @@
     <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"ដកទិន្នន័យបម្រុងទុកចេញ"</string>
     <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"ដក <xliff:g id="PATH">/mnt/backup</xliff:g> ចេញ"</string>
     <string name="error_title" msgid="405150657301906598">"បញ្ហា​ដែលបណ្ដាលឱ្យមិនអាច​ស្ដារបាន"</string>
-    <string name="error_desc" msgid="1984714179775053347">"មិនអាចស្ដារឡើងវិញពីបញ្ហាបានទេ។\nអ្នកអាចសាកល្បងចាប់ផ្ដើមទែមីណាល់ឡើងវិញ ឬសាកល្បងប្រើជម្រើសមួយក្នុងចំណោមជម្រើសស្ដារ។"</string>
+    <string name="error_desc" msgid="4588252235686826721">"មិនអាចស្ដារឡើងវិញពីបញ្ហាបានទេ។\nអ្នកអាចសាកល្បងចាប់ផ្ដើមទែមីណាល់ឡើងវិញ ឬសាកល្បងប្រើជម្រើសមួយក្នុងចំណោមជម្រើសស្ដារ។\nប្រសិនបើការព្យាយាមទាំងអស់មិនបានសម្រេច សូមឈូសទិន្នន័យទាំងអស់ដោយបើក/បិទទែមីណាល់ Linux ពីជម្រើសសម្រាប់អ្នក​អភិវឌ្ឍន៍។"</string>
     <string name="error_code" msgid="3585291676855383649">"លេខ​កូដ​បញ្ហា៖ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ការកំណត់"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ទែមីណាល់កំពុងដំណើរការ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ចុចដើម្បីបើកទែមីណាល់"</string>
     <string name="service_notification_quit_action" msgid="4888327875869277455">"បិទ"</string>
+    <string name="service_notification_close_title" msgid="1442526433361428844">"ទែមីណាល់កំពុងបិទ"</string>
+    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"បង្ខំ​ឱ្យ​បិទ"</string>
     <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ត្រូវបានបើក"</string>
+    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"កិច្ចការដែលដំណើរការរយៈពេលយូរ"</string>
+    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"ព្រឹត្តិការណ៍ប្រព័ន្ធ"</string>
+    <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
 </resources>
