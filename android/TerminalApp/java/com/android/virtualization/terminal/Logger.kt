@@ -51,8 +51,7 @@ internal object Logger {
             deleteOldLogs(dir, 10)
             val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
             val console = vm.getConsoleOutput()
-            val file =
-                Files.newOutputStream(logPath, StandardOpenOption.CREATE)
+            val file = Files.newOutputStream(logPath, StandardOpenOption.CREATE)
             executor.submit<Int?> {
                 console.use { console ->
                     LineBufferedOutputStream(file).use { fileOutput ->

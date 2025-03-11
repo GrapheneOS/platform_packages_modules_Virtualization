@@ -34,6 +34,30 @@ prebuilt_etc {
     filename: "trusty-test_vm-config.json",
 }
 
+prebuilt_etc {
+    name: "trusty_vm_launcher_sh",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+    },
+    src: "trusty-vm-launcher.sh",
+    filename: "trusty-vm-launcher.sh",
+}
+
+prebuilt_etc {
+    name: "trusty_wait_ready_sh",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+    },
+    src: "trusty-wait-ready.sh",
+    filename: "trusty-wait-ready.sh",
+}
+
 sh_test {
     // VTS tests for all Trusted HALs defined
     // under hardware/interfaces/security/see
