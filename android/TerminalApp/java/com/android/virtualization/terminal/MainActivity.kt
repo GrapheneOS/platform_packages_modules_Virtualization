@@ -24,8 +24,6 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.graphics.fonts.FontStyle
 import android.net.Uri
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.Bundle
 import android.os.ConditionVariable
@@ -62,6 +60,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URL
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -78,12 +77,11 @@ public class MainActivity :
     private lateinit var image: InstalledImage
     private lateinit var accessibilityManager: AccessibilityManager
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
-    private var ipAddress: String? = null
-    private var port: Int? = null
     private lateinit var terminalViewModel: TerminalViewModel
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var terminalTabAdapter: TerminalTabAdapter
+    private val terminalInfo = CompletableFuture<TerminalInfo>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -243,40 +241,12 @@ public class MainActivity :
     }
 
     fun connectToTerminalService(terminalView: TerminalView) {
-        if (ipAddress != null && port != null) {
-            val url = getTerminalServiceUrl(ipAddress, port!!)
-            terminalView.loadUrl(url.toString())
-            return
-        }
-        // TODO: refactor this block as a method
-        val nsdManager = getSystemService<NsdManager>(NsdManager::class.java)
-        val info = NsdServiceInfo()
-        info.serviceType = "_http._tcp"
-        info.serviceName = "ttyd"
-        nsdManager.registerServiceInfoCallback(
-            info,
-            executorService,
-            object : NsdManager.ServiceInfoCallback {
-                var loaded: Boolean = false
-
-                override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {}
-
-                override fun onServiceInfoCallbackUnregistered() {}
-
-                override fun onServiceLost() {}
-
-                override fun onServiceUpdated(info: NsdServiceInfo) {
-                    Log.i(TAG, "Service found: $info")
-                    if (!loaded) {
-                        ipAddress = info.hostAddresses[0].hostAddress
-                        port = info.port
-                        val url = getTerminalServiceUrl(ipAddress, port!!)
-                        loaded = true
-                        nsdManager.unregisterServiceInfoCallback(this)
-                        runOnUiThread(Runnable { terminalView.loadUrl(url.toString()) })
-                    }
-                }
+        terminalInfo.thenAcceptAsync(
+            { info ->
+                val url = getTerminalServiceUrl(info.ipAddress, info.port)
+                runOnUiThread({ terminalView.loadUrl(url.toString()) })
             },
+            executorService,
         )
     }
 
@@ -290,6 +260,10 @@ public class MainActivity :
 
     override fun onVmStart() {
         Log.i(TAG, "onVmStart()")
+    }
+
+    override fun onTerminalAvailable(info: TerminalInfo) {
+        terminalInfo.complete(info)
     }
 
     override fun onVmStop() {
