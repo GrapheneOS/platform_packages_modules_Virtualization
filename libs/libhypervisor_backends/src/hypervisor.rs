@@ -152,3 +152,8 @@ pub fn get_mem_sharer() -> Option<&'static dyn MemSharingHypervisor> {
 pub fn get_device_assigner() -> Option<&'static dyn DeviceAssigningHypervisor> {
     get_hypervisor().as_device_assigner()
 }
+
+/// Gets the unique hypervisor granule size, if any.
+pub fn get_granule_size() -> Option<usize> {
+    get_hypervisor().get_granule_size()
+}
