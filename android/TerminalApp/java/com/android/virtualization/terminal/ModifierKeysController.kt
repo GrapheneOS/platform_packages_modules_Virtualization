@@ -115,10 +115,12 @@ class ModifierKeysController(val activity: MainActivity, val parent: ViewGroup) 
             activeTerminalView!!.hasFocus() &&
             !(activity.resources.configuration.keyboard == Configuration.KEYBOARD_QWERTY)
 
-    // If terminal's height is less than 30% of the screen height, we need to show modifier keys in
-    // a single line to save the vertical space
-    private fun needsKeysInSingleLine(): Boolean =
-        activeTerminalView!!.height.div(activity.window.decorView.height.toFloat()) < 0.3f
+    // If terminal's height including height of modifier keys is less than 40% of the screen
+    // height, we need to show modifier keys in a single line to save the vertical space
+    private fun needsKeysInSingleLine(): Boolean {
+        val keys = if (keysInSingleLine) keysSingleLine else keysDoubleLine
+        return activeTerminalView!!.height + keys.height < 0.4f * activity.window.decorView.height
+    }
 
     companion object {
         private val BTN_KEY_CODE_MAP =
