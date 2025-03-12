@@ -62,6 +62,7 @@ import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class VmLauncherService : Service() {
     inner class VmLauncherServiceBinder : android.os.Binder() {
@@ -245,6 +246,15 @@ class VmLauncherService : Service() {
                 },
                 executorService,
             )
+            .exceptionallyAsync(
+                { e ->
+                    Log.e(TAG, "Failed to start VM", e)
+                    resultReceiver!!.send(RESULT_ERROR, null)
+                    stopSelf()
+                    null
+                },
+                executorService,
+            )
 
         return START_NOT_STICKY
     }
@@ -281,6 +291,8 @@ class VmLauncherService : Service() {
                 }
             },
         )
+
+        resolvedInfo.orTimeout(VM_BOOT_TIMEOUT_SECONDS.toLong(), TimeUnit.SECONDS)
         return resolvedInfo
     }
 
@@ -465,6 +477,8 @@ class VmLauncherService : Service() {
 
         private const val KEY_TERMINAL_IPADDRESS = "address"
         private const val KEY_TERMINAL_PORT = "port"
+
+        private const val VM_BOOT_TIMEOUT_SECONDS = 20
 
         private const val INITIAL_MEM_BALLOON_PERCENT = 10
         private const val MAX_MEM_BALLOON_PERCENT = 50
