@@ -90,6 +90,10 @@ impl Hypervisor for ProtectedKvmHypervisor {
     fn as_device_assigner(&self) -> Option<&dyn DeviceAssigningHypervisor> {
         Some(self)
     }
+
+    fn get_granule_size(&self) -> Option<usize> {
+        <Self as MemSharingHypervisor>::granule(self).ok()
+    }
 }
 
 impl MmioGuardedHypervisor for ProtectedKvmHypervisor {
