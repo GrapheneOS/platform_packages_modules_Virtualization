@@ -32,6 +32,13 @@ pub trait Hypervisor {
     fn as_device_assigner(&self) -> Option<&dyn DeviceAssigningHypervisor> {
         None
     }
+
+    /// Returns the granule used by all APIs (MEM_SHARE, MMIO_GUARD, device assignment, ...).
+    ///
+    /// If no such API is supported or if they support different granule sizes, returns None.
+    fn get_granule_size(&self) -> Option<usize> {
+        None
+    }
 }
 
 pub trait MmioGuardedHypervisor {
