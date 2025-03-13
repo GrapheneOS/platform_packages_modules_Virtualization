@@ -71,8 +71,9 @@ class VmLauncherService : Service() {
 
     private val binder = VmLauncherServiceBinder()
 
+    private lateinit var executorService: ExecutorService
+
     // TODO: using lateinit for some fields to avoid null
-    private var executorService: ExecutorService? = null
     private var virtualMachine: VirtualMachine? = null
     private var resultReceiver: ResultReceiver? = null
     private var server: Server? = null
@@ -167,6 +168,11 @@ class VmLauncherService : Service() {
         }
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
+    }
+
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (intent.action == ACTION_SHUTDOWN_VM) {
             if (debianService != null && debianService!!.shutdownDebian()) {
@@ -184,7 +190,6 @@ class VmLauncherService : Service() {
             Log.d(TAG, "VM instance is already started")
             return START_NOT_STICKY
         }
-        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
 
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
@@ -219,7 +224,7 @@ class VmLauncherService : Service() {
             stopSelf()
         }
         val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
-        Logger.setup(virtualMachine!!, logDir, executorService!!)
+        Logger.setup(virtualMachine!!, logDir, executorService)
 
         val notification =
             intent.getParcelableExtra<Notification?>(EXTRA_NOTIFICATION, Notification::class.java)
@@ -419,7 +424,7 @@ class VmLauncherService : Service() {
             return
         }
 
-        executorService!!.execute(
+        executorService.execute(
             Runnable {
                 // TODO(b/373533555): we can use mDNS for that.
                 val debianServicePortFile = File(filesDir, "debian_service_port")
@@ -447,10 +452,9 @@ class VmLauncherService : Service() {
                     Log.e(TAG, "failed to stop a VM instance", e)
                 }
             }
-            executorService?.shutdownNow()
-            executorService = null
             virtualMachine = null
         }
+        executorService.shutdownNow()
         super.onDestroy()
     }
 
