@@ -328,7 +328,7 @@ public class MainActivity :
 
         val stopIntent = Intent()
         stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(VmLauncherService.ACTION_STOP_VM_LAUNCHER_SERVICE)
+        stopIntent.setAction(VmLauncherService.ACTION_SHUTDOWN_VM)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,

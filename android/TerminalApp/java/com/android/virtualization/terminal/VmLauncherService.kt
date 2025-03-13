@@ -170,7 +170,7 @@ class VmLauncherService : Service() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (intent.action == ACTION_STOP_VM_LAUNCHER_SERVICE) {
+        if (intent.action == ACTION_SHUTDOWN_VM) {
             if (debianService != null && debianService!!.shutdownDebian()) {
                 // During shutdown, change the notification content to indicate that it's closing
                 val notification = createNotificationForTerminalClose()
@@ -301,7 +301,7 @@ class VmLauncherService : Service() {
     private fun createNotificationForTerminalClose(): Notification {
         val stopIntent = Intent()
         stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(ACTION_STOP_VM_LAUNCHER_SERVICE)
+        stopIntent.setAction(ACTION_SHUTDOWN_VM)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,
@@ -469,8 +469,7 @@ class VmLauncherService : Service() {
         private const val ACTION_START_VM_LAUNCHER_SERVICE =
             "android.virtualization.START_VM_LAUNCHER_SERVICE"
         const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
-        const val ACTION_STOP_VM_LAUNCHER_SERVICE: String =
-            "android.virtualization.STOP_VM_LAUNCHER_SERVICE"
+        const val ACTION_SHUTDOWN_VM: String = "android.virtualization.ACTION_SHUTDOWN_VM"
 
         private const val RESULT_START = 0
         private const val RESULT_STOP = 1
@@ -542,7 +541,7 @@ class VmLauncherService : Service() {
 
         fun stop(context: Context) {
             val i = getMyIntent(context)
-            i.setAction(ACTION_STOP_VM_LAUNCHER_SERVICE)
+            i.setAction(ACTION_SHUTDOWN_VM)
             context.startService(i)
         }
     }
