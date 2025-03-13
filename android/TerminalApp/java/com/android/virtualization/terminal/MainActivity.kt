@@ -29,7 +29,6 @@ import android.os.Bundle
 import android.os.ConditionVariable
 import android.os.Environment
 import android.os.SystemProperties
-import android.os.Trace
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -363,7 +362,6 @@ public class MainActivity :
                 )
                 .build()
 
-        Trace.beginAsyncSection("executeTerminal", 0)
         run(this, this, notification, getDisplayInfo())
     }
 
