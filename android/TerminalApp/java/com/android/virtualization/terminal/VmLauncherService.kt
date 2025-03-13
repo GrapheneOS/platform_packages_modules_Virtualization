@@ -32,7 +32,6 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.os.ResultReceiver
 import android.os.SystemProperties
-import android.os.Trace
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
@@ -202,15 +201,12 @@ class VmLauncherService : Service() {
         }
         val config = configBuilder.build()
 
-        Trace.beginSection("vmCreate")
         val runner: Runner =
             try {
                 create(this, config)
             } catch (e: VirtualMachineException) {
                 throw RuntimeException("cannot create runner", e)
             }
-        Trace.endSection()
-        Trace.beginAsyncSection("debianBoot", 0)
 
         virtualMachine = runner.vm
         resultReceiver =
