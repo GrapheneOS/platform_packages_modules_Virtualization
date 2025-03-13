@@ -146,8 +146,8 @@ internal class ImageArchive {
     companion object {
         private const val DIR_IN_SDCARD = "linux"
         private const val ARCHIVE_NAME = "images.tar.gz"
-        private const val BUILD_TAG = "latest" // TODO: use actual tag name
-        private const val HOST_URL = "https://dl.google.com/android/ferrochrome/$BUILD_TAG"
+        private val BUILD_TAG = Integer.toString(Build.VERSION.SDK_INT_FULL)
+        private val HOST_URL = "https://dl.google.com/android/ferrochrome/$BUILD_TAG"
 
         fun getSdcardPathForTesting(): Path {
             return Environment.getExternalStoragePublicDirectory(DIR_IN_SDCARD).toPath()
