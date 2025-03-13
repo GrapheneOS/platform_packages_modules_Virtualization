@@ -31,6 +31,7 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.ResultReceiver
+import android.os.SystemProperties
 import android.os.Trace
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -479,7 +480,18 @@ class VmLauncherService : Service() {
         private const val KEY_TERMINAL_IPADDRESS = "address"
         private const val KEY_TERMINAL_PORT = "port"
 
-        private const val VM_BOOT_TIMEOUT_SECONDS = 20
+        private val VM_BOOT_TIMEOUT_SECONDS: Int =
+            {
+                val deviceName = SystemProperties.get("ro.product.vendor.device", "")
+                val cuttlefish = deviceName.startsWith("vsoc_")
+                val goldfish = deviceName.startsWith("emu64")
+
+                if (cuttlefish || goldfish) {
+                    3 * 60
+                } else {
+                    30
+                }
+            }()
 
         private const val INITIAL_MEM_BALLOON_PERCENT = 10
         private const val MAX_MEM_BALLOON_PERCENT = 50
