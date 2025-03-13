@@ -19,7 +19,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.http.SslError
 import android.os.Bundle
-import android.os.Trace
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -145,7 +144,6 @@ class TerminalTabFragment() : Fragment() {
                 object : WebView.VisualStateCallback() {
                     override fun onComplete(completedRequestId: Long) {
                         if (completedRequestId == requestId) {
-                            Trace.endAsyncSection("executeTerminal", 0)
                             bootProgressView.visibility = View.GONE
                             terminalView.visibility = View.VISIBLE
                             terminalView.mapTouchToMouseEvent()

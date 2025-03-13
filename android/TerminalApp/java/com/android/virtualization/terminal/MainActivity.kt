@@ -29,7 +29,6 @@ import android.os.Bundle
 import android.os.ConditionVariable
 import android.os.Environment
 import android.os.SystemProperties
-import android.os.Trace
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -328,7 +327,7 @@ public class MainActivity :
 
         val stopIntent = Intent()
         stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(VmLauncherService.ACTION_STOP_VM_LAUNCHER_SERVICE)
+        stopIntent.setAction(VmLauncherService.ACTION_SHUTDOWN_VM)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,
@@ -363,7 +362,6 @@ public class MainActivity :
                 )
                 .build()
 
-        Trace.beginAsyncSection("executeTerminal", 0)
         run(this, this, notification, getDisplayInfo())
     }
 
