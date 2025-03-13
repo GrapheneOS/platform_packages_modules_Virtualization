@@ -28,6 +28,7 @@ import com.android.virtualization.terminal.proto.ReportVmActivePortsRequest
 import com.android.virtualization.terminal.proto.ReportVmActivePortsResponse
 import com.android.virtualization.terminal.proto.ShutdownQueueOpeningRequest
 import com.android.virtualization.terminal.proto.ShutdownRequestItem
+import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 
 internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
@@ -79,8 +80,15 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
         request: ShutdownQueueOpeningRequest?,
         responseObserver: StreamObserver<ShutdownRequestItem?>,
     ) {
+        val serverCallStreamObserver = responseObserver as ServerCallStreamObserver<ShutdownRequestItem?>
+        serverCallStreamObserver.setOnCancelHandler {
+            shutdownRunnable = null
+        }
         Log.d(TAG, "openShutdownRequestQueue")
         shutdownRunnable = Runnable {
+            if (serverCallStreamObserver.isCancelled()) {
+                return@Runnable
+            }
             responseObserver.onNext(ShutdownRequestItem.newBuilder().build())
             responseObserver.onCompleted()
             shutdownRunnable = null
