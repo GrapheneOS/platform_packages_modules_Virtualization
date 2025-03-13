@@ -63,6 +63,33 @@ rust_library {
     ],
 }
 
+rust_library {
+    name: "libdiced_open_dice_multialg",
+    defaults: ["libdiced_open_dice_defaults"],
+    host_supported: true,
+    vendor_available: true,
+    rustlibs: [
+        "libcoset",
+        "libopen_dice_android_bindgen_multialg",
+        "libopen_dice_cbor_bindgen_multialg",
+        "libzeroize",
+    ],
+    features: [
+        "std",
+        "multialg",
+    ],
+    shared_libs: [
+        "libcrypto",
+    ],
+    visibility: [
+        "//system/software_defined_vehicle:__subpackages__",
+    ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+}
+
 rust_defaults {
     name: "libdiced_open_dice_test_defaults",
     crate_name: "diced_open_dice_test",
@@ -76,6 +103,18 @@ rust_test {
     rustlibs: [
         "libdiced_open_dice",
         "libcoset",
+    ],
+}
+
+rust_test {
+    name: "libdiced_open_dice_multialg.integration_test",
+    defaults: ["libdiced_open_dice_test_defaults"],
+    rustlibs: [
+        "libdiced_open_dice_multialg",
+        "libcoset",
+    ],
+    features: [
+        "multialg",
     ],
 }
 
@@ -174,6 +213,20 @@ rust_bindgen {
 }
 
 rust_bindgen {
+    name: "libopen_dice_cbor_bindgen_multialg",
+    defaults: [
+        "libopen_dice.rust_defaults",
+        "libopen_dice_cbor_bindgen.rust_defaults",
+    ],
+    bindgen_flags: [
+        "--rustified-enum DiceKeyAlgorithm",
+        "--allowlist-type=DiceContext",
+    ],
+    whole_static_libs: ["libopen_dice_cbor_multialg"],
+    shared_libs: ["libcrypto"],
+}
+
+rust_bindgen {
     name: "libopen_dice_cbor_bindgen_nostd",
     defaults: [
         "libopen_dice_cbor_bindgen.rust_defaults",
@@ -228,6 +281,18 @@ rust_bindgen {
         "libopen_dice_cbor_bindgen",
     ],
     whole_static_libs: ["libopen_dice_android"],
+}
+
+rust_bindgen {
+    name: "libopen_dice_android_bindgen_multialg",
+    defaults: [
+        "libopen_dice.rust_defaults",
+        "libopen_dice_android_bindgen.rust_defaults",
+    ],
+    rustlibs: [
+        "libopen_dice_cbor_bindgen_multialg",
+    ],
+    whole_static_libs: ["libopen_dice_android_multialg"],
 }
 
 rust_bindgen {

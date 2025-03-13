@@ -21,11 +21,17 @@ use crate::dice::{
     PRIVATE_KEY_SEED_SIZE, PRIVATE_KEY_SIZE, VM_KEY_ALGORITHM,
 };
 use crate::error::{check_result, DiceError, Result};
+#[cfg(feature = "multialg")]
+use crate::KeyAlgorithm;
 use alloc::{vec, vec::Vec};
+#[cfg(feature = "multialg")]
+use open_dice_cbor_bindgen::DiceContext_;
 use open_dice_cbor_bindgen::{
     DiceCoseSignAndEncodeSign1, DiceGenerateCertificate, DiceHash, DiceKdf, DiceKeypairFromSeed,
     DicePrincipal, DiceSign, DiceVerify,
 };
+#[cfg(feature = "multialg")]
+use std::ffi::c_void;
 use std::ptr;
 
 /// Hashes the provided input using DICE's hash function `DiceHash`.
@@ -100,6 +106,44 @@ pub fn keypair_from_seed(seed: &[u8; PRIVATE_KEY_SEED_SIZE]) -> Result<(Vec<u8>,
     Ok((public_key, private_key))
 }
 
+/// Deterministically generates a public and private key pair from `seed` and `key_algorithm`.
+/// Since this is deterministic, `seed` is as sensitive as a private key and can
+/// be used directly as the private key.
+#[cfg(feature = "multialg")]
+pub fn keypair_from_seed_multialg(
+    seed: &[u8; PRIVATE_KEY_SEED_SIZE],
+    key_algorithm: KeyAlgorithm,
+) -> Result<(Vec<u8>, PrivateKey)> {
+    let mut public_key = vec![0u8; key_algorithm.public_key_size()];
+    let mut private_key = PrivateKey::default();
+    // This function is used with an open-dice config that uses the same algorithms for the
+    // subject and authority. Therefore, the principal is irrelevant in this context as this
+    // function only derives the key pair cryptographically without caring about which
+    // principal it is for. Hence, we arbitrarily set it to `DicePrincipal::kDicePrincipalSubject`.
+    let principal = DicePrincipal::kDicePrincipalSubject;
+    let context = DiceContext_ {
+        authority_algorithm: key_algorithm.into(),
+        subject_algorithm: key_algorithm.into(),
+    };
+    check_result(
+        // SAFETY: The function writes to the `public_key` and `private_key` within the given
+        // bounds, and only reads the `seed`.
+        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+        // open-dice.
+        unsafe {
+            DiceKeypairFromSeed(
+                &context as *const DiceContext_ as *mut c_void,
+                principal,
+                seed.as_ptr(),
+                public_key.as_mut_ptr(),
+                private_key.as_mut_ptr(),
+            )
+        },
+        public_key.len(),
+    )?;
+    Ok((public_key, private_key))
+}
+
 /// Derives the CDI_Leaf_Priv from the provided `dice_artifacts`.
 ///
 /// The corresponding public key is included in the leaf certificate of the DICE chain
@@ -111,6 +155,17 @@ pub fn keypair_from_seed(seed: &[u8; PRIVATE_KEY_SEED_SIZE]) -> Result<(Vec<u8>,
 pub fn derive_cdi_leaf_priv(dice_artifacts: &dyn DiceArtifacts) -> Result<PrivateKey> {
     let cdi_priv_key_seed = derive_cdi_private_key_seed(dice_artifacts.cdi_attest())?;
     let (_, private_key) = keypair_from_seed(cdi_priv_key_seed.as_array())?;
+    Ok(private_key)
+}
+
+/// Multialg variant of `derive_cdi_leaf_priv`.
+#[cfg(feature = "multialg")]
+pub fn derive_cdi_leaf_priv_multialg(
+    dice_artifacts: &dyn DiceArtifacts,
+    key_algorithm: KeyAlgorithm,
+) -> Result<PrivateKey> {
+    let cdi_priv_key_seed = derive_cdi_private_key_seed(dice_artifacts.cdi_attest())?;
+    let (_, private_key) = keypair_from_seed_multialg(cdi_priv_key_seed.as_array(), key_algorithm)?;
     Ok(private_key)
 }
 
@@ -173,6 +228,45 @@ pub fn sign_cose_sign1(
     Ok(encoded_signature_actual_size)
 }
 
+/// Multialg variant of `sign_cose_sign1`.
+#[cfg(feature = "multialg")]
+pub fn sign_cose_sign1_multialg(
+    message: &[u8],
+    aad: &[u8],
+    private_key: &[u8; PRIVATE_KEY_SIZE],
+    encoded_signature: &mut [u8],
+    key_algorithm: KeyAlgorithm,
+) -> Result<usize> {
+    let mut encoded_signature_actual_size = 0;
+    let context = DiceContext_ {
+        authority_algorithm: key_algorithm.into(),
+        subject_algorithm: key_algorithm.into(),
+    };
+    check_result(
+        // SAFETY: The function writes to `encoded_signature` and `encoded_signature_actual_size`
+        // within the given bounds. It only reads `message`, `aad`, and `private_key` within their
+        // given bounds.
+        //
+        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+        // open-dice.
+        unsafe {
+            DiceCoseSignAndEncodeSign1(
+                &context as *const DiceContext_ as *mut c_void,
+                message.as_ptr(),
+                message.len(),
+                aad.as_ptr(),
+                aad.len(),
+                private_key.as_ptr(),
+                encoded_signature.len(),
+                encoded_signature.as_mut_ptr(),
+                &mut encoded_signature_actual_size,
+            )
+        },
+        encoded_signature_actual_size,
+    )?;
+    Ok(encoded_signature_actual_size)
+}
+
 /// Signs the `message` with a private key derived from the given `dice_artifacts`
 /// CDI Attest. On success, places a `CoseSign1` encoded object in `encoded_signature`.
 /// Uses `DiceCoseSignAndEncodeSign1`.
@@ -186,6 +280,19 @@ pub fn sign_cose_sign1_with_cdi_leaf_priv(
 ) -> Result<usize> {
     let private_key = derive_cdi_leaf_priv(dice_artifacts)?;
     sign_cose_sign1(message, aad, private_key.as_array(), encoded_signature)
+}
+
+/// Multialg variant of `sign_cose_sign1_with_cdi_leaf_priv`.
+#[cfg(feature = "multialg")]
+pub fn sign_cose_sign1_with_cdi_leaf_priv_multialg(
+    message: &[u8],
+    aad: &[u8],
+    dice_artifacts: &dyn DiceArtifacts,
+    encoded_signature: &mut [u8],
+    key_algorithm: KeyAlgorithm,
+) -> Result<usize> {
+    let private_key = derive_cdi_leaf_priv_multialg(dice_artifacts, key_algorithm)?;
+    sign_cose_sign1_multialg(message, aad, private_key.as_array(), encoded_signature, key_algorithm)
 }
 
 /// Verifies the `signature` of the `message` with the given `public_key` using `DiceVerify`.
@@ -202,6 +309,40 @@ pub fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<()>
         unsafe {
             DiceVerify(
                 context(),
+                message.as_ptr(),
+                message.len(),
+                signature.as_ptr(),
+                public_key.as_ptr(),
+            )
+        },
+        0,
+    )
+}
+
+/// Multialg variant of `verify`.
+#[cfg(feature = "multialg")]
+pub fn verify_multialg(
+    message: &[u8],
+    signature: &[u8],
+    public_key: &[u8],
+    key_algorithm: KeyAlgorithm,
+) -> Result<()> {
+    if signature.len() != key_algorithm.signature_size()
+        || public_key.len() != key_algorithm.public_key_size()
+    {
+        return Err(DiceError::InvalidInput);
+    }
+    let context = DiceContext_ {
+        authority_algorithm: key_algorithm.into(),
+        subject_algorithm: key_algorithm.into(),
+    };
+    check_result(
+        // SAFETY: only reads the messages, signature and public key as constant values.
+        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+        // open-dice.
+        unsafe {
+            DiceVerify(
+                &context as *const DiceContext_ as *mut c_void,
                 message.as_ptr(),
                 message.len(),
                 signature.as_ptr(),

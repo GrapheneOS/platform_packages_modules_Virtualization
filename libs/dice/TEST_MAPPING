@@ -12,6 +12,9 @@
       "name": "libdiced_open_dice.integration_test"
     },
     {
+      "name": "libdiced_open_dice_multialg.integration_test"
+    },
+    {
       "name": "libdiced_open_dice_nostd.integration_test"
     },
     {
