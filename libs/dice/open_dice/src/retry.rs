@@ -24,6 +24,11 @@ use crate::dice::{
 };
 use crate::error::{DiceError, Result};
 use crate::ops::{generate_certificate, sign_cose_sign1, sign_cose_sign1_with_cdi_leaf_priv};
+#[cfg(feature = "multialg")]
+use crate::{
+    ops::{sign_cose_sign1_multialg, sign_cose_sign1_with_cdi_leaf_priv_multialg},
+    KeyAlgorithm,
+};
 use alloc::vec::Vec;
 #[cfg(feature = "serde_derive")]
 use serde_derive::{Deserialize, Serialize};
@@ -158,6 +163,19 @@ pub fn retry_sign_cose_sign1(
     })
 }
 
+/// Multialg variant of `retry_sign_cose_sign1`.
+#[cfg(feature = "multialg")]
+pub fn retry_sign_cose_sign1_multialg(
+    message: &[u8],
+    aad: &[u8],
+    private_key: &[u8; PRIVATE_KEY_SIZE],
+    key_algorithm: KeyAlgorithm,
+) -> Result<Vec<u8>> {
+    retry_with_measured_buffer(|encoded_signature| {
+        sign_cose_sign1_multialg(message, aad, private_key, encoded_signature, key_algorithm)
+    })
+}
+
 /// Signs a message with the given the private key derived from the
 /// CDI Attest of the given `dice_artifacts` and returns the signature
 /// as an encoded CoseSign1 object.
@@ -168,5 +186,24 @@ pub fn retry_sign_cose_sign1_with_cdi_leaf_priv(
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
         sign_cose_sign1_with_cdi_leaf_priv(message, aad, dice_artifacts, encoded_signature)
+    })
+}
+
+/// Multialg variant of `retry_sign_cose_sign1_with_cdi_leaf_priv`.
+#[cfg(feature = "multialg")]
+pub fn retry_sign_cose_sign1_with_cdi_leaf_priv_multialg(
+    message: &[u8],
+    aad: &[u8],
+    dice_artifacts: &dyn DiceArtifacts,
+    key_algorithm: KeyAlgorithm,
+) -> Result<Vec<u8>> {
+    retry_with_measured_buffer(|encoded_signature| {
+        sign_cose_sign1_with_cdi_leaf_priv_multialg(
+            message,
+            aad,
+            dice_artifacts,
+            encoded_signature,
+            key_algorithm,
+        )
     })
 }
