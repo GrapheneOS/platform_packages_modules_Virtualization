@@ -16,6 +16,8 @@
 package com.android.virtualization.terminal
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.system.virtualmachine.VirtualMachine
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -36,6 +38,12 @@ class MemBalloonController(val context: Context, val vm: VirtualMachine) {
         private const val MAX_PERCENT = 50
         private const val INFLATION_STEP_PERCENT = 5
         private const val INFLATION_PERIOD_SEC = 60L
+
+        private val mainHandler = Handler(Looper.getMainLooper())
+
+        private fun runOnMainThread(runnable: Runnable) {
+            mainHandler.post(runnable)
+        }
     }
 
     private val executor =
@@ -84,11 +92,15 @@ class MemBalloonController(val context: Context, val vm: VirtualMachine) {
     private var ongoingInflation: ScheduledFuture<*>? = null
 
     fun start() {
-        ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
+        // addObserver is @MainThread
+        runOnMainThread({ ProcessLifecycleOwner.get().lifecycle.addObserver(observer) })
     }
 
     fun stop() {
-        ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
-        executor.shutdown()
+        // removeObserver is @MainThread
+        runOnMainThread({
+            ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+            executor.shutdown()
+        })
     }
 }
