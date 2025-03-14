@@ -71,7 +71,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         diskSizeStepMb = 1L shl resources.getInteger(R.integer.disk_size_round_up_step_size_in_mb)
 
         val image = InstalledImage.getDefault(this)
-        diskSizeMb = bytesToMb(image.getSize())
+        diskSizeMb = bytesToMb(image.getApparentSize())
         val minDiskSizeMb = bytesToMb(image.getSmallestSizePossible()).coerceAtMost(diskSizeMb)
         val usableSpaceMb =
             bytesToMb(Environment.getDataDirectory().getUsableSpace()) and
