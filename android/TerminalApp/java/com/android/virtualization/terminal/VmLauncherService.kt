@@ -127,6 +127,11 @@ class VmLauncherService : Service() {
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
         val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
 
+        // Note: this doesn't always do the resizing. If the current image size is the same as the
+        // requested size which is rounded up to the page alignment, resizing is not done.
+        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
+        image.resize(diskSize)
+
         customImageConfigBuilder.setAudioConfig(
             AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
@@ -396,6 +401,7 @@ class VmLauncherService : Service() {
         private const val ACTION_START_VM_LAUNCHER_SERVICE =
             "android.virtualization.START_VM_LAUNCHER_SERVICE"
         const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
+        const val EXTRA_DISK_SIZE = "EXTRA_DISK_SIZE"
         const val ACTION_SHUTDOWN_VM: String = "android.virtualization.ACTION_SHUTDOWN_VM"
 
         private const val RESULT_START = 0
@@ -428,6 +434,7 @@ class VmLauncherService : Service() {
             callback: VmLauncherServiceCallback?,
             notification: Notification?,
             displayInfo: DisplayInfo,
+            diskSize: Long?,
         ): Result<Unit> {
             val i = getMyIntent(context)
             val resultReceiver: ResultReceiver =
@@ -451,6 +458,9 @@ class VmLauncherService : Service() {
             i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             i.putExtra(EXTRA_NOTIFICATION, notification)
             i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
+            if (diskSize != null) {
+                i.putExtra(EXTRA_DISK_SIZE, diskSize)
+            }
             return try {
                 context.startForegroundService(i)
                 Result.success(Unit)
