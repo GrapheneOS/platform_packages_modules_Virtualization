@@ -361,8 +361,10 @@ public class MainActivity :
                         .build()
                 )
                 .build()
-
-        run(this, this, notification, getDisplayInfo())
+        run(this, this, notification, getDisplayInfo()).onFailure {
+            Log.e(TAG, "Failed to start VM.", it)
+            finish()
+        }
     }
 
     @VisibleForTesting

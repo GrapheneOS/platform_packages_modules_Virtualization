@@ -15,6 +15,7 @@
  */
 package com.android.virtualization.terminal
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -423,7 +424,7 @@ class VmLauncherService : Service() {
             callback: VmLauncherServiceCallback?,
             notification: Notification?,
             displayInfo: DisplayInfo,
-        ) {
+        ): Result<Unit> {
             val i = getMyIntent(context)
             val resultReceiver: ResultReceiver =
                 object : ResultReceiver(Handler(Looper.myLooper()!!)) {
@@ -446,7 +447,12 @@ class VmLauncherService : Service() {
             i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             i.putExtra(EXTRA_NOTIFICATION, notification)
             i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
-            context.startForegroundService(i)
+            return try {
+                context.startForegroundService(i)
+                Result.success(Unit)
+            } catch (e: ForegroundServiceStartNotAllowedException) {
+                Result.failure<Unit>(e)
+            }
         }
 
         private fun getResultReceiverForIntent(r: ResultReceiver): ResultReceiver {
