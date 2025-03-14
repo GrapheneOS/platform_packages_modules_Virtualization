@@ -252,7 +252,7 @@ public class MainActivity :
         executorService.shutdown()
         getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
             .removeAccessibilityStateChangeListener(this)
-        stop(this)
+        stop(this, this)
         super.onDestroy()
     }
 
