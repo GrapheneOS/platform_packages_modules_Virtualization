@@ -55,7 +55,6 @@ import com.android.virtualization.terminal.VmLauncherService.Companion.stop
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URL
 import java.util.concurrent.CompletableFuture
@@ -312,8 +311,6 @@ public class MainActivity :
             return
         }
 
-        resizeDiskIfNecessary(image)
-
         val tapIntent = Intent(this, MainActivity::class.java)
         tapIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val tapPendingIntent =
@@ -360,7 +357,9 @@ public class MainActivity :
                         .build()
                 )
                 .build()
-        run(this, this, notification, getDisplayInfo()).onFailure {
+
+        val diskSize = intent.getLongExtra(KEY_DISK_SIZE, image.getSize())
+        run(this, this, notification, getDisplayInfo(), diskSize).onFailure {
             Log.e(TAG, "Failed to start VM.", it)
             finish()
         }
@@ -369,16 +368,6 @@ public class MainActivity :
     @VisibleForTesting
     public fun waitForBootCompleted(timeoutMillis: Long): Boolean {
         return bootCompleted.block(timeoutMillis)
-    }
-
-    private fun resizeDiskIfNecessary(image: InstalledImage) {
-        try {
-            // TODO(b/382190982): Show snackbar message instead when it's recoverable.
-            image.resize(intent.getLongExtra(KEY_DISK_SIZE, image.getSize()))
-        } catch (e: IOException) {
-            start(this, Exception("Failed to resize disk", e))
-            return
-        }
     }
 
     companion object {
