@@ -69,10 +69,10 @@ class VmLauncherService : Service() {
 
     // TODO: using lateinit for some fields to avoid null
     private var virtualMachine: VirtualMachine? = null
-    private var resultReceiver: ResultReceiver? = null
     private var server: Server? = null
     private var debianService: DebianServiceImpl? = null
     private var portNotifier: PortNotifier? = null
+    private var runner: Runner? = null
 
     interface VmLauncherServiceCallback {
         fun onVmStart()
@@ -94,12 +94,22 @@ class VmLauncherService : Service() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        val resultReceiver =
+            intent.getParcelableExtra<ResultReceiver?>(
+                Intent.EXTRA_RESULT_RECEIVER,
+                ResultReceiver::class.java,
+            )
+
         if (intent.action == ACTION_SHUTDOWN_VM) {
             if (debianService != null && debianService!!.shutdownDebian()) {
                 // During shutdown, change the notification content to indicate that it's closing
                 val notification = createNotificationForTerminalClose()
                 getSystemService<NotificationManager?>(NotificationManager::class.java)
                     .notify(this.hashCode(), notification)
+                runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
+                    resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+                    stopSelf()
+                }
             } else {
                 // If there is no Debian service or it fails to shutdown, just stop the service.
                 stopSelf()
@@ -125,24 +135,18 @@ class VmLauncherService : Service() {
         }
         val config = configBuilder.build()
 
-        val runner: Runner =
+        runner =
             try {
                 create(this, config)
             } catch (e: VirtualMachineException) {
                 throw RuntimeException("cannot create runner", e)
             }
 
-        virtualMachine = runner.vm
-        resultReceiver =
-            intent.getParcelableExtra<ResultReceiver?>(
-                Intent.EXTRA_RESULT_RECEIVER,
-                ResultReceiver::class.java,
-            )
-
+        virtualMachine = runner!!.vm
         val mbc = MemBalloonController(this, virtualMachine!!)
         mbc.start()
 
-        runner.exitStatus.thenAcceptAsync { success: Boolean ->
+        runner!!.exitStatus.thenAcceptAsync { success: Boolean ->
             mbc.stop()
             resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
@@ -462,9 +466,21 @@ class VmLauncherService : Service() {
             return ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() }
         }
 
-        fun stop(context: Context) {
+        fun stop(context: Context, callback: VmLauncherServiceCallback?) {
             val i = getMyIntent(context)
             i.setAction(ACTION_SHUTDOWN_VM)
+            val resultReceiver: ResultReceiver =
+                object : ResultReceiver(Handler(Looper.myLooper()!!)) {
+                    override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
+                        if (callback == null) {
+                            return
+                        }
+                        when (resultCode) {
+                            RESULT_STOP -> callback.onVmStop()
+                        }
+                    }
+                }
+            i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             context.startService(i)
         }
     }
