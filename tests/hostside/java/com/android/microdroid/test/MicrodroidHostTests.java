@@ -101,7 +101,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     private static final String INSTANCE_IMG = TEST_ROOT + "instance.img";
     private static final String INSTANCE_ID_FILE = TEST_ROOT + "instance_id";
 
-    private static final String DEBUG_LEVEL_FULL = "full --enable-earlycon";
+    private static final String DEBUG_LEVEL_FULL = "full";
     private static final String DEBUG_LEVEL_NONE = "none";
 
     private static final int MIN_MEM_ARM64 = 170;
@@ -555,6 +555,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
             throws Exception {
         // Preconditions
         assumeKernelSupported(os);
+        assumeVmTypeSupported(os, false);
 
         File key = findTestFile("test.com.android.virt.pem");
         Map<String, File> keyOverrides = Map.of();
@@ -582,6 +583,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     public void testBootFailsWhenVbMetaDigestDoesNotMatchBootconfig(String os) throws Exception {
         // protectedVmWithImageSignedWithDifferentKeyRunsPvmfw() is the protected case.
         assumeKernelSupported(os);
+        assumeVmTypeSupported(os, false);
 
         // Sign everything with key1 except vbmeta
         File key = findTestFile("test.com.android.virt.pem");
@@ -1155,6 +1157,8 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @CddTest
     public void testRunEmptyPayload() throws Exception {
+        assumeVmTypeSupported("microdroid", false);
+
         CommandRunner android = new CommandRunner(getDevice());
 
         // Create the idsig file for the APK

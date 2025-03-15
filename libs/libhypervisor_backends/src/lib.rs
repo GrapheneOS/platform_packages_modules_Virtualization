@@ -24,5 +24,6 @@ mod mem;
 
 pub use error::{Error, Result};
 pub use hypervisor::{
-    get_device_assigner, get_mem_sharer, get_mmio_guard, DeviceAssigningHypervisor, KvmError,
+    get_device_assigner, get_granule_size, get_mem_sharer, get_mmio_guard,
+    DeviceAssigningHypervisor, KvmError,
 };

@@ -677,6 +677,10 @@ impl VmInstance {
         }
     }
 
+    fn is_vm_running(&self) -> bool {
+        matches!(&*self.vm_state.lock().unwrap(), VmState::Running { .. })
+    }
+
     /// Returns the last reported state of the VM payload.
     pub fn payload_state(&self) -> PayloadState {
         *self.payload_state.lock().unwrap()
@@ -726,6 +730,9 @@ impl VmInstance {
 
     /// Returns current virtio-balloon size.
     pub fn get_memory_balloon(&self) -> Result<u64, Error> {
+        if !self.is_vm_running() {
+            bail!("get_memory_balloon when VM is not running");
+        }
         if !self.balloon_enabled {
             bail!("virtio-balloon is not enabled");
         }
@@ -748,6 +755,9 @@ impl VmInstance {
     /// Inflates the virtio-balloon by `num_bytes` to reclaim guest memory. Called in response to
     /// memory-trimming notifications.
     pub fn set_memory_balloon(&self, num_bytes: u64) -> Result<(), Error> {
+        if !self.is_vm_running() {
+            bail!("set_memory_balloon when VM is not running");
+        }
         if !self.balloon_enabled {
             bail!("virtio-balloon is not enabled");
         }

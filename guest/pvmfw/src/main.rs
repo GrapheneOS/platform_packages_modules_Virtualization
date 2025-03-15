@@ -41,7 +41,6 @@ use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use bssl_avf::Digester;
 use diced_open_dice::{bcc_handover_parse, DiceArtifacts, DiceContext, Hidden, VM_KEY_ALGORITHM};
-use hypervisor_backends::get_mem_sharer;
 use libfdt::Fdt;
 use log::{debug, error, info, trace, warn};
 use pvmfw_avb::verify_payload;
@@ -99,15 +98,7 @@ fn main<'a>(
     }
 
     let guest_page_size = verified_boot_data.page_size.unwrap_or(SIZE_4KB);
-    // TODO(ptosi): Cache the (single?) granule once, in vmbase.
-    let hyp_page_size = if let Some(mem_sharer) = get_mem_sharer() {
-        Some(mem_sharer.granule().map_err(|e| {
-            error!("Failed to get granule size: {e}");
-            RebootReason::InternalError
-        })?)
-    } else {
-        None
-    };
+    let hyp_page_size = hypervisor_backends::get_granule_size();
     let _ =
         sanitize_device_tree(untrusted_fdt, vm_dtbo, vm_ref_dt, guest_page_size, hyp_page_size)?;
     let fdt = untrusted_fdt; // DT has now been sanitized.

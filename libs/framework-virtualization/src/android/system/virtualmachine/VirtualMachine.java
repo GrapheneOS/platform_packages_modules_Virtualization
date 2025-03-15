@@ -1807,7 +1807,7 @@ public class VirtualMachine implements AutoCloseable {
      * {@linkplain #connectToVsockServer binder request}, and wait for {@link
      * VirtualMachineCallback#onPayloadFinished} to be called.
      *
-     * <p>A stopped virtual machine can be re-started by calling {@link #run()}.
+     * <p>A stopped virtual machine cannot be re-started.
      *
      * <p>NOTE: This method may block and should not be called on the main thread.
      *
@@ -1978,8 +1978,11 @@ public class VirtualMachine implements AutoCloseable {
      *
      * @hide
      */
+    @SystemApi
+    @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
     public interface VsockConnectionProvider {
         @NonNull
+        @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
         public ParcelFileDescriptor addConnection() throws VirtualMachineException;
     }
 
@@ -2043,6 +2046,8 @@ public class VirtualMachine implements AutoCloseable {
      *
      * @hide
      */
+    @SystemApi
+    @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
     @WorkerThread
     @NonNull
     public static IBinder binderFromPreconnectedClient(@NonNull VsockConnectionProvider provider)

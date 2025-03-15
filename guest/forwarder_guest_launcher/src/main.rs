@@ -52,10 +52,9 @@ struct TcpStateRow {
 #[derive(Parser)]
 /// Flags for running command
 pub struct Args {
-    /// grpc port number
+    /// path to a file where grpc port number is written
     #[arg(long)]
-    #[arg(alias = "grpc_port")]
-    grpc_port: String,
+    grpc_port_file: String,
 }
 
 async fn process_forwarding_request_queue(
@@ -163,11 +162,23 @@ async fn report_active_ports(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    env_logger::builder().filter_level(log::LevelFilter::Debug).init();
     debug!("Starting forwarder_guest_launcher");
     let args = Args::parse();
     let gateway_ip_addr = netdev::get_default_gateway()?.ipv4[0];
-    let addr = format!("https://{}:{}", gateway_ip_addr.to_string(), args.grpc_port);
+
+    // Wait for `grpc_port_file` becomes available.
+    const GRPC_PORT_MAX_RETRY_COUNT: u32 = 10;
+    for _ in 0..GRPC_PORT_MAX_RETRY_COUNT {
+        if std::path::Path::new(&args.grpc_port_file).exists() {
+            break;
+        }
+        debug!("{} does not exist. Wait 1 second", args.grpc_port_file);
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+    let grpc_port = std::fs::read_to_string(&args.grpc_port_file)?.trim().to_string();
+
+    let addr = format!("https://{}:{}", gateway_ip_addr.to_string(), grpc_port);
     let channel = Endpoint::from_shared(addr)?.connect().await?;
     let client = DebianServiceClient::new(channel);
 
