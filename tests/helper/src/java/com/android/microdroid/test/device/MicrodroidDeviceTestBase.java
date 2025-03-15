@@ -625,7 +625,7 @@ public abstract class MicrodroidDeviceTestBase {
             stdout.transferTo(out);
             stderr.transferTo(out);
             String output = out.toString("UTF-8");
-            Log.i(tag, "Got output : " + stdout);
+            Log.i(tag, "Got stdout + stderr : " + output);
             return output;
         } catch (IOException e) {
             Log.e(tag, "Error executing: " + command, e);

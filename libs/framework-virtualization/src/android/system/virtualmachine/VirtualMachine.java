@@ -1978,8 +1978,11 @@ public class VirtualMachine implements AutoCloseable {
      *
      * @hide
      */
+    @SystemApi
+    @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
     public interface VsockConnectionProvider {
         @NonNull
+        @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
         public ParcelFileDescriptor addConnection() throws VirtualMachineException;
     }
 
@@ -2043,6 +2046,8 @@ public class VirtualMachine implements AutoCloseable {
      *
      * @hide
      */
+    @SystemApi
+    @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
     @WorkerThread
     @NonNull
     public static IBinder binderFromPreconnectedClient(@NonNull VsockConnectionProvider provider)
