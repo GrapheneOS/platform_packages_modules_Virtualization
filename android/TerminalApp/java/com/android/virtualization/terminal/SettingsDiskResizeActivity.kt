@@ -31,6 +31,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Locale
 import java.util.regex.Pattern
@@ -140,12 +141,32 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         diskSizeMb = progressToMb(diskSizeSlider.progress)
         buttons.isVisible = false
 
-        // Restart terminal
-        val intent = baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
-        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        intent?.putExtra(MainActivity.KEY_DISK_SIZE, mbToBytes(diskSizeMb))
-        finish()
-        startActivity(intent)
+        // Note: we first stop the VM, and wait for it to fully stop. Then we (re) start the Main
+        // Activity with an extra argument specifying the new size. The actual resizing will be done
+        // there.
+        // TODO: show progress until the stop is confirmed
+        VmLauncherService.stop(
+            this,
+            object : VmLauncherServiceCallback {
+                override fun onVmStart() {}
+
+                override fun onTerminalAvailable(info: TerminalInfo) {}
+
+                override fun onVmStop() {
+                    finish()
+
+                    val intent =
+                        baseContext.packageManager.getLaunchIntentForPackage(
+                            baseContext.packageName
+                        )!!
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    intent.putExtra(MainActivity.KEY_DISK_SIZE, mbToBytes(diskSizeMb))
+                    startActivity(intent)
+                }
+
+                override fun onVmError() {}
+            },
+        )
     }
 
     fun updateSliderText(sizeMb: Long) {

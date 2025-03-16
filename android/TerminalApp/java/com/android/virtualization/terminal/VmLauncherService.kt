@@ -15,6 +15,7 @@
  */
 package com.android.virtualization.terminal
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -31,18 +32,16 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.ResultReceiver
-import android.os.Trace
+import android.os.SystemProperties
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
-import com.android.internal.annotations.GuardedBy
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.Runner.Companion.create
-import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
 import io.grpc.Metadata
@@ -55,65 +54,28 @@ import io.grpc.okhttp.OkHttpServerBuilder
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.RuntimeException
-import java.lang.Math.min
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 import java.nio.file.Files
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class VmLauncherService : Service() {
-    inner class VmLauncherServiceBinder : android.os.Binder() {
-        fun getService(): VmLauncherService = this@VmLauncherService
-    }
-
-    private val binder = VmLauncherServiceBinder()
+    private lateinit var executorService: ExecutorService
 
     // TODO: using lateinit for some fields to avoid null
-    private var executorService: ExecutorService? = null
     private var virtualMachine: VirtualMachine? = null
-    private var resultReceiver: ResultReceiver? = null
     private var server: Server? = null
     private var debianService: DebianServiceImpl? = null
     private var portNotifier: PortNotifier? = null
-    private var mLock = Object()
-    @GuardedBy("mLock")
-    private var currentMemBalloonPercent = 0;
-
-    @GuardedBy("mLock")
-    private val inflateMemBalloonHandler = Handler(Looper.getMainLooper())
-    private val inflateMemBalloonTask: Runnable = object : Runnable {
-        override fun run() {
-            synchronized(mLock) {
-                if (currentMemBalloonPercent < INITIAL_MEM_BALLOON_PERCENT
-                    || currentMemBalloonPercent > MAX_MEM_BALLOON_PERCENT
-                ) {
-                    Log.e(
-                        TAG, "currentBalloonPercent=$currentMemBalloonPercent is invalid," +
-                                " should be in range: " +
-                                "$INITIAL_MEM_BALLOON_PERCENT~$MAX_MEM_BALLOON_PERCENT"
-                    )
-                    return
-                }
-                // Increases the balloon size by MEM_BALLOON_PERCENT_STEP% every time
-                if (currentMemBalloonPercent < MAX_MEM_BALLOON_PERCENT) {
-                    currentMemBalloonPercent =
-                        min(
-                            MAX_MEM_BALLOON_PERCENT,
-                            currentMemBalloonPercent + MEM_BALLOON_PERCENT_STEP
-                        )
-                    virtualMachine?.setMemoryBalloonByPercent(currentMemBalloonPercent)
-                    inflateMemBalloonHandler.postDelayed(this,
-                        MEM_BALLOON_INFLATE_INTERVAL_MILLIS)
-                }
-            }
-        }
-    }
-
+    private var runner: Runner? = null
 
     interface VmLauncherServiceCallback {
         fun onVmStart()
+
+        fun onTerminalAvailable(info: TerminalInfo)
 
         fun onVmStop()
 
@@ -121,54 +83,31 @@ class VmLauncherService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        return binder
+        return null
     }
 
-    /**
-     * Processes application lifecycle events and adjusts the virtual machine's memory balloon
-     * accordingly.
-     *
-     * @param event The application lifecycle event.
-     */
-    fun processAppLifeCycleEvent(event: ApplicationLifeCycleEvent) {
-        when (event) {
-            // When the app starts, reset the memory balloon to 0%.
-            // This gives the app maximum available memory.
-            ApplicationLifeCycleEvent.APP_ON_START -> {
-                synchronized(mLock) {
-                    inflateMemBalloonHandler.removeCallbacks(inflateMemBalloonTask);
-                    currentMemBalloonPercent = 0;
-                    virtualMachine?.setMemoryBalloonByPercent(currentMemBalloonPercent)
-                }
-            }
-            ApplicationLifeCycleEvent.APP_ON_STOP -> {
-                // When the app stops, inflate the memory balloon to INITIAL_MEM_BALLOON_PERCENT.
-                // Inflate the balloon by MEM_BALLOON_PERCENT_STEP every
-                // MEM_BALLOON_INFLATE_INTERVAL_MILLIS milliseconds until reaching
-                // MAX_MEM_BALLOON_PERCENT of total memory. This allows the system to reclaim
-                // memory while the app is in the background.
-                synchronized(mLock) {
-                    currentMemBalloonPercent = INITIAL_MEM_BALLOON_PERCENT;
-                    virtualMachine?.setMemoryBalloonByPercent(currentMemBalloonPercent)
-                    inflateMemBalloonHandler.postDelayed(
-                        inflateMemBalloonTask,
-                        MEM_BALLOON_INFLATE_INTERVAL_MILLIS
-                    );
-                }
-            }
-            else -> {
-                Log.e(TAG, "unrecognized lifecycle event: $event")
-            }
-        }
+    override fun onCreate() {
+        super.onCreate()
+        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (intent.action == ACTION_STOP_VM_LAUNCHER_SERVICE) {
+        val resultReceiver =
+            intent.getParcelableExtra<ResultReceiver?>(
+                Intent.EXTRA_RESULT_RECEIVER,
+                ResultReceiver::class.java,
+            )
+
+        if (intent.action == ACTION_SHUTDOWN_VM) {
             if (debianService != null && debianService!!.shutdownDebian()) {
                 // During shutdown, change the notification content to indicate that it's closing
                 val notification = createNotificationForTerminalClose()
                 getSystemService<NotificationManager?>(NotificationManager::class.java)
                     .notify(this.hashCode(), notification)
+                runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
+                    resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+                    stopSelf()
+                }
             } else {
                 // If there is no Debian service or it fails to shutdown, just stop the service.
                 stopSelf()
@@ -179,7 +118,6 @@ class VmLauncherService : Service() {
             Log.d(TAG, "VM instance is already started")
             return START_NOT_STICKY
         }
-        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
 
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
@@ -187,40 +125,37 @@ class VmLauncherService : Service() {
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
         val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
 
+        // Note: this doesn't always do the resizing. If the current image size is the same as the
+        // requested size which is rounded up to the page alignment, resizing is not done.
+        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
+        image.resize(diskSize)
+
         customImageConfigBuilder.setAudioConfig(
-            AudioConfig.Builder()
-                .setUseSpeaker(true)
-                .setUseMicrophone(true)
-                .build()
+            AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
         if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
         }
         val config = configBuilder.build()
 
-        Trace.beginSection("vmCreate")
-        val runner: Runner =
+        runner =
             try {
                 create(this, config)
             } catch (e: VirtualMachineException) {
                 throw RuntimeException("cannot create runner", e)
             }
-        Trace.endSection()
-        Trace.beginAsyncSection("debianBoot", 0)
 
-        virtualMachine = runner.vm
-        resultReceiver =
-            intent.getParcelableExtra<ResultReceiver?>(
-                Intent.EXTRA_RESULT_RECEIVER,
-                ResultReceiver::class.java,
-            )
+        virtualMachine = runner!!.vm
+        val mbc = MemBalloonController(this, virtualMachine!!)
+        mbc.start()
 
-        runner.exitStatus.thenAcceptAsync { success: Boolean ->
+        runner!!.exitStatus.thenAcceptAsync { success: Boolean ->
+            mbc.stop()
             resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logPath = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
-        Logger.setup(virtualMachine!!, logPath, executorService!!)
+        val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
+        Logger.setup(virtualMachine!!, logDir, executorService)
 
         val notification =
             intent.getParcelableExtra<Notification?>(EXTRA_NOTIFICATION, Notification::class.java)
@@ -231,41 +166,73 @@ class VmLauncherService : Service() {
 
         portNotifier = PortNotifier(this)
 
-        // TODO: dedup this part
+        getTerminalServiceInfo()
+            .thenAcceptAsync(
+                { info ->
+                    val ipAddress = info.hostAddresses[0].hostAddress
+                    val port = info.port
+                    val bundle = Bundle()
+                    bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
+                    bundle.putInt(KEY_TERMINAL_PORT, port)
+                    resultReceiver!!.send(RESULT_TERMINAL_AVAIL, bundle)
+                    startDebianServer(ipAddress)
+                },
+                executorService,
+            )
+            .exceptionallyAsync(
+                { e ->
+                    Log.e(TAG, "Failed to start VM", e)
+                    resultReceiver!!.send(RESULT_ERROR, null)
+                    stopSelf()
+                    null
+                },
+                executorService,
+            )
+
+        return START_NOT_STICKY
+    }
+
+    private fun getTerminalServiceInfo(): CompletableFuture<NsdServiceInfo> {
+        val executor = Executors.newSingleThreadExecutor(TerminalThreadFactory(applicationContext))
         val nsdManager = getSystemService<NsdManager?>(NsdManager::class.java)
-        val info = NsdServiceInfo()
-        info.serviceType = "_http._tcp"
-        info.serviceName = "ttyd"
+        val queryInfo = NsdServiceInfo()
+        queryInfo.serviceType = "_http._tcp"
+        queryInfo.serviceName = "ttyd"
+        var resolvedInfo = CompletableFuture<NsdServiceInfo>()
+
         nsdManager.registerServiceInfoCallback(
-            info,
-            executorService!!,
+            queryInfo,
+            executor,
             object : NsdManager.ServiceInfoCallback {
-                var started: Boolean = false
+                var found: Boolean = false
 
                 override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {}
 
-                override fun onServiceInfoCallbackUnregistered() {}
+                override fun onServiceInfoCallbackUnregistered() {
+                    executor.shutdown()
+                }
 
                 override fun onServiceLost() {}
 
                 override fun onServiceUpdated(info: NsdServiceInfo) {
                     Log.i(TAG, "Service found: $info")
-                    if (!started) {
-                        started = true
+                    if (!found) {
+                        found = true
                         nsdManager.unregisterServiceInfoCallback(this)
-                        startDebianServer(info.hostAddresses[0].hostAddress)
+                        resolvedInfo.complete(info)
                     }
                 }
             },
         )
 
-        return START_NOT_STICKY
+        resolvedInfo.orTimeout(VM_BOOT_TIMEOUT_SECONDS.toLong(), TimeUnit.SECONDS)
+        return resolvedInfo
     }
 
     private fun createNotificationForTerminalClose(): Notification {
         val stopIntent = Intent()
         stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(ACTION_STOP_VM_LAUNCHER_SERVICE)
+        stopIntent.setAction(ACTION_SHUTDOWN_VM)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,
@@ -326,7 +293,7 @@ class VmLauncherService : Service() {
 
         // Set the initial display size
         // TODO(jeongik): set up the display size on demand
-        if (terminalGuiSupport() && displayInfo != null) {
+        if (Flags.terminalGuiSupport() && displayInfo != null) {
             builder
                 .setDisplayConfig(
                     VirtualMachineCustomImageConfig.DisplayConfig.Builder()
@@ -388,7 +355,7 @@ class VmLauncherService : Service() {
             return
         }
 
-        executorService!!.execute(
+        executorService.execute(
             Runnable {
                 // TODO(b/373533555): we can use mDNS for that.
                 val debianServicePortFile = File(filesDir, "debian_service_port")
@@ -401,6 +368,10 @@ class VmLauncherService : Service() {
                 }
             }
         )
+
+        if (Flags.terminalStorageBalloon()) {
+            StorageBalloonWorker.start(this, debianService!!)
+        }
     }
 
     override fun onDestroy() {
@@ -416,15 +387,15 @@ class VmLauncherService : Service() {
                     Log.e(TAG, "failed to stop a VM instance", e)
                 }
             }
-            executorService?.shutdownNow()
-            executorService = null
             virtualMachine = null
         }
+        executorService.shutdownNow()
         super.onDestroy()
     }
 
     private fun stopDebianServer() {
         debianService?.killForwarderHost()
+        debianService?.closeStorageBalloonRequestQueue()
         server?.shutdown()
     }
 
@@ -433,17 +404,29 @@ class VmLauncherService : Service() {
         private const val ACTION_START_VM_LAUNCHER_SERVICE =
             "android.virtualization.START_VM_LAUNCHER_SERVICE"
         const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
-        const val ACTION_STOP_VM_LAUNCHER_SERVICE: String =
-            "android.virtualization.STOP_VM_LAUNCHER_SERVICE"
+        const val EXTRA_DISK_SIZE = "EXTRA_DISK_SIZE"
+        const val ACTION_SHUTDOWN_VM: String = "android.virtualization.ACTION_SHUTDOWN_VM"
 
         private const val RESULT_START = 0
         private const val RESULT_STOP = 1
         private const val RESULT_ERROR = 2
+        private const val RESULT_TERMINAL_AVAIL = 3
 
-        private const val INITIAL_MEM_BALLOON_PERCENT = 10
-        private const val MAX_MEM_BALLOON_PERCENT = 50
-        private const val MEM_BALLOON_INFLATE_INTERVAL_MILLIS = 60000L
-        private const val MEM_BALLOON_PERCENT_STEP = 5;
+        private const val KEY_TERMINAL_IPADDRESS = "address"
+        private const val KEY_TERMINAL_PORT = "port"
+
+        private val VM_BOOT_TIMEOUT_SECONDS: Int =
+            {
+                val deviceName = SystemProperties.get("ro.product.vendor.device", "")
+                val cuttlefish = deviceName.startsWith("vsoc_")
+                val goldfish = deviceName.startsWith("emu64")
+
+                if (cuttlefish || goldfish) {
+                    3 * 60
+                } else {
+                    30
+                }
+            }()
 
         private fun getMyIntent(context: Context): Intent {
             return Intent(context.getApplicationContext(), VmLauncherService::class.java)
@@ -454,7 +437,8 @@ class VmLauncherService : Service() {
             callback: VmLauncherServiceCallback?,
             notification: Notification?,
             displayInfo: DisplayInfo,
-        ) {
+            diskSize: Long?,
+        ): Result<Unit> {
             val i = getMyIntent(context)
             val resultReceiver: ResultReceiver =
                 object : ResultReceiver(Handler(Looper.myLooper()!!)) {
@@ -464,6 +448,11 @@ class VmLauncherService : Service() {
                         }
                         when (resultCode) {
                             RESULT_START -> callback.onVmStart()
+                            RESULT_TERMINAL_AVAIL -> {
+                                val ipAddress = resultData!!.getString(KEY_TERMINAL_IPADDRESS)
+                                val port = resultData!!.getInt(KEY_TERMINAL_PORT)
+                                callback.onTerminalAvailable(TerminalInfo(ipAddress!!, port))
+                            }
                             RESULT_STOP -> callback.onVmStop()
                             RESULT_ERROR -> callback.onVmError()
                         }
@@ -472,7 +461,15 @@ class VmLauncherService : Service() {
             i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             i.putExtra(EXTRA_NOTIFICATION, notification)
             i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
-            context.startForegroundService(i)
+            if (diskSize != null) {
+                i.putExtra(EXTRA_DISK_SIZE, diskSize)
+            }
+            return try {
+                context.startForegroundService(i)
+                Result.success(Unit)
+            } catch (e: ForegroundServiceStartNotAllowedException) {
+                Result.failure<Unit>(e)
+            }
         }
 
         private fun getResultReceiverForIntent(r: ResultReceiver): ResultReceiver {
@@ -482,13 +479,27 @@ class VmLauncherService : Service() {
             return ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() }
         }
 
-        fun stop(context: Context) {
+        fun stop(context: Context, callback: VmLauncherServiceCallback?) {
             val i = getMyIntent(context)
-            i.setAction(ACTION_STOP_VM_LAUNCHER_SERVICE)
+            i.setAction(ACTION_SHUTDOWN_VM)
+            val resultReceiver: ResultReceiver =
+                object : ResultReceiver(Handler(Looper.myLooper()!!)) {
+                    override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
+                        if (callback == null) {
+                            return
+                        }
+                        when (resultCode) {
+                            RESULT_STOP -> callback.onVmStop()
+                        }
+                    }
+                }
+            i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             context.startService(i)
         }
     }
 }
+
+data class TerminalInfo(val ipAddress: String, val port: Int)
 
 data class DisplayInfo(val width: Int, val height: Int, val dpi: Int, val refreshRate: Int) :
     Parcelable {

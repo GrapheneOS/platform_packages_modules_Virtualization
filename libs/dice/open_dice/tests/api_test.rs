@@ -21,6 +21,11 @@ mod tests {
         retry_sign_cose_sign1, retry_sign_cose_sign1_with_cdi_leaf_priv, sign, verify,
         DiceArtifacts, PrivateKey, CDI_SIZE, HASH_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
     };
+    #[cfg(feature = "multialg")]
+    use diced_open_dice::{
+        keypair_from_seed_multialg, retry_sign_cose_sign1_multialg,
+        retry_sign_cose_sign1_with_cdi_leaf_priv_multialg, verify_multialg, KeyAlgorithm,
+    };
 
     use coset::{CborSerializable, CoseSign1};
 
@@ -93,7 +98,21 @@ mod tests {
         0xfc, 0x23, 0xc9, 0x21, 0x5c, 0x48, 0x21, 0x47, 0xee, 0x5b, 0xfa, 0xaf, 0x88, 0x9a, 0x52,
         0xf1, 0x61, 0x06, 0x37,
     ];
-
+    #[cfg(feature = "multialg")]
+    const EXPECTED_EC_P256_PUB_KEY: &[u8] = &[
+        0xa7, 0x93, 0x70, 0x16, 0xff, 0xe8, 0x3c, 0x23, 0x5f, 0x6b, 0xf9, 0x38, 0x7e, 0x9c, 0xe5,
+        0x21, 0xb5, 0x8a, 0x9b, 0x68, 0x5a, 0x2f, 0x62, 0xf4, 0x15, 0x94, 0x1c, 0x61, 0xb3, 0xbb,
+        0xe1, 0x26, 0x61, 0x47, 0x97, 0xbf, 0x3a, 0x1f, 0x6b, 0x87, 0x86, 0x47, 0x5e, 0xc3, 0xa6,
+        0x8b, 0x95, 0x89, 0x9e, 0x29, 0xd5, 0x55, 0x2a, 0xdd, 0x2a, 0x3f, 0xe5, 0xf0, 0x7a, 0xd6,
+        0xc4, 0x7b, 0x64, 0xe0,
+    ];
+    #[cfg(feature = "multialg")]
+    const EXPECTED_EC_P256_PRIV_KEY: &[u8] = &[
+        0x62, 0x32, 0x1b, 0xb, 0x5c, 0xac, 0x8f, 0x20, 0x61, 0xb7, 0xa3, 0xbb, 0x46, 0x2b, 0x4e,
+        0xb3, 0x3f, 0xa7, 0xf6, 0x9b, 0x2f, 0x5b, 0x80, 0xa8, 0x55, 0x5e, 0x80, 0x26, 0xbb, 0x72,
+        0xbe, 0xe7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    ];
     const EXPECTED_SIGNATURE: &[u8] = &[
         0x44, 0xae, 0xcc, 0xe2, 0xb9, 0x96, 0x18, 0x39, 0x0e, 0x61, 0x0f, 0x53, 0x07, 0xbf, 0xf2,
         0x32, 0x3d, 0x44, 0xd4, 0xf2, 0x07, 0x23, 0x30, 0x85, 0x32, 0x18, 0xd2, 0x69, 0xb8, 0x29,
@@ -140,6 +159,41 @@ mod tests {
         assert!(verify_result.is_err());
     }
 
+    #[cfg(feature = "multialg")]
+    #[test]
+    fn sign_cose_sign1_verify_multialg() {
+        let (pub_key, priv_key) = get_test_key_pair_ec_p256();
+
+        let signature_res = retry_sign_cose_sign1_multialg(
+            b"MyMessage",
+            b"MyAad",
+            priv_key.as_array(),
+            KeyAlgorithm::EcdsaP256,
+        );
+        assert!(signature_res.is_ok());
+        let signature = signature_res.unwrap();
+        let cose_sign1_res = CoseSign1::from_slice(&signature);
+        assert!(cose_sign1_res.is_ok());
+        let mut cose_sign1 = cose_sign1_res.unwrap();
+
+        let mut verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
+            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+        });
+        assert!(verify_result.is_ok());
+
+        verify_result = cose_sign1.verify_signature(b"BadAad", |sign, data| {
+            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+        });
+        assert!(verify_result.is_err());
+
+        // if we modify the signature, the payload should no longer verify
+        cose_sign1.signature.push(0xAA);
+        verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
+            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+        });
+        assert!(verify_result.is_err());
+    }
+
     struct TestArtifactsForSigning {}
 
     impl DiceArtifacts for TestArtifactsForSigning {
@@ -182,6 +236,41 @@ mod tests {
         assert!(verify_result.is_err());
     }
 
+    #[cfg(feature = "multialg")]
+    #[test]
+    fn sign_cose_sign1_with_cdi_leaf_priv_verify_multialg() {
+        let dice = TestArtifactsForSigning {};
+
+        let signature_res = retry_sign_cose_sign1_with_cdi_leaf_priv_multialg(
+            b"MyMessage",
+            b"MyAad",
+            &dice,
+            KeyAlgorithm::EcdsaP256,
+        );
+        assert!(signature_res.is_ok());
+        let signature = signature_res.unwrap();
+        let cose_sign1_res = CoseSign1::from_slice(&signature);
+        assert!(cose_sign1_res.is_ok());
+        let mut cose_sign1 = cose_sign1_res.unwrap();
+
+        let mut verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
+            verify_multialg(data, sign, EXPECTED_EC_P256_PUB_KEY, KeyAlgorithm::EcdsaP256)
+        });
+        assert!(verify_result.is_ok());
+
+        verify_result = cose_sign1.verify_signature(b"BadAad", |sign, data| {
+            verify_multialg(data, sign, EXPECTED_EC_P256_PUB_KEY, KeyAlgorithm::EcdsaP256)
+        });
+        assert!(verify_result.is_err());
+
+        // if we modify the signature, the payload should no longer verify
+        cose_sign1.signature.push(0xAA);
+        verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
+            verify_multialg(data, sign, EXPECTED_EC_P256_PUB_KEY, KeyAlgorithm::EcdsaP256)
+        });
+        assert!(verify_result.is_err());
+    }
+
     fn get_test_key_pair() -> (Vec<u8>, PrivateKey) {
         let seed = hash(b"MySeedString").unwrap();
         assert_eq!(seed, EXPECTED_SEED);
@@ -193,6 +282,25 @@ mod tests {
         let (pub_key, priv_key) = keypair_from_seed(cdi_private_key_seed.as_array()).unwrap();
         assert_eq!(&pub_key, EXPECTED_PUB_KEY);
         assert_eq!(priv_key.as_array(), EXPECTED_PRIV_KEY);
+
+        (pub_key, priv_key)
+    }
+
+    #[cfg(feature = "multialg")]
+    fn get_test_key_pair_ec_p256() -> (Vec<u8>, PrivateKey) {
+        let seed = hash(b"MySeedString").unwrap();
+        assert_eq!(seed, EXPECTED_SEED);
+        let cdi_attest = &seed[..CDI_SIZE];
+        assert_eq!(cdi_attest, EXPECTED_CDI_ATTEST);
+        let cdi_private_key_seed =
+            derive_cdi_private_key_seed(cdi_attest.try_into().unwrap()).unwrap();
+        assert_eq!(cdi_private_key_seed.as_array(), EXPECTED_CDI_PRIVATE_KEY_SEED);
+        let (pub_key, priv_key) =
+            keypair_from_seed_multialg(cdi_private_key_seed.as_array(), KeyAlgorithm::EcdsaP256)
+                .unwrap();
+
+        assert_eq!(&pub_key, EXPECTED_EC_P256_PUB_KEY);
+        assert_eq!(priv_key.as_array(), EXPECTED_EC_P256_PRIV_KEY);
 
         (pub_key, priv_key)
     }

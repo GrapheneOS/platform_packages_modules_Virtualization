@@ -1,11 +1,10 @@
 [Unit]
-Description=Port forwarding service in guest VM
 After=syslog.target
 After=network.target
 After=virtiofs_internal.service
 
 [Service]
-ExecStart=/usr/bin/bash -c '/usr/bin/forwarder_guest_launcher --grpc-port-file /mnt/internal/debian_service_port'
+ExecStart=/usr/bin/bash -c '/usr/bin/storage_balloon_agent --grpc_port_file /mnt/internal/debian_service_port'
 Type=simple
 Restart=on-failure
 RestartSec=1

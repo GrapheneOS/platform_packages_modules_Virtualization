@@ -24,14 +24,11 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.graphics.fonts.FontStyle
 import android.net.Uri
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.Bundle
 import android.os.ConditionVariable
 import android.os.Environment
 import android.os.SystemProperties
-import android.os.Trace
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -59,9 +56,9 @@ import com.android.virtualization.terminal.VmLauncherService.Companion.stop
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URL
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -78,12 +75,11 @@ public class MainActivity :
     private lateinit var image: InstalledImage
     private lateinit var accessibilityManager: AccessibilityManager
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
-    private var ipAddress: String? = null
-    private var port: Int? = null
     private lateinit var terminalViewModel: TerminalViewModel
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var terminalTabAdapter: TerminalTabAdapter
+    private val terminalInfo = CompletableFuture<TerminalInfo>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -243,40 +239,12 @@ public class MainActivity :
     }
 
     fun connectToTerminalService(terminalView: TerminalView) {
-        if (ipAddress != null && port != null) {
-            val url = getTerminalServiceUrl(ipAddress, port!!)
-            terminalView.loadUrl(url.toString())
-            return
-        }
-        // TODO: refactor this block as a method
-        val nsdManager = getSystemService<NsdManager>(NsdManager::class.java)
-        val info = NsdServiceInfo()
-        info.serviceType = "_http._tcp"
-        info.serviceName = "ttyd"
-        nsdManager.registerServiceInfoCallback(
-            info,
-            executorService,
-            object : NsdManager.ServiceInfoCallback {
-                var loaded: Boolean = false
-
-                override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {}
-
-                override fun onServiceInfoCallbackUnregistered() {}
-
-                override fun onServiceLost() {}
-
-                override fun onServiceUpdated(info: NsdServiceInfo) {
-                    Log.i(TAG, "Service found: $info")
-                    if (!loaded) {
-                        ipAddress = info.hostAddresses[0].hostAddress
-                        port = info.port
-                        val url = getTerminalServiceUrl(ipAddress, port!!)
-                        loaded = true
-                        nsdManager.unregisterServiceInfoCallback(this)
-                        runOnUiThread(Runnable { terminalView.loadUrl(url.toString()) })
-                    }
-                }
+        terminalInfo.thenAcceptAsync(
+            { info ->
+                val url = getTerminalServiceUrl(info.ipAddress, info.port)
+                runOnUiThread({ terminalView.loadUrl(url.toString()) })
             },
+            executorService,
         )
     }
 
@@ -284,12 +252,16 @@ public class MainActivity :
         executorService.shutdown()
         getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
             .removeAccessibilityStateChangeListener(this)
-        stop(this)
+        stop(this, this)
         super.onDestroy()
     }
 
     override fun onVmStart() {
         Log.i(TAG, "onVmStart()")
+    }
+
+    override fun onTerminalAvailable(info: TerminalInfo) {
+        terminalInfo.complete(info)
     }
 
     override fun onVmStop() {
@@ -340,8 +312,6 @@ public class MainActivity :
             return
         }
 
-        resizeDiskIfNecessary(image)
-
         val tapIntent = Intent(this, MainActivity::class.java)
         tapIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val tapPendingIntent =
@@ -354,7 +324,7 @@ public class MainActivity :
 
         val stopIntent = Intent()
         stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(VmLauncherService.ACTION_STOP_VM_LAUNCHER_SERVICE)
+        stopIntent.setAction(VmLauncherService.ACTION_SHUTDOWN_VM)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,
@@ -389,23 +359,16 @@ public class MainActivity :
                 )
                 .build()
 
-        Trace.beginAsyncSection("executeTerminal", 0)
-        run(this, this, notification, getDisplayInfo())
+        val diskSize = intent.getLongExtra(KEY_DISK_SIZE, image.getSize())
+        run(this, this, notification, getDisplayInfo(), diskSize).onFailure {
+            Log.e(TAG, "Failed to start VM.", it)
+            finish()
+        }
     }
 
     @VisibleForTesting
     public fun waitForBootCompleted(timeoutMillis: Long): Boolean {
         return bootCompleted.block(timeoutMillis)
-    }
-
-    private fun resizeDiskIfNecessary(image: InstalledImage) {
-        try {
-            // TODO(b/382190982): Show snackbar message instead when it's recoverable.
-            image.resize(intent.getLongExtra(KEY_DISK_SIZE, image.getSize()))
-        } catch (e: IOException) {
-            start(this, Exception("Failed to resize disk", e))
-            return
-        }
     }
 
     companion object {

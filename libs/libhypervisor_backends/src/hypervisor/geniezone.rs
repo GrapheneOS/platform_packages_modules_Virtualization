@@ -84,6 +84,10 @@ impl Hypervisor for GeniezoneHypervisor {
     fn as_mem_sharer(&self) -> Option<&dyn MemSharingHypervisor> {
         Some(self)
     }
+
+    fn get_granule_size(&self) -> Option<usize> {
+        <Self as MemSharingHypervisor>::granule(self).ok()
+    }
 }
 
 impl MmioGuardedHypervisor for GeniezoneHypervisor {
