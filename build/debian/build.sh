@@ -204,6 +204,7 @@ copy_android_config() {
 	build_rust_as_deb forwarder_guest
 	build_rust_as_deb forwarder_guest_launcher
 	build_rust_as_deb shutdown_runner
+	build_rust_as_deb storage_balloon_agent
 }
 
 package_custom_kernel() {

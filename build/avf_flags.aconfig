@@ -17,3 +17,11 @@ flag {
   description: "Flag for GUI support in terminal"
   bug: "386296118"
 }
+
+flag {
+  name: "terminal_storage_balloon"
+  is_exported: true
+  namespace: "virtualization"
+  description: "Flag for storage ballooning support in terminal"
+  bug: "382174138"
+}
