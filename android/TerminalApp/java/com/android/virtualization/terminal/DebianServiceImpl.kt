@@ -18,7 +18,8 @@ package com.android.virtualization.terminal
 import android.content.Context
 import android.util.Log
 import androidx.annotation.Keep
-import com.android.virtualization.terminal.DebianServiceImpl.ForwarderHostCallback
+import com.android.internal.annotations.GuardedBy
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.PortsStateManager.Companion.getInstance
 import com.android.virtualization.terminal.proto.DebianServiceGrpc.DebianServiceImplBase
@@ -28,6 +29,8 @@ import com.android.virtualization.terminal.proto.ReportVmActivePortsRequest
 import com.android.virtualization.terminal.proto.ReportVmActivePortsResponse
 import com.android.virtualization.terminal.proto.ShutdownQueueOpeningRequest
 import com.android.virtualization.terminal.proto.ShutdownRequestItem
+import com.android.virtualization.terminal.proto.StorageBalloonQueueOpeningRequest
+import com.android.virtualization.terminal.proto.StorageBalloonRequestItem
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 
@@ -35,6 +38,8 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
     private val portsStateManager: PortsStateManager = getInstance(context)
     private var portsStateListener: PortsStateManager.Listener? = null
     private var shutdownRunnable: Runnable? = null
+    private val mLock = Object()
+    @GuardedBy("mLock") private var storageBalloonCallback: StorageBalloonCallback? = null
 
     override fun reportVmActivePorts(
         request: ReportVmActivePortsRequest,
@@ -80,10 +85,9 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
         request: ShutdownQueueOpeningRequest?,
         responseObserver: StreamObserver<ShutdownRequestItem?>,
     ) {
-        val serverCallStreamObserver = responseObserver as ServerCallStreamObserver<ShutdownRequestItem?>
-        serverCallStreamObserver.setOnCancelHandler {
-            shutdownRunnable = null
-        }
+        val serverCallStreamObserver =
+            responseObserver as ServerCallStreamObserver<ShutdownRequestItem?>
+        serverCallStreamObserver.setOnCancelHandler { shutdownRunnable = null }
         Log.d(TAG, "openShutdownRequestQueue")
         shutdownRunnable = Runnable {
             if (serverCallStreamObserver.isCancelled()) {
@@ -92,6 +96,60 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
             responseObserver.onNext(ShutdownRequestItem.newBuilder().build())
             responseObserver.onCompleted()
             shutdownRunnable = null
+        }
+    }
+
+    private class StorageBalloonCallback(
+        private val responseObserver: StreamObserver<StorageBalloonRequestItem?>
+    ) {
+        fun setAvailableStorageBytes(availableBytes: Long) {
+            Log.d(TAG, "send setStorageBalloon: $availableBytes")
+            val item =
+                StorageBalloonRequestItem.newBuilder().setAvailableBytes(availableBytes).build()
+            responseObserver.onNext(item)
+        }
+
+        fun closeConnection() {
+            Log.d(TAG, "close StorageBalloonQueue")
+            responseObserver.onCompleted()
+        }
+    }
+
+    fun setAvailableStorageBytes(availableBytes: Long): Boolean {
+        synchronized(mLock) {
+            if (storageBalloonCallback == null) {
+                Log.d(TAG, "storageBalloonCallback is not ready.")
+                return false
+            }
+            storageBalloonCallback!!.setAvailableStorageBytes(availableBytes)
+        }
+        return true
+    }
+
+    override fun openStorageBalloonRequestQueue(
+        request: StorageBalloonQueueOpeningRequest?,
+        responseObserver: StreamObserver<StorageBalloonRequestItem?>,
+    ) {
+        if (!Flags.terminalStorageBalloon()) {
+            return
+        }
+        Log.d(TAG, "openStorageRequestQueue")
+        synchronized(mLock) {
+            if (storageBalloonCallback != null) {
+                Log.d(TAG, "RequestQueue already exists. Closing connection.")
+                storageBalloonCallback!!.closeConnection()
+            }
+            storageBalloonCallback = StorageBalloonCallback(responseObserver)
+        }
+    }
+
+    fun closeStorageBalloonRequestQueue() {
+        Log.d(TAG, "Stopping storage balloon queue")
+        synchronized(mLock) {
+            if (storageBalloonCallback != null) {
+                storageBalloonCallback!!.closeConnection()
+                storageBalloonCallback = null
+            }
         }
     }
 
