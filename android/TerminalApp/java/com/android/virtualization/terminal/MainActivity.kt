@@ -45,7 +45,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.lifecycle.ViewModelProvider
+import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
@@ -71,11 +71,11 @@ public class MainActivity :
     private lateinit var image: InstalledImage
     private lateinit var accessibilityManager: AccessibilityManager
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
-    private lateinit var terminalViewModel: TerminalViewModel
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var terminalTabAdapter: TerminalTabAdapter
     private val terminalInfo = CompletableFuture<TerminalInfo>()
+    private val terminalViewModel: TerminalViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,7 +110,6 @@ public class MainActivity :
     }
 
     private fun initializeUi() {
-        terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
         setContentView(R.layout.activity_headless)
         tabLayout = findViewById<TabLayout>(R.id.tab_layout)
         displayMenu = findViewById<Button>(R.id.display_button)
@@ -150,6 +149,20 @@ public class MainActivity :
         TabLayoutMediator(tabLayout, viewPager, false, false) { _: TabLayout.Tab?, _: Int -> }
             .attach()
 
+        tabLayout.addOnTabSelectedListener(
+            object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab?) {
+                    tab?.position?.let {
+                        terminalViewModel.selectedTabViewId = terminalTabAdapter.tabs[it].id
+                    }
+                }
+
+                override fun onTabUnselected(tab: TabLayout.Tab?) {}
+
+                override fun onTabReselected(tab: TabLayout.Tab?) {}
+            }
+        )
+
         addTerminalTab()
 
         tabAddButton?.setOnClickListener { addTerminalTab() }
@@ -159,7 +172,7 @@ public class MainActivity :
         val tab = tabLayout.newTab()
         tab.setCustomView(R.layout.tabitem_terminal)
         viewPager.offscreenPageLimit += 1
-        terminalTabAdapter.addTab()
+        terminalViewModel.selectedTabViewId = terminalTabAdapter.addTab()
         tab.customView!!
             .findViewById<Button>(R.id.tab_close_button)
             .setOnClickListener(
