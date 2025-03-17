@@ -145,28 +145,30 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         // Activity with an extra argument specifying the new size. The actual resizing will be done
         // there.
         // TODO: show progress until the stop is confirmed
-        VmLauncherService.stop(
-            this,
-            object : VmLauncherServiceCallback {
-                override fun onVmStart() {}
+        val intent =
+            VmLauncherService.getIntentForShutdown(
+                this,
+                object : VmLauncherServiceCallback {
+                    override fun onVmStart() {}
 
-                override fun onTerminalAvailable(info: TerminalInfo) {}
+                    override fun onTerminalAvailable(info: TerminalInfo) {}
 
-                override fun onVmStop() {
-                    finish()
+                    override fun onVmStop() {
+                        finish()
 
-                    val intent =
-                        baseContext.packageManager.getLaunchIntentForPackage(
-                            baseContext.packageName
-                        )!!
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    intent.putExtra(MainActivity.KEY_DISK_SIZE, mbToBytes(diskSizeMb))
-                    startActivity(intent)
-                }
+                        val intent =
+                            baseContext.packageManager.getLaunchIntentForPackage(
+                                baseContext.packageName
+                            )!!
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        intent.putExtra(MainActivity.EXTRA_DISK_SIZE, mbToBytes(diskSizeMb))
+                        startActivity(intent)
+                    }
 
-                override fun onVmError() {}
-            },
-        )
+                    override fun onVmError() {}
+                },
+            )
+        startService(intent)
     }
 
     fun updateSliderText(sizeMb: Long) {
