@@ -710,7 +710,21 @@ fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Resul
     info!("notifying payload started");
     service.notifyPayloadStarted()?;
 
-    let exit_status = command.spawn()?.wait()?;
+    let mut payload_process = command.spawn().context("failed to spawn payload process")?;
+    info!("payload pid = {:?}", payload_process.id());
+
+    // SAFETY: setpriority doesn't take any pointers
+    unsafe {
+        let ret = libc::setpriority(libc::PRIO_PROCESS, payload_process.id(), -20);
+        if ret != 0 {
+            error!(
+                "failed to adjust priority of the payload: {:#?}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+
+    let exit_status = payload_process.wait()?;
     match exit_status.code() {
         Some(exit_code) => Ok(exit_code),
         None => Err(match exit_status.signal() {
