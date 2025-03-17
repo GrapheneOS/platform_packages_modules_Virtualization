@@ -39,6 +39,7 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.WorkerThread
 import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.Runner.Companion.create
@@ -116,9 +117,11 @@ class VmLauncherService : Service() {
                 // done.
                 val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
 
-                doStart(notification, displayInfo, diskSize, resultReceiver)
+                executorService.submit({
+                    doStart(notification, displayInfo, diskSize, resultReceiver)
+                })
             }
-            ACTION_SHUTDOWN_VM -> doShutdown(resultReceiver)
+            ACTION_SHUTDOWN_VM -> executorService.submit({ doShutdown(resultReceiver) })
             else -> {
                 Log.e(TAG, "Unknown command " + intent.action)
                 stopSelf()
@@ -128,6 +131,7 @@ class VmLauncherService : Service() {
         return START_NOT_STICKY
     }
 
+    @WorkerThread
     private fun doStart(
         notification: Notification,
         displayInfo: DisplayInfo,
@@ -384,6 +388,7 @@ class VmLauncherService : Service() {
         }
     }
 
+    @WorkerThread
     private fun doShutdown(resultReceiver: ResultReceiver) {
         if (debianService != null && debianService!!.shutdownDebian()) {
             // During shutdown, change the notification content to indicate that it's closing
