@@ -8,6 +8,7 @@ service microdroid_manager /system/bin/microdroid_manager
     # CAP_SYS_BOOT is required to exec kexecload from microdroid_manager
     # CAP_SETPCAP is required to allow microdroid_manager to drop capabilities
     #   before executing the payload
-    capabilities AUDIT_CONTROL SYS_ADMIN SYS_BOOT SETPCAP SETUID SETGID
+    # CAP_SYS_NICE is required for microdroid_manager to adjust priority of the payload
+    capabilities AUDIT_CONTROL SYS_ADMIN SYS_BOOT SETPCAP SETUID SETGID SYS_NICE
     user root
     socket vm_payload_service stream 0666 system system
