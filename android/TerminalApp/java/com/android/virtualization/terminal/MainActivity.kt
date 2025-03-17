@@ -172,7 +172,9 @@ public class MainActivity :
         val tab = tabLayout.newTab()
         tab.setCustomView(R.layout.tabitem_terminal)
         viewPager.offscreenPageLimit += 1
-        terminalViewModel.selectedTabViewId = terminalTabAdapter.addTab()
+        val tabId = terminalTabAdapter.addTab()
+        terminalViewModel.selectedTabViewId = tabId
+        terminalViewModel.terminalTabs[tabId] = tab
         tab.customView!!
             .findViewById<Button>(R.id.tab_close_button)
             .setOnClickListener(
@@ -235,9 +237,7 @@ public class MainActivity :
                 "&fontWeightBold=" +
                 (FontStyle.FONT_WEIGHT_BOLD + config.fontWeightAdjustment) +
                 "&screenReaderMode=" +
-                accessibilityManager.isEnabled +
-                "&titleFixed=" +
-                getString(R.string.app_name))
+                accessibilityManager.isEnabled)
 
         try {
             return URL("https", ipAddress, port, "/$query")
