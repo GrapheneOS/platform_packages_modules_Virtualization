@@ -21,7 +21,6 @@ import androidx.annotation.Keep
 import com.android.internal.annotations.GuardedBy
 import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
-import com.android.virtualization.terminal.PortsStateManager.Companion.getInstance
 import com.android.virtualization.terminal.proto.DebianServiceGrpc.DebianServiceImplBase
 import com.android.virtualization.terminal.proto.ForwardingRequestItem
 import com.android.virtualization.terminal.proto.QueueOpeningRequest
@@ -35,7 +34,7 @@ import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 
 internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
-    private val portsStateManager: PortsStateManager = getInstance(context)
+    private val portsStateManager = PortsStateManager.getInstance(context)
     private var portsStateListener: PortsStateManager.Listener? = null
     private var shutdownRunnable: Runnable? = null
     private val mLock = Object()

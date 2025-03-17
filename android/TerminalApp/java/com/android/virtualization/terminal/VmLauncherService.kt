@@ -15,7 +15,6 @@
  */
 package com.android.virtualization.terminal
 
-import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -41,8 +40,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.WorkerThread
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.MainActivity.Companion.PREFIX
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
-import com.android.virtualization.terminal.Runner.Companion.create
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
 import io.grpc.Metadata
@@ -159,7 +158,7 @@ class VmLauncherService : Service() {
 
         runner =
             try {
-                create(this, config)
+                Runner.create(this, config)
             } catch (e: VirtualMachineException) {
                 throw RuntimeException("cannot create runner", e)
             }
@@ -170,7 +169,7 @@ class VmLauncherService : Service() {
 
         runner!!.exitStatus.thenAcceptAsync { success: Boolean ->
             mbc.stop()
-            resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+            resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
         val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
@@ -178,7 +177,7 @@ class VmLauncherService : Service() {
 
         startForeground(this.hashCode(), notification)
 
-        resultReceiver!!.send(RESULT_START, null)
+        resultReceiver.send(RESULT_START, null)
 
         portNotifier = PortNotifier(this)
 
@@ -190,7 +189,7 @@ class VmLauncherService : Service() {
                     val bundle = Bundle()
                     bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
                     bundle.putInt(KEY_TERMINAL_PORT, port)
-                    resultReceiver!!.send(RESULT_TERMINAL_AVAIL, bundle)
+                    resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
                     startDebianServer(ipAddress)
                 },
                 executorService,
@@ -198,7 +197,7 @@ class VmLauncherService : Service() {
             .exceptionallyAsync(
                 { e ->
                     Log.e(TAG, "Failed to start VM", e)
-                    resultReceiver!!.send(RESULT_ERROR, null)
+                    resultReceiver.send(RESULT_ERROR, null)
                     stopSelf()
                     null
                 },
@@ -396,7 +395,7 @@ class VmLauncherService : Service() {
             getSystemService<NotificationManager?>(NotificationManager::class.java)
                 .notify(this.hashCode(), notification)
             runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
-                resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+                resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
                 stopSelf()
             }
         } else {
@@ -431,11 +430,12 @@ class VmLauncherService : Service() {
     }
 
     companion object {
-        private const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
-        private const val ACTION_START_VM: String = "android.virtualization.ACTION_START_VM"
-        const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
-        const val EXTRA_DISK_SIZE = "EXTRA_DISK_SIZE"
-        const val ACTION_SHUTDOWN_VM: String = "android.virtualization.ACTION_SHUTDOWN_VM"
+        private const val ACTION_START_VM: String = PREFIX + "ACTION_START_VM"
+        private const val EXTRA_NOTIFICATION = PREFIX + "EXTRA_NOTIFICATION"
+        private const val EXTRA_DISPLAY_INFO = PREFIX + "EXTRA_DISPLAY_INFO"
+        private const val EXTRA_DISK_SIZE = PREFIX + "EXTRA_DISK_SIZE"
+
+        private const val ACTION_SHUTDOWN_VM: String = PREFIX + "ACTION_SHUTDOWN_VM"
 
         private const val RESULT_START = 0
         private const val RESULT_STOP = 1
@@ -487,13 +487,13 @@ class VmLauncherService : Service() {
             return intent
         }
 
-        fun run(
+        fun getIntentForStart(
             context: Context,
             callback: VmLauncherServiceCallback,
             notification: Notification?,
             displayInfo: DisplayInfo,
             diskSize: Long?,
-        ): Result<Unit> {
+        ): Intent {
             val i = prepareIntent(context, callback)
             i.setAction(ACTION_START_VM)
             i.putExtra(EXTRA_NOTIFICATION, notification)
@@ -501,18 +501,13 @@ class VmLauncherService : Service() {
             if (diskSize != null) {
                 i.putExtra(EXTRA_DISK_SIZE, diskSize)
             }
-            return try {
-                context.startForegroundService(i)
-                Result.success(Unit)
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                Result.failure<Unit>(e)
-            }
+            return i
         }
 
-        fun stop(context: Context, callback: VmLauncherServiceCallback) {
+        fun getIntentForShutdown(context: Context, callback: VmLauncherServiceCallback): Intent {
             val i = prepareIntent(context, callback)
             i.setAction(ACTION_SHUTDOWN_VM)
-            context.startService(i)
+            return i
         }
     }
 }
