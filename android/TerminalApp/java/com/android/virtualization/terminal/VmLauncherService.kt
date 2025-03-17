@@ -124,6 +124,10 @@ class VmLauncherService : Service() {
                 mainWorkerThread.submit({
                     doStart(notification, displayInfo, diskSize, resultReceiver)
                 })
+
+                // Do this outside of the main worker thread, so that we don't cause
+                // ForegroundServiceDidNotStartInTimeException
+                startForeground(this.hashCode(), notification)
             }
             ACTION_SHUTDOWN_VM -> mainWorkerThread.submit({ doShutdown(resultReceiver) })
             else -> {
@@ -142,11 +146,6 @@ class VmLauncherService : Service() {
         diskSize: Long,
         resultReceiver: ResultReceiver,
     ) {
-        if (virtualMachine != null) {
-            Log.d(TAG, "VM instance is already started")
-            return
-        }
-
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
@@ -168,8 +167,8 @@ class VmLauncherService : Service() {
                 throw RuntimeException("cannot create runner", e)
             }
 
-        virtualMachine = runner!!.vm
-        val mbc = MemBalloonController(this, virtualMachine!!)
+        val virtualMachine = runner!!.vm
+        val mbc = MemBalloonController(this, virtualMachine)
         mbc.start()
 
         runner!!.exitStatus.thenAcceptAsync { success: Boolean ->
@@ -177,10 +176,8 @@ class VmLauncherService : Service() {
             resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
-        Logger.setup(virtualMachine!!, logDir, bgThreads)
-
-        startForeground(this.hashCode(), notification)
+        val logDir = getFileStreamPath(virtualMachine.name + ".log").toPath()
+        Logger.setup(virtualMachine, logDir, bgThreads)
 
         resultReceiver.send(RESULT_START, null)
 
@@ -393,18 +390,21 @@ class VmLauncherService : Service() {
     }
 
     @WorkerThread
-    private fun doShutdown(resultReceiver: ResultReceiver) {
+    private fun doShutdown(resultReceiver: ResultReceiver?) {
+        stopForeground(STOP_FOREGROUND_REMOVE)
         if (debianService != null && debianService!!.shutdownDebian()) {
             // During shutdown, change the notification content to indicate that it's closing
             val notification = createNotificationForTerminalClose()
             getSystemService<NotificationManager?>(NotificationManager::class.java)
                 .notify(this.hashCode(), notification)
             runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
-                resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+                resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
                 stopSelf()
             }
+            runner = null
         } else {
             // If there is no Debian service or it fails to shutdown, just stop the service.
+            runner?.vm?.stop()
             stopSelf()
         }
     }
@@ -416,22 +416,16 @@ class VmLauncherService : Service() {
     }
 
     override fun onDestroy() {
+        mainWorkerThread.submit({
+            if (runner?.vm?.getStatus() == VirtualMachine.STATUS_RUNNING) {
+                doShutdown(null)
+            }
+        })
         portNotifier?.stop()
         getSystemService<NotificationManager?>(NotificationManager::class.java).cancelAll()
         stopDebianServer()
-        if (virtualMachine != null) {
-            if (virtualMachine!!.getStatus() == VirtualMachine.STATUS_RUNNING) {
-                try {
-                    virtualMachine!!.stop()
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } catch (e: VirtualMachineException) {
-                    Log.e(TAG, "failed to stop a VM instance", e)
-                }
-            }
-            virtualMachine = null
-        }
         bgThreads.shutdownNow()
-        mainWorkerThread.shutdownNow()
+        mainWorkerThread.shutdown()
         super.onDestroy()
     }
 
