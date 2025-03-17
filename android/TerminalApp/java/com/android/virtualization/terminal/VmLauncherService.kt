@@ -64,6 +64,7 @@ import java.util.concurrent.TimeUnit
 
 class VmLauncherService : Service() {
     private lateinit var executorService: ExecutorService
+    private lateinit var image: InstalledImage
 
     // TODO: using lateinit for some fields to avoid null
     private var virtualMachine: VirtualMachine? = null
@@ -89,51 +90,65 @@ class VmLauncherService : Service() {
     override fun onCreate() {
         super.onCreate()
         executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
+        image = InstalledImage.getDefault(this)
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         val resultReceiver =
-            intent.getParcelableExtra<ResultReceiver?>(
+            intent.getParcelableExtra<ResultReceiver>(
                 Intent.EXTRA_RESULT_RECEIVER,
                 ResultReceiver::class.java,
-            )
+            )!!
 
-        if (intent.action == ACTION_SHUTDOWN_VM) {
-            if (debianService != null && debianService!!.shutdownDebian()) {
-                // During shutdown, change the notification content to indicate that it's closing
-                val notification = createNotificationForTerminalClose()
-                getSystemService<NotificationManager?>(NotificationManager::class.java)
-                    .notify(this.hashCode(), notification)
-                runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
-                    resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
-                    stopSelf()
-                }
-            } else {
-                // If there is no Debian service or it fails to shutdown, just stop the service.
+        when (intent.action) {
+            ACTION_START_VM -> {
+                val notification =
+                    intent.getParcelableExtra<Notification>(
+                        EXTRA_NOTIFICATION,
+                        Notification::class.java,
+                    )!!
+
+                val displayInfo =
+                    intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)!!
+
+                // Note: this doesn't always do the resizing. If the current image size is the same
+                // as the requested size which is rounded up to the page alignment, resizing is not
+                // done.
+                val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
+
+                doStart(notification, displayInfo, diskSize, resultReceiver)
+            }
+            ACTION_SHUTDOWN_VM -> doShutdown(resultReceiver)
+            else -> {
+                Log.e(TAG, "Unknown command " + intent.action)
                 stopSelf()
             }
-            return START_NOT_STICKY
         }
+
+        return START_NOT_STICKY
+    }
+
+    private fun doStart(
+        notification: Notification,
+        displayInfo: DisplayInfo,
+        diskSize: Long,
+        resultReceiver: ResultReceiver,
+    ) {
         if (virtualMachine != null) {
             Log.d(TAG, "VM instance is already started")
-            return START_NOT_STICKY
+            return
         }
 
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
-        val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
-
-        // Note: this doesn't always do the resizing. If the current image size is the same as the
-        // requested size which is rounded up to the page alignment, resizing is not done.
-        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
         image.resize(diskSize)
 
         customImageConfigBuilder.setAudioConfig(
             AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
-        if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
+        if (overrideConfigIfNecessary(customImageConfigBuilder, displayInfo)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
         }
         val config = configBuilder.build()
@@ -156,9 +171,6 @@ class VmLauncherService : Service() {
         }
         val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
         Logger.setup(virtualMachine!!, logDir, executorService)
-
-        val notification =
-            intent.getParcelableExtra<Notification?>(EXTRA_NOTIFICATION, Notification::class.java)
 
         startForeground(this.hashCode(), notification)
 
@@ -188,8 +200,6 @@ class VmLauncherService : Service() {
                 },
                 executorService,
             )
-
-        return START_NOT_STICKY
     }
 
     private fun getTerminalServiceInfo(): CompletableFuture<NsdServiceInfo> {
@@ -374,6 +384,28 @@ class VmLauncherService : Service() {
         }
     }
 
+    private fun doShutdown(resultReceiver: ResultReceiver) {
+        if (debianService != null && debianService!!.shutdownDebian()) {
+            // During shutdown, change the notification content to indicate that it's closing
+            val notification = createNotificationForTerminalClose()
+            getSystemService<NotificationManager?>(NotificationManager::class.java)
+                .notify(this.hashCode(), notification)
+            runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
+                resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+                stopSelf()
+            }
+        } else {
+            // If there is no Debian service or it fails to shutdown, just stop the service.
+            stopSelf()
+        }
+    }
+
+    private fun stopDebianServer() {
+        debianService?.killForwarderHost()
+        debianService?.closeStorageBalloonRequestQueue()
+        server?.shutdown()
+    }
+
     override fun onDestroy() {
         portNotifier?.stop()
         getSystemService<NotificationManager?>(NotificationManager::class.java).cancelAll()
@@ -393,16 +425,9 @@ class VmLauncherService : Service() {
         super.onDestroy()
     }
 
-    private fun stopDebianServer() {
-        debianService?.killForwarderHost()
-        debianService?.closeStorageBalloonRequestQueue()
-        server?.shutdown()
-    }
-
     companion object {
         private const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
-        private const val ACTION_START_VM_LAUNCHER_SERVICE =
-            "android.virtualization.START_VM_LAUNCHER_SERVICE"
+        private const val ACTION_START_VM: String = "android.virtualization.ACTION_START_VM"
         const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
         const val EXTRA_DISK_SIZE = "EXTRA_DISK_SIZE"
         const val ACTION_SHUTDOWN_VM: String = "android.virtualization.ACTION_SHUTDOWN_VM"
@@ -428,24 +453,11 @@ class VmLauncherService : Service() {
                 }
             }()
 
-        private fun getMyIntent(context: Context): Intent {
-            return Intent(context.getApplicationContext(), VmLauncherService::class.java)
-        }
-
-        fun run(
-            context: Context,
-            callback: VmLauncherServiceCallback?,
-            notification: Notification?,
-            displayInfo: DisplayInfo,
-            diskSize: Long?,
-        ): Result<Unit> {
-            val i = getMyIntent(context)
-            val resultReceiver: ResultReceiver =
+        private fun prepareIntent(context: Context, callback: VmLauncherServiceCallback): Intent {
+            val intent = Intent(context.getApplicationContext(), VmLauncherService::class.java)
+            val resultReceiver =
                 object : ResultReceiver(Handler(Looper.myLooper()!!)) {
                     override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
-                        if (callback == null) {
-                            return
-                        }
                         when (resultCode) {
                             RESULT_START -> callback.onVmStart()
                             RESULT_TERMINAL_AVAIL -> {
@@ -455,10 +467,30 @@ class VmLauncherService : Service() {
                             }
                             RESULT_STOP -> callback.onVmStop()
                             RESULT_ERROR -> callback.onVmError()
+                            else -> Log.e(TAG, "unknown result code: " + resultCode)
                         }
                     }
                 }
-            i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
+
+            val parcel = Parcel.obtain()
+            resultReceiver.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+            intent.putExtra(
+                Intent.EXTRA_RESULT_RECEIVER,
+                ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() },
+            )
+            return intent
+        }
+
+        fun run(
+            context: Context,
+            callback: VmLauncherServiceCallback,
+            notification: Notification?,
+            displayInfo: DisplayInfo,
+            diskSize: Long?,
+        ): Result<Unit> {
+            val i = prepareIntent(context, callback)
+            i.setAction(ACTION_START_VM)
             i.putExtra(EXTRA_NOTIFICATION, notification)
             i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
             if (diskSize != null) {
@@ -472,28 +504,9 @@ class VmLauncherService : Service() {
             }
         }
 
-        private fun getResultReceiverForIntent(r: ResultReceiver): ResultReceiver {
-            val parcel = Parcel.obtain()
-            r.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-            return ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() }
-        }
-
-        fun stop(context: Context, callback: VmLauncherServiceCallback?) {
-            val i = getMyIntent(context)
+        fun stop(context: Context, callback: VmLauncherServiceCallback) {
+            val i = prepareIntent(context, callback)
             i.setAction(ACTION_SHUTDOWN_VM)
-            val resultReceiver: ResultReceiver =
-                object : ResultReceiver(Handler(Looper.myLooper()!!)) {
-                    override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
-                        if (callback == null) {
-                            return
-                        }
-                        when (resultCode) {
-                            RESULT_STOP -> callback.onVmStop()
-                        }
-                    }
-                }
-            i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
             context.startService(i)
         }
     }
