@@ -2,3 +2,7 @@
 
 $ROOTCMD useradd -m -u 1000 -N -G sudo,video,render -s /usr/bin/bash droid
 $ROOTCMD echo 'droid ALL=(ALL) NOPASSWD:ALL' >> $target/etc/sudoers
+$ROOTCMD cat >> $target/home/droid/.bashrc <<EOF
+# Show title of current running command
+trap 'echo -ne "\e]0;\$BASH_COMMAND\007"' DEBUG
+EOF
