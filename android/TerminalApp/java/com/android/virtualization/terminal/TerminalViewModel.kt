@@ -19,4 +19,5 @@ import androidx.lifecycle.ViewModel
 
 class TerminalViewModel : ViewModel() {
     val terminalViews: MutableSet<TerminalView> = mutableSetOf()
+    var selectedTabViewId: String? = null
 }
