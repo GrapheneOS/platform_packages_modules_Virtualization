@@ -31,6 +31,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
@@ -89,11 +90,33 @@ class TerminalTabFragment() : Fragment() {
         terminalView.settings.javaScriptEnabled = true
         terminalView.settings.cacheMode = WebSettings.LOAD_DEFAULT
 
-        terminalView.webChromeClient = WebChromeClient()
+        terminalView.webChromeClient = TerminalWebChromeClient()
         terminalView.webViewClient = TerminalWebViewClient()
 
         (activity as MainActivity).modifierKeysController.addTerminalView(terminalView)
         terminalViewModel.terminalViews.add(terminalView)
+    }
+
+    private inner class TerminalWebChromeClient : WebChromeClient() {
+        override fun onReceivedTitle(view: WebView?, title: String?) {
+            super.onReceivedTitle(view, title)
+            title?.let { originalTitle ->
+                val ttydSuffix = " | login -f droid (localhost)"
+                val displayedTitle =
+                    if (originalTitle.endsWith(ttydSuffix)) {
+                        // When the session is created. The format of the title will be
+                        // 'droid@localhost: ~ | login -f droid (localhost)'.
+                        originalTitle.dropLast(ttydSuffix.length)
+                    } else {
+                        originalTitle
+                    }
+
+                terminalViewModel.terminalTabs[id]
+                    ?.customView
+                    ?.findViewById<TextView>(R.id.tab_title)
+                    ?.text = displayedTitle
+            }
+        }
     }
 
     private inner class TerminalWebViewClient : WebViewClient() {
