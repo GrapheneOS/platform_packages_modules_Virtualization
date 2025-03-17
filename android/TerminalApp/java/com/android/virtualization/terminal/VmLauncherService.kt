@@ -63,7 +63,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class VmLauncherService : Service() {
-    private lateinit var executorService: ExecutorService
+    // Thread pool
+    private lateinit var bgThreads: ExecutorService
+    // Single thread
+    private lateinit var mainWorkerThread: ExecutorService
     private lateinit var image: InstalledImage
 
     // TODO: using lateinit for some fields to avoid null
@@ -89,7 +92,9 @@ class VmLauncherService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
+        val threadFactory = TerminalThreadFactory(getApplicationContext())
+        bgThreads = Executors.newCachedThreadPool(threadFactory)
+        mainWorkerThread = Executors.newSingleThreadExecutor(threadFactory)
         image = InstalledImage.getDefault(this)
     }
 
@@ -116,11 +121,11 @@ class VmLauncherService : Service() {
                 // done.
                 val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
 
-                executorService.submit({
+                mainWorkerThread.submit({
                     doStart(notification, displayInfo, diskSize, resultReceiver)
                 })
             }
-            ACTION_SHUTDOWN_VM -> executorService.submit({ doShutdown(resultReceiver) })
+            ACTION_SHUTDOWN_VM -> mainWorkerThread.submit({ doShutdown(resultReceiver) })
             else -> {
                 Log.e(TAG, "Unknown command " + intent.action)
                 stopSelf()
@@ -173,7 +178,7 @@ class VmLauncherService : Service() {
             stopSelf()
         }
         val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
-        Logger.setup(virtualMachine!!, logDir, executorService)
+        Logger.setup(virtualMachine!!, logDir, bgThreads)
 
         startForeground(this.hashCode(), notification)
 
@@ -192,7 +197,7 @@ class VmLauncherService : Service() {
                     resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
                     startDebianServer(ipAddress)
                 },
-                executorService,
+                bgThreads,
             )
             .exceptionallyAsync(
                 { e ->
@@ -201,7 +206,7 @@ class VmLauncherService : Service() {
                     stopSelf()
                     null
                 },
-                executorService,
+                bgThreads,
             )
     }
 
@@ -368,7 +373,7 @@ class VmLauncherService : Service() {
             return
         }
 
-        executorService.execute(
+        bgThreads.execute(
             Runnable {
                 // TODO(b/373533555): we can use mDNS for that.
                 val debianServicePortFile = File(filesDir, "debian_service_port")
@@ -425,7 +430,8 @@ class VmLauncherService : Service() {
             }
             virtualMachine = null
         }
-        executorService.shutdownNow()
+        bgThreads.shutdownNow()
+        mainWorkerThread.shutdownNow()
         super.onDestroy()
     }
 
