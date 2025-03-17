@@ -27,7 +27,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ForkJoinPool
 
 /** Utility class for creating a VM and waiting for it to finish. */
-internal class Runner private constructor(val vm: VirtualMachine?, callback: Callback) {
+internal class Runner private constructor(val vm: VirtualMachine, callback: Callback) {
     /** Get future about VM's exit status. */
     val exitStatus = callback.finishedSuccessfully
 
