@@ -15,6 +15,7 @@
  */
 package com.android.virtualization.terminal
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
@@ -49,10 +50,6 @@ import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
 import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
-import com.android.virtualization.terminal.ErrorActivity.Companion.start
-import com.android.virtualization.terminal.InstalledImage.Companion.getDefault
-import com.android.virtualization.terminal.VmLauncherService.Companion.run
-import com.android.virtualization.terminal.VmLauncherService.Companion.stop
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -85,7 +82,7 @@ public class MainActivity :
         super.onCreate(savedInstanceState)
         lockOrientationIfNecessary()
 
-        image = getDefault(this)
+        image = InstalledImage.getDefault(this)
 
         val launchInstaller = installIfNecessary()
 
@@ -198,7 +195,7 @@ public class MainActivity :
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (Build.isDebuggable() && event.keyCode == KeyEvent.KEYCODE_UNKNOWN) {
             if (event.action == KeyEvent.ACTION_UP) {
-                start(this, Exception("Debug: KeyEvent.KEYCODE_UNKNOWN"))
+                ErrorActivity.start(this, Exception("Debug: KeyEvent.KEYCODE_UNKNOWN"))
             }
             return true
         }
@@ -252,7 +249,8 @@ public class MainActivity :
         executorService.shutdown()
         getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
             .removeAccessibilityStateChangeListener(this)
-        stop(this, this)
+        val intent = VmLauncherService.getIntentForShutdown(this, this)
+        startService(intent)
         super.onDestroy()
     }
 
@@ -272,7 +270,7 @@ public class MainActivity :
     override fun onVmError() {
         Log.i(TAG, "onVmError()")
         // TODO: error cause is too simple.
-        start(this, Exception("onVmError"))
+        ErrorActivity.start(this, Exception("onVmError"))
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
@@ -307,7 +305,7 @@ public class MainActivity :
     }
 
     private fun startVm() {
-        val image = getDefault(this)
+        val image = InstalledImage.getDefault(this)
         if (!image.isInstalled()) {
             return
         }
@@ -322,9 +320,7 @@ public class MainActivity :
         val settingsPendingIntent =
             PendingIntent.getActivity(this, 0, settingsIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val stopIntent = Intent()
-        stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(VmLauncherService.ACTION_SHUTDOWN_VM)
+        val stopIntent = VmLauncherService.getIntentForShutdown(this, this)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,
@@ -359,9 +355,20 @@ public class MainActivity :
                 )
                 .build()
 
-        val diskSize = intent.getLongExtra(KEY_DISK_SIZE, image.getSize())
-        run(this, this, notification, getDisplayInfo(), diskSize).onFailure {
-            Log.e(TAG, "Failed to start VM.", it)
+        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
+
+        val intent =
+            VmLauncherService.getIntentForStart(
+                this,
+                this,
+                notification,
+                getDisplayInfo(),
+                diskSize,
+            )
+        try {
+            startForegroundService(intent)
+        } catch (e: ForegroundServiceStartNotAllowedException) {
+            Log.e(TAG, "Failed to start VM", e)
             finish()
         }
     }
@@ -373,7 +380,8 @@ public class MainActivity :
 
     companion object {
         const val TAG: String = "VmTerminalApp"
-        const val KEY_DISK_SIZE: String = "disk_size"
+        const val PREFIX: String = "com.android.virtualization.terminal."
+        const val EXTRA_DISK_SIZE: String = PREFIX + "EXTRA_DISK_SIZE"
         private val TERMINAL_CONNECTION_TIMEOUT_MS: Int
         private const val REQUEST_CODE_INSTALLER = 0x33
         private const val FONT_SIZE_DEFAULT = 13
