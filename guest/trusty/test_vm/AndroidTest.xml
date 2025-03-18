@@ -45,6 +45,7 @@
         <option name="abort-if-device-lost" value="true"/>
         <option name="abort-if-root-lost" value="true" />
         <option name="per-binary-timeout" value="10m" />
+        <option name="test-command-line" key="com.android.trusty.rust.authmgr_be_lib.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.authmgr_be_lib.test"/>
         <option name="test-command-line" key="com.android.trusty.rust.hwcryptokey_test.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwcryptokey_test.test"/>
         <option name="test-command-line" key="com.android.trusty.rust.storage_unittest_aidl.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.storage_unittest_aidl.test"/>
     </test>
