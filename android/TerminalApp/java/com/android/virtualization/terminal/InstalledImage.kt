@@ -116,11 +116,12 @@ public class InstalledImage private constructor(val installDir: Path) {
         val roundedUpDesiredSize = roundUp(desiredSize)
         val curSize = getSize()
 
+        runE2fsck(rootPartition)
+
         if (roundedUpDesiredSize == curSize) {
             return roundedUpDesiredSize
         }
 
-        runE2fsck(rootPartition)
         if (roundedUpDesiredSize > curSize) {
             allocateSpace(rootPartition, roundedUpDesiredSize)
         }
