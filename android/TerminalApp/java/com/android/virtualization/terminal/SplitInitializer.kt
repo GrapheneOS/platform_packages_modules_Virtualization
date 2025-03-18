@@ -27,29 +27,37 @@ import androidx.window.embedding.SplitPairFilter
 import androidx.window.embedding.SplitPairRule
 import androidx.window.embedding.SplitPlaceholderRule
 import androidx.window.embedding.SplitRule
+import com.android.system.virtualmachine.flags.Flags
 
 class SplitInitializer : Initializer<RuleController> {
 
     override fun create(context: Context): RuleController {
         val filters =
-            setOf(
-                SplitPairFilter(
-                    ComponentName(context, SettingsActivity::class.java),
-                    ComponentName(context, SettingsDiskResizeActivity::class.java),
-                    null,
-                ),
+            mutableSetOf(
                 SplitPairFilter(
                     ComponentName(context, SettingsActivity::class.java),
                     ComponentName(context, SettingsPortForwardingActivity::class.java),
                     null,
-                ),
-                SplitPairFilter(
-                    ComponentName(context, SettingsActivity::class.java),
-                    ComponentName(context, SettingsRecoveryActivity::class.java),
-                    null,
-                ),
+                )
             )
 
+        if (Flags.terminalStorageBalloon()) {
+            filters.add(
+                SplitPairFilter(
+                    ComponentName(context, SettingsActivity::class.java),
+                    ComponentName(context, SettingsDiskResizeActivity::class.java),
+                    null,
+                )
+            )
+        }
+
+        filters.add(
+            SplitPairFilter(
+                ComponentName(context, SettingsActivity::class.java),
+                ComponentName(context, SettingsRecoveryActivity::class.java),
+                null,
+            )
+        )
         val splitPairRules =
             SplitPairRule.Builder(filters)
                 .setClearTop(true)
