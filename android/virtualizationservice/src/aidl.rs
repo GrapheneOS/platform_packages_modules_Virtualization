@@ -273,6 +273,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
 
     fn allocateGlobalVmContext(
         &self,
+        name: &str,
         requester_debug_pid: i32,
     ) -> binder::Result<Strong<dyn IGlobalVmContext>> {
         check_manage_access()?;
@@ -281,7 +282,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         let requester_debug_pid = requester_debug_pid as pid_t;
         let state = &mut *self.state.lock().unwrap();
         state
-            .allocate_vm_context(requester_uid, requester_debug_pid)
+            .allocate_vm_context(name, requester_uid, requester_debug_pid)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
@@ -311,6 +312,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             .map(|vm| {
                 let vm = vm.lock().unwrap();
                 VirtualMachineDebugInfo {
+                    name: vm.name.clone(),
                     cid: vm.cid as i32,
                     temporaryDirectory: vm.get_temp_dir().to_string_lossy().to_string(),
                     requesterUid: vm.requester_uid as i32,
@@ -665,6 +667,8 @@ fn split_x509_certificate_chain(mut cert_chain: &[u8]) -> Result<Vec<Certificate
 
 #[derive(Debug, Default)]
 struct GlobalVmInstance {
+    /// Name of the VM
+    name: String,
     /// The unique CID assigned to the VM for vsock communication.
     cid: Cid,
     /// UID of the client who requested this VM instance.
@@ -760,6 +764,7 @@ impl GlobalState {
 
     fn allocate_vm_context(
         &mut self,
+        name: &str,
         requester_uid: uid_t,
         requester_debug_pid: pid_t,
     ) -> Result<Strong<dyn IGlobalVmContext>> {
@@ -768,6 +773,7 @@ impl GlobalState {
 
         let cid = self.get_next_available_cid()?;
         let instance = Arc::new(Mutex::new(GlobalVmInstance {
+            name: name.to_owned(),
             cid,
             requester_uid,
             requester_debug_pid,
