@@ -39,7 +39,7 @@ interface IVirtualizationServiceInternal {
      * The resources will not be recycled as long as there is a strong reference
      * to the returned object.
      */
-    IGlobalVmContext allocateGlobalVmContext(int requesterDebugPid);
+    IGlobalVmContext allocateGlobalVmContext(String name, int requesterDebugPid);
 
     /** Forwards a VmBooted atom to statsd. */
     void atomVmBooted(in AtomVmBooted atom);

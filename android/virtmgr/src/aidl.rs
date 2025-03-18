@@ -597,9 +597,10 @@ impl VirtualizationService {
         config: &VirtualMachineConfig,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         const NUM_ATTEMPTS: usize = 5;
+        let name = get_name(config);
 
         for _ in 0..NUM_ATTEMPTS {
-            let vm_context = GLOBAL_SERVICE.allocateGlobalVmContext(requester_debug_pid)?;
+            let vm_context = GLOBAL_SERVICE.allocateGlobalVmContext(name, requester_debug_pid)?;
             let cid = vm_context.getCid()? as Cid;
             let temp_dir: PathBuf = vm_context.getTemporaryDirectory()?.into();
 
@@ -1050,6 +1051,14 @@ fn requires_vm_service(config: &VirtualMachineConfig) -> bool {
     match config {
         VirtualMachineConfig::AppConfig(_) => true,
         VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
+    }
+}
+
+/// Returns the name of the config
+fn get_name(config: &VirtualMachineConfig) -> &str {
+    match config {
+        VirtualMachineConfig::AppConfig(config) => &config.name,
+        VirtualMachineConfig::RawConfig(config) => &config.name,
     }
 }
 
