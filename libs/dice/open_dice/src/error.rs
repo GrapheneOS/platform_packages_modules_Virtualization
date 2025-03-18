@@ -33,6 +33,8 @@ pub enum DiceError {
     UnsupportedKeyAlgorithm(coset::iana::Algorithm),
     /// A failed fallible allocation. Used in no_std environments.
     MemoryAllocationError,
+    /// DICE chain not found in artifacts.
+    DiceChainNotFound,
 }
 
 /// This makes `DiceError` accepted by anyhow.
@@ -51,6 +53,7 @@ impl fmt::Display for DiceError {
                 write!(f, "Unsupported key algorithm: {algorithm:?}")
             }
             Self::MemoryAllocationError => write!(f, "Memory allocation failed"),
+            Self::DiceChainNotFound => write!(f, "DICE chain not found in artifacts"),
         }
     }
 }
