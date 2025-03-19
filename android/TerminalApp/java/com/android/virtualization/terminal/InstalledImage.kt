@@ -83,7 +83,7 @@ public class InstalledImage private constructor(val installDir: Path) {
     }
 
     @Throws(IOException::class)
-    fun getSize(): Long {
+    fun getApparentSize(): Long {
         return Files.size(rootPartition)
     }
 
@@ -118,7 +118,7 @@ public class InstalledImage private constructor(val installDir: Path) {
     @Throws(IOException::class)
     fun resize(desiredSize: Long): Long {
         val roundedUpDesiredSize = roundUp(desiredSize)
-        val curSize = getSize()
+        val curSize = getApparentSize()
 
         runE2fsck(rootPartition)
 
@@ -130,7 +130,21 @@ public class InstalledImage private constructor(val installDir: Path) {
             allocateSpace(rootPartition, roundedUpDesiredSize)
         }
         resizeFilesystem(rootPartition, roundedUpDesiredSize)
-        return getSize()
+        return getApparentSize()
+    }
+
+    @Throws(IOException::class)
+    fun shrinkToMinimumSize(): Long {
+        // Fix filesystem before resizing.
+        runE2fsck(rootPartition)
+
+        val p: String = rootPartition.toAbsolutePath().toString()
+        runCommand("/system/bin/resize2fs", "-M", p)
+        Log.d(TAG, "resize2fs -M completed: $rootPartition")
+
+        // resize2fs may result in an inconsistent filesystem state. Fix with e2fsck.
+        runE2fsck(rootPartition)
+        return getApparentSize()
     }
 
     @Throws(IOException::class)
@@ -213,7 +227,7 @@ public class InstalledImage private constructor(val installDir: Path) {
             }
         }
 
-        private fun roundUp(bytes: Long): Long {
+        internal fun roundUp(bytes: Long): Long {
             // Round up every diskSizeStep MB
             return ceil((bytes.toDouble()) / RESIZE_STEP_BYTES).toLong() * RESIZE_STEP_BYTES
         }

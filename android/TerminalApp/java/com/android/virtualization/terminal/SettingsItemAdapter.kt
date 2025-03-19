@@ -24,7 +24,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
-class SettingsItemAdapter(private val dataSet: Array<SettingsItem>) :
+class SettingsItemAdapter(private val dataSet: List<SettingsItem>) :
     RecyclerView.Adapter<SettingsItemAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {

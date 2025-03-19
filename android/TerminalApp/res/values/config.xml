@@ -16,4 +16,5 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <bool name="terminal_portrait_only">true</bool>
+    <item name="activity_split_ratio" format="float" type="dimen">0.3</item>
 </resources>
