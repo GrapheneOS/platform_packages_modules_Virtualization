@@ -19,6 +19,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.android.system.virtualmachine.flags.Flags
 import com.google.android.material.appbar.MaterialToolbar
 
 class SettingsActivity : AppCompatActivity() {
@@ -29,27 +30,34 @@ class SettingsActivity : AppCompatActivity() {
 
         val toolbar: MaterialToolbar = findViewById(R.id.settings_toolbar)
         setSupportActionBar(toolbar)
-        val settingsItems =
-            arrayOf(
+        var settingsItems = mutableListOf<SettingsItem>()
+        if (!Flags.terminalStorageBalloon()) {
+            settingsItems.add(
                 SettingsItem(
                     resources.getString(R.string.settings_disk_resize_title),
                     resources.getString(R.string.settings_disk_resize_sub_title),
                     R.drawable.baseline_storage_24,
                     SettingsItemEnum.DiskResize,
-                ),
-                SettingsItem(
-                    resources.getString(R.string.settings_port_forwarding_title),
-                    resources.getString(R.string.settings_port_forwarding_sub_title),
-                    R.drawable.baseline_call_missed_outgoing_24,
-                    SettingsItemEnum.PortForwarding,
-                ),
-                SettingsItem(
-                    resources.getString(R.string.settings_recovery_title),
-                    resources.getString(R.string.settings_recovery_sub_title),
-                    R.drawable.baseline_settings_backup_restore_24,
-                    SettingsItemEnum.Recovery,
-                ),
+                )
             )
+        }
+        settingsItems.add(
+            SettingsItem(
+                resources.getString(R.string.settings_port_forwarding_title),
+                resources.getString(R.string.settings_port_forwarding_sub_title),
+                R.drawable.baseline_call_missed_outgoing_24,
+                SettingsItemEnum.PortForwarding,
+            )
+        )
+        settingsItems.add(
+            SettingsItem(
+                resources.getString(R.string.settings_recovery_title),
+                resources.getString(R.string.settings_recovery_sub_title),
+                R.drawable.baseline_settings_backup_restore_24,
+                SettingsItemEnum.Recovery,
+            )
+        )
+
         val settingsListItemAdapter = SettingsItemAdapter(settingsItems)
 
         val recyclerView: RecyclerView = findViewById(R.id.settings_list_recycler_view)

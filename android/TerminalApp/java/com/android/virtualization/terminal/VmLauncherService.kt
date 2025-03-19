@@ -41,6 +41,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.WorkerThread
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.MainActivity.Companion.PREFIX
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import io.grpc.Grpc
@@ -120,7 +121,7 @@ class VmLauncherService : Service() {
                 // Note: this doesn't always do the resizing. If the current image size is the same
                 // as the requested size which is rounded up to the page alignment, resizing is not
                 // done.
-                val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
+                val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
 
                 mainWorkerThread.submit({
                     doStart(notification, displayInfo, diskSize, resultReceiver)
@@ -140,16 +141,18 @@ class VmLauncherService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun truncateDiskIfNecessary(image: InstalledImage) {
-        val curSize = image.getSize()
-        val physicalSize = image.getPhysicalSize()
-
-        // Change the rootfs disk's apparent size to GUEST_SPARSE_DISK_SIZE_PERCENTAGE of the total
-        // disk size.
-        // Note that the physical size is not changed.
+    private fun calculateSparseDiskSize(): Long {
+        // With storage ballooning enabled, we create a sparse file with 95% of the total size.
         val statFs = StatFs(filesDir.absolutePath)
         val hostSize = statFs.totalBytes
-        val expectedSize = hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100
+        return roundUp(hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100)
+    }
+
+    private fun truncateDiskIfNecessary(image: InstalledImage) {
+        val curSize = image.getApparentSize()
+        val physicalSize = image.getPhysicalSize()
+
+        val expectedSize = calculateSparseDiskSize()
         Log.d(
             TAG,
             "rootfs apparent size=$curSize, physical size=$physicalSize, expectedSize=$expectedSize",
@@ -161,6 +164,38 @@ class VmLauncherService : Service() {
             } catch (e: IOException) {
                 throw RuntimeException("Failed to truncate a disk", e)
             }
+        }
+    }
+
+    // Convert the rootfs disk to a non-sparse file.
+    private fun convertToNonSparseDiskIfNecessary(image: InstalledImage) {
+        try {
+            val curApparentSize = image.getApparentSize()
+            val curPhysicalSize = image.getPhysicalSize()
+            Log.d(TAG, "Current disk size: apparent=$curApparentSize, physical=$curPhysicalSize")
+
+            // If storage ballooning was enabled via Flags.terminalStorageBalloon() before but it's
+            // now disabled, the disk is still a sparse file whose apparent size is too large.
+            // We need to shrink it to the minimum size.
+            //
+            // The disk file is considered sparse if its apparent disk size matches the expected
+            // sparse disk size.
+            // In addition, we consider it sparse if the physical size is clearly smaller than its
+            // apparent size. This additional condition is a fallback for cases
+            // where the logic of calculating the expected sparse disk size since the disk is
+            // created.
+            if (
+                curApparentSize == calculateSparseDiskSize() ||
+                    curPhysicalSize <
+                        curApparentSize * EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE / 100
+            ) {
+                Log.d(TAG, "A sparse disk is detected. Shrink it to the minimum size.")
+                val newSize = image.shrinkToMinimumSize()
+                Log.d(TAG, "Shrink the disk image: $curApparentSize -> $newSize")
+            }
+        } catch (e: IOException) {
+            throw RuntimeException("Failed to shrink rootfs disk", e)
+            return
         }
     }
 
@@ -180,6 +215,10 @@ class VmLauncherService : Service() {
             // When storage ballooning flag is enabled, convert rootfs disk into a sparse file.
             truncateDiskIfNecessary(image)
         } else {
+            // Convert rootfs disk into a sparse file if storage ballooning flag had been enabled
+            // and then disabled.
+            convertToNonSparseDiskIfNecessary(image)
+
             // Note: this doesn't always do the resizing. If the current image size is the same as
             // the requested size which is rounded up to the page alignment, resizing is not done.
             image.resize(diskSize)
@@ -479,6 +518,7 @@ class VmLauncherService : Service() {
         private const val KEY_TERMINAL_PORT = "port"
 
         private const val GUEST_SPARSE_DISK_SIZE_PERCENTAGE = 95
+        private const val EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE = 90
 
         private val VM_BOOT_TIMEOUT_SECONDS: Int =
             {
