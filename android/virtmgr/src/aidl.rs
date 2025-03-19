@@ -641,6 +641,24 @@ impl VirtualizationService {
 
         let calling_partition = find_partition(CALLING_EXE_PATH.as_deref())?;
 
+        let instance_id = extract_instance_id(config);
+        // Require vendor instance IDs to start with a specific prefix so that they don't conflict
+        // with system instance IDs.
+        //
+        // We should also make sure that non-vendor VMs do not use the vendor prefix, but there are
+        // already system VMs in the wild that may have randomly generated IDs with the prefix, so,
+        // for now, we only check in one direction.
+        const INSTANCE_ID_VENDOR_PREFIX: &[u8] = &[0xFF, 0xFF, 0xFF, 0xFF];
+        if matches!(calling_partition, CallingPartition::Vendor | CallingPartition::Odm)
+            && !instance_id.starts_with(INSTANCE_ID_VENDOR_PREFIX)
+        {
+            return Err(anyhow!(
+                "vendor initiated VMs must have instance IDs starting with 0xFFFFFFFF, got {}",
+                hex::encode(instance_id)
+            ))
+            .or_service_specific_exception(-1);
+        }
+
         check_config_features(config)?;
 
         if cfg!(early) {
@@ -668,7 +686,6 @@ impl VirtualizationService {
             check_gdb_allowed(config)?;
         }
 
-        let instance_id = extract_instance_id(config);
         let mut device_tree_overlays = vec![];
         if let Some(dt_overlay) =
             maybe_create_reference_dt_overlay(config, &instance_id, &temporary_directory)?
