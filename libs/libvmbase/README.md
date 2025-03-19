@@ -79,23 +79,16 @@ must use the C ABI, and have the expected names. For example, to log sync except
 use vmbase::power::reboot;
 
 extern "C" fn sync_exception_current() {
-    eprintln!("sync_exception_current");
-
     let mut esr: u64;
     unsafe {
         asm!("mrs {esr}, esr_el1", esr = out(reg) esr);
     }
-    eprintln!("esr={:#08x}", esr);
-
-    reboot();
+    panic!("sync_exception_current, esr={:#08x}", esr);
 }
 ```
 
 The `println!` macro shouldn't be used in exception handlers, because it relies on a global instance
 of the UART driver which might be locked when the exception happens, which would result in deadlock.
-Instead you can use `eprintln!`, which will re-initialize the UART every time to ensure that it can
-be used. This should still be used with care, as it may interfere with whatever the rest of the
-program is doing with the UART.
 
 See [example/src/exceptions.rs](examples/src/exceptions.rs) for a complete example.
 

@@ -104,18 +104,25 @@ pub fn init_console() {
 
 /// Return platform uart with specific index
 ///
-/// Panics if console was not initialized by calling [`init`] first.
-pub fn uart(id: usize) -> &'static spin::mutex::SpinMutex<Uart> {
-    CONSOLES[id].get().unwrap()
+/// Returns `None` if console was not initialized by calling [`init`] first.
+pub fn uart(id: usize) -> Option<&'static SpinMutex<Uart>> {
+    CONSOLES[id].get()
 }
 
-/// Reinitializes the emergency UART driver and returns it.
+/// Reinitializes the n-th UART driver and returns it.
 ///
 /// This is intended for use in situations where the UART may be in an unknown state or the global
-/// instance may be locked, such as in an exception handler or panic handler.
-pub fn emergency_uart() -> Uart {
+/// instance may be locked, such as in the synchronous exception handler.
+///
+/// # Safety
+///
+/// This takes over the UART from wherever it is being used, the existing UART instance should not
+/// be used after this is called. This should only be used immediately before aborting the VM.
+pub unsafe fn emergency_uart(id: usize) -> Option<Uart> {
+    let addr = *ADDRESSES[id].get()?;
+
     // SAFETY: Initialization of UART using dedicated const address.
-    unsafe { Uart::new(UART_ADDRESSES[DEFAULT_EMERGENCY_CONSOLE_INDEX]) }
+    Some(unsafe { Uart::new(addr) })
 }
 
 /// Makes a `PSCI_SYSTEM_OFF` call to shutdown the VM.

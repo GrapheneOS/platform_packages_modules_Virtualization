@@ -14,33 +14,26 @@
 
 //! Console driver for 8250 UART.
 
-use crate::arch::platform;
-use core::fmt::{write, Arguments, Write};
+use crate::arch::platform::{self, emergency_uart, DEFAULT_EMERGENCY_CONSOLE_INDEX};
+use crate::power::reboot;
+use core::fmt::{self, write, Arguments, Write};
+use core::panic::PanicInfo;
 
 /// Writes a formatted string followed by a newline to the n-th console.
 ///
-/// Panics if the n-th console was not initialized by calling [`init`] first.
-pub fn writeln(n: usize, format_args: Arguments) {
-    let uart = &mut *platform::uart(n).lock();
-    write(uart, format_args).unwrap();
-    let _ = uart.write_str("\n");
-}
+/// Returns an error if the n-th console was not initialized by calling [`init`] first.
+pub fn writeln(n: usize, format_args: Arguments) -> fmt::Result {
+    let uart = &mut *platform::uart(n).ok_or(fmt::Error)?.lock();
 
-/// Reinitializes the emergency UART driver and writes a formatted string followed by a newline to
-/// it.
-///
-/// This is intended for use in situations where the UART may be in an unknown state or the global
-/// instance may be locked, such as in an exception handler or panic handler.
-pub fn ewriteln(format_args: Arguments) {
-    let mut uart = platform::emergency_uart();
-    let _ = write(&mut uart, format_args);
-    let _ = uart.write_str("\n");
+    write(uart, format_args)?;
+    uart.write_str("\n")?;
+    Ok(())
 }
 
 /// Prints the given formatted string to the n-th console, followed by a newline.
 ///
-/// Panics if the console has not yet been initialized. May hang if used in an exception context;
-/// use `eprintln!` instead.
+/// Returns an error if the console has not yet been initialized. May deadlock if used in a
+/// synchronous exception handler.
 #[macro_export]
 macro_rules! console_writeln {
     ($n:expr, $($arg:tt)*) => ({
@@ -48,27 +41,24 @@ macro_rules! console_writeln {
     })
 }
 
-pub(crate) use console_writeln;
-
 /// Prints the given formatted string to the console, followed by a newline.
 ///
-/// Panics if the console has not yet been initialized. May hang if used in an exception context;
-/// use `eprintln!` instead.
+/// Panics if the console has not yet been initialized. May hang if used in an exception context.
 macro_rules! println {
     ($($arg:tt)*) => ({
-        $crate::console::console_writeln!($crate::arch::platform::DEFAULT_CONSOLE_INDEX, $($arg)*)
+        $crate::console_writeln!($crate::arch::platform::DEFAULT_CONSOLE_INDEX, $($arg)*).unwrap()
     })
 }
 
 pub(crate) use println; // Make it available in this crate.
 
-/// Prints the given string followed by a newline to the console in an emergency, such as an
-/// exception handler.
-///
-/// Never panics.
-#[macro_export]
-macro_rules! eprintln {
-    ($($arg:tt)*) => ({
-        $crate::console::ewriteln(format_args!($($arg)*))
-    })
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    // SAFETY: We always reboot at the end of this method so there is no way for the
+    // original UART driver to be used after this.
+    if let Some(mut console) = unsafe { emergency_uart(DEFAULT_EMERGENCY_CONSOLE_INDEX) } {
+        // Ignore errors, to avoid a panic loop.
+        let _ = writeln!(console, "{}", info);
+    }
+    reboot()
 }
