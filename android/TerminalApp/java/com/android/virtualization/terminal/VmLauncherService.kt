@@ -31,6 +31,7 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.ResultReceiver
+import android.os.StatFs
 import android.os.SystemProperties
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -139,6 +140,30 @@ class VmLauncherService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun truncateDiskIfNecessary(image: InstalledImage) {
+        val curSize = image.getSize()
+        val physicalSize = image.getPhysicalSize()
+
+        // Change the rootfs disk's apparent size to GUEST_SPARSE_DISK_SIZE_PERCENTAGE of the total
+        // disk size.
+        // Note that the physical size is not changed.
+        val statFs = StatFs(filesDir.absolutePath)
+        val hostSize = statFs.totalBytes
+        val expectedSize = hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100
+        Log.d(
+            TAG,
+            "rootfs apparent size=$curSize, physical size=$physicalSize, expectedSize=$expectedSize",
+        )
+
+        if (curSize != expectedSize) {
+            try {
+                image.truncate(expectedSize)
+            } catch (e: IOException) {
+                throw RuntimeException("Failed to truncate a disk", e)
+            }
+        }
+    }
+
     @WorkerThread
     private fun doStart(
         notification: Notification,
@@ -150,7 +175,15 @@ class VmLauncherService : Service() {
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
-        image.resize(diskSize)
+
+        if (Flags.terminalStorageBalloon()) {
+            // When storage ballooning flag is enabled, convert rootfs disk into a sparse file.
+            truncateDiskIfNecessary(image)
+        } else {
+            // Note: this doesn't always do the resizing. If the current image size is the same as
+            // the requested size which is rounded up to the page alignment, resizing is not done.
+            image.resize(diskSize)
+        }
 
         customImageConfigBuilder.setAudioConfig(
             AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
@@ -444,6 +477,8 @@ class VmLauncherService : Service() {
 
         private const val KEY_TERMINAL_IPADDRESS = "address"
         private const val KEY_TERMINAL_PORT = "port"
+
+        private const val GUEST_SPARSE_DISK_SIZE_PERCENTAGE = 95
 
         private val VM_BOOT_TIMEOUT_SECONDS: Int =
             {
