@@ -78,6 +78,9 @@ int AVirtualMachineRawConfig_setName(AVirtualMachineRawConfig* _Nonnull config,
  * The `instanceId` is expected to be re-used for the VM instance with an associated state (secret,
  * encrypted storage) - i.e., rebooting the VM must not change the instanceId.
  *
+ * `instanceId` MUST start with 0xFFFFFFFF if and only if this library is being
+ * called from code in a vendor or odm partition,
+ *
  * \param config a virtual machine config object.
  * \param instanceId a pointer to a 64-byte buffer for the instance ID.
  * \param instanceIdSize the number of bytes in `instanceId`.
