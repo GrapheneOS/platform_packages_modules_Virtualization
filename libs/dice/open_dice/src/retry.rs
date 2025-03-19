@@ -17,7 +17,7 @@
 //! of this buffer may fail and callers will see Error::MemoryAllocationError.
 //! When running with std, allocation may fail.
 
-use crate::bcc::{bcc_format_config_descriptor, bcc_main_flow, DiceConfigValues};
+use crate::bcc::{bcc_format_config_descriptor, bcc_main_flow, BccHandover, DiceConfigValues};
 use crate::dice::{
     dice_main_flow, Cdi, CdiValues, DiceArtifacts, InputValues, CDI_SIZE, PRIVATE_KEY_SEED_SIZE,
     PRIVATE_KEY_SIZE,
@@ -57,6 +57,20 @@ impl DiceArtifacts for OwnedDiceArtifacts {
 
     fn bcc(&self) -> Option<&[u8]> {
         Some(&self.bcc)
+    }
+}
+
+impl TryFrom<BccHandover<'_>> for OwnedDiceArtifacts {
+    type Error = DiceError;
+
+    fn try_from(artifacts: BccHandover<'_>) -> Result<Self> {
+        let cdi_attest = artifacts.cdi_attest().to_vec().try_into().unwrap();
+        let cdi_seal = artifacts.cdi_seal().to_vec().try_into().unwrap();
+        let bcc = artifacts
+            .bcc()
+            .map(|bcc_slice| bcc_slice.to_vec())
+            .ok_or(DiceError::DiceChainNotFound)?;
+        Ok(OwnedDiceArtifacts { cdi_values: CdiValues { cdi_attest, cdi_seal }, bcc })
     }
 }
 

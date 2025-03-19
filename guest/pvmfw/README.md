@@ -147,6 +147,10 @@ The configuration data is described using the following [header]:
 |  offset = (FOURTH - HEAD)     |
 |  size = (FOURTH_END - FOURTH) |
 +-------------------------------+
+|           [Entry 4]           | <-- Entry 4 is present since version 1.3
+|  offset = (FIFTH - HEAD)      |
+|  size = (FIFTH_END - FIFTH)   |
++-------------------------------+
 |              ...              |
 +-------------------------------+
 |           [Entry n]           |
@@ -168,7 +172,11 @@ The configuration data is described using the following [header]:
 | {Fourth blob: VM reference DT}|
 +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+ <-- FOURTH_END
 | (Padding to 8-byte alignment) |
-+===============================+
++===============================+ <-- FIFTH
+| {Fifth blob: Reserved Memory} |
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+ <-- FIFTH_END
+| (Padding to 8-byte alignment) |
++===============================+ <-- FIFTH
 |              ...              |
 +===============================+ <-- TAIL
 ```
@@ -237,6 +245,31 @@ In version 1.2, a fourth blob is added.
 [device_assignment]: ../../docs/device_assignment.md
 [secretkeeper_key]: https://android.googlesource.com/platform/system/secretkeeper/+/refs/heads/main/README.md#secretkeeper-public-key
 [vendor_hashtree_digest]: ../../build/microdroid/README.md#verification-of-vendor-image
+
+#### Version 1.3 {#pvmfw-data-v1-3}
+
+In version 1.3, a fifth blob is added.
+
+- entry 4, if present, contains potentially confidential data to be passed to
+  specific guests identified from their VM name. If the data is confidential,
+  this feature should only be used with guests using a fixed rollback
+  protection mechanism to prevent rollback attacks from a malicious host. Data
+  is passed as a reserved-memory region through the device tree with the
+  provided properties at an address which is implementation defined. Multiple
+  regions may be passed to the same guest. The format is as follows.
+
+  ```rust
+  #[repr(C)]
+  struct ReservedMemConfigEntry<const N: usize> {
+    /// The number of headers contained in this blob.
+    count: u32,
+    /// The [reserved memory headers](src/reserved_mem.rs) describing the passed data.
+    headers: [RMemHeader; N]
+    /// The actual data being passed. The reserved memory headers point to
+    /// offsets within this array.
+    data: [u8],
+  }
+  ```
 
 #### Virtual Platform DICE Chain Handover
 
