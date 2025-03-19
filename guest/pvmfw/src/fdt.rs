@@ -1382,7 +1382,7 @@ pub fn modify_for_next_stage(
         fdt.unpack()?;
     }
 
-    patch_dice_node(fdt, bcc.as_ptr() as usize, bcc.len())?;
+    patch_dice_node(fdt, bcc)?;
 
     if let Some(mut chosen) = fdt.chosen_mut()? {
         empty_or_delete_prop(&mut chosen, c"avf,strict-boot", strict_boot)?;
@@ -1401,16 +1401,14 @@ pub fn modify_for_next_stage(
 }
 
 /// Patch the "google,open-dice"-compatible reserved-memory node to point to the bcc range
-fn patch_dice_node(fdt: &mut Fdt, addr: usize, size: usize) -> libfdt::Result<()> {
-    // We reject DTs with missing reserved-memory node as validation should have checked that the
-    // "swiotlb" subnode (compatible = "restricted-dma-pool") was present.
-    let node = fdt.node_mut(c"/reserved-memory")?.ok_or(libfdt::FdtError::NotFound)?;
-
+fn patch_dice_node(fdt: &mut Fdt, handover: &[u8]) -> libfdt::Result<()> {
+    // The node is assumed to be present in the template DT.
+    let node = fdt.node_mut(c"/reserved-memory")?.ok_or(FdtError::NotFound)?;
     let mut node = node.next_compatible(c"google,open-dice")?.ok_or(FdtError::NotFound)?;
 
-    let addr: u64 = addr.try_into().unwrap();
-    let size: u64 = size.try_into().unwrap();
-    node.setprop_inplace(c"reg", [addr.to_be_bytes(), size.to_be_bytes()].as_flattened())
+    let addr = (handover.as_ptr() as usize).try_into().unwrap();
+    let size = handover.len().try_into().unwrap();
+    node.setprop_addrrange_inplace(c"reg", addr, size)
 }
 
 fn empty_or_delete_prop(
