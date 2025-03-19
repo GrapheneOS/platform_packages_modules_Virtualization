@@ -98,7 +98,7 @@ pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64
     };
 
     const REBOOT_REASON_CONSOLE: usize = 1;
-    console_writeln!(REBOOT_REASON_CONSOLE, "{}", reboot_reason.as_avf_reboot_string());
+    console_writeln!(REBOOT_REASON_CONSOLE, "{}", reboot_reason.as_avf_reboot_string()).unwrap();
     reboot()
 
     // if we reach this point and return, vmbase::entry::rust_entry() will call power::shutdown().

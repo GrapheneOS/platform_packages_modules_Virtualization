@@ -1981,6 +1981,12 @@ public class VirtualMachine implements AutoCloseable {
     @SystemApi
     @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
     public interface VsockConnectionProvider {
+        /**
+         * Returns a connection, either from {@link #connectVsock} or from
+         * the VM owner which would call {@link #connectVsock} on your behalf.
+         *
+         * <p>Each call should return a new connection.
+         */
         @NonNull
         @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
         public ParcelFileDescriptor addConnection() throws VirtualMachineException;
@@ -2042,7 +2048,20 @@ public class VirtualMachine implements AutoCloseable {
     /**
      * Convert existing vsock connection to a binder connection.
      *
+     * <p>See {@linkplain #connectToVsockServer} for details. This method allows
+     * you to create the connects independently from upgrading them to the
+     * binder connection. Specifically:
+     *
      * <p>connectToVsockServer = connectToVsock + binderFromPreconnectedClient
+     *
+     * <p>This method is useful if you want to pass the vsock connection to
+     * another process before establishing the RPC binder connection, so that
+     * you can create a direct connection.
+     *
+     * @args
+     *     provider: a provider that provides the vsock connection. This
+     *              provider should return connections from
+     *              {@link #connectVsock}, from the VM owner.
      *
      * @hide
      */

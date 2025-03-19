@@ -8,7 +8,6 @@ rust_ffi_static {
     crate_name: "vmbase_example",
     srcs: ["src/main.rs"],
     rustlibs: [
-        "libaarch64_paging",
         "libdiced_open_dice_nostd",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
@@ -16,6 +15,13 @@ rust_ffi_static {
         "libvirtio_drivers",
         "libvmbase",
     ],
+    target: {
+        android_arm64: {
+            rustlibs: [
+                "libaarch64_paging",
+            ],
+        },
+    },
 }
 
 genrule {

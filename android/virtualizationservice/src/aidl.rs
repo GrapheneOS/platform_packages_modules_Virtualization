@@ -489,6 +489,9 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         id.try_fill(&mut rand::thread_rng())
             .context("Failed to allocate instance_id")
             .or_service_specific_exception(-1)?;
+        // Randomly allocated IDs always start with all 7s to avoid colliding with statically
+        // assigned IDs.
+        id[..4].fill(0x77);
         let uid = get_calling_uid();
         info!("Allocated a VM's instance_id: {:?}..., for uid: {:?}", &hex::encode(id)[..8], uid);
         self.try_updating_sk_state(&id);

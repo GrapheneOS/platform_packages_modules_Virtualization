@@ -25,9 +25,6 @@ import java.io.BufferedReader
 import java.io.FileReader
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.lang.IllegalArgumentException
-import java.lang.NumberFormatException
-import java.lang.RuntimeException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -86,8 +83,15 @@ public class InstalledImage private constructor(val installDir: Path) {
     }
 
     @Throws(IOException::class)
-    fun getSize(): Long {
+    fun getApparentSize(): Long {
         return Files.size(rootPartition)
+    }
+
+    @Throws(IOException::class)
+    fun getPhysicalSize(): Long {
+        val stat = RandomAccessFile(rootPartition.toFile(), "rw").use { raf -> Os.fstat(raf.fd) }
+        // The unit of st_blocks is 512 byte in Android.
+        return 512L * stat.st_blocks
     }
 
     @Throws(IOException::class)
@@ -114,7 +118,7 @@ public class InstalledImage private constructor(val installDir: Path) {
     @Throws(IOException::class)
     fun resize(desiredSize: Long): Long {
         val roundedUpDesiredSize = roundUp(desiredSize)
-        val curSize = getSize()
+        val curSize = getApparentSize()
 
         runE2fsck(rootPartition)
 
@@ -126,7 +130,32 @@ public class InstalledImage private constructor(val installDir: Path) {
             allocateSpace(rootPartition, roundedUpDesiredSize)
         }
         resizeFilesystem(rootPartition, roundedUpDesiredSize)
-        return getSize()
+        return getApparentSize()
+    }
+
+    @Throws(IOException::class)
+    fun shrinkToMinimumSize(): Long {
+        // Fix filesystem before resizing.
+        runE2fsck(rootPartition)
+
+        val p: String = rootPartition.toAbsolutePath().toString()
+        runCommand("/system/bin/resize2fs", "-M", p)
+        Log.d(TAG, "resize2fs -M completed: $rootPartition")
+
+        // resize2fs may result in an inconsistent filesystem state. Fix with e2fsck.
+        runE2fsck(rootPartition)
+        return getApparentSize()
+    }
+
+    @Throws(IOException::class)
+    fun truncate(size: Long) {
+        try {
+            RandomAccessFile(rootPartition.toFile(), "rw").use { raf -> Os.ftruncate(raf.fd, size) }
+            Log.d(TAG, "Truncated space to: $size bytes")
+        } catch (e: ErrnoException) {
+            Log.e(TAG, "Failed to allocate space", e)
+            throw IOException("Failed to allocate space", e)
+        }
     }
 
     companion object {
@@ -148,10 +177,9 @@ public class InstalledImage private constructor(val installDir: Path) {
         @Throws(IOException::class)
         private fun allocateSpace(path: Path, sizeInBytes: Long) {
             try {
-                val raf = RandomAccessFile(path.toFile(), "rw")
-                val fd = raf.fd
-                Os.posix_fallocate(fd, 0, sizeInBytes)
-                raf.close()
+                RandomAccessFile(path.toFile(), "rw").use { raf ->
+                    Os.posix_fallocate(raf.fd, 0, sizeInBytes)
+                }
                 Log.d(TAG, "Allocated space to: $sizeInBytes bytes")
             } catch (e: ErrnoException) {
                 Log.e(TAG, "Failed to allocate space", e)
@@ -199,7 +227,7 @@ public class InstalledImage private constructor(val installDir: Path) {
             }
         }
 
-        private fun roundUp(bytes: Long): Long {
+        internal fun roundUp(bytes: Long): Long {
             // Round up every diskSizeStep MB
             return ceil((bytes.toDouble()) / RESIZE_STEP_BYTES).toLong() * RESIZE_STEP_BYTES
         }

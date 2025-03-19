@@ -23,7 +23,11 @@ parcelable VirtualMachineAppConfig {
     /** Name of VM */
     String name;
 
-    /** Id of the VM instance */
+    /**
+     * Id of the VM instance
+     *
+     * See AVirtualMachineRawConfig_setInstanceId for details.
+     */
     byte[64] instanceId;
 
     /** Main APK */
