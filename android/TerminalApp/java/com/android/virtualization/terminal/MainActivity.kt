@@ -49,7 +49,7 @@ import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -125,9 +125,9 @@ public class MainActivity :
         }
 
         displayMenu?.also {
-            it.visibility = if (terminalGuiSupport()) View.VISIBLE else View.GONE
+            it.visibility = if (Flags.terminalGuiSupport()) View.VISIBLE else View.GONE
             it.setEnabled(false)
-            if (terminalGuiSupport()) {
+            if (Flags.terminalGuiSupport()) {
                 it.setOnClickListener {
                     val intent = Intent(this, DisplayActivity::class.java)
                     intent.flags =
