@@ -97,8 +97,6 @@ pub struct Bcc {
 }
 
 impl Bcc {
-    /// Returns whether any node in the received DICE chain is marked as debug (and hence is not
-    /// secure).
     pub fn new(received_bcc: Option<&[u8]>) -> Result<Bcc> {
         let received_bcc = received_bcc.unwrap_or(&[]);
         if received_bcc.is_empty() {
@@ -132,6 +130,8 @@ impl Bcc {
         Ok(Self { is_debug_mode, leaf_subject_pubkey })
     }
 
+    /// Returns whether any node in the received DICE chain is marked as debug (and hence is not
+    /// secure).
     pub fn is_debug_mode(&self) -> bool {
         self.is_debug_mode
     }
