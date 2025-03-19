@@ -32,12 +32,3 @@ pub mod rand;
 pub mod uart;
 pub mod util;
 pub mod virtio;
-
-use core::panic::PanicInfo;
-use power::reboot;
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    eprintln!("{}", info);
-    reboot()
-}

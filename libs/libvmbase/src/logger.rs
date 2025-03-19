@@ -16,7 +16,7 @@
 //!
 //! Internally uses the println! vmbase macro, which prints to crosvm's UART.
 //! Note: may not work if the VM is in an inconsistent state. Exception handlers
-//! should avoid using this logger and instead print with eprintln!.
+//! should avoid using this logger.
 
 use crate::console::println;
 use core::sync::atomic::{AtomicBool, Ordering};
