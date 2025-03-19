@@ -798,9 +798,8 @@ impl VirtualizationService {
                 .or_service_specific_exception(-1)?;
         }
 
-        // Check if files for payloads and bases are NOT coming from /vendor and /odm, as they may
-        // have unstable interfaces.
-        // TODO(b/316431494): remove once Treble interfaces are stabilized.
+        // Check if files for payloads and bases are on the same side of the Treble boundary as the
+        // calling process, as they may have unstable interfaces.
         check_partitions_for_files(config, calling_partition).or_service_specific_exception(-1)?;
 
         let zero_filler_path = temporary_directory.join("zero.img");
