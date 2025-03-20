@@ -75,6 +75,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
     <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">\u200E%1$s\u200E</xliff:g> max</string>
+    <!-- Snackbar message for showing not enough space error. [CHAR LIMIT=none] -->
+    <string name="settings_disk_resize_not_enough_space_message">Not enough space on the device to resize disk</string>
     <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=16] -->
     <string name="settings_disk_resize_resize_cancel">Cancel</string>
     <!-- Settings menu button to apply change Terminal app. This will launch a confirmation dialog [CHAR LIMIT=16] -->
