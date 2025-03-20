@@ -20,7 +20,6 @@
 extern crate alloc;
 
 mod arch;
-mod bcc;
 mod bootargs;
 mod config;
 mod device_assignment;
@@ -32,8 +31,7 @@ mod instance;
 mod memory;
 mod rollback;
 
-use crate::bcc::Bcc;
-use crate::dice::PartialInputs;
+use crate::dice::{Bcc, PartialInputs};
 use crate::entry::RebootReason;
 use crate::fdt::{modify_for_next_stage, read_instance_id, sanitize_device_tree};
 use crate::rollback::perform_rollback_protection;
@@ -134,7 +132,7 @@ fn main<'a>(
         // entire chain we were given and taint the CDIs. Note that the resulting CDIs are
         // still deterministically derived from those we received, so will vary iff they do.
         // TODO(b/280405545): Remove this post Android 14.
-        let truncated_bcc_handover = bcc::truncate(bcc_handover).map_err(|e| {
+        let truncated_bcc_handover = dice::chain::truncate(bcc_handover).map_err(|e| {
             error!("{e}");
             RebootReason::InternalError
         })?;

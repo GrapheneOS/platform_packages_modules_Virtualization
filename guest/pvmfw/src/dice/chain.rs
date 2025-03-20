@@ -59,6 +59,7 @@ impl fmt::Display for BccError {
 
 /// Return a new CBOR encoded BccHandover that is based on the incoming CDIs but does not chain
 /// from the received BCC.
+#[cfg_attr(test, allow(dead_code))]
 pub fn truncate(bcc_handover: BccHandover) -> Result<Vec<u8>> {
     // Note: The strings here are deliberately different from those used in a normal DICE handover
     // because we want this to not be equivalent to any valid DICE derivation.
@@ -75,6 +76,7 @@ pub fn truncate(bcc_handover: BccHandover) -> Result<Vec<u8>> {
     cbor_util::serialize(&bcc_handover).map_err(|_| BccError::CborEncodeError)
 }
 
+#[cfg_attr(test, allow(dead_code))]
 fn taint_cdi(cdi: &Cdi, info: &str) -> Result<Cdi> {
     // An arbitrary value generated randomly.
     const SALT: [u8; 64] = [

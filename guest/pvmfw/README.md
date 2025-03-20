@@ -1,19 +1,30 @@
 # Protected Virtual Machine Firmware
 
+## Protected VM (_"pVM"_)
+
 In the context of the [Android Virtualization Framework][AVF], a hypervisor
 (_e.g._ [pKVM]) enforces full memory isolation between its virtual machines
-(VMs) and the host.  As a result, the host is only allowed to access memory that
-has been explicitly shared back by a VM. Such _protected VMs_ (“pVMs”) are
-therefore able to manipulate secrets without being at risk of an attacker
-stealing them by compromising the Android host.
+(VMs) and the host. As a result, such VMs are given strong guarantees regarding
+their confidentiality and integrity.
 
-As pVMs are started dynamically by a _virtual machine manager_ (“VMM”) running
-as a host process and as pVMs must not trust the host (see [_Why
-AVF?_][why-avf]), the virtual machine it configures can't be trusted either.
-Furthermore, even though the isolation mentioned above allows pVMs to protect
-their secrets from the host, it does not help with provisioning them during
-boot. In particular, the threat model would prohibit the host from ever having
-access to those secrets, preventing the VMM from passing them to the pVM.
+A _protected VMs_ (“pVMs”) is a VM running in the non-secure or realm world,
+started dynamically by a _virtual machine manager_ (“VMM”) running as a process
+of the untrusted Android host (see [_Why AVF?_][why-avf]) and which is isolated
+from the host OS so that access to its memory is restricted, even in the event
+of a compromised Android host. pVMs support rich environments, including
+Linux-based distributions.
+
+The pVM concept is not Google-exclusive. Partner-defined VMs (SoC/OEM) meeting
+isolation/memory access restrictions are also pVMs.
+
+## Protected VM Root-of-Trust: pvmfw
+
+As pVMs are managed by a VMM running on the untrusted host, the virtual machine
+it configures can't be trusted either. Furthermore, even though the isolation
+mentioned above allows pVMs to protect their secrets from the host, it does not
+help with provisioning them during boot. In particular, the threat model would
+prohibit the host from ever having access to those secrets, preventing the VMM
+from passing them to the pVM.
 
 To address these concerns the hypervisor securely loads the pVM firmware
 (“pvmfw”) in the pVM from a protected memory region (this prevents the host or

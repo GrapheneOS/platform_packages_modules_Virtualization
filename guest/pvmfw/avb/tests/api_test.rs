@@ -71,6 +71,7 @@ fn latest_trusty_test_vm_kernel_passes_verification() -> Result<()> {
         expected_rollback_index,
         vec![Capability::TrustySecurityVm],
         None,
+        Some("trusty_test_vm".to_owned()),
     )
 }
 
