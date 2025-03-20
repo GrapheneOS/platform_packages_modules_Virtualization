@@ -47,9 +47,6 @@ internal object Logger {
         }
 
         try {
-            if (Files.isRegularFile(dir)) {
-                Files.delete(dir)
-            }
             Files.createDirectories(dir)
             deleteOldLogs(dir, 10)
             val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
