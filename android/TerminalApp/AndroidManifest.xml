@@ -65,6 +65,8 @@
         <activity android:name=".ErrorActivity"
             android:label="@string/error_title"
             android:process=":error" />
+        <activity android:name=".UpgradeActivity"
+            android:label="@string/upgrade_title" />
         <property
             android:name="android.window.PROPERTY_ACTIVITY_EMBEDDING_SPLITS_ENABLED"
             android:value="true" />
