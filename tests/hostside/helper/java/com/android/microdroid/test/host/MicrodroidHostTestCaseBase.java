@@ -262,6 +262,11 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     }
 
     public List<String> getSupportedOSList() throws Exception {
+        // The --os flag was introduced in SDK level 36. When running tests on earlier dessert
+        // releases only use "microdroid" OS.
+        if (getAndroidDevice().getApiLevel() < 36) {
+            return Arrays.asList("microdroid");
+        }
         return parseStringArrayFieldsFromVmInfo("Available OS list: ");
     }
 
