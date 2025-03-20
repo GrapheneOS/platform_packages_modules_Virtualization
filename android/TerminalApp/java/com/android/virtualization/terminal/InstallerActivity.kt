@@ -64,6 +64,7 @@ public class InstallerActivity : BaseActivity() {
 
         setContentView(R.layout.activity_installer)
         updateSizeEstimation(ESTIMATED_IMG_SIZE_BYTES)
+        sdcardLocation(fromSdCard().getPath())
         measureImageSizeAndUpdateDescription()
 
         waitForWifiCheckbox = findViewById<CheckBox>(R.id.installer_wait_for_wifi_checkbox)
@@ -75,6 +76,15 @@ public class InstallerActivity : BaseActivity() {
         installerServiceConnection = InstallerServiceConnection(this)
         if (!bindService(intent, installerServiceConnection!!, BIND_AUTO_CREATE)) {
             handleInternalError(Exception("Failed to connect to installer service"))
+        }
+    }
+
+    private fun sdcardLocation(dst: String) {
+        val desc =
+            getString(R.string.installer_sdcard_info_text_format, dst)
+        runOnUiThread {
+            val view = findViewById<TextView>(R.id.installer_sdcard_info)
+            view.text = desc
         }
     }
 

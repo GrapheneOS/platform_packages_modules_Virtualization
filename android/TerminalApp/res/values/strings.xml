@@ -33,6 +33,8 @@
     <string name="installer_title_text">Install Linux terminal</string>
     <!-- Installer activity description format [CHAR LIMIT=none] -->
     <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">\u200E%1$s\u200E</xliff:g> of data over the network.\nWould you like to proceed?</string>
+    <!-- Installer activity extra description [CHAR LIMIT=none] -->
+    <string name="installer_sdcard_info_text_format">Alternatively, if you want to provide your own custom image, you can place it under <xliff:g id="sdcard_loc">%1$s</xliff:g> using adb or the Files app</string>
     <!-- Checkbox at the installer activity to download when Wi-Fi is available to prevent from paying network traffic [CHAR LIMIT=none] -->
     <string name="installer_wait_for_wifi_checkbox_text">Download using Wi-Fi only</string>
     <!-- Button at the installer activity to confirm installation [CHAR LIMIT=16] -->
