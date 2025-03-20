@@ -40,6 +40,7 @@ import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.WorkerThread
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.MainActivity.Companion.PREFIX
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
