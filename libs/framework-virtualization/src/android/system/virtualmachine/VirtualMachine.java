@@ -813,6 +813,10 @@ public class VirtualMachine implements AutoCloseable {
      */
     @GuardedBy("mLock")
     private void dropVm() {
+        if (mInputEventExecutor != null) {
+            mInputEventExecutor.shutdownNow();
+            mInputEventExecutor = null;
+        }
         if (mMemoryManagementCallbacks != null) {
             mContext.unregisterComponentCallbacks(mMemoryManagementCallbacks);
         }
