@@ -34,6 +34,7 @@ import android.webkit.WebViewClient
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.CertificateUtils.createOrGetKey
 import com.android.virtualization.terminal.CertificateUtils.writeCertificateToFile
 import java.security.PrivateKey
@@ -201,7 +202,7 @@ class TerminalTabFragment() : Fragment() {
 
     private fun updateMainActivity() {
         val mainActivity = (activity as MainActivity)
-        if (terminalGuiSupport()) {
+        if (Flags.terminalGuiSupport()) {
             mainActivity.displayMenu!!.visibility = View.VISIBLE
             mainActivity.displayMenu!!.isEnabled = true
         }
