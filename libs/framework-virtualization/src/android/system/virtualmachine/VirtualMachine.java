@@ -1829,9 +1829,6 @@ public class VirtualMachine implements AutoCloseable {
             try {
                 mVirtualMachine.stop();
                 dropVm();
-                if (mInputEventExecutor != null) {
-                    mInputEventExecutor.shutdownNow();
-                }
             } catch (RemoteException e) {
                 throw e.rethrowAsRuntimeException();
             } catch (ServiceSpecificException e) {
