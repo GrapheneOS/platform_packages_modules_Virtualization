@@ -148,6 +148,7 @@ pub fn assert_payload_without_initrd_passes_verification(
     expected_rollback_index: u64,
     capabilities: Vec<Capability>,
     page_size: Option<usize>,
+    expected_name: Option<String>,
 ) -> Result<()> {
     let public_key = load_trusted_public_key()?;
     let verified_boot_data = verify_payload(
@@ -168,7 +169,7 @@ pub fn assert_payload_without_initrd_passes_verification(
         capabilities,
         rollback_index: expected_rollback_index,
         page_size,
-        name: None,
+        name: expected_name,
     };
     assert_eq!(expected_boot_data, verified_boot_data);
 
