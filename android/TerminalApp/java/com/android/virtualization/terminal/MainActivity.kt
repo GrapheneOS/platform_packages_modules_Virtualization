@@ -103,7 +103,13 @@ public class MainActivity :
 
         // if installer is launched, it will be handled in onActivityResult
         if (!launchInstaller) {
-            if (!Environment.isExternalStorageManager()) {
+            if (image.isOlderThanCurrentVersion()) {
+                val intent = Intent(this, UpgradeActivity::class.java)
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                // Explicitly finish to make sure that user can't go back from ErrorActivity.
+                finish()
+            } else if (!Environment.isExternalStorageManager()) {
                 requestStoragePermissions(this, manageExternalStorageActivityResultLauncher)
             } else {
                 startVm()

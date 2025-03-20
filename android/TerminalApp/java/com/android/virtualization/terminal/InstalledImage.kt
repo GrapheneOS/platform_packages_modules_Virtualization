@@ -67,6 +67,16 @@ public class InstalledImage private constructor(val installDir: Path) {
         }
     }
 
+    fun isOlderThanCurrentVersion(): Boolean {
+        val year =
+            try {
+                buildId.split(" ").last().toInt()
+            } catch (_: Exception) {
+                0
+            }
+        return year < RELEASE_YEAR
+    }
+
     @Throws(IOException::class)
     fun uninstallAndBackup(): Path {
         Files.delete(marker)
@@ -191,6 +201,7 @@ public class InstalledImage private constructor(val installDir: Path) {
         const val MARKER_FILENAME: String = "completed"
 
         const val RESIZE_STEP_BYTES: Long = 4 shl 20 // 4 MiB
+        const val RELEASE_YEAR: Int = 2025
 
         /** Returns InstalledImage for a given app context */
         fun getDefault(context: Context): InstalledImage {
