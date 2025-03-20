@@ -113,13 +113,15 @@ rust_test {
 
 rust_test {
     name: "libpvmfw.dice.test",
-    srcs: ["src/dice.rs"],
+    srcs: ["src/dice/mod.rs"],
     defaults: ["libpvmfw.test.defaults"],
     rustlibs: [
         "libcbor_util",
         "libciborium",
+        "libcoset_nostd",
         "libdiced_open_dice_nostd",
         "libhwtrust",
+        "liblog_rust",
         "libpvmfw_avb_nostd",
         "libdiced_sample_inputs_nostd",
         "libzerocopy_nostd",

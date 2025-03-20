@@ -15,9 +15,12 @@
 //! Support for DICE derivation and BCC generation.
 extern crate alloc;
 
+pub(crate) mod chain;
+
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+pub use chain::Bcc;
 use ciborium::cbor;
 use ciborium::Value;
 use core::mem::size_of;
