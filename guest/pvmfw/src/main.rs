@@ -31,7 +31,7 @@ mod instance;
 mod memory;
 mod rollback;
 
-use crate::dice::{Bcc, PartialInputs};
+use crate::dice::{DiceChainInfo, PartialInputs};
 use crate::entry::RebootReason;
 use crate::fdt::{modify_for_next_stage, read_instance_id, sanitize_device_tree};
 use crate::rollback::perform_rollback_protection;
@@ -52,7 +52,7 @@ fn main<'a>(
     untrusted_fdt: &mut Fdt,
     signed_kernel: &[u8],
     ramdisk: Option<&[u8]>,
-    current_bcc_handover: &[u8],
+    current_dice_handover: &[u8],
     mut debug_policy: Option<&[u8]>,
     vm_dtbo: Option<&mut [u8]>,
     vm_ref_dt: Option<&[u8]>,
@@ -67,21 +67,21 @@ fn main<'a>(
         debug!("Ramdisk: None");
     }
 
-    let bcc_handover = bcc_handover_parse(current_bcc_handover).map_err(|e| {
-        error!("Invalid BCC Handover: {e:?}");
-        RebootReason::InvalidBcc
+    let dice_handover = bcc_handover_parse(current_dice_handover).map_err(|e| {
+        error!("Invalid DICE Handover: {e:?}");
+        RebootReason::InvalidDiceHandover
     })?;
-    trace!("BCC: {bcc_handover:x?}");
+    trace!("DICE handover: {dice_handover:x?}");
 
-    let bcc = Bcc::new(bcc_handover.bcc()).map_err(|e| {
+    let dice_chain_info = DiceChainInfo::new(dice_handover.bcc()).map_err(|e| {
         error!("{e}");
-        RebootReason::InvalidBcc
+        RebootReason::InvalidDiceHandover
     })?;
 
     // The bootloader should never pass us a debug policy when the boot is secure (the bootloader
     // is locked). If it gets it wrong, disregard it & log it, to avoid it causing problems.
-    if debug_policy.is_some() && !bcc.is_debug_mode() {
-        warn!("Ignoring debug policy, BCC does not indicate Debug mode");
+    if debug_policy.is_some() && !dice_chain_info.is_debug_mode() {
+        warn!("Ignoring debug policy, DICE handover does not indicate Debug mode");
         debug_policy = None;
     }
 
@@ -101,13 +101,14 @@ fn main<'a>(
         sanitize_device_tree(untrusted_fdt, vm_dtbo, vm_ref_dt, guest_page_size, hyp_page_size)?;
     let fdt = untrusted_fdt; // DT has now been sanitized.
 
-    let next_bcc_size = guest_page_size;
-    let next_bcc = heap::aligned_boxed_slice(next_bcc_size, guest_page_size).ok_or_else(|| {
-        error!("Failed to allocate the next-stage BCC");
-        RebootReason::InternalError
-    })?;
+    let next_dice_handover_size = guest_page_size;
+    let next_dice_handover = heap::aligned_boxed_slice(next_dice_handover_size, guest_page_size)
+        .ok_or_else(|| {
+            error!("Failed to allocate the next-stage DICE handover");
+            RebootReason::InternalError
+        })?;
     // By leaking the slice, its content will be left behind for the next stage.
-    let next_bcc = Box::leak(next_bcc);
+    let next_dice_handover = Box::leak(next_dice_handover);
 
     let dice_inputs = PartialInputs::new(&verified_boot_data).map_err(|e| {
         error!("Failed to compute partial DICE inputs: {e:?}");
@@ -119,49 +120,50 @@ fn main<'a>(
         fdt,
         &verified_boot_data,
         &dice_inputs,
-        bcc_handover.cdi_seal(),
+        dice_handover.cdi_seal(),
         instance_hash,
     )?;
     trace!("Got salt for instance: {salt:x?}");
 
-    let new_bcc_handover = if cfg!(dice_changes) {
-        Cow::Borrowed(current_bcc_handover)
+    let new_dice_handover = if cfg!(dice_changes) {
+        Cow::Borrowed(current_dice_handover)
     } else {
         // It is possible that the DICE chain we were given is rooted in the UDS. We do not want to
         // give such a chain to the payload, or even the associated CDIs. So remove the
         // entire chain we were given and taint the CDIs. Note that the resulting CDIs are
         // still deterministically derived from those we received, so will vary iff they do.
         // TODO(b/280405545): Remove this post Android 14.
-        let truncated_bcc_handover = dice::chain::truncate(bcc_handover).map_err(|e| {
+        let truncated_dice_handover = dice::chain::truncate(dice_handover).map_err(|e| {
             error!("{e}");
             RebootReason::InternalError
         })?;
-        Cow::Owned(truncated_bcc_handover)
+        Cow::Owned(truncated_dice_handover)
     };
 
-    trace!("BCC leaf subject public key algorithm: {:?}", bcc.leaf_subject_pubkey().cose_alg);
+    let cose_alg = dice_chain_info.leaf_subject_pubkey().cose_alg;
+    trace!("DICE chain leaf subject public key algorithm: {:?}", cose_alg);
 
     let dice_context = DiceContext {
-        authority_algorithm: bcc.leaf_subject_pubkey().cose_alg.try_into().map_err(|e| {
+        authority_algorithm: cose_alg.try_into().map_err(|e| {
             error!("{e}");
             RebootReason::InternalError
         })?,
         subject_algorithm: VM_KEY_ALGORITHM,
     };
     dice_inputs
-        .write_next_bcc(
-            new_bcc_handover.as_ref(),
+        .write_next_handover(
+            new_dice_handover.as_ref(),
             &salt,
             instance_hash,
             defer_rollback_protection,
-            next_bcc,
+            next_dice_handover,
             dice_context,
         )
         .map_err(|e| {
             error!("Failed to derive next-stage DICE secrets: {e:?}");
             RebootReason::SecretDerivationError
         })?;
-    flush(next_bcc);
+    flush(next_dice_handover);
 
     let kaslr_seed = u64::from_ne_bytes(rand::random_array().map_err(|e| {
         error!("Failed to generated guest KASLR seed: {e}");
@@ -170,7 +172,7 @@ fn main<'a>(
     let strict_boot = true;
     modify_for_next_stage(
         fdt,
-        next_bcc,
+        next_dice_handover,
         new_instance,
         strict_boot,
         debug_policy,
@@ -183,7 +185,7 @@ fn main<'a>(
     })?;
 
     info!("Starting payload...");
-    Ok((next_bcc, debuggable))
+    Ok((next_dice_handover, debuggable))
 }
 
 // Get the "salt" which is one of the input for DICE derivation.

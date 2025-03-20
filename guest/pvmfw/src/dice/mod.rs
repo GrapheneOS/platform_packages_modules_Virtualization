@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Support for DICE derivation and BCC generation.
+//! Support for DICE derivation and DICE chain generation.
 extern crate alloc;
 
 pub(crate) mod chain;
@@ -20,7 +20,7 @@ pub(crate) mod chain;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-pub use chain::Bcc;
+pub use chain::DiceChainInfo;
 use ciborium::cbor;
 use ciborium::Value;
 use core::mem::size_of;
@@ -104,13 +104,13 @@ impl PartialInputs {
         Ok(Self { code_hash, auth_hash, mode, security_version, rkp_vm_marker, component_name })
     }
 
-    pub fn write_next_bcc(
+    pub fn write_next_handover(
         self,
-        current_bcc_handover: &[u8],
+        current_handover: &[u8],
         salt: &[u8; HIDDEN_SIZE],
         instance_hash: Option<Hash>,
         deferred_rollback_protection: bool,
-        next_bcc: &mut [u8],
+        next_handover: &mut [u8],
         context: DiceContext,
     ) -> Result<()> {
         let config = self
@@ -124,7 +124,7 @@ impl PartialInputs {
             self.mode,
             self.make_hidden(salt, deferred_rollback_protection)?,
         );
-        let _ = bcc_handover_main_flow(current_bcc_handover, &dice_inputs, next_bcc, context)?;
+        let _ = bcc_handover_main_flow(current_handover, &dice_inputs, next_handover, context)?;
         Ok(())
     }
 
@@ -184,6 +184,7 @@ mod tests {
         SECURITY_VERSION_KEY,
     };
     use ciborium::Value;
+    use diced_open_dice::bcc_handover_parse;
     use diced_open_dice::DiceArtifacts;
     use diced_open_dice::DiceContext;
     use diced_open_dice::DiceMode;
@@ -337,7 +338,7 @@ mod tests {
 
         inputs
             .clone()
-            .write_next_bcc(
+            .write_next_handover(
                 sample_dice_input,
                 &[0u8; HIDDEN_SIZE],
                 Some([0u8; 64]),
@@ -346,11 +347,11 @@ mod tests {
                 context.clone(),
             )
             .unwrap();
-        let bcc_handover1 = diced_open_dice::bcc_handover_parse(&buffer_without_defer).unwrap();
+        let handover1 = from_serialized_handover(&buffer_without_defer);
 
         inputs
             .clone()
-            .write_next_bcc(
+            .write_next_handover(
                 sample_dice_input,
                 &[0u8; HIDDEN_SIZE],
                 Some([0u8; 64]),
@@ -359,11 +360,11 @@ mod tests {
                 context.clone(),
             )
             .unwrap();
-        let bcc_handover2 = diced_open_dice::bcc_handover_parse(&buffer_with_defer).unwrap();
+        let handover2 = from_serialized_handover(&buffer_with_defer);
 
         inputs
             .clone()
-            .write_next_bcc(
+            .write_next_handover(
                 sample_dice_input,
                 &[0u8; HIDDEN_SIZE],
                 Some([0u8; 64]),
@@ -372,25 +373,24 @@ mod tests {
                 context.clone(),
             )
             .unwrap();
-        let bcc_handover3 =
-            diced_open_dice::bcc_handover_parse(&buffer_without_defer_retry).unwrap();
+        let handover3 = from_serialized_handover(&buffer_without_defer_retry);
 
-        assert_ne!(bcc_handover1.cdi_seal(), bcc_handover2.cdi_seal());
-        assert_eq!(bcc_handover1.cdi_seal(), bcc_handover3.cdi_seal());
+        assert_ne!(handover1.cdi_seal(), handover2.cdi_seal());
+        assert_eq!(handover1.cdi_seal(), handover3.cdi_seal());
     }
 
     #[test]
     fn dice_derivation_with_different_algorithms_is_valid() {
         let dice_artifacts = make_sample_bcc_and_cdis().unwrap();
-        let bcc_handover0_bytes = to_bcc_handover(&dice_artifacts);
+        let handover0_bytes = to_serialized_handover(&dice_artifacts);
         let vb_data = VerifiedBootData { debug_level: DebugLevel::Full, ..BASE_VB_DATA };
         let inputs = PartialInputs::new(&vb_data).unwrap();
         let mut buffer = [0; 4096];
 
         inputs
             .clone()
-            .write_next_bcc(
-                &bcc_handover0_bytes,
+            .write_next_handover(
+                &handover0_bytes,
                 &[0u8; HIDDEN_SIZE],
                 Some([0u8; 64]),
                 true,
@@ -400,15 +400,15 @@ mod tests {
                     subject_algorithm: KeyAlgorithm::EcdsaP256,
                 },
             )
-            .expect("Failed to derive Ed25519 -> EcdsaP256 BCC");
-        let bcc_handover1 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
-        let bcc_handover1_bytes = to_bcc_handover(&bcc_handover1);
+            .expect("Failed to derive Ed25519 -> EcdsaP256 DICE chain");
+        let handover1 = from_serialized_handover(&buffer);
+        let handover1_bytes = to_serialized_handover(&handover1);
         buffer.fill(0);
 
         inputs
             .clone()
-            .write_next_bcc(
-                &bcc_handover1_bytes,
+            .write_next_handover(
+                &handover1_bytes,
                 &[0u8; HIDDEN_SIZE],
                 Some([0u8; 64]),
                 true,
@@ -418,15 +418,15 @@ mod tests {
                     subject_algorithm: KeyAlgorithm::EcdsaP384,
                 },
             )
-            .expect("Failed to derive EcdsaP256 -> EcdsaP384 BCC");
-        let bcc_handover2 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
-        let bcc_handover2_bytes = to_bcc_handover(&bcc_handover2);
+            .expect("Failed to derive EcdsaP256 -> EcdsaP384 DICE chain");
+        let handover2 = from_serialized_handover(&buffer);
+        let handover2_bytes = to_serialized_handover(&handover2);
         buffer.fill(0);
 
         inputs
             .clone()
-            .write_next_bcc(
-                &bcc_handover2_bytes,
+            .write_next_handover(
+                &handover2_bytes,
                 &[0u8; HIDDEN_SIZE],
                 Some([0u8; 64]),
                 true,
@@ -436,21 +436,25 @@ mod tests {
                     subject_algorithm: KeyAlgorithm::Ed25519,
                 },
             )
-            .expect("Failed to derive EcdsaP384 -> Ed25519 BCC");
-        let bcc_handover3 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
+            .expect("Failed to derive EcdsaP384 -> Ed25519 DICE chain");
+        let handover3 = from_serialized_handover(&buffer);
 
         let mut session = Session::default();
         session.set_allow_any_mode(true);
-        let _chain = dice::Chain::from_cbor(&session, bcc_handover3.bcc().unwrap()).unwrap();
+        let _chain = dice::Chain::from_cbor(&session, handover3.bcc().unwrap()).unwrap();
     }
 
-    fn to_bcc_handover(dice_artifacts: &dyn DiceArtifacts) -> Vec<u8> {
+    fn to_serialized_handover(dice_artifacts: &dyn DiceArtifacts) -> Vec<u8> {
         let dice_chain = cbor_util::deserialize::<Value>(dice_artifacts.bcc().unwrap()).unwrap();
-        let bcc_handover = Value::Map(vec![
+        let handover = Value::Map(vec![
             (Value::Integer(1.into()), Value::Bytes(dice_artifacts.cdi_attest().to_vec())),
             (Value::Integer(2.into()), Value::Bytes(dice_artifacts.cdi_seal().to_vec())),
             (Value::Integer(3.into()), dice_chain),
         ]);
-        cbor_util::serialize(&bcc_handover).unwrap()
+        cbor_util::serialize(&handover).unwrap()
+    }
+
+    fn from_serialized_handover(bytes: &[u8]) -> diced_open_dice::BccHandover {
+        bcc_handover_parse(bytes).unwrap()
     }
 }

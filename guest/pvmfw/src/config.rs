@@ -124,7 +124,7 @@ impl Header {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Entry {
-    Bcc,
+    DiceHandover,
     DebugPolicy,
     VmDtbo,
     VmBaseDtbo,
@@ -136,12 +136,12 @@ impl Entry {
     const COUNT: usize = Self::_VARIANT_COUNT as usize;
 
     const ALL_ENTRIES: [Entry; Self::COUNT] =
-        [Self::Bcc, Self::DebugPolicy, Self::VmDtbo, Self::VmBaseDtbo];
+        [Self::DiceHandover, Self::DebugPolicy, Self::VmDtbo, Self::VmBaseDtbo];
 }
 
 #[derive(Default)]
 pub struct Entries<'a> {
-    pub bcc: &'a mut [u8],
+    pub dice_handover: &'a mut [u8],
     pub debug_policy: Option<&'a [u8]>,
     pub vm_dtbo: Option<&'a mut [u8]>,
     pub vm_ref_dt: Option<&'a [u8]>,
@@ -269,8 +269,8 @@ impl<'a> Config<'a> {
                 entry_size,
             );
         }
-        // Ensures that BCC exists.
-        ranges[Entry::Bcc as usize].ok_or(Error::MissingEntry(Entry::Bcc))?;
+        // Ensures that the DICE handover is present.
+        ranges[Entry::DiceHandover as usize].ok_or(Error::MissingEntry(Entry::DiceHandover))?;
 
         Ok(Self { body, ranges })
     }
@@ -293,15 +293,15 @@ impl<'a> Config<'a> {
                 entries[i] = Some(chunk);
             }
         }
-        let [bcc, debug_policy, vm_dtbo, vm_ref_dt] = entries;
+        let [dice_handover, debug_policy, vm_dtbo, vm_ref_dt] = entries;
 
-        // The platform BCC has always been required.
-        let bcc = bcc.unwrap();
+        // The platform DICE handover has always been required.
+        let dice_handover = dice_handover.unwrap();
 
         // We have no reason to mutate so drop the `mut`.
         let debug_policy = debug_policy.map(|x| &*x);
         let vm_ref_dt = vm_ref_dt.map(|x| &*x);
 
-        Entries { bcc, debug_policy, vm_dtbo, vm_ref_dt }
+        Entries { dice_handover, debug_policy, vm_dtbo, vm_ref_dt }
     }
 }

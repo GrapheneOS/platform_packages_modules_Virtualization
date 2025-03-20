@@ -23,13 +23,13 @@ use vmbase::{arch::aarch64::min_dcache_line_size, layout, memory::deactivate_dyn
 /// Function boot payload after cleaning all secret from pvmfw memory
 pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     let fdt_address = slices.fdt.as_ptr() as usize;
-    let bcc = slices
-        .dice_chain
+    let dice_handover = slices
+        .dice_handover
         .map(|slice| {
             let r = slice.as_ptr_range();
             (r.start as usize)..(r.end as usize)
         })
-        .expect("Missing DICE chain");
+        .expect("Missing DICE handover");
 
     deactivate_dynamic_page_tables();
 
@@ -50,9 +50,9 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     assert_eq!(scratch.start.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
     assert_eq!(scratch.end.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
 
-    assert!(bcc.is_within(&(scratch.start.0..scratch.end.0)));
-    assert_eq!(bcc.start % ASM_STP_ALIGN, 0, "Misaligned guest BCC.");
-    assert_eq!(bcc.end % ASM_STP_ALIGN, 0, "Misaligned guest BCC.");
+    assert!(dice_handover.is_within(&(scratch.start.0..scratch.end.0)));
+    assert_eq!(dice_handover.start % ASM_STP_ALIGN, 0, "Misaligned guest DICE handover.");
+    assert_eq!(dice_handover.end % ASM_STP_ALIGN, 0, "Misaligned guest DICE handover.");
 
     let stack = layout::stack_range();
 
@@ -73,17 +73,17 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     // SAFETY: We're exiting pvmfw by passing the register values we need to a noreturn asm!().
     unsafe {
         asm!(
-            "cmp {scratch}, {bcc}",
+            "cmp {scratch}, {dice_handover}",
             "b.hs 1f",
 
-            // Zero .data & .bss until BCC.
+            // Zero .data & .bss until DICE handover.
             "0: stp xzr, xzr, [{scratch}], 16",
-            "cmp {scratch}, {bcc}",
+            "cmp {scratch}, {dice_handover}",
             "b.lo 0b",
 
             "1:",
-            // Skip BCC.
-            "mov {scratch}, {bcc_end}",
+            // Skip DICE handover.
+            "mov {scratch}, {dice_handover_end}",
             "cmp {scratch}, {scratch_end}",
             "b.hs 1f",
 
@@ -93,7 +93,7 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "b.lo 0b",
 
             "1:",
-            // Flush d-cache over .data & .bss (including BCC).
+            // Flush d-cache over .data & .bss (including DICE handover).
             "0: dc cvau, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {scratch_end}",
@@ -159,8 +159,8 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "dsb nsh",
             "br x30",
             sctlr_el1_val = in(reg) SCTLR_EL1_VAL,
-            bcc = in(reg) u64::try_from(bcc.start).unwrap(),
-            bcc_end = in(reg) u64::try_from(bcc.end).unwrap(),
+            dice_handover = in(reg) u64::try_from(dice_handover.start).unwrap(),
+            dice_handover_end = in(reg) u64::try_from(dice_handover.end).unwrap(),
             cache_line = in(reg) u64::try_from(scratch.start.0).unwrap(),
             scratch = in(reg) u64::try_from(scratch.start.0).unwrap(),
             scratch_end = in(reg) u64::try_from(scratch.end.0).unwrap(),
