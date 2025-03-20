@@ -109,7 +109,7 @@ public class InstallerActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
 
-        if (autoInstall || (Build.isDebuggable() && fromSdCard().exists())) {
+        if (autoInstall || fromSdCard().exists()) {
             showSnackBar("Auto installing", Snackbar.LENGTH_LONG)
             requestInstall()
         }

@@ -175,12 +175,12 @@ internal class ImageArchive {
         }
 
         /**
-         * Creates ImageArchive from either SdCard or Internet. SdCard is used only when the build
-         * is debuggable and the file actually exists.
+         * Creates ImageArchive from either SdCard or Internet. SdCard is used only when the
+         * file actually exists.
          */
         fun getDefault(): ImageArchive {
             val archive = fromSdCard()
-            return if (Build.isDebuggable() && archive.exists()) {
+            return if (archive.exists()) {
                 archive
             } else {
                 fromInternet()
