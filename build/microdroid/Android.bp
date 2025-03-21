@@ -506,7 +506,7 @@ avb_add_hash_footer_defaults {
     },
 }
 
-MICRODROID_GKI_ROLLBACK_INDEX = 1
+MICRODROID_GKI_ROLLBACK_INDEX = 2
 
 flag_aware_avb_add_hash_footer_defaults {
     name: "microdroid_kernel_cap_defaults",

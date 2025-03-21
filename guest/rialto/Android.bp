@@ -69,8 +69,8 @@ filegroup {
 
 // Both SERVICE_VM_VERSION and SERVICE_VM_VERSION_STRING should represent the
 // same version number for the service VM.
-SERVICE_VM_VERSION = 1
-SERVICE_VM_VERSION_STRING = "1"
+SERVICE_VM_VERSION = 2
+SERVICE_VM_VERSION_STRING = "2"
 
 genrule {
     name: "service_vm_version_rs",
