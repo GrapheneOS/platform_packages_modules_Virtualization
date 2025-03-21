@@ -50,9 +50,12 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     assert_eq!(scratch.start.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
     assert_eq!(scratch.end.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
 
-    assert!(dice_handover.is_within(&(scratch.start.0..scratch.end.0)));
-    assert_eq!(dice_handover.start % ASM_STP_ALIGN, 0, "Misaligned guest DICE handover.");
-    assert_eq!(dice_handover.end % ASM_STP_ALIGN, 0, "Misaligned guest DICE handover.");
+    // A sub-region of the scratch memory might contain data for the next stage so skip zeroing it.
+    let skipped = dice_handover;
+
+    assert!(skipped.is_within(&(scratch.start.0..scratch.end.0)));
+    assert_eq!(skipped.start % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
+    assert_eq!(skipped.end % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
 
     let stack = layout::stack_range();
 
@@ -73,14 +76,14 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     // SAFETY: We're exiting pvmfw by passing the register values we need to a noreturn asm!().
     unsafe {
         asm!(
-            // Zero .data & .bss until DICE handover.
+            // Zero .data & .bss until the start of the skipped region.
             "b 1f",
             "0: stp xzr, xzr, [{scratch}], 16",
-            "1: cmp {scratch}, {dice_handover}",
+            "1: cmp {scratch}, {skipped}",
             "b.lo 0b",
 
-            // Skip DICE handover.
-            "mov {scratch}, {dice_handover_end}",
+            // Skip the skipped region.
+            "mov {scratch}, {skipped_end}",
 
             // Keep zeroing .data & .bss.
             "b 1f",
@@ -88,7 +91,7 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "1: cmp {scratch}, {scratch_end}",
             "b.lo 0b",
 
-            // Flush d-cache over .data & .bss (including DICE handover).
+            // Flush d-cache over .data & .bss (including skipped region).
             "0: dc cvau, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {scratch_end}",
@@ -154,8 +157,8 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "dsb nsh",
             "br x30",
             sctlr_el1_val = in(reg) SCTLR_EL1_VAL,
-            dice_handover = in(reg) u64::try_from(dice_handover.start).unwrap(),
-            dice_handover_end = in(reg) u64::try_from(dice_handover.end).unwrap(),
+            skipped = in(reg) u64::try_from(skipped.start).unwrap(),
+            skipped_end = in(reg) u64::try_from(skipped.end).unwrap(),
             cache_line = in(reg) u64::try_from(scratch.start.0).unwrap(),
             scratch = in(reg) u64::try_from(scratch.start.0).unwrap(),
             scratch_end = in(reg) u64::try_from(scratch.end.0).unwrap(),
