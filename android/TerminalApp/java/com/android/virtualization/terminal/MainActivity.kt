@@ -24,6 +24,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.graphics.fonts.FontStyle
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -232,6 +233,16 @@ public class MainActivity :
         val uri = Uri.fromParts("package", context.getPackageName(), null)
         intent.setData(uri)
         activityResultLauncher.launch(intent)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        MediaScannerConnection.scanFile(
+            this,
+            arrayOf("/storage/emulated/${userId}/Download"),
+            null /* mimeTypes */,
+            null, /* callback */
+        )
     }
 
     private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {
