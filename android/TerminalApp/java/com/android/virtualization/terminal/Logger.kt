@@ -17,9 +17,7 @@ package com.android.virtualization.terminal
 
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineConfig
-import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
-import com.android.virtualization.terminal.Logger.LineBufferedOutputStream
 import java.io.BufferedOutputStream
 import java.io.BufferedReader
 import java.io.IOException
@@ -56,19 +54,29 @@ internal object Logger {
             val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
             val console = vm.getConsoleOutput()
             val file = Files.newOutputStream(logPath, StandardOpenOption.CREATE)
-            executor.submit<Int?> {
-                console.use { console ->
-                    LineBufferedOutputStream(file).use { fileOutput ->
-                        Streams.copy(console, fileOutput)
+            executor.execute({
+                try {
+                    console.use { console ->
+                        LineBufferedOutputStream(file).use { fileOutput ->
+                            Streams.copy(console, fileOutput)
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to log console output. VM may be shutting down", e)
                 }
-            }
+            })
 
             val log = vm.getLogOutput()
-            executor.submit<Unit> { log.use { writeToLogd(it, tag) } }
-        } catch (e: VirtualMachineException) {
-            throw RuntimeException(e)
-        } catch (e: IOException) {
+            executor.execute({
+                log.use {
+                    try {
+                        writeToLogd(it, tag)
+                    } catch (e: Exception) {
+                        Log.w(tag, "Failed to log VM log output. VM may be shutting down", e)
+                    }
+                }
+            })
+        } catch (e: Exception) {
             throw RuntimeException(e)
         }
     }

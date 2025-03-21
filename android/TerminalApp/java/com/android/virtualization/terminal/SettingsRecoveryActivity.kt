@@ -21,19 +21,23 @@ import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import java.io.IOException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class SettingsRecoveryActivity : AppCompatActivity() {
+    private lateinit var executorService: ExecutorService
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        executorService =
+            Executors.newSingleThreadExecutor(TerminalThreadFactory(applicationContext))
+
         setContentView(R.layout.settings_recovery)
 
         val resetCard = findViewById<MaterialCardView>(R.id.settings_recovery_reset_card)
@@ -81,6 +85,12 @@ class SettingsRecoveryActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        executorService.shutdown()
+    }
+
     private fun removeBackup(): Unit {
         try {
             InstalledImage.getDefault(this).deleteBackup()
@@ -116,27 +126,22 @@ class SettingsRecoveryActivity : AppCompatActivity() {
         }
     }
 
-    private fun runInBackgroundAndRestartApp(
-        backgroundWork: suspend CoroutineScope.() -> Unit
-    ): Unit {
+    private fun runInBackgroundAndRestartApp(backgroundWork: Runnable) {
         findViewById<View>(R.id.setting_recovery_card_container).visibility = View.INVISIBLE
         findViewById<View>(R.id.recovery_boot_progress).visibility = View.VISIBLE
-        lifecycleScope
-            .launch(Dispatchers.IO) { backgroundWork() }
-            .invokeOnCompletion {
-                runOnUiThread {
-                    findViewById<View>(R.id.setting_recovery_card_container).visibility =
-                        View.VISIBLE
-                    findViewById<View>(R.id.recovery_boot_progress).visibility = View.INVISIBLE
-                    // Restart terminal
-                    val intent =
-                        baseContext.packageManager.getLaunchIntentForPackage(
-                            baseContext.packageName
-                        )
-                    intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    finish()
-                    startActivity(intent)
-                }
+        executorService.execute({
+            backgroundWork.run()
+
+            runOnUiThread {
+                findViewById<View>(R.id.setting_recovery_card_container).visibility = View.VISIBLE
+                findViewById<View>(R.id.recovery_boot_progress).visibility = View.INVISIBLE
+                // Restart terminal
+                val intent =
+                    baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
+                intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                finish()
+                startActivity(intent)
             }
+        })
     }
 }
