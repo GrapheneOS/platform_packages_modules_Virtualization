@@ -94,7 +94,7 @@ class VmLauncherService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        val threadFactory = TerminalThreadFactory(getApplicationContext())
+        val threadFactory = TerminalThreadFactory(applicationContext)
         bgThreads = Executors.newCachedThreadPool(threadFactory)
         mainWorkerThread = Executors.newSingleThreadExecutor(threadFactory)
         image = InstalledImage.getDefault(this)
@@ -123,7 +123,7 @@ class VmLauncherService : Service() {
                 // done.
                 val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
 
-                mainWorkerThread.submit({
+                mainWorkerThread.execute({
                     doStart(notification, displayInfo, diskSize, resultReceiver)
                 })
 
@@ -131,7 +131,7 @@ class VmLauncherService : Service() {
                 // ForegroundServiceDidNotStartInTimeException
                 startForeground(this.hashCode(), notification)
             }
-            ACTION_SHUTDOWN_VM -> mainWorkerThread.submit({ doShutdown(resultReceiver) })
+            ACTION_SHUTDOWN_VM -> mainWorkerThread.execute({ doShutdown(resultReceiver) })
             else -> {
                 Log.e(TAG, "Unknown command " + intent.action)
                 stopSelf()
@@ -505,7 +505,7 @@ class VmLauncherService : Service() {
     }
 
     override fun onDestroy() {
-        mainWorkerThread.submit({
+        mainWorkerThread.execute({
             if (runner?.vm?.getStatus() == VirtualMachine.STATUS_RUNNING) {
                 doShutdown(null)
             }
