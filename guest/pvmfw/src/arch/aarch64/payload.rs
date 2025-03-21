@@ -73,26 +73,21 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     // SAFETY: We're exiting pvmfw by passing the register values we need to a noreturn asm!().
     unsafe {
         asm!(
-            "cmp {scratch}, {dice_handover}",
-            "b.hs 1f",
-
             // Zero .data & .bss until DICE handover.
+            "b 1f",
             "0: stp xzr, xzr, [{scratch}], 16",
-            "cmp {scratch}, {dice_handover}",
+            "1: cmp {scratch}, {dice_handover}",
             "b.lo 0b",
 
-            "1:",
             // Skip DICE handover.
             "mov {scratch}, {dice_handover_end}",
-            "cmp {scratch}, {scratch_end}",
-            "b.hs 1f",
 
             // Keep zeroing .data & .bss.
+            "b 1f",
             "0: stp xzr, xzr, [{scratch}], 16",
-            "cmp {scratch}, {scratch_end}",
+            "1: cmp {scratch}, {scratch_end}",
             "b.lo 0b",
 
-            "1:",
             // Flush d-cache over .data & .bss (including DICE handover).
             "0: dc cvau, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
