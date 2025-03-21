@@ -69,10 +69,7 @@ apex_defaults {
         default: [],
     }),
 
-    canned_fs_config: select(release_flag("RELEASE_AVF_ENABLE_VIRT_CPUFREQ"), {
-        true: "canned_fs_config_sys_nice",
-        default: "canned_fs_config",
-    }),
+    canned_fs_config: "canned_fs_config",
 }
 
 vintf_fragment {
