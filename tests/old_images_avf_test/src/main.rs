@@ -173,20 +173,6 @@ fn run_vm(image_path: &str, test_name: &CStr, protected_vm: bool) -> Result<()> 
 }
 
 #[test]
-fn test_run_rialto_protected() -> Result<()> {
-    if hypervisor_props::is_protected_vm_supported()? {
-        run_vm(
-            "/data/local/tmp/rialto.bin", /* image_path */
-            c"test_rialto",               /* test_name */
-            true,                         /* protected_vm */
-        )
-    } else {
-        info!("pVMs are not supported on device. skipping test");
-        Ok(())
-    }
-}
-
-#[test]
 fn test_run_rialto_non_protected() -> Result<()> {
     if hypervisor_props::is_vm_supported()? {
         run_vm(
@@ -196,20 +182,6 @@ fn test_run_rialto_non_protected() -> Result<()> {
         )
     } else {
         info!("VMs are not supported on device. skipping test");
-        Ok(())
-    }
-}
-
-#[test]
-fn test_run_android16_rialto_protected() -> Result<()> {
-    if hypervisor_props::is_protected_vm_supported()? {
-        run_vm(
-            "/data/local/tmp/android16_rialto.bin", /* image_path */
-            c"android16_test_rialto",               /* test_name */
-            true,                                   /* protected_vm */
-        )
-    } else {
-        info!("pVMs are not supported on device. skipping test");
         Ok(())
     }
 }
