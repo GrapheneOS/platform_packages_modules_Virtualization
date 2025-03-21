@@ -141,7 +141,7 @@ impl Entry {
 
 #[derive(Default)]
 pub struct Entries<'a> {
-    pub dice_handover: &'a mut [u8],
+    pub dice_handover: Option<&'a mut [u8]>,
     pub debug_policy: Option<&'a [u8]>,
     pub vm_dtbo: Option<&'a mut [u8]>,
     pub vm_ref_dt: Option<&'a [u8]>,
@@ -294,9 +294,6 @@ impl<'a> Config<'a> {
             }
         }
         let [dice_handover, debug_policy, vm_dtbo, vm_ref_dt] = entries;
-
-        // The platform DICE handover has always been required.
-        let dice_handover = dice_handover.unwrap();
 
         // We have no reason to mutate so drop the `mut`.
         let debug_policy = debug_policy.map(|x| &*x);

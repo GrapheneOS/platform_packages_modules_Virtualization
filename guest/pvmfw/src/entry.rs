@@ -139,7 +139,7 @@ fn main_wrapper<'a>(
         slices.fdt,
         slices.kernel,
         slices.ramdisk,
-        config_entries.dice_handover,
+        config_entries.dice_handover.as_deref(),
         config_entries.debug_policy,
         config_entries.vm_dtbo,
         config_entries.vm_ref_dt,
@@ -147,11 +147,14 @@ fn main_wrapper<'a>(
     if let Some(r) = next_dice_handover {
         slices.add_dice_handover(r);
     }
+
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
     let keep_uart = cfg!(debuggable_vms_improvements) && debuggable_payload;
 
     // Writable-dirty regions will be flushed when MemoryTracker is dropped.
-    config_entries.dice_handover.zeroize();
+    if let Some(r) = config_entries.dice_handover {
+        r.zeroize();
+    }
 
     unshare_all_mmio_except_uart().map_err(|e| {
         error!("Failed to unshare MMIO ranges: {e}");
@@ -220,8 +223,8 @@ impl<'a> AppendedPayload<'a> {
     fn get_entries(self) -> config::Entries<'a> {
         match self {
             Self::Config(cfg) => cfg.get_entries(),
-            Self::LegacyDiceHandover(dice_handover) => {
-                config::Entries { dice_handover, ..Default::default() }
+            Self::LegacyDiceHandover(d) => {
+                config::Entries { dice_handover: Some(d), ..Default::default() }
             }
         }
     }

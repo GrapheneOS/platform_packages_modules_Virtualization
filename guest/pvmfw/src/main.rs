@@ -56,7 +56,7 @@ fn main<'a>(
     untrusted_fdt: &mut Fdt,
     signed_kernel: &[u8],
     ramdisk: Option<&[u8]>,
-    current_dice_handover: &[u8],
+    current_dice_handover: Option<&[u8]>,
     mut debug_policy: Option<&[u8]>,
     vm_dtbo: Option<&mut [u8]>,
     vm_ref_dt: Option<&[u8]>,
@@ -71,8 +71,7 @@ fn main<'a>(
         debug!("Ramdisk: None");
     }
 
-    let (dice_handover_bytes, dice_cdi_seal, dice_context, dice_debug_mode) =
-        parse_dice_handover(current_dice_handover)?;
+    let (parsed_dice, dice_debug_mode) = parse_dice_handover(current_dice_handover)?;
 
     // The bootloader should never pass us a debug policy when the boot is secure (the bootloader
     // is locked). If it gets it wrong, disregard it & log it, to avoid it causing problems.
@@ -81,7 +80,13 @@ fn main<'a>(
         debug_policy = None;
     }
 
-    let (verified_boot_data, debuggable, guest_page_size) = {
+    // Policy/Hidden ABI: If the pvmfw loader (typically ABL) didn't pass a DICE handover (which is
+    // technically still mandatory, as per the config data specification), skip DICE, AVB, and RBP.
+    // This is to support Qualcomm QTVMs, which perform guest image verification in TrustZone.
+    let (verified_boot_data, debuggable, guest_page_size) = if current_dice_handover.is_none() {
+        warn!("Verified boot is disabled!");
+        (None, false, SIZE_4KB)
+    } else {
         let (dat, debug, sz) = perform_verified_boot(signed_kernel, ramdisk)?;
         (Some(dat), debug, sz)
     };
@@ -97,6 +102,8 @@ fn main<'a>(
             error!("Failed to compute partial DICE inputs: {e:?}");
             RebootReason::InternalError
         })?;
+        let (dice_handover_bytes, dice_cdi_seal, dice_context) =
+            parsed_dice.expect("Missing DICE values with VB data");
         let (new_instance, salt, defer_rollback_protection) =
             perform_rollback_protection(fdt, data, &dice_inputs, &dice_cdi_seal)?;
         trace!("Got salt for instance: {salt:x?}");
@@ -140,8 +147,11 @@ fn main<'a>(
 }
 
 fn parse_dice_handover(
-    bytes: &[u8],
-) -> Result<(Cow<'_, [u8]>, Vec<u8>, DiceContext, bool), RebootReason> {
+    bytes: Option<&[u8]>,
+) -> Result<(Option<(Cow<'_, [u8]>, Vec<u8>, DiceContext)>, bool), RebootReason> {
+    let Some(bytes) = bytes else {
+        return Ok((None, false));
+    };
     let dice_handover = bcc_handover_parse(bytes).map_err(|e| {
         error!("Invalid DICE Handover: {e:?}");
         RebootReason::InvalidDiceHandover
@@ -181,7 +191,7 @@ fn parse_dice_handover(
         Cow::Owned(truncated_bytes)
     };
 
-    Ok((bytes_for_next, cdi_seal, dice_context, is_debug_mode))
+    Ok((Some((bytes_for_next, cdi_seal, dice_context)), is_debug_mode))
 }
 
 fn perform_dice_derivation<'a>(
