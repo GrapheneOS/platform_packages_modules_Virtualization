@@ -465,7 +465,6 @@ class VmLauncherService : Service() {
     private fun doShutdown(resultReceiver: ResultReceiver?) {
         runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
             resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
-            stopSelf()
         }
         if (debianService != null && debianService!!.shutdownDebian()) {
             // During shutdown, change the notification content to indicate that it's closing
@@ -494,7 +493,6 @@ class VmLauncherService : Service() {
         } else {
             // If there is no Debian service or it fails to shutdown, just stop the service.
             runner?.vm?.stop()
-            stopSelf()
         }
     }
 
