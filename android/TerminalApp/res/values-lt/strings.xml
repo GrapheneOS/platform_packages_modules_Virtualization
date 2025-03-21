@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Disko dydis nustatytas"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Priskirta <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maks. <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Įrenginyje nepakanka vietos disko dydžiui pakeisti"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Atšaukti"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Taikyti"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminalas bus paleistas iš naujo, kad būtų galima pakeisti disko dydį"</string>
