@@ -185,18 +185,18 @@ public class MainActivity :
         terminalViewModel.terminalTabs[tabId] = tab
         tab.customView!!
             .findViewById<Button>(R.id.tab_close_button)
-            .setOnClickListener(
-                View.OnClickListener { _: View? ->
-                    if (terminalTabAdapter.tabs.size == 1) {
-                        finishAndRemoveTask()
-                    }
-                    viewPager.offscreenPageLimit -= 1
-                    terminalTabAdapter.deleteTab(tab.position)
-                    tabLayout.removeTab(tab)
-                }
-            )
+            .setOnClickListener(View.OnClickListener { _: View? -> closeTab(tab) })
         // Add and select the tab
         tabLayout.addTab(tab, true)
+    }
+
+    fun closeTab(tab: TabLayout.Tab) {
+        if (terminalTabAdapter.tabs.size == 1) {
+            finishAndRemoveTask()
+        }
+        viewPager.offscreenPageLimit -= 1
+        terminalTabAdapter.deleteTab(tab.position)
+        tabLayout.removeTab(tab)
     }
 
     private fun lockOrientationIfNecessary() {
