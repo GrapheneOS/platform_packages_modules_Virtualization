@@ -60,7 +60,7 @@ fn main<'a>(
     mut debug_policy: Option<&[u8]>,
     vm_dtbo: Option<&mut [u8]>,
     vm_ref_dt: Option<&[u8]>,
-) -> Result<(&'a [u8], bool), RebootReason> {
+) -> Result<(Option<&'a [u8]>, bool), RebootReason> {
     info!("pVM firmware");
     debug!("FDT: {:?}", untrusted_fdt.as_ptr());
     debug!("Signed kernel: {:?} ({:#x} bytes)", signed_kernel.as_ptr(), signed_kernel.len());
@@ -81,33 +81,40 @@ fn main<'a>(
         debug_policy = None;
     }
 
-    let (verified_boot_data, debuggable, guest_page_size) =
-        perform_verified_boot(signed_kernel, ramdisk)?;
+    let (verified_boot_data, debuggable, guest_page_size) = {
+        let (dat, debug, sz) = perform_verified_boot(signed_kernel, ramdisk)?;
+        (Some(dat), debug, sz)
+    };
 
     let hyp_page_size = hypervisor_backends::get_granule_size();
     let _ =
         sanitize_device_tree(untrusted_fdt, vm_dtbo, vm_ref_dt, guest_page_size, hyp_page_size)?;
     let fdt = untrusted_fdt; // DT has now been sanitized.
 
-    let instance_hash = salt_from_instance_id(fdt)?;
-    let dice_inputs = PartialInputs::new(&verified_boot_data, instance_hash).map_err(|e| {
-        error!("Failed to compute partial DICE inputs: {e:?}");
-        RebootReason::InternalError
-    })?;
+    let (next_dice_handover, new_instance) = if let Some(ref data) = verified_boot_data {
+        let instance_hash = salt_from_instance_id(fdt)?;
+        let dice_inputs = PartialInputs::new(data, instance_hash).map_err(|e| {
+            error!("Failed to compute partial DICE inputs: {e:?}");
+            RebootReason::InternalError
+        })?;
+        let (new_instance, salt, defer_rollback_protection) =
+            perform_rollback_protection(fdt, data, &dice_inputs, &dice_cdi_seal)?;
+        trace!("Got salt for instance: {salt:x?}");
 
-    let (new_instance, salt, defer_rollback_protection) =
-        perform_rollback_protection(fdt, &verified_boot_data, &dice_inputs, &dice_cdi_seal)?;
-    trace!("Got salt for instance: {salt:x?}");
+        let next_dice_handover = perform_dice_derivation(
+            dice_handover_bytes.as_ref(),
+            dice_context,
+            dice_inputs,
+            &salt,
+            defer_rollback_protection,
+            guest_page_size,
+            guest_page_size,
+        )?;
 
-    let next_dice_handover = perform_dice_derivation(
-        dice_handover_bytes.as_ref(),
-        dice_context,
-        dice_inputs,
-        &salt,
-        defer_rollback_protection,
-        guest_page_size,
-        guest_page_size,
-    )?;
+        (Some(next_dice_handover), new_instance)
+    } else {
+        (None, true)
+    };
 
     let kaslr_seed = u64::from_ne_bytes(rand::random_array().map_err(|e| {
         error!("Failed to generated guest KASLR seed: {e}");

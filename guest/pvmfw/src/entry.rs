@@ -144,7 +144,9 @@ fn main_wrapper<'a>(
         config_entries.vm_dtbo,
         config_entries.vm_ref_dt,
     )?;
-    slices.add_dice_handover(next_dice_handover);
+    if let Some(r) = next_dice_handover {
+        slices.add_dice_handover(r);
+    }
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
     let keep_uart = cfg!(debuggable_vms_improvements) && debuggable_payload;
 
