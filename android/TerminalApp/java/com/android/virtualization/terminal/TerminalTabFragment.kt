@@ -216,7 +216,7 @@ class TerminalTabFragment() : Fragment() {
     }
 
     private fun updateMainActivity() {
-        val mainActivity = (activity as MainActivity)
+        val mainActivity = activity as MainActivity ?: return
         if (terminalGuiSupport()) {
             mainActivity.displayMenu!!.visibility = View.VISIBLE
             mainActivity.displayMenu!!.isEnabled = true
