@@ -58,7 +58,7 @@ class MemBalloonController(val context: Context, val vm: VirtualMachine) {
             // available memory to the virtual machine
             override fun onResume(owner: LifecycleOwner) {
                 ongoingInflation?.cancel(false)
-                executor.submit({
+                executor.execute({
                     Log.v(TAG, "app resumed. deflating mem balloon to the minimum")
                     vm.setMemoryBalloonByPercent(0)
                 })
