@@ -23,13 +23,10 @@ use vmbase::{arch::aarch64::min_dcache_line_size, layout, memory::deactivate_dyn
 /// Function boot payload after cleaning all secret from pvmfw memory
 pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     let fdt_address = slices.fdt.as_ptr() as usize;
-    let dice_handover = slices
-        .dice_handover
-        .map(|slice| {
-            let r = slice.as_ptr_range();
-            (r.start as usize)..(r.end as usize)
-        })
-        .expect("Missing DICE handover");
+    let dice_handover = slices.dice_handover.map(|slice| {
+        let r = slice.as_ptr_range();
+        (r.start as usize)..(r.end as usize)
+    });
 
     deactivate_dynamic_page_tables();
 
@@ -51,7 +48,9 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     assert_eq!(scratch.end.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
 
     // A sub-region of the scratch memory might contain data for the next stage so skip zeroing it.
-    let skipped = dice_handover;
+    // Alternatively, an empty region at the start of the scratch region is compatible with the ASM
+    // implementation and results in the whole scratch region being zeroed.
+    let skipped = dice_handover.unwrap_or(scratch.start.0..scratch.start.0);
 
     assert!(skipped.is_within(&(scratch.start.0..scratch.end.0)));
     assert_eq!(skipped.start % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
