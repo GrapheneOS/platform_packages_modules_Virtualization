@@ -56,6 +56,7 @@ apex_defaults {
         "libvirtualizationservice_jni",
         "libvirtualmachine_jni",
     ],
+    native_shared_libs: ["libavf"],
     // TODO(b/295593640) Unfortunately these are added to the apex even though they are unused.
     // Once the build system is fixed, remove this.
     unwanted_transitive_deps: [
@@ -68,10 +69,7 @@ apex_defaults {
         default: [],
     }),
 
-    canned_fs_config: select(release_flag("RELEASE_AVF_ENABLE_VIRT_CPUFREQ"), {
-        true: "canned_fs_config_sys_nice",
-        default: "canned_fs_config",
-    }),
+    canned_fs_config: "canned_fs_config",
 }
 
 vintf_fragment {
@@ -108,7 +106,6 @@ apex_defaults {
                 "rialto_bin",
                 "android_bootloader_crosvm_aarch64",
             ],
-            native_shared_libs: ["libavf"],
         },
         x86_64: {
             binaries: [
@@ -129,7 +126,6 @@ apex_defaults {
             prebuilts: [
                 "android_bootloader_crosvm_x86_64",
             ],
-            native_shared_libs: ["libavf"],
         },
     },
     binaries: [

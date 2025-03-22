@@ -39,6 +39,9 @@ use {
 #[cfg(target_arch = "aarch64")]
 pub use geniezone::GeniezoneError;
 
+#[cfg(target_arch = "aarch64")]
+pub use gunyah::GunyahError;
+
 use alloc::boxed::Box;
 use common::Hypervisor;
 pub use common::{DeviceAssigningHypervisor, MemSharingHypervisor, MmioGuardedHypervisor};

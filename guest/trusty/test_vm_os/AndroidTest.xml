@@ -15,10 +15,10 @@
   limitations under the License.
   -->
     <configuration description="Runs {MODULE}">
-    <!-- object type="module_controller" class="com.android.tradefed.testtype.suite.module.CommandSuccessModuleController" -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.CommandSuccessModuleController">
         <!--Skip the test when trusty VM is not enabled. -->
-        <!--option name="run-command" value="getprop trusty.test_vm.nonsecure_vm_ready | grep 1" /-->
-    <!--/object-->
+        <option name="run-command" value="getprop trusty.security_vm.enabled | grep 1" />
+    </object>
     <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer" />
     <!-- Target Preparers - Run Shell Commands -->
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
@@ -38,6 +38,7 @@
         <option name="run-command" value="start storageproxyd_test_vm_os" />
         <option name="teardown-command" value="stop storageproxyd_test_vm_os" />
         <option name="teardown-command" value="killall storageproxyd_test_vm_os || true" />
+        <!--option name="teardown-command" value="rm -rf /data/local/trusty_test_vm_os"/-->
     </target_preparer>
     <test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >
         <option name="parse-gtest" value="true" />
@@ -79,4 +80,10 @@
         <option name="test-command-line" key="com.android.trusty.rust.binder_rpc_test.test" value="/data/local/tmp/trusty_test_vm_os/trusty-ut-ctrl.sh com.android.trusty.rust.binder_rpc_test.test"/>
         <option name="test-command-line" key="com.android.trusty.binder.test" value="/data/local/tmp/trusty_test_vm_os/trusty-ut-ctrl.sh com.android.trusty.binder.test"/>
     </test>
+    <metrics_collector class="com.android.tradefed.device.metric.FilePullerLogCollector">
+        <option name="directory-keys" value="/data/local/tmp/trusty_test_vm_os/logs" />
+        <option name="collect-on-run-ended-only" value="true" />
+        <option name="clean-up" value="true"/>
+        <option name="collect-on-run-ended-only" value="false" />
+    </metrics_collector>
     </configuration>

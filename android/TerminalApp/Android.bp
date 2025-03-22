@@ -14,7 +14,9 @@ android_app {
         // TODO(b/330257000): will be removed when binder RPC is used
         "android.system.virtualizationservice_internal-java",
         "androidx-constraintlayout_constraintlayout",
+        "androidx.navigation_navigation-fragment-ktx",
         "androidx.window_window",
+        "androidx.work_work-runtime",
         "apache-commons-compress",
         "avf_aconfig_flags_java",
         "com.google.android.material_material",

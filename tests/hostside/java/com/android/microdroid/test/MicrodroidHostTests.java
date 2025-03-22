@@ -496,15 +496,20 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         final String configPath = "assets/vm_config_apex.json";
 
         // Act
-        mMicrodroidDevice =
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(true)
-                        .os(SUPPORTED_OSES.get(os))
-                        .name("protected_vm_runs_pvmfw")
-                        .build(getAndroidDevice());
+                        .name("protected_vm_runs_pvmfw");
+
+        // --os flag was introduced in SDK 36
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
 
         // Assert
         mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
@@ -647,14 +652,18 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         CommandRunner android = new CommandRunner(getDevice());
         String testStartTime = android.runWithTimeout(1000, "date", "'+%Y-%m-%d %H:%M:%S.%N'");
 
-        mMicrodroidDevice =
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
-                        .protectedVm(protectedVm)
-                        .os(SUPPORTED_OSES.get(os))
-                        .build(getAndroidDevice());
+                        .protectedVm(protectedVm);
+
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
         mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
         mMicrodroidDevice.enableAdbRoot();
 
@@ -874,15 +883,20 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Create VM with microdroid
         TestDevice device = getAndroidDevice();
         final String configPath = "assets/vm_config_apex.json"; // path inside the APK
-        ITestDevice microdroid =
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
-                        .os(SUPPORTED_OSES.get(os))
-                        .name("test_telemetry_pushed_atoms")
-                        .build(device);
+                        .name("test_telemetry_pushed_atoms");
+
+        if (device.getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        ITestDevice microdroid = microdroidBuilder.build(device);
+
         microdroid.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
         device.shutdownMicrodroid(microdroid);
 
@@ -1026,14 +1040,18 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         assumeVmTypeSupported(os, protectedVm);
 
         final String configPath = "assets/vm_config.json"; // path inside the APK
-        testMicrodroidBootsWithBuilder(
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
-                        .name("test_microdroid_boots")
-                        .os(SUPPORTED_OSES.get(os)));
+                        .name("test_microdroid_boots");
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        testMicrodroidBootsWithBuilder(microdroidBuilder);
     }
 
     @Test
@@ -1064,15 +1082,18 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         assumeVmTypeSupported(os, protectedVm);
 
         final String configPath = "assets/vm_config.json";
-        mMicrodroidDevice =
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
-                        .os(SUPPORTED_OSES.get(os))
-                        .name("test_microdroid_ram_usage")
-                        .build(getAndroidDevice());
+                        .name("test_microdroid_ram_usage");
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
         mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
         mMicrodroidDevice.enableAdbRoot();
 
@@ -1362,16 +1383,18 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         Objects.requireNonNull(device);
         final String configPath = "assets/vm_config.json";
 
-        mMicrodroidDevice =
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
-                        .os(SUPPORTED_OSES.get(os))
-                        .addAssignableDevice(device)
-                        .build(getAndroidDevice());
+                        .addAssignableDevice(device);
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
 
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
         assertThat(mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT)).isTrue();
         assertThat(mMicrodroidDevice.enableAdbRoot()).isTrue();
     }
@@ -1408,16 +1431,19 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         android.run("echo advise > " + SHMEM_ENABLED_PATH);
 
         final String configPath = "assets/vm_config.json";
-        mMicrodroidDevice =
+        MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
                         .debugLevel(DEBUG_LEVEL_FULL)
                         .memoryMib(minMemorySize())
                         .cpuTopology("match_host")
                         .protectedVm(protectedVm)
-                        .os(SUPPORTED_OSES.get(os))
                         .hugePages(true)
-                        .name("test_huge_pages")
-                        .build(getAndroidDevice());
+                        .name("test_huge_pages");
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
         mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
 
         android.run("echo never >" + SHMEM_ENABLED_PATH);

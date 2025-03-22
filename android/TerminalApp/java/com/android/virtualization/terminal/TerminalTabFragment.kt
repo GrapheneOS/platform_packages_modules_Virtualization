@@ -24,6 +24,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ClientCertRequest
+import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -31,8 +32,9 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.CertificateUtils.createOrGetKey
 import com.android.virtualization.terminal.CertificateUtils.writeCertificateToFile
@@ -45,7 +47,7 @@ class TerminalTabFragment() : Fragment() {
     private lateinit var id: String
     private var certificates: Array<X509Certificate>? = null
     private var privateKey: PrivateKey? = null
-    private lateinit var terminalViewModel: TerminalViewModel
+    private val terminalViewModel: TerminalViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,7 +61,6 @@ class TerminalTabFragment() : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
         terminalView = view.findViewById(R.id.webview)
         bootProgressView = view.findViewById(R.id.boot_progress)
         initializeWebView()
@@ -79,17 +80,57 @@ class TerminalTabFragment() : Fragment() {
         terminalView.saveState(outState)
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateFocus()
+    }
+
     private fun initializeWebView() {
         terminalView.settings.databaseEnabled = true
         terminalView.settings.domStorageEnabled = true
         terminalView.settings.javaScriptEnabled = true
         terminalView.settings.cacheMode = WebSettings.LOAD_DEFAULT
 
-        terminalView.webChromeClient = WebChromeClient()
+        terminalView.webChromeClient = TerminalWebChromeClient()
         terminalView.webViewClient = TerminalWebViewClient()
+        terminalView.addJavascriptInterface(TerminalViewInterface(context!!), "TerminalApp")
 
         (activity as MainActivity).modifierKeysController.addTerminalView(terminalView)
         terminalViewModel.terminalViews.add(terminalView)
+    }
+
+    private inner class TerminalWebChromeClient : WebChromeClient() {
+        override fun onReceivedTitle(view: WebView?, title: String?) {
+            super.onReceivedTitle(view, title)
+            title?.let { originalTitle ->
+                val ttydSuffix = " | login -f droid (localhost)"
+                val displayedTitle =
+                    if (originalTitle.endsWith(ttydSuffix)) {
+                        // When the session is created. The format of the title will be
+                        // 'droid@localhost: ~ | login -f droid (localhost)'.
+                        originalTitle.dropLast(ttydSuffix.length)
+                    } else {
+                        originalTitle
+                    }
+
+                terminalViewModel.terminalTabs[id]
+                    ?.customView
+                    ?.findViewById<TextView>(R.id.tab_title)
+                    ?.text = displayedTitle
+            }
+        }
+    }
+
+    inner class TerminalViewInterface(private val mContext: android.content.Context) {
+        @JavascriptInterface
+        fun closeTab() {
+            if (activity != null) {
+                activity?.runOnUiThread {
+                    val mainActivity = (activity as MainActivity)
+                    mainActivity.closeTab(terminalViewModel.terminalTabs[id]!!)
+                }
+            }
+        }
     }
 
     private inner class TerminalWebViewClient : WebViewClient() {
@@ -147,7 +188,9 @@ class TerminalTabFragment() : Fragment() {
                             bootProgressView.visibility = View.GONE
                             terminalView.visibility = View.VISIBLE
                             terminalView.mapTouchToMouseEvent()
+                            terminalView.applyTerminalDisconnectCallback()
                             updateMainActivity()
+                            updateFocus()
                         }
                     }
                 },
@@ -173,7 +216,7 @@ class TerminalTabFragment() : Fragment() {
     }
 
     private fun updateMainActivity() {
-        val mainActivity = (activity as MainActivity)
+        val mainActivity = activity as MainActivity ?: return
         if (terminalGuiSupport()) {
             mainActivity.displayMenu!!.visibility = View.VISIBLE
             mainActivity.displayMenu!!.isEnabled = true
@@ -187,6 +230,12 @@ class TerminalTabFragment() : Fragment() {
         writeCertificateToFile(activity!!, pke.certificate)
         privateKey = pke.privateKey
         certificates = arrayOf<X509Certificate>(pke.certificate as X509Certificate)
+    }
+
+    private fun updateFocus() {
+        if (terminalViewModel.selectedTabViewId == id) {
+            terminalView.requestFocus()
+        }
     }
 
     companion object {

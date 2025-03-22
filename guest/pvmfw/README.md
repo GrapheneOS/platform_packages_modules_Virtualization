@@ -1,19 +1,30 @@
 # Protected Virtual Machine Firmware
 
+## Protected VM (_"pVM"_)
+
 In the context of the [Android Virtualization Framework][AVF], a hypervisor
 (_e.g._ [pKVM]) enforces full memory isolation between its virtual machines
-(VMs) and the host.  As a result, the host is only allowed to access memory that
-has been explicitly shared back by a VM. Such _protected VMs_ (“pVMs”) are
-therefore able to manipulate secrets without being at risk of an attacker
-stealing them by compromising the Android host.
+(VMs) and the host. As a result, such VMs are given strong guarantees regarding
+their confidentiality and integrity.
 
-As pVMs are started dynamically by a _virtual machine manager_ (“VMM”) running
-as a host process and as pVMs must not trust the host (see [_Why
-AVF?_][why-avf]), the virtual machine it configures can't be trusted either.
-Furthermore, even though the isolation mentioned above allows pVMs to protect
-their secrets from the host, it does not help with provisioning them during
-boot. In particular, the threat model would prohibit the host from ever having
-access to those secrets, preventing the VMM from passing them to the pVM.
+A _protected VMs_ (“pVMs”) is a VM running in the non-secure or realm world,
+started dynamically by a _virtual machine manager_ (“VMM”) running as a process
+of the untrusted Android host (see [_Why AVF?_][why-avf]) and which is isolated
+from the host OS so that access to its memory is restricted, even in the event
+of a compromised Android host. pVMs support rich environments, including
+Linux-based distributions.
+
+The pVM concept is not Google-exclusive. Partner-defined VMs (SoC/OEM) meeting
+isolation/memory access restrictions are also pVMs.
+
+## Protected VM Root-of-Trust: pvmfw
+
+As pVMs are managed by a VMM running on the untrusted host, the virtual machine
+it configures can't be trusted either. Furthermore, even though the isolation
+mentioned above allows pVMs to protect their secrets from the host, it does not
+help with provisioning them during boot. In particular, the threat model would
+prohibit the host from ever having access to those secrets, preventing the VMM
+from passing them to the pVM.
 
 To address these concerns the hypervisor securely loads the pVM firmware
 (“pvmfw”) in the pVM from a protected memory region (this prevents the host or
@@ -147,6 +158,10 @@ The configuration data is described using the following [header]:
 |  offset = (FOURTH - HEAD)     |
 |  size = (FOURTH_END - FOURTH) |
 +-------------------------------+
+|           [Entry 4]           | <-- Entry 4 is present since version 1.3
+|  offset = (FIFTH - HEAD)      |
+|  size = (FIFTH_END - FIFTH)   |
++-------------------------------+
 |              ...              |
 +-------------------------------+
 |           [Entry n]           |
@@ -168,7 +183,11 @@ The configuration data is described using the following [header]:
 | {Fourth blob: VM reference DT}|
 +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+ <-- FOURTH_END
 | (Padding to 8-byte alignment) |
-+===============================+
++===============================+ <-- FIFTH
+| {Fifth blob: Reserved Memory} |
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+ <-- FIFTH_END
+| (Padding to 8-byte alignment) |
++===============================+ <-- FIFTH
 |              ...              |
 +===============================+ <-- TAIL
 ```
@@ -237,6 +256,31 @@ In version 1.2, a fourth blob is added.
 [device_assignment]: ../../docs/device_assignment.md
 [secretkeeper_key]: https://android.googlesource.com/platform/system/secretkeeper/+/refs/heads/main/README.md#secretkeeper-public-key
 [vendor_hashtree_digest]: ../../build/microdroid/README.md#verification-of-vendor-image
+
+#### Version 1.3 {#pvmfw-data-v1-3}
+
+In version 1.3, a fifth blob is added.
+
+- entry 4, if present, contains potentially confidential data to be passed to
+  specific guests identified from their VM name. If the data is confidential,
+  this feature should only be used with guests using a fixed rollback
+  protection mechanism to prevent rollback attacks from a malicious host. Data
+  is passed as a reserved-memory region through the device tree with the
+  provided properties at an address which is implementation defined. Multiple
+  regions may be passed to the same guest. The format is as follows.
+
+  ```rust
+  #[repr(C)]
+  struct ReservedMemConfigEntry<const N: usize> {
+    /// The number of headers contained in this blob.
+    count: u32,
+    /// The [reserved memory headers](src/reserved_mem.rs) describing the passed data.
+    headers: [RMemHeader; N]
+    /// The actual data being passed. The reserved memory headers point to
+    /// offsets within this array.
+    data: [u8],
+  }
+  ```
 
 #### Virtual Platform DICE Chain Handover
 
@@ -477,12 +521,12 @@ above must be replicated to produce a single file containing the pvmfw binary
 and its configuration data.
 
 As a quick prototyping solution, a valid DICE chain (such as this [test
-file][bcc.dat]) can be appended to the `pvmfw.bin` image with `pvmfw-tool`.
+file][dice.dat]) can be appended to the `pvmfw.bin` image with `pvmfw-tool`.
 
 ```shell
 m pvmfw-tool pvmfw_bin
 PVMFW_BIN=${ANDROID_PRODUCT_OUT}/system/etc/pvmfw.bin
-DICE=${ANDROID_BUILD_TOP}/packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
+DICE=${ANDROID_BUILD_TOP}/packages/modules/Virtualization/tests/pvmfw/assets/dice.dat
 
 pvmfw-tool custom_pvmfw ${PVMFW_BIN} ${DICE}
 ```
@@ -504,7 +548,7 @@ adb shell /apex/com.android.virt/bin/vm run-microdroid --protected
 
 Note: `adb root` is required to set the system property.
 
-[bcc.dat]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
+[dice.dat]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/tests/pvmfw/assets/dice.dat
 
 ### Running pVM without pvmfw
 

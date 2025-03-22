@@ -16,7 +16,10 @@
 package com.android.virtualization.terminal
 
 import androidx.lifecycle.ViewModel
+import com.google.android.material.tabs.TabLayout.Tab
 
 class TerminalViewModel : ViewModel() {
     val terminalViews: MutableSet<TerminalView> = mutableSetOf()
+    var selectedTabViewId: String? = null
+    val terminalTabs: MutableMap<String, Tab> = mutableMapOf()
 }

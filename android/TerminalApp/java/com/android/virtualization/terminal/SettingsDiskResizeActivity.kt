@@ -15,13 +15,15 @@
  */
 package com.android.virtualization.terminal
 
+import android.content.Context
 import android.content.Intent
 import android.icu.text.MeasureFormat
 import android.icu.text.NumberFormat
 import android.icu.util.Measure
 import android.icu.util.MeasureUnit
 import android.os.Bundle
-import android.os.Environment
+import android.os.storage.StorageManager
+import android.os.storage.StorageManager.UUID_DEFAULT
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.TextUtils
@@ -33,12 +35,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import java.util.Locale
 import java.util.regex.Pattern
 
 class SettingsDiskResizeActivity : AppCompatActivity() {
     private val numberPattern: Pattern = Pattern.compile("[\\d]*[\\٫.,]?[\\d]+")
-    private val defaultMaxDiskSizeMb: Long = 16 shl 10
+    private val defaultHostReserveSizeMb: Long = 5 shl 10
 
     private var diskSizeStepMb: Long = 0
     private var diskSizeMb: Long = 0
@@ -46,6 +49,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
     private lateinit var cancelButton: View
     private lateinit var resizeButton: View
     private lateinit var diskSizeText: TextView
+    private lateinit var diskMaxSizeText: TextView
     private lateinit var diskSizeSlider: SeekBar
 
     private fun bytesToMb(bytes: Long): Long {
@@ -54,6 +58,13 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
 
     private fun mbToBytes(bytes: Long): Long {
         return bytes shl 20
+    }
+
+    private fun getAvailableSizeMb(): Long {
+        var storageManager =
+            applicationContext.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+        val hostAllocatableMb = bytesToMb(storageManager.getAllocatableBytes(UUID_DEFAULT))
+        return diskSizeMb + hostAllocatableMb
     }
 
     private fun mbToProgress(bytes: Long): Int {
@@ -71,15 +82,15 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         diskSizeStepMb = 1L shl resources.getInteger(R.integer.disk_size_round_up_step_size_in_mb)
 
         val image = InstalledImage.getDefault(this)
-        diskSizeMb = bytesToMb(image.getSize())
+        diskSizeMb = bytesToMb(image.getApparentSize())
         val minDiskSizeMb = bytesToMb(image.getSmallestSizePossible()).coerceAtMost(diskSizeMb)
-        val usableSpaceMb =
-            bytesToMb(Environment.getDataDirectory().getUsableSpace()) and
-                (diskSizeStepMb - 1).inv()
-        val maxDiskSizeMb = defaultMaxDiskSizeMb.coerceAtMost(diskSizeMb + usableSpaceMb)
+        var maxDiskSizeMb = getAvailableSizeMb()
+        if (maxDiskSizeMb > defaultHostReserveSizeMb) {
+            maxDiskSizeMb -= defaultHostReserveSizeMb
+        }
 
         diskSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_assigned)!!
-        val diskMaxSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_max)
+        diskMaxSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_max)
         diskMaxSizeText.text =
             getString(
                 R.string.settings_disk_resize_resize_gb_max_format,
@@ -138,35 +149,52 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
     }
 
     private fun resize() {
-        diskSizeMb = progressToMb(diskSizeSlider.progress)
+        val desiredDiskSizeMb = progressToMb(diskSizeSlider.progress)
+        val availableSizeMb = getAvailableSizeMb()
+        if (availableSizeMb < desiredDiskSizeMb) {
+            Snackbar.make(
+                    findViewById(android.R.id.content),
+                    R.string.settings_disk_resize_not_enough_space_message,
+                    Snackbar.LENGTH_SHORT,
+                )
+                .show()
+            diskSizeSlider.max = mbToProgress(availableSizeMb)
+            updateMaxSizeText(availableSizeMb)
+            cancel()
+            return
+        }
+
+        diskSizeMb = desiredDiskSizeMb
         buttons.isVisible = false
 
         // Note: we first stop the VM, and wait for it to fully stop. Then we (re) start the Main
         // Activity with an extra argument specifying the new size. The actual resizing will be done
         // there.
         // TODO: show progress until the stop is confirmed
-        VmLauncherService.stop(
-            this,
-            object : VmLauncherServiceCallback {
-                override fun onVmStart() {}
+        val intent =
+            VmLauncherService.getIntentForShutdown(
+                this,
+                object : VmLauncherServiceCallback {
+                    override fun onVmStart() {}
 
-                override fun onTerminalAvailable(info: TerminalInfo) {}
+                    override fun onTerminalAvailable(info: TerminalInfo) {}
 
-                override fun onVmStop() {
-                    finish()
+                    override fun onVmStop() {
+                        finish()
 
-                    val intent =
-                        baseContext.packageManager.getLaunchIntentForPackage(
-                            baseContext.packageName
-                        )!!
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    intent.putExtra(MainActivity.KEY_DISK_SIZE, mbToBytes(diskSizeMb))
-                    startActivity(intent)
-                }
+                        val intent =
+                            baseContext.packageManager.getLaunchIntentForPackage(
+                                baseContext.packageName
+                            )!!
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        intent.putExtra(MainActivity.EXTRA_DISK_SIZE, mbToBytes(diskSizeMb))
+                        startActivity(intent)
+                    }
 
-                override fun onVmError() {}
-            },
-        )
+                    override fun onVmError() {}
+                },
+            )
+        startService(intent)
     }
 
     fun updateSliderText(sizeMb: Long) {
@@ -181,6 +209,14 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
             getString(
                 R.string.settings_disk_resize_resize_gb_assigned_format,
                 localizedFileSize(sizeMb, /* isShort= */ false),
+            )
+    }
+
+    fun updateMaxSizeText(sizeMb: Long) {
+        diskMaxSizeText.text =
+            getString(
+                R.string.settings_disk_resize_resize_gb_max_format,
+                localizedFileSize(sizeMb, /* isShort= */ true),
             )
     }
 

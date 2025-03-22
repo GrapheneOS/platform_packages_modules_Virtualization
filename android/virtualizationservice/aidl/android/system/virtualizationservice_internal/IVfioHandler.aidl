@@ -16,7 +16,6 @@
 package android.system.virtualizationservice_internal;
 
 import android.system.virtualizationservice.AssignableDevice;
-import android.system.virtualizationservice.VirtualMachineDebugInfo;
 import android.system.virtualizationservice_internal.AtomVmBooted;
 import android.system.virtualizationservice_internal.AtomVmCreationRequested;
 import android.system.virtualizationservice_internal.AtomVmExited;
