@@ -874,9 +874,13 @@ impl WdtInfo {
     }
 }
 
-fn read_wdt_info_from(fdt: &Fdt) -> libfdt::Result<WdtInfo> {
+fn read_wdt_info_from(fdt: &Fdt) -> libfdt::Result<Option<WdtInfo>> {
     let mut node_iter = fdt.compatible_nodes(c"qemu,vcpu-stall-detector")?;
-    let node = node_iter.next().ok_or(FdtError::NotFound)?;
+    let Some(node) = node_iter.next() else {
+        // Some VMs may not have qemu,vcpu-stall-detector compatible watchdogs.
+        // Do not treat it as error.
+        return Ok(None);
+    };
     let mut ranges = node.reg()?.ok_or(FdtError::NotFound)?;
 
     let reg = ranges.next().ok_or(FdtError::NotFound)?;
@@ -893,7 +897,7 @@ fn read_wdt_info_from(fdt: &Fdt) -> libfdt::Result<WdtInfo> {
         warn!("Discarding extra vmwdt <interrupts> entries.");
     }
 
-    Ok(WdtInfo { addr: reg.addr, size, irq })
+    Ok(Some(WdtInfo { addr: reg.addr, size, irq }))
 }
 
 fn validate_wdt_info(wdt: &WdtInfo, num_cpus: usize) -> Result<(), RebootReason> {
@@ -905,18 +909,25 @@ fn validate_wdt_info(wdt: &WdtInfo, num_cpus: usize) -> Result<(), RebootReason>
     Ok(())
 }
 
-fn patch_wdt_info(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
-    let mut interrupts = WdtInfo::get_expected(num_cpus).irq;
-    for v in interrupts.iter_mut() {
-        *v = v.to_be();
-    }
-
+fn patch_wdt_info(
+    fdt: &mut Fdt,
+    wdt_info: &Option<WdtInfo>,
+    num_cpus: usize,
+) -> libfdt::Result<()> {
     let mut node = fdt
         .root_mut()
         .next_compatible(c"qemu,vcpu-stall-detector")?
         .ok_or(libfdt::FdtError::NotFound)?;
-    node.setprop_inplace(c"interrupts", interrupts.as_bytes())?;
-    Ok(())
+
+    if wdt_info.is_some() {
+        let mut interrupts = WdtInfo::get_expected(num_cpus).irq;
+        for v in interrupts.iter_mut() {
+            *v = v.to_be();
+        }
+        node.setprop_inplace(c"interrupts", interrupts.as_bytes())
+    } else {
+        node.nop()
+    }
 }
 
 /// Patch the DT by deleting the ns16550a compatible nodes whose address are unknown
@@ -1088,6 +1099,7 @@ pub struct DeviceTreeInfo {
     untrusted_props: BTreeMap<CString, Vec<u8>>,
     vm_ref_dt_props_info: BTreeMap<CString, Vec<u8>>,
     vcpufreq_info: Option<VcpufreqInfo>,
+    wdt_info: Option<WdtInfo>,
 }
 
 impl DeviceTreeInfo {
@@ -1218,7 +1230,9 @@ fn parse_device_tree(
         error!("Failed to read vCPU stall detector info from DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    validate_wdt_info(&wdt_info, cpus.len())?;
+    if let Some(ref info) = wdt_info {
+        validate_wdt_info(info, cpus.len())?;
+    }
 
     let serial_info = read_serial_info_from(fdt).map_err(|e| {
         error!("Failed to read serial info from DT: {e}");
@@ -1284,6 +1298,7 @@ fn parse_device_tree(
         untrusted_props,
         vm_ref_dt_props_info,
         vcpufreq_info,
+        wdt_info,
     })
 }
 
@@ -1316,7 +1331,7 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         error!("Failed to patch pci info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    patch_wdt_info(fdt, info.cpus.len()).map_err(|e| {
+    patch_wdt_info(fdt, &info.wdt_info, info.cpus.len()).map_err(|e| {
         error!("Failed to patch wdt info to DT: {e}");
         RebootReason::InvalidFdt
     })?;

@@ -11,7 +11,6 @@
         dep = <&node_a_dep &common>;
         reg = <0x0 0xFF000 0x0 0x1>;
         interrupts = <0x0 0xF 0x4>;
-        iommus;
     };
 
     node_a_dep: node_a_dep {
