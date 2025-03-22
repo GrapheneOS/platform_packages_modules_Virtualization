@@ -24,6 +24,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.graphics.fonts.FontStyle
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -103,7 +104,13 @@ public class MainActivity :
 
         // if installer is launched, it will be handled in onActivityResult
         if (!launchInstaller) {
-            if (!Environment.isExternalStorageManager()) {
+            if (image.isOlderThanCurrentVersion()) {
+                val intent = Intent(this, UpgradeActivity::class.java)
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                // Explicitly finish to make sure that user can't go back from ErrorActivity.
+                finish()
+            } else if (!Environment.isExternalStorageManager()) {
                 requestStoragePermissions(this, manageExternalStorageActivityResultLauncher)
             } else {
                 startVm()
@@ -179,18 +186,18 @@ public class MainActivity :
         terminalViewModel.terminalTabs[tabId] = tab
         tab.customView!!
             .findViewById<Button>(R.id.tab_close_button)
-            .setOnClickListener(
-                View.OnClickListener { _: View? ->
-                    if (terminalTabAdapter.tabs.size == 1) {
-                        finishAndRemoveTask()
-                    }
-                    viewPager.offscreenPageLimit -= 1
-                    terminalTabAdapter.deleteTab(tab.position)
-                    tabLayout.removeTab(tab)
-                }
-            )
+            .setOnClickListener(View.OnClickListener { _: View? -> closeTab(tab) })
         // Add and select the tab
         tabLayout.addTab(tab, true)
+    }
+
+    fun closeTab(tab: TabLayout.Tab) {
+        if (terminalTabAdapter.tabs.size == 1) {
+            finishAndRemoveTask()
+        }
+        viewPager.offscreenPageLimit -= 1
+        terminalTabAdapter.deleteTab(tab.position)
+        tabLayout.removeTab(tab)
     }
 
     private fun lockOrientationIfNecessary() {
@@ -226,6 +233,16 @@ public class MainActivity :
         val uri = Uri.fromParts("package", context.getPackageName(), null)
         intent.setData(uri)
         activityResultLauncher.launch(intent)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        MediaScannerConnection.scanFile(
+            this,
+            arrayOf("/storage/emulated/${userId}/Download"),
+            null /* mimeTypes */,
+            null, /* callback */
+        )
     }
 
     private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {

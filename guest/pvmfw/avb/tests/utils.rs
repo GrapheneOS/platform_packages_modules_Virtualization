@@ -133,7 +133,9 @@ pub fn assert_latest_payload_verification_passes(
         initrd_digest,
         public_key: &public_key,
         capabilities,
-        rollback_index: 1,
+        // TODO(b/392081737): Capture expected rollback_index from build variables as we
+        // intend on auto-syncing rollback_index with security patch timestamps
+        rollback_index: 2,
         page_size,
         name: None,
     };

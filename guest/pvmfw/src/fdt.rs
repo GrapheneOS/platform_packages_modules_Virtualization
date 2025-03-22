@@ -1360,7 +1360,7 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
 /// Modifies the input DT according to the fields of the configuration.
 pub fn modify_for_next_stage(
     fdt: &mut Fdt,
-    bcc: &[u8],
+    dice_handover: Option<&[u8]>,
     new_instance: bool,
     strict_boot: bool,
     debug_policy: Option<&[u8]>,
@@ -1382,7 +1382,7 @@ pub fn modify_for_next_stage(
         fdt.unpack()?;
     }
 
-    patch_dice_node(fdt, bcc)?;
+    patch_dice_node(fdt, dice_handover)?;
 
     if let Some(mut chosen) = fdt.chosen_mut()? {
         empty_or_delete_prop(&mut chosen, c"avf,strict-boot", strict_boot)?;
@@ -1400,15 +1400,19 @@ pub fn modify_for_next_stage(
     Ok(())
 }
 
-/// Patch the "google,open-dice"-compatible reserved-memory node to point to the bcc range
-fn patch_dice_node(fdt: &mut Fdt, handover: &[u8]) -> libfdt::Result<()> {
+/// Patch the "google,open-dice"-compatible reserved-memory node to point to the DICE handover.
+fn patch_dice_node(fdt: &mut Fdt, handover: Option<&[u8]>) -> libfdt::Result<()> {
     // The node is assumed to be present in the template DT.
     let node = fdt.node_mut(c"/reserved-memory")?.ok_or(FdtError::NotFound)?;
     let mut node = node.next_compatible(c"google,open-dice")?.ok_or(FdtError::NotFound)?;
 
-    let addr = (handover.as_ptr() as usize).try_into().unwrap();
-    let size = handover.len().try_into().unwrap();
-    node.setprop_addrrange_inplace(c"reg", addr, size)
+    if let Some(r) = handover {
+        let addr = (r.as_ptr() as usize).try_into().unwrap();
+        let size = r.len().try_into().unwrap();
+        node.setprop_addrrange_inplace(c"reg", addr, size)
+    } else {
+        node.nop()
+    }
 }
 
 fn empty_or_delete_prop(

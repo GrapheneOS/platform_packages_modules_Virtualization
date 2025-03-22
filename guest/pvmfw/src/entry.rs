@@ -33,8 +33,8 @@ use zeroize::Zeroize;
 
 #[derive(Debug, Clone)]
 pub enum RebootReason {
-    /// A malformed BCC was received.
-    InvalidBcc,
+    /// A malformed DICE handover was received.
+    InvalidDiceHandover,
     /// An invalid configuration was appended to pvmfw.
     InvalidConfig,
     /// An unexpected internal error happened.
@@ -54,7 +54,7 @@ pub enum RebootReason {
 impl RebootReason {
     pub fn as_avf_reboot_string(&self) -> &'static str {
         match self {
-            Self::InvalidBcc => "PVM_FIRMWARE_INVALID_BCC",
+            Self::InvalidDiceHandover => "PVM_FIRMWARE_INVALID_DICE_HANDOVER",
             Self::InvalidConfig => "PVM_FIRMWARE_INVALID_CONFIG_DATA",
             Self::InternalError => "PVM_FIRMWARE_INTERNAL_ERROR",
             Self::InvalidFdt => "PVM_FIRMWARE_INVALID_FDT",
@@ -135,21 +135,26 @@ fn main_wrapper<'a>(
     let mut slices = MemorySlices::new(fdt, payload, payload_size)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
-    let (next_bcc, debuggable_payload) = crate::main(
+    let (next_dice_handover, debuggable_payload) = crate::main(
         slices.fdt,
         slices.kernel,
         slices.ramdisk,
-        config_entries.bcc,
+        config_entries.dice_handover.as_deref(),
         config_entries.debug_policy,
         config_entries.vm_dtbo,
         config_entries.vm_ref_dt,
     )?;
-    slices.add_dice_chain(next_bcc);
+    if let Some(r) = next_dice_handover {
+        slices.add_dice_handover(r);
+    }
+
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
     let keep_uart = cfg!(debuggable_vms_improvements) && debuggable_payload;
 
     // Writable-dirty regions will be flushed when MemoryTracker is dropped.
-    config_entries.bcc.zeroize();
+    if let Some(r) = config_entries.dice_handover {
+        r.zeroize();
+    }
 
     unshare_all_mmio_except_uart().map_err(|e| {
         error!("Failed to unshare MMIO ranges: {e}");
@@ -180,8 +185,8 @@ fn get_appended_data_slice() -> Result<&'static mut [u8], MemoryTrackerError> {
 enum AppendedPayload<'a> {
     /// Configuration data.
     Config(config::Config<'a>),
-    /// Deprecated raw BCC, as used in Android T.
-    LegacyBcc(&'a mut [u8]),
+    /// Deprecated raw DICE handover, as used in Android T.
+    LegacyDiceHandover(&'a mut [u8]),
 }
 
 impl<'a> AppendedPayload<'a> {
@@ -201,9 +206,12 @@ impl<'a> AppendedPayload<'a> {
                 // SAFETY: Pointer to a valid mut (not accessed elsewhere), 'a lifetime re-used.
                 let data: &'a mut _ = unsafe { &mut *data_ptr };
 
-                const BCC_SIZE: usize = SIZE_4KB;
-                warn!("Assuming the appended data at {:?} to be a raw BCC", data.as_ptr());
-                Some(Self::LegacyBcc(&mut data[..BCC_SIZE]))
+                const DICE_CHAIN_SIZE: usize = SIZE_4KB;
+                warn!(
+                    "Assuming the appended data at {:?} to be a raw DICE handover",
+                    data.as_ptr()
+                );
+                Some(Self::LegacyDiceHandover(&mut data[..DICE_CHAIN_SIZE]))
             }
             Err(e) => {
                 error!("Invalid configuration data at {data_ptr:?}: {e}");
@@ -215,7 +223,9 @@ impl<'a> AppendedPayload<'a> {
     fn get_entries(self) -> config::Entries<'a> {
         match self {
             Self::Config(cfg) => cfg.get_entries(),
-            Self::LegacyBcc(bcc) => config::Entries { bcc, ..Default::default() },
+            Self::LegacyDiceHandover(d) => {
+                config::Entries { dice_handover: Some(d), ..Default::default() }
+            }
         }
     }
 }

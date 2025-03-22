@@ -42,8 +42,8 @@ pub fn perform_rollback_protection(
     verified_boot_data: &VerifiedBootData,
     dice_inputs: &PartialInputs,
     cdi_seal: &[u8],
-    instance_hash: Option<Hidden>,
 ) -> Result<(bool, Hidden, bool), RebootReason> {
+    let instance_hash = dice_inputs.instance_hash;
     if let Some(fixed) = get_fixed_rollback_protection(verified_boot_data) {
         // Prevent attackers from impersonating well-known images.
         perform_fixed_index_rollback_protection(verified_boot_data, fixed)?;

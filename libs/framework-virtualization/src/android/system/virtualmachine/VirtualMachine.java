@@ -758,7 +758,7 @@ public class VirtualMachine implements AutoCloseable {
             try {
                 status = stateToStatus(virtualMachine.getState());
             } catch (RemoteException e) {
-                throw e.rethrowAsRuntimeException();
+                status = STATUS_STOPPED;
             }
         }
         if (status == STATUS_STOPPED && !mVmRootPath.exists()) {
@@ -1890,9 +1890,7 @@ public class VirtualMachine implements AutoCloseable {
                     mVirtualMachine.stop();
                     dropVm();
                 }
-            } catch (RemoteException e) {
-                throw e.rethrowAsRuntimeException();
-            } catch (ServiceSpecificException e) {
+            } catch (RemoteException | ServiceSpecificException e) {
                 // Deliberately ignored; this almost certainly means the VM exited just as
                 // we tried to stop it.
                 Log.i(TAG, "Ignoring error on close()", e);

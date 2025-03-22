@@ -28,7 +28,7 @@ public class PvmfwTool {
         System.out.println("            Requires BCC. VM Reference DT, VM DTBO, and Debug policy");
         System.out.println("            can optionally be specified");
         System.out.println(
-                "Usage: pvmfw-tool <out> <pvmfw.bin> <bcc.dat> [VM reference DT] [VM DTBO] [debug"
+                "Usage: pvmfw-tool <out> <pvmfw.bin> <dice.dat> [VM reference DT] [VM DTBO] [debug"
                         + " policy]");
     }
 

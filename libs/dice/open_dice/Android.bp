@@ -61,6 +61,7 @@ rust_library {
         "//apex_available:platform",
         "com.android.virt",
     ],
+    min_sdk_version: "35",
 }
 
 rust_library {
@@ -88,6 +89,7 @@ rust_library {
         "//apex_available:platform",
         "com.android.virt",
     ],
+    min_sdk_version: "35",
 }
 
 rust_defaults {
@@ -210,6 +212,7 @@ rust_bindgen {
     ],
     whole_static_libs: ["libopen_dice_cbor"],
     shared_libs: ["libcrypto"],
+    min_sdk_version: "35",
 }
 
 rust_bindgen {
@@ -224,6 +227,7 @@ rust_bindgen {
     ],
     whole_static_libs: ["libopen_dice_cbor_multialg"],
     shared_libs: ["libcrypto"],
+    min_sdk_version: "35",
 }
 
 rust_bindgen {
@@ -281,6 +285,7 @@ rust_bindgen {
         "libopen_dice_cbor_bindgen",
     ],
     whole_static_libs: ["libopen_dice_android"],
+    min_sdk_version: "35",
 }
 
 rust_bindgen {
@@ -293,6 +298,7 @@ rust_bindgen {
         "libopen_dice_cbor_bindgen_multialg",
     ],
     whole_static_libs: ["libopen_dice_android_multialg"],
+    min_sdk_version: "35",
 }
 
 rust_bindgen {

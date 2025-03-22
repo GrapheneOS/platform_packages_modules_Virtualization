@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Code to inspect/manipulate the BCC (DICE Chain) we receive from our loader (the hypervisor).
+//! Code to inspect/manipulate the DICE Chain we receive from our loader.
 
 // TODO(b/279910232): Unify this, somehow, with the similar but different code in hwtrust.
 
@@ -25,55 +25,55 @@ use coset::{iana, Algorithm, CborSerializable, CoseKey};
 use diced_open_dice::{BccHandover, Cdi, DiceArtifacts, DiceMode};
 use log::trace;
 
-type Result<T> = core::result::Result<T, BccError>;
+type Result<T> = core::result::Result<T, DiceChainError>;
 
-pub enum BccError {
+pub enum DiceChainError {
     CborDecodeError,
     CborEncodeError,
     CosetError(coset::CoseError),
     DiceError(diced_open_dice::DiceError),
-    MalformedBcc(&'static str),
-    MissingBcc,
+    Malformed(&'static str),
+    Missing,
 }
 
-impl From<coset::CoseError> for BccError {
+impl From<coset::CoseError> for DiceChainError {
     fn from(e: coset::CoseError) -> Self {
         Self::CosetError(e)
     }
 }
 
-impl fmt::Display for BccError {
+impl fmt::Display for DiceChainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::CborDecodeError => write!(f, "Error parsing BCC CBOR"),
-            Self::CborEncodeError => write!(f, "Error encoding BCC CBOR"),
+            Self::CborDecodeError => write!(f, "Error parsing DICE chain CBOR"),
+            Self::CborEncodeError => write!(f, "Error encoding DICE chain CBOR"),
             Self::CosetError(e) => write!(f, "Encountered an error with coset: {e}"),
             Self::DiceError(e) => write!(f, "Dice error: {e:?}"),
-            Self::MalformedBcc(s) => {
-                write!(f, "BCC does not have the expected CBOR structure: {s}")
+            Self::Malformed(s) => {
+                write!(f, "DICE chain does not have the expected CBOR structure: {s}")
             }
-            Self::MissingBcc => write!(f, "Missing BCC"),
+            Self::Missing => write!(f, "Missing DICE chain"),
         }
     }
 }
 
 /// Return a new CBOR encoded BccHandover that is based on the incoming CDIs but does not chain
-/// from the received BCC.
+/// from the received DICE chain.
 #[cfg_attr(test, allow(dead_code))]
-pub fn truncate(bcc_handover: BccHandover) -> Result<Vec<u8>> {
+pub fn truncate(handover: BccHandover) -> Result<Vec<u8>> {
     // Note: The strings here are deliberately different from those used in a normal DICE handover
     // because we want this to not be equivalent to any valid DICE derivation.
-    let cdi_seal = taint_cdi(bcc_handover.cdi_seal(), "TaintCdiSeal")?;
-    let cdi_attest = taint_cdi(bcc_handover.cdi_attest(), "TaintCdiAttest")?;
+    let cdi_seal = taint_cdi(handover.cdi_seal(), "TaintCdiSeal")?;
+    let cdi_attest = taint_cdi(handover.cdi_attest(), "TaintCdiAttest")?;
 
     // BccHandover = {
     //   1 : bstr .size 32,     ; CDI_Attest
     //   2 : bstr .size 32,     ; CDI_Seal
     //   ? 3 : Bcc,             ; Certificate chain
     // }
-    let bcc_handover: Vec<(Value, Value)> =
+    let handover: Vec<(Value, Value)> =
         vec![(1.into(), cdi_attest.as_slice().into()), (2.into(), cdi_seal.as_slice().into())];
-    cbor_util::serialize(&bcc_handover).map_err(|_| BccError::CborEncodeError)
+    cbor_util::serialize(&handover).map_err(|_| DiceChainError::CborEncodeError)
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -88,42 +88,39 @@ fn taint_cdi(cdi: &Cdi, info: &str) -> Result<Cdi> {
     ];
     let mut result = [0u8; size_of::<Cdi>()];
     diced_open_dice::kdf(cdi.as_slice(), &SALT, info.as_bytes(), result.as_mut_slice())
-        .map_err(BccError::DiceError)?;
+        .map_err(DiceChainError::DiceError)?;
     Ok(result)
 }
 
-/// Represents a (partially) decoded BCC DICE chain.
-pub struct Bcc {
+/// Represents a (partially) decoded DICE chain.
+pub struct DiceChainInfo {
     is_debug_mode: bool,
     leaf_subject_pubkey: PublicKey,
 }
 
-impl Bcc {
-    pub fn new(received_bcc: Option<&[u8]>) -> Result<Bcc> {
-        let received_bcc = received_bcc.unwrap_or(&[]);
-        if received_bcc.is_empty() {
-            return Err(BccError::MissingBcc);
-        }
+impl DiceChainInfo {
+    pub fn new(handover: Option<&[u8]>) -> Result<Self> {
+        let handover = handover.filter(|h| !h.is_empty()).ok_or(DiceChainError::Missing)?;
 
-        // We don't attempt to fully validate the BCC (e.g. we don't check the signatures) - we
-        // have to trust our loader. But if it's invalid CBOR or otherwise clearly ill-formed,
+        // We don't attempt to fully validate the DICE chain (e.g. we don't check the signatures) -
+        // we have to trust our loader. But if it's invalid CBOR or otherwise clearly ill-formed,
         // something is very wrong, so we fail.
-        let bcc_cbor =
-            cbor_util::deserialize(received_bcc).map_err(|_| BccError::CborDecodeError)?;
+        let handover_cbor =
+            cbor_util::deserialize(handover).map_err(|_| DiceChainError::CborDecodeError)?;
 
         // Bcc = [
         //   PubKeyEd25519 / PubKeyECDSA256, // DK_pub
         //   + BccEntry,                     // Root -> leaf (KM_pub)
         // ]
-        let bcc = match bcc_cbor {
+        let dice_chain = match handover_cbor {
             Value::Array(v) if v.len() >= 2 => v,
-            _ => return Err(BccError::MalformedBcc("Invalid top level value")),
+            _ => return Err(DiceChainError::Malformed("Invalid top level value")),
         };
         // Decode all the DICE payloads to make sure they are well-formed.
-        let payloads = bcc
+        let payloads = dice_chain
             .into_iter()
             .skip(1)
-            .map(|v| BccEntry::new(v).payload())
+            .map(|v| DiceChainEntry::new(v).payload())
             .collect::<Result<Vec<_>>>()?;
 
         let is_debug_mode = is_any_payload_debug_mode(&payloads)?;
@@ -143,7 +140,7 @@ impl Bcc {
     }
 }
 
-fn is_any_payload_debug_mode(payloads: &[BccPayload]) -> Result<bool> {
+fn is_any_payload_debug_mode(payloads: &[DiceChainEntryPayload]) -> Result<bool> {
     // Check if any payload in the chain is marked as Debug mode, which means the device is not
     // secure. (Normal means it is a secure boot, for that stage at least; we ignore recovery
     // & not configured /invalid values, since it's not clear what they would mean in this
@@ -157,10 +154,7 @@ fn is_any_payload_debug_mode(payloads: &[BccPayload]) -> Result<bool> {
 }
 
 #[repr(transparent)]
-struct BccEntry(Value);
-
-#[repr(transparent)]
-struct BccPayload(Value);
+struct DiceChainEntry(Value);
 
 #[derive(Debug, Clone)]
 pub struct PublicKey {
@@ -169,12 +163,12 @@ pub struct PublicKey {
     pub cose_alg: iana::Algorithm,
 }
 
-impl BccEntry {
+impl DiceChainEntry {
     pub fn new(entry: Value) -> Self {
         Self(entry)
     }
 
-    pub fn payload(&self) -> Result<BccPayload> {
+    pub fn payload(&self) -> Result<DiceChainEntryPayload> {
         // BccEntry = [                                  // COSE_Sign1 (untagged)
         //     protected : bstr .cbor {
         //         1 : AlgorithmEdDSA / AlgorithmES256,  // Algorithm
@@ -185,11 +179,13 @@ impl BccEntry {
         //                     // ECDSA(SigningKey, bstr .cbor BccEntryInput)
         //     // See RFC 8032 for details of how to encode the signature value for Ed25519.
         // ]
+        let payload = self
+            .payload_bytes()
+            .ok_or(DiceChainError::Malformed("Invalid DiceChainEntryPayload"))?;
         let payload =
-            self.payload_bytes().ok_or(BccError::MalformedBcc("Invalid payload in BccEntry"))?;
-        let payload = cbor_util::deserialize(payload).map_err(|_| BccError::CborDecodeError)?;
-        trace!("Bcc payload: {payload:?}");
-        Ok(BccPayload(payload))
+            cbor_util::deserialize(payload).map_err(|_| DiceChainError::CborDecodeError)?;
+        trace!("DiceChainEntryPayload: {payload:?}");
+        Ok(DiceChainEntryPayload(payload))
     }
 
     fn payload_bytes(&self) -> Option<&Vec<u8>> {
@@ -205,7 +201,10 @@ const KEY_MODE: i32 = -4670551;
 const MODE_DEBUG: u8 = DiceMode::kDiceModeDebug as u8;
 const SUBJECT_PUBLIC_KEY: i32 = -4670552;
 
-impl BccPayload {
+#[repr(transparent)]
+struct DiceChainEntryPayload(Value);
+
+impl DiceChainEntryPayload {
     pub fn is_debug_mode(&self) -> Result<bool> {
         // BccPayload = {                     // CWT
         // ...
@@ -221,11 +220,11 @@ impl BccPayload {
         // Profile for DICE spec.
         let mode = if let Some(bytes) = value.as_bytes() {
             if bytes.len() != 1 {
-                return Err(BccError::MalformedBcc("Invalid mode bstr"));
+                return Err(DiceChainError::Malformed("Invalid mode bstr"));
             }
             bytes[0].into()
         } else {
-            value.as_integer().ok_or(BccError::MalformedBcc("Invalid type for mode"))?
+            value.as_integer().ok_or(DiceChainError::Malformed("Invalid type for mode"))?
         };
         Ok(mode == MODE_DEBUG.into())
     }
@@ -239,9 +238,9 @@ impl BccPayload {
         // ...
         // }
         self.value_from_key(SUBJECT_PUBLIC_KEY)
-            .ok_or(BccError::MalformedBcc("Subject public key missing"))?
+            .ok_or(DiceChainError::Malformed("Subject public key missing"))?
             .as_bytes()
-            .ok_or(BccError::MalformedBcc("Subject public key is not a byte string"))
+            .ok_or(DiceChainError::Malformed("Subject public key is not a byte string"))
             .and_then(|v| PublicKey::from_slice(v))
     }
 
@@ -264,7 +263,7 @@ impl PublicKey {
     fn from_slice(slice: &[u8]) -> Result<Self> {
         let key = CoseKey::from_slice(slice)?;
         let Some(Algorithm::Assigned(cose_alg)) = key.alg else {
-            return Err(BccError::MalformedBcc("Invalid algorithm in public key"));
+            return Err(DiceChainError::Malformed("Invalid algorithm in public key"));
         };
         Ok(Self { cose_alg })
     }

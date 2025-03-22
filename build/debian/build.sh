@@ -15,6 +15,7 @@ show_help() {
 	echo "-a ARCH    Architecture of the image [default is host arch: $(uname -m)]"
 	echo "-g         Use Debian generic kernel [default is our custom kernel]"
 	echo "-r         Release mode build"
+	echo "-u         Set VM boot mode to u-boot [default is to load kernel directly]"
 	echo "-w         Save temp work directory [for debugging]"
 }
 
@@ -25,7 +26,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:ghrw" option; do
+	while getopts "a:ghruw" option; do
 		case ${option} in
 			h)
 				show_help ; exit
@@ -38,6 +39,9 @@ parse_options() {
 				;;
 			r)
 				mode=release
+				;;
+			u)
+				uboot=1
 				;;
 			w)
 				save_workdir=1
@@ -111,6 +115,13 @@ install_prerequisites() {
 	else
 		packages+=(
 			qemu-system
+		)
+	fi
+
+	if [[ "$uboot" != 1 ]]; then
+		packages+=(
+			libguestfs-tools
+			linux-image-generic
 		)
 	fi
 
@@ -312,6 +323,14 @@ EOF
 }
 
 run_fai() {
+	# NOTE: Prevent FAI from installing grub packages and running related scripts,
+	#       if we are loading the kernel directly.
+	if [[ "$uboot" != 1 ]]; then
+		sed -i "/shim-signed/d ; /grub.*${debian_arch}.*/d" \
+		    "${config_space}/package_config/${debian_arch^^}"
+		rm "${config_space}/scripts/SYSTEM_BOOT/20-grub"
+	fi
+
 	local out="${raw_disk_image}"
 	make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"
 	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
@@ -319,9 +338,13 @@ run_fai() {
 
 generate_output_package() {
 	fdisk -l "${raw_disk_image}"
-	local vm_config="$SCRIPT_DIR/vm_config.json"
 	local root_partition_num=1
 	local efi_partition_num=15
+
+	local vm_config="$SCRIPT_DIR/vm_config.json"
+	if [[ "$uboot" == 1 ]]; then
+		vm_config="$SCRIPT_DIR/vm_config.u-boot.json"
+	fi
 
 	pushd ${workdir} > /dev/null
 
@@ -341,14 +364,25 @@ generate_output_package() {
 	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
 	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
 
-	popd > /dev/null
-
 	contents=(
 		build_id
 		root_part
 		efi_part
 		vm_config.json
 	)
+
+	if [[ "$uboot" != 1 ]]; then
+		rm -f vmlinuz* initrd.img*
+		virt-get-kernel -a "${raw_disk_image}"
+		mv vmlinuz* vmlinuz
+		mv initrd.img* initrd.img
+		contents+=(
+			vmlinuz
+			initrd.img
+		)
+	fi
+
+	popd > /dev/null
 
 	# --sparse option isn't supported in apache-commons-compress
 	tar czv -f ${output} -C ${workdir} "${contents[@]}"
@@ -373,6 +407,7 @@ arch="$(uname -m)"
 mode=debug
 save_workdir=0
 use_generic_kernel=0
+uboot=0
 
 parse_options "$@"
 check_sudo

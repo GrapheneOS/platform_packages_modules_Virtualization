@@ -521,12 +521,12 @@ above must be replicated to produce a single file containing the pvmfw binary
 and its configuration data.
 
 As a quick prototyping solution, a valid DICE chain (such as this [test
-file][bcc.dat]) can be appended to the `pvmfw.bin` image with `pvmfw-tool`.
+file][dice.dat]) can be appended to the `pvmfw.bin` image with `pvmfw-tool`.
 
 ```shell
 m pvmfw-tool pvmfw_bin
 PVMFW_BIN=${ANDROID_PRODUCT_OUT}/system/etc/pvmfw.bin
-DICE=${ANDROID_BUILD_TOP}/packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
+DICE=${ANDROID_BUILD_TOP}/packages/modules/Virtualization/tests/pvmfw/assets/dice.dat
 
 pvmfw-tool custom_pvmfw ${PVMFW_BIN} ${DICE}
 ```
@@ -548,7 +548,7 @@ adb shell /apex/com.android.virt/bin/vm run-microdroid --protected
 
 Note: `adb root` is required to set the system property.
 
-[bcc.dat]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/tests/pvmfw/assets/bcc.dat
+[dice.dat]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/tests/pvmfw/assets/dice.dat
 
 ### Running pVM without pvmfw
 

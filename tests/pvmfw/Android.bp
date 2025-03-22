@@ -63,6 +63,6 @@ java_test_host {
 filegroup {
     name: "test_avf_bcc_dat",
     srcs: [
-        "assets/bcc.dat",
+        "assets/dice.dat",
     ],
 }

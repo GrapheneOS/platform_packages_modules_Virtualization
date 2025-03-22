@@ -24,6 +24,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ClientCertRequest
+import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -92,6 +93,7 @@ class TerminalTabFragment() : Fragment() {
 
         terminalView.webChromeClient = TerminalWebChromeClient()
         terminalView.webViewClient = TerminalWebViewClient()
+        terminalView.addJavascriptInterface(TerminalViewInterface(context!!), "TerminalApp")
 
         (activity as MainActivity).modifierKeysController.addTerminalView(terminalView)
         terminalViewModel.terminalViews.add(terminalView)
@@ -115,6 +117,18 @@ class TerminalTabFragment() : Fragment() {
                     ?.customView
                     ?.findViewById<TextView>(R.id.tab_title)
                     ?.text = displayedTitle
+            }
+        }
+    }
+
+    inner class TerminalViewInterface(private val mContext: android.content.Context) {
+        @JavascriptInterface
+        fun closeTab() {
+            if (activity != null) {
+                activity?.runOnUiThread {
+                    val mainActivity = (activity as MainActivity)
+                    mainActivity.closeTab(terminalViewModel.terminalTabs[id]!!)
+                }
             }
         }
     }
@@ -174,6 +188,7 @@ class TerminalTabFragment() : Fragment() {
                             bootProgressView.visibility = View.GONE
                             terminalView.visibility = View.VISIBLE
                             terminalView.mapTouchToMouseEvent()
+                            terminalView.applyTerminalDisconnectCallback()
                             updateMainActivity()
                             updateFocus()
                         }
@@ -201,7 +216,7 @@ class TerminalTabFragment() : Fragment() {
     }
 
     private fun updateMainActivity() {
-        val mainActivity = (activity as MainActivity)
+        val mainActivity = activity as MainActivity ?: return
         if (terminalGuiSupport()) {
             mainActivity.displayMenu!!.visibility = View.VISIBLE
             mainActivity.displayMenu!!.isEnabled = true

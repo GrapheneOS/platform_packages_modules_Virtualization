@@ -27,9 +27,6 @@
             "sharedPath": "$APP_DATA_DIR/files"
         }
     ],
-    "kernel": "$PAYLOAD_DIR/vmlinuz",
-    "initrd": "$PAYLOAD_DIR/initrd.img",
-    "params": "root=/dev/vda1",
     "protected": false,
     "cpu_topology": "match_host",
     "platform_version": "~1.0",
