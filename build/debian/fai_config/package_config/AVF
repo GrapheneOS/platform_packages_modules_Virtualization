@@ -15,3 +15,4 @@ mesa-vulkan-drivers
 libvulkan1
 vulkan-tools
 pulseaudio
+systemd-zram-generator
