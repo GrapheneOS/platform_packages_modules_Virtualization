@@ -142,6 +142,7 @@ pub struct CrosvmConfig {
     pub instance_id: [u8; 64],
     // (memfd, guest address, size)
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
+    pub start_suspended: bool,
 }
 
 #[derive(Debug)]
@@ -419,6 +420,8 @@ pub struct VmInstance {
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
     pub balloon_enabled: bool,
+    /// List of vendor tee services this VM might access.
+    pub vendor_tee_services: Vec<String>,
     /// The latest lifecycle state which the payload reported itself to be in.
     payload_state: Mutex<PayloadState>,
     /// Represents the condition that payload_state was updated
@@ -446,6 +449,7 @@ impl VmInstance {
         requester_uid: u32,
         requester_debug_pid: i32,
         vm_context: VmContext,
+        vendor_tee_services: Vec<String>,
     ) -> Result<VmInstance, Error> {
         validate_config(&config)?;
         let cid = config.cid;
@@ -473,6 +477,7 @@ impl VmInstance {
             payload_state_updated: Condvar::new(),
             requester_uid_name,
             balloon_enabled,
+            vendor_tee_services,
         };
         info!("{} created", &instance);
         Ok(instance)
@@ -821,6 +826,18 @@ impl VmInstance {
         // SAFETY: Pointer is valid for the lifetime of the call.
         let success =
             unsafe { crosvm_control::crosvm_client_resume_vm(socket_path_cstring.as_ptr()) };
+        if !success {
+            bail!("Failed to resume VM");
+        }
+        Ok(())
+    }
+
+    /// Performs full resume of VM.
+    pub fn resume_full(&self) -> Result<(), Error> {
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        // SAFETY: Pointer is valid for the lifetime of the call.
+        let success =
+            unsafe { crosvm_control::crosvm_client_resume_vm_full(socket_path_cstring.as_ptr()) };
         if !success {
             bail!("Failed to resume VM");
         }
@@ -1429,6 +1446,10 @@ fn run_vm(
                 if audio_config.use_speaker { 1 } else { 0 }
             ));
         }
+    }
+
+    if config.start_suspended {
+        command.arg("--suspended");
     }
 
     print_crosvm_args(&command);
