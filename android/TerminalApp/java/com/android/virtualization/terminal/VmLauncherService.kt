@@ -15,7 +15,6 @@
  */
 package com.android.virtualization.terminal
 
-import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -32,6 +31,7 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.ResultReceiver
+import android.os.StatFs
 import android.os.SystemProperties
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -39,9 +39,11 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.WorkerThread
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
+import com.android.virtualization.terminal.MainActivity.Companion.PREFIX
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
-import com.android.virtualization.terminal.Runner.Companion.create
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
 import io.grpc.Metadata
@@ -63,7 +65,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class VmLauncherService : Service() {
-    private lateinit var executorService: ExecutorService
+    // Thread pool
+    private lateinit var bgThreads: ExecutorService
+    // Single thread
+    private lateinit var mainWorkerThread: ExecutorService
+    private lateinit var image: InstalledImage
 
     // TODO: using lateinit for some fields to avoid null
     private var virtualMachine: VirtualMachine? = null
@@ -88,81 +94,164 @@ class VmLauncherService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        executorService = Executors.newCachedThreadPool(TerminalThreadFactory(applicationContext))
+        val threadFactory = TerminalThreadFactory(applicationContext)
+        bgThreads = Executors.newCachedThreadPool(threadFactory)
+        mainWorkerThread = Executors.newSingleThreadExecutor(threadFactory)
+        image = InstalledImage.getDefault(this)
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         val resultReceiver =
-            intent.getParcelableExtra<ResultReceiver?>(
+            intent.getParcelableExtra<ResultReceiver>(
                 Intent.EXTRA_RESULT_RECEIVER,
                 ResultReceiver::class.java,
-            )
+            )!!
 
-        if (intent.action == ACTION_SHUTDOWN_VM) {
-            if (debianService != null && debianService!!.shutdownDebian()) {
-                // During shutdown, change the notification content to indicate that it's closing
-                val notification = createNotificationForTerminalClose()
-                getSystemService<NotificationManager?>(NotificationManager::class.java)
-                    .notify(this.hashCode(), notification)
-                runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
-                    resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
-                    stopSelf()
-                }
-            } else {
-                // If there is no Debian service or it fails to shutdown, just stop the service.
+        when (intent.action) {
+            ACTION_START_VM -> {
+                val notification =
+                    intent.getParcelableExtra<Notification>(
+                        EXTRA_NOTIFICATION,
+                        Notification::class.java,
+                    )!!
+
+                val displayInfo =
+                    intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)!!
+
+                // Note: this doesn't always do the resizing. If the current image size is the same
+                // as the requested size which is rounded up to the page alignment, resizing is not
+                // done.
+                val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
+
+                mainWorkerThread.execute({
+                    doStart(notification, displayInfo, diskSize, resultReceiver)
+                })
+
+                // Do this outside of the main worker thread, so that we don't cause
+                // ForegroundServiceDidNotStartInTimeException
+                startForeground(this.hashCode(), notification)
+            }
+            ACTION_SHUTDOWN_VM -> mainWorkerThread.execute({ doShutdown(resultReceiver) })
+            else -> {
+                Log.e(TAG, "Unknown command " + intent.action)
                 stopSelf()
             }
-            return START_NOT_STICKY
-        }
-        if (virtualMachine != null) {
-            Log.d(TAG, "VM instance is already started")
-            return START_NOT_STICKY
         }
 
+        return START_NOT_STICKY
+    }
+
+    private fun calculateSparseDiskSize(): Long {
+        // With storage ballooning enabled, we create a sparse file with 95% of the total size.
+        val statFs = StatFs(filesDir.absolutePath)
+        val hostSize = statFs.totalBytes
+        return roundUp(hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100)
+    }
+
+    private fun truncateDiskIfNecessary(image: InstalledImage) {
+        val curSize = image.getApparentSize()
+        val physicalSize = image.getPhysicalSize()
+
+        val expectedSize = calculateSparseDiskSize()
+        Log.d(
+            TAG,
+            "rootfs apparent size=$curSize, physical size=$physicalSize, expectedSize=$expectedSize",
+        )
+
+        if (curSize != expectedSize) {
+            try {
+                image.truncate(expectedSize)
+            } catch (e: IOException) {
+                throw RuntimeException("Failed to truncate a disk", e)
+            }
+        }
+    }
+
+    // Convert the rootfs disk to a non-sparse file.
+    private fun convertToNonSparseDiskIfNecessary(image: InstalledImage) {
+        try {
+            val curApparentSize = image.getApparentSize()
+            val curPhysicalSize = image.getPhysicalSize()
+            Log.d(TAG, "Current disk size: apparent=$curApparentSize, physical=$curPhysicalSize")
+
+            // If storage ballooning was enabled via Flags.terminalStorageBalloon() before but it's
+            // now disabled, the disk is still a sparse file whose apparent size is too large.
+            // We need to shrink it to the minimum size.
+            //
+            // The disk file is considered sparse if its apparent disk size matches the expected
+            // sparse disk size.
+            // In addition, we consider it sparse if the physical size is clearly smaller than its
+            // apparent size. This additional condition is a fallback for cases
+            // where the logic of calculating the expected sparse disk size since the disk is
+            // created.
+            if (
+                curApparentSize == calculateSparseDiskSize() ||
+                    curPhysicalSize <
+                        curApparentSize * EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE / 100
+            ) {
+                Log.d(TAG, "A sparse disk is detected. Shrink it to the minimum size.")
+                val newSize = image.shrinkToMinimumSize()
+                Log.d(TAG, "Shrink the disk image: $curApparentSize -> $newSize")
+            }
+        } catch (e: IOException) {
+            throw RuntimeException("Failed to shrink rootfs disk", e)
+            return
+        }
+    }
+
+    @WorkerThread
+    private fun doStart(
+        notification: Notification,
+        displayInfo: DisplayInfo,
+        diskSize: Long,
+        resultReceiver: ResultReceiver,
+    ) {
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
-        val displaySize = intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)
 
-        // Note: this doesn't always do the resizing. If the current image size is the same as the
-        // requested size which is rounded up to the page alignment, resizing is not done.
-        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getSize())
-        image.resize(diskSize)
+        if (Flags.terminalStorageBalloon()) {
+            // When storage ballooning flag is enabled, convert rootfs disk into a sparse file.
+            truncateDiskIfNecessary(image)
+        } else {
+            // Convert rootfs disk into a sparse file if storage ballooning flag had been enabled
+            // and then disabled.
+            convertToNonSparseDiskIfNecessary(image)
+
+            // Note: this doesn't always do the resizing. If the current image size is the same as
+            // the requested size which is rounded up to the page alignment, resizing is not done.
+            image.resize(diskSize)
+        }
 
         customImageConfigBuilder.setAudioConfig(
             AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
-        if (overrideConfigIfNecessary(customImageConfigBuilder, displaySize)) {
+        if (overrideConfigIfNecessary(customImageConfigBuilder, displayInfo)) {
             configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
         }
         val config = configBuilder.build()
 
         runner =
             try {
-                create(this, config)
+                Runner.create(this, config)
             } catch (e: VirtualMachineException) {
                 throw RuntimeException("cannot create runner", e)
             }
 
-        virtualMachine = runner!!.vm
-        val mbc = MemBalloonController(this, virtualMachine!!)
+        val virtualMachine = runner!!.vm
+        val mbc = MemBalloonController(this, virtualMachine)
         mbc.start()
 
         runner!!.exitStatus.thenAcceptAsync { success: Boolean ->
             mbc.stop()
-            resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+            resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logDir = getFileStreamPath(virtualMachine!!.name + ".log").toPath()
-        Logger.setup(virtualMachine!!, logDir, executorService)
+        val logDir = getFileStreamPath(virtualMachine.name + ".log").toPath()
+        Logger.setup(virtualMachine, logDir, bgThreads)
 
-        val notification =
-            intent.getParcelableExtra<Notification?>(EXTRA_NOTIFICATION, Notification::class.java)
-
-        startForeground(this.hashCode(), notification)
-
-        resultReceiver!!.send(RESULT_START, null)
+        resultReceiver.send(RESULT_START, null)
 
         portNotifier = PortNotifier(this)
 
@@ -174,22 +263,20 @@ class VmLauncherService : Service() {
                     val bundle = Bundle()
                     bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
                     bundle.putInt(KEY_TERMINAL_PORT, port)
-                    resultReceiver!!.send(RESULT_TERMINAL_AVAIL, bundle)
+                    resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
                     startDebianServer(ipAddress)
                 },
-                executorService,
+                bgThreads,
             )
             .exceptionallyAsync(
                 { e ->
                     Log.e(TAG, "Failed to start VM", e)
-                    resultReceiver!!.send(RESULT_ERROR, null)
+                    resultReceiver.send(RESULT_ERROR, null)
                     stopSelf()
                     null
                 },
-                executorService,
+                bgThreads,
             )
-
-        return START_NOT_STICKY
     }
 
     private fun getTerminalServiceInfo(): CompletableFuture<NsdServiceInfo> {
@@ -355,7 +442,7 @@ class VmLauncherService : Service() {
             return
         }
 
-        executorService.execute(
+        bgThreads.execute(
             Runnable {
                 // TODO(b/373533555): we can use mDNS for that.
                 val debianServicePortFile = File(filesDir, "debian_service_port")
@@ -374,23 +461,39 @@ class VmLauncherService : Service() {
         }
     }
 
-    override fun onDestroy() {
-        portNotifier?.stop()
-        getSystemService<NotificationManager?>(NotificationManager::class.java).cancelAll()
-        stopDebianServer()
-        if (virtualMachine != null) {
-            if (virtualMachine!!.getStatus() == VirtualMachine.STATUS_RUNNING) {
-                try {
-                    virtualMachine!!.stop()
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } catch (e: VirtualMachineException) {
-                    Log.e(TAG, "failed to stop a VM instance", e)
-                }
-            }
-            virtualMachine = null
+    @WorkerThread
+    private fun doShutdown(resultReceiver: ResultReceiver?) {
+        runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
+            resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
         }
-        executorService.shutdownNow()
-        super.onDestroy()
+        if (debianService != null && debianService!!.shutdownDebian()) {
+            // During shutdown, change the notification content to indicate that it's closing
+            val notification = createNotificationForTerminalClose()
+            getSystemService<NotificationManager?>(NotificationManager::class.java)
+                .notify(this.hashCode(), notification)
+
+            runner?.also { r ->
+                // For the case that shutdown from the guest agent fails.
+                // When timeout is set, the original CompletableFuture's every `thenAcceptAsync` is
+                // canceled as well. So add empty `thenAcceptAsync` to avoid interference.
+                r.exitStatus
+                    .thenAcceptAsync {}
+                    .orTimeout(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    .exceptionally {
+                        Log.e(
+                            TAG,
+                            "Stop the service directly because the VM instance isn't stopped with " +
+                                "graceful shutdown",
+                        )
+                        r.vm.stop()
+                        null
+                    }
+            }
+            runner = null
+        } else {
+            // If there is no Debian service or it fails to shutdown, just stop the service.
+            runner?.vm?.stop()
+        }
     }
 
     private fun stopDebianServer() {
@@ -399,13 +502,28 @@ class VmLauncherService : Service() {
         server?.shutdown()
     }
 
+    override fun onDestroy() {
+        mainWorkerThread.execute({
+            if (runner?.vm?.getStatus() == VirtualMachine.STATUS_RUNNING) {
+                doShutdown(null)
+            }
+        })
+        portNotifier?.stop()
+        getSystemService<NotificationManager?>(NotificationManager::class.java).cancelAll()
+        stopDebianServer()
+        bgThreads.shutdownNow()
+        mainWorkerThread.shutdown()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        super.onDestroy()
+    }
+
     companion object {
-        private const val EXTRA_NOTIFICATION = "EXTRA_NOTIFICATION"
-        private const val ACTION_START_VM_LAUNCHER_SERVICE =
-            "android.virtualization.START_VM_LAUNCHER_SERVICE"
-        const val EXTRA_DISPLAY_INFO = "EXTRA_DISPLAY_INFO"
-        const val EXTRA_DISK_SIZE = "EXTRA_DISK_SIZE"
-        const val ACTION_SHUTDOWN_VM: String = "android.virtualization.ACTION_SHUTDOWN_VM"
+        private const val ACTION_START_VM: String = PREFIX + "ACTION_START_VM"
+        private const val EXTRA_NOTIFICATION = PREFIX + "EXTRA_NOTIFICATION"
+        private const val EXTRA_DISPLAY_INFO = PREFIX + "EXTRA_DISPLAY_INFO"
+        private const val EXTRA_DISK_SIZE = PREFIX + "EXTRA_DISK_SIZE"
+
+        private const val ACTION_SHUTDOWN_VM: String = PREFIX + "ACTION_SHUTDOWN_VM"
 
         private const val RESULT_START = 0
         private const val RESULT_STOP = 1
@@ -414,6 +532,11 @@ class VmLauncherService : Service() {
 
         private const val KEY_TERMINAL_IPADDRESS = "address"
         private const val KEY_TERMINAL_PORT = "port"
+
+        private const val SHUTDOWN_TIMEOUT_SECONDS = 3L
+
+        private const val GUEST_SPARSE_DISK_SIZE_PERCENTAGE = 95
+        private const val EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE = 90
 
         private val VM_BOOT_TIMEOUT_SECONDS: Int =
             {
@@ -428,24 +551,11 @@ class VmLauncherService : Service() {
                 }
             }()
 
-        private fun getMyIntent(context: Context): Intent {
-            return Intent(context.getApplicationContext(), VmLauncherService::class.java)
-        }
-
-        fun run(
-            context: Context,
-            callback: VmLauncherServiceCallback?,
-            notification: Notification?,
-            displayInfo: DisplayInfo,
-            diskSize: Long?,
-        ): Result<Unit> {
-            val i = getMyIntent(context)
-            val resultReceiver: ResultReceiver =
+        private fun prepareIntent(context: Context, callback: VmLauncherServiceCallback): Intent {
+            val intent = Intent(context.getApplicationContext(), VmLauncherService::class.java)
+            val resultReceiver =
                 object : ResultReceiver(Handler(Looper.myLooper()!!)) {
                     override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
-                        if (callback == null) {
-                            return
-                        }
                         when (resultCode) {
                             RESULT_START -> callback.onVmStart()
                             RESULT_TERMINAL_AVAIL -> {
@@ -455,46 +565,42 @@ class VmLauncherService : Service() {
                             }
                             RESULT_STOP -> callback.onVmStop()
                             RESULT_ERROR -> callback.onVmError()
+                            else -> Log.e(TAG, "unknown result code: " + resultCode)
                         }
                     }
                 }
-            i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
+
+            val parcel = Parcel.obtain()
+            resultReceiver.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+            intent.putExtra(
+                Intent.EXTRA_RESULT_RECEIVER,
+                ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() },
+            )
+            return intent
+        }
+
+        fun getIntentForStart(
+            context: Context,
+            callback: VmLauncherServiceCallback,
+            notification: Notification?,
+            displayInfo: DisplayInfo,
+            diskSize: Long?,
+        ): Intent {
+            val i = prepareIntent(context, callback)
+            i.setAction(ACTION_START_VM)
             i.putExtra(EXTRA_NOTIFICATION, notification)
             i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
             if (diskSize != null) {
                 i.putExtra(EXTRA_DISK_SIZE, diskSize)
             }
-            return try {
-                context.startForegroundService(i)
-                Result.success(Unit)
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                Result.failure<Unit>(e)
-            }
+            return i
         }
 
-        private fun getResultReceiverForIntent(r: ResultReceiver): ResultReceiver {
-            val parcel = Parcel.obtain()
-            r.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-            return ResultReceiver.CREATOR.createFromParcel(parcel).also { parcel.recycle() }
-        }
-
-        fun stop(context: Context, callback: VmLauncherServiceCallback?) {
-            val i = getMyIntent(context)
+        fun getIntentForShutdown(context: Context, callback: VmLauncherServiceCallback): Intent {
+            val i = prepareIntent(context, callback)
             i.setAction(ACTION_SHUTDOWN_VM)
-            val resultReceiver: ResultReceiver =
-                object : ResultReceiver(Handler(Looper.myLooper()!!)) {
-                    override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
-                        if (callback == null) {
-                            return
-                        }
-                        when (resultCode) {
-                            RESULT_STOP -> callback.onVmStop()
-                        }
-                    }
-                }
-            i.putExtra(Intent.EXTRA_RESULT_RECEIVER, getResultReceiverForIntent(resultReceiver))
-            context.startService(i)
+            return i
         }
     }
 }

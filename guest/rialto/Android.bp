@@ -8,7 +8,6 @@ rust_ffi_static {
     srcs: ["src/main.rs"],
     defaults: ["vmbase_ffi_defaults"],
     rustlibs: [
-        "libaarch64_paging",
         "libbssl_avf_nostd",
         "libciborium_io_nostd",
         "libciborium_nostd",
@@ -23,6 +22,13 @@ rust_ffi_static {
         "libvirtio_drivers",
         "libvmbase",
     ],
+    target: {
+        android_arm64: {
+            rustlibs: [
+                "libaarch64_paging",
+            ],
+        },
+    },
 }
 
 cc_binary {
@@ -63,8 +69,8 @@ filegroup {
 
 // Both SERVICE_VM_VERSION and SERVICE_VM_VERSION_STRING should represent the
 // same version number for the service VM.
-SERVICE_VM_VERSION = 1
-SERVICE_VM_VERSION_STRING = "1"
+SERVICE_VM_VERSION = 2
+SERVICE_VM_VERSION_STRING = "2"
 
 genrule {
     name: "service_vm_version_rs",

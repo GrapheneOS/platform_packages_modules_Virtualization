@@ -15,6 +15,7 @@
  */
 package com.android.virtualization.terminal
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
@@ -23,6 +24,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.graphics.fonts.FontStyle
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -44,15 +46,12 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.lifecycle.ViewModelProvider
+import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.ErrorActivity.Companion.start
-import com.android.virtualization.terminal.InstalledImage.Companion.getDefault
-import com.android.virtualization.terminal.VmLauncherService.Companion.run
-import com.android.virtualization.terminal.VmLauncherService.Companion.stop
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -75,17 +74,18 @@ public class MainActivity :
     private lateinit var image: InstalledImage
     private lateinit var accessibilityManager: AccessibilityManager
     private lateinit var manageExternalStorageActivityResultLauncher: ActivityResultLauncher<Intent>
-    private lateinit var terminalViewModel: TerminalViewModel
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var terminalTabAdapter: TerminalTabAdapter
     private val terminalInfo = CompletableFuture<TerminalInfo>()
+    private val terminalViewModel: TerminalViewModel by viewModels()
+    private var isVmRunning = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lockOrientationIfNecessary()
 
-        image = getDefault(this)
+        image = InstalledImage.getDefault(this)
 
         val launchInstaller = installIfNecessary()
 
@@ -105,7 +105,13 @@ public class MainActivity :
 
         // if installer is launched, it will be handled in onActivityResult
         if (!launchInstaller) {
-            if (!Environment.isExternalStorageManager()) {
+            if (image.isOlderThanCurrentVersion()) {
+                val intent = Intent(this, UpgradeActivity::class.java)
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                // Explicitly finish to make sure that user can't go back from ErrorActivity.
+                finish()
+            } else if (!Environment.isExternalStorageManager()) {
                 requestStoragePermissions(this, manageExternalStorageActivityResultLauncher)
             } else {
                 startVm()
@@ -114,7 +120,6 @@ public class MainActivity :
     }
 
     private fun initializeUi() {
-        terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
         setContentView(R.layout.activity_headless)
         tabLayout = findViewById<TabLayout>(R.id.tab_layout)
         displayMenu = findViewById<Button>(R.id.display_button)
@@ -129,9 +134,9 @@ public class MainActivity :
         }
 
         displayMenu?.also {
-            it.visibility = if (terminalGuiSupport()) View.VISIBLE else View.GONE
+            it.visibility = if (Flags.terminalGuiSupport()) View.VISIBLE else View.GONE
             it.setEnabled(false)
-            if (terminalGuiSupport()) {
+            if (Flags.terminalGuiSupport()) {
                 it.setOnClickListener {
                     val intent = Intent(this, DisplayActivity::class.java)
                     intent.flags =
@@ -154,6 +159,20 @@ public class MainActivity :
         TabLayoutMediator(tabLayout, viewPager, false, false) { _: TabLayout.Tab?, _: Int -> }
             .attach()
 
+        tabLayout.addOnTabSelectedListener(
+            object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab?) {
+                    tab?.position?.let {
+                        terminalViewModel.selectedTabViewId = terminalTabAdapter.tabs[it].id
+                    }
+                }
+
+                override fun onTabUnselected(tab: TabLayout.Tab?) {}
+
+                override fun onTabReselected(tab: TabLayout.Tab?) {}
+            }
+        )
+
         addTerminalTab()
 
         tabAddButton?.setOnClickListener { addTerminalTab() }
@@ -163,21 +182,23 @@ public class MainActivity :
         val tab = tabLayout.newTab()
         tab.setCustomView(R.layout.tabitem_terminal)
         viewPager.offscreenPageLimit += 1
-        terminalTabAdapter.addTab()
+        val tabId = terminalTabAdapter.addTab()
+        terminalViewModel.selectedTabViewId = tabId
+        terminalViewModel.terminalTabs[tabId] = tab
         tab.customView!!
             .findViewById<Button>(R.id.tab_close_button)
-            .setOnClickListener(
-                View.OnClickListener { _: View? ->
-                    if (terminalTabAdapter.tabs.size == 1) {
-                        finishAndRemoveTask()
-                    }
-                    viewPager.offscreenPageLimit -= 1
-                    terminalTabAdapter.deleteTab(tab.position)
-                    tabLayout.removeTab(tab)
-                }
-            )
+            .setOnClickListener(View.OnClickListener { _: View? -> closeTab(tab) })
         // Add and select the tab
         tabLayout.addTab(tab, true)
+    }
+
+    fun closeTab(tab: TabLayout.Tab) {
+        if (terminalTabAdapter.tabs.size == 1) {
+            finishAndRemoveTask()
+        }
+        viewPager.offscreenPageLimit -= 1
+        terminalTabAdapter.deleteTab(tab.position)
+        tabLayout.removeTab(tab)
     }
 
     private fun lockOrientationIfNecessary() {
@@ -198,7 +219,7 @@ public class MainActivity :
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (Build.isDebuggable() && event.keyCode == KeyEvent.KEYCODE_UNKNOWN) {
             if (event.action == KeyEvent.ACTION_UP) {
-                start(this, Exception("Debug: KeyEvent.KEYCODE_UNKNOWN"))
+                ErrorActivity.start(this, Exception("Debug: KeyEvent.KEYCODE_UNKNOWN"))
             }
             return true
         }
@@ -215,6 +236,16 @@ public class MainActivity :
         activityResultLauncher.launch(intent)
     }
 
+    override fun onPause() {
+        super.onPause()
+        MediaScannerConnection.scanFile(
+            this,
+            arrayOf("/storage/emulated/${userId}/Download"),
+            null /* mimeTypes */,
+            null, /* callback */
+        )
+    }
+
     private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {
         val config = resources.configuration
         // TODO: Always enable screenReaderMode (b/395845063)
@@ -226,9 +257,7 @@ public class MainActivity :
                 "&fontWeightBold=" +
                 (FontStyle.FONT_WEIGHT_BOLD + config.fontWeightAdjustment) +
                 "&screenReaderMode=" +
-                accessibilityManager.isEnabled +
-                "&titleFixed=" +
-                getString(R.string.app_name))
+                accessibilityManager.isEnabled)
 
         try {
             return URL("https", ipAddress, port, "/$query")
@@ -252,12 +281,16 @@ public class MainActivity :
         executorService.shutdown()
         getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
             .removeAccessibilityStateChangeListener(this)
-        stop(this, this)
+        if (isVmRunning) {
+            val intent = VmLauncherService.getIntentForShutdown(this, this)
+            startService(intent)
+        }
         super.onDestroy()
     }
 
     override fun onVmStart() {
         Log.i(TAG, "onVmStart()")
+        isVmRunning = true
     }
 
     override fun onTerminalAvailable(info: TerminalInfo) {
@@ -266,13 +299,15 @@ public class MainActivity :
 
     override fun onVmStop() {
         Log.i(TAG, "onVmStop()")
+        isVmRunning = false
         finish()
     }
 
     override fun onVmError() {
         Log.i(TAG, "onVmError()")
+        isVmRunning = false
         // TODO: error cause is too simple.
-        start(this, Exception("onVmError"))
+        ErrorActivity.start(this, Exception("onVmError"))
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
@@ -307,7 +342,7 @@ public class MainActivity :
     }
 
     private fun startVm() {
-        val image = getDefault(this)
+        val image = InstalledImage.getDefault(this)
         if (!image.isInstalled()) {
             return
         }
@@ -322,9 +357,7 @@ public class MainActivity :
         val settingsPendingIntent =
             PendingIntent.getActivity(this, 0, settingsIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val stopIntent = Intent()
-        stopIntent.setClass(this, VmLauncherService::class.java)
-        stopIntent.setAction(VmLauncherService.ACTION_SHUTDOWN_VM)
+        val stopIntent = VmLauncherService.getIntentForShutdown(this, this)
         val stopPendingIntent =
             PendingIntent.getService(
                 this,
@@ -359,9 +392,20 @@ public class MainActivity :
                 )
                 .build()
 
-        val diskSize = intent.getLongExtra(KEY_DISK_SIZE, image.getSize())
-        run(this, this, notification, getDisplayInfo(), diskSize).onFailure {
-            Log.e(TAG, "Failed to start VM.", it)
+        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
+
+        val intent =
+            VmLauncherService.getIntentForStart(
+                this,
+                this,
+                notification,
+                getDisplayInfo(),
+                diskSize,
+            )
+        try {
+            startForegroundService(intent)
+        } catch (e: ForegroundServiceStartNotAllowedException) {
+            Log.e(TAG, "Failed to start VM", e)
             finish()
         }
     }
@@ -373,7 +417,8 @@ public class MainActivity :
 
     companion object {
         const val TAG: String = "VmTerminalApp"
-        const val KEY_DISK_SIZE: String = "disk_size"
+        const val PREFIX: String = "com.android.virtualization.terminal."
+        const val EXTRA_DISK_SIZE: String = PREFIX + "EXTRA_DISK_SIZE"
         private val TERMINAL_CONNECTION_TIMEOUT_MS: Int
         private const val REQUEST_CODE_INSTALLER = 0x33
         private const val FONT_SIZE_DEFAULT = 13

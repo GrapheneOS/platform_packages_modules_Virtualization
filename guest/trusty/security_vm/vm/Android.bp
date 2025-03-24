@@ -123,6 +123,10 @@ avb_add_hash_footer {
             name: "com.android.virt.cap",
             value: "trusty_security_vm",
         },
+        {
+            name: "com.android.virt.name",
+            value: "trusty_security_vm",
+        },
     ],
     src: select(soong_config_variable("trusty_system_vm", "enabled"), {
         true: ":trusty_security_vm_unsigned",

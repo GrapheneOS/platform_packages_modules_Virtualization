@@ -758,7 +758,7 @@ public class VirtualMachine implements AutoCloseable {
             try {
                 status = stateToStatus(virtualMachine.getState());
             } catch (RemoteException e) {
-                throw e.rethrowAsRuntimeException();
+                status = STATUS_STOPPED;
             }
         }
         if (status == STATUS_STOPPED && !mVmRootPath.exists()) {
@@ -813,6 +813,10 @@ public class VirtualMachine implements AutoCloseable {
      */
     @GuardedBy("mLock")
     private void dropVm() {
+        if (mInputEventExecutor != null) {
+            mInputEventExecutor.shutdownNow();
+            mInputEventExecutor = null;
+        }
         if (mMemoryManagementCallbacks != null) {
             mContext.unregisterComponentCallbacks(mMemoryManagementCallbacks);
         }
@@ -1825,9 +1829,6 @@ public class VirtualMachine implements AutoCloseable {
             try {
                 mVirtualMachine.stop();
                 dropVm();
-                if (mInputEventExecutor != null) {
-                    mInputEventExecutor.shutdownNow();
-                }
             } catch (RemoteException e) {
                 throw e.rethrowAsRuntimeException();
             } catch (ServiceSpecificException e) {
@@ -1889,9 +1890,7 @@ public class VirtualMachine implements AutoCloseable {
                     mVirtualMachine.stop();
                     dropVm();
                 }
-            } catch (RemoteException e) {
-                throw e.rethrowAsRuntimeException();
-            } catch (ServiceSpecificException e) {
+            } catch (RemoteException | ServiceSpecificException e) {
                 // Deliberately ignored; this almost certainly means the VM exited just as
                 // we tried to stop it.
                 Log.i(TAG, "Ignoring error on close()", e);
@@ -1981,6 +1980,12 @@ public class VirtualMachine implements AutoCloseable {
     @SystemApi
     @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
     public interface VsockConnectionProvider {
+        /**
+         * Returns a connection, either from {@link #connectVsock} or from
+         * the VM owner which would call {@link #connectVsock} on your behalf.
+         *
+         * <p>Each call should return a new connection.
+         */
         @NonNull
         @SuppressLint("UnflaggedApi") // already existing functionality exposed, users should flag
         public ParcelFileDescriptor addConnection() throws VirtualMachineException;
@@ -2042,7 +2047,20 @@ public class VirtualMachine implements AutoCloseable {
     /**
      * Convert existing vsock connection to a binder connection.
      *
+     * <p>See {@linkplain #connectToVsockServer} for details. This method allows
+     * you to create the connects independently from upgrading them to the
+     * binder connection. Specifically:
+     *
      * <p>connectToVsockServer = connectToVsock + binderFromPreconnectedClient
+     *
+     * <p>This method is useful if you want to pass the vsock connection to
+     * another process before establishing the RPC binder connection, so that
+     * you can create a direct connection.
+     *
+     * @args
+     *     provider: a provider that provides the vsock connection. This
+     *              provider should return connections from
+     *              {@link #connectVsock}, from the VM owner.
      *
      * @hide
      */

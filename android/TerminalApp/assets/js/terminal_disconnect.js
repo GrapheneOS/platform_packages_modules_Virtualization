@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.virtualization.terminal
 
-import androidx.lifecycle.ViewModel
-import com.google.android.material.tabs.TabLayout.Tab
-
-class TerminalViewModel : ViewModel() {
-    val terminalViews: MutableSet<TerminalView> = mutableSetOf()
-    var selectedTabViewId: String? = null
-    val terminalTabs: MutableMap<String, Tab> = mutableMapOf()
-}
+(function() {
+  var originalLog = console.log;
+  console.log = function() {
+    console.log.history = console.log.history || [];
+    console.log.history.push(arguments);
+    originalLog.apply(console, arguments);
+    if (typeof arguments[0] === 'string' && arguments[0].startsWith("[ttyd] websocket connection closed with code: ")) {
+        TerminalApp.closeTab()
+    }
+  };
+})();

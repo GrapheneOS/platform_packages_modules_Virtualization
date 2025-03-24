@@ -373,10 +373,12 @@ impl VmDtbo {
         // see: DeviceAssignmentInfo::validate_all_regs().
         let mut all_iommus = BTreeSet::new();
         for physical_device in physical_devices.values() {
-            for iommu in &physical_device.iommus {
-                if !all_iommus.insert(iommu) {
-                    error!("Unsupported phys IOMMU duplication found, <iommus> = {iommu:?}");
-                    return Err(DeviceAssignmentError::UnsupportedIommusDuplication);
+            if let Some(iommus) = &physical_device.iommus {
+                for iommu in iommus {
+                    if !all_iommus.insert(iommu) {
+                        error!("Unsupported phys IOMMU duplication found, <iommus> = {iommu:?}");
+                        return Err(DeviceAssignmentError::UnsupportedIommusDuplication);
+                    }
                 }
             }
         }
@@ -692,17 +694,17 @@ impl PhysIommu {
 struct PhysicalDeviceInfo {
     target: Phandle,
     reg: Vec<DeviceReg>,
-    iommus: Vec<(PhysIommu, Sid)>,
+    iommus: Option<Vec<(PhysIommu, Sid)>>,
 }
 
 impl PhysicalDeviceInfo {
     fn parse_iommus(
         node: &FdtNode,
         phys_iommus: &BTreeMap<Phandle, PhysIommu>,
-    ) -> Result<Vec<(PhysIommu, Sid)>> {
+    ) -> Result<Option<Vec<(PhysIommu, Sid)>>> {
         let mut iommus = vec![];
         let Some(mut cells) = node.getprop_cells(c"iommus")? else {
-            return Ok(iommus);
+            return Ok(None);
         };
         while let Some(cell) = cells.next() {
             // Parse pIOMMU ID
@@ -717,7 +719,7 @@ impl PhysicalDeviceInfo {
 
             iommus.push((*iommu, Sid::from(cell)));
         }
-        Ok(iommus)
+        Ok(Some(iommus))
     }
 
     fn parse(node: &FdtNode, phys_iommus: &BTreeMap<Phandle, PhysIommu>) -> Result<Option<Self>> {
@@ -740,9 +742,9 @@ struct AssignedDeviceInfo {
     // <reg> property from the crosvm DT
     reg: Vec<DeviceReg>,
     // <interrupts> property from the crosvm DT
-    interrupts: Vec<u8>,
+    interrupts: Option<Vec<u8>>,
     // Parsed <iommus> property from the crosvm DT. Tuple of PvIommu and vSID.
-    iommus: Vec<(PvIommu, Vsid)>,
+    iommus: Option<Vec<(PvIommu, Vsid)>>,
 }
 
 impl AssignedDeviceInfo {
@@ -794,19 +796,18 @@ impl AssignedDeviceInfo {
         Ok(())
     }
 
-    fn parse_interrupts(node: &FdtNode) -> Result<Vec<u8>> {
+    fn parse_interrupts(node: &FdtNode) -> Result<Option<Vec<u8>>> {
+        let Some(cells) = node.getprop_cells(c"interrupts")? else {
+            return Ok(None);
+        };
         // Validation: Validate if interrupts cell numbers are multiple of #interrupt-cells.
         // We can't know how many interrupts would exist.
-        let interrupts_cells = node
-            .getprop_cells(c"interrupts")?
-            .ok_or(DeviceAssignmentError::InvalidInterrupts)?
-            .count();
-        if interrupts_cells % CELLS_PER_INTERRUPT != 0 {
+        if cells.count() % CELLS_PER_INTERRUPT != 0 {
             return Err(DeviceAssignmentError::InvalidInterrupts);
         }
 
         // Once validated, keep the raw bytes so patch can be done with setprop()
-        Ok(node.getprop(c"interrupts").unwrap().unwrap().into())
+        Ok(Some(node.getprop(c"interrupts").unwrap().unwrap().into()))
     }
 
     // TODO(b/277993056): Also validate /__local_fixups__ to ensure that <iommus> has phandle.
@@ -895,8 +896,16 @@ impl AssignedDeviceInfo {
 
         let interrupts = Self::parse_interrupts(&node)?;
 
-        let iommus = Self::parse_iommus(&node, pviommus)?;
-        Self::validate_iommus(&iommus, &physical_device.iommus, hypervisor)?;
+        // Ignore <iommus> if no pvIOMMUs are expected based on the VM DTBO, possibly
+        // because physical IOMMUs are being assigned directly.
+        let iommus = if let Some(iommus) = &physical_device.iommus {
+            let parsed_iommus = Self::parse_iommus(&node, pviommus)?;
+            Self::validate_iommus(&parsed_iommus, iommus, hypervisor)?;
+            Some(parsed_iommus)
+        } else {
+            // TODO: Detect misconfigured iommus in input DT.
+            None
+        };
 
         Ok(Some(Self { node_path, reg, interrupts, iommus }))
     }
@@ -904,14 +913,21 @@ impl AssignedDeviceInfo {
     fn patch(&self, fdt: &mut Fdt, pviommu_phandles: &BTreeMap<PvIommu, Phandle>) -> Result<()> {
         let mut dst = fdt.node_mut(&self.node_path)?.unwrap();
         dst.setprop(c"reg", &to_be_bytes(&self.reg))?;
-        dst.setprop(c"interrupts", &self.interrupts)?;
-        let mut iommus = Vec::with_capacity(8 * self.iommus.len());
-        for (pviommu, vsid) in &self.iommus {
-            let phandle = pviommu_phandles.get(pviommu).unwrap();
-            iommus.extend_from_slice(&u32::from(*phandle).to_be_bytes());
-            iommus.extend_from_slice(&vsid.0.to_be_bytes());
+        if let Some(interrupts) = &self.interrupts {
+            dst.setprop(c"interrupts", interrupts)?;
+        } else {
+            dst.nop_property(c"interrupts")?;
         }
-        dst.setprop(c"iommus", &iommus)?;
+
+        if let Some(iommus) = &self.iommus {
+            let mut iommus_vec = Vec::with_capacity(8 * iommus.len());
+            for (pviommu, vsid) in iommus {
+                let phandle = pviommu_phandles.get(pviommu).unwrap();
+                iommus_vec.extend_from_slice(&u32::from(*phandle).to_be_bytes());
+                iommus_vec.extend_from_slice(&vsid.0.to_be_bytes());
+            }
+            dst.setprop(c"iommus", &iommus_vec)?;
+        }
 
         Ok(())
     }
@@ -946,10 +962,12 @@ impl DeviceAssignmentInfo {
     fn validate_pviommu_topology(assigned_devices: &[AssignedDeviceInfo]) -> Result<()> {
         let mut all_iommus = BTreeSet::new();
         for assigned_device in assigned_devices {
-            for iommu in &assigned_device.iommus {
-                if !all_iommus.insert(iommu) {
-                    error!("Unsupported pvIOMMU duplication found, <iommus> = {iommu:?}");
-                    return Err(DeviceAssignmentError::UnsupportedPvIommusDuplication);
+            if let Some(iommus) = &assigned_device.iommus {
+                for iommu in iommus {
+                    if !all_iommus.insert(iommu) {
+                        error!("Unsupported pvIOMMU duplication found, <iommus> = {iommu:?}");
+                        return Err(DeviceAssignmentError::UnsupportedPvIommusDuplication);
+                    }
                 }
             }
         }
@@ -1282,6 +1300,8 @@ mod tests {
 
     // TODO(ptosi): Add tests with varying HYP_GRANULE values.
 
+    // TODO(ptosi): Add tests with iommus.is_none()
+
     #[test]
     fn device_info_new_without_symbols() {
         let mut fdt_data = fs::read(FDT_FILE_PATH).unwrap();
@@ -1328,8 +1348,8 @@ mod tests {
         let expected = [AssignedDeviceInfo {
             node_path: CString::new("/bus0/backlight").unwrap(),
             reg: vec![[0x9, 0xFF].into()],
-            interrupts: into_fdt_prop(vec![0x0, 0xF, 0x4]),
-            iommus: vec![],
+            interrupts: Some(into_fdt_prop(vec![0x0, 0xF, 0x4])),
+            iommus: None,
         }];
 
         assert_eq!(device_info.assigned_devices, expected);
@@ -1353,8 +1373,8 @@ mod tests {
         let expected = [AssignedDeviceInfo {
             node_path: CString::new("/rng").unwrap(),
             reg: vec![[0x9, 0xFF].into()],
-            interrupts: into_fdt_prop(vec![0x0, 0xF, 0x4]),
-            iommus: vec![(PvIommu { id: 0x4 }, Vsid(0xFF0))],
+            interrupts: Some(into_fdt_prop(vec![0x0, 0xF, 0x4])),
+            iommus: Some(vec![(PvIommu { id: 0x4 }, Vsid(0xFF0))]),
         }];
 
         assert_eq!(device_info.assigned_devices, expected);
@@ -1435,7 +1455,6 @@ mod tests {
             (Ok(c"android,backlight,ignore-gctrl-reset"), Ok(Vec::new())),
             (Ok(c"compatible"), Ok(Vec::from(*b"android,backlight\0"))),
             (Ok(c"interrupts"), Ok(into_fdt_prop(vec![0x0, 0xF, 0x4]))),
-            (Ok(c"iommus"), Ok(Vec::new())),
             (Ok(c"phandle"), Ok(into_fdt_prop(vec![phandle.unwrap()]))),
             (Ok(c"reg"), Ok(into_fdt_prop(vec![0x0, 0x9, 0x0, 0xFF]))),
         ];

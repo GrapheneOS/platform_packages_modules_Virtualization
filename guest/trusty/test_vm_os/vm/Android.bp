@@ -100,6 +100,10 @@ avb_add_hash_footer {
             name: "com.android.virt.cap",
             value: "trusty_security_vm",
         },
+        {
+            name: "com.android.virt.name",
+            value: "trusty_test_vm_os",
+        },
     ],
     src: ":trusty_test_vm_os_unsigned",
     enabled: false,

@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Support for DICE derivation and BCC generation.
+//! Support for DICE derivation and DICE chain generation.
 extern crate alloc;
+
+pub(crate) mod chain;
 
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+pub use chain::DiceChainInfo;
 use ciborium::cbor;
 use ciborium::Value;
 use core::mem::size_of;
@@ -84,11 +87,12 @@ pub struct PartialInputs {
     pub mode: DiceMode,
     pub security_version: u64,
     pub rkp_vm_marker: bool,
+    pub instance_hash: Option<Hash>,
     component_name: String,
 }
 
 impl PartialInputs {
-    pub fn new(data: &VerifiedBootData) -> Result<Self> {
+    pub fn new(data: &VerifiedBootData, instance_hash: Option<Hash>) -> Result<Self> {
         let code_hash = to_dice_hash(data)?;
         let auth_hash = hash(data.public_key)?;
         let mode = to_dice_mode(data.debug_level);
@@ -98,20 +102,27 @@ impl PartialInputs {
         let rkp_vm_marker = data.has_capability(Capability::RemoteAttest)
             || data.has_capability(Capability::TrustySecurityVm);
 
-        Ok(Self { code_hash, auth_hash, mode, security_version, rkp_vm_marker, component_name })
+        Ok(Self {
+            code_hash,
+            auth_hash,
+            mode,
+            security_version,
+            rkp_vm_marker,
+            instance_hash,
+            component_name,
+        })
     }
 
-    pub fn write_next_bcc(
+    pub fn write_next_handover(
         self,
-        current_bcc_handover: &[u8],
+        current_handover: &[u8],
         salt: &[u8; HIDDEN_SIZE],
-        instance_hash: Option<Hash>,
         deferred_rollback_protection: bool,
-        next_bcc: &mut [u8],
+        next_handover: &mut [u8],
         context: DiceContext,
     ) -> Result<()> {
         let config = self
-            .generate_config_descriptor(instance_hash)
+            .generate_config_descriptor()
             .map_err(|_| diced_open_dice::DiceError::InvalidInput)?;
 
         let dice_inputs = InputValues::new(
@@ -121,7 +132,7 @@ impl PartialInputs {
             self.mode,
             self.make_hidden(salt, deferred_rollback_protection)?,
         );
-        let _ = bcc_handover_main_flow(current_bcc_handover, &dice_inputs, next_bcc, context)?;
+        let _ = bcc_handover_main_flow(current_handover, &dice_inputs, next_handover, context)?;
         Ok(())
     }
 
@@ -157,14 +168,14 @@ impl PartialInputs {
         )
     }
 
-    fn generate_config_descriptor(&self, instance_hash: Option<Hash>) -> Result<Vec<u8>> {
+    fn generate_config_descriptor(&self) -> Result<Vec<u8>> {
         let mut config = Vec::with_capacity(4);
         config.push((cbor!(COMPONENT_NAME_KEY)?, cbor!(self.component_name.as_str())?));
         config.push((cbor!(SECURITY_VERSION_KEY)?, cbor!(self.security_version)?));
         if self.rkp_vm_marker {
             config.push((cbor!(RKP_VM_MARKER_KEY)?, Value::Null))
         }
-        if let Some(instance_hash) = instance_hash {
+        if let Some(instance_hash) = self.instance_hash {
             config.push((cbor!(INSTANCE_HASH_KEY)?, Value::from(instance_hash.as_slice())));
         }
         let config = Value::Map(config);
@@ -181,6 +192,7 @@ mod tests {
         SECURITY_VERSION_KEY,
     };
     use ciborium::Value;
+    use diced_open_dice::bcc_handover_parse;
     use diced_open_dice::DiceArtifacts;
     use diced_open_dice::DiceContext;
     use diced_open_dice::DiceMode;
@@ -213,7 +225,7 @@ mod tests {
     #[test]
     fn base_data_conversion() {
         let vb_data = BASE_VB_DATA;
-        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let inputs = PartialInputs::new(&vb_data, None).unwrap();
 
         assert_eq!(inputs.mode, DiceMode::kDiceModeNormal);
         assert_eq!(inputs.security_version, 42);
@@ -225,7 +237,7 @@ mod tests {
     #[test]
     fn debuggable_conversion() {
         let vb_data = VerifiedBootData { debug_level: DebugLevel::Full, ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let inputs = PartialInputs::new(&vb_data, None).unwrap();
 
         assert_eq!(inputs.mode, DiceMode::kDiceModeDebug);
     }
@@ -234,7 +246,7 @@ mod tests {
     fn rkp_vm_conversion() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let inputs = PartialInputs::new(&vb_data, None).unwrap();
 
         assert!(inputs.rkp_vm_marker);
     }
@@ -242,22 +254,23 @@ mod tests {
     #[test]
     fn base_config_descriptor() {
         let vb_data = BASE_VB_DATA;
-        let inputs = PartialInputs::new(&vb_data).unwrap();
-        let config_map = decode_config_descriptor(&inputs, None);
+        let inputs = PartialInputs::new(&vb_data, None).unwrap();
+        let config_map = decode_config_descriptor(&inputs);
 
         assert_eq!(config_map.get(&COMPONENT_NAME_KEY).unwrap().as_text().unwrap(), "vm_entry");
         assert_eq!(config_map.get(&COMPONENT_VERSION_KEY), None);
         assert_eq!(config_map.get(&RESETTABLE_KEY), None);
         assert_eq!(config_map.get(&SECURITY_VERSION_KEY).unwrap().as_integer().unwrap(), 42.into());
         assert_eq!(config_map.get(&RKP_VM_MARKER_KEY), None);
+        assert_eq!(config_map.get(&INSTANCE_HASH_KEY), None);
     }
 
     #[test]
     fn rkp_vm_config_descriptor_has_rkp_vm_marker_and_component_name() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
-        let config_map = decode_config_descriptor(&inputs, Some(HASH));
+        let inputs = PartialInputs::new(&vb_data, Some(HASH)).unwrap();
+        let config_map = decode_config_descriptor(&inputs);
 
         assert_eq!(config_map.get(&COMPONENT_NAME_KEY).unwrap().as_text().unwrap(), "vm_entry");
         assert!(config_map.get(&RKP_VM_MARKER_KEY).unwrap().is_null());
@@ -267,8 +280,8 @@ mod tests {
     fn security_vm_config_descriptor_has_rkp_vm_marker() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::TrustySecurityVm], ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
-        let config_map = decode_config_descriptor(&inputs, Some(HASH));
+        let inputs = PartialInputs::new(&vb_data, Some(HASH)).unwrap();
+        let config_map = decode_config_descriptor(&inputs);
 
         assert!(config_map.get(&RKP_VM_MARKER_KEY).unwrap().is_null());
     }
@@ -277,8 +290,8 @@ mod tests {
     fn config_descriptor_with_instance_hash() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
-        let config_map = decode_config_descriptor(&inputs, Some(HASH));
+        let inputs = PartialInputs::new(&vb_data, Some(HASH)).unwrap();
+        let config_map = decode_config_descriptor(&inputs);
         assert_eq!(*config_map.get(&INSTANCE_HASH_KEY).unwrap(), Value::from(HASH.as_slice()));
     }
 
@@ -286,16 +299,13 @@ mod tests {
     fn config_descriptor_without_instance_hash() {
         let vb_data =
             VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
-        let config_map = decode_config_descriptor(&inputs, None);
+        let inputs = PartialInputs::new(&vb_data, None).unwrap();
+        let config_map = decode_config_descriptor(&inputs);
         assert!(!config_map.contains_key(&INSTANCE_HASH_KEY));
     }
 
-    fn decode_config_descriptor(
-        inputs: &PartialInputs,
-        instance_hash: Option<Hash>,
-    ) -> HashMap<i64, Value> {
-        let config_descriptor = inputs.generate_config_descriptor(instance_hash).unwrap();
+    fn decode_config_descriptor(inputs: &PartialInputs) -> HashMap<i64, Value> {
+        let config_descriptor = inputs.generate_config_descriptor().unwrap();
 
         let cbor_map =
             cbor_util::deserialize::<Value>(&config_descriptor).unwrap().into_map().unwrap();
@@ -309,7 +319,7 @@ mod tests {
     #[test]
     fn changing_deferred_rpb_changes_secrets() {
         let vb_data = VerifiedBootData { debug_level: DebugLevel::Full, ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let inputs = PartialInputs::new(&vb_data, Some([0u8; 64])).unwrap();
         let mut buffer_without_defer = [0; 4096];
         let mut buffer_with_defer = [0; 4096];
         let mut buffer_without_defer_retry = [0; 4096];
@@ -334,62 +344,57 @@ mod tests {
 
         inputs
             .clone()
-            .write_next_bcc(
+            .write_next_handover(
                 sample_dice_input,
                 &[0u8; HIDDEN_SIZE],
-                Some([0u8; 64]),
                 false,
                 &mut buffer_without_defer,
                 context.clone(),
             )
             .unwrap();
-        let bcc_handover1 = diced_open_dice::bcc_handover_parse(&buffer_without_defer).unwrap();
+        let handover1 = from_serialized_handover(&buffer_without_defer);
 
         inputs
             .clone()
-            .write_next_bcc(
+            .write_next_handover(
                 sample_dice_input,
                 &[0u8; HIDDEN_SIZE],
-                Some([0u8; 64]),
                 true,
                 &mut buffer_with_defer,
                 context.clone(),
             )
             .unwrap();
-        let bcc_handover2 = diced_open_dice::bcc_handover_parse(&buffer_with_defer).unwrap();
+        let handover2 = from_serialized_handover(&buffer_with_defer);
 
         inputs
             .clone()
-            .write_next_bcc(
+            .write_next_handover(
                 sample_dice_input,
                 &[0u8; HIDDEN_SIZE],
-                Some([0u8; 64]),
                 false,
                 &mut buffer_without_defer_retry,
                 context.clone(),
             )
             .unwrap();
-        let bcc_handover3 =
-            diced_open_dice::bcc_handover_parse(&buffer_without_defer_retry).unwrap();
+        let handover3 = from_serialized_handover(&buffer_without_defer_retry);
 
-        assert_ne!(bcc_handover1.cdi_seal(), bcc_handover2.cdi_seal());
-        assert_eq!(bcc_handover1.cdi_seal(), bcc_handover3.cdi_seal());
+        assert_ne!(handover1.cdi_seal(), handover2.cdi_seal());
+        assert_eq!(handover1.cdi_seal(), handover3.cdi_seal());
     }
 
     #[test]
     fn dice_derivation_with_different_algorithms_is_valid() {
         let dice_artifacts = make_sample_bcc_and_cdis().unwrap();
-        let bcc_handover0_bytes = to_bcc_handover(&dice_artifacts);
+        let handover0_bytes = to_serialized_handover(&dice_artifacts);
         let vb_data = VerifiedBootData { debug_level: DebugLevel::Full, ..BASE_VB_DATA };
-        let inputs = PartialInputs::new(&vb_data).unwrap();
+        let inputs = PartialInputs::new(&vb_data, Some([0u8; 64])).unwrap();
         let mut buffer = [0; 4096];
 
         inputs
             .clone()
-            .write_next_bcc(
-                &bcc_handover0_bytes,
+            .write_next_handover(
+                &handover0_bytes,
                 &[0u8; HIDDEN_SIZE],
-                Some([0u8; 64]),
                 true,
                 &mut buffer,
                 DiceContext {
@@ -397,17 +402,16 @@ mod tests {
                     subject_algorithm: KeyAlgorithm::EcdsaP256,
                 },
             )
-            .expect("Failed to derive Ed25519 -> EcdsaP256 BCC");
-        let bcc_handover1 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
-        let bcc_handover1_bytes = to_bcc_handover(&bcc_handover1);
+            .expect("Failed to derive Ed25519 -> EcdsaP256 DICE chain");
+        let handover1 = from_serialized_handover(&buffer);
+        let handover1_bytes = to_serialized_handover(&handover1);
         buffer.fill(0);
 
         inputs
             .clone()
-            .write_next_bcc(
-                &bcc_handover1_bytes,
+            .write_next_handover(
+                &handover1_bytes,
                 &[0u8; HIDDEN_SIZE],
-                Some([0u8; 64]),
                 true,
                 &mut buffer,
                 DiceContext {
@@ -415,17 +419,16 @@ mod tests {
                     subject_algorithm: KeyAlgorithm::EcdsaP384,
                 },
             )
-            .expect("Failed to derive EcdsaP256 -> EcdsaP384 BCC");
-        let bcc_handover2 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
-        let bcc_handover2_bytes = to_bcc_handover(&bcc_handover2);
+            .expect("Failed to derive EcdsaP256 -> EcdsaP384 DICE chain");
+        let handover2 = from_serialized_handover(&buffer);
+        let handover2_bytes = to_serialized_handover(&handover2);
         buffer.fill(0);
 
         inputs
             .clone()
-            .write_next_bcc(
-                &bcc_handover2_bytes,
+            .write_next_handover(
+                &handover2_bytes,
                 &[0u8; HIDDEN_SIZE],
-                Some([0u8; 64]),
                 true,
                 &mut buffer,
                 DiceContext {
@@ -433,21 +436,25 @@ mod tests {
                     subject_algorithm: KeyAlgorithm::Ed25519,
                 },
             )
-            .expect("Failed to derive EcdsaP384 -> Ed25519 BCC");
-        let bcc_handover3 = diced_open_dice::bcc_handover_parse(&buffer).unwrap();
+            .expect("Failed to derive EcdsaP384 -> Ed25519 DICE chain");
+        let handover3 = from_serialized_handover(&buffer);
 
         let mut session = Session::default();
         session.set_allow_any_mode(true);
-        let _chain = dice::Chain::from_cbor(&session, bcc_handover3.bcc().unwrap()).unwrap();
+        let _chain = dice::Chain::from_cbor(&session, handover3.bcc().unwrap()).unwrap();
     }
 
-    fn to_bcc_handover(dice_artifacts: &dyn DiceArtifacts) -> Vec<u8> {
+    fn to_serialized_handover(dice_artifacts: &dyn DiceArtifacts) -> Vec<u8> {
         let dice_chain = cbor_util::deserialize::<Value>(dice_artifacts.bcc().unwrap()).unwrap();
-        let bcc_handover = Value::Map(vec![
+        let handover = Value::Map(vec![
             (Value::Integer(1.into()), Value::Bytes(dice_artifacts.cdi_attest().to_vec())),
             (Value::Integer(2.into()), Value::Bytes(dice_artifacts.cdi_seal().to_vec())),
             (Value::Integer(3.into()), dice_chain),
         ]);
-        cbor_util::serialize(&bcc_handover).unwrap()
+        cbor_util::serialize(&handover).unwrap()
+    }
+
+    fn from_serialized_handover(bytes: &[u8]) -> diced_open_dice::BccHandover {
+        bcc_handover_parse(bytes).unwrap()
     }
 }

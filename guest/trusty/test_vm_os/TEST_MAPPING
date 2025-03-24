@@ -1,9 +1,0 @@
-{
-  "trusty_test_vm_presubmit": [
-  ],
-  "trusty_test_vm_postsubmit": [
-    {
-        "name": "TrustyVMOS_UnitTests"
-    }
-  ]
-}

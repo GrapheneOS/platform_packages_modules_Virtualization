@@ -23,13 +23,10 @@ use vmbase::{arch::aarch64::min_dcache_line_size, layout, memory::deactivate_dyn
 /// Function boot payload after cleaning all secret from pvmfw memory
 pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     let fdt_address = slices.fdt.as_ptr() as usize;
-    let bcc = slices
-        .dice_chain
-        .map(|slice| {
-            let r = slice.as_ptr_range();
-            (r.start as usize)..(r.end as usize)
-        })
-        .expect("Missing DICE chain");
+    let dice_handover = slices.dice_handover.map(|slice| {
+        let r = slice.as_ptr_range();
+        (r.start as usize)..(r.end as usize)
+    });
 
     deactivate_dynamic_page_tables();
 
@@ -50,9 +47,14 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     assert_eq!(scratch.start.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
     assert_eq!(scratch.end.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
 
-    assert!(bcc.is_within(&(scratch.start.0..scratch.end.0)));
-    assert_eq!(bcc.start % ASM_STP_ALIGN, 0, "Misaligned guest BCC.");
-    assert_eq!(bcc.end % ASM_STP_ALIGN, 0, "Misaligned guest BCC.");
+    // A sub-region of the scratch memory might contain data for the next stage so skip zeroing it.
+    // Alternatively, an empty region at the start of the scratch region is compatible with the ASM
+    // implementation and results in the whole scratch region being zeroed.
+    let skipped = dice_handover.unwrap_or(scratch.start.0..scratch.start.0);
+
+    assert!(skipped.is_within(&(scratch.start.0..scratch.end.0)));
+    assert_eq!(skipped.start % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
+    assert_eq!(skipped.end % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
 
     let stack = layout::stack_range();
 
@@ -73,27 +75,22 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     // SAFETY: We're exiting pvmfw by passing the register values we need to a noreturn asm!().
     unsafe {
         asm!(
-            "cmp {scratch}, {bcc}",
-            "b.hs 1f",
-
-            // Zero .data & .bss until BCC.
+            // Zero .data & .bss until the start of the skipped region.
+            "b 1f",
             "0: stp xzr, xzr, [{scratch}], 16",
-            "cmp {scratch}, {bcc}",
+            "1: cmp {scratch}, {skipped}",
             "b.lo 0b",
 
-            "1:",
-            // Skip BCC.
-            "mov {scratch}, {bcc_end}",
-            "cmp {scratch}, {scratch_end}",
-            "b.hs 1f",
+            // Skip the skipped region.
+            "mov {scratch}, {skipped_end}",
 
             // Keep zeroing .data & .bss.
+            "b 1f",
             "0: stp xzr, xzr, [{scratch}], 16",
-            "cmp {scratch}, {scratch_end}",
+            "1: cmp {scratch}, {scratch_end}",
             "b.lo 0b",
 
-            "1:",
-            // Flush d-cache over .data & .bss (including BCC).
+            // Flush d-cache over .data & .bss (including skipped region).
             "0: dc cvau, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {scratch_end}",
@@ -159,8 +156,8 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "dsb nsh",
             "br x30",
             sctlr_el1_val = in(reg) SCTLR_EL1_VAL,
-            bcc = in(reg) u64::try_from(bcc.start).unwrap(),
-            bcc_end = in(reg) u64::try_from(bcc.end).unwrap(),
+            skipped = in(reg) u64::try_from(skipped.start).unwrap(),
+            skipped_end = in(reg) u64::try_from(skipped.end).unwrap(),
             cache_line = in(reg) u64::try_from(scratch.start.0).unwrap(),
             scratch = in(reg) u64::try_from(scratch.start.0).unwrap(),
             scratch_end = in(reg) u64::try_from(scratch.end.0).unwrap(),

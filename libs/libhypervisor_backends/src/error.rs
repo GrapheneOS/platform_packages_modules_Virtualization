@@ -18,6 +18,8 @@ use core::{fmt, result};
 
 #[cfg(target_arch = "aarch64")]
 use super::hypervisor::GeniezoneError;
+#[cfg(target_arch = "aarch64")]
+use super::hypervisor::GunyahError;
 use super::hypervisor::KvmError;
 #[cfg(target_arch = "aarch64")]
 use uuid::Uuid;
@@ -41,6 +43,9 @@ pub enum Error {
     #[cfg(target_arch = "x86_64")]
     /// Unsupported x86_64 Hypervisor
     UnsupportedHypervisor(u128),
+    #[cfg(target_arch = "aarch64")]
+    /// Failed to invoke Gunyah HVC.
+    GunyahError(GunyahError),
 }
 
 impl fmt::Display for Error {
@@ -56,6 +61,10 @@ impl fmt::Display for Error {
                     f,
                     "Failed to invoke GenieZone HVC function with function ID {function_id}: {e}"
                 )
+            }
+            #[cfg(target_arch = "aarch64")]
+            Self::GunyahError(e) => {
+                write!(f, "Failed to invoke Gunyah HVC: {e}")
             }
             #[cfg(target_arch = "aarch64")]
             Self::UnsupportedHypervisorUuid(u) => {

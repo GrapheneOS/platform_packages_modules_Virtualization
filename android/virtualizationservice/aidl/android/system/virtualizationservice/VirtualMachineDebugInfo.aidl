@@ -19,6 +19,9 @@ import android.system.virtualizationservice.VirtualMachineState;
 
 /** Information about a running VM, for debug purposes only. */
 parcelable VirtualMachineDebugInfo {
+    /** Name of the VM. */
+    String name;
+
     /** The CID assigned to the VM. */
     int cid;
 

@@ -80,3 +80,9 @@ rust_test {
     ],
     static_libs: ["libopen_dice_clear_memory"],
 }
+
+dirgroup {
+    name: "trusty_dirgroup_packages_modules_virtualization_libs_dice_sample_inputs",
+    visibility: ["//trusty/vendor/google/aosp/scripts"],
+    dirs: ["."],
+}

@@ -29,7 +29,6 @@ import com.android.virtualization.terminal.ConfigJson.GpuJson
 import com.android.virtualization.terminal.ConfigJson.InputJson
 import com.android.virtualization.terminal.ConfigJson.PartitionJson
 import com.android.virtualization.terminal.ConfigJson.SharedPathJson
-import com.android.virtualization.terminal.InstalledImage.Companion.getDefault
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import java.io.BufferedReader
@@ -313,7 +312,7 @@ internal data class ConfigJson(
         private fun replaceKeywords(r: Reader, context: Context): String {
             val rules: Map<String, String> =
                 mapOf(
-                    "\\\$PAYLOAD_DIR" to getDefault(context).installDir.toString(),
+                    "\\\$PAYLOAD_DIR" to InstalledImage.getDefault(context).installDir.toString(),
                     "\\\$USER_ID" to context.userId.toString(),
                     "\\\$PACKAGE_NAME" to context.getPackageName(),
                     "\\\$APP_DATA_DIR" to context.getDataDir().toString(),

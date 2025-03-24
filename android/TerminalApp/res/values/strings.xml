@@ -75,6 +75,8 @@
     <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
     <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">\u200E%1$s\u200E</xliff:g> max</string>
+    <!-- Snackbar message for showing not enough space error. [CHAR LIMIT=none] -->
+    <string name="settings_disk_resize_not_enough_space_message">Not enough space on the device to resize disk</string>
     <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=16] -->
     <string name="settings_disk_resize_resize_cancel">Cancel</string>
     <!-- Settings menu button to apply change Terminal app. This will launch a confirmation dialog [CHAR LIMIT=16] -->
@@ -158,6 +160,15 @@
     <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
     <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
     <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
+
+    <!-- Upgrade page's title. Tells users that you'll need to upgrade [CHAR LIMIT=none] -->
+    <string name="upgrade_title">Upgrade to newer terminal</string>
+    <!-- Upgrade page's description. Tell users that can't use as-is, and also explains next step. (/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
+    <string name="upgrade_desc">Linux terminal you were using is out of date. Please upgrade to proceed.\nData will be backed at <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <!-- Upgrade page's button to start upgrade. [CHAR LIMIT=16] -->
+    <string name="upgrade_button">Upgrade</string>
+    <!-- Upgrade page's error toast message when upgrade failed. [CHAR LIMIT=none] -->
+    <string name="upgrade_error">Upgrade failed</string>
 
     <!-- Notification action button for settings [CHAR LIMIT=20] -->
     <string name="service_notification_settings">Settings</string>
