@@ -83,6 +83,7 @@ rust_library_rlib {
         "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libonce_cell_nostd",
+        "libsafe_mmio",
         "libspin_nostd",
         "libstatic_assertions",
         "libthiserror_nostd",

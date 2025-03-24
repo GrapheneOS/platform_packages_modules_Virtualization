@@ -119,26 +119,6 @@ macro_rules! tlbi {
     }};
 }
 
-/// STRB intrinsics.
-///
-/// See https://github.com/rust-lang/rust/issues/131894
-///
-/// # Safety
-///
-/// `dst` must be valid for writes.
-#[inline]
-pub unsafe fn strb(dst: *mut u8, src: u8) {
-    // SAFETY: strb only modifies *dst, which must be valid for writes.
-    unsafe {
-        core::arch::asm!(
-            "strb {value:w}, [{ptr}]",
-            value = in(reg) src,
-            ptr = in(reg) dst,
-            options(preserves_flags),
-        );
-    }
-}
-
 /// Reads the number of words in the smallest cache line of all the data caches and unified caches.
 #[inline]
 pub fn min_dcache_line_size() -> usize {
