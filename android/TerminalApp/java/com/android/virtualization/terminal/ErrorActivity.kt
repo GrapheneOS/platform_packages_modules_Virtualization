@@ -18,6 +18,7 @@ package com.android.virtualization.terminal
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import android.view.View
 import android.widget.TextView
 import java.io.IOException
@@ -34,6 +35,7 @@ class ErrorActivity : BaseActivity() {
 
         val button = findViewById<View>(R.id.recovery)
         button.setOnClickListener(View.OnClickListener { _ -> launchRecoveryActivity() })
+        findViewById<TextView>(R.id.cause).setMovementMethod(ScrollingMovementMethod())
     }
 
     override fun onNewIntent(intent: Intent) {
