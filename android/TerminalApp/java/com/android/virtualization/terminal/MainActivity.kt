@@ -194,7 +194,7 @@ public class MainActivity :
 
     fun closeTab(tab: TabLayout.Tab) {
         if (terminalTabAdapter.tabs.size == 1) {
-            finishAndRemoveTask()
+            finish()
         }
         viewPager.offscreenPageLimit -= 1
         terminalTabAdapter.deleteTab(tab.position)
