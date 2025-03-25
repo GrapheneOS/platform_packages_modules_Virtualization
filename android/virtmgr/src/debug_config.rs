@@ -191,7 +191,7 @@ pub struct DebugConfig {
 impl DebugConfig {
     pub fn new(config: &VirtualMachineConfig) -> Self {
         let debug_level = get_debug_level(config).unwrap_or(DebugLevel::NONE);
-        let debug_policy = Self::get_debug_policy().unwrap_or_else(|| {
+        let debug_policy = Self::get_debug_policy(config).unwrap_or_else(|| {
             info!("Debug policy is disabled");
             Default::default()
         });
@@ -204,7 +204,11 @@ impl DebugConfig {
         Self { debug_level, debug_policy, dump_device_tree }
     }
 
-    fn get_debug_policy() -> Option<DebugPolicy> {
+    fn get_debug_policy(config: &VirtualMachineConfig) -> Option<DebugPolicy> {
+        if matches!(config, VirtualMachineConfig::RawConfig(_)) {
+            info!("Debug policy ignored for non-Microdroid VM");
+            return None;
+        }
         let dp_sysprop = system_properties::read(CUSTOM_DEBUG_POLICY_OVERLAY_SYSPROP);
         let custom_dp = dp_sysprop.unwrap_or_else(|e| {
             warn!("Failed to read sysprop {CUSTOM_DEBUG_POLICY_OVERLAY_SYSPROP}: {e}");
