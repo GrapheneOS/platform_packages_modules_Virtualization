@@ -20,7 +20,7 @@ use core::fmt::{self, Write};
 /// The backend for [`Uart`] that abstracts the access to 8250 register map
 pub trait UartBackend {
     /// Writes a byte value on the offset to the hardware registers.
-    fn write_register_u8(&self, offset: usize, byte: u8);
+    fn write_register_u8(&mut self, offset: usize, byte: u8);
 }
 
 /// Minimal driver for an 8250 UART. This only implements enough to work with the emulated 8250
@@ -36,7 +36,7 @@ impl<Backend: UartBackend> Uart<Backend> {
     }
 
     /// Writes a single byte to the UART.
-    pub fn write_byte(&self, byte: u8) {
+    pub fn write_byte(&mut self, byte: u8) {
         self.backend.write_register_u8(0, byte)
     }
 }

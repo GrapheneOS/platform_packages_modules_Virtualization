@@ -14,36 +14,29 @@
 
 //! Uart driver with backend for aarch64 using MMIO
 
-use crate::arch::write_volatile_u8;
 use crate::uart::UartBackend;
+use core::ptr::NonNull;
+use safe_mmio::{fields::ReadWrite, UniqueMmioPointer};
 
 /// Alias for default Uart for aarch64 backend with [`MmioBackend`]
-pub type Uart = crate::uart::Uart<MmioBackend>;
+pub type Uart = crate::uart::Uart<MmioBackend<'static>>;
 
-/// Backend for [`crate::uart::Uart`] that uses [`crate::arch::write_volatile_u8`] for writing to
-/// hardware registers.
-pub struct MmioBackend {
-    base_address: *mut u8,
+/// Backend for [`crate::uart::Uart`] that uses `safe-mmio` for writing to hardware registers.
+pub struct MmioBackend<'a> {
+    registers: UniqueMmioPointer<'a, [ReadWrite<u8>; 8]>,
 }
 
-impl MmioBackend {
-    /// Constructs a new instance of the UART driver backend for a device at the given base address.
-    ///
-    /// # Safety
-    ///
-    /// The given base address must point to the 8 MMIO control registers of an appropriate UART
-    /// device, which must be mapped into the address space of the process as device memory and not
-    /// have any other aliases.
-    pub unsafe fn new(base_address: usize) -> Self {
-        Self { base_address: base_address as *mut u8 }
+impl<'a> MmioBackend<'a> {
+    /// Constructs a new instance of the UART driver backend for a device with the given data
+    /// register.
+    pub fn new(registers: UniqueMmioPointer<'a, [ReadWrite<u8>; 8]>) -> Self {
+        Self { registers }
     }
 }
 
-impl UartBackend for MmioBackend {
-    fn write_register_u8(&self, offset: usize, byte: u8) {
-        // SAFETY: We know that the base address points to the control registers of a UART device
-        // which is appropriately mapped.
-        unsafe { write_volatile_u8(self.base_address.add(offset), byte) }
+impl UartBackend for MmioBackend<'_> {
+    fn write_register_u8(&mut self, offset: usize, byte: u8) {
+        self.registers.get(offset).expect("Register offset out of bounds").write(byte);
     }
 }
 
@@ -52,15 +45,15 @@ impl Uart {
     ///
     /// # Safety
     ///
-    /// The given base address must point to the 8 MMIO control registers of an appropriate UART
-    /// device, which must be mapped into the address space of the process as device memory and not
-    /// have any other aliases.
+    /// The given base address must point to the 8 MMIO control registers of an appropriate 8250
+    /// UART device, which must be mapped into the address space of the process as device memory and
+    /// not have any other aliases.
     pub unsafe fn new(base_address: usize) -> Self {
-        // SAFETY: Delegated to caller
-        unsafe { Self::create(MmioBackend::new(base_address)) }
+        // SAFETY: The caller promises that base_address points to a mapped 8250 UART's registers
+        // with no aliases. That implies that there are 8 single-byte registers we can safely
+        // access, as required by `UniqueMmioPointer`.
+        let data_register =
+            unsafe { UniqueMmioPointer::new(NonNull::new(base_address as _).unwrap()) };
+        Self::create(MmioBackend::new(data_register))
     }
 }
-
-// SAFETY: `MmioBackend` just contains a pointer to device memory, which can be accessed from any
-// context.
-unsafe impl Send for MmioBackend {}
