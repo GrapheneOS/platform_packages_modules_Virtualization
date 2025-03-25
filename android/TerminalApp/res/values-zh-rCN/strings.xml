@@ -42,6 +42,8 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
+    <skip />
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"应用"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
