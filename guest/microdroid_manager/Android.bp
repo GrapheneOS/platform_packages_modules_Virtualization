@@ -49,7 +49,7 @@ rust_defaults {
         "librpcbinder_rs",
         "librustutils",
         "libsecretkeeper_client",
-        "libsecretkeeper_comm_nostd",
+        "libsecretkeeper_comm",
         "libscopeguard",
         "libserde",
         "libserde_cbor",
