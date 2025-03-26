@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"无法调整磁盘大小，因为设备上的空间不足"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"应用"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"不可恢复的错误"</string>
     <string name="error_desc" msgid="4588252235686826721">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。\n如果所有尝试都失败，请通过在“开发者选项”中开启/关闭 Linux 终端来擦除所有数据。"</string>
     <string name="error_code" msgid="3585291676855383649">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"设置"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"终端正在运行"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"点击即可打开终端"</string>

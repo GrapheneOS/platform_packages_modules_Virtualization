@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ဒစ်ခ်အရွယ်အစား သတ်မှတ်လိုက်သည်"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> သတ်မှတ်ထားသည်"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"အများဆုံး <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"ဒစ်ခ်အရွယ်ပြင်ရန် စက်ပစ္စည်းတွင် နေရာမလုံလောက်ပါ"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"မလုပ်တော့"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"သုံးရန်"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ဒစ်ခ်ကို အရွယ်ပြင်ရန် တာမီနယ်ပြန်စပါမည်"</string>
@@ -83,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ပြန်ပြင်၍မရသော အမှား"</string>
     <string name="error_desc" msgid="4588252235686826721">"အမှားကို ပြန်ပြင်၍မရလိုက်ပါ။\nတာမီနယ်ကို ပြန်စနိုင်သည် (သို့) ပြန်ရယူရေး နည်းလမ်းများထဲမှ တစ်ခုကို စမ်းကြည့်နိုင်သည်။\nကြိုးပမ်းမှုအားလုံး အဆင်မပြေပါက ဆော့ဖ်ဝဲရေးသူအတွက် ရွေးစရာများမှနေ၍ Linux တာမီနယ်ကို ဖွင့်ခြင်း/ပိတ်ခြင်းဖြင့် ဒေတာအားလုံး ရှင်းလင်းပါ။"</string>
     <string name="error_code" msgid="3585291676855383649">"အမှားကုဒ်- <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"တာမီနယ်အသစ်သို့ အဆင့်မြှင့်ရန်"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"သင်အသုံးပြုနေသည့် Linux တာမီနယ် ဟောင်းနေသည်။ ရှေ့ဆက်ရန်အတွက် အဆင့်မြှင့်ပါ။\n<xliff:g id="PATH">/mnt/backup</xliff:g> တွင် ဒေတာကို အရန်သိမ်းထားမည်"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"အဆင့်မြှင့်ရန်"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"အဆင့်မြှင့်ခြင်း မအောင်မြင်ပါ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ဆက်တင်များ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"တာမီနယ်ကို ဖွင့်ထားသည်"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"တာမီနယ်ဖွင့်ရန် နှိပ်ပါ"</string>

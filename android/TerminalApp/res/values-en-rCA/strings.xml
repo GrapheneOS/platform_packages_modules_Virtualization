@@ -82,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Unrecoverable error"</string>
     <string name="error_desc" msgid="4588252235686826721">"Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
     <string name="error_code" msgid="3585291676855383649">"Error code: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Upgrade to newer terminal"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Linux terminal you were using is out of date. Please upgrade to proceed.\nData will be backed at <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Upgrade"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Upgrade failed"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Settings"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal is running"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Click to open terminal"</string>
