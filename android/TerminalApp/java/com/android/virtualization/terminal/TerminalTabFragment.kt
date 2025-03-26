@@ -124,10 +124,12 @@ class TerminalTabFragment() : Fragment() {
     inner class TerminalViewInterface(private val mContext: android.content.Context) {
         @JavascriptInterface
         fun closeTab() {
-            if (activity != null) {
-                activity?.runOnUiThread {
-                    val mainActivity = (activity as MainActivity)
-                    mainActivity.closeTab(terminalViewModel.terminalTabs[id]!!)
+            if (terminalViewModel.terminalTabs.containsKey(id)) {
+                if (activity != null) {
+                    activity?.runOnUiThread {
+                        val mainActivity = (activity as MainActivity)
+                        mainActivity.closeTab(terminalViewModel.terminalTabs[id]!!)
+                    }
                 }
             }
         }
@@ -243,6 +245,7 @@ class TerminalTabFragment() : Fragment() {
     }
 
     override fun onDestroy() {
+        terminalView.terminalClose()
         terminalViewModel.terminalViews.remove(terminalView)
         super.onDestroy()
     }

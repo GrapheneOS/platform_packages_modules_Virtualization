@@ -43,6 +43,7 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
     private val disableCtrlKey: String = readAssetAsString(context, "js/disable_ctrl_key.js")
     private val terminalDisconnectCallback: String =
         readAssetAsString(context, "js/terminal_disconnect.js")
+    private val terminalClose: String = readAssetAsString(context, "js/terminal_close.js")
     private val touchToMouseHandler: String =
         readAssetAsString(context, "js/touch_to_mouse_handler.js")
     private val a11yManager =
@@ -74,6 +75,10 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
 
     fun applyTerminalDisconnectCallback() {
         this.evaluateJavascript(terminalDisconnectCallback, null)
+    }
+
+    fun terminalClose() {
+        this.evaluateJavascript(terminalClose, null)
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
