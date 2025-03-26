@@ -1088,15 +1088,18 @@ fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt
 /// Valid PSCI versions allowed for guests.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PsciVersion {
+    V0_2,
     V1_0,
 }
 
 impl PsciVersion {
     const V1_0_COMPAT: &CStr = c"arm,psci-1.0";
+    const V0_2_COMPAT: &CStr = c"arm,psci-0.2";
 
     const fn get_compatible(&self) -> &'static CStr {
         match self {
             Self::V1_0 => Self::V1_0_COMPAT,
+            Self::V0_2 => Self::V0_2_COMPAT,
         }
     }
 }
@@ -1107,7 +1110,7 @@ struct PsciInfo {
 }
 
 fn read_psci(fdt: &Fdt) -> libfdt::Result<PsciInfo> {
-    let valid_versions = &[PsciVersion::V1_0];
+    let valid_versions = &[PsciVersion::V0_2, PsciVersion::V1_0];
     for version in valid_versions {
         let compat = version.get_compatible();
         if let Some(node) = fdt.compatible_nodes(compat)?.next() {
