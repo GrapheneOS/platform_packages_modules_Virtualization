@@ -120,7 +120,7 @@ pub fn unshare_all_memory() {
 /// Unshare the UART page, previously shared with the host.
 pub fn unshare_uart() -> Result<()> {
     let Some(mmio_guard) = get_mmio_guard() else { return Ok(()) };
-    let console_uart_page = layout::console_uart_page();
+    let Some(console_uart_page) = layout::console_uart_page() else { return Ok(()) };
     Ok(mmio_guard.unmap(console_uart_page.start.0)?)
 }
 
@@ -544,7 +544,9 @@ impl MemoryTracker {
 
         let mut page_table = PageTable::default();
 
-        page_table.map_device(&console_uart_page.into()).unwrap();
+        if let Some(console_uart_page) = console_uart_page {
+            page_table.map_device(&console_uart_page.into()).unwrap();
+        }
         page_table.map_code(&text.into()).unwrap();
         page_table.map_rodata(&rodata.into()).unwrap();
         page_table.map_data(&data_bss.into()).unwrap();
