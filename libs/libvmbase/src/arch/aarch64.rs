@@ -14,6 +14,7 @@
 
 //! Wrappers of assembly calls.
 
+pub mod bionic;
 pub mod dbm;
 pub mod exceptions;
 pub mod hvc;

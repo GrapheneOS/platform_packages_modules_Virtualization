@@ -18,6 +18,9 @@
 pub mod aarch64;
 
 #[cfg(target_arch = "aarch64")]
+pub use aarch64::bionic;
+
+#[cfg(target_arch = "aarch64")]
 pub use aarch64::platform;
 
 #[cfg(target_arch = "aarch64")]

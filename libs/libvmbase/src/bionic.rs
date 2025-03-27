@@ -15,7 +15,6 @@
 //! Low-level compatibility layer between baremetal Rust and Bionic C functions.
 
 use crate::rand::fill_with_entropy;
-use crate::read_sysreg;
 use core::ffi::c_char;
 use core::ffi::c_int;
 use core::ffi::c_void;
@@ -25,6 +24,8 @@ use core::str;
 
 use log::error;
 use log::info;
+
+pub use crate::arch::bionic::__get_tls;
 
 const EOF: c_int = -1;
 const EIO: c_int = 5;
@@ -47,11 +48,6 @@ pub struct Tls {
 #[link_section = ".data.stack_protector"]
 #[export_name = "__bionic_tls"]
 pub static mut TLS: Tls = Tls { _unused: [0; 40], stack_guard: 0 };
-
-/// Gets a pointer to the TLS from the dedicated system register.
-pub fn __get_tls() -> *mut Tls {
-    read_sysreg!("tpidr_el0") as *mut Tls
-}
 
 #[no_mangle]
 extern "C" fn __stack_chk_fail() -> ! {
