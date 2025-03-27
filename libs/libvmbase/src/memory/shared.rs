@@ -16,10 +16,10 @@
 
 use super::error::MemoryTrackerError;
 use super::util::virt_to_phys;
+use crate::arch::paging::{MemoryRegion as VaRange, PAGE_SIZE};
 use crate::arch::VirtualAddress;
 use crate::layout;
 use crate::util::unchecked_align_down;
-use aarch64_paging::paging::{MemoryRegion as VaRange, PAGE_SIZE};
 use alloc::alloc::{alloc_zeroed, dealloc, handle_alloc_error};
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;

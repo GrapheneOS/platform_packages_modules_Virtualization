@@ -36,7 +36,9 @@ pub use aarch64::rand;
 pub use aarch64::uart;
 
 #[cfg(target_arch = "aarch64")]
-pub use aarch64_paging::paging::VirtualAddress;
+pub use aarch64_paging::paging;
+
+pub use paging::VirtualAddress;
 
 /// Flush `size` bytes of data cache by virtual address.
 #[inline]

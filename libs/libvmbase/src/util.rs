@@ -14,7 +14,7 @@
 
 //! Utility functions.
 
-use aarch64_paging::paging::MemoryRegion;
+use crate::arch::paging::MemoryRegion;
 use core::ops::Range;
 
 /// Computes the largest multiple of the provided alignment smaller or equal to the address.
