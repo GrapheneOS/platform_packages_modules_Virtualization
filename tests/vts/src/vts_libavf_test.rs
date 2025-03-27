@@ -84,12 +84,17 @@ fn run_rialto(protected_vm: bool) -> Result<()> {
 
     info!("raw config created");
 
+    // The first 4 bytes of an instance ID for a vendor VM must be 0xFFFFFFFF
+    let mut instance_id: [u8; 64] = [0; 64];
+    instance_id[0..4].copy_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF]);
+
     // SAFETY: config is the only reference to a valid object
     unsafe {
         AVirtualMachineRawConfig_setName(config, c"vts_libavf_test_rialto".as_ptr());
         AVirtualMachineRawConfig_setKernel(config, kernel_fd);
         AVirtualMachineRawConfig_setProtectedVm(config, protected_vm);
         AVirtualMachineRawConfig_setMemoryMiB(config, VM_MEMORY_MB);
+        AVirtualMachineRawConfig_setInstanceId(config, instance_id.as_ptr(), instance_id.len());
     }
 
     let mut vm = std::ptr::null_mut();
