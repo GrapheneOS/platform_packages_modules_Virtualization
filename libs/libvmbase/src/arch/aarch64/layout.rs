@@ -16,7 +16,8 @@
 //!
 //! https://crosvm.dev/book/appendix/memory_layout.html#common-layout
 
-use crate::memory::page_4kb_of;
+use crate::arch::VirtualAddress;
+use crate::memory::{page_4kb_of, PAGE_SIZE};
 use core::ops::Range;
 use static_assertions::const_assert_eq;
 
@@ -50,3 +51,8 @@ const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[0]));
 const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[1]));
 const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[2]));
 const_assert_eq!(UART_PAGE_ADDR, page_4kb_of(UART_ADDRESSES[3]));
+
+/// Range of the page at UART_PAGE_ADDR of PAGE_SIZE.
+pub fn console_uart_page() -> Range<VirtualAddress> {
+    VirtualAddress(UART_PAGE_ADDR)..VirtualAddress(UART_PAGE_ADDR + PAGE_SIZE)
+}

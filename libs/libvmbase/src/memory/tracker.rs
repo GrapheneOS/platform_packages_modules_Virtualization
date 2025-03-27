@@ -120,7 +120,8 @@ pub fn unshare_all_memory() {
 /// Unshare the UART page, previously shared with the host.
 pub fn unshare_uart() -> Result<()> {
     let Some(mmio_guard) = get_mmio_guard() else { return Ok(()) };
-    Ok(mmio_guard.unmap(layout::crosvm::UART_PAGE_ADDR)?)
+    let console_uart_page = layout::console_uart_page();
+    Ok(mmio_guard.unmap(console_uart_page.start.0)?)
 }
 
 /// Map the provided range as normal memory, with R/W permissions.

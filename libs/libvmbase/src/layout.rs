@@ -24,6 +24,8 @@ use core::ops::Range;
 #[cfg(target_arch = "aarch64")]
 pub use crate::arch::aarch64::layout as crosvm;
 
+pub use crosvm::console_uart_page;
+
 /// First address that can't be translated by a level 1 TTBR0_EL1.
 pub const MAX_VIRT_ADDR: usize = 1 << 40;
 
@@ -94,12 +96,6 @@ pub fn stack_range() -> Range<VirtualAddress> {
 /// Writable data region for the exception handler stack.
 pub fn eh_stack_range() -> Range<VirtualAddress> {
     linker_region!(eh_stack_limit, init_eh_stack_pointer)
-}
-
-/// Range of the page at UART_PAGE_ADDR of PAGE_SIZE.
-#[cfg(target_arch = "aarch64")]
-pub fn console_uart_page() -> Range<VirtualAddress> {
-    VirtualAddress(crosvm::UART_PAGE_ADDR)..VirtualAddress(crosvm::UART_PAGE_ADDR + PAGE_SIZE)
 }
 
 /// Read-write data (original).
