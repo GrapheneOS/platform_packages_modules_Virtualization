@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Velikost diska je nastavljena"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Dodeljeno: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Največja velikost: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"V napravi ni dovolj prostora za spreminjanje velikosti diska"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Prekliči"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Uporabi"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminal se bo znova zagnal, da se bo izvedla sprememba velikosti diska"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"Nepopravljiva napaka"</string>
     <string name="error_desc" msgid="4588252235686826721">"Obnovitev po napaki ni uspela.\nPoskusite znova zagnati terminal ali uporabiti eno od možnosti obnovitve.\nČe noben poskus ne uspe, izbrišite vse podatke tako, da v možnostih za razvijalce vklopite/izklopite terminal Linux."</string>
     <string name="error_code" msgid="3585291676855383649">"Koda napake: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"Nastavitve"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal se izvaja"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Kliknite, če želite odpreti terminal"</string>

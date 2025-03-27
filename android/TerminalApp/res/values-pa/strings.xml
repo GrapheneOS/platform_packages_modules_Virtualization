@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ਡਿਸਕ ਸਾਈਜ਼ ਸੈੱਟ ਕੀਤਾ ਗਿਆ"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ਜ਼ਿੰਮੇ ਲਗਾਇਆ ਗਿਆ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ਵੱਧੋ-ਵੱਧ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"ਡਿਸਕ ਦਾ ਆਕਾਰ ਬਦਲਣ ਲਈ ਡੀਵਾਈਸ \'ਤੇ ਲੋੜੀਂਦੀ ਜਗ੍ਹਾ ਨਹੀਂ ਹੈ"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ਰੱਦ ਕਰੋ"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ਲਾਗੂ ਕਰੋ"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ਡਿਸਕ ਦਾ ਆਕਾਰ ਬਦਲਣ ਲਈ ਟਰਮੀਨਲ ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕੀਤਾ ਜਾਵੇਗਾ"</string>
@@ -83,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ਮੁੜ-ਹਾਸਲ ਨਾ ਹੋਣਯੋਗ ਡਾਟੇ ਸੰਬੰਧੀ ਗੜਬੜ"</string>
     <string name="error_desc" msgid="4588252235686826721">"ਗੜਬੜ ਨੂੰ ਠੀਕ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।\nਤੁਸੀਂ ਟਰਮੀਨਲ ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕਰਨ ਦੀ ਕੋਸ਼ਿਸ਼ ਕਰ ਸਕਦੇ ਹੋ ਜਾਂ ਰਿਕਵਰੀ ਦੇ ਵਿਕਲਪਾਂ ਵਿੱਚੋਂ ਕਿਸੇ ਇੱਕ ਨੂੰ ਅਜ਼ਮਾ ਕੇ ਦੇਖ ਸਕਦੇ ਹੋ।\nਜੇ ਸਾਰੀਆਂ ਕੋਸ਼ਿਸ਼ਾਂ ਅਸਫਲ ਹੋ ਜਾਂਦੀਆਂ ਹਨ, ਤਾਂ ਵਿਕਾਸਕਾਰ ਵਿਕਲਪਾਂ ਤੋਂ Linux ਟਰਮੀਨਲ ਨੂੰ ਚਾਲੂ/ਬੰਦ ਕਰ ਕੇ ਸਾਰਾ ਡਾਟਾ ਸਾਫ਼ ਕਰੋ।"</string>
     <string name="error_code" msgid="3585291676855383649">"ਗੜਬੜ ਕੋਡ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"ਨਵੇਂ ਟਰਮੀਨਲ \'ਤੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"ਤੁਹਾਡੇ ਵੱਲੋਂ ਵਰਤਿਆ ਜਾ ਰਿਹਾ Linux ਟਰਮੀਨਲ ਪੁਰਾਣਾ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਅੱਗੇ ਵਧਣ ਲਈ ਅੱਪਗ੍ਰੇਡ ਕਰੋ।\nਡਾਟੇ ਦਾ ਬੈਕਅੱਪ <xliff:g id="PATH">/mnt/backup</xliff:g> ਵਿੱਚ ਲਿਆ ਜਾਵੇਗਾ"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"ਅੱਪਗ੍ਰੇਡ ਕਰੋ"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"ਅੱਪਗ੍ਰੇਡ ਕਰਨਾ ਅਸਫਲ ਰਿਹਾ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ਸੈਟਿੰਗਾਂ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ਟਰਮੀਨਲ ਚਾਲੂ ਹੈ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ਟਰਮੀਨਲ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ"</string>

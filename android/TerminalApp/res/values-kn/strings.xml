@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ಡಿಸ್ಕ್ ಗಾತ್ರವನ್ನು ಸೆಟ್ ಮಾಡಲಾಗಿದೆ"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಸಾಧನದಲ್ಲಿ ಸಾಕಷ್ಟು ಸ್ಥಳಾವಕಾಶವಿಲ್ಲ."</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ರದ್ದುಮಾಡಿ"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ಅನ್ವಯಿಸಿ"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ"</string>
     <string name="error_desc" msgid="4588252235686826721">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\nನೀವು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು.\nಎಲ್ಲಾ ಪ್ರಯತ್ನಗಳು ವಿಫಲವಾದರೆ, ಡೆವಲಪರ್ ಆಯ್ಕೆಗಳಿಂದ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಆನ್/ಆಫ್ ಮಾಡುವ ಮೂಲಕ ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸಿಹಾಕು."</string>
     <string name="error_code" msgid="3585291676855383649">"ದೋಷ ಕೋಡ್‌: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ"</string>
