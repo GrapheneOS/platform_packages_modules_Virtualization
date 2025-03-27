@@ -684,7 +684,7 @@ fn validate_pci_addr_range(
     let cpu_addr = range.parent_addr;
     let size = range.size;
 
-    if range_type != PciRangeType::Memory64 {
+    if !(range_type == PciRangeType::Memory64 || range_type == PciRangeType::Memory32) {
         error!("Invalid range type {:?} for bus address {:#x} in PCI node", range_type, bus_addr);
         return Err(RebootReason::InvalidFdt);
     }
