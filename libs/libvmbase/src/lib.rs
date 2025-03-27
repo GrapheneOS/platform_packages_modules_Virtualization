@@ -25,6 +25,7 @@ mod entry;
 pub mod fdt;
 pub mod heap;
 pub mod layout;
+pub mod linker;
 pub mod logger;
 pub mod memory;
 pub mod power;

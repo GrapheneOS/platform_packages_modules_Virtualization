@@ -18,7 +18,6 @@ pub mod dbm;
 pub mod exceptions;
 pub mod hvc;
 pub mod layout;
-pub mod linker;
 pub mod page_table;
 pub mod platform;
 pub mod rand;

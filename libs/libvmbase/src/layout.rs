@@ -16,9 +16,8 @@
 
 #![allow(unused_unsafe)]
 
-#[cfg(target_arch = "aarch64")]
-use crate::arch::aarch64::linker::__stack_chk_guard;
 use crate::arch::VirtualAddress;
+use crate::linker::__stack_chk_guard;
 use crate::memory::{max_stack_size, PAGE_SIZE};
 use core::ops::Range;
 
@@ -32,8 +31,7 @@ pub const MAX_VIRT_ADDR: usize = 1 << 40;
 #[macro_export]
 macro_rules! linker_addr {
     ($symbol:ident) => {{
-        #[cfg(target_arch = "aarch64")]
-        let addr = (&raw const $crate::arch::aarch64::linker::$symbol) as usize;
+        let addr = (&raw const $crate::linker::$symbol) as usize;
         VirtualAddress(addr)
     }};
 }

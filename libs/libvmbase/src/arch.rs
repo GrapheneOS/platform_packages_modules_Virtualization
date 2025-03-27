@@ -24,9 +24,6 @@ pub use aarch64::platform;
 pub use aarch64::layout;
 
 #[cfg(target_arch = "aarch64")]
-pub use aarch64::linker;
-
-#[cfg(target_arch = "aarch64")]
 pub use aarch64::dbm;
 
 #[cfg(target_arch = "aarch64")]
