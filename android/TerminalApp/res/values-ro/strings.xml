@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Dimensiunea discului este setată"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"S-au alocat <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> max."</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Nu există suficient spațiu pe dispozitiv pentru a redimensiona discul"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Anulează"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Aplică"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminalul va fi repornit pentru a redimensiona discul"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"Eroare ireversibilă"</string>
     <string name="error_desc" msgid="4588252235686826721">"Nu s-a putut recupera în urma unei erori.\nRepornește terminalul sau încearcă una dintre opțiunile de recuperare.\nDacă toate încercările eșuează, șterge toate datele activând sau dezactivând terminalul Linux din opțiunile pentru dezvoltatori."</string>
     <string name="error_code" msgid="3585291676855383649">"Cod de eroare: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"Setări"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalul rulează"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Dă clic pentru a deschide terminalul"</string>

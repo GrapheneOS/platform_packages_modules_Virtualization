@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Mida del disc definida"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> assignats"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> màx."</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"No hi ha prou espai al dispositiu per canviar la mida del disc"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancel·la"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Aplica"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"El terminal es reiniciarà per canviar la mida del disc"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"Error irrecuperable"</string>
     <string name="error_desc" msgid="4588252235686826721">"No s\'ha pogut recuperar després de l\'error.\nPots provar de reiniciar el terminal o provar una de les opcions de recuperació.\nSi tots els intents fallen, suprimeix totes les dades activant o desactivant el terminal de Linux des de les opcions per a desenvolupadors."</string>
     <string name="error_code" msgid="3585291676855383649">"Codi d\'error: <xliff:g id="ERROR_CODE">%s</xliff:g>."</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"Configuració"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"El terminal s\'està executant"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Fes clic per obrir el terminal"</string>

@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Schijfgrootte ingesteld"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> toegewezen"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> max."</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Onvoldoende ruimte op het apparaat om de schijfgrootte te wijzigen"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Annuleren"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Toepassen"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminal wordt opnieuw opgestart om de schijfgrootte aan te passen"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"Onherstelbare fout"</string>
     <string name="error_desc" msgid="4588252235686826721">"Kan niet herstellen van een fout.\nJe kunt de terminal opnieuw opstarten of een van de herstelopties proberen.\nAls alle pogingen mislukken, wis je alle gegevens door de Linux-terminal aan/uit te zetten via de ontwikkelaarsopties."</string>
     <string name="error_code" msgid="3585291676855383649">"Foutcode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"Instellingen"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal wordt uitgevoerd"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Klik om terminal te openen"</string>

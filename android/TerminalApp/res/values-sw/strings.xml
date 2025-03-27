@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Ukubwa wa diski umewekwa"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> zimekabidhiwa"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Kikomo cha <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Hakuna nafasi ya kutosha kwenye kifaa ili kubadilisha ukubwa wa diski"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Acha"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Tekeleza"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Temino itafungwa kisha ifunguliwe ili kubadilisha ukubwa wa diski"</string>
@@ -83,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Hitilafu inayozuia kurejesha"</string>
     <string name="error_desc" msgid="4588252235686826721">"Imeshindwa kurejesha data kutokana na hitilafu.\nUnaweza kujaribu kufunga kisha ufungue kifaa au ujaribu mojawapo ya chaguo za kurejesha.\nIwapo utashindwa, ondoa kabisa data yote kwa kuwasha au kuzima kifaa cha Linux katika chaguo za wasanidi programu."</string>
     <string name="error_code" msgid="3585291676855383649">"Msimbo wa hitilafu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Weka toleo jipya zaidi la kituo"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Kituo cha Linux ulichokuwa ukitumia kimepitwa na wakati. Tafadhali pata toleo jipya ili uendelee.\nNakala za data zitahifadhiwa kwenye <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Pata toleo jipya"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Imeshindwa kuweka toleo jipya"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Mipangilio"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Temino inatumika"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Bofya ili ufungue temino"</string>

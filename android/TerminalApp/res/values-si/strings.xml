@@ -42,8 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"තැටි ප්‍රමාණය සැකසිණි"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> පවරන ලදි"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> උපරිමය"</string>
-    <!-- no translation found for settings_disk_resize_not_enough_space_message (6977611919841042576) -->
-    <skip />
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"තැටිය ප්‍රතිප්‍රමාණ කිරීමට උපාංගයේ ප්‍රමාණවත් ඉඩක් නොමැත"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"අවලංගු කරන්න"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"යොදන්න"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"තැටියේ ප්‍රමාණය වෙනස් කිරීමට ටර්මිනලය යළි ඇරඹෙනු ඇත"</string>
@@ -83,6 +82,14 @@
     <string name="error_title" msgid="405150657301906598">"ප්‍රතිසාධනය කළ නොහැකි දෝෂය"</string>
     <string name="error_desc" msgid="4588252235686826721">"දෝෂයකින් ප්‍රතිසාධනය කිරීමට අසමත් විය.\nඔබට ටර්මිනලය නැවත ආරම්භ කිරීමට උත්සාහ කළ හැක, නැතහොත් ප්‍රතිසාධන විකල්ප වලින් එකක් උත්සාහ කරන්න.\nසියලු උත්සාහයන් අසමත් වුවහොත්, සංවර්ධක විකල්ප වලින් Linux පර්යන්තය ක්‍රියාත්මක/ක්‍රියාවිරහිත කිරීමෙන් සියලු දත්ත පිස දමන්න."</string>
     <string name="error_code" msgid="3585291676855383649">"දෝෂ කේතය: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for upgrade_title (2882073508237099774) -->
+    <skip />
+    <!-- no translation found for upgrade_desc (5082726326034764623) -->
+    <skip />
+    <!-- no translation found for upgrade_button (2118716848859611704) -->
+    <skip />
+    <!-- no translation found for upgrade_error (8195371718626852651) -->
+    <skip />
     <string name="service_notification_settings" msgid="1437365721184401135">"සැකසීම්"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"පර්යන්තය ධාවනය වේ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ටර්මිනලය විවෘත කිරීමට ක්ලික් කරන්න"</string>
