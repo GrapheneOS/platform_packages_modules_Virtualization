@@ -48,11 +48,9 @@ pub struct Tls {
 #[export_name = "__bionic_tls"]
 pub static mut TLS: Tls = Tls { _unused: [0; 40], stack_guard: 0 };
 
-/// Gets a reference to the TLS from the dedicated system register.
-pub fn __get_tls() -> &'static mut Tls {
-    let tpidr = read_sysreg!("tpidr_el0");
-    // SAFETY: The register is currently only written to once, from entry.S, with a valid value.
-    unsafe { &mut *(tpidr as *mut Tls) }
+/// Gets a pointer to the TLS from the dedicated system register.
+pub fn __get_tls() -> *mut Tls {
+    read_sysreg!("tpidr_el0") as *mut Tls
 }
 
 #[no_mangle]

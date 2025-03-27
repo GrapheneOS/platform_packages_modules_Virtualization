@@ -1085,6 +1085,60 @@ fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt
     }
 }
 
+/// Valid PSCI versions allowed for guests.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PsciVersion {
+    V0_2,
+    V1_0,
+}
+
+impl PsciVersion {
+    const V1_0_COMPAT: &CStr = c"arm,psci-1.0";
+    const V0_2_COMPAT: &CStr = c"arm,psci-0.2";
+
+    const fn get_compatible(&self) -> &'static CStr {
+        match self {
+            Self::V1_0 => Self::V1_0_COMPAT,
+            Self::V0_2 => Self::V0_2_COMPAT,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct PsciInfo {
+    version: PsciVersion,
+}
+
+fn read_psci(fdt: &Fdt) -> libfdt::Result<PsciInfo> {
+    let valid_versions = &[PsciVersion::V0_2, PsciVersion::V1_0];
+    for version in valid_versions {
+        let compat = version.get_compatible();
+        if let Some(node) = fdt.compatible_nodes(compat)?.next() {
+            let method = node.getprop_str(c"method")?.ok_or(FdtError::NotFound)?;
+            if method != c"hvc" {
+                return Err(FdtError::BadValue);
+            }
+            return Ok(PsciInfo { version: *version });
+        }
+    }
+
+    // PSCI is required for pVMs.
+    Err(FdtError::NotFound)
+}
+
+fn patch_psci(fdt: &mut Fdt, psci: &PsciInfo) -> libfdt::Result<()> {
+    let mut node = fdt.node_mut(c"/psci")?.ok_or(FdtError::NotFound)?;
+    let node_ref = node.as_node();
+    let node_compat = node_ref.getprop_str(c"compatible")?.ok_or(FdtError::NotFound)?;
+    let compat = psci.version.get_compatible();
+
+    if compat != node_compat {
+        node.setprop(c"compatible", compat.to_bytes())?;
+    }
+
+    Ok(())
+}
+
 #[derive(Debug)]
 pub struct DeviceTreeInfo {
     initrd_range: Option<(DeviceTreeInteger, DeviceTreeInteger)>,
@@ -1100,6 +1154,7 @@ pub struct DeviceTreeInfo {
     vm_ref_dt_props_info: BTreeMap<CString, Vec<u8>>,
     vcpufreq_info: Option<VcpufreqInfo>,
     wdt_info: Option<WdtInfo>,
+    psci: PsciInfo,
 }
 
 impl DeviceTreeInfo {
@@ -1239,6 +1294,11 @@ fn parse_device_tree(
         RebootReason::InvalidFdt
     })?;
 
+    let psci = read_psci(fdt).map_err(|e| {
+        error!("Failed to read PSCI info from DT: {e}");
+        RebootReason::InvalidFdt
+    })?;
+
     let swiotlb_info = SwiotlbInfo::new_from_fdt(fdt)
         .map_err(|e| {
             error!("Failed to read swiotlb info from DT: {e}");
@@ -1299,6 +1359,7 @@ fn parse_device_tree(
         vm_ref_dt_props_info,
         vcpufreq_info,
         wdt_info,
+        psci,
     })
 }
 
@@ -1349,6 +1410,10 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
     })?;
     patch_timer(fdt, info.cpus.len()).map_err(|e| {
         error!("Failed to patch timer info to DT: {e}");
+        RebootReason::InvalidFdt
+    })?;
+    patch_psci(fdt, &info.psci).map_err(|e| {
+        error!("Failed to patch PSCI info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
     if let Some(device_assignment) = &info.device_assignment {
