@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Ανεπανόρθωτο σφάλμα"</string>
     <string name="error_desc" msgid="4588252235686826721">"Αποτυχία ανάκτησης από σφάλμα.\nΜπορείτε να δοκιμάσετε να επανεκκινήσετε το τερματικό ή να δοκιμάσετε μια από τις επιλογές ανάκτησης.\nΕάν όλες οι προσπάθειες αποτύχουν, κάντε εκκαθάριση όλων των δεδομένων ενεργοποιώντας/απενεργοποιώντας το τερματικό Linux από τις επιλογές για προγραμματιστές."</string>
     <string name="error_code" msgid="3585291676855383649">"Κωδικός σφάλματος: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Αναβάθμιση σε νεότερο τερματικό"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Το τερματικό Linux που χρησιμοποιείτε είναι παλιό. Κάντε αναβάθμιση για να συνεχίσετε.\nΘα δημιουργηθούν αντίγραφα ασφαλείας των δεδομένων στο <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Αναβάθμιση"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Η αναβάθμιση απέτυχε"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Ρυθμίσεις"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Το τερματικό εκτελείται"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Κάντε κλικ για άνοιγμα του τερματικού"</string>

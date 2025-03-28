@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Neatkopjama kļūda"</string>
     <string name="error_desc" msgid="4588252235686826721">"Neizdevās veikt atkopšanu pēc kļūdas.\nVarat restartēt termināli vai izmēģināt kādu no atkopšanas opcijām.\nJa neviens mēģinājums neizdodas, notīriet visus datus, izstrādātāju opcijās ieslēdzot/izslēdzot Linux termināli."</string>
     <string name="error_code" msgid="3585291676855383649">"Kļūdas kods: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Jauniniet uz jaunāku termināli"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Jūsu izmantotais Linux terminālis ir novecojis. Jauniniet to, lai turpinātu.\nDati tiks dublēti šeit: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Jaunināt"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Jaunināšana neizdevās."</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Iestatījumi"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminālis darbojas"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Lai atvērtu termināli, noklikšķiniet"</string>

@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ຂໍ້ຜິດພາດທີ່ບໍ່ສາມາດກູ້ຄືນມາໄດ້"</string>
     <string name="error_desc" msgid="4588252235686826721">"ກູ້ຄືນຈາກຂໍ້ຜິດພາດບໍ່ສຳເລັດ.\nທ່ານສາມາດລອງຣີສະຕາດເທີມິນອນ ຫຼື ລອງໃຊ້ໜຶ່ງໃນຕົວເລືອກການກູ້ຄືນໄດ້.\nຫາກພະຍາຍາມດຳເນີນການທຸກຢ່າງແລ້ວແຕ່ບໍ່ສຳເລັດ, ໃຫ້ລຶບລ້າງຂໍ້ມູນທັງໝົດໂດຍເປີດ/ປິດເທີມິນອນ Linux ຈາກຕົວເລືອກນັກພັດທະນາ."</string>
     <string name="error_code" msgid="3585291676855383649">"ລະຫັດຂໍ້ຜິດພາດ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"ອັບເກຣດເປັນເທີມິນອນເວີຊັນໃໝ່"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"ເທີມິນອນ Linux ທີ່ທ່ານໃຊ້ຢູ່ເປັນເວີຊັນເກົ່າ. ກະລຸນາອັບເກຣດເພື່ອດຳເນີນການຕໍ່.\nລະບົບຈະສຳຮອງຂໍ້ມູນໄວ້ຢູ່ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"ອັບເກຣດ"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"ອັບເກຣດບໍ່ສຳເລັດ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ການຕັ້ງຄ່າ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ເທີມິນອນກຳລັງເຮັດວຽກຢູ່"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ຄລິກເພື່ອເປີດເທີມິນອນ"</string>

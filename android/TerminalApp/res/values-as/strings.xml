@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"পুনৰুদ্ধাৰ কৰিব নোৱৰা আসোঁৱাহ"</string>
     <string name="error_desc" msgid="4588252235686826721">"এটা আসোঁৱাহৰ পৰা পুনৰুদ্ধাৰ কৰিব পৰা নগ’ল।\nআপুনি টাৰ্মিনেলটো ৰিষ্টাৰ্ট কৰি চাব পাৰে বা পুনৰুদ্ধাৰৰ বিকল্পসমূহৰ মাজৰ পৰা এটা ব্যৱহাৰ কৰি চাব পাৰে।\nযদি আটাইবোৰ প্ৰয়াস বিফল হয়, বিকাশকৰ্তাৰ বিকল্পসমূহৰ পৰা Linux টাৰ্মিনেল অন/অফ কৰি আটাইবোৰ ডেটা মচি পেলাওক।"</string>
     <string name="error_code" msgid="3585291676855383649">"আসোঁৱাহ ক’ড: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"সেইটোতকৈ নতুন টাৰ্মিনেললৈ আপগ্ৰে’ড কৰক"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"আপুনি ব্যৱহাৰ কৰি থকা Linux টাৰ্মিনেলটো আওপুৰণি। অনুগ্ৰহ কৰি আগবাঢ়িবলৈ আপগ্ৰে’ড কৰক।\nডেটাৰ বেক আপ <xliff:g id="PATH">/mnt/backup</xliff:g>ত লোৱা হ’ব"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"আপগ্ৰে’ড কৰক"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"আপগ্ৰে’ড কৰিব পৰা নগ’ল"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ছেটিং"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"টাৰ্মিনেলটো চলি আছে"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"টাৰ্মিনেল খুলিবলৈ ক্লিক কৰক"</string>

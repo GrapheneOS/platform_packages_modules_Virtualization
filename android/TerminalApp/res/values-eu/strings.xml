@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Leheneratu ezin den errorea"</string>
     <string name="error_desc" msgid="4588252235686826721">"Ezin izan da leheneratu errorea.\nBerrabiarazi terminala edo probatu leheneratzeko aukeretako bat.\nSaiakera guztiek huts egiten badute, xahutu datu guztiak garatzaileentzako aukeren bidez Linux-en terminala aktibatuta/desaktibatuta."</string>
     <string name="error_code" msgid="3585291676855383649">"Errore-kodea: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Bertsio-berritu terminal berriago batera"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Erabiltzen ari zinen Linux-en terminala zaharkituta dago. Aurrera egiteko, bertsio-berritu.\nHemen egingo dira datuen babeskopiak: <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Bertsio-berritu"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Ezin izan da bertsio-berritu"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Ezarpenak"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminala abian da"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Egin klik terminala irekitzeko"</string>

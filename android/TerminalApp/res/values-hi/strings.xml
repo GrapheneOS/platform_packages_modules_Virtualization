@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ऐसी गड़बड़ी जिसकी वजह से डेटा वापस नहीं पाया जा सकता"</string>
     <string name="error_desc" msgid="4588252235686826721">"किसी गड़बड़ी की वजह से डेटा वापस नहीं पाया जा सका.\nटर्मिनल को रीस्टार्ट करके देखें या डेटा वापस पाने के किसी एक विकल्प को आज़माएं.\nअगर सभी कोशिशें बेकार हो जाती हैं, तो \'डेवलपर के लिए सेटिंग और टूल\' से Linux टर्मिनल को चालू/बंद करके, सारा डेटा मिटा दें."</string>
     <string name="error_code" msgid="3585291676855383649">"गड़बड़ी का कोड: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"नए टर्मिनल पर अपग्रेड करें"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"जिस Linux टर्मिनल का इस्तेमाल किया जा रहा था वह पुराना है. आगे बढ़ने के लिए, कृपया अपग्रेड करें.\nडेटा का बैकअप <xliff:g id="PATH">/mnt/backup</xliff:g> पर लिया जाएगा"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"अपग्रेड करें"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"अपग्रेड नहीं किया जा सका"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिंग"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चालू है"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"टर्मिनल खोलने के लिए क्लिक करें"</string>
