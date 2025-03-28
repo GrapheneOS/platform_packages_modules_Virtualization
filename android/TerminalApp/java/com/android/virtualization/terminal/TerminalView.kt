@@ -281,7 +281,11 @@ class TerminalView(context: Context, attrs: AttributeSet?) :
     override fun onCreateInputConnection(outAttrs: EditorInfo?): InputConnection? {
         val inputConnection = super.onCreateInputConnection(outAttrs)
         if (outAttrs != null) {
-            outAttrs.inputType = outAttrs.inputType or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            outAttrs.inputType =
+                InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
+                    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            outAttrs.imeOptions = EditorInfo.IME_FLAG_FORCE_ASCII
         }
         return inputConnection
     }
