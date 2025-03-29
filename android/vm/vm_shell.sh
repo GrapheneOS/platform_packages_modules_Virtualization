@@ -50,6 +50,17 @@ function connect_vm() {
 }
 
 function list_cids() {
+    if adb devices | grep -q "^localhost:8000"; then
+      echo "WARNING: localhost:8000 is already listed in adb devices.">&2
+      echo "There could be an open terminal connected to the adb console.">&2
+      read -p "Do you want to continue? (y/N): " choice
+      if [[ "$choice" != "y" ]]; then
+        echo "Exiting.">&2
+        exit 1
+      else
+        adb disconnect localhost:8000 2>/dev/null
+      fi
+    fi
     adb shell /apex/com.android.virt/bin/vm list | awk 'BEGIN { FS="[:,]" } /cid/ { print $2; }'
 }
 

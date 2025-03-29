@@ -46,7 +46,11 @@ extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
         panic!("Failed to get stack canary entropy: {e}");
     }
 
-    bionic::__get_tls().stack_guard = u64::from_ne_bytes(stack_guard);
+    // Initialize stack_guard in thread-local storage.
+    // SAFETY: The register is currently only written to once, from entry.S, with a valid value.
+    unsafe {
+        (*bionic::__get_tls()).stack_guard = u64::from_ne_bytes(stack_guard);
+    }
 
     switch_to_dynamic_page_tables();
 

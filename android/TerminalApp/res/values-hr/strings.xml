@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Veličina diska je postavljena"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Dodijeljeno: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maks. <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Na uređaju nema dovoljno prostora za promjenu veličine diska"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Odustani"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Primijeni"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminal će se ponovo pokrenuti da bi se promijenila veličina diska"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Nepopravljiva pogreška"</string>
     <string name="error_desc" msgid="4588252235686826721">"Oporavak od pogreške nije uspio.\nMožete pokušati ponovo pokrenuti terminal ili isprobajte jednu od opcija oporavka.\nAko nijedna metoda ne uspije, izbrišite sve podatke tako da uključite/isključite Linux terminal u opcijama za razvojne programere."</string>
     <string name="error_code" msgid="3585291676855383649">"Kôd pogreške: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Nadogradnja na noviji terminal"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Linux terminal koji ste upotrebljavali je zastario. Nadogradite da biste nastavili.\nPodaci će se sigurnosno kopirati na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Nadogradi"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Nadogradnja nije uspjela"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Postavke"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal je pokrenut"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Kliknite da biste otvorili terminal"</string>

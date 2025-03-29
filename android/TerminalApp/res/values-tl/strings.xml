@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Nakatakda na ang laki ng disk"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ang nakatalaga"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> ang max"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Hindi sapat ang space sa device para i-resize ang disk"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Kanselahin"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Ilapat"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Ire-restart ang terminal para i-resize ang disk"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Hindi nare-recover na error"</string>
     <string name="error_desc" msgid="4588252235686826721">"Hindi naka-recover mula sa isang error.\nPuwede mong subukang i-restart ang terminal o subukan ang isa sa mga opsyon sa pag-recover.\nKung mabigo ang lahat ng pagtatangka, i-wipe ang lahat ng data sa pamamagitan ng pag-on/off sa terminal ng Linux mula sa mga opsyon ng developer."</string>
     <string name="error_code" msgid="3585291676855383649">"Code ng error: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Mag-upgrade sa mas bagong terminal"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Luma na ang Linux terminal na ginagamit mo. Mag-upgrade para magpatuloy.\nMaba-back ang data sa <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"I-upgrade"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Hindi na-upgrade"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Mga Setting"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Gumagana ang terminal"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"I-click para buksan ang terminal"</string>

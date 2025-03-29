@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Diskstørrelsen er angitt"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> er tildelt"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maks"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Det er ikke nok plass på enheten til å endre størrelsen på disken"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Avbryt"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Bruk"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Terminalen starter på nytt for å endre størrelsen på disken"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Ugjenopprettelig feil"</string>
     <string name="error_desc" msgid="4588252235686826721">"Kunne ikke gjenopprette etter en feil.\nDu kan prøve å starte terminalen på nytt eller prøve et av gjenopprettingsalternativene.\nHvis alle forsøkene mislykkes, kan du slette alle dataene ved å slå på/av Linux-terminalen fra utvikleralternativene."</string>
     <string name="error_code" msgid="3585291676855383649">"Feilkode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Oppgrader til en nyere terminal"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Linux-terminalen du brukte, er utdatert. Oppgrader for å fortsette.\nDataene sikkerhetskopieres til <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Oppgrader"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Oppgraderingen mislyktes"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Innstillinger"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminalen kjører"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Klikk for å åpne terminalen"</string>

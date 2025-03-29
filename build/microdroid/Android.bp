@@ -476,19 +476,6 @@ avb_gen_vbmeta_image {
     src: ":microdroid_16k_initrd_debuggable",
 }
 
-soong_config_module_type {
-    name: "flag_aware_avb_add_hash_footer_defaults",
-    module_type: "avb_add_hash_footer_defaults",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_llpvm_changes",
-    ],
-    properties: [
-        "rollback_index",
-        "props",
-    ],
-}
-
 avb_add_hash_footer_defaults {
     name: "microdroid_kernel_signed_defaults",
     src: ":empty_file",
@@ -508,44 +495,27 @@ avb_add_hash_footer_defaults {
 
 MICRODROID_GKI_ROLLBACK_INDEX = 2
 
-flag_aware_avb_add_hash_footer_defaults {
+avb_add_hash_footer_defaults {
     name: "microdroid_kernel_cap_defaults",
     // Below are properties that are conditionally set depending on value of build flags.
-    soong_config_variables: {
-        release_avf_enable_llpvm_changes: {
-            rollback_index: MICRODROID_GKI_ROLLBACK_INDEX,
-            props: [
-                {
-                    name: "com.android.virt.cap",
-                    value: "secretkeeper_protection",
-                },
-            ],
+    props: [
+        {
+            name: "com.android.virt.cap",
+            value: "secretkeeper_protection",
         },
-    },
+    ],
+    rollback_index: MICRODROID_GKI_ROLLBACK_INDEX,
 }
 
-flag_aware_avb_add_hash_footer_defaults {
+avb_add_hash_footer_defaults {
     name: "microdroid_kernel_cap_with_uefi_defaults",
-    // Below are properties that are conditionally set depending on value of build flags.
-    soong_config_variables: {
-        release_avf_enable_llpvm_changes: {
-            rollback_index: MICRODROID_GKI_ROLLBACK_INDEX,
-            props: [
-                {
-                    name: "com.android.virt.cap",
-                    value: "secretkeeper_protection|supports_uefi_boot",
-                },
-            ],
-            conditions_default: {
-                props: [
-                    {
-                        name: "com.android.virt.cap",
-                        value: "supports_uefi_boot",
-                    },
-                ],
-            },
+    rollback_index: MICRODROID_GKI_ROLLBACK_INDEX,
+    props: [
+        {
+            name: "com.android.virt.cap",
+            value: "secretkeeper_protection|supports_uefi_boot",
         },
-    },
+    ],
 }
 
 avb_add_hash_footer {

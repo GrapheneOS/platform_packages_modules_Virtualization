@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Дискийн хэмжээг тохируулсан"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> оноосон"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Дээд тал нь <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Дискийн хэмжээг өөрчлөхөд төхөөрөмж дээр хангалттай зай байхгүй байна"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Цуцлах"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Оруулах"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Дискийн хэмжээг өөрчлөхийн тулд терминалыг дахин эхлүүлнэ"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Сэргээх боломжгүй алдаа"</string>
     <string name="error_desc" msgid="4588252235686826721">"Алдааны улмаас сэргээж чадсангүй.\nТа терминалыг дахин эхлүүлэх эсвэл сэргээх сонголтуудын аль нэгийг туршиж үзэх боломжтой.\nХэрэв бүх оролдлого амжилтгүй болбол хөгжүүлэгчийн тохиргооноос Linux терминалыг асаах/унтраах замаар бүх өгөгдлийг арчина уу."</string>
     <string name="error_code" msgid="3585291676855383649">"Алдааны код: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Шинэ терминал руу сайжруулах"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Таны ашиглаж байсан Linux-н терминал хуучирсан байна. Үргэлжлүүлэхийн тулд сайжруулна уу.\nӨгөгдлийг <xliff:g id="PATH">/mnt/backup</xliff:g> дээр нөөцөлнө"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Сайжруулах"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Сайжруулж чадсангүй"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Тохиргоо"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал ажиллаж байна"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Терминалыг нээхийн тулд товшино уу"</string>

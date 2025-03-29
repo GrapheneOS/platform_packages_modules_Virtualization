@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已設定磁碟大小"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已指派 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最多 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"裝置空間不足，無法調整磁碟大小"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"取消"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"套用"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"終端機將會重新開機以調整磁碟大小"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"無法復原的錯誤"</string>
     <string name="error_desc" msgid="4588252235686826721">"無法從錯誤中復原。\n你可嘗試重新啟動終端機，或使用其中一個復原選項。\n如果各種嘗試皆失敗，前往開發人員選項開啟/關閉 Linux 終端機即可抹除所有資料。"</string>
     <string name="error_code" msgid="3585291676855383649">"錯誤代碼：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"升級至較新版本的終端機"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"你先前使用的 Linux 終端機版本過舊。請先升級，才能繼續操作。\n資料將備份至 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"升級"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"升級失敗"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"設定"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"終端機執行中"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"按一下以開啟終端機"</string>

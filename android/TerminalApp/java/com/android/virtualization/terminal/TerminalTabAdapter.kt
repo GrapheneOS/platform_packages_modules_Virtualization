@@ -55,6 +55,7 @@ class TerminalTabAdapter(fragmentActivity: FragmentActivity) :
     fun deleteTab(position: Int) {
         if (position in 0 until tabs.size) {
             tabs.removeAt(position)
+            notifyItemRemoved(position)
         }
     }
 }

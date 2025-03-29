@@ -230,8 +230,12 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
 
     public boolean isFeatureEnabled(String feature) throws Exception {
         CommandRunner android = new CommandRunner(getDevice());
-        String result = android.run(VIRT_APEX + "bin/vm", "check-feature-enabled", feature);
-        return result.contains("enabled");
+        String cmd = VIRT_APEX + "bin/vm check-feature-enabled " + feature;
+        CommandResult result = android.runForResult(cmd);
+        assumeTrue(
+                "Failed to run" + cmd + " " + result,
+                result.getStatus() == CommandStatus.SUCCESS && result.getExitCode() == 0);
+        return result.getStdout().trim().contains("Feature " + feature + " is enabled");
     }
 
     public List<AssignableDevice> getAssignableDevices() throws Exception {

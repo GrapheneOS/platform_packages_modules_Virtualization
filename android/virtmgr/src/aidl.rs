@@ -117,6 +117,9 @@ const MICRODROID_OS_NAME: &str = "microdroid";
 const SECRETKEEPER_IDENTIFIER: &str =
     "android.hardware.security.secretkeeper.ISecretkeeper/default";
 
+const VM_CAPABILITIES_HAL_IDENTIFIER: &str =
+    "android.hardware.virtualization.capabilities.IVmCapabilitiesService/default";
+
 const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
 
 /// crosvm requires all partitions to be a multiple of 4KiB.
@@ -765,10 +768,11 @@ impl VirtualizationService {
             }
         }
 
-        // TODO(b/391774181): handle vendor tee services (which require talking to HAL) as well.
-        if !vendor_tee_services.is_empty() {
-            return Err(anyhow!("support for vendor tee services is coming soon!"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        if !vendor_tee_services.is_empty() && !is_vm_capabilities_hal_supported() {
+            return Err(anyhow!(
+                "requesting access to tee services requires {VM_CAPABILITIES_HAL_IDENTIFIER}"
+            ))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
         // TODO(b/391774181): remove this check in a follow-up patch.
@@ -1011,6 +1015,7 @@ impl VirtualizationService {
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
             custom_memory_backing_files,
+            start_suspended: !vendor_tee_services.is_empty(),
         };
         let instance = Arc::new(
             VmInstance::new(
@@ -1019,6 +1024,7 @@ impl VirtualizationService {
                 requester_uid,
                 requester_debug_pid,
                 vm_context,
+                vendor_tee_services,
             )
             .with_context(|| format!("Failed to create VM with config {:?}", config))
             .with_log()
@@ -1719,6 +1725,16 @@ impl VirtualMachine {
     fn create(instance: Arc<VmInstance>) -> Strong<dyn IVirtualMachine::IVirtualMachine> {
         BnVirtualMachine::new_binder(VirtualMachine { instance }, BinderFeatures::default())
     }
+
+    fn handle_vendor_tee_services(&self) -> binder::Result<()> {
+        // TODO(b/360102915): get vm_fd from crosvm
+        // TODO(b/360102915): talk to HAL
+        self.instance
+            .resume_full()
+            .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
 }
 
 impl Interface for VirtualMachine {}
@@ -1761,7 +1777,12 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
             .start()
             .with_context(|| format!("Error starting VM with CID {}", self.instance.cid))
             .with_log()
-            .or_service_specific_exception(-1)
+            .or_service_specific_exception(-1)?;
+        if !self.instance.vendor_tee_services.is_empty() {
+            self.handle_vendor_tee_services()
+        } else {
+            Ok(())
+        }
     }
 
     fn stop(&self) -> binder::Result<()> {
@@ -2336,6 +2357,11 @@ impl IVirtualMachineService for VirtualMachineService {
 fn is_secretkeeper_supported() -> bool {
     binder::is_declared(SECRETKEEPER_IDENTIFIER)
         .expect("Could not check for declared Secretkeeper interface")
+}
+
+fn is_vm_capabilities_hal_supported() -> bool {
+    binder::is_declared(VM_CAPABILITIES_HAL_IDENTIFIER)
+        .expect("failed to check if {VM_CAPABILITIES_HAL_IDENTIFIER} is present")
 }
 
 impl VirtualMachineService {

@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"डिस्कको आकारको सेट गरियो"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"असाइन गरिएको: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"अधिकतम <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"डिस्कको साइज बदल्न डिभाइसमा पर्याप्त खाली ठाउँ छैन"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"रद्द गर्नुहोस्"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"लागू गर्नुहोस्"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"डिस्कको आकार बदल्न टर्मिनल रिस्टार्ट गरिने छ"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"रिकभर गर्न नदिने त्रुटि"</string>
     <string name="error_desc" msgid="4588252235686826721">"कुनै त्रुटिका कारण रिकभर गर्न सकिएन।\nतपाईं टर्मिनल रिस्टार्ट गरी हेर्न वा रिकभर गर्ने विकल्पहरूमध्ये कुनै एउटा विकल्प अपनाई हेर्न सक्नुहुन्छ।\nसबै विकल्प अपनाउँदा पनि त्रुटि समाधान भएन भने विकासकर्ता मोडबाट Linux टर्मिनल अन/अफ गरी सबै डेटा मेटाउनुहोस्।"</string>
     <string name="error_code" msgid="3585291676855383649">"त्रुटिको कोड: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"अपग्रेड गरी अझ नयाँ टर्मिनल प्रयोग गर्नुहोस्"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"तपाईंले प्रयोग गरिरहनुभएको Linux टर्मिनल पुरानो भइसकेको छ। कृपया अगाडि बढ्न अपग्रेड गर्नुहोस्।\nडेटा <xliff:g id="PATH">/mnt/backup</xliff:g> मा ब्याकअप गरिने छ"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"अपग्रेड गर्नुहोस्"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"अपग्रेड गर्न सकिएन"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"सेटिङ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"टर्मिनल चलिरहेको छ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"टर्मिनल खोल्न क्लिक गर्नुहोस्"</string>
