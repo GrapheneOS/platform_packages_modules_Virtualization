@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ରିକଭର କରିହେଉନଥିବା ତ୍ରୁଟି"</string>
     <string name="error_desc" msgid="4588252235686826721">"ଏକ ତ୍ରୁଟିରୁ ରିକଭର କରିବାରେ ବିଫଳ ହୋଇଛି।\nଆପଣ ଟର୍ମିନାଲ ରିଷ୍ଟାର୍ଟ କରିବାକୁ ଚେଷ୍ଟା କରିପାରିବେ କିମ୍ବା ରିକଭରି ବିକଳ୍ପଗୁଡ଼ିକ ମଧ୍ୟରୁ ଗୋଟିଏ ବିକଳ୍ପ ଚେଷ୍ଟା କରିପାରିବେ।\nଯଦି ସମସ୍ତ ପ୍ରଚେଷ୍ଟା ବିଫଳ ହୁଏ, ତେବେ ଡେଭେଲପର ବିକଳ୍ପରୁ Linux ଟର୍ମିନାଲକୁ ଚାଲୁ/ବନ୍ଦ କରି ସମସ୍ତ ଡାଟା ୱାଇପ କରନ୍ତୁ।"</string>
     <string name="error_code" msgid="3585291676855383649">"ତ୍ରୁଟି କୋଡ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"ନୂଆ ଟର୍ମିନାଲକୁ ଅପଗ୍ରେଡ କରନ୍ତୁ"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"ଆପଣ ବ୍ୟବହାର କରୁଥିବା Linux ଟର୍ମିନାଲଟି ପୁରୁଣା ଅଟେ। ଆଗକୁ ବଢ଼ିବାକୁ ଦୟାକରି ଅପଗ୍ରେଡ କରନ୍ତୁ।\n<xliff:g id="PATH">/mnt/backup</xliff:g>ରେ ଡାଟାର ବେକଅପ ନିଆଯିବ"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"ଅପଗ୍ରେଡ କରନ୍ତୁ"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"ଅପଗ୍ରେଡ କରିବା ବିଫଳ ହୋଇଛି"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ସେଟିଂସ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ଟର୍ମିନାଲ ଚାଲୁ ଅଛି"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ଟର୍ମିନାଲ ଖୋଲିବାକୁ କ୍ଲିକ କରନ୍ତୁ"</string>

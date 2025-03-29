@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Onterugstelbare fout"</string>
     <string name="error_desc" msgid="4588252235686826721">"Kon nie ná ’n fout terugstel nie.\nJy kan probeer om die terminaal te herbegin of een van die herwinningopsies probeer.\nAs alle pogings misluk, vee alle data skoon deur Linux-terminaal in ontwikkelaaropsies aan/af te skakel."</string>
     <string name="error_code" msgid="3585291676855383649">"Foutkode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Gradeer op na ’n nuwer terminaal"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Die Linux-terminaal wat jy gebruik het, is verouderd. Gradeer op om voort te gaan.\nData sal gerugsteun word by <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Gradeer op"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Opgradering het misluk"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Instellings"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminaal loop tans"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Klik om Terminaal oop te maak"</string>

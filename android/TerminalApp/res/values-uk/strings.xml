@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Помилка з неможливістю відновлення"</string>
     <string name="error_desc" msgid="4588252235686826721">"Не вдалося виконати відновлення після помилки.\nСпробуйте перезапустити термінал або скористатись одним зі способів відновлення.\nЯкщо це не допоможе, очистьте всі дані, увімкнувши або вимкнувши термінал Linux у параметрах розробника."</string>
     <string name="error_code" msgid="3585291676855383649">"Код помилки: <xliff:g id="ERROR_CODE">%s</xliff:g>."</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Оновіть термінал"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Ваш термінал Linux застарів. Щоб продовжити, оновіть його.\nРезервну копію даних буде збережено тут: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Оновити"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Не вдалось оновити"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Налаштування"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Термінал запущено"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Натисніть, щоб відкрити термінал"</string>

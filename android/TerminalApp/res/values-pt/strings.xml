@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Erro irrecuperável"</string>
     <string name="error_desc" msgid="4588252235686826721">"Falha ao recuperar o terminal de um erro.\nTente reiniciar o terminal ou usar uma das opções de recuperação.\nSe todas as tentativas falharem, exclua permanentemente os dados ativando/desativando o terminal Linux nas Opções do desenvolvedor."</string>
     <string name="error_code" msgid="3585291676855383649">"Código do erro: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Faça upgrade para um terminal mais recente"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"O terminal Linux que você estava usando está desatualizado. Faça upgrade para continuar.\nOs dados serão salvos em <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Fazer upgrade"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Falha no upgrade"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Configurações"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"O terminal está em execução"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Clique para abrir o terminal"</string>

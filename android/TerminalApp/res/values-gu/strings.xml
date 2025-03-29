@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ભૂલને કારણે રિકવર કરવો અશક્ય"</string>
     <string name="error_desc" msgid="4588252235686826721">"કોઈ ભૂલમાંથી રિકવર કરવામાં નિષ્ફળ રહ્યાં.\nતમે ટર્મિનલને ફરી શરૂ કરવાનો પ્રયાસ કરી શકો છો અથવા રિકવરીના વિકલ્પોમાંનો કોઈ એક વિકલ્પ અજમાવી શકો છો.\nજો બધા પ્રયાસો નિષ્ફળ જાય, તો ડેવલપરના વિકલ્પોમાંથી Linux ટર્મિનલને ચાલુ/બંધ કરીને બધો ડેટા વાઇપ કરો."</string>
     <string name="error_code" msgid="3585291676855383649">"ભૂલનો કોડ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"નવા ટર્મિનલ પર અપગ્રેડ કરો"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"તમે જે Linux ટર્મિનલનો ઉપયોગ કરતા હતા, તે જૂનું થઈ ગયું છે. આગળ વધવા માટે કૃપા કરીને અપગ્રેડ કરો.\n<xliff:g id="PATH">/mnt/backup</xliff:g> પર ડેટાનું બૅકઅપ લેવામાં આવશે"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"અપગ્રેડ કરો"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"અપગ્રેડ કરવાનું નિષ્ફળ થયું"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"સેટિંગ"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ટર્મિનલ ચાલી રહ્યું છે"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ટર્મિનલ ખોલવા માટે ક્લિક કરો"</string>

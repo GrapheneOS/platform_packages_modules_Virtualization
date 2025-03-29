@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Оңдолбос ката"</string>
     <string name="error_desc" msgid="4588252235686826721">"Катадан кийин калыбына келтирилген жок.\nТерминалды өчүрүп күйгүзүп же калыбына келтирүү жолдорунун бирин колдонуп көрүңүз.\nЭгер бардык аракеттер ишке ашпай калса, Linux терминалын иштеп чыгуучунун параметрлеринен күйгүзүп/өчүрүп, бардык маалыматты тазалаңыз."</string>
     <string name="error_code" msgid="3585291676855383649">"Ката коду: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Жаңы терминалга жаңыртыңыз"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Сиз колдонуп жаткан Linux терминалы эскирип калды. Улантуу үчүн аны жаңыртыңыз.\nМаалыматтардын камдык көчүрмөсү <xliff:g id="PATH">/mnt/backup</xliff:g> дарегинде сакталат"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Жаңыртуу"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Жаңыртырлган жок"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Параметрлер"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминал иштеп жатат"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Терминалды ачуу үчүн басыңыз"</string>

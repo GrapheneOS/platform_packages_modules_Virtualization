@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Nepopravljiva napaka"</string>
     <string name="error_desc" msgid="4588252235686826721">"Obnovitev po napaki ni uspela.\nPoskusite znova zagnati terminal ali uporabiti eno od možnosti obnovitve.\nČe noben poskus ne uspe, izbrišite vse podatke tako, da v možnostih za razvijalce vklopite/izklopite terminal Linux."</string>
     <string name="error_code" msgid="3585291676855383649">"Koda napake: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"Nadgradite na novejši terminal"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Terminal Linux, ki ste ga uporabljali, je zastarel. Če želite nadaljevati, ga nadgradite.\nPodatki bodo varnostno kopirani v <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Nadgradi"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Nadgradnja ni uspela"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Nastavitve"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Terminal se izvaja"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Kliknite, če želite odpreti terminal"</string>

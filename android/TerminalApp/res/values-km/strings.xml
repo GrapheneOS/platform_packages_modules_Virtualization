@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"បញ្ហា​ដែលបណ្ដាលឱ្យមិនអាច​ស្ដារបាន"</string>
     <string name="error_desc" msgid="4588252235686826721">"មិនអាចស្ដារឡើងវិញពីបញ្ហាបានទេ។\nអ្នកអាចសាកល្បងចាប់ផ្ដើមទែមីណាល់ឡើងវិញ ឬសាកល្បងប្រើជម្រើសមួយក្នុងចំណោមជម្រើសស្ដារ។\nប្រសិនបើការព្យាយាមទាំងអស់មិនបានសម្រេច សូមឈូសទិន្នន័យទាំងអស់ដោយបើក/បិទទែមីណាល់ Linux ពីជម្រើសសម្រាប់អ្នក​អភិវឌ្ឍន៍។"</string>
     <string name="error_code" msgid="3585291676855383649">"លេខ​កូដ​បញ្ហា៖ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"ដំឡើងទៅកំណែទែមីណាល់ថ្មី​ជាង​នេះ"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"ទែមីណាល់ Linux ដែលអ្នកកំពុងប្រើហួសសម័យហើយ។ សូមដំឡើងកំណែ ដើម្បីបន្ត។\nទិន្នន័យនឹងត្រូវបានបម្រុងទុកនៅ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"ដំឡើងកំណែ"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"ការដំឡើងកំណែ​មិនបានសម្រេចទេ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ការកំណត់"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ទែមីណាល់កំពុងដំណើរការ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ចុចដើម្បីបើកទែមីណាល់"</string>

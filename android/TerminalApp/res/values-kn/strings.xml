@@ -82,14 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ"</string>
     <string name="error_desc" msgid="4588252235686826721">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\nನೀವು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು.\nಎಲ್ಲಾ ಪ್ರಯತ್ನಗಳು ವಿಫಲವಾದರೆ, ಡೆವಲಪರ್ ಆಯ್ಕೆಗಳಿಂದ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಆನ್/ಆಫ್ ಮಾಡುವ ಮೂಲಕ ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸಿಹಾಕು."</string>
     <string name="error_code" msgid="3585291676855383649">"ದೋಷ ಕೋಡ್‌: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for upgrade_title (2882073508237099774) -->
-    <skip />
-    <!-- no translation found for upgrade_desc (5082726326034764623) -->
-    <skip />
-    <!-- no translation found for upgrade_button (2118716848859611704) -->
-    <skip />
-    <!-- no translation found for upgrade_error (8195371718626852651) -->
-    <skip />
+    <string name="upgrade_title" msgid="2882073508237099774">"ಹೊಸ ಟರ್ಮಿನಲ್‌ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"ನೀವು ಬಳಸುತ್ತಿದ್ದ Linux ಟರ್ಮಿನಲ್ ಅವಧಿ ಮೀರಿದೆ. ಮುಂದುವರಿಯಲು ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ.\nಡೇಟಾವನ್ನು <xliff:g id="PATH">/mnt/backup</xliff:g> ನಲ್ಲಿ ಬ್ಯಾಕಪ್ ಮಾಡಲಾಗುತ್ತದೆ"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"ಅಪ್‌ಗ್ರೇಡ್ ವಿಫಲವಾಗಿದೆ"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ"</string>
