@@ -77,6 +77,7 @@ class VmLauncherService : Service() {
     private var debianService: DebianServiceImpl? = null
     private var portNotifier: PortNotifier? = null
     private var runner: Runner? = null
+    private var handler: Handler? = null
 
     interface VmLauncherServiceCallback {
         fun onVmStart()
@@ -98,6 +99,7 @@ class VmLauncherService : Service() {
         bgThreads = Executors.newCachedThreadPool(threadFactory)
         mainWorkerThread = Executors.newSingleThreadExecutor(threadFactory)
         image = InstalledImage.getDefault(this)
+        handler = Handler(Looper.getMainLooper())
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -341,6 +343,10 @@ class VmLauncherService : Service() {
             .build()
     }
 
+    private fun runOnMainThread(r: Runnable) {
+        handler!!.post(r)
+    }
+
     private fun overrideConfigIfNecessary(
         builder: VirtualMachineCustomImageConfig.Builder,
         displayInfo: DisplayInfo?,
@@ -359,7 +365,9 @@ class VmLauncherService : Service() {
                     .setContextTypes(arrayOf<String>("virgl2"))
                     .build()
             )
-            Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
+            runOnMainThread {
+                Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
+            }
             changed = true
         } else if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
             // TODO: check if the configuration is right. current config comes from cuttlefish's one
@@ -374,7 +382,7 @@ class VmLauncherService : Service() {
                     .setContextTypes(arrayOf<String>("gfxstream-vulkan", "gfxstream-composer"))
                     .build()
             )
-            Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show()
+            runOnMainThread { Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show() }
             changed = true
         }
 
@@ -503,6 +511,7 @@ class VmLauncherService : Service() {
     }
 
     override fun onDestroy() {
+        handler = null
         mainWorkerThread.execute({
             if (runner?.vm?.getStatus() == VirtualMachine.STATUS_RUNNING) {
                 doShutdown(null)
