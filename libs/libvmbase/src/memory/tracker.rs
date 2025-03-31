@@ -18,12 +18,12 @@ use super::error::MemoryTrackerError;
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
 use crate::arch::aarch64::page_table::{PageTable, MMIO_LAZY_MAP_FLAG};
 use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
+use crate::arch::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
 use crate::arch::VirtualAddress;
 use crate::dsb;
 use crate::layout;
 use crate::memory::shared::{MemoryRange, MemorySharer, MmioSharer};
 use crate::util::RangeExt as _;
-use aarch64_paging::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
 use alloc::boxed::Box;
 use buddy_system_allocator::LockedFrameAllocator;
 use core::mem::size_of;
@@ -120,7 +120,8 @@ pub fn unshare_all_memory() {
 /// Unshare the UART page, previously shared with the host.
 pub fn unshare_uart() -> Result<()> {
     let Some(mmio_guard) = get_mmio_guard() else { return Ok(()) };
-    Ok(mmio_guard.unmap(layout::crosvm::UART_PAGE_ADDR)?)
+    let Some(console_uart_page) = layout::console_uart_page() else { return Ok(()) };
+    Ok(mmio_guard.unmap(console_uart_page.start.0)?)
 }
 
 /// Map the provided range as normal memory, with R/W permissions.
@@ -543,7 +544,9 @@ impl MemoryTracker {
 
         let mut page_table = PageTable::default();
 
-        page_table.map_device(&console_uart_page.into()).unwrap();
+        if let Some(console_uart_page) = console_uart_page {
+            page_table.map_device(&console_uart_page.into()).unwrap();
+        }
         page_table.map_code(&text.into()).unwrap();
         page_table.map_rodata(&rodata.into()).unwrap();
         page_table.map_data(&data_bss.into()).unwrap();
