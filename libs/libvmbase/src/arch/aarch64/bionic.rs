@@ -1,4 +1,4 @@
-// Copyright 2022, The Android Open Source Project
+// Copyright 2025, The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Basic functionality for bare-metal binaries to run in a VM under crosvm.
+//! aarch64-specific Bionic support code.
 
-#![no_std]
+use crate::bionic::Tls;
+use crate::read_sysreg;
 
-extern crate alloc;
-
-pub mod arch;
-pub mod bionic;
-pub mod console;
-mod entry;
-pub mod fdt;
-pub mod heap;
-pub mod layout;
-pub mod linker;
-pub mod logger;
-pub mod memory;
-pub mod power;
-pub mod rand;
-pub mod uart;
-pub mod util;
-pub mod virtio;
+/// Gets a pointer to the TLS from the dedicated system register.
+pub fn __get_tls() -> *mut Tls {
+    read_sysreg!("tpidr_el0") as *mut Tls
+}

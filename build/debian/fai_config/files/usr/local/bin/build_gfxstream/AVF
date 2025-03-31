@@ -1,0 +1,9 @@
+#!/bin/bash
+sudo apt update
+sudo apt install -y git
+sudo apt build-dep -y -t bookworm-backports mesa
+
+git clone https://gitlab.freedesktop.org/mesa/mesa.git
+cd mesa
+meson setup guest-build/ -Dvulkan-drivers="gfxstream" -Dgallium-drivers="" -Dopengl=false
+ninja -C guest-build/

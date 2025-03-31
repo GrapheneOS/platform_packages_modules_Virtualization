@@ -71,6 +71,7 @@ SECTIONS
 		. = ALIGN(32);
 		data_end = .;
 	} >writable_data AT>image
+	data_size = SIZEOF(.data);
 	data_lma = LOADADDR(.data);
 
 	/* Everything beyond this point will not be included in the binary. */
@@ -91,6 +92,7 @@ SECTIONS
 		. = ALIGN(16);
 		bss_end = .;
 	} >writable_data
+	bss_size = SIZEOF(.bss);
 
 	/* Left unmapped, to catch overflows of the exception handler stack. */
 	.eh_stack_guard_page (NOLOAD) : ALIGN(4096) {
