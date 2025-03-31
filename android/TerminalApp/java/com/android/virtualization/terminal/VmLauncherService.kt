@@ -123,9 +123,7 @@ class VmLauncherService : Service() {
                 // done.
                 val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
 
-                mainWorkerThread.execute({
-                    doStart(notification, displayInfo, diskSize, resultReceiver)
-                })
+                mainWorkerThread.execute({ doStart(displayInfo, diskSize, resultReceiver) })
 
                 // Do this outside of the main worker thread, so that we don't cause
                 // ForegroundServiceDidNotStartInTimeException
@@ -200,12 +198,7 @@ class VmLauncherService : Service() {
     }
 
     @WorkerThread
-    private fun doStart(
-        notification: Notification,
-        displayInfo: DisplayInfo,
-        diskSize: Long,
-        resultReceiver: ResultReceiver,
-    ) {
+    private fun doStart(displayInfo: DisplayInfo, diskSize: Long, resultReceiver: ResultReceiver) {
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
