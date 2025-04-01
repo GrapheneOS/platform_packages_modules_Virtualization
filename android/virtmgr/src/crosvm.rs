@@ -1413,18 +1413,13 @@ fn run_vm(
             if let Some(socket_fd) = &shared_path.socket_fd {
                 let socket_path =
                     add_preserved_fd(&mut preserved_fds, socket_fd.try_clone().unwrap());
-                let raw_fd: i32 = socket_path.rsplit_once('/').unwrap().1.parse().unwrap();
-                command
-                    .arg("--vhost-user-fs")
-                    .arg(format!("tag={},socket-fd={}", &shared_path.tag, raw_fd));
+                command.arg("--vhost-user").arg(format!("fs,socket={}", socket_path));
             }
         } else {
             if let Err(e) = wait_for_file(&shared_path.socket_path, 5) {
                 bail!("Error waiting for file: {}", e);
             }
-            command
-                .arg("--vhost-user-fs")
-                .arg(format!("{},tag={}", &shared_path.socket_path, &shared_path.tag));
+            command.arg("--vhost-user").arg(format!("fs,socket={}", shared_path.socket_path));
         }
     }
 
