@@ -1180,7 +1180,11 @@ fn run_vm(
                 command.arg("--host-cpu-topology");
                 #[cfg(target_arch = "aarch64")]
                 {
-                    command.arg("--virt-cpufreq");
+                    if cfg!(virt_cpufreq_upstream) {
+                        command.arg("--virt-cpufreq-upstream");
+                    } else {
+                        command.arg("--virt-cpufreq");
+                    }
                     command.arg("--cpus").arg("sve=[auto=true]");
                 }
             } else {

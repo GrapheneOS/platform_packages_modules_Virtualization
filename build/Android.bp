@@ -53,6 +53,10 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_SUPPORT_CUSTOM_VM_WITH_PARAVIRTUALIZED_DEVICES"), {
         true: ["paravirtualized_devices"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
+        // Starting with android16-6.12 microdroid kernel uses upstream version of virtcpufreq driver.
+        "android16_612": ["virt_cpufreq_upstream"],
+        default: [],
     }),
 }
 
