@@ -106,7 +106,6 @@ macro_rules! main {
 ///
 /// See https://docs.kernel.org/arch/arm64/booting.html
 /// ```
-#[cfg(target_arch = "aarch64")]
 #[macro_export]
 macro_rules! generate_image_header {
     () => {

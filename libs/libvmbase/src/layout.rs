@@ -24,13 +24,10 @@ use core::ops::Range;
 #[cfg(target_arch = "aarch64")]
 pub use crate::arch::aarch64::layout as crosvm;
 
-#[cfg(target_arch = "x86_64")]
-pub use crate::arch::x86_64::layout as crosvm;
-
 pub use crosvm::console_uart_page;
 
 /// First address that can't be translated by a level 1 TTBR0_EL1.
-pub const MAX_VIRT_ADDR: usize = crosvm::MAX_VIRT_ADDR;
+pub const MAX_VIRT_ADDR: usize = 1 << 40;
 
 /// Get an address from a linker-defined symbol.
 #[macro_export]

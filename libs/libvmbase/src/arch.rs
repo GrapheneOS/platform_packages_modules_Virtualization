@@ -17,50 +17,26 @@
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64;
 
-#[cfg(target_arch = "x86_64")]
-pub mod x86_64;
-
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::bionic;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::bionic;
 
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::platform;
 
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::platform;
-
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::layout;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::layout;
 
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::dbm;
 
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::dbm;
-
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::rand;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::rand;
 
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::uart;
 
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::uart;
-
 #[cfg(target_arch = "aarch64")]
 pub use aarch64_paging::paging;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::paging;
 
 pub use paging::VirtualAddress;
 
@@ -75,10 +51,6 @@ pub(crate) fn flush_region(start: usize, size: usize) {
             for line in (start..end).step_by(line_size) {
                 crate::dc!("cvau", line);
             }
-        } else if #[cfg(target_arch = "x86_64")] {
-            // TODO(b/362733888): implement for x86
-            let _ = start;
-            let _ = size;
         } else {
             compile_error!("Unsupported target_arch")
         }

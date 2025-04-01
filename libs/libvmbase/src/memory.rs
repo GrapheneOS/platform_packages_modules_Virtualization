@@ -30,8 +30,6 @@ pub use tracker::{
 
 #[cfg(target_arch = "aarch64")]
 pub use crate::arch::aarch64::page_table::PageTable;
-#[cfg(target_arch = "x86_64")]
-pub use crate::arch::x86_64::page_table::PageTable;
 
 pub use util::{
     flush, flushed_zeroize, page_4kb_of, PAGE_SIZE, SIZE_128KB, SIZE_16KB, SIZE_2MB, SIZE_4KB,
