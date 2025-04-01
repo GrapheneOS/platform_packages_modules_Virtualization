@@ -16,14 +16,10 @@
 
 use super::error::MemoryTrackerError;
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
-#[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::page_table::{PageTable, MMIO_LAZY_MAP_FLAG};
 use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
 use crate::arch::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
-#[cfg(target_arch = "x86_64")]
-use crate::arch::x86_64::page_table::PageTable;
 use crate::arch::VirtualAddress;
-#[cfg(target_arch = "aarch64")]
 use crate::dsb;
 use crate::layout;
 use crate::memory::shared::{MemoryRange, MemorySharer, MmioSharer};
@@ -487,7 +483,6 @@ impl MemoryTracker {
     /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
     ///
     /// Returns an error if any PTE in the range is not an invalid lazy MMIO mapping.
-    #[cfg(target_arch = "aarch64")]
     fn map_lazy_mmio_as_valid(&mut self, page_range: &VaRange) -> Result<()> {
         // This must be safe and free from break-before-make (BBM) violations, given that the
         // initial lazy mapping has the valid bit cleared, and each newly created valid descriptor
@@ -505,12 +500,6 @@ impl MemoryTracker {
             .map_err(|_| MemoryTrackerError::InvalidPte)
     }
 
-    #[cfg(target_arch = "x86_64")]
-    fn map_lazy_mmio_as_valid(&mut self, _page_range: &VaRange) -> Result<()> {
-        // TODO(b/362733888): Provide the implementation for x86_64
-        Ok(())
-    }
-
     /// Flush all memory regions marked as writable-dirty.
     fn flush_dirty_pages(&mut self) -> Result<()> {
         // Collect memory ranges for which dirty state is tracked.
@@ -518,8 +507,6 @@ impl MemoryTracker {
             self.regions.iter().filter(|r| r.mem_type == MemoryType::ReadWrite).map(|r| &r.range);
         // Execute a barrier instruction to ensure all hardware updates to the page table have been
         // observed before reading PTE flags to determine dirty state.
-        // TODO(b/362733888): Provide the implementation for x86_64
-        #[cfg(target_arch = "aarch64")]
         dsb!("ish");
         // Now flush writable-dirty pages in those regions.
         for range in writable_regions {
