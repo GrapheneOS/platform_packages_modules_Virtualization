@@ -1176,7 +1176,7 @@ fn run_vm(
     }
     match config.cpus.cpuTopology {
         CpuTopology::MatchHost(_) => {
-            if cfg!(virt_cpufreq) && check_if_all_cpus_allowed()? {
+            if check_if_all_cpus_allowed()? {
                 command.arg("--host-cpu-topology");
                 #[cfg(target_arch = "aarch64")]
                 {
