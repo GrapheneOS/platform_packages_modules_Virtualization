@@ -13,7 +13,7 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<configuration description="Runs avf_early_vm_test.">
+<configuration description="Runs avf_hypervisor_neverallow_test.">
     <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer">
         <option name="force-root" value="true"/>
     </target_preparer>
