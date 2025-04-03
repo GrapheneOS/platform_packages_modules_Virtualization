@@ -1121,17 +1121,13 @@ fn run_vm(
             _ => command.arg("--protected-vm"),
         };
 
-        let swiotlb_size_mib = config.swiotlb_mib.map(u32::from).unwrap_or({
-            // 3 virtio-console devices + vsock = 4.
-            // TODO: Count more device types, like balloon, input, and sound.
-            let virtio_pci_device_count = 4 + config.disks.len();
-            // crosvm virtio queue has 256 entries, so 2 MiB per device (2 pages per entry) should
-            // be enough.
-            // NOTE: The above explanation isn't completely accurate, e.g., circa 2024q4, each
-            // virtio-block has 16 queues with 256 entries each and each virito-console has 2
-            // queues of 256 entries each. So, it is allocating less than 2 pages per entry, but
-            // seems to work well enough in practice.
-            2 * virtio_pci_device_count as u32
+        let swiotlb_size_mib = config.swiotlb_mib.map(u32::from).unwrap_or_else(|| {
+            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
+                guest_page_size: 4096, // TODO: Use real page size.
+                block_count: config.disks.len().try_into().unwrap(),
+                console_count: 3,
+                balloon: config.balloon,
+            })
         });
         command.arg("--swiotlb").arg(swiotlb_size_mib.to_string());
 
@@ -1574,4 +1570,113 @@ fn path_to_cstring(path: &Path) -> CString {
     }
     // The path contains invalid utf8 or a null, which should never happen.
     panic!("bad path: {path:?}");
+}
+
+struct SwiotlbEstimateInputs {
+    guest_page_size: u32,
+    block_count: u32,
+    console_count: u32,
+    balloon: bool,
+}
+
+/// Estimate needed size of SWIOTLB based on crosvm and Linux kernel implementation details and
+/// workload guesses.
+///
+/// Since it is based on implementations details of other projects, it is bound to go stale.
+///
+/// Optimized for microdroid. Custom VMs may want to set an explicit swiotlb size in their
+/// configs.
+fn estimate_swiotlb_usage_mib(inputs: SwiotlbEstimateInputs) -> u32 {
+    fn align(x: u32, alignment: u32) -> u32 {
+        (x + alignment) & alignment
+    }
+    // virtio split queue data structure size, based on virtio spec.
+    let virtq_size = |entries: u32| -> u32 {
+        // Assume any extra space in the last page is wasted.
+        align(
+            align(16 * entries, 16) + align(6 + 2 * entries, 2) + align(6 + 8 * entries, 4),
+            inputs.guest_page_size,
+        )
+    };
+
+    let mut total = 0;
+
+    // virtio vsock.
+    total += [
+        // event queue.
+        virtq_size(256),
+        // tx queue.
+        virtq_size(256),
+        // rx queue.
+        virtq_size(256),
+        // Linux eagerly fills the rx queue with requests, one page each.
+        256 * inputs.guest_page_size,
+    ]
+    .iter()
+    .sum::<u32>();
+
+    // virtio console.
+    total += inputs.console_count
+        * [
+            // tx queue.
+            virtq_size(256),
+            // rx queue.
+            virtq_size(256),
+            // Linux eagerly fills the rx queue with requests, one page each.
+            256 * inputs.guest_page_size,
+        ]
+        .iter()
+        .sum::<u32>();
+
+    // virtio block.
+    total += inputs.block_count
+        * [
+            // crosvm gives 16 queues.
+            16 * virtq_size(256),
+        ]
+        .iter()
+        .sum::<u32>();
+
+    // virtio balloon.
+    if inputs.balloon {
+        // Expected queues: inflate, deflate, stats, reporting
+        total += 4 * virtq_size(128);
+    }
+
+    // Guess at workload dependant peak memory needs.
+    //
+    // This is a temporary algorithm that was chosen so that the overall total of this function
+    // matches an older algorithm that gave 2MiB to each of these devices.
+    total += 900 * 1024 * (1 + inputs.console_count + 2 * inputs.block_count);
+
+    total.div_ceil(1024).div_ceil(1024)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_estimate_swiotlb() {
+        // Basic microdroid configuration.
+        assert_eq!(
+            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
+                guest_page_size: 4096,
+                block_count: 3,
+                console_count: 3,
+                balloon: true,
+            }),
+            14
+        );
+        // Basic 16k microdroid configuration.
+        assert_eq!(
+            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
+                guest_page_size: 16 * 1024,
+                block_count: 3,
+                console_count: 3,
+                balloon: true,
+            }),
+            26
+        );
+    }
 }
