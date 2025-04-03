@@ -1,0 +1,11 @@
+python_test_host {
+    name: "avf_hypervisor_neverallow_test",
+    main: "avf_hypervisor_neverallow_test.py",
+    srcs: ["avf_hypervisor_neverallow_test.py"],
+    data: [":sepolicy-analyze"],
+    test_suites: ["vts"],
+    test_config: "AndroidTest.xml",
+    test_options: {
+        unit_test: false,
+    },
+}
