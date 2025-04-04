@@ -67,6 +67,85 @@
 /* Architecturally defined MSRs */
 #define IA32_FS_BASE    0xC0000100
 
+/*
+ *  GDT Access Byte
+ *
+ *  7                               0
+ *  +---+-----+---+---+----+----+---+
+ *  | P | DPL | S | E | DC | RW | A |
+ *  +---+-----+---+---+----+----+---+
+ *                |                 |
+ *                |<-     TYPE    ->|
+ *
+ *  P   1b - Present
+ *  DPL 2b - Descriptor privilege level (ring)
+ *  S   1b - System descriptor (0)
+ *  E   1b - Executable
+ *  DC  1b - Direction/Conforming
+ *  RW  1b - Read/Write
+ *  A   1b - Access (1)
+ *
+ */
+
+#define GDT_ACCESS_P 0x80
+#define GDT_ACCESS_S 0x10
+
+/* Documentation reference
+ * Intel Volume 3A - 3.4.5.1
+ * Table 3-1 Code- and Data-Segment Types
+ *
+ * Access type ACCESS:
+ * R - Read
+ * W - Write
+ * A - Accessed
+ * E - Expand down
+ * X - Executable
+ * C - Conforming
+ */
+#define GDT_ACCESS_TYPE_DATA_RO 0x00
+#define GDT_ACCESS_TYPE_DATA_ROA 0x01
+#define GDT_ACCESS_TYPE_DATA_RW 0x02
+#define GDT_ACCESS_TYPE_DATA_RWA 0x03
+#define GDT_ACCESS_TYPE_DATA_ROE 0x04
+#define GDT_ACCESS_TYPE_DATA_ROEA 0x05
+#define GDT_ACCESS_TYPE_DATA_RWE 0x06
+#define GDT_ACCESS_TYPE_DATA_RWEA 0x07
+#define GDT_ACCESS_TYPE_CODE_XO 0x08
+#define GDT_ACCESS_TYPE_CODE_XA 0x09
+#define GDT_ACCESS_TYPE_CODE_XR 0x0a
+#define GDT_ACCESS_TYPE_CODE_XRA 0x0b
+#define GDT_ACCESS_TYPE_CODE_XOC 0x0c
+#define GDT_ACCESS_TYPE_CODE_XOCA 0x0d
+#define GDT_ACCESS_TYPE_CODE_XRC 0x0e
+#define GDT_ACCESS_TYPE_CODE_XRCA 0x0f
+
+/*
+ *
+ *  Flags bitfield
+ *
+ *  3                  0
+ *  +----+----+---+-----+
+ *  | G  | DB | L | AVL |
+ *  +----+----+---+-----+
+ *
+ *  G   1b - Granularity
+ *           (0) - 1 B
+ *           (1) - 4 KiB
+ *  DB  1b - Size flag
+ *           (0) - 16bit mode
+ *           (1) - 32bit protected mode
+ *  L   1b - Long mode code segment (1)
+ *  AVL 1b - Available to system sw
+ *
+ */
+
+#define GDT_FLAG_G_4KB 0x80
+#define GDT_FLAG_DB_32 0x40
+#define GDT_FLAG_LONG 0x20
+
+#define CODE_SELECTOR 0x10
+#define DATA_SELECTOR 0x18
+
 .macro reset_or_hang
         /* Pulse reset line with 8042 keyboard controller. */
         mov $0xFE, %al
