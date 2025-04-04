@@ -31,6 +31,7 @@ mod instance;
 mod memory;
 mod rollback;
 
+use crate::config::reserved_mem::{ResMem, ResMemEntryInfo};
 use crate::dice::{DiceChainInfo, PartialInputs};
 use crate::entry::RebootReason;
 use crate::fdt::{modify_for_next_stage, read_instance_id, sanitize_device_tree};
@@ -39,6 +40,7 @@ use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bssl_avf::Digester;
+use core::slice::ChunksMut;
 use diced_open_dice::{
     bcc_handover_parse, DiceArtifacts, DiceContext, Hidden, HIDDEN_SIZE, VM_KEY_ALGORITHM,
 };
@@ -51,7 +53,9 @@ use pvmfw_embedded_key::PUBLIC_KEY;
 use vmbase::heap;
 use vmbase::memory::{flush, SIZE_4KB};
 use vmbase::rand;
+use zeroize::Zeroize;
 
+#[allow(clippy::too_many_arguments)]
 fn main<'a>(
     untrusted_fdt: &mut Fdt,
     signed_kernel: &[u8],
@@ -60,6 +64,7 @@ fn main<'a>(
     mut debug_policy: Option<&[u8]>,
     vm_dtbo: Option<&mut [u8]>,
     vm_ref_dt: Option<&[u8]>,
+    reserved_mem: Option<&[u8]>,
 ) -> Result<(Option<&'a [u8]>, bool), RebootReason> {
     info!("pVM firmware");
     debug!("FDT: {:?}", untrusted_fdt.as_ptr());
@@ -96,6 +101,43 @@ fn main<'a>(
         sanitize_device_tree(untrusted_fdt, vm_dtbo, vm_ref_dt, guest_page_size, hyp_page_size)?;
     let fdt = untrusted_fdt; // DT has now been sanitized.
 
+    let mut reserved_mem_info: Vec<ResMemEntryInfo> =
+        if let (Some(vb_data), Some(reserved_mem)) = (&verified_boot_data, reserved_mem) {
+            ResMem::new(reserved_mem, guest_page_size)
+                .map_err(|e| {
+                    error!("Failed to parse reserved memory: {e}");
+                    RebootReason::InvalidConfig
+                })?
+                .into_iter()
+                .filter(|x| Some(x.vm_name.to_str().unwrap()) == vb_data.name.as_deref())
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
+
+    let next_dice_handover_pages = if verified_boot_data.is_some() { 1 } else { 0 };
+    let preserved_memory_size =
+        guest_page_size * (reserved_mem_info.len() + next_dice_handover_pages);
+    let preserved_memory = heap::aligned_boxed_slice(preserved_memory_size, guest_page_size)
+        .ok_or_else(|| {
+            error!("Failed to allocate the next-stage reserved memory");
+            RebootReason::InternalError
+        })?;
+
+    // By leaking the slice, its content will be left behind for the next stage.
+    let preserved_memory = Box::leak(preserved_memory);
+    let mut preserved_pages: ChunksMut<'_, u8> = preserved_memory.chunks_mut(guest_page_size);
+
+    // Move reserved memory to preserved preserved_pages.
+    for entry in reserved_mem_info.iter_mut() {
+        let page = preserved_pages.next().unwrap();
+        let (blob, rest) = page.split_at_mut(entry.blob.len());
+        blob.copy_from_slice(entry.blob);
+        rest.zeroize();
+
+        entry.blob = blob;
+    }
+
     let (next_dice_handover, new_instance) = if let Some(ref data) = verified_boot_data {
         let instance_hash = salt_from_instance_id(fdt)?;
         let dice_inputs = PartialInputs::new(data, instance_hash).map_err(|e| {
@@ -108,14 +150,14 @@ fn main<'a>(
             perform_rollback_protection(fdt, data, &dice_inputs, &dice_cdi_seal)?;
         trace!("Got salt for instance: {salt:x?}");
 
-        let next_dice_handover = perform_dice_derivation(
+        let next_dice_handover = preserved_pages.next().unwrap();
+        perform_dice_derivation(
             dice_handover_bytes.as_ref(),
             dice_context,
             dice_inputs,
             &salt,
             defer_rollback_protection,
-            guest_page_size,
-            guest_page_size,
+            next_dice_handover,
         )?;
 
         (Some(next_dice_handover), new_instance)
@@ -130,20 +172,23 @@ fn main<'a>(
     let strict_boot = true;
     modify_for_next_stage(
         fdt,
-        next_dice_handover,
+        next_dice_handover.as_deref(),
         new_instance,
         strict_boot,
         debug_policy,
         debuggable,
         kaslr_seed,
+        &reserved_mem_info,
     )
     .map_err(|e| {
         error!("Failed to configure device tree: {e}");
         RebootReason::InternalError
     })?;
 
+    flush(preserved_memory);
+
     info!("Starting payload...");
-    Ok((next_dice_handover, debuggable))
+    Ok((Some(preserved_memory), debuggable))
 }
 
 fn parse_dice_handover(
@@ -194,23 +239,14 @@ fn parse_dice_handover(
     Ok((Some((bytes_for_next, cdi_seal, dice_context)), is_debug_mode))
 }
 
-fn perform_dice_derivation<'a>(
+fn perform_dice_derivation(
     dice_handover_bytes: &[u8],
     dice_context: DiceContext,
     dice_inputs: PartialInputs,
     salt: &[u8; HIDDEN_SIZE],
     defer_rollback_protection: bool,
-    next_handover_size: usize,
-    next_handover_align: usize,
-) -> Result<&'a [u8], RebootReason> {
-    let next_dice_handover = heap::aligned_boxed_slice(next_handover_size, next_handover_align)
-        .ok_or_else(|| {
-            error!("Failed to allocate the next-stage DICE handover");
-            RebootReason::InternalError
-        })?;
-    // By leaking the slice, its content will be left behind for the next stage.
-    let next_dice_handover = Box::leak(next_dice_handover);
-
+    next_dice_handover: &mut [u8],
+) -> Result<(), RebootReason> {
     dice_inputs
         .write_next_handover(
             dice_handover_bytes.as_ref(),
@@ -223,8 +259,7 @@ fn perform_dice_derivation<'a>(
             error!("Failed to derive next-stage DICE secrets: {e:?}");
             RebootReason::SecretDerivationError
         })?;
-    flush(next_dice_handover);
-    Ok(next_dice_handover)
+    Ok(())
 }
 
 fn perform_verified_boot<'a>(
