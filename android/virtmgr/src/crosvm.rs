@@ -1241,14 +1241,18 @@ fn run_vm(
     command.arg(format!("--serial=type=file,path={},hardware=serial,num=2", &failure_serial_path));
     // /dev/hvc0
     command.arg(format!(
-        "--serial={}{},hardware=virtio-console,num=1",
+        "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[1,32]",
         &console_out_arg,
         if console_input_device == CONSOLE_HVC0 { &console_in_arg } else { "" }
     ));
     // /dev/hvc1
-    command.arg(format!("--serial={},hardware=virtio-console,num=2", &ramdump_arg));
+    command.arg(format!(
+        "--serial={},hardware=virtio-console,num=2,max-queue-sizes=[1,32]",
+        &ramdump_arg
+    ));
     // /dev/hvc2
-    command.arg(format!("--serial={},hardware=virtio-console,num=3", &log_arg));
+    command
+        .arg(format!("--serial={},hardware=virtio-console,num=3,max-queue-sizes=[1,32]", &log_arg));
 
     if let Some(bootloader) = config.bootloader {
         command.arg("--bios").arg(add_preserved_fd(&mut preserved_fds, bootloader));
@@ -1614,11 +1618,11 @@ fn estimate_swiotlb_usage_mib(inputs: SwiotlbEstimateInputs) -> u32 {
     total += inputs.console_count
         * [
             // tx queue.
-            virtq_size(256),
+            virtq_size(32),
             // rx queue.
-            virtq_size(256),
+            virtq_size(1),
             // Linux eagerly fills the rx queue with requests, one page each.
-            256 * inputs.guest_page_size,
+            inputs.guest_page_size,
         ]
         .iter()
         .sum::<u32>();
@@ -1661,7 +1665,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            14
+            11
         );
         // Basic 16k microdroid configuration.
         assert_eq!(
@@ -1671,7 +1675,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            26
+            14
         );
     }
 }
