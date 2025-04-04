@@ -1649,11 +1649,11 @@ fn estimate_swiotlb_usage_mib(inputs: SwiotlbEstimateInputs) -> u32 {
 
     // Guess at workload dependant peak memory needs.
     //
-    // This is a temporary algorithm that was chosen so that the overall total of this function
-    // matches an older algorithm that gave 2MiB to each of these devices.
-    total += 900 * 1024 * (1 + inputs.console_count + 2 * inputs.block_count);
+    // This was chosen by making it just large enough to boot Microdroid, then adding 2 MiB. Maybe
+    // should add more based on vCPU count and/or page size.
+    total += 4 * 1024 * 1024;
 
-    total.div_ceil(1024).div_ceil(1024)
+    total.div_ceil(1024 * 1024)
 }
 
 #[cfg(test)]
@@ -1670,7 +1670,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            11
+            6
         );
         // Basic 16k microdroid configuration.
         assert_eq!(
@@ -1680,7 +1680,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            14
+            9
         );
     }
 }
