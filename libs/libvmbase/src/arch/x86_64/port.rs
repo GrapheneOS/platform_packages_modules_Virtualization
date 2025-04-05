@@ -12,15 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Module providing Low-level platform specific implementations
+//! x86-64 port I/O operations
 
-#[cfg(target_arch = "aarch64")]
-mod aarch64;
-#[cfg(target_arch = "x86_64")]
-mod x86_64;
+use core::arch::asm;
 
-#[cfg(target_arch = "aarch64")]
-pub use aarch64::payload;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::payload;
+/// Write byte to I/O bus at defined address
+///
+/// # Safety
+///
+/// The caller must ensure that writing to this port will not cause any memory-safety side
+/// effects.
+#[inline]
+pub unsafe fn write_u8(port: u16, value: u8) {
+    // SAFETY: Caller is responsible for ensuring safety of accessing this I/O port.
+    unsafe {
+        asm!(
+            "out dx, al",
+            in("dx") port,
+            in("al") value,
+            options(nomem, nostack, preserves_flags)
+        );
+    }
+}

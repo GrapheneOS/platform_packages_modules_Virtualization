@@ -1,4 +1,4 @@
-// Copyright 2022, The Android Open Source Project
+// Copyright 2024, The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Basic functionality for bare-metal binaries to run in a VM under crosvm.
+//! x86_64 platform specific code
 
-#![no_std]
-// TODO(b/354116267): Remove once all warnings are resolved
-#![cfg_attr(target_arch = "x86_64", allow(dead_code, unused_imports))]
-
-extern crate alloc;
-
-pub mod arch;
-pub mod bionic;
-pub mod console;
-mod entry;
-pub mod fdt;
-pub mod heap;
-pub mod layout;
-pub mod linker;
-pub mod logger;
-pub mod memory;
-pub mod power;
-pub mod rand;
-pub mod uart;
-pub mod util;
-pub mod virtio;
+pub mod payload;

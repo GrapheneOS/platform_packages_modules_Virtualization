@@ -16,24 +16,27 @@
 
 #![allow(unused_unsafe)]
 
-#[cfg(target_arch = "aarch64")]
-use crate::arch::aarch64::linker::__stack_chk_guard;
 use crate::arch::VirtualAddress;
+use crate::linker::__stack_chk_guard;
 use crate::memory::{max_stack_size, PAGE_SIZE};
 use core::ops::Range;
 
 #[cfg(target_arch = "aarch64")]
 pub use crate::arch::aarch64::layout as crosvm;
 
+#[cfg(target_arch = "x86_64")]
+pub use crate::arch::x86_64::layout as crosvm;
+
+pub use crosvm::console_uart_page;
+
 /// First address that can't be translated by a level 1 TTBR0_EL1.
-pub const MAX_VIRT_ADDR: usize = 1 << 40;
+pub const MAX_VIRT_ADDR: usize = crosvm::MAX_VIRT_ADDR;
 
 /// Get an address from a linker-defined symbol.
 #[macro_export]
 macro_rules! linker_addr {
     ($symbol:ident) => {{
-        #[cfg(target_arch = "aarch64")]
-        let addr = (&raw const $crate::arch::aarch64::linker::$symbol) as usize;
+        let addr = (&raw const $crate::linker::$symbol) as usize;
         VirtualAddress(addr)
     }};
 }
@@ -96,12 +99,6 @@ pub fn stack_range() -> Range<VirtualAddress> {
 /// Writable data region for the exception handler stack.
 pub fn eh_stack_range() -> Range<VirtualAddress> {
     linker_region!(eh_stack_limit, init_eh_stack_pointer)
-}
-
-/// Range of the page at UART_PAGE_ADDR of PAGE_SIZE.
-#[cfg(target_arch = "aarch64")]
-pub fn console_uart_page() -> Range<VirtualAddress> {
-    VirtualAddress(crosvm::UART_PAGE_ADDR)..VirtualAddress(crosvm::UART_PAGE_ADDR + PAGE_SIZE)
 }
 
 /// Read-write data (original).

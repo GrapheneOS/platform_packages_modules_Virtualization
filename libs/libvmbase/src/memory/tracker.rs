@@ -16,14 +16,18 @@
 
 use super::error::MemoryTrackerError;
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
+#[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::page_table::{PageTable, MMIO_LAZY_MAP_FLAG};
 use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
+use crate::arch::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
+#[cfg(target_arch = "x86_64")]
+use crate::arch::x86_64::page_table::PageTable;
 use crate::arch::VirtualAddress;
+#[cfg(target_arch = "aarch64")]
 use crate::dsb;
 use crate::layout;
 use crate::memory::shared::{MemoryRange, MemorySharer, MmioSharer};
 use crate::util::RangeExt as _;
-use aarch64_paging::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
 use alloc::boxed::Box;
 use buddy_system_allocator::LockedFrameAllocator;
 use core::mem::size_of;
@@ -120,7 +124,8 @@ pub fn unshare_all_memory() {
 /// Unshare the UART page, previously shared with the host.
 pub fn unshare_uart() -> Result<()> {
     let Some(mmio_guard) = get_mmio_guard() else { return Ok(()) };
-    Ok(mmio_guard.unmap(layout::crosvm::UART_PAGE_ADDR)?)
+    let Some(console_uart_page) = layout::console_uart_page() else { return Ok(()) };
+    Ok(mmio_guard.unmap(console_uart_page.start.0)?)
 }
 
 /// Map the provided range as normal memory, with R/W permissions.
@@ -482,6 +487,7 @@ impl MemoryTracker {
     /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
     ///
     /// Returns an error if any PTE in the range is not an invalid lazy MMIO mapping.
+    #[cfg(target_arch = "aarch64")]
     fn map_lazy_mmio_as_valid(&mut self, page_range: &VaRange) -> Result<()> {
         // This must be safe and free from break-before-make (BBM) violations, given that the
         // initial lazy mapping has the valid bit cleared, and each newly created valid descriptor
@@ -499,6 +505,12 @@ impl MemoryTracker {
             .map_err(|_| MemoryTrackerError::InvalidPte)
     }
 
+    #[cfg(target_arch = "x86_64")]
+    fn map_lazy_mmio_as_valid(&mut self, _page_range: &VaRange) -> Result<()> {
+        // TODO(b/362733888): Provide the implementation for x86_64
+        Ok(())
+    }
+
     /// Flush all memory regions marked as writable-dirty.
     fn flush_dirty_pages(&mut self) -> Result<()> {
         // Collect memory ranges for which dirty state is tracked.
@@ -506,6 +518,8 @@ impl MemoryTracker {
             self.regions.iter().filter(|r| r.mem_type == MemoryType::ReadWrite).map(|r| &r.range);
         // Execute a barrier instruction to ensure all hardware updates to the page table have been
         // observed before reading PTE flags to determine dirty state.
+        // TODO(b/362733888): Provide the implementation for x86_64
+        #[cfg(target_arch = "aarch64")]
         dsb!("ish");
         // Now flush writable-dirty pages in those regions.
         for range in writable_regions {
@@ -543,7 +557,9 @@ impl MemoryTracker {
 
         let mut page_table = PageTable::default();
 
-        page_table.map_device(&console_uart_page.into()).unwrap();
+        if let Some(console_uart_page) = console_uart_page {
+            page_table.map_device(&console_uart_page.into()).unwrap();
+        }
         page_table.map_code(&text.into()).unwrap();
         page_table.map_rodata(&rodata.into()).unwrap();
         page_table.map_data(&data_bss.into()).unwrap();

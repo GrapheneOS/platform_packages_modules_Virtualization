@@ -135,7 +135,7 @@ fn main_wrapper<'a>(
     let mut slices = MemorySlices::new(fdt, payload, payload_size)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
-    let (next_dice_handover, debuggable_payload) = crate::main(
+    let (preserved_memory, debuggable_payload) = crate::main(
         slices.fdt,
         slices.kernel,
         slices.ramdisk,
@@ -143,9 +143,10 @@ fn main_wrapper<'a>(
         config_entries.debug_policy,
         config_entries.vm_dtbo,
         config_entries.vm_ref_dt,
+        config_entries.reserved_mem.as_deref(),
     )?;
-    if let Some(r) = next_dice_handover {
-        slices.add_dice_handover(r);
+    if let Some(r) = preserved_memory {
+        slices.add_preserved_memory(r);
     }
 
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
@@ -153,6 +154,9 @@ fn main_wrapper<'a>(
 
     // Writable-dirty regions will be flushed when MemoryTracker is dropped.
     if let Some(r) = config_entries.dice_handover {
+        r.zeroize();
+    }
+    if let Some(r) = config_entries.reserved_mem {
         r.zeroize();
     }
 

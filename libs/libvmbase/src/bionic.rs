@@ -15,7 +15,6 @@
 //! Low-level compatibility layer between baremetal Rust and Bionic C functions.
 
 use crate::rand::fill_with_entropy;
-use crate::read_sysreg;
 use core::ffi::c_char;
 use core::ffi::c_int;
 use core::ffi::c_void;
@@ -25,6 +24,8 @@ use core::str;
 
 use log::error;
 use log::info;
+
+pub use crate::arch::bionic::__get_tls;
 
 const EOF: c_int = -1;
 const EIO: c_int = 5;
@@ -47,11 +48,6 @@ pub struct Tls {
 #[link_section = ".data.stack_protector"]
 #[export_name = "__bionic_tls"]
 pub static mut TLS: Tls = Tls { _unused: [0; 40], stack_guard: 0 };
-
-/// Gets a pointer to the TLS from the dedicated system register.
-pub fn __get_tls() -> *mut Tls {
-    read_sysreg!("tpidr_el0") as *mut Tls
-}
 
 #[no_mangle]
 extern "C" fn __stack_chk_fail() -> ! {
@@ -124,14 +120,15 @@ unsafe extern "C" fn async_safe_fatal_va_list(prefix: *const c_char, format: *co
     }
 }
 
-#[cfg(target_arch = "aarch64")]
-#[allow(clippy::enum_clike_unportable_variant)] // No risk if AArch64 only.
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[allow(clippy::enum_clike_unportable_variant)] // No risk if AArch64/x86-64 only.
 #[repr(usize)]
 /// Fake FILE* values used by C to refer to the default streams.
 ///
 /// These values are intentionally invalid pointers so that dereferencing them will be caught.
 enum CFilePtr {
     // On AArch64 with TCR_EL1.EPD1 set or TCR_EL1.T1SZ > 12, these VAs can't be mapped.
+    // On x86-64, they are non-canonical addresses.
     Stdout = 0xfff0_badf_badf_bad0,
     Stderr = 0xfff0_badf_badf_bad1,
 }

@@ -130,6 +130,20 @@ rust_test {
     static_libs: ["libopen_dice_clear_memory"],
 }
 
+rust_test {
+    name: "libpvmfw.reserved_mem.test",
+    srcs: ["src/config/reserved_mem.rs"],
+    defaults: ["libpvmfw.test.defaults"],
+    rustlibs: [
+        "liblibfdt",
+        "liblog_rust",
+        "libzerocopy_nostd",
+    ],
+    data: [
+        ":test_pvmfw_devices_without_device",
+    ],
+}
+
 genrule {
     name: "test_pvmfw_devices_vm_dtbo",
     defaults: ["dts_to_dtb"],

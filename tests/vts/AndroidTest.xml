@@ -28,6 +28,10 @@
         <option name="arch" value="arm64" />
     </object>
 
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.ShippingApiLevelModuleController">
+        <option name="vendor-min-api-level" value="202504" />
+    </object>
+
     <test class="com.android.tradefed.testtype.rust.RustBinaryTest" >
         <option name="test-device-path" value="/data/nativetest64/vendor" />
         <option name="module-name" value="vts_libavf_test" />
