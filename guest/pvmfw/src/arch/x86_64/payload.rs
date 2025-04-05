@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Module providing Low-level platform specific implementations
+//! x86_64 low-level payload entry point
 
-#[cfg(target_arch = "aarch64")]
-mod aarch64;
-#[cfg(target_arch = "x86_64")]
-mod x86_64;
+use crate::memory::MemorySlices;
 
-#[cfg(target_arch = "aarch64")]
-pub use aarch64::payload;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::payload;
+/// Function boot payload after cleaning all secret from pvmfw memory
+pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
+    // TODO(b/354116267): implement x86_64 payload handoff
+    let _ = entrypoint;
+    let _ = slices;
+    todo!()
+}

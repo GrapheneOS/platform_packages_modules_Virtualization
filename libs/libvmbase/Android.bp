@@ -123,6 +123,12 @@ cc_library_static {
                 "asm/aarch64/exceptions_panic.S",
             ],
         },
+        android_x86_64: {
+            srcs: [
+                "asm/x86_64/entry.S",
+                "asm/x86_64/gdt.S",
+            ],
+        },
     },
 }
 
