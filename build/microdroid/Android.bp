@@ -157,6 +157,7 @@ android_system_image {
     fake_timestamp: "1611569676",
     // python -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_URL, 'www.android.com/avf/microdroid/system'))"
     uuid: "5fe079c6-f01a-52be-87d3-d415231a72ad",
+    use_generic_config: true,
 }
 
 prebuilt_etc {
