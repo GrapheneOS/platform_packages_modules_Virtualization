@@ -83,7 +83,7 @@
     <string name="error_desc" msgid="4588252235686826721">"Z chybového stavu se nepodařilo dostat.\nMůžete terminál zkusit restartovat, nebo vyzkoušet některou z možností obnovení.\nPokud všechny pokusy selžou, nevratně smažte všechna data tím, že v možnostech pro vývojáře zapnete/vypnete terminál Linux."</string>
     <string name="error_code" msgid="3585291676855383649">"Kód chyby: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Upgradujte na novější terminál"</string>
-    <string name="upgrade_desc" msgid="5082726326034764623">"Používaný terminál Linux je zastaralý. Než budete pokračovat, upgradujte ho.\nData budou blokována na cestě <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Používaný terminál Linux je zastaralý. Než budete pokračovat, upgradujte ho.\nData budou zálohována do <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Upgradovat"</string>
     <string name="upgrade_error" msgid="8195371718626852651">"Upgrade se nezdařil"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Nastavení"</string>
