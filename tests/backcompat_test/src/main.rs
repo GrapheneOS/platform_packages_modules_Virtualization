@@ -99,6 +99,7 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<()> {
         disks: vec![disk_image, empty_disk_image],
         protectedVm: protected,
         memoryMib: 300,
+        swiotlbMib: 12,
         cpuOptions: CpuOptions { cpuTopology: CpuTopology::CpuCount(1) },
         platformVersion: "~1.0".to_string(),
         ..Default::default()
