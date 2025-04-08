@@ -39,7 +39,7 @@ android_app {
     platform_apis: true,
     privileged: true,
     optimize: {
-        // TODO(b/377100096): enable bytecode optimization again
+        // TODO(b/404723964): enable bytecode optimization again
         //optimize: true,
         proguard_flags_files: ["proguard.flags"],
         shrink_resources: true,

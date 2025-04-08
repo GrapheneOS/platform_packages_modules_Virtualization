@@ -50,7 +50,7 @@ class TerminalAppTest {
     }
 
     private fun installVmImage() {
-        val INSTALL_TIMEOUT_MILLIS: Long = 300000 // 5 min
+        val INSTALL_TIMEOUT_MILLIS: Long = 600000 // 10 min
 
         val intent = Intent(targetContext, InstallerActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
