@@ -29,7 +29,7 @@ fi
 
 # Download
 downloaded=$(tempfile)
-wget ${src} -O ${downloaded}
+wget -q ${src} -O ${downloaded}
 
 # Push the file to the device
 dst=/data/media/${user}/linux
