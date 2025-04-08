@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ഡിസ്‌ക് വലുപ്പം സജ്ജീകരിച്ചു"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> അസൈൻ ചെയ്‌തു"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"പരമാവധി <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"ഡിസ്‌കിന്റെ വലുപ്പം മാറ്റുന്നതിനായി ഉപകരണത്തിൽ ആവശ്യത്തിന് ഇടമില്ല"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"റദ്ദാക്കുക"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"ബാധകമാക്കുക"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"ഡിസ്കിന്റെ വലുപ്പം മാറ്റുന്നതിനായി ടെർമിനൽ റീസ്റ്റാർട്ട് ചെയ്യും"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"വീണ്ടെടുക്കാനാകാത്ത വിധത്തിലാക്കിയ പിശക്"</string>
     <string name="error_desc" msgid="4588252235686826721">"ഒരു പിശകിൽ നിന്ന് വീണ്ടെടുക്കാനായില്ല.\nനിങ്ങൾക്ക് ടെർമിനൽ റീസ്റ്റാർട്ട് ചെയ്യാൻ ശ്രമിക്കാം അല്ലെങ്കിൽ വീണ്ടെടുക്കൽ ഓപ്‌ഷനുകളിലൊന്ന് ശ്രമിച്ചുനോക്കാം.\nഎല്ലാ ശ്രമങ്ങളും പരാജയപ്പെടുകയാണെങ്കിൽ, ഡെവലപ്പർ ഓ‌പ്ഷനുകളിൽ നിന്ന് Linux ടെർമിനൽ ഓൺ/ഓഫ് ആക്കി എല്ലാ ഡാറ്റയും തുടച്ചുനീക്കുക."</string>
     <string name="error_code" msgid="3585291676855383649">"പിശക് കോഡ്: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"പുതിയ ടെർമിനലിലേക്ക് അപ്‌ഗ്രേഡ് ചെയ്യുക"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"നിങ്ങൾ ഉപയോഗിക്കുന്ന Linux ടെർമിനൽ കാലഹരണപ്പെട്ടതാണ്. തുടരുന്നതിനായി അപ്‌ഗ്രേഡ് ചെയ്യുക.\n<xliff:g id="PATH">/mnt/backup</xliff:g> എന്നതിൽ ഡാറ്റ ബാക്കപ്പ് ചെയ്യും"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"അപ്ഗ്രേഡ് ചെയ്യൂ"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"അപ്ഗ്രേഡ് ചെയ്യാനായില്ല"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"ക്രമീകരണം"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"ടെർമിനൽ റൺ ചെയ്യുന്നു"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"ടെർമിനൽ തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക"</string>

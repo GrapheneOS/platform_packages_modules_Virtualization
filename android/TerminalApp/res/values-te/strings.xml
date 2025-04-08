@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"డిస్క్ సైజ్ సెట్ చేయబడింది"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> కేటాయించబడింది"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"గరిష్ఠంగా <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"డిస్క్ సైజ్‌ను మార్చడానికి పరికరంలో తగినంత స్పేస్ లేదు"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"రద్దు చేయండి"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"వర్తింపజేయండి"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"డిస్క్ సైజ్‌ను మార్చడానికి టెర్మినల్ రీస్టార్ట్ అవుతుంది"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"రికవరీని అసాధ్యం చేసే ఎర్రర్"</string>
     <string name="error_desc" msgid="4588252235686826721">"ఎర్రర్‌ను రికవర్ చేయడంలో విఫలమైంది.\nమీరు టెర్మినల్‌ను రీస్టార్ట్ చేసి ట్రై చేయవచ్చు లేదా రికవరీ ఆప్షన్‌లలో ఒకదాన్ని ట్రై చేయవచ్చు.\nఅన్ని ప్రయత్నాలు విఫలమైతే, డెవలపర్ ఆప్షన్‌ల నుండి Linux టెర్మినల్‌ను ఆన్/ఆఫ్ చేయడం ద్వారా మొత్తం డేటాను పూర్తిగా తొలగించండి."</string>
     <string name="error_code" msgid="3585291676855383649">"ఎర్రర్ కోడ్: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"సరికొత్త టెర్మినల్‌కు అప్‌గ్రేడ్ చేయండి"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"మీరు ఉపయోగిస్తున్న Linux టెర్మినల్ గడువు ముగిసింది. కొనసాగించడానికి దయచేసి అప్‌గ్రేడ్ చేయండి.\n<xliff:g id="PATH">/mnt/backup</xliff:g>‌లో డేటా బ్యాకప్ చేయబడుతుంది"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"అప్‌గ్రేడ్"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"అప్‌గ్రేడ్ చేయడంలో విఫలమైంది"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"సెట్టింగ్‌లు"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"టెర్మినల్ రన్ అవుతోంది"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"టెర్మినల్‌ను తెరవడానికి క్లిక్ చేయండి"</string>

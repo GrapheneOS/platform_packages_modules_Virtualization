@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Tamanho do disco definido"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Tamanho atribuído: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Tamanho máx.: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Sem espaço suficiente no dispositivo para redimensionar o disco"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Cancelar"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Aplicar"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"O terminal vai ser reiniciado para redimensionar o disco"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Erro irrecuperável"</string>
     <string name="error_desc" msgid="4588252235686826721">"Falha ao recuperar de um erro.\nPode tentar reiniciar o terminal ou experimentar uma das opções de recuperação.\nSe todas as tentativas falharem, limpe todos os dados ativando/desativando o terminal do Linux nas opções de programador."</string>
     <string name="error_code" msgid="3585291676855383649">"Código de erro: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Atualize para um terminal mais recente"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"O terminal do Linux que estava a usar está desatualizado. Atualize para continuar.\nVai ser feita uma cópia de segurança dos dados em <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Atualizar"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Falha ao atualizar"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Definições"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"O terminal está em execução"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Clique para abrir o terminal"</string>

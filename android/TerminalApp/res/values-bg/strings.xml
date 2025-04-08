@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Размерът на диска е зададен"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Зададено: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Макс.: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"На устройството няма достатъчно място за преоразмеряване на диска"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Отказ"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Прилагане"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Терминалът ще се рестартира, за да се преоразмери дискът"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Непоправима грешка"</string>
     <string name="error_desc" msgid="4588252235686826721">"Неуспешно възстановяване от грешка.\nМожете да рестартирате терминала или да изпробвате една от опциите за възстановяване.\nАко всички опити са неуспешни, изчистете всички данни, като включите/изключите терминала на Linux от опциите за програмисти."</string>
     <string name="error_code" msgid="3585291676855383649">"Код на грешката: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"Надстройване до по-нов терминал"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"Терминалът на Linux, който използвахте, е неактуален. Моля, надстройте, за да продължите.\nЗа данните ще бъде създадено резервно копие в(ъв) <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"Надстройване"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"Надстройването не бе успешно"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"Настройки"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"Терминалът работи"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"Кликнете, за да отворите терминала"</string>
