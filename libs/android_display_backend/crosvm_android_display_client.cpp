@@ -37,6 +37,10 @@ namespace {
 class SinkANativeWindow_Buffer {
 public:
     Result<void> configure(uint32_t width, uint32_t height, int format) {
+        if (format != HAL_PIXEL_FORMAT_BGRA_8888) {
+            return Error() << "Pixel format " << format << " is not BGRA_8888.";
+        }
+
         mBufferBits.resize(width * height * 4);
         mBuffer = ANativeWindow_Buffer{
                 .width = static_cast<int32_t>(width),
@@ -235,9 +239,9 @@ public:
 
 private:
     // Note: crosvm always uses BGRA8888 or BGRX8888. See devices/src/virtio/gpu/mod.rs in
-    // crosvm where the SetScanoutBlob command is handled.
-    // But skia doesn't work well with BGRA format, so use RGBA which has worked well.
-    static constexpr const int kFormat = HAL_PIXEL_FORMAT_RGBA_8888;
+    // crosvm where the SetScanoutBlob command is handled. Let's use BGRA not BGRX with a hope
+    // that we will need alpha blending for the cursor surface.
+    static constexpr const int kFormat = HAL_PIXEL_FORMAT_BGRA_8888;
 
     std::string mName;
 
