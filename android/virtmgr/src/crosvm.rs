@@ -89,6 +89,11 @@ const CONSOLE_HVC0: &str = "hvc0";
 /// Serial (emulated uart)
 const CONSOLE_TTYS0: &str = "ttyS0";
 
+/// AVF never provides a virtio-console input, so make the RX as small as possible.
+/// The `virtio_drivers` crate requires a size of at least 2.
+const CONSOLE_RX_QUEUE_SIZE: u32 = 2;
+const CONSOLE_TX_QUEUE_SIZE: u32 = 32;
+
 /// If the VM doesn't move to the Started state within this amount time, a hang-up error is
 /// triggered.
 static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
@@ -1241,14 +1246,18 @@ fn run_vm(
     command.arg(format!("--serial=type=file,path={},hardware=serial,num=2", &failure_serial_path));
     // /dev/hvc0
     command.arg(format!(
-        "--serial={}{},hardware=virtio-console,num=1",
+        "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
         &console_out_arg,
         if console_input_device == CONSOLE_HVC0 { &console_in_arg } else { "" }
     ));
     // /dev/hvc1
-    command.arg(format!("--serial={},hardware=virtio-console,num=2", &ramdump_arg));
+    command.arg(format!(
+        "--serial={},hardware=virtio-console,num=2,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
+        &ramdump_arg
+    ));
     // /dev/hvc2
-    command.arg(format!("--serial={},hardware=virtio-console,num=3", &log_arg));
+    command
+        .arg(format!("--serial={},hardware=virtio-console,num=3,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]", &log_arg));
 
     if let Some(bootloader) = config.bootloader {
         command.arg("--bios").arg(add_preserved_fd(&mut preserved_fds, bootloader));
@@ -1614,11 +1623,11 @@ fn estimate_swiotlb_usage_mib(inputs: SwiotlbEstimateInputs) -> u32 {
     total += inputs.console_count
         * [
             // tx queue.
-            virtq_size(256),
+            virtq_size(CONSOLE_TX_QUEUE_SIZE),
             // rx queue.
-            virtq_size(256),
+            virtq_size(CONSOLE_RX_QUEUE_SIZE),
             // Linux eagerly fills the rx queue with requests, one page each.
-            256 * inputs.guest_page_size,
+            CONSOLE_RX_QUEUE_SIZE * inputs.guest_page_size,
         ]
         .iter()
         .sum::<u32>();
@@ -1661,7 +1670,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            14
+            11
         );
         // Basic 16k microdroid configuration.
         assert_eq!(
@@ -1671,7 +1680,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            26
+            14
         );
     }
 }
