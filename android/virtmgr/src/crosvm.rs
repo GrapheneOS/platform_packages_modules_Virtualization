@@ -1177,11 +1177,15 @@ fn run_vm(
     }
     match config.cpus.cpuTopology {
         CpuTopology::MatchHost(_) => {
-            if cfg!(virt_cpufreq) && check_if_all_cpus_allowed()? {
+            if check_if_all_cpus_allowed()? {
                 command.arg("--host-cpu-topology");
                 #[cfg(target_arch = "aarch64")]
                 {
-                    command.arg("--virt-cpufreq");
+                    if cfg!(virt_cpufreq_upstream) {
+                        command.arg("--virt-cpufreq-upstream");
+                    } else {
+                        command.arg("--virt-cpufreq");
+                    }
                     command.arg("--cpus").arg("sve=[auto=true]");
                 }
             } else {
