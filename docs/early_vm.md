@@ -33,7 +33,7 @@ Multiple XML files matching the glob pattern
 
 * `IPC_LOCK`
 * `NET_BIND_SERVICE`
-* `SYS_NICE` (required if `RELEASE_AVF_ENABLE_VIRT_CPUFREQ` is enabled)
+* `SYS_NICE`
 * `SYS_RESOURCES`
 
 Typically, the client is defined as a service in an init script, where
