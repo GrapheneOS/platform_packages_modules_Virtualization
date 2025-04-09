@@ -1680,7 +1680,7 @@ mod tests {
                 console_count: 3,
                 balloon: true,
             }),
-            9
+            10
         );
     }
 }
