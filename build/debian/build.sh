@@ -278,6 +278,12 @@ generate_output_package() {
 		virt-get-kernel -a "${raw_disk_image}"
 		mv vmlinuz* vmlinuz
 		mv initrd.img* initrd.img
+
+		if [[ "$arch" == "aarch64" ]]; then
+			lz4 -BD -12 -q vmlinuz vmlinuz.lz4
+			mv vmlinuz.lz4 vmlinuz
+		fi
+
 		contents+=(
 			vmlinuz
 			initrd.img
