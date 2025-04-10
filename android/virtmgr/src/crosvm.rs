@@ -89,7 +89,8 @@ const CONSOLE_HVC0: &str = "hvc0";
 /// Serial (emulated uart)
 const CONSOLE_TTYS0: &str = "ttyS0";
 
-/// AVF never provides a virtio-console input, so make the RX as small as possible.
+/// virtio-console input usage is uncommon in AVF and it consumes a lot of memory (one page per
+/// entry), so make the RX as small as possible.
 /// The `virtio_drivers` crate requires a size of at least 2.
 const CONSOLE_RX_QUEUE_SIZE: u32 = 2;
 const CONSOLE_TX_QUEUE_SIZE: u32 = 32;

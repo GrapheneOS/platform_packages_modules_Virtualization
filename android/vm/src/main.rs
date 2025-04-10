@@ -172,6 +172,14 @@ pub struct MicrodroidConfig {
     /// You can list all available OSes via `vm info` command.
     #[arg(long)]
     os: Option<String>,
+
+    /// Don't store pVM secrets in secretkeeper. This effectively means that after pVM shutdowns,
+    /// all data associated with can't be decrypted anymore. This option is mostly useful for early
+    /// test of pVMs during bring up on a new hardware, which might not have secretkeeper set up
+    /// correctly yet.
+    #[cfg(debuggable_vms_improvements)]
+    #[arg(long)]
+    ephemeral: bool,
 }
 
 impl MicrodroidConfig {
@@ -191,6 +199,16 @@ impl MicrodroidConfig {
                 &self.devices
             } else {
                 &[]
+            }
+        }
+    }
+
+    fn ephemeral(&self) -> bool {
+        cfg_if::cfg_if! {
+            if #[cfg(debuggable_vms_improvements)] {
+                self.ephemeral
+            } else {
+                false
             }
         }
     }
