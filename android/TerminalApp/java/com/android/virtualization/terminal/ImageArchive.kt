@@ -135,11 +135,6 @@ internal class ImageArchive {
 
     @Throws(IOException::class)
     private fun commitInstallationAt(dir: Path) {
-        // To save storage, delete the source archive on the disk.
-        if (source is PathSource) {
-            Files.deleteIfExists(source.value)
-        }
-
         // Mark the completion
         val marker = dir.resolve(InstalledImage.MARKER_FILENAME)
         Files.createFile(marker)
