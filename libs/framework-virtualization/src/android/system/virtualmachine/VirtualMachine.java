@@ -62,6 +62,7 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.os.SystemProperties;
 import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.system.virtualizationcommon.DeathReason;
@@ -118,6 +119,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
 
 /**
@@ -268,6 +271,43 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull private final List<ExtraApkSpec> mExtraApks;
 
     private class MemoryManagementCallbacks implements ComponentCallbacks2 {
+        // Default balloon adjustements. 10% when level < TRIM_MEMORY_UI_HIDDEN,
+        // 30% when level is between TRIM_MEMORY_UI_HIDDEN and TRIM_MEMORY_BACKGROUND,
+        // 50% otherwise.
+        private static final int[] DEFAULT_BALLOON_ADJ = {10, 30, 50};
+
+        private final int[] percentages =
+                parseAdj(
+                        SystemProperties.get(
+                                "virtualization.balloon.adj." + mPackageName + "." + mName));
+
+        private int[] parseAdj(String adj) {
+            if (adj == null) {
+                return DEFAULT_BALLOON_ADJ;
+            }
+            // <number>,<number>,<number> where <number> can be one or two digits.
+            Pattern pattern = Pattern.compile("(\\d{1,2})\\s*,\\s*(\\d{1,2})\\s*,\\s*(\\d{1,2})");
+            Matcher matcher = pattern.matcher(adj);
+            if (!matcher.matches()) {
+                Log.e(TAG, "invalid vm balloon adjustment: [" + adj + "]. Falling back to default");
+                return DEFAULT_BALLOON_ADJ;
+            }
+            int[] ret = new int[3];
+            for (int i = 0; i < ret.length; i++) {
+                try {
+                    // group 0 is the entire match. group 1 is the first sub match
+                    ret[i] = Integer.parseInt(matcher.group(i + 1));
+                } catch (NumberFormatException e) {
+                    // cannot happen
+                }
+                if (i != 0 && ret[i] < ret[i - 1]) {
+                    Log.w(TAG, "vm balloon adjustment is not increasing: [" + adj + "]");
+                    ret[i] = ret[i - 1];
+                }
+            }
+            return ret;
+        }
+
         @Override
         public void onConfigurationChanged(@NonNull Configuration newConfig) {}
 
@@ -277,15 +317,15 @@ public class VirtualMachine implements AutoCloseable {
         @Override
         public void onTrimMemory(int level) {
             /* Treat level < TRIM_MEMORY_UI_HIDDEN as generic low-memory warnings */
-            int percent = 10;
+            int percent = percentages[0];
 
             if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
-                percent = 30;
+                percent = percentages[1];
             }
 
             if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
                 /* Release as much memory as we can. The app is on the LMKD LRU kill list. */
-                percent = 50;
+                percent = percentages[2];
             }
 
             setMemoryBalloonByPercent(percent);
