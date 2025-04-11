@@ -889,7 +889,7 @@ fn handle_stream_connection_tombstoned() -> Result<()> {
     // Should not listen for tombstones on a guest VM's port.
     assert!(!is_valid_guest_cid(VM_TOMBSTONES_SERVICE_PORT as Cid));
     let listener =
-        VsockListener::bind_with_cid_port(VMADDR_CID_HOST, VM_TOMBSTONES_SERVICE_PORT as Cid)?;
+        VsockListener::bind_with_cid_port(VMADDR_CID_HOST, VM_TOMBSTONES_SERVICE_PORT as u32)?;
     for incoming_stream in listener.incoming() {
         let mut incoming_stream = match incoming_stream {
             Err(e) => {
