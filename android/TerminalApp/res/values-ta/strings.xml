@@ -42,6 +42,7 @@
     <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"டிஸ்க் அளவு அமைக்கப்பட்டது"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ஒதுக்கப்பட்டது"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"அதிகபட்சம் <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"டிஸ்க் அளவை மாற்ற சாதனத்தில் போதுமான இடம் இல்லை"</string>
     <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"ரத்துசெய்"</string>
     <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"பயன்படுத்து"</string>
     <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"டிஸ்க் அளவை மாற்ற டெர்மினல் மீண்டும் தொடங்கப்படும்"</string>
@@ -81,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"சரிசெய்ய முடியாத பிழை"</string>
     <string name="error_desc" msgid="4588252235686826721">"பிழையில் இருந்து மீட்டெடுக்க முடியவில்லை.\nநீங்கள் டெர்மினலை மீண்டும் தொடங்கியோ மீட்டெடுப்பு விருப்பங்களில் ஒன்றைப் பயன்படுத்தியோ பார்க்கலாம்.\nஅனைத்து முயற்சிகளும் தோல்வி அடைந்தால் டெவெலப்பர் விருப்பங்களில் Linux டெர்மினலை ஆன்/ஆஃப் செய்து அனைத்துத் தரவையும் அழிக்கவும்."</string>
     <string name="error_code" msgid="3585291676855383649">"பிழைக் குறியீடு: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="upgrade_title" msgid="2882073508237099774">"புதிய டெர்மினலுக்கு மேம்படுத்துங்கள்"</string>
+    <string name="upgrade_desc" msgid="5082726326034764623">"நீங்கள் பயன்படுத்தும் Linux டெர்மினல் சமீபத்தியதாக இல்லை. தொடர்வதற்கு மேம்படுத்துங்கள்.\n<xliff:g id="PATH">/mnt/backup</xliff:g> இல் தரவு காப்புப் பிரதி எடுக்கப்படும்."</string>
+    <string name="upgrade_button" msgid="2118716848859611704">"மேம்படுத்து"</string>
+    <string name="upgrade_error" msgid="8195371718626852651">"மேம்படுத்த முடியவில்லை"</string>
     <string name="service_notification_settings" msgid="1437365721184401135">"அமைப்புகள்"</string>
     <string name="service_notification_title" msgid="2918088850910713393">"டெர்மினல் இயக்கத்தில் உள்ளது"</string>
     <string name="service_notification_content" msgid="5772901142342308273">"டெர்மினலைத் திறக்க கிளிக் செய்யுங்கள்"</string>
