@@ -23,5 +23,6 @@ android_test {
     data: [
         "TerminalAppTests-helper.sh",
         "TerminalAppTests-downloader.sh",
+        "TerminalAppTests-precondition-checker.sh",
     ],
 }

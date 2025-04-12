@@ -115,7 +115,7 @@ internal class ImageArchive {
                 is PathSource -> source.value.toString()
                 is UrlSource -> source.value.toString()
             }
-        Log.d(TAG, "Installing. source: $source, destination: $dir")
+        Log.d(TAG, "Install started. source: $source, destination: $dir")
         TarArchiveInputStream(GzipCompressorInputStream(getInputStream(filter))).use { tarStream ->
             Files.createDirectories(dir)
             var entry: ArchiveEntry?
@@ -125,19 +125,16 @@ internal class ImageArchive {
                     Files.createDirectories(to)
                     continue
                 }
+                Log.d(TAG, "Installing " + to)
                 Files.copy(tarStream, to, StandardCopyOption.REPLACE_EXISTING)
             }
         }
+        Log.d(TAG, "Installed")
         commitInstallationAt(dir)
     }
 
     @Throws(IOException::class)
     private fun commitInstallationAt(dir: Path) {
-        // To save storage, delete the source archive on the disk.
-        if (source is PathSource) {
-            Files.deleteIfExists(source.value)
-        }
-
         // Mark the completion
         val marker = dir.resolve(InstalledImage.MARKER_FILENAME)
         Files.createFile(marker)

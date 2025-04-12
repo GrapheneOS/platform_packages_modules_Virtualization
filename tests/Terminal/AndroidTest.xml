@@ -26,6 +26,11 @@
         <option name="force-root" value="true"/>
     </target_preparer>
 
+    <!-- Ensure that the capability to run test -->
+    <target_preparer class="com.android.tradefed.targetprep.RunHostScriptTargetPreparer">
+        <option name="script-file" value="TerminalAppTests-precondition-checker.sh" />
+    </target_preparer>
+
     <!-- Download the VM image and push it to the device -->
     <target_preparer class="com.android.tradefed.targetprep.RunHostScriptTargetPreparer">
         <option name="script-file" value="TerminalAppTests-downloader.sh" />

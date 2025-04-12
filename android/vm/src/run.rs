@@ -178,6 +178,10 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         custom_config.extraKernelCmdlineParams.push(String::from("keep_bootcon"));
     }
 
+    if config.microdroid.ephemeral() {
+        custom_config.wantUpdatable = false;
+    }
+
     let vm_config = VirtualMachineConfig::AppConfig(VirtualMachineAppConfig {
         name: config.common.name.unwrap_or_else(|| String::from("VmRunApp")),
         apk: apk_fd.into(),

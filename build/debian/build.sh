@@ -125,32 +125,6 @@ install_prerequisites() {
 		)
 	fi
 
-	if [[ "$use_generic_kernel" != 1 ]]; then
-		packages+=(
-			bc
-			bison
-			debhelper
-			dh-exec
-			flex
-			gcc-12
-			kernel-wedge
-			libelf-dev
-			libpci-dev
-			lz4
-			pahole
-			python3-jinja2
-			python3-docutils
-			quilt
-			rsync
-		)
-		if [[ "$arch" == "aarch64" ]]; then
-			packages+=(
-				gcc-arm-linux-gnueabihf
-				gcc-12-aarch64-linux-gnu
-			)
-		fi
-	fi
-
 	DEBIAN_FRONTEND=noninteractive \
 	apt install --no-install-recommends --assume-yes "${packages[@]}"
 
@@ -233,89 +207,17 @@ EOF
 	sed -i "/linux-image.*-${debian_arch}/d" \
 	    "${config_space}/package_config/${debian_arch^^}"
 
-	local deb_base_url="https://deb.debian.org/debian"
-	local deb_security_base_url="https://security.debian.org/debian-security"
+	cmd_args=(
+		-a "$arch"
+		-d "${debian_cloud_image}/localdebs"
+	)
 
-	local pool_dir="pool/main/l/linux"
-	local ksrc_base_url="${deb_base_url}/${pool_dir}"
-	local ksrc_security_base_url="${deb_security_base_url}/${pool_dir}"
-
-	# NOTE: 6.1 is the latest LTS kernel for which Debian's kernel build scripts
-	#       work on Python 3.10, the default version on our Ubuntu 22.04 builders.
-	#
-	#       We track the latest Debian stable kernel version for the 6.1 branch,
-	#       which can be found at:
-	#       https://packages.debian.org/stable/linux-source-6.1
-	local debian_kver="6.1.123-1"
-
-	local dsc_file="linux_${debian_kver}.dsc"
-	local orig_ksrc_file="linux_${debian_kver%-*}.orig.tar.xz"
-	local debian_ksrc_file="linux_${debian_kver}.debian.tar.xz"
-
-	# 0. Grab the kernel sources, and the latest debian keyrings
-	mkdir -p "${workdir}/kernel"
-	pushd "${workdir}/kernel" > /dev/null
-
-	wget "${ksrc_security_base_url}/${dsc_file}" || \
-	wget "${ksrc_base_url}/${dsc_file}"
-
-	wget "${ksrc_security_base_url}/${orig_ksrc_file}" || \
-	wget "${ksrc_base_url}/${orig_ksrc_file}"
-
-	wget "${ksrc_security_base_url}/${debian_ksrc_file}" || \
-	wget "${ksrc_base_url}/${debian_ksrc_file}"
-
-	rsync -az --progress keyring.debian.org::keyrings/keyrings/ /usr/share/keyrings/
-
-	# 1. Verify, extract and merge patches into the original kernel sources
-	dpkg-source --require-strong-checksums \
-	            --require-valid-signature \
-	            --extract "${dsc_file}"
-	pushd "linux-${debian_kver%-*}" > /dev/null
-
-	local kpatches_src="$SCRIPT_DIR/kernel/patches"
-	cp -r "${kpatches_src}/avf" debian/patches/
-	cat "${kpatches_src}/series" >> debian/patches/series
-	./debian/rules orig
-
-	local custom_flavour="avf"
-	local debarch_flavour="${custom_flavour}-${debian_arch}"
-
-	local abi_kver="$(sed -nE 's;Package: linux-support-(.*);\1;p' debian/control)"
-	local abi_flavour="${abi_kver}-${debarch_flavour}"
-
-	# 2. Define our custom flavour and regenerate control file
-	# NOTE: Our flavour extends Debian's `cloud` config on the `none` featureset.
-	cp "$SCRIPT_DIR/kernel/config" \
-	   debian/config/${debian_arch}/config.${debarch_flavour}
-
-	sed -z "s;\[base\]\nflavours:;[base]\nflavours:\n ${debarch_flavour};" \
-	    -i debian/config/${debian_arch}/none/defines
-	cat >> debian/config/${debian_arch}/none/defines <<EOF
-[${debarch_flavour}_image]
-configs:
- config.cloud
- ${debian_arch}/config.${debarch_flavour}
-EOF
-	cat >> debian/config/${debian_arch}/defines <<EOF
-[${debarch_flavour}_description]
-hardware: ${arch} AVF
-hardware-long: ${arch} Android Virtualization Framework
-EOF
-	./debian/rules debian/control || true
-
-	# 3. Build the kernel and generate Debian packages
-	./debian/rules source
-	[[ "$arch" == "$(uname -m)" ]] || export $(dpkg-architecture -a $debian_arch)
-	make -j$(nproc) -f debian/rules.gen \
-	     "binary-arch_${debian_arch}_none_${debarch_flavour}"
-
-	# 4. Copy the packages to localdebs and add their names to package_config/AVF
-	popd > /dev/null
-	cp "linux-headers-${abi_flavour}_${debian_kver}_${debian_arch}.deb" \
-	   "linux-image-${abi_flavour}-unsigned_${debian_kver}_${debian_arch}.deb" \
-	   "${debian_cloud_image}/localdebs/"
-	popd > /dev/null
+	if [[ "$save_workdir" -eq 1 ]]; then
+		cmd_args+=(-w)
+	fi
+	$SCRIPT_DIR/build_custom_kernel.sh "${cmd_args[@]}"
+	# 4. Add the package to package_config/AVF
+	abi_flavour=$(cat "${debian_cloud_image}/localdebs/abi_flavour")
 	cat >> "${config_space}/package_config/AVF" <<EOF
 linux-headers-${abi_flavour}
 linux-image-${abi_flavour}-unsigned
@@ -376,6 +278,12 @@ generate_output_package() {
 		virt-get-kernel -a "${raw_disk_image}"
 		mv vmlinuz* vmlinuz
 		mv initrd.img* initrd.img
+
+		if [[ "$arch" == "aarch64" ]]; then
+			lz4 -BD -12 -q vmlinuz vmlinuz.lz4
+			mv vmlinuz.lz4 vmlinuz
+		fi
+
 		contents+=(
 			vmlinuz
 			initrd.img
