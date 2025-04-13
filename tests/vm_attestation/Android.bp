@@ -48,6 +48,7 @@ rust_ffi {
     defaults: ["vm_attestation_test_payload_defaults"],
     visibility: [
         ":__subpackages__",
+        "//packages/modules/Virtualization/tests/benchmark",
         "//packages/modules/Virtualization/tests/testapk",
     ],
 }
