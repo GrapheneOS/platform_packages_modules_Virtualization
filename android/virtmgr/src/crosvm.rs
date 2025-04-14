@@ -102,7 +102,7 @@ static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
         // Nested virtualization is slow, so we need a longer timeout.
         Duration::from_secs(300)
     } else {
-        Duration::from_secs(30)
+        Duration::from_secs(60)
     }
 });
 
