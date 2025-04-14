@@ -182,6 +182,11 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         custom_config.wantUpdatable = false;
     }
 
+    #[cfg(vm_to_host_services)]
+    let host_services = config.common.host_services.clone();
+    #[cfg(not(vm_to_host_services))]
+    let host_services: Vec<String> = Vec::new();
+
     let vm_config = VirtualMachineConfig::AppConfig(VirtualMachineAppConfig {
         name: config.common.name.unwrap_or_else(|| String::from("VmRunApp")),
         apk: apk_fd.into(),
@@ -199,6 +204,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         osName: os_name.to_string(),
         hugePages: config.common.hugepages,
         boostUclamp: config.common.boost_uclamp,
+        hostServices: host_services,
     });
     run(
         service.as_ref(),
