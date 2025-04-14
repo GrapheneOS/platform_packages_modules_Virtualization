@@ -34,6 +34,7 @@
     <!-- Download the VM image and push it to the device -->
     <target_preparer class="com.android.tradefed.targetprep.RunHostScriptTargetPreparer">
         <option name="script-file" value="TerminalAppTests-downloader.sh" />
+        <option name="script-timeout" value="10m" />
     </target_preparer>
 
     <!-- Push the helper script to the device -->
