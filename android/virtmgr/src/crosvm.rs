@@ -740,9 +740,9 @@ impl VmInstance {
     }
 
     /// Returns current virtio-balloon size.
-    pub fn get_memory_balloon(&self) -> Result<u64, Error> {
+    pub fn get_actual_memory_balloon_bytes(&self) -> Result<u64, Error> {
         if !self.is_vm_running() {
-            bail!("get_memory_balloon when VM is not running");
+            bail!("get_actual_memory_balloon_bytes when VM is not running");
         }
         if !self.balloon_enabled {
             bail!("virtio-balloon is not enabled");

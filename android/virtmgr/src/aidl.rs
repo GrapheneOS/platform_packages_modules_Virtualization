@@ -1797,10 +1797,10 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
         Ok(self.instance.balloon_enabled)
     }
 
-    fn getMemoryBalloon(&self) -> binder::Result<i64> {
+    fn getActualMemoryBalloonBytes(&self) -> binder::Result<i64> {
         let balloon = self
             .instance
-            .get_memory_balloon()
+            .get_actual_memory_balloon_bytes()
             .with_context(|| format!("Error getting balloon for VM with CID {}", self.instance.cid))
             .with_log()
             .or_service_specific_exception(-1)?;
