@@ -24,9 +24,6 @@
       "name": "VmAttestationTestApp"
     },
     {
-      "name": "CustomPvmfwHostTestCases"
-    },
-    {
       "name": "art_standalone_dexpreopt_tests"
     },
     {
@@ -69,6 +66,9 @@
     },
     {
       "name": "AVFHostTestCases"
+    },
+    {
+      "name": "CustomPvmfwHostTestCases"
     },
     {
       "name": "AvfRkpdAppGoogleIntegrationTests",
