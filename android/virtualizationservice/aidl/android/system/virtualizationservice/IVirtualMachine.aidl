@@ -50,7 +50,7 @@ interface IVirtualMachine {
 
     /** Access to the VM's memory balloon. */
     boolean isMemoryBalloonEnabled();
-    long getMemoryBalloon();
+    long getActualMemoryBalloonBytes();
     void setMemoryBalloon(long num_bytes);
 
     /** Open a vsock connection to the CID of the VM on the given port. */
