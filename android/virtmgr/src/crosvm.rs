@@ -1144,6 +1144,21 @@ fn run_vm(
         // Context in b/238324526.
         command.arg("--unmap-guest-memory-on-fork");
 
+        // Lock the guest memory to improve memory accounting. More context in b/407786138
+        //
+        // Note that this uses MLOCK_ONFAULT underneath, so we still only pay for memory as it is
+        // used. Also depends on MADV_DONTNEED_LOCKED, which requires Linux v5.18+.
+        fn kernel_version() -> Option<(u32, u32)> {
+            let release = nix::sys::utsname::uname().ok()?.release().to_string_lossy().into_owned();
+            let mut release_iter = release.splitn(3, ".");
+            Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
+        }
+        if kernel_version().context("bad uname")? >= (5, 18) {
+            command.arg("--lock-guest-memory-dontneed");
+        } else {
+            warn!("kernel is too old enable --lock-guest-memory-dontneed");
+        }
+
         if config.ramdump.is_some() {
             // Protected VM needs to reserve memory for ramdump here. Note that we reserve more
             // memory for the restricted dma pool.
