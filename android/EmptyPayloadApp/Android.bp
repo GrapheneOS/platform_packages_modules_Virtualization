@@ -11,7 +11,7 @@ android_app {
     jni_uses_platform_apis: true,
     use_embedded_native_libs: true,
     min_sdk_version: "34",
-    target_sdk_version: "34",
+    target_sdk_version: "current",
     compile_multilib: "first",
     stl: "none",
 }
