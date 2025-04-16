@@ -1387,21 +1387,21 @@ public class VirtualMachine implements AutoCloseable {
     }
 
     /** @hide */
-    public long getMemoryBalloon() {
+    public long getActualMemoryBalloonBytes() {
         long bytes = 0;
 
         if (mMemoryManagementCallbacks != null) {
-            Log.d(TAG, "Auto balloon enabled in getMemoryBalloon");
+            Log.d(TAG, "Auto balloon enabled in getActualMemoryBalloonBytes");
             return bytes;
         }
 
         synchronized (mLock) {
             try {
                 if (mVirtualMachine != null) {
-                    bytes = mVirtualMachine.getMemoryBalloon();
+                    bytes = mVirtualMachine.getActualMemoryBalloonBytes();
                 }
             } catch (RemoteException e) {
-                Log.w(TAG, "Cannot getMemoryBalloon", e);
+                Log.w(TAG, "Cannot getActualMemoryBalloonBytes", e);
             }
         }
 
