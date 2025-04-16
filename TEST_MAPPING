@@ -1,6 +1,8 @@
 // When adding or removing tests here, don't forget to amend _all_modules list in
 // wireless/android/busytown/ath_config/configs/prod/avf/tests.gcl
 {
+  // Only add critical tests and avoid time consuming tests.
+  // presubmit should be finished within 30m.
   "avf-presubmit": [
     {
       "name": "AvfRkpdAppIntegrationTests"
@@ -45,9 +47,6 @@
       "name": "libdice_driver_test"
     },
     {
-      "name": "vm_accessor_test"
-    },
-    {
       "name": "avf_backcompat_tests"
     },
     {
@@ -76,6 +75,12 @@
     },
     {
       "name": "TerminalAppTests"
+    },
+    {
+      "name": "vm_accessor_test"
+    },
+    {
+      "name": "avf_early_vm_test"
     }
   ],
   "postsubmit": [
