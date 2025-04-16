@@ -22,7 +22,7 @@ use log::error;
 use log::warn;
 use log::LevelFilter;
 use vmbase::{
-    configure_heap, console_writeln, limit_stack_size, main,
+    bzimage, configure_heap, console_writeln, limit_stack_size, main,
     memory::{
         map_image_footer, unshare_all_memory, unshare_all_mmio_except_uart, unshare_uart,
         MemoryTrackerError, SIZE_128KB, SIZE_4KB,
@@ -166,16 +166,33 @@ fn main_wrapper<'a>(
     })?;
     unshare_all_memory();
 
-    let next_stage = select_next_stage(slices.kernel, keep_uart);
+    let next_stage = select_next_stage(slices.kernel, keep_uart)?;
 
     Ok((next_stage, slices))
 }
 
-fn select_next_stage(kernel: &[u8], keep_uart: bool) -> NextStage {
-    if keep_uart {
-        NextStage::LinuxBootWithUart(kernel.as_ptr() as _)
+/// Returns the offset of the entry point from the beginning of the provided kernel.
+fn kernel_entry_point_offset(kernel: &[u8]) -> Result<usize, RebootReason> {
+    let offset = if let Some(hdr) = bzimage::setup_header::get_from_bzimage(kernel) {
+        hdr.entry_point_64_offset()
     } else {
-        NextStage::LinuxBoot(kernel.as_ptr() as _)
+        0
+    };
+
+    if offset >= kernel.len() {
+        error!("Kernel entry point offset out of range");
+        return Err(RebootReason::InvalidPayload);
+    }
+
+    Ok(offset)
+}
+
+fn select_next_stage(kernel: &[u8], keep_uart: bool) -> Result<NextStage, RebootReason> {
+    let entry_point = kernel.as_ptr() as usize + kernel_entry_point_offset(kernel)?;
+    if keep_uart {
+        Ok(NextStage::LinuxBootWithUart(entry_point))
+    } else {
+        Ok(NextStage::LinuxBoot(entry_point))
     }
 }
 
