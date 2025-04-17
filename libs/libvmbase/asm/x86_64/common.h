@@ -64,7 +64,13 @@
 #define XCR0_TILECFG    0x00020000
 #define XCR0_TILEDATA   0x00040000
 
+/* Extended Feature Enable Register */
+#define EFER_LME        (1 << 8)
+#define EFER_LMA        (1 << 10)
+#define EFER_NXE        (1 << 11)
+
 /* Architecturally defined MSRs */
+#define IA32_EFER       0xC0000080
 #define IA32_FS_BASE    0xC0000100
 
 /*
