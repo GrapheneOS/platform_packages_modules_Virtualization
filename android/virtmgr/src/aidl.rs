@@ -983,6 +983,13 @@ impl VirtualizationService {
             );
         }
 
+        // It is too late to add a system API to control the ballooning behavior, so we automically
+        // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+        // permission as a temporarily solution.
+        // TODO(b/407079334): Replace with SystemApi.
+        let idle_compactor_balloon =
+            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -1037,6 +1044,7 @@ impl VirtualizationService {
                 requester_uid,
                 requester_debug_pid,
                 vm_context,
+                idle_compactor_balloon,
                 vendor_tee_services,
             )
             .with_context(|| format!("Failed to create VM with config {:?}", config))
