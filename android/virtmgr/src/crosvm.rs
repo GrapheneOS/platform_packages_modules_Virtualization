@@ -428,8 +428,6 @@ pub struct VmInstance {
     pub balloon_enabled: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
-    /// List of host services this VM might access.
-    pub host_services: Vec<String>,
     /// The latest lifecycle state which the payload reported itself to be in.
     payload_state: Mutex<PayloadState>,
     /// Represents the condition that payload_state was updated
@@ -458,7 +456,6 @@ impl VmInstance {
         requester_debug_pid: i32,
         vm_context: VmContext,
         vendor_tee_services: Vec<String>,
-        host_services: Vec<String>,
     ) -> Result<VmInstance, Error> {
         validate_config(&config)?;
         let cid = config.cid;
@@ -487,7 +484,6 @@ impl VmInstance {
             requester_uid_name,
             balloon_enabled,
             vendor_tee_services,
-            host_services,
         };
         info!("{} created", &instance);
         Ok(instance)
