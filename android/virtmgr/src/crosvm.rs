@@ -705,9 +705,9 @@ impl VmInstance {
     /// the guest to contract its memory usage, and then deflate the balloon.
     fn idle_compactor_balloon_loop(&self) -> Result<()> {
         // We'll size the balloon so that the guest only ends up with this many bytes available.
-        const TARGET_AVAILABLE_BYTES: u64 = 0_000_000;
+        const TARGET_AVAILABLE_BYTES: u64 = 10_000_000;
         // We'll stop the inflate when available bytes goes this low.
-        const INFLATE_DONE_BYTES: i64 = 10_000_000;
+        const INFLATE_DONE_BYTES: i64 = 15_000_000;
         // We'll stop the inflate if this much time passes.
         const INFLATE_TIMEOUT: Duration = Duration::from_secs(15);
 
