@@ -72,6 +72,7 @@ rust_defaults {
         "libuuid",
         // TODO(b/202115393) stabilize the interface
         "packagemanager_aidl-rust",
+        "rpc_servicemanager_aidl-rust",
     ],
     shared_libs: [
         "libselinux",
