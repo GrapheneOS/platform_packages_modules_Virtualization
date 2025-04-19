@@ -46,7 +46,6 @@ rust_defaults {
         "libnix",
         "libopenssl",
         "libprotobuf",
-        "librpc_servicemanager",
         "librpcbinder_rs",
         "librustutils",
         "libsecretkeeper_client",
