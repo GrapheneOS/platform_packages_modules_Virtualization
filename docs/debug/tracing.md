@@ -163,7 +163,7 @@ Here is a quick example on how trace Microdroid VM:
 
 2. Set up an adb connection with the running VM:
 ```shell
-adb shell forward tcp:9876 vsock:${CID}:5555
+adb forward tcp:9876 vsock:${CID}:5555
 adb connect localhost:9876
 adb -s localhost:9876 root
 ```

@@ -106,7 +106,7 @@ pub fn init_console() {
 ///
 /// Returns `None` if console was not initialized by calling [`init`] first.
 pub fn uart(id: usize) -> Option<&'static SpinMutex<Uart>> {
-    CONSOLES[id].get()
+    CONSOLES.get(id)?.get()
 }
 
 /// Reinitializes the n-th UART driver and returns it.
@@ -119,7 +119,7 @@ pub fn uart(id: usize) -> Option<&'static SpinMutex<Uart>> {
 /// This takes over the UART from wherever it is being used, the existing UART instance should not
 /// be used after this is called. This should only be used immediately before aborting the VM.
 pub unsafe fn emergency_uart(id: usize) -> Option<Uart> {
-    let addr = *ADDRESSES[id].get()?;
+    let addr = *ADDRESSES.get(id)?.get()?;
 
     // SAFETY: Initialization of UART using dedicated const address.
     Some(unsafe { Uart::new(addr) })

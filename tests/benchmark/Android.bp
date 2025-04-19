@@ -21,6 +21,7 @@ android_test {
         "MicrodroidIdleNativeLib",
         "MicrodroidTestNativeLib",
         "libiovsock_host_jni",
+        "libvm_attestation_test_payload",
     ],
     libs: [
         "framework-virtualization.impl",

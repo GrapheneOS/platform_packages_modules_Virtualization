@@ -131,4 +131,7 @@ parcelable VirtualMachineRawConfig {
 
     /** Custom memfds for a subset of guest memory */
     CustomMemoryBackingFile[] customMemoryBackingFiles;
+
+    /** List of host services this VM wants to access */
+    String[] hostServices;
 }

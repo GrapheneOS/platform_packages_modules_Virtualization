@@ -21,7 +21,7 @@ use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, SharedPathConfig, Displ
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{ApexInfoList, add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
-use crate::selinux::{check_tee_service_permission, getfilecon, getprevcon, SeContext};
+use crate::selinux::{check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext};
 use android_os_permissions_aidl::aidl::android::os::IPermissionController;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
     Certificate::Certificate,
@@ -781,6 +781,19 @@ impl VirtualizationService {
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
+        // Verify the VM owner has permissions to get all of these host services
+        // now to get early feedback. Each individual service is checked again
+        // when the client in the VM is requesting the specific services.
+        if !config.hostServices.is_empty() {
+            check_host_service_permission(
+                &caller_secontext,
+                &config.hostServices,
+                requester_debug_pid,
+                requester_uid,
+            )
+            .with_log()
+            .or_binder_exception(ExceptionCode::SECURITY)?;
+        }
         let kernel = maybe_clone_file(&config.kernel)?;
         let initrd = maybe_clone_file(&config.initrd)?;
 
@@ -970,6 +983,13 @@ impl VirtualizationService {
             );
         }
 
+        // It is too late to add a system API to control the ballooning behavior, so we automically
+        // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+        // permission as a temporarily solution.
+        // TODO(b/407079334): Replace with SystemApi.
+        let idle_compactor_balloon =
+            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -1024,6 +1044,7 @@ impl VirtualizationService {
                 requester_uid,
                 requester_debug_pid,
                 vm_context,
+                idle_compactor_balloon,
                 vendor_tee_services,
             )
             .with_context(|| format!("Failed to create VM with config {:?}", config))
@@ -1467,6 +1488,7 @@ fn load_app_config(
     vm_config.cpuOptions = config.cpuOptions.clone();
     vm_config.hugePages = config.hugePages || vm_payload_config.hugepages;
     vm_config.boostUclamp = config.boostUclamp;
+    vm_config.hostServices = config.hostServices.clone();
 
     // Microdroid takes additional init ramdisk & (optionally) storage image
     add_microdroid_system_images(config, instance_file, storage_image, os_name, &mut vm_config)?;
@@ -1797,10 +1819,10 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
         Ok(self.instance.balloon_enabled)
     }
 
-    fn getMemoryBalloon(&self) -> binder::Result<i64> {
+    fn getActualMemoryBalloonBytes(&self) -> binder::Result<i64> {
         let balloon = self
             .instance
-            .get_memory_balloon()
+            .get_actual_memory_balloon_bytes()
             .with_context(|| format!("Error getting balloon for VM with CID {}", self.instance.cid))
             .with_log()
             .or_service_specific_exception(-1)?;

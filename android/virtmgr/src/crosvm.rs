@@ -102,7 +102,7 @@ static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
         // Nested virtualization is slow, so we need a longer timeout.
         Duration::from_secs(300)
     } else {
-        Duration::from_secs(30)
+        Duration::from_secs(60)
     }
 });
 
@@ -345,6 +345,14 @@ impl VmState {
             thread::spawn(move || {
                 instance_monitor_status.clone().monitor_vm_status(child_monitor_status);
             });
+            if instance.idle_compactor_balloon {
+                let instance = instance.clone();
+                thread::spawn(move || {
+                    if let Err(e) = instance.idle_compactor_balloon_loop() {
+                        warn!("idle_compactor_balloon_loop failed: {e:#}");
+                    }
+                });
+            }
 
             let child_clone = child.clone();
             let instance_clone = instance.clone();
@@ -426,6 +434,8 @@ pub struct VmInstance {
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
     pub balloon_enabled: bool,
+    // Whether to inflate the balloon on app idle.
+    idle_compactor_balloon: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
     /// The latest lifecycle state which the payload reported itself to be in.
@@ -449,12 +459,14 @@ impl fmt::Display for VmInstance {
 
 impl VmInstance {
     /// Validates the given config and creates a new `VmInstance` but doesn't start running it.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: CrosvmConfig,
         temporary_directory: PathBuf,
         requester_uid: u32,
         requester_debug_pid: i32,
         vm_context: VmContext,
+        idle_compactor_balloon: bool,
         vendor_tee_services: Vec<String>,
     ) -> Result<VmInstance, Error> {
         validate_config(&config)?;
@@ -483,6 +495,7 @@ impl VmInstance {
             payload_state_updated: Condvar::new(),
             requester_uid_name,
             balloon_enabled,
+            idle_compactor_balloon,
             vendor_tee_services,
         };
         info!("{} created", &instance);
@@ -688,6 +701,83 @@ impl VmInstance {
         }
     }
 
+    /// When the app is idle, temporarily inflate the balloon almost as much as possible to force
+    /// the guest to contract its memory usage, and then deflate the balloon.
+    fn idle_compactor_balloon_loop(&self) -> Result<()> {
+        // We'll size the balloon so that the guest only ends up with this many bytes available.
+        const TARGET_AVAILABLE_BYTES: u64 = 10_000_000;
+        // We'll stop the inflate when available bytes goes this low.
+        const INFLATE_DONE_BYTES: i64 = 15_000_000;
+        // We'll stop the inflate if this much time passes.
+        const INFLATE_TIMEOUT: Duration = Duration::from_secs(15);
+
+        let mut vm_idle_prop_watcher = system_properties::PropertyWatcher::new("appsearch_vm.idle")
+            .expect("failed to create PropertyWatcher");
+        #[derive(PartialEq, Eq)]
+        enum VmState {
+            Idle,
+            Busy,
+        }
+        // `wait_for_state_change` waits for state change or timeout and then return current state
+        // (even on timeout).
+        //
+        // This is not racy because PropertyWatcher internally tracks the property's "serial". If
+        // the property changes between two `wait_for_state_change` calls, the second call will
+        // immediately return.
+        //
+        // Currently it seems to always return when the property is written, even when the value
+        // doesn't actually change. This may or may not be desirable.
+        let mut wait_for_state_change = |timeout: Option<Duration>| {
+            match vm_idle_prop_watcher.wait(timeout) {
+                Ok(()) | Err(system_properties::PropertyWatcherError::WaitFailed) => {}
+                Err(e) => return Err(e),
+            }
+            let r = vm_idle_prop_watcher.read(|_, v| Ok(v == "1" || v == "true"));
+            match r {
+                Ok(true) => Ok(VmState::Idle),
+                Ok(false) => Ok(VmState::Busy),
+                Err(system_properties::PropertyWatcherError::SystemPropertyAbsent) => {
+                    // Assume busy.
+                    Ok(VmState::Busy)
+                }
+                Err(e) => Err(e),
+            }
+        };
+        loop {
+            // Wait for idle.
+            if wait_for_state_change(None)? == VmState::Idle {
+                // Read current balloon size and available memory in guest.
+                let (balloon_actual, stats) = self.get_balloon_stats()?;
+                // Make the balloon big enough to consume all available memory, minus a constant.
+                let balloon_target = balloon_actual
+                    .checked_add_signed(stats.available_memory)
+                    .context("balloon_actual + available_memory overflow")?
+                    .saturating_sub(TARGET_AVAILABLE_BYTES);
+                self.set_memory_balloon(balloon_target)?;
+
+                // Wait for the balloon to finish inflating all the way.
+                // If the VM becomes non-idle or too much time passes, give up.
+                let inflate_start = std::time::Instant::now();
+                loop {
+                    if wait_for_state_change(Some(Duration::from_secs(1)))? != VmState::Idle {
+                        break;
+                    }
+                    if inflate_start.elapsed() > INFLATE_TIMEOUT {
+                        break;
+                    }
+                    let (_, stats) = self.get_balloon_stats()?;
+                    if stats.available_memory < INFLATE_DONE_BYTES {
+                        break;
+                    }
+                }
+                // Deflate the balloon. Note that the VM RSS will not immediately increase in
+                // response to this, we are just notifying the guest it is free to use the memory
+                // again.
+                self.set_memory_balloon(0)?;
+            }
+        }
+    }
+
     fn is_vm_running(&self) -> bool {
         matches!(&*self.vm_state.lock().unwrap(), VmState::Running { .. })
     }
@@ -740,30 +830,48 @@ impl VmInstance {
     }
 
     /// Returns current virtio-balloon size.
-    pub fn get_memory_balloon(&self) -> Result<u64, Error> {
+    pub fn get_actual_memory_balloon_bytes(&self) -> Result<u64, Error> {
+        Ok(self.get_balloon_stats()?.0)
+    }
+
+    fn get_balloon_stats(&self) -> Result<(u64, crosvm_control::BalloonStatsFfi), Error> {
         if !self.is_vm_running() {
-            bail!("get_memory_balloon when VM is not running");
+            bail!("get_actual_memory_balloon_bytes when VM is not running");
         }
         if !self.balloon_enabled {
             bail!("virtio-balloon is not enabled");
         }
         let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        let mut stats = crosvm_control::BalloonStatsFfi {
+            swap_in: 0,
+            swap_out: 0,
+            major_faults: 0,
+            minor_faults: 0,
+            free_memory: 0,
+            total_memory: 0,
+            available_memory: 0,
+            disk_caches: 0,
+            hugetlb_allocations: 0,
+            hugetlb_failures: 0,
+            shared_memory: 0,
+            unevictable_memory: 0,
+        };
         let mut balloon_actual = 0u64;
-        // SAFETY: Pointers are valid for the lifetime of the call. Null `stats` is valid.
+        // SAFETY: Pointers are valid for the lifetime of the call.
         let success = unsafe {
             crosvm_control::crosvm_client_balloon_stats(
                 socket_path_cstring.as_ptr(),
-                /* stats= */ std::ptr::null_mut(),
+                &mut stats,
                 &mut balloon_actual,
             )
         };
         if !success {
             bail!("Error requesting balloon stats");
         }
-        Ok(balloon_actual)
+        Ok((balloon_actual, stats))
     }
 
-    /// Inflates the virtio-balloon by `num_bytes` to reclaim guest memory. Called in response to
+    /// Inflates the virtio-balloon to `num_bytes` to reclaim guest memory. Called in response to
     /// memory-trimming notifications.
     pub fn set_memory_balloon(&self, num_bytes: u64) -> Result<(), Error> {
         if !self.is_vm_running() {
@@ -1143,6 +1251,21 @@ fn run_vm(
         // Workaround to keep crash_dump from trying to read protected guest memory.
         // Context in b/238324526.
         command.arg("--unmap-guest-memory-on-fork");
+
+        // Lock the guest memory to improve memory accounting. More context in b/407786138
+        //
+        // Note that this uses MLOCK_ONFAULT underneath, so we still only pay for memory as it is
+        // used. Also depends on MADV_DONTNEED_LOCKED, which requires Linux v5.18+.
+        fn kernel_version() -> Option<(u32, u32)> {
+            let release = nix::sys::utsname::uname().ok()?.release().to_string_lossy().into_owned();
+            let mut release_iter = release.splitn(3, ".");
+            Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
+        }
+        if kernel_version().context("bad uname")? >= (5, 18) {
+            command.arg("--lock-guest-memory-dontneed");
+        } else {
+            warn!("kernel is too old enable --lock-guest-memory-dontneed");
+        }
 
         if config.ramdump.is_some() {
             // Protected VM needs to reserve memory for ramdump here. Note that we reserve more
