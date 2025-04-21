@@ -63,7 +63,8 @@ fn find_vm_apk_path() -> Result<PathBuf, Error> {
 fn create_work_dir() -> Result<PathBuf, Error> {
     let s: String =
         rand::thread_rng().sample_iter(&Alphanumeric).take(17).map(char::from).collect();
-    let work_dir = PathBuf::from("/data/local/tmp/microdroid").join(s);
+    // Match this with vm_accessor/test/AndroidTest.xml for clean up.
+    let work_dir = PathBuf::from("/data/local/tmp/vm_accessor").join(s);
     info!("creating work dir {}", work_dir.display());
     fs::create_dir_all(&work_dir).context("failed to mkdir")?;
     Ok(work_dir)
