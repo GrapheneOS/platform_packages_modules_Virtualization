@@ -128,3 +128,9 @@ genrule {
     srcs: ["tests/data/test_tree_phandle.dts"],
     out: ["data/test_tree_phandle.dtb"],
 }
+
+dirgroup {
+    name: "trusty_dirgroup_packages_modules_virtualization_libs_libfdt",
+    visibility: ["//trusty/vendor/google/aosp/scripts"],
+    dirs: ["."],
+}
