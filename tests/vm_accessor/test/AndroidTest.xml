@@ -41,6 +41,13 @@
     <option name="push-file" key="vm_accessor_test" value="/data/local/tmp/vm_accessor_test" />
   </target_preparer>
 
+  <!-- Create test directory. Sync with vm_accessor's behavior -->
+  <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+    <option name="throw-if-cmd-fail" value="true" />
+    <option name="run-command" value="mkdir -p /data/local/tmp/vm_accessor" />
+    <option name="teardown-command" value="rm -rf /data/local/tmp/vm_accessor" />
+  </target_preparer>
+
   <!-- TODO(b/346763236): Remove this -->
   <target_preparer class="com.android.tradefed.targetprep.DisableSELinuxTargetPreparer" />
 
