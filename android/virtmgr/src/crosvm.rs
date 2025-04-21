@@ -34,6 +34,7 @@ use std::fmt;
 use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
+use std::time::Instant;
 use std::num::{NonZeroU16, NonZeroU32};
 use std::os::unix::io::{AsRawFd, OwnedFd};
 use std::os::unix::process::CommandExt;
@@ -646,6 +647,9 @@ impl VmInstance {
     fn monitor_vm_status(&self, child: Arc<SharedChild>) {
         let pid = child.id();
 
+        const QUIET_PERIOD: Duration = Duration::from_secs(60);
+        let start = Instant::now();
+
         loop {
             let mut wait_duration = Duration::from_secs(30);
             {
@@ -656,7 +660,9 @@ impl VmInstance {
                     Ok(guest_time) => vm_metric.cpu_guest_time = Some(guest_time),
                     Err(e) => {
                         wait_duration = Duration::from_secs(1);
-                        warn!("Failed to get guest CPU time: {}", e);
+                        if start.elapsed() >= QUIET_PERIOD {
+                            warn!("Failed to get guest CPU time: {}", e);
+                        }
                     }
                 }
 
@@ -670,7 +676,9 @@ impl VmInstance {
                     }
                     Err(e) => {
                         wait_duration = Duration::from_secs(1);
-                        warn!("Failed to get guest RSS: {}", e);
+                        if start.elapsed() >= QUIET_PERIOD {
+                            warn!("Failed to get guest RSS: {}", e);
+                        }
                     }
                 }
             }
