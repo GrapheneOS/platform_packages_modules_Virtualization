@@ -18,6 +18,13 @@
     <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
     <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
+
+    <!-- Only run if the VM attestation is supported.
+         Match with MicrodroidDeviceTestBase#ensureVmAttestationSupported() -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.ShippingApiLevelModuleController">
+        <option name="vsr-min-api-level" value="202504" />
+    </object>
+
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="VmAttestationTestApp.apk" />
     </target_preparer>
