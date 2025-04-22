@@ -74,15 +74,21 @@ internal class Runner private constructor(val vm: VirtualMachine, callback: Call
             val name = customConfig.name
             require(!name.isNullOrEmpty()) { "Virtual machine's name is missing in the config" }
 
-            var vm = vmm.getOrCreate(name, config)
-            try {
-                vm.config = config
-            } catch (e: VirtualMachineException) {
+            // If there's a VM with the same name, delete it. And before deleting it, ensure that
+            // it's stopped. This can happen especially when the user started the terminal app right
+            // after they dismissed it.
+            var oldVm = vmm.get(name)
+            if (oldVm != null) {
+                if (oldVm.getStatus() != VirtualMachine.STATUS_STOPPED) {
+                    val cb = Callback()
+                    Log.i(TAG, "Virtual machine ($name) is running. Waiting for it to stop.")
+                    oldVm.setCallback(ForkJoinPool.commonPool(), cb)
+                    cb.finishedSuccessfully.join()
+                }
                 vmm.delete(name)
-                vm = vmm.create(name, config)
-                Log.w(TAG, "Re-creating virtual machine ($name)", e)
             }
 
+            var vm = vmm.create(name, config)
             val cb = Callback()
             vm.setCallback(ForkJoinPool.commonPool(), cb)
             vm.run()
