@@ -57,10 +57,19 @@ rust_defaults {
     ],
 }
 
+vintf_fragment {
+    name: "virtualizationservice.xml",
+    src: "virtualizationservice.xml",
+}
+
 rust_binary {
     name: "virtualizationservice",
     defaults: ["virtualizationservice_defaults"],
     apex_available: ["com.android.virt"],
+    vintf_fragment_modules: select(soong_config_variable("ANDROID", "avf_remote_attestation_enabled"), {
+        "true": ["virtualizationservice.xml"],
+        default: unset,
+    }),
 }
 
 xsd_config {
