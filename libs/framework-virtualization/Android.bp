@@ -66,5 +66,9 @@ gensrcs {
             true: "sed -ie 's/@vendor_modules_enabled_placeholder/true/g'",
             default: "sed -ie 's/@vendor_modules_enabled_placeholder/false/g'",
         }) + " $(genDir)/tmp.java && " +
+        select(release_flag("RELEASE_AVF_SUPPORT_LONG_RUNNING_VMS"), {
+            true: "sed -ie 's/@support_long_running_vms_placeholder/true/g'",
+            default: "sed -ie 's/@support_long_running_vms_placeholder/false/g'",
+        }) + " $(genDir)/tmp.java && " +
         " cp $(genDir)/tmp.java $(out)",
 }
