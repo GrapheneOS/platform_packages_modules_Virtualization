@@ -46,6 +46,8 @@ use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadCo
 use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::Signal;
 use payload::load_metadata;
+#[cfg(not(vm_to_host_services))]
+use rpc_servicemanager::get_default_rpc_servicemanager_uds_fd;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::{get_default_rpc_servicemanager_uds_fd, register_rpc_servicemanager};
 use rpcbinder::RpcSession;
@@ -209,6 +211,8 @@ fn try_main() -> Result<()> {
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
     #[cfg(vm_to_host_services)]
     let rpc_servicemanager_fd = get_default_rpc_servicemanager_uds_fd()?;
+    #[cfg(not(vm_to_host_services))]
+    let _ = get_default_rpc_servicemanager_uds_fd()?;
 
     load_crashkernel_if_supported().context("Failed to load crashkernel")?;
 
