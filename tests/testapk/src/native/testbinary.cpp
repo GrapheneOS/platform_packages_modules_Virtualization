@@ -17,6 +17,7 @@
 #include <aidl/com/android/microdroid/testservice/BnTestService.h>
 #include <aidl/com/android/microdroid/testservice/BnVmCallback.h>
 #include <aidl/com/android/microdroid/testservice/IAppCallback.h>
+#include <android-base/chrono_utils.h>
 #include <android-base/file.h>
 #include <android-base/properties.h>
 #include <android-base/result.h>
@@ -31,6 +32,8 @@
 #include <sys/capability.h>
 #include <sys/statvfs.h>
 #include <sys/system_properties.h>
+
+#include <chrono>
 #ifdef __MICRODROID_TEST_PAYLOAD_USES_LIBICU__
 #include <unicode/uchar.h>
 #endif
@@ -48,6 +51,7 @@ using android::base::Error;
 using android::base::make_scope_guard;
 using android::base::Result;
 using android::base::unique_fd;
+using android::base::WaitForProperty;
 using android::fs_mgr::Fstab;
 using android::fs_mgr::FstabEntry;
 using android::fs_mgr::GetEntryForMountPoint;
@@ -426,6 +430,28 @@ Result<void> start_test_service() {
                                                  "should be only used together with "
                                                  "MicrodroidTestNativeLibWithLibIcu.so payload");
 #endif
+        }
+
+        ScopedAStatus requestEncryptedStoreSetup() override {
+            const char* path_c = AVmPayload_getEncryptedStoragePath();
+            if (access(path_c, F_OK) == 0) {
+                std::string err_msg = std::string(path_c) + " already exist";
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   err_msg.c_str());
+            }
+            if (__system_property_set("microdroid_manager.encrypted_store.setup", "true") != 0) {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "Failed to set "
+                                                                   "microdroid_manager.setup_"
+                                                                   "encrypted_store sysprop");
+            }
+
+            if (!WaitForProperty("microdroid_manager.encrypted_store.status", "ready", 5s)) {
+                return ScopedAStatus::
+                        fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                     "encrypted store not available after 5s");
+            }
+            return ScopedAStatus::ok();
         }
 
         ScopedAStatus quit() override { exit(0); }

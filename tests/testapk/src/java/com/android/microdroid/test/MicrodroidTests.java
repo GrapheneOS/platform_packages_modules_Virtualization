@@ -3129,6 +3129,33 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         VirtualMachineCallback.STOP_REASON_MICRODROID_UNKNOWN_RUNTIME_ERROR);
     }
 
+    @Test
+    public void delayEncryptedStoreSetup() throws Exception {
+        assumeSupportedDevice();
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_delay_enc_store.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(1_000_000)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_delay_enc_store", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            // This call will also check that encrypted store is not mounted.
+                            ts.requestEncryptedStoreSetup();
+                            ts.writeToFile("Hello!", "/mnt/encryptedstore/file.txt");
+                            tr.mFileContent = ts.readFromFile("/mnt/encryptedstore/file.txt");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mFileContent).isEqualTo("Hello!");
+    }
+
     private static class VmShareServiceConnection implements ServiceConnection {
 
         private final CountDownLatch mLatch = new CountDownLatch(1);

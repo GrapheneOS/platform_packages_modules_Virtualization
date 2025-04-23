@@ -72,6 +72,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
+use std::sync::Arc;
 use std::time::Duration;
 use vm_secret::VmSecret;
 
@@ -100,6 +101,7 @@ const ENCRYPTEDSTORE_KEYSIZE: usize = 32;
 const DICE_CHAIN_FILE: &str = "/microdroid_resources/dice_chain.raw";
 
 const ENCRYPTED_STORE_STATUS_PROP: &str = "microdroid_manager.encrypted_store.status";
+const ENCRYPTED_STORE_SETUP_PROP: &str = "microdroid_manager.encrypted_store.setup";
 
 #[derive(thiserror::Error, Debug)]
 enum MicrodroidError {
@@ -440,8 +442,10 @@ fn try_run_payload(
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
     let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
-    let vm_secret = VmSecret::new(dice_artifacts, service, &mut state)
-        .context("Failed to create VM secrets")?;
+    let vm_secret = Arc::new(
+        VmSecret::new(dice_artifacts, service, &mut state)
+            .context("Failed to create VM secrets")?,
+    );
 
     let is_new_instance = match state {
         VmInstanceState::NewlyCreated => true,
@@ -501,19 +505,46 @@ fn try_run_payload(
 
     let std_redirect = if is_debuggable()? {
         // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-        Some(rustutils::inherited_fd::take_fd_ownership(
+        Arc::new(Some(rustutils::inherited_fd::take_fd_ownership(
             env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
-        )?)
+        )?))
     } else {
-        None
+        Arc::new(None)
     };
 
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        info!("Preparing encryptedstore ...");
-        Some(prepare_encryptedstore(&vm_secret, &std_redirect).context("encryptedstore run")?)
+        let vm_secret_for_enc_store = vm_secret.clone();
+        let std_redirect_for_enc_store = std_redirect.clone();
+        if config.delay_encrypted_store_setup {
+            info!("Delaying preparation of encryptedstore as requested ...");
+            std::thread::spawn(move || {
+                // Should we violently crash here? Or should we just log the error and let payload
+                // decide what to do?
+                info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
+                wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
+                    .expect("failed waiting for {ENCRYPTED_STORE_SETUP_PROP}");
+                info!("{ENCRYPTED_STORE_SETUP_PROP} is true. Preparing encryptedstore ...");
+                prepare_encryptedstore(&vm_secret_for_enc_store, &std_redirect_for_enc_store)
+                    .expect("encrypted store run")
+                    .wait()
+                    .expect("encrypted store run");
+                wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
+                    .expect("wait for {ENCRYPTED_STORE_STATUS_PROP}");
+                // Now we can tell ueventd to stop.
+                system_properties::write("microdroid_manager.init_done", "1")
+                    .expect("set microdroid_manager.init_done");
+            });
+            None
+        } else {
+            info!("Preparing encryptedstore ...");
+            Some(
+                prepare_encryptedstore(&vm_secret_for_enc_store, &std_redirect_for_enc_store)
+                    .context("encryptedstore run")?,
+            )
+        }
     } else {
         None
     };
@@ -560,8 +591,12 @@ fn try_run_payload(
     wait_for_property_true("dev.bootcomplete").context("failed waiting for dev.bootcomplete")?;
 
     // And then tell it we're done so unnecessary services can be shut down.
-    system_properties::write("microdroid_manager.init_done", "1")
-        .context("set microdroid_manager.init_done")?;
+    // Right now the only service we stop is ueventd. However, in case payload request to delay
+    // setup of the encrypted store, we should keep the ueventd around.
+    if !config.delay_encrypted_store_setup {
+        system_properties::write("microdroid_manager.init_done", "1")
+            .context("set microdroid_manager.init_done")?;
+    }
 
     info!("boot completed, time to run payload");
     exec_task(task, service, &std_redirect).context("Failed to run payload")
@@ -758,6 +793,7 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
                 export_tombstones: None,
                 enable_authfs: false,
                 hugepages: false,
+                delay_encrypted_store_setup: payload_config.delay_encrypted_store_setup,
             })
         }
         _ => bail!("Failed to match config against a config type."),

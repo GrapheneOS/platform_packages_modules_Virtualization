@@ -1,0 +1,7 @@
+{
+  "task": {
+    "type": "microdroid_launcher",
+    "command": "MicrodroidTestNativeLib.so"
+  },
+  "delay_encrypted_store_setup": true
+}

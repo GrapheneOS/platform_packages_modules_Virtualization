@@ -2218,6 +2218,15 @@ fn check_no_tee_services(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
+fn check_no_delay_enc_store(config: &VirtualMachineConfig) -> binder::Result<()> {
+    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if config.shouldDelayEncryptedStoreSetup {
+        return Err(anyhow!("long_running_vms feature is disabled"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+    }
+    Ok(())
+}
+
 fn check_protected_vm_is_supported() -> binder::Result<()> {
     let is_pvm_supported =
         hypervisor_props::is_protected_vm_supported().or_service_specific_exception(-1)?;
@@ -2244,6 +2253,9 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     }
     if !cfg!(tee_services_allowlist) {
         check_no_tee_services(config)?;
+    }
+    if !cfg!(long_running_vms) {
+        check_no_delay_enc_store(config)?;
     }
     Ok(())
 }

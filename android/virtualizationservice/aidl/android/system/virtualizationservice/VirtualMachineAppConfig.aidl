@@ -155,4 +155,11 @@ parcelable VirtualMachineAppConfig {
 
     /** List of host services this VM wants to access */
     String[] hostServices;
+
+    /**
+     * Whether microdroid_manager should delay setup of encrypted store until later.
+     * If this is set to true, payload is expected to tell microdroid_manager when to do the
+     * setup.
+     */
+    boolean shouldDelayEncryptedStoreSetup;
 }
