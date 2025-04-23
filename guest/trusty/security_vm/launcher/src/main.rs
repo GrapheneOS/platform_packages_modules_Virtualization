@@ -19,13 +19,18 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     IVirtualizationService::IVirtualizationService, VirtualMachineConfig::VirtualMachineConfig,
     VirtualMachineRawConfig::VirtualMachineRawConfig,
 };
-use android_system_virtualizationservice::binder::{ParcelFileDescriptor, Strong};
-use anyhow::{Context, Result};
+use android_system_virtualizationservice::binder::{
+    self, ParcelFileDescriptor, ProcessState, Strong,
+};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 use hypervisor_props::is_protected_vm_supported;
 use std::fs::File;
 use std::path::PathBuf;
 use vmclient::VmInstance;
+
+const ACCESSOR_SERVICE_NAME: &str = "android.os.IAccessor/ICommService/default";
+const INTERNAL_RPC_SERVICE_NAME: &str = "android.keymint.trusty.commservice.ICommService/default";
 
 #[derive(Parser)]
 /// Collection of CLI for trusty_security_vm_launcher
@@ -49,6 +54,10 @@ pub struct Args {
     /// Memory size of the VM in MiB
     #[arg(long, default_value_t = 128)]
     memory_size_mib: i32,
+
+    /// Port number of the RPC service exposed in VM
+    #[arg(long, default_value_t = -1)]
+    port: i32,
 
     /// CPU Topology exposed to the VM <one-cpu|match-host>
     #[arg(long, default_value = "one-cpu", value_parser = parse_cpu_topology)]
@@ -117,10 +126,26 @@ fn main() -> Result<()> {
     vm.start(None /* callback */).context("Failed to start VM")?;
 
     println!("started {} VM", args.name.to_owned());
-    let death_reason = vm.wait_for_death();
-    eprintln!("{} ended: {:?}", args.name.to_owned(), death_reason);
 
+    if args.port > 0 {
+        ProcessState::start_thread_pool();
+        let accessor = vm
+            .vm
+            .createAccessorBinder(INTERNAL_RPC_SERVICE_NAME, args.port)
+            .context("failed to create accessor binder")?;
+        let accessor_delegator = binder::delegate_accessor(INTERNAL_RPC_SERVICE_NAME, accessor)
+            .context("failed to delegate accessor")?;
+        // TODO(b/429217397): Use a proper way to register an accessor.
+        binder::add_service(ACCESSOR_SERVICE_NAME, accessor_delegator)
+            .context("failed to add accessor service")?;
+        println!("registered accessor service {ACCESSOR_SERVICE_NAME}");
+        ProcessState::join_thread_pool();
+
+        bail!("Thread pool unexpectedly ended");
+    } else {
+        let death_reason = vm.wait_for_death();
+        eprintln!("{} ended: {:?}", args.name.to_owned(), death_reason);
+        Ok(())
+    }
     // TODO(b/331320802): we may want to use android logger instead of stdio_to_kmsg?
-
-    Ok(())
 }
