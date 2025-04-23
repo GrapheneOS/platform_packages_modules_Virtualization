@@ -46,6 +46,8 @@ use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadCo
 use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::Signal;
 use payload::load_metadata;
+#[cfg(vm_to_host_services)]
+use rpc_servicemanager::{get_default_rpc_servicemanager_uds_fd, register_rpc_servicemanager};
 use rpcbinder::RpcSession;
 use rustutils::sockets::android_get_control_socket;
 use rustutils::system_properties;
@@ -203,7 +205,10 @@ fn try_main() -> Result<()> {
     );
     info!("started.");
 
+    // Get the FDs now (with FD_CLOEXEC), so they aren't included in the forked processes
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
+    #[cfg(vm_to_host_services)]
+    let rpc_servicemanager_fd = get_default_rpc_servicemanager_uds_fd()?;
 
     load_crashkernel_if_supported().context("Failed to load crashkernel")?;
 
@@ -213,6 +218,14 @@ fn try_main() -> Result<()> {
     let service = get_vms_rpc_binder()
         .context("cannot connect to VirtualMachineService")
         .map_err(|e| MicrodroidError::FailedToConnectToVirtualizationService(e.to_string()))?;
+
+    #[cfg(vm_to_host_services)]
+    register_rpc_servicemanager(
+        service
+            .getHostRpcProvider()
+            .context("failed to set up the host RPC provider from the host")?,
+        Some(rpc_servicemanager_fd),
+    )?;
 
     match try_run_payload(&service, vm_payload_service_fd) {
         Ok(code) => {

@@ -16,6 +16,7 @@
 package android.system.virtualmachineservice;
 
 import android.hardware.security.secretkeeper.ISecretkeeper;
+import android.os.IRpcProvider;
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationcommon.ErrorCode;
 
@@ -69,4 +70,14 @@ interface IVirtualMachineService {
      * @param id Identifier for the secret held in Secretkeeper for the caller
      */
     void claimSecretkeeperEntry(in byte[64] id);
+
+    /**
+     * Return an interface for the rpc_servicemanager instance to use.
+     *
+     * This is how microdroid manager gets information about host services that are
+     * listening over vsock for clients in the guest VM.
+     * These host services are currently proxied by virtmgr so the services
+     * aren't aware of a vsock connection between the client and service.
+     */
+    IRpcProvider getHostRpcProvider();
 }
