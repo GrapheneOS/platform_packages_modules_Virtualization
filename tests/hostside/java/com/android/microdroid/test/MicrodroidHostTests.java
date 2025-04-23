@@ -425,15 +425,22 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Preconditions
         assumeVmTypeSupported("microdroid", true); // Non-protected VMs may not support upgrades
         ensureUpdatableVmSupported();
-        getDevice().uninstallPackage(PACKAGE_NAME);
-        getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ true);
-        ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
 
-        getDevice().uninstallPackage(PACKAGE_NAME);
-        cleanUpVirtualizationTestSetup(getDevice());
-        // Install the updated version of app (versionCode 6)
-        getDevice().installPackage(findTestFile(APK_UPDATED_NAME), /* reinstall= */ true);
-        ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+        try {
+            // Boot with the default version (V5)
+            ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            cleanUpVirtualizationTestSetup(getDevice());
+
+            // Install the updated version of app (V6)
+            getDevice().installPackage(findTestFile(APK_UPDATED_NAME), /* reinstall= */ true);
+            ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+        } finally {
+            // Restore the default MicrodroidTestApp.apk for other tests.
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ false);
+        }
     }
 
     @Test
@@ -444,20 +451,28 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Preconditions: Rollback protection is provided only for protected VM.
         assumeVmTypeSupported("microdroid", true);
 
-        // Install the upgraded version (v6)
-        getDevice().uninstallPackage(PACKAGE_NAME);
-        getDevice().installPackage(findTestFile(APK_UPDATED_NAME), /* reinstall= */ true);
-        ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+        try {
+            // Install the latest version (V6)
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            getDevice().installPackage(findTestFile(APK_UPDATED_NAME), /* reinstall= */ true);
+            ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
 
-        getDevice().uninstallPackage(PACKAGE_NAME);
-        cleanUpVirtualizationTestSetup(getDevice());
-        // Install the older version (v5)
-        getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ true);
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            cleanUpVirtualizationTestSetup(getDevice());
+            // Install the default version (V5)
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ true);
 
-        assertThrows(
-                "pVM must fail to boot with downgraded payload apk",
-                DeviceRuntimeException.class,
-                () -> ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG));
+            assertThrows(
+                    "pVM must fail to boot with downgraded payload apk",
+                    DeviceRuntimeException.class,
+                    () ->
+                            ensureProtectedMicrodroidBootsSuccessfully(
+                                    INSTANCE_ID_FILE, INSTANCE_IMG));
+        } finally {
+            // Restore the default MicrodroidTestApp.apk for other tests.
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ false);
+        }
     }
 
     private void ensureProtectedMicrodroidBootsSuccessfully(
@@ -1460,8 +1475,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
         prepareVirtualizationTestSetup(getDevice());
 
-        getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ false);
-
+        new CommandRunner(getDevice()).tryRun("pm", "clear", PACKAGE_NAME);
         new CommandRunner(getDevice())
                 .tryRun(
                         "pm",
@@ -1480,8 +1494,6 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
         archiveLogThenDelete(
                 mTestLogs, getDevice(), LOG_PATH, "vm.log-" + mTestName.getMethodName());
-
-        getDevice().uninstallPackage(PACKAGE_NAME);
     }
 
     private void assumeVfioPlatformSupported() throws Exception {
