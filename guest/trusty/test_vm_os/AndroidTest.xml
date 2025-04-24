@@ -32,6 +32,7 @@
     </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="throw-if-cmd-fail" value="true" />
+        <option name="log-command-output" value="true" />
         <!--Note: the first run-command shall not expect the background command to have started -->
         <option name="run-bg-command" value="sh /data/local/tmp/trusty_test_vm_os/trusty-vm-launcher.sh" />
         <option name="run-command" value="sh /data/local/tmp/trusty_test_vm_os/trusty-wait-ready.sh" />
@@ -82,8 +83,6 @@
     </test>
     <metrics_collector class="com.android.tradefed.device.metric.FilePullerLogCollector">
         <option name="directory-keys" value="/data/local/tmp/trusty_test_vm_os/logs" />
-        <option name="collect-on-run-ended-only" value="true" />
         <option name="clean-up" value="true"/>
-        <option name="collect-on-run-ended-only" value="false" />
     </metrics_collector>
     </configuration>
