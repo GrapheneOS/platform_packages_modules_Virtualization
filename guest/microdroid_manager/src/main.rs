@@ -40,7 +40,7 @@ use binder::Strong;
 use dice_driver::DiceDriver;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
-use log::{error, info};
+use log::{error, info, warn};
 use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
 use nix::mount::{umount2, MntFlags};
@@ -173,6 +173,27 @@ fn should_defer_rollback_protection() -> bool {
     Path::new(DEFER_ROLLBACK_PROTECTION).exists()
 }
 
+/// Configure the balloon device to not retry when it fails to inflate. Context: b/407629285
+fn set_bail_on_out_of_puff() -> Result<()> {
+    // The sysfs path will look like the following, but `N` varies.
+    //
+    //     /sys/bus/virtio/drivers/virtio_balloon/virtioN/bail_on_out_of_puff"
+    for entry in std::fs::read_dir("/sys/bus/virtio/drivers/virtio_balloon")? {
+        let entry = entry?;
+        match entry.file_name().to_str() {
+            Some(name) if name.starts_with("virtio") => {}
+            _ => continue,
+        }
+        let option_path = entry.path().join("bail_on_out_of_puff");
+        if !option_path.exists() {
+            continue;
+        }
+        std::fs::write(option_path, "Y")?;
+        return Ok(());
+    }
+    bail!("didn't find bail_on_out_of_puff sysfs entry")
+}
+
 fn main() -> Result<()> {
     // SAFETY: This is very early in the process. Nobody has taken ownership of the inherited FDs
     // yet.
@@ -218,6 +239,10 @@ fn try_main() -> Result<()> {
 
     swap::init_swap().context("Failed to initialize swap")?;
     info!("swap enabled.");
+
+    if let Err(e) = set_bail_on_out_of_puff() {
+        warn!("failed to set bail_on_out_of_puff: {e:#}");
+    }
 
     let service = get_vms_rpc_binder()
         .context("cannot connect to VirtualMachineService")
