@@ -216,7 +216,8 @@ EOF
 		cmd_args+=(-w)
 	fi
 	$SCRIPT_DIR/build_custom_kernel.sh "${cmd_args[@]}"
-	# 4. Add the package to package_config/AVF
+
+	# Add the custom kernel packages to package_config/AVF for installation.
 	abi_flavour=$(cat "${debian_cloud_image}/localdebs/abi_flavour")
 	cat >> "${config_space}/package_config/AVF" <<EOF
 linux-headers-${abi_flavour}
@@ -228,6 +229,8 @@ run_fai() {
 	# NOTE: Prevent FAI from installing grub packages and running related scripts,
 	#       if we are loading the kernel directly.
 	if [[ "$uboot" != 1 ]]; then
+		sed -i "/\/boot\/efi/d" \
+		    "${config_space}/files/etc/fstab/${debian_arch^^}"
 		sed -i "/shim-signed/d ; /grub.*${debian_arch}.*/d" \
 		    "${config_space}/package_config/${debian_arch^^}"
 		rm "${config_space}/scripts/SYSTEM_BOOT/20-grub"
@@ -239,10 +242,6 @@ run_fai() {
 }
 
 generate_output_package() {
-	fdisk -l "${raw_disk_image}"
-	local root_partition_num=1
-	local efi_partition_num=15
-
 	local vm_config="$SCRIPT_DIR/vm_config.json"
 	if [[ "$uboot" == 1 ]]; then
 		vm_config="$SCRIPT_DIR/vm_config.u-boot.json"
@@ -252,9 +251,9 @@ generate_output_package() {
 
 	echo ${build_id} > build_id
 
+	local root_partition_num=1
 	loop=$(losetup -f --show --partscan $raw_disk_image)
 	dd if="${loop}p$root_partition_num" of=root_part
-	dd if="${loop}p$efi_partition_num" of=efi_part
 	losetup -d "${loop}"
 
 	cp ${vm_config} vm_config.json
@@ -264,12 +263,10 @@ generate_output_package() {
 	fi
 
 	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
-	sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
 
 	contents=(
 		build_id
 		root_part
-		efi_part
 		vm_config.json
 	)
 
@@ -287,6 +284,17 @@ generate_output_package() {
 		contents+=(
 			vmlinuz
 			initrd.img
+		)
+	else
+		local efi_partition_num=15
+		loop=$(losetup -f --show --partscan $raw_disk_image)
+		dd if="${loop}p$efi_partition_num" of=efi_part
+		losetup -d "${loop}"
+
+		sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
+
+		contents+=(
+			efi_part
 		)
 	fi
 
