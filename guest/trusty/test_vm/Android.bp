@@ -83,5 +83,6 @@ sh_test {
     test_config_template: "AndroidTest.xml",
     test_suites: [
         "general-tests",
+        "vts",
     ],
 }
