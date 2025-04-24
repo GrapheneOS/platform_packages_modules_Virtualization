@@ -154,8 +154,8 @@ static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
     }
 });
 
-// TODO(ioffe): add service for guest-ffa.
-const KNOWN_TEE_SERVICES: [&str; 0] = [];
+const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
 
 fn check_known_tee_service(tee_service: &str) -> binder::Result<()> {
     if !KNOWN_TEE_SERVICES.contains(&tee_service) {
@@ -775,12 +775,6 @@ impl VirtualizationService {
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
-        // TODO(b/391774181): remove this check in a follow-up patch.
-        if !system_tee_services.is_empty() {
-            return Err(anyhow!("support for system tee services is coming soon!"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
-
         // Verify the VM owner has permissions to get all of these host services
         // now to get early feedback. Each individual service is checked again
         // when the client in the VM is requesting the specific services.
@@ -1036,6 +1030,7 @@ impl VirtualizationService {
             instance_id,
             custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
+            enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
         };
         let instance = Arc::new(
             VmInstance::new(
