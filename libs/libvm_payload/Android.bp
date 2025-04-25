@@ -94,9 +94,15 @@ rust_library_rlib {
 cc_library_headers {
     name: "vm_payload_headers",
     defaults: ["avf_build_flags_cc"],
-    apex_available: ["com.android.compos"],
+    apex_available: ["//apex_available:anyapex"],
     export_include_dirs: ["include"],
     visibility: ["//visibility:public"],
+
+    // Set to 33 for appsearch, but can be arbitrary low since symbols
+    // are guarded by __INTRODUCED_IN. Comment requested by ioffe@.
+    // Library introduced at SDK 34, so no symbols are actually usable
+    // at 33.
+    min_sdk_version: "33",
 }
 
 // Restricted headers for use by internal clients & associated tests.
