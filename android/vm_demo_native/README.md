@@ -15,11 +15,11 @@ app](../MicrodroidDemoApp/README.md).
 ```sh
 source build/envsetup.sh
 choosecombo 1 aosp_arm64 userdebug
-m MicrodroidTestApp
+m MicrodroidTestHelperApp
 m vm_demo_native
 ```
 
-`MicrodroidTestApp` is the application what will be running in the VM. Actually, we will run a
+`MicrodroidTestHelperApp` is the application what will be running in the VM. Actually, we will run a
 native shared library `MicrodroidTestNativeLib.so` from the APK.
 
 `vm_demo_native` runs on the host (i.e. Android). Its job is to start the VM and connect to the
@@ -29,9 +29,12 @@ native shared lib and do some work using the lib. Specifically, we will call an 
 ## Installing
 
 ```sh
-adb push out/target/product/generic_arm64/testcases/MicrodroidTestApp/arm64/MicrodroidTestApp.apk \
+# choosecombo would set this as well.
+OUT=out/target/product/generic_arm64
+
+adb push ${OUT}/testcases/MicrodroidTestHelperApp/arm64/MicrodroidTestHelperApp.apk \
   /data/local/tmp/
-adb push out/target/product/generic_arm64/system/bin/vm_demo_native /data/local/tmp/
+adb push ${OUT}/system/bin/vm_demo_native /data/local/tmp/
 ```
 
 ## Running

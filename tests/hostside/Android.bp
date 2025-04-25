@@ -34,8 +34,8 @@ java_defaults {
 }
 
 DEVICE_DATA = [
-    ":MicrodroidTestApp",
-    ":MicrodroidTestAppUpdated",
+    ":MicrodroidTestHelperApp",
+    ":MicrodroidTestHelperAppUpdated",
     ":microdroid_general_sepolicy.conf",
     ":test.com.android.virt.pem",
     ":test2.com.android.virt.pem",

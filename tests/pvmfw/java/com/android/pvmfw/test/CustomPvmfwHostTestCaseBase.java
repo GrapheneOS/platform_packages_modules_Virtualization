@@ -41,8 +41,8 @@ import java.util.Map;
 public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     @NonNull public static final String PVMFW_FILE_NAME = "pvmfw_test.bin";
     @NonNull public static final String BCC_FILE_NAME = "dice.dat";
-    @NonNull public static final String PACKAGE_FILE_NAME = "MicrodroidTestApp.apk";
-    @NonNull public static final String PACKAGE_NAME = "com.android.microdroid.test";
+    @NonNull public static final String PACKAGE_FILE_NAME = "MicrodroidTestHelperApp.apk";
+    @NonNull public static final String PACKAGE_NAME = "com.android.microdroid.helper";
     @NonNull public static final String MICRODROID_DEBUG_FULL = "full";
     @NonNull public static final String MICRODROID_DEBUG_NONE = "none";
 

@@ -91,9 +91,9 @@ import java.util.stream.Collectors;
 
 @RunWith(DeviceParameterizedRunner.class)
 public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
-    private static final String APK_NAME = "MicrodroidTestApp.apk";
-    private static final String APK_UPDATED_NAME = "MicrodroidTestAppUpdated.apk";
-    private static final String PACKAGE_NAME = "com.android.microdroid.test";
+    private static final String APK_NAME = "MicrodroidTestHelperApp.apk";
+    private static final String APK_UPDATED_NAME = "MicrodroidTestHelperAppUpdated.apk";
+    private static final String PACKAGE_NAME = "com.android.microdroid.helper";
     private static final String EMPTY_AOSP_PACKAGE_NAME = "com.android.microdroid.empty_payload";
     private static final String EMPTY_PACKAGE_NAME = "com.google.android.microdroid.empty_payload";
     private static final String SHELL_PACKAGE_NAME = "com.android.shell";

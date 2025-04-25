@@ -22,6 +22,6 @@ java_test_host {
         ":authfs_test_files",
     ],
     device_common_data: [
-        ":MicrodroidTestApp",
+        ":MicrodroidTestHelperApp",
     ],
 }

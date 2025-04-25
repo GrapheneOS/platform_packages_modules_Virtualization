@@ -377,7 +377,8 @@ Result<void> inner_main() {
     // Step 2: create vm config
     VirtualMachineAppConfig app_config = OR_RETURN(
             create_vm_config(*service, work_dir_path, "my_vm",
-                             "/data/local/tmp/MicrodroidTestApp.apk", "MicrodroidTestNativeLib.so",
+                             "/data/local/tmp/MicrodroidTestHelperApp.apk",
+                             "MicrodroidTestNativeLib.so",
                              /* debuggable = */ true, // should be false for production VMs
                              /* protected_vm = */ true, 150));
 
