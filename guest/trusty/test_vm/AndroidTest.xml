@@ -15,6 +15,7 @@
   limitations under the License.
   -->
     <configuration description="Runs {MODULE}">
+    <option name="test-suite-tag" value="vts" />
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.CommandSuccessModuleController">
         <!--Skip the test when trusty VM is not enabled. -->
         <option name="run-command" value="getprop trusty.security_vm.enabled | grep 1" />
