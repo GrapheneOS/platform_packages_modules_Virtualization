@@ -72,6 +72,7 @@
         <option name="test-command-line" key="com.android.trusty.dlmalloctest" value="/data/local/tmp/trusty_test_vm_os/trusty-ut-ctrl.sh com.android.trusty.dlmalloctest"/>
         <option name="test-command-line" key="com.android.trusty.rust.tipc.test" value="/data/local/tmp/trusty_test_vm_os/trusty-ut-ctrl.sh com.android.trusty.rust.tipc.test"/>
         <option name="test-command-line" key="com.android.uirq-unittest" value="/data/local/tmp/trusty_test_vm_os/trusty-ut-ctrl.sh com.android.uirq-unittest"/>
+        <option name="test-command-line" key="com.android.trusty.rust.hwbcc.test" value="/data/local/tmp/trusty_test_vm_os/trusty-ut-ctrl.sh com.android.trusty.rust.hwbcc.test"/>
     </test>
     <test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >
         <option name="parse-gtest" value="true" />
