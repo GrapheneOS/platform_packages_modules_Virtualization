@@ -8,12 +8,6 @@
                     "path": "$PAYLOAD_DIR/root_part",
                     "writable": true,
                     "guid": "{root_part_guid}"
-                },
-                {
-                    "label": "EFI",
-                    "path": "$PAYLOAD_DIR/efi_part",
-                    "writable": false,
-                    "guid": "{efi_part_guid}"
                 }
             ],
             "writable": true

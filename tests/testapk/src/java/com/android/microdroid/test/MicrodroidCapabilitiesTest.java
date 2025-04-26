@@ -48,6 +48,10 @@ public class MicrodroidCapabilitiesTest extends MicrodroidDeviceTestBase {
         // NoMicrodroidTest.)
         assumeFeatureVirtualizationFramework();
 
+        assume().withMessage("AVF is unconditionally enabled on GSI. Skipping.")
+                .that(isGsi())
+                .isFalse();
+
         int capabilities = getVirtualMachineManager().getCapabilities();
         int vmCapabilities =
                 capabilities

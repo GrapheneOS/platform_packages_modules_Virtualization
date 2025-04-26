@@ -12,3 +12,4 @@ service microdroid_manager /system/bin/microdroid_manager
     capabilities AUDIT_CONTROL SYS_ADMIN SYS_BOOT SETPCAP SETUID SETGID SYS_NICE
     user root
     socket vm_payload_service stream 0666 system system
+    socket rpc_servicemanager stream 0666 system system

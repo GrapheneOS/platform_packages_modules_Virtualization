@@ -34,6 +34,7 @@ use std::fmt;
 use std::fs::{read_to_string, File};
 use std::io::{self, Read};
 use std::mem;
+use std::time::Instant;
 use std::num::{NonZeroU16, NonZeroU32};
 use std::os::unix::io::{AsRawFd, OwnedFd};
 use std::os::unix::process::CommandExt;
@@ -407,6 +408,8 @@ impl VmContext {
 pub struct VmInstance {
     /// The current state of the VM.
     pub vm_state: Mutex<VmState>,
+    /// Condvar that is notified when `vm_state` becomes `Dead`.
+    vm_dead_convar: Condvar,
     /// Global resources allocated for this VM.
     #[allow(dead_code)] // Keeps the context alive
     pub(crate) vm_context: VmContext,
@@ -438,6 +441,8 @@ pub struct VmInstance {
     idle_compactor_balloon: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
+    /// List of host services this VM might access.
+    pub host_services: Vec<String>,
     /// The latest lifecycle state which the payload reported itself to be in.
     payload_state: Mutex<PayloadState>,
     /// Represents the condition that payload_state was updated
@@ -468,6 +473,7 @@ impl VmInstance {
         vm_context: VmContext,
         idle_compactor_balloon: bool,
         vendor_tee_services: Vec<String>,
+        host_services: Vec<String>,
     ) -> Result<VmInstance, Error> {
         validate_config(&config)?;
         let cid = config.cid;
@@ -480,6 +486,7 @@ impl VmInstance {
             .map_or_else(|| format!("{}", requester_uid), |u| u.name);
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
+            vm_dead_convar: Condvar::new(),
             vm_context,
             cid,
             crosvm_control_socket_path: temporary_directory.join("crosvm.sock"),
@@ -497,6 +504,7 @@ impl VmInstance {
             balloon_enabled,
             idle_compactor_balloon,
             vendor_tee_services,
+            host_services,
         };
         info!("{} created", &instance);
         Ok(instance)
@@ -581,10 +589,9 @@ impl VmInstance {
 
         let failure_reason = failure_reason_thread.join().expect("failure_reason_thread panic'd");
 
-        let mut vm_state = self.vm_state.lock().unwrap();
-        *vm_state = VmState::Dead;
-        // Ensure that the mutex is released before calling the callbacks.
-        drop(vm_state);
+        *self.vm_state.lock().unwrap() = VmState::Dead;
+        self.vm_dead_convar.notify_all();
+
         info!("{} exited", &self);
 
         // In case of hangup, the pipe doesn't give us any information because the hangup can't be
@@ -656,48 +663,52 @@ impl VmInstance {
 
     fn monitor_vm_status(&self, child: Arc<SharedChild>) {
         let pid = child.id();
-        let mut metric_countdown = 0;
+
+        const QUIET_PERIOD: Duration = Duration::from_secs(60);
+        let start = Instant::now();
 
         loop {
+            let mut wait_duration = Duration::from_secs(30);
             {
-                // Check VM state
-                let vm_state = &*self.vm_state.lock().unwrap();
-                if let VmState::Dead = vm_state {
-                    break;
-                }
+                let mut vm_metric = self.vm_metric.lock().unwrap();
 
-                if metric_countdown > 0 {
-                    metric_countdown -= 1;
-                } else {
-                    metric_countdown = 10;
-                    let mut vm_metric = self.vm_metric.lock().unwrap();
-
-                    // Get CPU Information
-                    match get_guest_time(pid) {
-                        Ok(guest_time) => vm_metric.cpu_guest_time = Some(guest_time),
-                        Err(e) => {
-                            metric_countdown = 0;
+                // Get CPU Information
+                match get_guest_time(pid) {
+                    Ok(guest_time) => vm_metric.cpu_guest_time = Some(guest_time),
+                    Err(e) => {
+                        wait_duration = Duration::from_secs(1);
+                        if start.elapsed() >= QUIET_PERIOD {
                             warn!("Failed to get guest CPU time: {}", e);
                         }
                     }
+                }
 
-                    // Get Memory Information
-                    match get_rss(pid) {
-                        Ok(rss) => {
-                            vm_metric.rss = match &vm_metric.rss {
-                                Some(x) => Some(Rss::extract_max(x, &rss)),
-                                None => Some(rss),
-                            }
+                // Get Memory Information
+                match get_rss(pid) {
+                    Ok(rss) => {
+                        vm_metric.rss = match &vm_metric.rss {
+                            Some(x) => Some(Rss::extract_max(x, &rss)),
+                            None => Some(rss),
                         }
-                        Err(e) => {
-                            metric_countdown = 0;
+                    }
+                    Err(e) => {
+                        wait_duration = Duration::from_secs(1);
+                        if start.elapsed() >= QUIET_PERIOD {
                             warn!("Failed to get guest RSS: {}", e);
                         }
                     }
                 }
             }
 
-            thread::sleep(Duration::from_secs(1));
+            // Wait a bit before updating metrics again. Exit immediately if the VM dies.
+            let vm_state = self.vm_state.lock().unwrap();
+            if let VmState::Dead = &*vm_state {
+                break;
+            }
+            let (vm_state, _) = self.vm_dead_convar.wait_timeout(vm_state, wait_duration).unwrap();
+            if let VmState::Dead = &*vm_state {
+                break;
+            }
         }
     }
 

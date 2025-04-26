@@ -1,3 +1,2 @@
-androidboot.first_stage_console = 1
 androidboot.hardware = microdroid
 kernel.8250.nr_uarts = 4

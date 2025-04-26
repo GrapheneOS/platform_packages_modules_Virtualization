@@ -22,6 +22,7 @@ use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::payload::{ApexInfoList, add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
 use crate::selinux::{check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext};
+use crate::host_services;
 use android_os_permissions_aidl::aidl::android::os::IPermissionController;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
     Certificate::Certificate,
@@ -49,7 +50,11 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal::IVirtualizationServiceInternal;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
-        BnVirtualMachineService, IVirtualMachineService,
+        BnVirtualMachineService, IVirtualMachineService
+};
+use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
+    BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo,
+    Vsock::Vsock,
 };
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::{BnSecretkeeper, ISecretkeeper};
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::SecretId::SecretId;
@@ -1046,6 +1051,7 @@ impl VirtualizationService {
                 vm_context,
                 idle_compactor_balloon,
                 vendor_tee_services,
+                config.hostServices.clone(),
             )
             .with_context(|| format!("Failed to create VM with config {:?}", config))
             .with_log()
@@ -2290,6 +2296,54 @@ impl<T> AsRef<T> for BorrowedOrOwned<'_, T> {
     }
 }
 
+struct HostRpcProvider {
+    state: Arc<Mutex<State>>,
+    cid: Cid,
+    // Keep a map of instances to ports to know if we've already set up a proxy
+    proxied_services: Mutex<HashMap<String, Vsock>>,
+}
+
+impl Interface for HostRpcProvider {}
+impl IRpcProvider for HostRpcProvider {
+    fn getServiceConnectionInfo(&self, name: &str) -> binder::Result<ServiceConnectionInfo> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            if !vm.host_services.iter().any(|i| i == name) {
+                return Err(anyhow!(
+                    "This VM is not configured to access the host service \
+                        {name}. The service must be added to the VM configuration in \
+                        the hostServices field."
+                ))
+                .or_service_specific_exception(-1);
+            }
+            // Check with servicemanager to make sure the VM owner still has permission to get this
+            // service
+            let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
+            check_host_service_permission(
+                &caller_secontext,
+                &[name.to_string()],
+                vm.requester_debug_pid,
+                vm.requester_uid,
+            )
+            .with_log()
+            .or_binder_exception(ExceptionCode::SECURITY)?;
+        } else {
+            error!("notifyError is called from an unknown CID {}", cid);
+            return Err(anyhow!("cannot find a VM with CID {}", cid))
+                .or_service_specific_exception(-1);
+        }
+
+        // If we've previously proxied this service, we only need to return the connection info
+        if let Some(p) = self.proxied_services.lock().unwrap().get(name) {
+            return Ok(ServiceConnectionInfo::Vsock(p.clone()));
+        }
+
+        let info = host_services::get_service_connection_info(name, cid)?;
+        self.proxied_services.lock().unwrap().insert(name.to_string(), info.clone());
+        Ok(ServiceConnectionInfo::Vsock(info.clone()))
+    }
+}
+
 /// Implementation of `IVirtualMachineService`, the entry point of the AIDL service.
 #[derive(Debug, Default)]
 struct VirtualMachineService {
@@ -2373,6 +2427,17 @@ impl IVirtualMachineService for VirtualMachineService {
 
     fn claimSecretkeeperEntry(&self, id: &[u8; 64]) -> binder::Result<()> {
         GLOBAL_SERVICE.claimSecretkeeperEntry(id)
+    }
+
+    fn getHostRpcProvider(&self) -> binder::Result<Strong<dyn IRpcProvider>> {
+        Ok(BnRpcProvider::new_binder(
+            HostRpcProvider {
+                state: self.state.clone(),
+                cid: self.cid,
+                proxied_services: Default::default(),
+            },
+            BinderFeatures::default(),
+        ))
     }
 }
 

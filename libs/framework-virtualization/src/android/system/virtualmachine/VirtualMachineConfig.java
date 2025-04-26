@@ -1232,6 +1232,11 @@ public final class VirtualMachineConfig {
          * Sets the amount of RAM to give the VM, in bytes. If not explicitly set then a default
          * size will be used.
          *
+         * Warning: use the smallest possible amount of memory here that you can
+         * in order to save resources. You will pay ~1.4% of this cost or more
+         * for the associated struct pages on a 4 KB Linux page size VM or
+         * approximately 0.4% of this on a 16 KB page size VM.
+         *
          * @hide
          */
         @SystemApi

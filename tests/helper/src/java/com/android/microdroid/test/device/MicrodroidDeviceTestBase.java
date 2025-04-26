@@ -306,6 +306,7 @@ public abstract class MicrodroidDeviceTestBase {
         return false;
     }
 
+    // Sync with AndroidTest.xml that has the same check for faster skipping.
     protected void ensureVmAttestationSupported() throws Exception {
         // The first vendor API level is checked because VM attestation requires the VM DICE chain
         // to be ROM-rooted.
