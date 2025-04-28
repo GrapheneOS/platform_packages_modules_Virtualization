@@ -77,12 +77,8 @@ enum NextStage {
 }
 
 /// Entry point for pVM firmware.
-pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64) {
-    let fdt_address = fdt_address.try_into().unwrap();
-    let payload_start = payload_start.try_into().unwrap();
-    let payload_size = payload_size.try_into().unwrap();
-
-    let reboot_reason = match main_wrapper(fdt_address, payload_start, payload_size) {
+pub fn start(argv: &[usize]) {
+    let reboot_reason = match main_wrapper(argv) {
         Err(r) => r,
         Ok((next_stage, slices)) => match next_stage {
             NextStage::LinuxBootWithUart(ep) => jump_to_payload(ep, &slices),
@@ -108,15 +104,14 @@ pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64
 ///
 /// Provide the abstractions necessary for start() to abort the pVM boot and for main() to run with
 /// the assumption that its environment has been properly configured.
-fn main_wrapper<'a>(
-    fdt: usize,
-    payload: usize,
-    payload_size: usize,
-) -> Result<(NextStage, MemorySlices<'a>), RebootReason> {
+fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), RebootReason> {
     // Limitations in this function:
     // - only access MMIO once (and while) it has been mapped and configured
     // - only perform logging once the logger has been initialized
     // - only access non-pvmfw memory once (and while) it has been mapped
+    let fdt: usize = argv[0];
+    let payload_start: usize = argv[1];
+    let payload_size: usize = argv[2];
 
     log::set_max_level(LevelFilter::Info);
 
@@ -132,7 +127,7 @@ fn main_wrapper<'a>(
 
     let config_entries = appended.get_entries();
 
-    let mut slices = MemorySlices::new(fdt, payload, payload_size)?;
+    let mut slices = MemorySlices::new(fdt, payload_start, payload_size)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
     let (preserved_memory, debuggable_payload) = crate::main(

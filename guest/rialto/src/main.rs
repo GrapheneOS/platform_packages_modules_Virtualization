@@ -157,11 +157,11 @@ fn find_socket_device<T: Hal>(
 }
 
 /// Entry point for Rialto.
-pub fn main(fdt_addr: u64, _a1: u64, _a2: u64, _a3: u64) {
+pub fn main(argv: &[usize]) {
     log::set_max_level(log::LevelFilter::Debug);
     // SAFETY: `fdt_addr` is supposed to be a valid pointer and points to
     // a valid `Fdt`.
-    if let Err(e) = unsafe { try_main(fdt_addr as usize) } {
+    if let Err(e) = unsafe { try_main(argv[0]) } {
         error!("Rialto failed with {e}");
         reboot()
     }
