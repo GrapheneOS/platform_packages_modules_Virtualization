@@ -100,6 +100,12 @@ unsafe extern "C" fn getentropy(buffer: *mut c_void, length: usize) -> c_int {
     0
 }
 
+/// `getenv()` stub - always returns NULL since we have no environment.
+#[no_mangle]
+extern "C" fn getenv() -> *mut c_void {
+    core::ptr::null_mut()
+}
+
 /// Reports a fatal error detected by Bionic.
 ///
 /// # Safety
