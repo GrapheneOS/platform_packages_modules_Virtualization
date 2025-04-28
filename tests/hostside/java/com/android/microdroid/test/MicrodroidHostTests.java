@@ -493,7 +493,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Arrange
         assumeKernelSupported(os);
         assumeVmTypeSupported(os, true);
-        final String configPath = "assets/vm_config_apex.json";
+        final String configPath = "assets/vm_config.json";
 
         // Act
         MicrodroidBuilder microdroidBuilder =
