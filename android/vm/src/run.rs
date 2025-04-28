@@ -280,6 +280,7 @@ pub fn command_run(config: RunCustomVmConfig) -> Result<(), Error> {
     } else {
         vm_config.name = String::from("VmRun");
     }
+    vm_config.protectedVm = config.common.protected;
     if let Some(gdb) = config.debug.gdb {
         vm_config.gdbPort = gdb.get() as i32;
     }
