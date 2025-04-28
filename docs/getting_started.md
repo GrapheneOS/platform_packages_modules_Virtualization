@@ -99,7 +99,7 @@ that is intended to run on pVM. You can run a Microdroid-based VM with an empty
 payload using the following command:
 
 ```shell
-packages/modules/Virtualization/vm/vm_shell.sh start-microdroid --auto-connect -- --protected
+packages/modules/Virtualization/android/vm/vm_shell.sh start-microdroid --auto-connect -- --protected
 ```
 
 You will see the log messages like the below.

@@ -47,17 +47,19 @@ main!(main);
 configure_heap!(SIZE_64KB);
 
 /// Entry point for VM bootloader.
-pub fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
+pub fn main(argv: &[usize]) {
     log::set_max_level(LevelFilter::Debug);
 
     info!("Hello world");
-    info!("x0={:#018x}, x1={:#018x}, x2={:#018x}, x3={:#018x}", arg0, arg1, arg2, arg3);
+    for (index, arg) in argv.iter().enumerate() {
+        info!("x{}={:#018x}", index, arg);
+    }
     print_addresses();
     check_data();
     check_stack_guard();
 
     info!("Checking FDT...");
-    let fdt_addr = usize::try_from(arg0).unwrap();
+    let fdt_addr = argv[0];
     // SAFETY: The DTB range is valid, writable memory, and we don't construct any aliases to it.
     let fdt = unsafe { core::slice::from_raw_parts_mut(fdt_addr as *mut u8, FDT_MAX_SIZE) };
     map_data(fdt_addr, FDT_MAX_SIZE.try_into().unwrap()).unwrap();

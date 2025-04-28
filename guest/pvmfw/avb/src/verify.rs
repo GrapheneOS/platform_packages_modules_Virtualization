@@ -144,9 +144,7 @@ fn verify_loaded_partition_has_expected_length(
         return Err(SlotVerifyError::Io);
     }
     let loaded_partition = &loaded_partitions[0];
-    if !PartitionName::try_from(loaded_partition.partition_name())
-        .map_or(false, |p| p == partition_name)
-    {
+    if PartitionName::try_from(loaded_partition.partition_name()) != Ok(partition_name) {
         // Only the requested partition should be loaded.
         return Err(SlotVerifyError::Io);
     }
