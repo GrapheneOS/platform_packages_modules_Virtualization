@@ -22,6 +22,7 @@ extern crate alloc;
 
 pub mod arch;
 pub mod bionic;
+pub mod bzimage;
 pub mod console;
 mod entry;
 pub mod fdt;
