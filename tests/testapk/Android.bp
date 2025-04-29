@@ -66,7 +66,6 @@ java_defaults {
 }
 
 DATA = [
-    ":MicrodroidTestAppUpdated",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V5",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V6",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version",
@@ -135,7 +134,7 @@ android_test_helper_app {
 android_test {
     name: "MicrodroidTestApp",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
-    manifest: "AndroidManifestV5.xml",
+    manifest: "AndroidManifest.xml",
     test_suites: ["general-tests"],
     test_config_template: "AndroidTestTemplate.xml",
     auto_gen_config: true,
@@ -145,7 +144,7 @@ android_test {
 android_test {
     name: "MicrodroidTestApp.CTS",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
-    manifest: "AndroidManifestV5.xml",
+    manifest: "AndroidManifest.xml",
     test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["cts"],
     auto_gen_config: true,
@@ -167,7 +166,7 @@ android_test {
 android_test {
     name: "MicrodroidTestApp.VTS",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
-    manifest: "AndroidManifestV5.xml",
+    manifest: "AndroidManifest.xml",
     test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["vts"],
     auto_gen_config: true,
@@ -189,7 +188,7 @@ android_test {
 android_test {
     name: "MicrodroidTestApp.GTS",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
-    manifest: "AndroidManifestV5.xml",
+    manifest: "AndroidManifest.xml",
     test_config_template: "AndroidTestTemplate.xml",
     test_suites: ["gts"],
     auto_gen_config: true,
@@ -209,7 +208,13 @@ android_test {
 }
 
 android_test_helper_app {
-    name: "MicrodroidTestAppUpdated",
+    name: "MicrodroidTestHelperApp",
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
+    manifest: "AndroidManifestV5.xml",
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppUpdated",
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV6.xml",
 }
