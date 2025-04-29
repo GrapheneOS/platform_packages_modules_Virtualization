@@ -17,7 +17,7 @@
 #![no_main]
 #![no_std]
 
-mod exceptions;
+mod arch;
 mod layout;
 mod pci;
 

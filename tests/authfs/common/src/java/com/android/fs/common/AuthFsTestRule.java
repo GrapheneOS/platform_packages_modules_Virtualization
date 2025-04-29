@@ -58,7 +58,7 @@ public class AuthFsTestRule extends TestLogData {
     public static final String TEST_DIR = "/data/local/tmp/authfs";
 
     /** File name of the test APK */
-    private static final String TEST_APK_NAME = "MicrodroidTestApp.apk";
+    private static final String TEST_APK_NAME = "MicrodroidTestHelperApp.apk";
 
     /** Output directory where the test can generate output on Android */
     public static final String TEST_OUTPUT_DIR = "/data/local/tmp/authfs/output_dir";

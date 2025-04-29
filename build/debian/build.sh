@@ -120,6 +120,7 @@ install_prerequisites() {
 
 	if [[ "$uboot" != 1 ]]; then
 		packages+=(
+			erofs-utils
 			libguestfs-tools
 			linux-image-generic
 		)
@@ -281,9 +282,51 @@ generate_output_package() {
 			mv vmlinuz.lz4 vmlinuz
 		fi
 
+		mkdir -p /mnt/debian_rootfs
+		mount -o loop root_part /mnt/debian_rootfs
+		CHROOT="chroot /mnt/debian_rootfs"
+		$CHROOT mkdir -p /opt/kernel_extras/headers /opt/kernel_extras/modules /opt/kernel_extras/dtbs
+
+		headers_pkgs="$($CHROOT dpkg --list | grep '^ii' | grep linux-headers | awk '{print $2}')"
+		for hpkg in $headers_pkgs ; do
+			ver="$(echo "$hpkg" | sed -E 's/^linux-headers-//')"
+			$CHROOT cp -a /usr/src/linux-headers-$ver /opt/kernel_extras/headers/
+			$CHROOT dpkg --purge "$hpkg"
+			$CHROOT mkdir -p /usr/src/
+			$CHROOT ln -sf /opt/kernel_extras/headers/linux-headers-$ver /usr/src/linux-headers-$ver
+		done
+
+		image_pkgs="$($CHROOT dpkg --list | grep '^ii' | grep linux-image | awk '{print $2}')"
+		for ipkg in $image_pkgs ; do
+			ver="$(echo "$ipkg" | sed -E 's/^linux-image-//; s/-unsigned$//')"
+			$CHROOT cp -a /lib/modules/$ver /opt/kernel_extras/modules/
+			[[ "$arch" != "aarch64" ]] || $CHROOT cp -a /usr/lib/linux-image-$ver /opt/kernel_extras/dtbs/
+			$CHROOT dpkg --purge "$ipkg"
+			$CHROOT mkdir -p /lib/modules/
+			$CHROOT ln -sf /opt/kernel_extras/modules/$ver /lib/modules/$ver
+			if [[ "$arch" == "aarch64" ]]; then
+				$CHROOT mkdir -p /usr/lib/
+				$CHROOT ln -sf /opt/kernel_extras/dtbs/linux-image-$ver /usr/lib/linux-image-$ver
+			fi
+		done
+
+		mkfs.erofs kernel_extras /mnt/debian_rootfs/opt/kernel_extras
+		$CHROOT rm -rf /opt/kernel_extras/*
+
+		# NOTE: This is a random, permanent GUID for the kernel extras partition,
+		#       so we won't have to update /etc/fstab in the rootfs when updating kernel-related files.
+		#       This is NOT the filesystem GUID, but the partition GUID in the emulated disk
+		#       that is set by crosvm based on vm_config.json.
+		kernel_extras_guid="1c93c9da-ea90-4b52-b841-96ea021a15cb"
+		echo "PARTUUID=${kernel_extras_guid} /opt/kernel_extras erofs ro 0 0" \
+		  >> /mnt/debian_rootfs/etc/fstab
+		sed -i "s/{kernel_extras_guid}/$kernel_extras_guid/g" vm_config.json
+
+		umount /mnt/debian_rootfs
 		contents+=(
 			vmlinuz
 			initrd.img
+			kernel_extras
 		)
 	else
 		local efi_partition_num=15
