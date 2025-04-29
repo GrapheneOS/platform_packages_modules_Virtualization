@@ -11,6 +11,17 @@
                 }
             ],
             "writable": true
+        },
+        {
+            "partitions": [
+                {
+                    "label": "KERNEL_EXTRAS",
+                    "path": "$PAYLOAD_DIR/kernel_extras",
+                    "writable": false,
+                    "guid": "{kernel_extras_guid}"
+                }
+            ],
+            "writable": false
         }
     ],
     "sharedPath": [
