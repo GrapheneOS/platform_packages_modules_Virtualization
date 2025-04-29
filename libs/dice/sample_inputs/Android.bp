@@ -46,6 +46,7 @@ rust_library {
 
 rust_library {
     name: "libdiced_sample_inputs_multialg",
+    host_supported: true,
     defaults: [
         "libdiced_sample_inputs_defaults",
         "libdiced_sample_inputs_std_defaults",

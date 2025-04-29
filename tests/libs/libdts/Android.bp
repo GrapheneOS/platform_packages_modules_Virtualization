@@ -9,6 +9,7 @@ rust_library_rlib {
     srcs: ["src/lib.rs"],
     edition: "2021",
     prefer_rlib: true,
+    host_supported: true,
     rustlibs: [
         "libanyhow",
         "liblibfdt",

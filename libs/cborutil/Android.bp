@@ -32,6 +32,7 @@ rust_library_rlib {
 rust_library {
     name: "libcbor_util",
     defaults: ["libcbor_util_defaults"],
+    host_supported: true,
     features: [
         "std",
     ],

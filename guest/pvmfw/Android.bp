@@ -61,7 +61,16 @@ rust_defaults {
 
 rust_test {
     name: "libpvmfw.bootargs.test",
-    host_supported: true,
+    defaults: ["libpvmfw.bootargs.test.defaults"],
+}
+
+rust_test_host {
+    name: "libpvmfw.bootargs.test_host",
+    defaults: ["libpvmfw.bootargs.test.defaults"],
+}
+
+rust_defaults {
+    name: "libpvmfw.bootargs.test.defaults",
     // For now, only bootargs.rs is written to be conditionally compiled with std.
     srcs: ["src/bootargs.rs"],
     defaults: ["libpvmfw.test.defaults"],
@@ -72,6 +81,19 @@ rust_test {
 
 rust_test {
     name: "libpvmfw.device_assignment.test",
+    defaults: ["libpvmfw.device_assignment.test.defaults"],
+    data_bins: ["dtc_static"],
+}
+
+rust_test_host {
+    name: "libpvmfw.device_assignment.test_host",
+    defaults: ["libpvmfw.device_assignment.test.defaults"],
+    data_bins: ["dtc"],
+    data_libs: ["libfdt"],
+}
+
+rust_defaults {
+    name: "libpvmfw.device_assignment.test.defaults",
     srcs: ["src/device_assignment.rs"],
     defaults: ["libpvmfw.test.defaults"],
     rustlibs: [
@@ -100,19 +122,21 @@ rust_test {
         ":test_pvmfw_devices_with_multiple_dependencies",
         ":test_pvmfw_devices_expected_dt",
     ],
-    data_bins: ["dtc_static"],
     compile_multilib: "first",
-    // To use libpvmfw_fdt_template for testing
-    enabled: false,
-    target: {
-        android_arm64: {
-            enabled: true,
-        },
-    },
 }
 
 rust_test {
     name: "libpvmfw.dice.test",
+    defaults: ["libpvmfw.dice.test.defaults"],
+}
+
+rust_test_host {
+    name: "libpvmfw.dice.test_host",
+    defaults: ["libpvmfw.dice.test.defaults"],
+}
+
+rust_defaults {
+    name: "libpvmfw.dice.test.defaults",
     srcs: ["src/dice/mod.rs"],
     defaults: ["libpvmfw.test.defaults"],
     rustlibs: [
@@ -132,6 +156,16 @@ rust_test {
 
 rust_test {
     name: "libpvmfw.reserved_mem.test",
+    defaults: ["libpvmfw.reserved_mem.test.defaults"],
+}
+
+rust_test_host {
+    name: "libpvmfw.reserved_mem.test_host",
+    defaults: ["libpvmfw.reserved_mem.test.defaults"],
+}
+
+rust_defaults {
+    name: "libpvmfw.reserved_mem.test.defaults",
     srcs: ["src/config/reserved_mem.rs"],
     defaults: ["libpvmfw.test.defaults"],
     rustlibs: [
@@ -274,6 +308,7 @@ cc_genrule {
         "testdata/expected_dt_with_multiple_dependencies.dts",
         "testdata/expected_dt_with_dependency_loop.dts",
     ],
+    host_supported: true,
     out: [
         "expected_dt_with_dependency.dtb",
         "expected_dt_with_multiple_dependencies.dtb",
@@ -418,6 +453,7 @@ cc_object {
 cc_genrule {
     name: "pvmfw_fdt_template_rs",
     srcs: [":pvmfw_platform.dts.preprocessed"],
+    host_supported: true,
     out: ["lib.rs"],
     tools: ["dtc"],
     cmd: "$(location dtc) -@ -I dts -O dtb -o $(genDir)/compiled.dtbo $(in) && " +
@@ -434,6 +470,14 @@ cc_genrule {
 rust_library_rlib {
     name: "libpvmfw_fdt_template",
     defaults: ["vmbase_rlib_defaults"],
+    host_supported: true,
+    enabled: true,
+    target: {
+        // pvmfw_fdt_template_rs isn't generated for Windows, but not needed.
+        windows: {
+            enabled: false,
+        },
+    },
     srcs: [":pvmfw_fdt_template_rs"],
     crate_name: "pvmfw_fdt_template",
 }

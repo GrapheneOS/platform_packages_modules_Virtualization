@@ -20,12 +20,15 @@ rust_defaults {
     prefer_rlib: true,
     host_supported: false,
     enabled: false,
-    no_stdlibs: true,
-    stdlibs: [
-        "libcompiler_builtins.rust_sysroot",
-        "libcore.rust_sysroot",
-    ],
     target: {
+        android: {
+            // Some users set host_supported, where libcore isn't available.
+            no_stdlibs: true,
+            stdlibs: [
+                "libcompiler_builtins.rust_sysroot",
+                "libcore.rust_sysroot",
+            ],
+        },
         android_arm64: {
             enabled: true,
         },
