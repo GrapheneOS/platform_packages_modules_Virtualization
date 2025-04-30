@@ -76,9 +76,12 @@ impl Dts {
 
     fn get_dtc() -> Option<Command> {
         const DTC_STATIC: &str = "./dtc_static";
+        const DTC: &str = "./dtc";
 
         if Path::new(DTC_STATIC).exists() {
             Some(Command::new(DTC_STATIC))
+        } else if Path::new(DTC).exists() {
+            Some(Command::new(DTC))
         } else {
             None
         }
