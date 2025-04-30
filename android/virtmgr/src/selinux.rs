@@ -15,7 +15,7 @@
 //! Wrapper to libselinux
 
 use anyhow::{anyhow, bail, Context, Result};
-use binder::check_service_access;
+use binder::{check_service_access, CHECK_ACCESS_PERMISSION_FIND};
 use libc::{pid_t, uid_t};
 use std::ffi::{c_int, CStr, CString};
 use std::fmt;
@@ -253,7 +253,7 @@ pub fn check_host_service_permission(
         servicemanager_delegate_check_access(
             caller_ctx,
             service,
-            "find",
+            CHECK_ACCESS_PERMISSION_FIND,
             caller_debug_pid,
             caller_uid,
         )
@@ -265,7 +265,7 @@ pub fn check_host_service_permission(
 fn servicemanager_delegate_check_access(
     caller_ctx: &SeContext,
     service_name: &str,
-    permission: &str,
+    permission: u32,
     caller_debug_pid: pid_t,
     caller_uid: uid_t,
 ) -> Result<()> {
