@@ -109,7 +109,7 @@ impl BootArgs {
                     fdt: None,
                     payload_start: None,
                     payload_size: None,
-                    boot_params: argv.first().copied(),
+                    boot_params: argv.get(1).copied(),
                 }
             } else {
                 compile_error!("Boot args not supported on this arch")
