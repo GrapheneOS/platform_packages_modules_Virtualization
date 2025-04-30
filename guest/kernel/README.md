@@ -19,7 +19,7 @@ repo sync
 For ARM64
 ```bash
 tools/bazel clean
-tooln/bazel run --config=fast //common:kernel_aarch64_microdroid_dist -- --dist_dir=out/dist
+tools/bazel run --config=fast //common:kernel_aarch64_microdroid_dist -- --dist_dir=out/dist
 ```
 
 For x86\_64,
@@ -61,6 +61,14 @@ cp out/dist/Image <android_checkout>/packages/modules/Virtualization/guest/kerne
 For x86\_64,
 ```bash
 cp out/dist/bzImage <android_checkout>/packages/modules/Virtualization/guest/kernel/android15-6.6/x86_64/kernel-6.6
+```
+
+## Debugging microdroid using GDB
+
+Debugging documentation located at:
+
+```bash
+<android_checkout>/packages/modules/Virtualization/docs/debug/gdb_kernel.md
 ```
 
 ### For official updates
