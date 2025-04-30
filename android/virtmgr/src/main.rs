@@ -124,10 +124,12 @@ fn main() {
     }
 
     let service = VirtualizationService::init();
-    let service =
-        BnVirtualizationService::new_binder(service, BinderFeatures::default()).as_binder();
+    let state_ptr = service.state.clone();
 
-    let server = RpcServer::new_unix_domain_bootstrap(service, rpc_server_fd)
+    let service = BnVirtualizationService::new_binder(service, BinderFeatures::default());
+    let service_binder = service.as_binder();
+
+    let server = RpcServer::new_unix_domain_bootstrap(service_binder, rpc_server_fd)
         .expect("Failed to start RpcServer");
     server.set_supported_file_descriptor_transport_modes(&[FileDescriptorTransportMode::Unix]);
 
@@ -140,4 +142,9 @@ fn main() {
 
     server.join();
     info!("Shutting down VirtualizationService RpcServer");
+
+    // Do all the standard cleanup we can, mainly to make sure we join logging threads.
+    state_ptr.lock().unwrap().stop_all();
+
+    info!("All VMs halted.");
 }
