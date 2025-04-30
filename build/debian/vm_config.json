@@ -8,12 +8,7 @@
                     "path": "$PAYLOAD_DIR/root_part",
                     "writable": true,
                     "guid": "{root_part_guid}"
-                }
-            ],
-            "writable": true
-        },
-        {
-            "partitions": [
+                },
                 {
                     "label": "KERNEL_EXTRAS",
                     "path": "$PAYLOAD_DIR/kernel_extras",
@@ -21,7 +16,7 @@
                     "guid": "{kernel_extras_guid}"
                 }
             ],
-            "writable": false
+            "writable": true
         }
     ],
     "sharedPath": [

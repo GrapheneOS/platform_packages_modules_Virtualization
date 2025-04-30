@@ -13,8 +13,9 @@ rust_ffi_static {
     rustlibs: [
         "libbssl_avf_nostd",
         "libcbor_util_nostd",
-        "libciborium_nostd",
+        "libcfg_if",
         "libciborium_io_nostd",
+        "libciborium_nostd",
         "libcoset_nostd",
         "libdiced_open_dice_nostd",
         "libhypervisor_backends",

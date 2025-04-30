@@ -76,6 +76,48 @@ enum NextStage {
     LinuxBootWithUart(usize),
 }
 
+/// Pvmfw boot arguments
+///
+/// This structure define all arguments that are passed
+/// from crosvm to pVM at boot on time.
+pub struct BootArgs {
+    /// Address of FDT
+    pub fdt: Option<usize>,
+    /// Address of first byte in payload image
+    pub payload_start: Option<usize>,
+    /// Size of payload in bytes
+    pub payload_size: Option<usize>,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(dead_code))]
+    /// Address of Linux x86 boot params structure
+    pub boot_params: Option<usize>,
+}
+
+impl BootArgs {
+    /// This function parse arguments prepared by `libvmbase` entry code,
+    /// to create new set of boot arguments specific for particular platform.
+    pub fn from_vmbase_args(argv: &[usize]) -> Self {
+        cfg_if::cfg_if! {
+            if #[cfg(target_arch = "aarch64")] {
+                Self {
+                    fdt: argv.first().copied(),
+                    payload_start: argv.get(1).copied(),
+                    payload_size: argv.get(2).copied(),
+                    boot_params: None,
+                }
+            } else if #[cfg(target_arch = "x86_64")] {
+                Self {
+                    fdt: None,
+                    payload_start: None,
+                    payload_size: None,
+                    boot_params: argv.first().copied(),
+                }
+            } else {
+                compile_error!("Boot args not supported on this arch")
+            }
+        }
+    }
+}
+
 /// Entry point for pVM firmware.
 pub fn start(argv: &[usize]) {
     let reboot_reason = match main_wrapper(argv) {
@@ -109,11 +151,10 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
     // - only access MMIO once (and while) it has been mapped and configured
     // - only perform logging once the logger has been initialized
     // - only access non-pvmfw memory once (and while) it has been mapped
-    let fdt: usize = argv[0];
-    let payload_start: usize = argv[1];
-    let payload_size: usize = argv[2];
 
     log::set_max_level(LevelFilter::Info);
+
+    let boot_args = BootArgs::from_vmbase_args(argv);
 
     let appended_data = get_appended_data_slice().map_err(|e| {
         error!("Failed to map the appended data: {e}");
@@ -127,7 +168,7 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
 
     let config_entries = appended.get_entries();
 
-    let mut slices = MemorySlices::new(fdt, payload_start, payload_size)?;
+    let mut slices = MemorySlices::new(boot_args)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
     let (preserved_memory, debuggable_payload) = crate::main(
