@@ -31,11 +31,11 @@ impl Dts {
     /// Creates a device tree source from /proc/device-tree style directory
     pub fn from_fs(path: &Path) -> Result<Self> {
         let path = path.to_str().unwrap();
-        let res = Command::new("./dtc_static")
-            .args(["-f", "-s", "-I", "fs", "-O", "dts", path])
-            .output()?;
+        let mut dtc = Self::get_dtc().unwrap();
+        let cmd = dtc.args(["-f", "-s", "-I", "fs", "-O", "dts", path]);
+        let res = cmd.output()?;
         if !res.status.success() {
-            return Err(anyhow!("Failed to run dtc_static, res={res:?}"));
+            return Err(anyhow!("Failed to run {cmd:?}: res={res:?}"));
         }
         Ok(Self { dts: String::from_utf8(res.stdout)? })
     }
@@ -43,33 +43,44 @@ impl Dts {
     /// Creates a device tree source from dtb
     pub fn from_dtb(path: &Path) -> Result<Self> {
         let path = path.to_str().unwrap();
-        let res = Command::new("./dtc_static")
-            .args(["-f", "-s", "-I", "dtb", "-O", "dts", path])
-            .output()?;
+        let mut dtc = Self::get_dtc().unwrap();
+        let cmd = dtc.args(["-f", "-s", "-I", "dtb", "-O", "dts", path]);
+        let res = cmd.output()?;
         if !res.status.success() {
-            return Err(anyhow!("Failed to run dtc_static, res={res:?}"));
+            return Err(anyhow!("Failed to run {cmd:?}: res={res:?}"));
         }
         Ok(Self { dts: String::from_utf8(res.stdout)? })
     }
 
     /// Creates a device tree source from Fdt
     pub fn from_fdt(fdt: &Fdt) -> Result<Self> {
-        let mut dtc = Command::new("./dtc_static")
+        let mut dtc = Self::get_dtc().unwrap();
+        let cmd = dtc
             .args(["-f", "-s", "-I", "dtb", "-O", "dts"])
             .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()?;
+            .stdout(Stdio::piped());
 
+        let mut child = cmd.spawn()?;
         {
-            let mut stdin = dtc.stdin.take().unwrap();
+            let mut stdin = child.stdin.take().unwrap();
             stdin.write_all(fdt.as_slice())?;
             // Explicitly drop stdin to avoid indefinite blocking
         }
 
-        let res = dtc.wait_with_output()?;
+        let res = child.wait_with_output()?;
         if !res.status.success() {
-            return Err(anyhow!("Failed to run dtc_static, res={res:?}"));
+            return Err(anyhow!("Failed to run {cmd:?}: res={res:?}"));
         }
         Ok(Self { dts: String::from_utf8(res.stdout)? })
+    }
+
+    fn get_dtc() -> Option<Command> {
+        const DTC_STATIC: &str = "./dtc_static";
+
+        if Path::new(DTC_STATIC).exists() {
+            Some(Command::new(DTC_STATIC))
+        } else {
+            None
+        }
     }
 }
