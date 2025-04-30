@@ -285,29 +285,30 @@ generate_output_package() {
 		mkdir -p /mnt/debian_rootfs
 		mount -o loop root_part /mnt/debian_rootfs
 		CHROOT="chroot /mnt/debian_rootfs"
-		$CHROOT mkdir -p /opt/kernel_extras/headers /opt/kernel_extras/modules /opt/kernel_extras/dtbs
+		$CHROOT mkdir -p /opt/kernel_extras/{dtbs,headers,modules}
 
 		headers_pkgs="$($CHROOT dpkg --list | grep '^ii' | grep linux-headers | awk '{print $2}')"
-		for hpkg in $headers_pkgs ; do
-			ver="$(echo "$hpkg" | sed -E 's/^linux-headers-//')"
-			$CHROOT cp -a /usr/src/linux-headers-$ver /opt/kernel_extras/headers/
-			$CHROOT dpkg --purge "$hpkg"
-			$CHROOT mkdir -p /usr/src/
-			$CHROOT ln -sf /opt/kernel_extras/headers/linux-headers-$ver /usr/src/linux-headers-$ver
-		done
-
+		headers_vers="$(echo "$headers_pkgs" | sed -E 's/^linux-headers-//')"
 		image_pkgs="$($CHROOT dpkg --list | grep '^ii' | grep linux-image | awk '{print $2}')"
-		for ipkg in $image_pkgs ; do
-			ver="$(echo "$ipkg" | sed -E 's/^linux-image-//; s/-unsigned$//')"
+		image_vers="$(echo "$image_pkgs" | sed -E 's/^linux-image-//; s/-unsigned$//')"
+
+		for ver in $headers_vers ; do
+			$CHROOT cp -a /usr/src/linux-headers-$ver /opt/kernel_extras/headers/
+		done
+		for ver in $image_vers ; do
 			$CHROOT cp -a /lib/modules/$ver /opt/kernel_extras/modules/
 			[[ "$arch" != "aarch64" ]] || $CHROOT cp -a /usr/lib/linux-image-$ver /opt/kernel_extras/dtbs/
-			$CHROOT dpkg --purge "$ipkg"
-			$CHROOT mkdir -p /lib/modules/
+		done
+
+		$CHROOT dpkg --purge $headers_pkgs $image_pkgs
+		$CHROOT mkdir -p /lib/modules /usr/{lib,src}
+
+		for ver in $headers_vers ; do
+			$CHROOT ln -sf /opt/kernel_extras/headers/linux-headers-$ver /usr/src/linux-headers-$ver
+		done
+		for ver in $image_vers ; do
 			$CHROOT ln -sf /opt/kernel_extras/modules/$ver /lib/modules/$ver
-			if [[ "$arch" == "aarch64" ]]; then
-				$CHROOT mkdir -p /usr/lib/
-				$CHROOT ln -sf /opt/kernel_extras/dtbs/linux-image-$ver /usr/lib/linux-image-$ver
-			fi
+			[[ "$arch" != "aarch64" ]] || $CHROOT ln -sf /opt/kernel_extras/dtbs/linux-image-$ver /usr/lib/linux-image-$ver
 		done
 
 		mkfs.erofs kernel_extras /mnt/debian_rootfs/opt/kernel_extras
