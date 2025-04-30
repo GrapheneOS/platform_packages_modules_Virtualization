@@ -63,6 +63,7 @@ use std::os::unix::io::OwnedFd;
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::str;
 use std::time::Duration;
@@ -757,14 +758,23 @@ fn find_library_path(name: &str) -> Result<String> {
     let mut watcher = PropertyWatcher::new("ro.product.cpu.abilist")?;
     let value = watcher.read(|_name, value| Ok(value.trim().to_string()))?;
     let abi = value.split(',').next().ok_or_else(|| anyhow!("no abilist"))?;
-    let path = format!("{}/lib/{}/{}", VM_APK_CONTENTS_PATH, abi, name);
 
-    let metadata = fs::metadata(&path).with_context(|| format!("Unable to access {}", path))?;
-    if !metadata.is_file() {
-        bail!("{} is not a file", &path);
+    let paths = [
+        format!("{}/lib/{}/{}", VM_APK_CONTENTS_PATH, abi, name),
+        // TODO(b/372535544): standardize
+        "/apex/com.android.appsearch/lib64/libicing_anywhere.so".to_string(),
+    ];
+
+    for path_str in &paths {
+        let path = PathBuf::from(path_str);
+        if let Ok(metadata) = fs::metadata(&path) {
+            if metadata.is_file() {
+                return Ok(path_str.to_string());
+            }
+        }
     }
 
-    Ok(path)
+    bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
 fn prepare_encryptedstore(vm_secret: &VmSecret) -> Result<Child> {
