@@ -46,7 +46,7 @@ use tinyvec::ArrayVec;
 use vmbase::fdt::pci::PciMemoryFlags;
 use vmbase::fdt::pci::PciRangeType;
 use vmbase::fdt::SwiotlbInfo;
-use vmbase::layout::{crosvm::MEM_START, MAX_VIRT_ADDR};
+use vmbase::layout::crosvm::MEM_START;
 use vmbase::memory::SIZE_4KB;
 use vmbase::util::RangeExt as _;
 use zerocopy::IntoBytes as _;
@@ -699,10 +699,6 @@ fn validate_pci_addr_range(
         error!("PCI address range size {:#x} overflows", size);
         return Err(RebootReason::InvalidFdt);
     };
-    if bus_end > MAX_VIRT_ADDR.try_into().unwrap() {
-        error!("PCI address end {:#x} is outside of translatable range", bus_end);
-        return Err(RebootReason::InvalidFdt);
-    }
 
     let memory_start = memory_range.start.try_into().unwrap();
     let memory_end = memory_range.end.try_into().unwrap();
