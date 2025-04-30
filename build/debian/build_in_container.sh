@@ -53,14 +53,19 @@ if [[ "$arch" != "aarch64" && "$arch" != "x86_64" ]]; then
   echo "Invalid architecture: $arch" ; exit 1
 fi
 
-if [ -z "$ANDROID_BUILD_TOP" ] ; then
-  echo '`ANDROID_BUILD_TOP` is undefined.'
-  echo 'Please `lunch` an Android target, or manually set the variable.'
-  exit 1
+if [ -n "$AVF_BUILD_TOP" ]; then
+  build_top="$AVF_BUILD_TOP"
+else
+  if [ -z "$ANDROID_BUILD_TOP" ] ; then
+    echo '`AVF_BUILD_TOP` or `ANDROID_BUILD_TOP` should be undefined.'
+    echo 'Please `lunch` an Android target, or manually set one of the variable.'
+    exit 1
+  fi
+  build_top="$ANDROID_BUILD_TOP/packages/modules/Virtualization"
 fi
 
 docker run --privileged -it -v /dev:/dev \
-  -v "$ANDROID_BUILD_TOP/packages/modules/Virtualization:/root/Virtualization" \
+  -v "$build_top:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
   ubuntu:22.04 \
   bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag $shell_condition bash"
