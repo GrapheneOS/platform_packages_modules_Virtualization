@@ -5,6 +5,8 @@
 # - Add Android-specific packages via a new class
 # - Use a stable release from debian-cloud-images
 
+set -x
+
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 show_help() {
