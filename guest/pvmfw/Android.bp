@@ -308,6 +308,9 @@ cc_binary {
             ],
         },
         android_x86_64: {
+            srcs: [
+                "asm/x86_64/idmap.S",
+            ],
             linker_scripts: [
                 "asm/x86_64/image.ld",
                 ":vmbase_sections",

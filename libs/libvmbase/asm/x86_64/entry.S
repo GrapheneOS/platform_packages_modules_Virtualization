@@ -17,9 +17,61 @@
 #include "common.h"
 
 .section .init.entry, "ax"
-.code64
+.code32
 .global entry
 entry:
+	/* NOTE: The first few instructions must be valid opcodes in both 32- and 64-bit mode! */
+
+	/* If paging is enabled, the CPU may be in long mode; check IA32_EFER.LMA. */
+	movl %cr0, %eax
+	testl $CR0_PG, %eax
+	jnz .Lcheck_efer_lma
+
+	/*
+	 * Since paging is disabled, the CPU is definitely in 32-bit flat mode, not long mode or
+	 * compatibility mode.
+	 */
+
+	/* Load our GDT. */
+	movl $gdtr, %eax
+	lgdt (%eax)
+
+	/* Reload all data segment descriptors from our GDT. */
+	movw $DATA_SELECTOR, %ax
+	movw %ax, %ss
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %fs
+	movw %ax, %es
+
+	/* Set page table pointer to static identity mapping. */
+	movl $idmap, %eax
+	movl %eax, %cr3
+
+	/* Enable PAE. */
+	movl %cr4, %eax
+	orl $CR4_PAE, %eax
+	movl %eax, %cr4
+
+	/* Enable long mode and NX support. */
+	movl %edx, %ebx
+	movl $IA32_EFER, %ecx
+	rdmsr
+	orl $(EFER_LME | EFER_NXE), %eax
+	wrmsr
+	mov %ebx, %edx
+
+	/* Enable paging. */
+	movl %cr0, %eax
+	orl $CR0_PG, %eax
+	movl %eax, %cr0
+
+	/* Far jump to reload CS and enter 64-bit long mode. */
+	ljmp $CODE_SELECTOR, $.Lentry_64
+
+.code64
+.Lentry_64:
+
 	/* Our load address is set by the host, so validate it before proceeding. */
 	leaq entry(%rip), %rax
 	movabs $entry, %rbx
@@ -61,24 +113,6 @@ entry:
 	cld
 .Lno_reloc:
 
-	/* Load global descriptor table from the data section. */
-	lgdt gdtr(%rip)
-
-	/* Reload all data segments with the data descriptor from the new GDT. */
-	movw $DATA_SELECTOR, %ax
-	movw %ax, %ss
-	movw %ax, %ds
-	movw %ax, %es
-	movw %ax, %fs
-	movw %ax, %gs
-
-	/* RETF to CODE_SELECTOR:.Lreload_cs to switch CS to the new code descriptor. */
-	leaq .Lreload_cs(%rip), %rax
-	pushq $CODE_SELECTOR
-	pushq %rax
-	lretq
-.Lreload_cs:
-
 	/* Initialize FPU (per Intel SDM, 10.2.1 "Configuring the x87 FPU Environment"). */
 	mov %cr0, %rax
 	and $~CR0_EM, %eax
@@ -110,3 +144,50 @@ entry:
 	call rust_entry
 
 	reset_or_hang
+
+
+.code32
+.Lcheck_efer_lma:
+	/*
+	 * If IA32_EFER.LMA is set, assume the CPU is in 64-bit mode (not compatibility mode), as
+	 * there is no way to read the cached CS selector to determine if the L bit is set, and
+	 * compatibility mode is not an expected initial state.
+	 */
+	movl %edx, %ebx
+	movl $IA32_EFER, %ecx
+	rdmsr
+	test $EFER_LMA, %eax
+	jnz .Lefer_lma_set
+
+	/* Halt if paging is enabled but long mode is not active; this is not an expected state. */
+	reset_or_hang
+
+.code64
+.Lefer_lma_set:
+
+	/* Enable NX support in IA32_EFER. */
+	orl $EFER_NXE, %eax
+	wrmsr
+	movl %ebx, %edx
+
+	/* Load our GDT. */
+	lgdt gdtr(%rip)
+
+	/* Load all data segments with the data descriptor from our GDT. */
+	movw $DATA_SELECTOR, %ax
+	movw %ax, %ss
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %fs
+	movw %ax, %gs
+
+	/* Set page table pointer to static identity mapping. */
+	leaq idmap(%rip), %rax
+	mov %rax, %cr3
+
+	/* RETF to CODE_SELECTOR:.Lentry_64 to switch CS to the new code descriptor. */
+	leaq init_stack_pointer(%rip), %rsp
+	leaq .Lentry_64(%rip), %rax
+	pushq $CODE_SELECTOR
+	pushq %rax
+	lretq
