@@ -14,7 +14,6 @@
 
 //! This module contains the error thrown by Rialto.
 
-use aarch64_paging::MapError;
 use core::{fmt, result};
 use diced_open_dice::DiceError;
 use hypervisor_backends::Error as HypervisorError;
@@ -31,8 +30,6 @@ type CiboriumDeError = ciborium::de::Error<virtio_drivers::Error>;
 pub enum Error {
     /// Hypervisor error.
     Hypervisor(HypervisorError),
-    /// Failed when attempting to map some range in the page table.
-    PageTableMapping(MapError),
     /// Invalid FDT.
     InvalidFdt(FdtError),
     /// Invalid PCI.
@@ -61,9 +58,6 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Hypervisor(e) => write!(f, "Hypervisor error: {e}."),
-            Self::PageTableMapping(e) => {
-                write!(f, "Failed when attempting to map some range in the page table: {e}.")
-            }
             Self::InvalidFdt(e) => write!(f, "Invalid FDT: {e}"),
             Self::InvalidPci(e) => write!(f, "Invalid PCI: {e}"),
             Self::MemoryOperationFailed(e) => write!(f, "Failed memory operation: {e}"),
@@ -86,12 +80,6 @@ impl fmt::Display for Error {
 impl From<HypervisorError> for Error {
     fn from(e: HypervisorError) -> Self {
         Self::Hypervisor(e)
-    }
-}
-
-impl From<MapError> for Error {
-    fn from(e: MapError) -> Self {
-        Self::PageTableMapping(e)
     }
 }
 
