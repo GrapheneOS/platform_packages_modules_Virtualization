@@ -2257,7 +2257,7 @@ fn clone_or_prepare_logger_fd(
         buf.shrink_to(1024);
         match reader.read_until(b'\n', &mut buf) {
             Ok(0) => {
-                // EOF
+                info!("{}: EOF", &tag);
                 return;
             }
             Ok(_size) => {

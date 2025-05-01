@@ -105,13 +105,12 @@ macro_rules! main {
     };
 }
 
-/// Prepends a Linux kernel header to the generated binary image.
+/// Prepends an arm64 Linux kernel header to the generated binary image.
 ///
 /// See https://docs.kernel.org/arch/arm64/booting.html
-/// ```
 #[cfg(target_arch = "aarch64")]
 #[macro_export]
-macro_rules! generate_image_header {
+macro_rules! generate_image_header_aarch64 {
     () => {
         #[cfg(not(target_endian = "little"))]
         compile_error!("Image header uses wrong endianness: bootloaders expect LE!");
@@ -134,6 +133,26 @@ macro_rules! generate_image_header {
             ".ascii \"ARM\x64\"",           // magic
             ".long 0",                      // res5
         );
+    };
+}
+
+/// Prepends a bzImage kernel header to the generated binary image.
+#[cfg(target_arch = "x86_64")]
+#[macro_export]
+macro_rules! generate_image_header_x86_64 {
+    () => {
+        // TODO(b/362733888): generate header
+    };
+}
+
+/// Prepends a Linux kernel header to the generated binary image.
+#[macro_export]
+macro_rules! generate_image_header {
+    () => {
+        #[cfg(target_arch = "aarch64")]
+        $crate::generate_image_header_aarch64!();
+        #[cfg(target_arch = "x86_64")]
+        $crate::generate_image_header_x86_64!();
     };
 }
 
