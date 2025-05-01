@@ -46,7 +46,6 @@ use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadCo
 use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::Signal;
 use payload::load_metadata;
-use rpc_servicemanager::get_default_rpc_servicemanager_uds_fd;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
 use rpcbinder::RpcSession;
@@ -206,12 +205,6 @@ fn try_main() -> Result<()> {
     );
     info!("started.");
 
-    // Get the FDs now (with FD_CLOEXEC), so they aren't included in the forked processes
-    let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
-    let rpc_servicemanager_fd = get_default_rpc_servicemanager_uds_fd()?;
-    #[cfg(not(vm_to_host_services))]
-    std::mem::drop(rpc_servicemanager_fd);
-
     load_crashkernel_if_supported().context("Failed to load crashkernel")?;
 
     swap::init_swap().context("Failed to initialize swap")?;
@@ -226,9 +219,9 @@ fn try_main() -> Result<()> {
         service
             .getHostRpcProvider()
             .context("failed to set up the host RPC provider from the host")?,
-        Some(rpc_servicemanager_fd),
     )?;
 
+    let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
     match try_run_payload(&service, vm_payload_service_fd) {
         Ok(code) => {
             if code == 0 {
