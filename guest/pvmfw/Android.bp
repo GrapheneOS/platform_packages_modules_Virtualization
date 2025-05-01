@@ -24,7 +24,6 @@ rust_ffi_static {
         "libpvmfw_avb_nostd",
         "libpvmfw_embedded_key",
         "libpvmfw_fdt_template",
-        "libservice_vm_version",
         "libstatic_assertions",
         "libtinyvec_nostd",
         "libuuid_nostd",
@@ -38,6 +37,7 @@ rust_ffi_static {
             rustlibs: [
                 "libaarch64_paging",
                 "libsmccc",
+                "libservice_vm_version",
             ],
         },
     },
@@ -307,15 +307,6 @@ cc_binary {
                 ":vmbase_sections",
             ],
         },
-        android_x86_64: {
-            srcs: [
-                "asm/x86_64/idmap.S",
-            ],
-            linker_scripts: [
-                "asm/x86_64/image.ld",
-                ":vmbase_sections",
-            ],
-        },
     },
     // `installable: false` is inherited from vmbase_elf_defaults, and that
     // hides this module from Make, which makes it impossible for the Make world
@@ -337,9 +328,6 @@ raw_binary {
         android_arm64: {
             enabled: true,
         },
-        android_x86_64: {
-            enabled: true,
-        },
     },
 }
 
@@ -352,9 +340,6 @@ prebuilt_etc {
     filename: "pvmfw_test.bin",
     target: {
         android_arm64: {
-            src: ":pvmfw_bin",
-        },
-        android_x86_64: {
             src: ":pvmfw_bin",
         },
     },
