@@ -109,12 +109,22 @@ impl Subcomponent {
         }
     }
 
-    fn for_apex(apex: &ApexData) -> Self {
+    fn for_apex(apex: &ApexData, instance_data: &MicrodroidData) -> Self {
+        // TODO(b/414602022): rollback index only allowed for relaxed rollback APEX
+        let dice_version = if instance_data.apk_data.rollback_index.is_some()
+            && apex.manifest_name.as_ref().unwrap().contains("appsearch")
+        {
+            // b/414312074 - allow appsearch to be flashed between branches.
+            1_u64
+        } else {
+            apex.manifest_version.unwrap() as u64
+        };
+
         // Note that this is only reachable if the dice_changes flag is on, in which case
         // the manifest data will always be present.
         Self {
             name: format!("apex:{}", apex.manifest_name.as_ref().unwrap()),
-            version: apex.manifest_version.unwrap() as u64,
+            version: dice_version,
             code_hash: apex.root_digest.clone(),
             authority_hash: sha512(&apex.public_key).to_vec(),
         }
@@ -129,7 +139,10 @@ fn build_subcomponent_list(instance_data: &MicrodroidData) -> Vec<Subcomponent> 
     let apks = once(&instance_data.apk_data)
         .chain(&instance_data.extra_apks_data)
         .map(Subcomponent::for_apk);
-    let apexes = instance_data.apex_data.iter().map(Subcomponent::for_apex);
+    let apexes = instance_data
+        .apex_data
+        .iter()
+        .map(|apex_data| Subcomponent::for_apex(apex_data, instance_data));
     apks.chain(apexes).collect()
 }
 
