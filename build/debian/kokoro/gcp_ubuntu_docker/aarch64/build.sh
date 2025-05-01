@@ -5,7 +5,11 @@ set -e
 cd "${KOKORO_ARTIFACTS_DIR}/git/avf/build/debian/"
 sudo losetup -D
 grep vmx /proc/cpuinfo || true
-sudo ./build.sh -a aarch64 -r
+
+# Sibling docker would be launched from host, so provide host's path for mount.
+export AVF_BUILD_TOP="${KOKORO_HOST_ROOT}/src/git/avf"
+sudo -E ./build_in_container.sh -a aarch64 -r
+
 sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR} || true
 mkdir -p ${KOKORO_ARTIFACTS_DIR}/logs
 sudo cp -r /var/log/fai/* ${KOKORO_ARTIFACTS_DIR}/logs || true
