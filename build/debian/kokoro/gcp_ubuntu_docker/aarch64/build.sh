@@ -8,7 +8,7 @@ grep vmx /proc/cpuinfo || true
 
 # Sibling docker would be launched from host, so provide host's path for mount.
 AVF_BUILD_TOP="${KOKORO_HOST_ROOT}/src/git/avf"
-sudo ./build_in_container.sh -a aarch64 -b ${AVF_BUILD_TOP} -r
+sudo ./build_in_container.sh -a aarch64 -b ${AVF_BUILD_TOP} -r -k
 
 sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR} || true
 mkdir -p ${KOKORO_ARTIFACTS_DIR}/logs
