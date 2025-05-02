@@ -7,6 +7,7 @@ show_help() {
   echo "Builds a debian image and save it to image.raw."
   echo "Options:"
   echo "-b BUILD_TOP   Specify build top [default is generated from \$ANDROID_BUILD_TOP]"
+  echo "-i IMAGE_NAME  Specify the image name [default is ubuntu:22.04]"
   echo "-h             Print usage and this help message and exit."
   echo "-a ARCH        Architecture of the image [default is host arch: $(uname -m)]"
   echo "-g             Use Debian generic kernel [default is our custom kernel]"
@@ -25,14 +26,18 @@ shell_condition="||"
 uboot_flag=
 build_top=
 interactive="-it"
+image_name="ubuntu:22.04"
 
-while getopts "a:b:ghrsuwk" option; do
+while getopts "a:b:i:ghrsuwk" option; do
   case ${option} in
     a)
       arch="$OPTARG"
       ;;
     b)
       build_top="$OPTARG"
+      ;;
+    i)
+      image_name="$OPTARG"
       ;;
     g)
       kernel_flag="-g"
@@ -77,5 +82,5 @@ fi
 docker run --privileged $interactive -v /dev:/dev \
   -v "$build_top:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
-  ubuntu:22.04 \
+  "$image_name" \
   bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag $shell_condition bash"
