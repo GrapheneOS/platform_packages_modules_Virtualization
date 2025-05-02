@@ -26,7 +26,7 @@ uboot_flag=
 build_top=
 interactive="-it"
 
-while getopts "a:b:ghrsuw" option; do
+while getopts "a:b:ghrsuwk" option; do
   case ${option} in
     a)
       arch="$OPTARG"
