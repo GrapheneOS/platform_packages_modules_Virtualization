@@ -156,6 +156,11 @@ on boot
     # Mark boot completed. This will notify microdroid_manager to run payload.
     setprop dev.bootcomplete 1
 
+# Ensure that selinux labels are properly applied to encryptedstore.
+on property:microdroid_manager.encrypted_store.status=mounted
+    restorecon /mnt/encryptedstore
+    setprop microdroid_manager.encrypted_store.status ready
+
 service apexd-vm /system/bin/apexd --vm
     user root
     group system
