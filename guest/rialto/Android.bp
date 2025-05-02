@@ -22,13 +22,6 @@ rust_ffi_static {
         "libvirtio_drivers",
         "libvmbase",
     ],
-    target: {
-        android_arm64: {
-            rustlibs: [
-                "libaarch64_paging",
-            ],
-        },
-    },
 }
 
 cc_binary {

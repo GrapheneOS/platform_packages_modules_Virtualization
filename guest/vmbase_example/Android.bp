@@ -20,9 +20,6 @@ rust_ffi_static {
     target: {
         android_arm64: {
             enabled: true,
-            rustlibs: [
-                "libaarch64_paging",
-            ],
         },
     },
 }
