@@ -17,9 +17,9 @@
 #![no_main]
 #![no_std]
 
+mod arch;
 mod communication;
 mod error;
-mod exceptions;
 mod fdt;
 
 extern crate alloc;
