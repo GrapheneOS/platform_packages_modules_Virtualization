@@ -118,7 +118,6 @@ pub fn run_vm() -> Result<VmInstance, Error> {
         payload,
         osName: VM_OS_NAME.to_owned(),
         debugLevel: DebugLevel::FULL,
-        hostServices: vec!["android.frameworks.stats.IStats/default".into()],
         ..Default::default()
     });
 
