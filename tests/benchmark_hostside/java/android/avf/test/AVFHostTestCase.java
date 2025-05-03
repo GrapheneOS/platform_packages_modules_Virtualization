@@ -77,8 +77,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     private static final int BOOT_COMPLETE_TIMEOUT_MS = 10 * 60 * 1000;
     private static final int ROUND_COUNT = 5;
     private static final int ROUND_IGNORE_STARTUP_TIME = 3;
-    private static final String APK_NAME = "MicrodroidTestApp.apk";
-    private static final String PACKAGE_NAME = "com.android.microdroid.test";
+    private static final String APK_NAME = "MicrodroidTestHelperApp.apk";
+    private static final String PACKAGE_NAME = "com.android.microdroid.helper";
 
     private MetricsProcessor mMetricsProcessor;
     @Rule public TestMetrics mMetrics = new TestMetrics();

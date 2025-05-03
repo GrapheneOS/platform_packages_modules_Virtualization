@@ -22,7 +22,7 @@ use log::error;
 use log::warn;
 use log::LevelFilter;
 use vmbase::{
-    configure_heap, console_writeln, limit_stack_size, main,
+    bzimage, configure_heap, console_writeln, limit_stack_size, main,
     memory::{
         map_image_footer, unshare_all_memory, unshare_all_mmio_except_uart, unshare_uart,
         MemoryTrackerError, SIZE_128KB, SIZE_4KB,
@@ -76,13 +76,51 @@ enum NextStage {
     LinuxBootWithUart(usize),
 }
 
-/// Entry point for pVM firmware.
-pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64) {
-    let fdt_address = fdt_address.try_into().unwrap();
-    let payload_start = payload_start.try_into().unwrap();
-    let payload_size = payload_size.try_into().unwrap();
+/// Pvmfw boot arguments
+///
+/// This structure define all arguments that are passed
+/// from crosvm to pVM at boot on time.
+pub struct BootArgs {
+    /// Address of FDT
+    pub fdt: Option<usize>,
+    /// Address of first byte in payload image
+    pub payload_start: Option<usize>,
+    /// Size of payload in bytes
+    pub payload_size: Option<usize>,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(dead_code))]
+    /// Address of Linux x86 boot params structure
+    pub boot_params: Option<usize>,
+}
 
-    let reboot_reason = match main_wrapper(fdt_address, payload_start, payload_size) {
+impl BootArgs {
+    /// This function parse arguments prepared by `libvmbase` entry code,
+    /// to create new set of boot arguments specific for particular platform.
+    pub fn from_vmbase_args(argv: &[usize]) -> Self {
+        cfg_if::cfg_if! {
+            if #[cfg(target_arch = "aarch64")] {
+                Self {
+                    fdt: argv.first().copied(),
+                    payload_start: argv.get(1).copied(),
+                    payload_size: argv.get(2).copied(),
+                    boot_params: None,
+                }
+            } else if #[cfg(target_arch = "x86_64")] {
+                Self {
+                    fdt: None,
+                    payload_start: None,
+                    payload_size: None,
+                    boot_params: argv.get(1).copied(),
+                }
+            } else {
+                compile_error!("Boot args not supported on this arch")
+            }
+        }
+    }
+}
+
+/// Entry point for pVM firmware.
+pub fn start(argv: &[usize]) {
+    let reboot_reason = match main_wrapper(argv) {
         Err(r) => r,
         Ok((next_stage, slices)) => match next_stage {
             NextStage::LinuxBootWithUart(ep) => jump_to_payload(ep, &slices),
@@ -108,17 +146,15 @@ pub fn start(fdt_address: u64, payload_start: u64, payload_size: u64, _arg3: u64
 ///
 /// Provide the abstractions necessary for start() to abort the pVM boot and for main() to run with
 /// the assumption that its environment has been properly configured.
-fn main_wrapper<'a>(
-    fdt: usize,
-    payload: usize,
-    payload_size: usize,
-) -> Result<(NextStage, MemorySlices<'a>), RebootReason> {
+fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), RebootReason> {
     // Limitations in this function:
     // - only access MMIO once (and while) it has been mapped and configured
     // - only perform logging once the logger has been initialized
     // - only access non-pvmfw memory once (and while) it has been mapped
 
     log::set_max_level(LevelFilter::Info);
+
+    let boot_args = BootArgs::from_vmbase_args(argv);
 
     let appended_data = get_appended_data_slice().map_err(|e| {
         error!("Failed to map the appended data: {e}");
@@ -132,7 +168,7 @@ fn main_wrapper<'a>(
 
     let config_entries = appended.get_entries();
 
-    let mut slices = MemorySlices::new(fdt, payload, payload_size)?;
+    let mut slices = MemorySlices::new(boot_args)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
     let (preserved_memory, debuggable_payload) = crate::main(
@@ -166,16 +202,33 @@ fn main_wrapper<'a>(
     })?;
     unshare_all_memory();
 
-    let next_stage = select_next_stage(slices.kernel, keep_uart);
+    let next_stage = select_next_stage(slices.kernel, keep_uart)?;
 
     Ok((next_stage, slices))
 }
 
-fn select_next_stage(kernel: &[u8], keep_uart: bool) -> NextStage {
-    if keep_uart {
-        NextStage::LinuxBootWithUart(kernel.as_ptr() as _)
+/// Returns the offset of the entry point from the beginning of the provided kernel.
+fn kernel_entry_point_offset(kernel: &[u8]) -> Result<usize, RebootReason> {
+    let offset = if let Some(hdr) = bzimage::setup_header::get_from_bzimage(kernel) {
+        hdr.entry_point_64_offset()
     } else {
-        NextStage::LinuxBoot(kernel.as_ptr() as _)
+        0
+    };
+
+    if offset >= kernel.len() {
+        error!("Kernel entry point offset out of range");
+        return Err(RebootReason::InvalidPayload);
+    }
+
+    Ok(offset)
+}
+
+fn select_next_stage(kernel: &[u8], keep_uart: bool) -> Result<NextStage, RebootReason> {
+    let entry_point = kernel.as_ptr() as usize + kernel_entry_point_offset(kernel)?;
+    if keep_uart {
+        Ok(NextStage::LinuxBootWithUart(entry_point))
+    } else {
+        Ok(NextStage::LinuxBoot(entry_point))
     }
 }
 

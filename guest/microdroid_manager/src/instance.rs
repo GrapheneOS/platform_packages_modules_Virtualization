@@ -280,7 +280,7 @@ pub struct MicrodroidData {
 
 impl MicrodroidData {
     pub fn extra_apk_root_hash_eq(&self, i: usize, root_hash: &[u8]) -> bool {
-        self.extra_apks_data.get(i).map_or(false, |apk| apk.root_hash_eq(root_hash))
+        self.extra_apks_data.get(i).is_some_and(|apk| apk.root_hash_eq(root_hash))
     }
 }
 

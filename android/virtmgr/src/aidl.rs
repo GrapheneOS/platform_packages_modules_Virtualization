@@ -1600,8 +1600,12 @@ fn create_vm_payload_config(
         // USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission as a signal that we should include
         // com.android.i18n APEX.
         // TODO: remove this after we provide a stable @SystemApi to load additional APEXes to
-        // Microdroid pVMs.
-        let apexes = vec![ApexConfig { name: String::from("com.android.i18n") }];
+        // Microdroid pVMs. Note - changing this breaks existing DICE chain.
+        // b/406856088 - added appsearch here as well, which is needed for .so shareing.
+        let apexes = vec![
+            ApexConfig { name: String::from("com.android.i18n") },
+            ApexConfig { name: String::from("com.android.appsearch") },
+        ];
         Ok(VmPayloadConfig { task: Some(task), apexes, extra_apks, ..Default::default() })
     } else {
         Ok(VmPayloadConfig { task: Some(task), extra_apks, ..Default::default() })
@@ -2257,7 +2261,7 @@ fn clone_or_prepare_logger_fd(
         buf.shrink_to(1024);
         match reader.read_until(b'\n', &mut buf) {
             Ok(0) => {
-                // EOF
+                info!("{}: EOF", &tag);
                 return;
             }
             Ok(_size) => {

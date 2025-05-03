@@ -19,6 +19,6 @@ java_test_host {
         "general-tests",
     ],
     device_common_data: [
-        ":MicrodroidTestApp",
+        ":MicrodroidTestHelperApp",
     ],
 }

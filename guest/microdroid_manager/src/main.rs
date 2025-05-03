@@ -40,7 +40,7 @@ use binder::Strong;
 use dice_driver::DiceDriver;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
-use log::{error, info};
+use log::{error, info, warn};
 use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
 use nix::mount::{umount2, MntFlags};
@@ -63,6 +63,7 @@ use std::os::unix::io::OwnedFd;
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::str;
 use std::time::Duration;
@@ -172,6 +173,27 @@ fn should_defer_rollback_protection() -> bool {
     Path::new(DEFER_ROLLBACK_PROTECTION).exists()
 }
 
+/// Configure the balloon device to not retry when it fails to inflate. Context: b/407629285
+fn set_bail_on_out_of_puff() -> Result<()> {
+    // The sysfs path will look like the following, but `N` varies.
+    //
+    //     /sys/bus/virtio/drivers/virtio_balloon/virtioN/bail_on_out_of_puff"
+    for entry in std::fs::read_dir("/sys/bus/virtio/drivers/virtio_balloon")? {
+        let entry = entry?;
+        match entry.file_name().to_str() {
+            Some(name) if name.starts_with("virtio") => {}
+            _ => continue,
+        }
+        let option_path = entry.path().join("bail_on_out_of_puff");
+        if !option_path.exists() {
+            continue;
+        }
+        std::fs::write(option_path, "Y")?;
+        return Ok(());
+    }
+    bail!("didn't find bail_on_out_of_puff sysfs entry")
+}
+
 fn main() -> Result<()> {
     // SAFETY: This is very early in the process. Nobody has taken ownership of the inherited FDs
     // yet.
@@ -216,6 +238,10 @@ fn try_main() -> Result<()> {
 
     swap::init_swap().context("Failed to initialize swap")?;
     info!("swap enabled.");
+
+    if let Err(e) = set_bail_on_out_of_puff() {
+        warn!("failed to set bail_on_out_of_puff: {e:#}");
+    }
 
     let service = get_vms_rpc_binder()
         .context("cannot connect to VirtualMachineService")
@@ -757,14 +783,23 @@ fn find_library_path(name: &str) -> Result<String> {
     let mut watcher = PropertyWatcher::new("ro.product.cpu.abilist")?;
     let value = watcher.read(|_name, value| Ok(value.trim().to_string()))?;
     let abi = value.split(',').next().ok_or_else(|| anyhow!("no abilist"))?;
-    let path = format!("{}/lib/{}/{}", VM_APK_CONTENTS_PATH, abi, name);
 
-    let metadata = fs::metadata(&path).with_context(|| format!("Unable to access {}", path))?;
-    if !metadata.is_file() {
-        bail!("{} is not a file", &path);
+    let paths = [
+        format!("{}/lib/{}/{}", VM_APK_CONTENTS_PATH, abi, name),
+        // TODO(b/372535544): standardize
+        "/apex/com.android.appsearch/lib64/libicing_anywhere.so".to_string(),
+    ];
+
+    for path_str in &paths {
+        let path = PathBuf::from(path_str);
+        if let Ok(metadata) = fs::metadata(&path) {
+            if metadata.is_file() {
+                return Ok(path_str.to_string());
+            }
+        }
     }
 
-    Ok(path)
+    bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
 fn prepare_encryptedstore(vm_secret: &VmSecret) -> Result<Child> {

@@ -14,7 +14,7 @@
 
 //! Low-level allocation and tracking of main memory.
 
-use crate::entry::RebootReason;
+use crate::entry::{BootArgs, RebootReason};
 use crate::fdt::{read_initrd_range_from, read_kernel_range_from};
 use core::num::NonZeroUsize;
 use core::slice;
@@ -35,7 +35,8 @@ pub(crate) struct MemorySlices<'a> {
 }
 
 impl<'a> MemorySlices<'a> {
-    pub fn new(fdt: usize, kernel: usize, kernel_size: usize) -> Result<Self, RebootReason> {
+    pub fn new(boot_args: BootArgs) -> Result<Self, RebootReason> {
+        let fdt: usize = boot_args.fdt.expect("Missing DT address");
         let fdt_size = NonZeroUsize::new(crosvm::FDT_MAX_SIZE).unwrap();
         // TODO - Only map the FDT as read-only, until we modify it right before jump_to_payload()
         // e.g. by generating a DTBO for a template DT in main() and, on return, re-map DT as RW,
@@ -70,7 +71,10 @@ impl<'a> MemorySlices<'a> {
             (r.start, r.len())
         } else if cfg!(feature = "legacy") {
             warn!("Failed to find the kernel range in the DT; falling back to legacy ABI");
-            (kernel, kernel_size)
+            (
+                boot_args.payload_start.expect("Missing payload start in boot args"),
+                boot_args.payload_size.expect("Missing payload size in boot args"),
+            )
         } else {
             error!("Failed to locate the kernel from the DT");
             return Err(RebootReason::InvalidPayload);

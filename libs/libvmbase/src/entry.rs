@@ -26,6 +26,9 @@ use core::mem::size_of;
 /// This is the entry point to the Rust code, called from the binary entry point in `entry.S`.
 #[no_mangle]
 extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
+    // Map early boot arguments to slice
+    let argv: [usize; 4] = [x0 as _, x1 as _, x2 as _, x3 as _];
+
     heap::init();
     // Initialize platform drivers
     platform::init_console();
@@ -60,14 +63,14 @@ extern "C" fn rust_entry(x0: u64, x1: u64, x2: u64, x3: u64) -> ! {
     // SAFETY: `main` is provided by the application using the `main!` macro, and we make sure it
     // has the right type.
     unsafe {
-        main(x0, x1, x2, x3);
+        main(&argv);
     }
     shutdown();
 }
 
 extern "Rust" {
     /// Main function provided by the application using the `main!` macro.
-    fn main(arg0: u64, arg1: u64, arg2: u64, arg3: u64);
+    fn main(argv: &[usize]);
 }
 
 /// Marks the main function of the binary.
@@ -95,20 +98,19 @@ macro_rules! main {
     ($name:path) => {
         // Export a symbol with a name matching the extern declaration above.
         #[export_name = "main"]
-        fn __main(arg0: u64, arg1: u64, arg2: u64, arg3: u64) {
+        fn __main(argv: &[usize]) {
             // Ensure that the main function provided by the application has the correct type.
-            $name(arg0, arg1, arg2, arg3)
+            $name(argv)
         }
     };
 }
 
-/// Prepends a Linux kernel header to the generated binary image.
+/// Prepends an arm64 Linux kernel header to the generated binary image.
 ///
 /// See https://docs.kernel.org/arch/arm64/booting.html
-/// ```
 #[cfg(target_arch = "aarch64")]
 #[macro_export]
-macro_rules! generate_image_header {
+macro_rules! generate_image_header_aarch64 {
     () => {
         #[cfg(not(target_endian = "little"))]
         compile_error!("Image header uses wrong endianness: bootloaders expect LE!");
@@ -131,6 +133,26 @@ macro_rules! generate_image_header {
             ".ascii \"ARM\x64\"",           // magic
             ".long 0",                      // res5
         );
+    };
+}
+
+/// Prepends a bzImage kernel header to the generated binary image.
+#[cfg(target_arch = "x86_64")]
+#[macro_export]
+macro_rules! generate_image_header_x86_64 {
+    () => {
+        // TODO(b/362733888): generate header
+    };
+}
+
+/// Prepends a Linux kernel header to the generated binary image.
+#[macro_export]
+macro_rules! generate_image_header {
+    () => {
+        #[cfg(target_arch = "aarch64")]
+        $crate::generate_image_header_aarch64!();
+        #[cfg(target_arch = "x86_64")]
+        $crate::generate_image_header_x86_64!();
     };
 }
 

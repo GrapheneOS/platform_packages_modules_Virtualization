@@ -8,6 +8,12 @@
                     "path": "$PAYLOAD_DIR/root_part",
                     "writable": true,
                     "guid": "{root_part_guid}"
+                },
+                {
+                    "label": "KERNEL_EXTRAS",
+                    "path": "$PAYLOAD_DIR/kernel_extras",
+                    "writable": false,
+                    "guid": "{kernel_extras_guid}"
                 }
             ],
             "writable": true

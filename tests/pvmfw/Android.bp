@@ -48,7 +48,7 @@ java_test_host {
         ":test_avf_bcc_dat",
     ],
     device_common_data: [
-        ":MicrodroidTestApp",
+        ":MicrodroidTestHelperApp",
         ":test_avf_debug_policy_with_ramdump",
         ":test_avf_debug_policy_without_ramdump",
         ":test_avf_debug_policy_with_adb",
