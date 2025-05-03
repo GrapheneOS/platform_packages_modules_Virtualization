@@ -32,6 +32,7 @@
 /* Page directory flags */
 .set .L_PDE_2MB_RX, .L_PRESENT | .L_PAGE_SIZE
 .set .L_PDE_2MB_RW, .L_PRESENT | .L_PAGE_SIZE | .L_WRITABLE | .L_EXECUTE_DISABLE
+.set .L_PDE_2MB_RWX, .L_PRESENT | .L_PAGE_SIZE | .L_WRITABLE
 
 .section ".rodata.idmap", "a", %progbits
 
@@ -49,24 +50,57 @@ idmap:
 /* Page directory pointer table for 0 - 512 GB */
 .align 4096
 .L_pdpt:
-	/* 0 - 1 GB: not present */
-	.quad 0
+	/* 0 - 1 GB: TODO(b/375569103): remove after dynamic paging implemented */
+	.quad .L_PDPTE_PD + .L_pd_0g
 
 	/* 1 - 2 GB */
 	.quad .L_PDPTE_PD + .L_pd_1g
 
-	/* 2+ GB: not present */
+	/* 2 - 3 GB: TODO(b/375569103): remove after dynamic paging implemented */
+	.quad .L_PDPTE_PD + .L_pd_2g
+
+	/* 3 - 4 GB: TODO(b/375569103): remove after dynamic paging implemented */
+	.quad .L_PDPTE_PD + .L_pd_3g
+
+	/* 4+ GB: not present */
 	.balign 4096, 0
 
+
+/* Page directory for 0 GB - 1 GB */
+.align 4096
+.L_pd_0g:
+
+.rept 512
+	.quad .L_PDE_2MB_RWX + 0x00000000 + 0x200000 * \+
+.endr
 
 /* Page directory for 1 GB - 2 GB */
 .align 4096
 .L_pd_1g:
-	/* 0x40000000 - 0x7fc00000: not present */
-	.fill 512-2, 8, 0
+
+	/* 0x40000000 - 0x7fc00000: TODO(b/375569103): remove after dynamic paging implemented */
+.rept 512 - 2
+	.quad .L_PDE_2MB_RWX + 0x40000000 + 0x200000 * \+
+.endr
 
 	/* 0x7fc00000 - 0x7fe00000: pVM firmware image */
 	.quad .L_PDE_2MB_RX + 0x7fc00000
 
 	/* 0x7fe00000 - 0x80000000: Writable memory for .bss and .data */
 	.quad .L_PDE_2MB_RW + 0x7fe00000
+
+/* Page directory for 2 GB - 3 GB */
+.align 4096
+.L_pd_2g:
+
+.rept 512
+	.quad .L_PDE_2MB_RWX + 0x80000000 + 0x200000 * \+
+.endr
+
+/* Page directory for 3 GB - 4 GB */
+.align 4096
+.L_pd_3g:
+
+.rept 512
+	.quad .L_PDE_2MB_RWX + 0xc0000000 + 0x200000 * \+
+.endr
