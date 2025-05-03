@@ -55,6 +55,7 @@ pub enum Error {
     UnsupportedVersion(Version),
     /// Header describes configuration data that doesn't fit in the expected buffer.
     InvalidSize(usize),
+    #[allow(dead_code)]
     /// Header entry is missing.
     MissingEntry(Entry),
     /// Range described by entry does not fit within config data.
@@ -275,8 +276,6 @@ impl<'a> Config<'a> {
                 entry_size,
             );
         }
-        // Ensures that the DICE handover is present.
-        ranges[Entry::DiceHandover as usize].ok_or(Error::MissingEntry(Entry::DiceHandover))?;
 
         Ok(Self { body, ranges })
     }
