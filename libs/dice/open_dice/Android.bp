@@ -83,6 +83,7 @@ rust_library {
         "libcrypto",
     ],
     visibility: [
+        "//packages/modules/Virtualization:__subpackages__",
         "//system/software_defined_vehicle:__subpackages__",
     ],
     apex_available: [

@@ -23,18 +23,34 @@ rust_defaults {
     srcs: ["src/lib.rs"],
 }
 
-rust_library {
-    name: "libdiced_sample_inputs",
-    defaults: ["libdiced_sample_inputs_defaults"],
+rust_defaults {
+    name: "libdiced_sample_inputs_std_defaults",
     features: [
         "std",
     ],
     rustlibs: [
         "libciborium",
         "libcoset",
-        "libdiced_open_dice",
         "liblog_rust",
     ],
+}
+
+rust_library {
+    name: "libdiced_sample_inputs",
+    defaults: [
+        "libdiced_sample_inputs_defaults",
+        "libdiced_sample_inputs_std_defaults",
+    ],
+    rustlibs: ["libdiced_open_dice"],
+}
+
+rust_library {
+    name: "libdiced_sample_inputs_multialg",
+    defaults: [
+        "libdiced_sample_inputs_defaults",
+        "libdiced_sample_inputs_std_defaults",
+    ],
+    rustlibs: ["libdiced_open_dice_multialg"],
 }
 
 rust_library_rlib {
