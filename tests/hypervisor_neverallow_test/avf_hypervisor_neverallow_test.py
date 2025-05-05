@@ -146,7 +146,7 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
         self._pullDevicePolicy(policy_path)
 
         # Hypervisors supported by AVF.
-        hypervisors = ["/dev/kvm", "/dev/gunyah", "/dev/gz"]
+        hypervisors = ["/dev/kvm", "/dev/gunyah", "/dev/gzvm"]
 
         # There are devices that launched with Android <= 15 that use alternate
         # paths, like /dev/qgunyah, from outside crosvm and AVF in their vendor
