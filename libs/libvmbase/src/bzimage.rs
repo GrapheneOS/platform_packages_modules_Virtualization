@@ -16,10 +16,40 @@
 //!
 //! <https://docs.kernel.org/arch/x86/boot.html>
 
-use zerocopy::{FromBytes, Immutable, KnownLayout, Unaligned};
+use core::mem;
+
+use static_assertions::const_assert_eq;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
+
+/// Structure of "zero page" memory
+#[derive(FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
+#[repr(C, packed)]
+pub struct boot_params {
+    _dontcare0: [u8; 488],
+
+    /// Number of entries in `e820_table`.
+    pub e820_entries: u8,
+
+    _dontcare1: [u8; 8],
+
+    /// Linux boot protocol header
+    pub hdr: setup_header,
+
+    _dontcare2: [u8; 100],
+
+    /// Physical memory layout
+    pub e820_table: [e820_entry; 128],
+
+    _dontcare3: [u8; 816],
+}
+
+const_assert_eq!(mem::offset_of!(boot_params, e820_entries), 0x1e8);
+const_assert_eq!(mem::offset_of!(boot_params, hdr), 0x1f1);
+const_assert_eq!(mem::offset_of!(boot_params, e820_table), 0x2d0);
+const_assert_eq!(mem::size_of::<boot_params>(), 0x1000);
 
 /// Linux x86 bzImage header
-#[derive(Debug, FromBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(Debug, FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
 #[repr(C, packed)]
 pub struct setup_header {
     setup_sects: u8,
@@ -118,3 +148,17 @@ impl setup_header {
         Some(hdr)
     }
 }
+
+/// boot_params::e820_table entry
+#[derive(Debug, FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
+#[repr(C, packed)]
+pub struct e820_entry {
+    /// Memory region start address
+    pub addr: u64,
+    /// Memory region size
+    pub size: u64,
+    /// Memory region type
+    pub type_: u32,
+}
+
+const_assert_eq!(mem::size_of::<e820_entry>(), 20);

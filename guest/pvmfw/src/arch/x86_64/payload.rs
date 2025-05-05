@@ -22,8 +22,8 @@ use crate::memory::MemorySlices;
 
 /// Function boot payload after cleaning all secret from pvmfw memory
 pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
-    // TODO(b/393354256): replace hard-coded crosvm layout with address from `slices`.
-    let boot_params = 0x7000;
+    let boot_params = slices.boot_params.as_ref().expect("boot_params required on x86_64");
+    let boot_params = (*boot_params) as *const _ as usize;
 
     let preserved_memory = slices.preserved_memory.map(|slice| {
         let r = slice.as_ptr_range();

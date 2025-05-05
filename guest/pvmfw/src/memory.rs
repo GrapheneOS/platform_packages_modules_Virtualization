@@ -23,19 +23,40 @@ use log::error;
 use log::info;
 use log::warn;
 use vmbase::{
+    bzimage,
     layout::crosvm,
     memory::{map_data, map_rodata, resize_available_memory},
 };
+use zerocopy::FromBytes;
 
 pub(crate) struct MemorySlices<'a> {
     pub fdt: &'a mut libfdt::Fdt,
     pub kernel: &'a [u8],
     pub ramdisk: Option<&'a [u8]>,
     pub preserved_memory: Option<&'a [u8]>,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(dead_code))]
+    pub boot_params: Option<&'a mut bzimage::boot_params>,
 }
 
 impl<'a> MemorySlices<'a> {
     pub fn new(boot_args: BootArgs) -> Result<Self, RebootReason> {
+        let mut boot_params = None;
+
+        if let Some(boot_params_addr) = boot_args.boot_params {
+            let boot_params_size = NonZeroUsize::new(size_of::<bzimage::boot_params>()).unwrap();
+            map_data(boot_params_addr, boot_params_size).map_err(|e| {
+                error!("Failed to map the boot_params range: {e}");
+                RebootReason::InternalError
+            })?;
+
+            // SAFETY: map_data validated the range to be in main memory, mapped, and not overlap.
+            let boot_params_slice = unsafe {
+                slice::from_raw_parts_mut(boot_params_addr as *mut u8, boot_params_size.into())
+            };
+            let boot_params_ref = bzimage::boot_params::mut_from_bytes(boot_params_slice).unwrap();
+            boot_params = Some(boot_params_ref);
+        }
+
         let fdt: usize = boot_args.fdt.expect("Missing DT address");
         let fdt_size = NonZeroUsize::new(crosvm::FDT_MAX_SIZE).unwrap();
         // TODO - Only map the FDT as read-only, until we modify it right before jump_to_payload()
@@ -118,7 +139,7 @@ impl<'a> MemorySlices<'a> {
 
         let preserved_memory = None;
 
-        Ok(Self { fdt: untrusted_fdt, kernel, ramdisk, preserved_memory })
+        Ok(Self { fdt: untrusted_fdt, kernel, ramdisk, preserved_memory, boot_params })
     }
 
     pub fn add_preserved_memory(&mut self, slice: &'a [u8]) {
