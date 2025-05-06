@@ -1204,6 +1204,7 @@ fn run_vm(
 
     if let Some(gdb_port) = config.gdb_port {
         command.arg("--gdb").arg(gdb_port.to_string());
+        command.arg("-p").arg("nokaslr");
     }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
