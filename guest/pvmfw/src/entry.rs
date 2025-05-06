@@ -25,7 +25,7 @@ use vmbase::{
     bzimage, configure_heap, console_writeln, limit_stack_size, main,
     memory::{
         map_image_footer, unshare_all_memory, unshare_all_mmio_except_uart, unshare_uart,
-        MemoryTrackerError, SIZE_128KB, SIZE_4KB,
+        MemoryTrackerError, SIZE_256KB, SIZE_4KB,
     },
     power::reboot,
 };
@@ -67,7 +67,7 @@ impl RebootReason {
 }
 
 main!(start);
-configure_heap!(SIZE_128KB);
+configure_heap!(SIZE_256KB);
 limit_stack_size!(SIZE_4KB * 12);
 
 #[derive(Debug)]
