@@ -135,6 +135,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME =
             "com.android.microdroid.test_relaxed_rollback_protection_scheme";
 
+    private static final String ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME =
+            "com.android.microdroid.test_enc_store_kek_on_ce";
+
     @Rule public Timeout globalTimeout = Timeout.seconds(300);
 
     @Parameterized.Parameters(name = "protectedVm={0},os={1}")
@@ -175,6 +178,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         // Some tests might install additional apks, so we need to clean them up here.
         uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
+        uninstallApp(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME);
     }
 
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
@@ -3154,6 +3158,88 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
         assertThat(testResults.mFileContent).isEqualTo("Hello!");
+    }
+
+    @Test
+    public void encryptedStoreKekOnCe_vmIsOnDe() throws Exception {
+        assumeSupportedDevice();
+
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
+
+        Context testHelperAppCtx =
+                getContext()
+                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
+                        .createDeviceProtectedStorageContext();
+
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .setMemoryBytes(minMemoryRequired())
+                        .build();
+
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("test_vm_enc_store_kek_on_ce_vm_on_de", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            // This call will also check that encrypted store is not mounted.
+                            ts.requestEncryptedStoreSetup();
+                            ts.writeToFile("Hello!", "/mnt/encryptedstore/file.txt");
+                            tr.mFileContent = ts.readFromFile("/mnt/encryptedstore/file.txt");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mFileContent).isEqualTo("Hello!");
+
+        // TODO(b/406258175): check that KEK is created.
+        // TODO(b/406258175): check that encrypted store is persisted across VM boots.
+    }
+
+    @Test
+    public void encryptedStoreKekOnCe_vmIsOnCe() throws Exception {
+        assumeSupportedDevice();
+
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
+
+        Context testHelperAppCtx =
+                getContext()
+                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
+                        .createCredentialProtectedStorageContext();
+
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .setMemoryBytes(minMemoryRequired())
+                        .build();
+
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("test_vm_enc_store_kek_on_ce_vm_on_ce", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            // This call will also check that encrypted store is not mounted.
+                            ts.requestEncryptedStoreSetup();
+                            ts.writeToFile("Hello!", "/mnt/encryptedstore/file.txt");
+                            tr.mFileContent = ts.readFromFile("/mnt/encryptedstore/file.txt");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mFileContent).isEqualTo("Hello!");
+
+        // TODO(b/406258175): check that KEK is created.
+        // TODO(b/406258175): check that encrypted store is persisted across VM boots.
     }
 
     private static class VmShareServiceConnection implements ServiceConnection {

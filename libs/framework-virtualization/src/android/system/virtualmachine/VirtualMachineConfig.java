@@ -112,6 +112,7 @@ public final class VirtualMachineConfig {
     private static final String KEY_EXTRA_APKS = "extraApks";
     private static final String KEY_SHOULD_BOOST_UCLAMP = "shouldBoostUclamp";
     private static final String KEY_SHOULD_USE_HUGEPAGES = "shouldUseHugepages";
+    private static final String KEY_ENCRYPTED_STORE_MODE = "encryptedStoreMode";
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -218,6 +219,47 @@ public final class VirtualMachineConfig {
 
     private final boolean mShouldUseHugepages;
 
+    @EncryptedStoreMode private final int mEncryptedStoreMode;
+
+    /**
+     * Name of the {@code <property>} of the {@code AndroidManifest.xml} to specify which encrypted
+     * store mode is used for the VM. If the property is not specified in the {@code
+     * AndroidManifest.xml} then a {@link #ENCRYPTED_STORE_MODE_DEFAULT} is used.
+     *
+     * <p>In most cases you don't want to specify this property and use the default encrypted store
+     * mode.
+     *
+     * <p>If {@link #ENCRYPTED_STORE_MODE_KEK_ON_CE} is chosen (by setting value of the property to
+     * the {@code 1} in the manifest), then KEK used to set the encrypted store of the VM will be
+     * stored on the app's CE storage. This also means that encrypted store won't be set up during
+     * the VM boot. Instead, payload is expected to signal {@code microdroid_manager} when it's ok
+     * to setup encrypted store by setting the {@code microdroid_manager.encrypted_store.setup}
+     * sysprop to {@code true}.
+     */
+    private static final String ENCRYPTED_STORE_MODE_PROP_NAME =
+            "android.system.virtualmachine.ENCRYPTED_STORE_MODE";
+
+    /**
+     * Default mode of encrypted store used by most of the VMs.
+     *
+     * @hide
+     */
+    public static final int ENCRYPTED_STORE_MODE_DEFAULT = 0;
+
+    /**
+     * A mode of encrypted store where the KEK used for the set up is stored on the CE storage of
+     * the app.
+     *
+     * @hide
+     */
+    public static final int ENCRYPTED_STORE_MODE_KEK_ON_CE = 1;
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(
+            prefix = "ENCRYPTED_STORE_MODE_",
+            value = {ENCRYPTED_STORE_MODE_DEFAULT, ENCRYPTED_STORE_MODE_KEK_ON_CE})
+    private @interface EncryptedStoreMode {}
+
     @Retention(RetentionPolicy.SOURCE)
     @StringDef(
             prefix = "MICRODROID",
@@ -253,7 +295,8 @@ public final class VirtualMachineConfig {
             @Nullable File vendorDiskImage,
             @NonNull @OsName String os,
             boolean shouldBoostUclamp,
-            boolean shouldUseHugepages) {
+            boolean shouldUseHugepages,
+            @EncryptedStoreMode int encryptedStoreMode) {
         // This is only called from Builder.build(); the builder handles parameter validation.
         mPackageName = packageName;
         mApkPath = apkPath;
@@ -278,6 +321,7 @@ public final class VirtualMachineConfig {
         mOs = os;
         mShouldBoostUclamp = shouldBoostUclamp;
         mShouldUseHugepages = shouldUseHugepages;
+        mEncryptedStoreMode = encryptedStoreMode;
     }
 
     /** Loads a config from a file. */
@@ -380,6 +424,8 @@ public final class VirtualMachineConfig {
 
         builder.setShouldBoostUclamp(b.getBoolean(KEY_SHOULD_BOOST_UCLAMP));
         builder.setShouldUseHugepages(b.getBoolean(KEY_SHOULD_USE_HUGEPAGES));
+        builder.setEncryptedStoreMode(
+                b.getInt(KEY_ENCRYPTED_STORE_MODE, ENCRYPTED_STORE_MODE_DEFAULT));
 
         return builder.build();
     }
@@ -433,6 +479,7 @@ public final class VirtualMachineConfig {
         }
         b.putBoolean(KEY_SHOULD_BOOST_UCLAMP, mShouldBoostUclamp);
         b.putBoolean(KEY_SHOULD_USE_HUGEPAGES, mShouldUseHugepages);
+        b.putInt(KEY_ENCRYPTED_STORE_MODE, mEncryptedStoreMode);
         b.writeToStream(output);
     }
 
@@ -546,6 +593,16 @@ public final class VirtualMachineConfig {
     @SystemApi
     public boolean isEncryptedStorageEnabled() {
         return mEncryptedStorageBytes > 0;
+    }
+
+    /**
+     * Returns mode encrypted store is set up with
+     *
+     * @hide
+     */
+    @EncryptedStoreMode
+    public int getEncryptedStoreMode() {
+        return mEncryptedStoreMode;
     }
 
     /**
@@ -910,6 +967,12 @@ public final class VirtualMachineConfig {
         vsConfig.hugePages = mShouldUseHugepages;
         vsConfig.hostServices = EMPTY_STRING_ARRAY;
 
+        if (mEncryptedStoreMode == ENCRYPTED_STORE_MODE_KEK_ON_CE) {
+            // If non-default KEK_ON_CE mode for encrypted store is used, then we need to delay
+            // setup of the encrypted store until the CE storage is unlocked.
+            vsConfig.shouldDelayEncryptedStoreSetup = true;
+        }
+
         return vsConfig;
     }
 
@@ -991,6 +1054,7 @@ public final class VirtualMachineConfig {
         @NonNull @OsName private String mOs = DEFAULT_OS;
         private boolean mShouldBoostUclamp = false;
         private boolean mShouldUseHugepages = false;
+        private int mEncryptedStoreMode = ENCRYPTED_STORE_MODE_DEFAULT;
 
         /**
          * Creates a builder for the given context.
@@ -1000,6 +1064,9 @@ public final class VirtualMachineConfig {
         @SystemApi
         public Builder(@NonNull Context context) {
             mPackageName = requireNonNull(context, "context must not be null").getPackageName();
+            if (BuildFlags.SUPPORT_LONG_RUNNING_VMS_ENABLED) {
+                setEncryptedStoreMode(context);
+            }
         }
 
         /**
@@ -1086,7 +1153,8 @@ public final class VirtualMachineConfig {
                     mVendorDiskImage,
                     mOs,
                     mShouldBoostUclamp,
-                    mShouldUseHugepages);
+                    mShouldUseHugepages,
+                    mEncryptedStoreMode);
         }
 
         /**
@@ -1423,6 +1491,29 @@ public final class VirtualMachineConfig {
         @NonNull
         public Builder setShouldUseHugepages(boolean shouldUseHugepages) {
             mShouldUseHugepages = shouldUseHugepages;
+            return this;
+        }
+
+        private Builder setEncryptedStoreMode(@EncryptedStoreMode int encryptedStoreMode) {
+            mEncryptedStoreMode = encryptedStoreMode;
+            return this;
+        }
+
+        private Builder setEncryptedStoreMode(@NonNull Context context) {
+            PackageManager pm = context.getPackageManager();
+            try {
+                PackageManager.Property prop =
+                        pm.getProperty(ENCRYPTED_STORE_MODE_PROP_NAME, context.getPackageName());
+                int value = prop.getInteger();
+                if (value != ENCRYPTED_STORE_MODE_DEFAULT
+                        && value != ENCRYPTED_STORE_MODE_KEK_ON_CE) {
+                    Log.w(TAG, ENCRYPTED_STORE_MODE_PROP_NAME + " has unexpected value " + value);
+                } else {
+                    mEncryptedStoreMode = value;
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                // Just ignore the exception
+            }
             return this;
         }
     }
