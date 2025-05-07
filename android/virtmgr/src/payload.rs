@@ -97,8 +97,9 @@ impl ApexInfoList {
         INSTANCE.get_or_try_init(|| {
             let apex_info_list = File::open(APEX_INFO_LIST_PATH)
                 .context(format!("Failed to open {}", APEX_INFO_LIST_PATH))?;
-            let mut apex_info_list: ApexInfoList = from_reader(apex_info_list)
-                .context(format!("Failed to parse {}", APEX_INFO_LIST_PATH))?;
+            let mut apex_info_list: ApexInfoList =
+                from_reader(std::io::BufReader::new(apex_info_list))
+                    .context(format!("Failed to parse {}", APEX_INFO_LIST_PATH))?;
 
             // For active APEXes, we run derive_classpath and parse its output to see if it
             // contributes to the classpath(s). (This allows us to handle any new classpath env
