@@ -27,6 +27,7 @@ uboot_flag=
 build_top=
 interactive="-it"
 image_name="ubuntu:22.04"
+extra_args=""
 
 while getopts "a:b:i:ghrsuwk" option; do
   case ${option} in
@@ -59,6 +60,7 @@ while getopts "a:b:i:ghrsuwk" option; do
       ;;
     k)
       interactive=""
+      extra_args="-v /var/log/fai:/var/log/fai"
       ;;
     *)
       echo "Invalid option: $OPTARG" ; exit 1
@@ -82,5 +84,6 @@ fi
 docker run --privileged $interactive -v /dev:/dev \
   -v "$build_top:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
+  $extra_args \
   "$image_name" \
   bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag $shell_condition bash"
