@@ -52,6 +52,7 @@ struct ApkManifestInfo {
     uint32_t version_code_major;
     std::optional<uint32_t> rollback_index;
     bool has_relaxed_rollback_protection_permission;
+    uint8_t encrypted_store_mode;
 };
 
 namespace {
@@ -70,6 +71,8 @@ constexpr u16string_view ROLLBACK_INDEX_PROPERTY_NAME{
         u"android.system.virtualmachine.ROLLBACK_INDEX"};
 constexpr u16string_view USE_RELAXED_ROLLBACK_PROTECTION_PERMISSION_NAME{
         u"android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION"};
+constexpr u16string_view ENCRYPTED_STORE_MODE_PROPERTY_NAME{
+        u"android.system.virtualmachine.ENCRYPTED_STORE_MODE"};
 
 // Read through the XML parse tree up to the <manifest> element.
 Result<void> findManifestElement(ResXMLTree& tree) {
@@ -184,17 +187,11 @@ bool isRelaxedRollbackProtectionPermission(const ResXMLTree& perm_tag) {
     return false;
 }
 
-// Returns value of the `android.system.virtualmachine.ROLLBACK_INDEX` property or std::nullopt if
-// given prop_tag doesn't represent the rollback_index property.
-std::optional<uint32_t> getRollbackIndexValue(const ResXMLTree& prop_tag) {
+// Returns android:name attribute of this <property> tag or std::nullopt if this property tag
+// doesn't have such attribute.
+std::optional<u16string_view> getPropertyName(const ResXMLTree& prop_tag) {
     size_t count = prop_tag.getAttributeCount();
-    bool is_rollback_index_prop = false;
-
-    // Note: in theory the `android:value` attribute can come before `android:name` one, so we need
-    // to iterate over all attributes twice.
-    for (size_t it = 0; it < 2 * count; it++) {
-        size_t i = it >= count ? it - count : it;
-
+    for (size_t i = 0; i < count; i++) {
         size_t len = 0;
         const char16_t* chars = prop_tag.getAttributeNamespace(i, &len);
         auto namespaceUrl = chars ? u16string_view(chars, len) : u16string_view();
@@ -210,23 +207,40 @@ std::optional<uint32_t> getRollbackIndexValue(const ResXMLTree& prop_tag) {
             chars = prop_tag.getAttributeStringValue(i, &len);
             if (!chars) {
                 LOG(WARNING) << "expected name attribute to be non-empty";
-                continue;
+                return std::nullopt;
             }
 
             // What a name!
             auto nameName = u16string_view(chars, len);
-            if (nameName != ROLLBACK_INDEX_PROPERTY_NAME) {
-                return std::nullopt;
-            }
-            is_rollback_index_prop = true;
-        } else if (attributeName == VALUE_ATTRIBUTE_NAME) {
-            if (!is_rollback_index_prop) {
-                // We don't know yet if this is the right property. Skip for now.
-                continue;
-            }
+            return std::make_optional(std::move(nameName));
+        }
+    }
+
+    return std::nullopt;
+}
+
+// Returns uint32_t value of the android:value attribute of this <property> tag.
+//
+// If this property doesn't have such attribute or its value is not a uint32_t then returns
+// std::nullopt.
+std::optional<uint32_t> getPropertyValueUint(const ResXMLTree& prop_tag) {
+    size_t count = prop_tag.getAttributeCount();
+    for (size_t i = 0; i < count; i++) {
+        size_t len = 0;
+        const char16_t* chars = prop_tag.getAttributeNamespace(i, &len);
+        auto namespaceUrl = chars ? u16string_view(chars, len) : u16string_view();
+
+        chars = prop_tag.getAttributeName(i, &len);
+        auto attributeName = chars ? u16string_view(chars, len) : u16string_view();
+
+        if (namespaceUrl != ANDROID_NAMESPACE_URL) {
+            continue;
+        }
+
+        if (attributeName == VALUE_ATTRIBUTE_NAME) {
             auto value = getU32Attribute(prop_tag, i);
             if (!value.ok()) {
-                LOG(ERROR) << "Failed to parse value of the rollback index : " << value.error();
+                LOG(ERROR) << "Failed to parse value : " << value.error();
                 return std::nullopt;
             }
             return std::make_optional(std::move(*value));
@@ -282,6 +296,8 @@ Result<unique_ptr<ApkManifestInfo>> parseManifest(const void* manifest, size_t s
     }
 
     info->has_relaxed_rollback_protection_permission = false;
+    // Default mode of encrypted store
+    info->encrypted_store_mode = 0;
 
     // Now we need to parse the rest of the manifest to check if it contains the
     // `USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION` permission and the
@@ -310,14 +326,30 @@ Result<unique_ptr<ApkManifestInfo>> parseManifest(const void* manifest, size_t s
                         info->has_relaxed_rollback_protection_permission = true;
                     }
                 } else if (tag_name == PROPERTY_TAG_NAME) {
-                    auto rollback_index = getRollbackIndexValue(tree);
-                    if (rollback_index.has_value()) {
+                    auto prop_name = getPropertyName(tree);
+                    if (!prop_name.has_value()) {
+                        break;
+                    }
+                    if (*prop_name == ROLLBACK_INDEX_PROPERTY_NAME) {
+                        auto rollback_index = getPropertyValueUint(tree);
+                        if (!rollback_index.has_value()) {
+                            LOG(WARNING) << "rollback index property doesn't have value";
+                            break;
+                        }
                         LOG(INFO) << "found rollback_index : " << *rollback_index;
                         if (info->rollback_index.has_value()) {
                             LOG(WARNING)
                                     << "found duplicate rollback index, overriding previous value";
                         }
                         info->rollback_index.emplace(*rollback_index);
+                    } else if (*prop_name == ENCRYPTED_STORE_MODE_PROPERTY_NAME) {
+                        auto encrypted_store_mode = getPropertyValueUint(tree);
+                        if (!encrypted_store_mode.has_value()) {
+                            LOG(WARNING) << "encrypted store mode property doesn't have value";
+                            break;
+                        }
+                        LOG(INFO) << "found encrypted store mode : " << *encrypted_store_mode;
+                        info->encrypted_store_mode = *encrypted_store_mode;
                     }
                 } else {
                     break;
@@ -370,4 +402,8 @@ const uint32_t* getRollbackIndex(const ApkManifestInfo* info) {
 
 bool hasRelaxedRollbackProtectionPermission(const ApkManifestInfo* info) {
     return info->has_relaxed_rollback_protection_permission;
+}
+
+uint8_t getEncryptedStoreMode(const ApkManifestInfo* info) {
+    return info->encrypted_store_mode;
 }

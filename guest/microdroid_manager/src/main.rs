@@ -35,7 +35,7 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 };
 
 use crate::dice::dice_derivation;
-use crate::instance::{InstanceDisk, MicrodroidData};
+use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::verify::verify_payload;
 use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
@@ -516,32 +516,29 @@ fn try_run_payload(
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        let vm_secret_for_enc_store = vm_secret.clone();
         let std_redirect_for_enc_store = std_redirect.clone();
         if config.delay_encrypted_store_setup {
+            let vm_secret_for_enc_store = vm_secret.clone();
+            let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
             info!("Delaying preparation of encryptedstore as requested ...");
             std::thread::spawn(move || {
                 // Should we violently crash here? Or should we just log the error and let payload
                 // decide what to do?
-                info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
-                wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
-                    .expect("failed waiting for {ENCRYPTED_STORE_SETUP_PROP}");
-                info!("{ENCRYPTED_STORE_SETUP_PROP} is true. Preparing encryptedstore ...");
-                prepare_encryptedstore(&vm_secret_for_enc_store, &std_redirect_for_enc_store)
-                    .expect("encrypted store run")
-                    .wait()
-                    .expect("encrypted store run");
-                wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
-                    .expect("wait for {ENCRYPTED_STORE_STATUS_PROP}");
-                // Now we can tell ueventd to stop.
-                system_properties::write("microdroid_manager.init_done", "1")
-                    .expect("set microdroid_manager.init_done");
+                if let Err(e) = delayed_prepare_encryptedstore(
+                    encrypted_store_mode,
+                    vm_secret_for_enc_store,
+                    std_redirect_for_enc_store,
+                ) {
+                    error!("delayed prepare encrypted store failed: {:#?}", e);
+                }
             });
             None
         } else {
             info!("Preparing encryptedstore ...");
+            let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+            vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
             Some(
-                prepare_encryptedstore(&vm_secret_for_enc_store, &std_redirect_for_enc_store)
+                prepare_encryptedstore(&key, &std_redirect_for_enc_store)
                     .context("encryptedstore run")?,
             )
         }
@@ -924,9 +921,7 @@ fn find_library_path(name: &str) -> Result<String> {
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) -> Result<Child> {
-    let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
-    vm_secret.derive_encryptedstore_key(&mut key)?;
+fn prepare_encryptedstore(key: &[u8], std_redirect: &Option<OwnedFd>) -> Result<Child> {
     let (stdout, stderr) = if let Some(fd) = std_redirect {
         (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
     } else {
@@ -936,7 +931,7 @@ fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) 
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
-        .arg(hex::encode(&*key))
+        .arg(hex::encode(key))
         .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
         .stdout(stdout)
         .stderr(stderr)
@@ -971,4 +966,37 @@ impl GuestAgent {
     fn new_binder() -> Strong<dyn IGuestAgent> {
         BnGuestAgent::new_binder(GuestAgent {}, BinderFeatures::default())
     }
+}
+
+fn delayed_prepare_encryptedstore(
+    encrypted_store_mode: EncryptedStoreMode,
+    vm_secret: Arc<VmSecret>,
+    std_redirect: Arc<Option<OwnedFd>>,
+) -> Result<()> {
+    info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
+    wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
+        .context("failed waiting for {ENCRYPTED_STORE_SETUP_PROP}")?;
+    info!("{ENCRYPTED_STORE_SETUP_PROP} is true. Preparing encryptedstore ...");
+
+    let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+    match encrypted_store_mode {
+        EncryptedStoreMode::KEKsStoredOnHost => {
+            warn!("new encrypted store is not implemented yet");
+            // TODO(b/406258175): implement new approach.
+            vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
+        }
+        EncryptedStoreMode::DefaultKey => {
+            vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
+        }
+    }
+    prepare_encryptedstore(&key, &std_redirect)?
+        .wait()
+        .context("failed waiting for encryptedstore binary to finish")?;
+
+    wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
+        .context("wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
+
+    // Now we can tell ueventd to stop.
+    system_properties::write("microdroid_manager.init_done", "1")
+        .context("set microdroid_manager.init_done")
 }
