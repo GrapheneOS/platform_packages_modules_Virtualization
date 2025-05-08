@@ -38,17 +38,21 @@ internal class PortNotifier(val context: Context) {
             val intentFilter = IntentFilter(ACTION_PORT_FORWARDING)
             context.registerReceiver(it, intentFilter, Context.RECEIVER_NOT_EXPORTED)
         }
+    private val portsStateManager: PortsStateManager = PortsStateManager.getInstance(context)
     private val portsStateListener: PortsStateManager.Listener =
         object : PortsStateManager.Listener {
-            override fun onPortsStateUpdated(oldActivePorts: Set<Int>, newActivePorts: Set<Int>) {
-                // added active ports
-                (newActivePorts - oldActivePorts).forEach { showNotificationFor(it) }
-                // removed active ports
-                (oldActivePorts - newActivePorts).forEach { discardNotificationFor(it) }
+                override fun onPortsStateUpdated(
+                    oldActivePorts: Set<Int>,
+                    newActivePorts: Set<Int>,
+                ) {
+                    // added active ports
+                    (newActivePorts - oldActivePorts - portsStateManager.getEnabledPorts())
+                        .forEach { showNotificationFor(it) }
+                    // removed active ports
+                    (oldActivePorts - newActivePorts).forEach { discardNotificationFor(it) }
+                }
             }
-        }
-    private val portsStateManager: PortsStateManager =
-        PortsStateManager.getInstance(context).also { it.registerListener(portsStateListener) }
+            .also { portsStateManager.registerListener(it) }
 
     fun stop() {
         portsStateManager.unregisterListener(portsStateListener)
