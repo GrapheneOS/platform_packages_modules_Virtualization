@@ -39,7 +39,7 @@
         android:enabled="false"
         android:name=".Application">
         <activity android:name=".MainActivity"
-                  android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
+                  android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize|fontScale|density"
                   android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
