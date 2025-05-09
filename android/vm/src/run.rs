@@ -206,6 +206,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         boostUclamp: config.common.boost_uclamp,
         hostServices: host_services,
         shouldDelayEncryptedStoreSetup: false,
+        encryptedStoreKEK: None,
     });
     run(
         service.as_ref(),

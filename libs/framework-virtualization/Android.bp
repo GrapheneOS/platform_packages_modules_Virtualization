@@ -24,6 +24,7 @@ java_sdk_library {
 
     permitted_packages: [
         "android.system.virtualmachine",
+        "android.system.virtualizationcommon",
         "android.system.virtualizationservice",
         // android.sysprop.*, renamed by jarjar
         "com.android.system.virtualmachine.sysprop",

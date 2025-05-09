@@ -19,18 +19,12 @@ use keystore2_crypto::ZVec;
 use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
 
 /// Size of the AES256-GCM tag
-// Used in the follow-up change.
-#[allow(dead_code)]
 const AES_256_GCM_TAG_LENGTH: usize = 16;
 
 /// Size of the AES256-GCM nonce
-// Used in the follow-up change.
-#[allow(dead_code)]
 const AES_256_GCM_NONCE_LENGTH: usize = 12;
 
 /// Encrypts key_to_encrypt using provided encryption_key.
-// Used in the follow-up change.
-#[allow(dead_code)]
 pub fn encrypt_kek(key_to_encrypt: &[u8], encryption_key: &[u8]) -> Result<ZVec> {
     let mut result =
         ZVec::new(AES_256_GCM_NONCE_LENGTH + key_to_encrypt.len() + AES_256_GCM_TAG_LENGTH)?;
@@ -51,8 +45,6 @@ pub fn encrypt_kek(key_to_encrypt: &[u8], encryption_key: &[u8]) -> Result<ZVec>
 }
 
 /// Decrypts encrypted_key using provided encryption_key.
-// Used in the follow-up change.
-#[allow(dead_code)]
 pub fn decrypt_kek(encrypted_key: &[u8], encryption_key: &[u8]) -> Result<ZVec> {
     let cipher_start_idx = AES_256_GCM_NONCE_LENGTH;
     let tag_start_idx = encrypted_key.len() - AES_256_GCM_TAG_LENGTH;

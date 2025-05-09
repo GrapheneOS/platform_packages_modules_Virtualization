@@ -15,6 +15,7 @@
  */
 package android.system.virtualizationservice;
 
+import android.system.virtualizationcommon.IEncryptedStoreKEK;
 import android.system.virtualizationservice.CpuOptions;
 import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 
@@ -162,4 +163,9 @@ parcelable VirtualMachineAppConfig {
      * setup.
      */
     boolean shouldDelayEncryptedStoreSetup;
+
+    /**
+     * KEK used to set up the encrypted store or {@code null} if encrypted store uses default mode.
+     */
+    @nullable IEncryptedStoreKEK encryptedStoreKEK;
 }
