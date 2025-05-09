@@ -16,6 +16,7 @@ show_help() {
   echo "-s             Leave a shell open if able [default: only if the build fails]"
   echo "-u             Set VM boot mode to u-boot [default is to load kernel directly]"
   echo "-w             Save temp work directory in the container [for debugging]"
+  echo "-b             Set build id [default is eng-\$(hostname)-\$(date --utc)]"
 }
 
 arch="$(uname -m)"
@@ -26,8 +27,9 @@ save_workdir_flag=
 shell="|| bash"
 uboot_flag=
 image_name="ubuntu:22.04"
+build_id=$(echo eng-$(hostname)-$(date --utc))
 
-while getopts "a:i:ghrsuw" option; do
+while getopts "a:b:i:ghrsuw" option; do
   case ${option} in
     a)
       arch="$OPTARG"
@@ -53,6 +55,9 @@ while getopts "a:i:ghrsuw" option; do
     w)
       save_workdir_flag="-w"
       ;;
+    b)
+      build_id="$OPTARG"
+      ;;
     *)
       echo "Invalid option: $OPTARG" ; exit 1
       ;;
@@ -76,4 +81,4 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag $shell"
+  bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag -b $build_id $shell"
