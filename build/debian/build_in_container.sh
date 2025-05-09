@@ -12,7 +12,6 @@ show_help() {
   echo "-h             Print usage and this help message and exit."
   echo "-a ARCH        Architecture of the image [default is host arch: $(uname -m)]"
   echo "-g             Use Debian generic kernel [default is our custom kernel]"
-  echo "-r             Release mode build"
   echo "-s             Leave a shell open if able [default: only if the build fails]"
   echo "-u             Set VM boot mode to u-boot [default is to load kernel directly]"
   echo "-w             Save temp work directory in the container [for debugging]"
@@ -22,14 +21,13 @@ show_help() {
 arch="$(uname -m)"
 virt_repo_top="${SCRIPT_DIR}/../../"
 kernel_flag=
-release_flag=
 save_workdir_flag=
 shell="|| bash"
 uboot_flag=
 image_name="ubuntu:22.04"
 build_id=$(echo eng-$(hostname)-$(date --utc))
 
-while getopts "a:b:i:ghrsuw" option; do
+while getopts "a:b:i:ghsuw" option; do
   case ${option} in
     a)
       arch="$OPTARG"
@@ -42,9 +40,6 @@ while getopts "a:b:i:ghrsuw" option; do
       ;;
     h)
       show_help ; exit
-      ;;
-    r)
-      release_flag="-r"
       ;;
     s)
       shell="; bash"
@@ -81,4 +76,4 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag -b $build_id $shell"
+  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag -b $build_id $shell"

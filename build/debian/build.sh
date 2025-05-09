@@ -16,7 +16,6 @@ show_help() {
 	echo "-h           Print usage and this help message and exit."
 	echo "-a ARCH      Architecture of the image [default is host arch: $(uname -m)]"
 	echo "-g           Use Debian generic kernel [default is our custom kernel]"
-	echo "-r           Release mode build"
 	echo "-u           Set VM boot mode to u-boot [default is to load kernel directly]"
 	echo "-w           Save temp work directory [for debugging]"
 	echo "-b BUILD_ID  Set build id [default is eng-\$(hostname)-\$(date --utc)]"
@@ -29,7 +28,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:ghruwv:" option; do
+	while getopts "a:ghuwv:" option; do
 		case ${option} in
 			h)
 				show_help ; exit
@@ -39,9 +38,6 @@ parse_options() {
 				;;
 			g)
 				use_generic_kernel=1
-				;;
-			r)
-				mode=release
 				;;
 			u)
 				uboot=1
@@ -362,7 +358,6 @@ debian_version=bookworm
 config_space=${debian_cloud_image}/config_space/${debian_version}
 resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch="$(uname -m)"
-mode=debug
 save_workdir=0
 use_generic_kernel=0
 uboot=0
