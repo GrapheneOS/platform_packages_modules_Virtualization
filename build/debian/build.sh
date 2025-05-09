@@ -240,13 +240,7 @@ run_fai() {
 	fi
 
 	local out="${raw_disk_image}"
-	if ! make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"; then
-		# Check freespaces
-		df -h
-		# debootstrap log is only available if FAI failed in deboostrap;
-		# This is the only log that we're interested in at this moment.
-		cat /tmp/fai-diskimage*/debootstrap/debootstrap.log
-	fi
+	make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"
 	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
 }
 
