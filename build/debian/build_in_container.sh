@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+set -ex
 
 show_help() {
   echo "Usage: sudo $0 [OPTION]..."
@@ -12,24 +12,21 @@ show_help() {
   echo "-a ARCH        Architecture of the image [default is host arch: $(uname -m)]"
   echo "-g             Use Debian generic kernel [default is our custom kernel]"
   echo "-r             Release mode build"
-  echo "-s             Leave a shell open [default: only if the build fails]"
+  echo "-s             Leave a shell open if able [default: only if the build fails]"
   echo "-u             Set VM boot mode to u-boot [default is to load kernel directly]"
   echo "-w             Save temp work directory in the container [for debugging]"
-  echo "-k             Specify to run inside the kokoro instance"
 }
 
 arch="$(uname -m)"
 kernel_flag=
 release_flag=
 save_workdir_flag=
-shell_condition="||"
+shell="|| bash"
 uboot_flag=
 build_top=
-interactive="-it"
 image_name="ubuntu:22.04"
-extra_args=""
 
-while getopts "a:b:i:ghrsuwk" option; do
+while getopts "a:b:i:ghrsuw" option; do
   case ${option} in
     a)
       arch="$OPTARG"
@@ -50,17 +47,13 @@ while getopts "a:b:i:ghrsuwk" option; do
       release_flag="-r"
       ;;
     s)
-      shell_condition=";"
+      shell="; bash"
       ;;
     u)
       uboot_flag="-u"
       ;;
     w)
       save_workdir_flag="-w"
-      ;;
-    k)
-      interactive=""
-      extra_args="-v /var/log/fai:/var/log/fai"
       ;;
     *)
       echo "Invalid option: $OPTARG" ; exit 1
@@ -81,9 +74,17 @@ if [ -z "$build_top" ]; then
   build_top="$ANDROID_BUILD_TOP/packages/modules/Virtualization"
 fi
 
-docker run --privileged $interactive -v /dev:/dev \
+if [[ -t 0 ]]; then
+  interactive="-it"
+else
+  echo "Not an interactive shell. Can't leave a shell open."
+  shell=""
+fi
+
+docker run --privileged $interactive \
+  -v /dev:/dev \
   -v "$build_top:/root/Virtualization" \
+  -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
-  $extra_args \
   "$image_name" \
-  bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag $shell_condition bash"
+  bash -c "./build.sh -a $arch $release_flag $kernel_flag $uboot_flag $save_workdir_flag $shell"

@@ -11,7 +11,7 @@ sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
 # Sibling docker would be launched from host, so provide host's path for mount.
 AVF_BUILD_TOP="${KOKORO_HOST_ROOT_DIR}/src/git/avf"
-sudo ./build_in_container.sh -a aarch64 -b ${AVF_BUILD_TOP} -r -k -w
+sudo ./build_in_container.sh -a aarch64 -b ${AVF_BUILD_TOP} -r -w
 
 sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR}
 mkdir -p ${KOKORO_ARTIFACTS_DIR}/logs
