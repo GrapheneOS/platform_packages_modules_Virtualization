@@ -13,6 +13,6 @@ sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 AVF_BUILD_TOP="${KOKORO_HOST_ROOT_DIR}/src/git/avf"
 sudo ./build_in_container.sh -a aarch64 -b ${AVF_BUILD_TOP} -r -k -w
 
-sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR} || true
+sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR}
 mkdir -p ${KOKORO_ARTIFACTS_DIR}/logs
 sudo cp -r /var/log/fai/* ${KOKORO_ARTIFACTS_DIR}/logs || true
