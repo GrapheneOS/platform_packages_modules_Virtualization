@@ -31,6 +31,7 @@ android_test {
     compile_multilib: "64",
     required: ["perf-setup"],
     host_required: ["MicrodroidTestPreparer"],
+    host_common_data: [":MicrodroidTestPreparer"],
     data: [":test_microdroid_vendor_image"],
 }
 
