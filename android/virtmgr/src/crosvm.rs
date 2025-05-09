@@ -770,7 +770,7 @@ impl VmInstance {
                 // If the VM becomes non-idle or too much time passes, give up.
                 let inflate_start = std::time::Instant::now();
                 loop {
-                    if wait_for_state_change(Some(Duration::from_secs(1)))? != VmState::Idle {
+                    if wait_for_state_change(Some(Duration::from_millis(50)))? != VmState::Idle {
                         break;
                     }
                     if inflate_start.elapsed() > INFLATE_TIMEOUT {
