@@ -2,11 +2,25 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-rust_library_rlib {
-    name: "libpvmfw_avb_nostd",
+rust_defaults {
+    name: "libpvmfw_avb.defaults",
     crate_name: "pvmfw_avb",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
+}
+
+rust_library_rlib {
+    name: "libpvmfw_avb",
+    defaults: ["libpvmfw_avb.defaults"],
+    rustlibs: [
+        "libavb_rs",
+        "libtinyvec",
+    ],
+}
+
+rust_library_rlib {
+    name: "libpvmfw_avb_nostd",
+    defaults: ["libpvmfw_avb.defaults"],
     prefer_rlib: true,
     rustlibs: [
         "libavb_rs_nostd",

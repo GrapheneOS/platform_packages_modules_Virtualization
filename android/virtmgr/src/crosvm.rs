@@ -403,6 +403,31 @@ impl VmContext {
     }
 }
 
+// TODO: may want to check if these are ever dropped without joining,
+// as logs could be lost in these cases.
+#[derive(Debug)]
+pub struct VmJoinHandles {
+    /// Join handle for console
+    pub console_join_handle: Option<JoinHandle<()>>,
+    /// Join handle for log
+    pub log_join_handle: Option<JoinHandle<()>>,
+}
+
+impl VmJoinHandles {
+    pub fn join_all(&mut self) {
+        // logs in case they are stuck to aid debugging, as we are adding this
+        // feature. logs are also there so when we get more bugreports after
+        // b/404210068, we can see if this change actually results in us getting
+        // more logs
+
+        info!("Joining threads for VM console");
+        self.console_join_handle.take().map(JoinHandle::join);
+        info!("Joining threads for VM log");
+        self.log_join_handle.take().map(JoinHandle::join);
+        info!("Joining threads for VM done");
+    }
+}
+
 /// Information about a particular instance of a VM which may be running.
 #[derive(Debug)]
 pub struct VmInstance {
@@ -428,6 +453,8 @@ pub struct VmInstance {
     /// The PID of the process which requested the VM. Note that this process may no longer exist
     /// and the PID may have been reused for a different process, so this should not be trusted.
     pub requester_debug_pid: i32,
+    /// handles to threads running VM tasks,
+    pub join_handles: Mutex<VmJoinHandles>,
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
     /// VirtualMachineService binder object for the VM.
@@ -470,6 +497,8 @@ impl VmInstance {
         temporary_directory: PathBuf,
         requester_uid: u32,
         requester_debug_pid: i32,
+        console_join_handle: Option<JoinHandle<()>>,
+        log_join_handle: Option<JoinHandle<()>>,
         vm_context: VmContext,
         idle_compactor_balloon: bool,
         vendor_tee_services: Vec<String>,
@@ -495,6 +524,7 @@ impl VmInstance {
             temporary_directory,
             requester_uid,
             requester_debug_pid,
+            join_handles: Mutex::new(VmJoinHandles { console_join_handle, log_join_handle }),
             callbacks: Default::default(),
             vm_service: Mutex::new(None),
             vm_metric: Mutex::new(Default::default()),
@@ -619,6 +649,9 @@ impl VmInstance {
             exit_signal,
             &vm_metric,
         );
+
+        // clean up VM state
+        self.join_handles.lock().unwrap().join_all();
 
         // Delete temporary files. The folder itself is removed by VirtualizationServiceInternal.
         remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
@@ -757,6 +790,7 @@ impl VmInstance {
         loop {
             // Wait for idle.
             if wait_for_state_change(None)? == VmState::Idle {
+                info!("idle compactor balloon inflate starting");
                 // Read current balloon size and available memory in guest.
                 let (balloon_actual, stats) = self.get_balloon_stats()?;
                 // Make the balloon big enough to consume all available memory, minus a constant.
@@ -770,14 +804,18 @@ impl VmInstance {
                 // If the VM becomes non-idle or too much time passes, give up.
                 let inflate_start = std::time::Instant::now();
                 loop {
-                    if wait_for_state_change(Some(Duration::from_secs(1)))? != VmState::Idle {
-                        break;
-                    }
-                    if inflate_start.elapsed() > INFLATE_TIMEOUT {
+                    if wait_for_state_change(Some(Duration::from_millis(50)))? != VmState::Idle {
+                        info!("idle compactor balloon inflate aborted");
                         break;
                     }
                     let (_, stats) = self.get_balloon_stats()?;
-                    if stats.available_memory < INFLATE_DONE_BYTES {
+                    if inflate_start.elapsed() > INFLATE_TIMEOUT
+                        || stats.available_memory < INFLATE_DONE_BYTES
+                    {
+                        info!(
+                            "idle compactor balloon inflate took {} seconds, final available_memory {} bytes",
+                            inflate_start.elapsed().as_secs_f64(), stats.available_memory
+                        );
                         break;
                     }
                 }
@@ -823,6 +861,8 @@ impl VmInstance {
                 child.kill().with_context(|| format!("Error killing crosvm({id}) instance"))?;
                 monitor_vm_exit_thread.take()
             } else {
+                // TODO: if it were ever running, we may still need to join
+                // logging handles, in monitor_vm_exit.
                 bail!("VM is not running")
             }
         };
@@ -1338,6 +1378,7 @@ fn run_vm(
 
     if let Some(gdb_port) = config.gdb_port {
         command.arg("--gdb").arg(gdb_port.to_string());
+        command.arg("-p").arg("nokaslr");
     }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.

@@ -118,13 +118,13 @@ rust_test {
     rustlibs: [
         "libcbor_util",
         "libciborium",
-        "libcoset_nostd",
-        "libdiced_open_dice_nostd",
+        "libcoset",
+        "libdiced_open_dice_multialg",
         "libhwtrust",
         "liblog_rust",
-        "libpvmfw_avb_nostd",
-        "libdiced_sample_inputs_nostd",
-        "libzerocopy_nostd",
+        "libpvmfw_avb",
+        "libdiced_sample_inputs_multialg",
+        "libzerocopy",
         "libhex",
     ],
     static_libs: ["libopen_dice_clear_memory"],
@@ -137,7 +137,7 @@ rust_test {
     rustlibs: [
         "liblibfdt",
         "liblog_rust",
-        "libzerocopy_nostd",
+        "libzerocopy",
     ],
     data: [
         ":test_pvmfw_devices_without_device",
