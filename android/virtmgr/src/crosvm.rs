@@ -790,6 +790,7 @@ impl VmInstance {
         loop {
             // Wait for idle.
             if wait_for_state_change(None)? == VmState::Idle {
+                info!("idle compactor balloon inflate starting");
                 // Read current balloon size and available memory in guest.
                 let (balloon_actual, stats) = self.get_balloon_stats()?;
                 // Make the balloon big enough to consume all available memory, minus a constant.
@@ -804,13 +805,17 @@ impl VmInstance {
                 let inflate_start = std::time::Instant::now();
                 loop {
                     if wait_for_state_change(Some(Duration::from_millis(50)))? != VmState::Idle {
-                        break;
-                    }
-                    if inflate_start.elapsed() > INFLATE_TIMEOUT {
+                        info!("idle compactor balloon inflate aborted");
                         break;
                     }
                     let (_, stats) = self.get_balloon_stats()?;
-                    if stats.available_memory < INFLATE_DONE_BYTES {
+                    if inflate_start.elapsed() > INFLATE_TIMEOUT
+                        || stats.available_memory < INFLATE_DONE_BYTES
+                    {
+                        info!(
+                            "idle compactor balloon inflate took {} seconds, final available_memory {} bytes",
+                            inflate_start.elapsed().as_secs_f64(), stats.available_memory
+                        );
                         break;
                     }
                 }
