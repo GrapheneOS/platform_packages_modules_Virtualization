@@ -16,4 +16,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.android.microdroid.helper"
       android:versionCode="6">
+    <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33" />
 </manifest>

@@ -13,12 +13,12 @@ show_help() {
 	echo "Usage: sudo $0 [OPTION]... [FILE]"
 	echo "Builds a debian image and save it to FILE. [sudo is required]"
 	echo "Options:"
-	echo "-h         Print usage and this help message and exit."
-	echo "-a ARCH    Architecture of the image [default is host arch: $(uname -m)]"
-	echo "-g         Use Debian generic kernel [default is our custom kernel]"
-	echo "-r         Release mode build"
-	echo "-u         Set VM boot mode to u-boot [default is to load kernel directly]"
-	echo "-w         Save temp work directory [for debugging]"
+	echo "-h           Print usage and this help message and exit."
+	echo "-a ARCH      Architecture of the image [default is host arch: $(uname -m)]"
+	echo "-g           Use Debian generic kernel [default is our custom kernel]"
+	echo "-u           Set VM boot mode to u-boot [default is to load kernel directly]"
+	echo "-w           Save temp work directory [for debugging]"
+	echo "-b BUILD_ID  Set build id [default is eng-\$(hostname)-\$(date --utc)]"
 }
 
 check_sudo() {
@@ -28,7 +28,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:ghruw" option; do
+	while getopts "a:ghuwv:" option; do
 		case ${option} in
 			h)
 				show_help ; exit
@@ -39,14 +39,14 @@ parse_options() {
 			g)
 				use_generic_kernel=1
 				;;
-			r)
-				mode=release
-				;;
 			u)
 				uboot=1
 				;;
 			w)
 				save_workdir=1
+				;;
+			b)
+				build_id="$OPTARG"
 				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
@@ -66,14 +66,6 @@ parse_options() {
 	esac
 	if [[ "${*:$OPTIND:1}" ]]; then
 		output="${*:$OPTIND:1}"
-	fi
-}
-
-prepare_build_id() {
-	if [ -z "${KOKORO_BUILD_NUMBER}" ]; then
-		echo eng-$(hostname)-$(date --utc)
-	else
-		echo ${KOKORO_BUILD_NUMBER}
 	fi
 }
 
@@ -240,13 +232,7 @@ run_fai() {
 	fi
 
 	local out="${raw_disk_image}"
-	if ! make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"; then
-		# Check freespaces
-		df -h
-		# debootstrap log is only available if FAI failed in deboostrap;
-		# This is the only log that we're interested in at this moment.
-		cat /tmp/fai-diskimage*/debootstrap/debootstrap.log
-	fi
+	make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"
 	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
 }
 
@@ -366,13 +352,12 @@ trap clean_up EXIT
 output=images.tar.gz
 workdir=$(mktemp -d)
 raw_disk_image=${workdir}/image.raw
-build_id=$(prepare_build_id)
+build_id=$(echo eng-$(hostname)-$(date --utc))
 debian_cloud_image=${workdir}/debian_cloud_image
 debian_version=bookworm
 config_space=${debian_cloud_image}/config_space/${debian_version}
 resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch="$(uname -m)"
-mode=debug
 save_workdir=0
 use_generic_kernel=0
 uboot=0

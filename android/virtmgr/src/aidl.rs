@@ -222,7 +222,7 @@ pub fn remove_temporary_files(path: &PathBuf) -> Result<()> {
 /// Implementation of `IVirtualizationService`, the entry point of the AIDL service.
 #[derive(Debug, Default)]
 pub struct VirtualizationService {
-    state: Arc<Mutex<State>>,
+    pub state: Arc<Mutex<State>>,
 }
 
 impl Interface for VirtualizationService {
@@ -718,10 +718,11 @@ impl VirtualizationService {
         };
 
         let state = &mut *self.state.lock().unwrap();
-        let console_out_fd =
+        let (console_out_fd, console_join_handle) =
             clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
         let console_in_fd = console_in_fd.map(clone_file).transpose()?;
-        let log_fd = clone_or_prepare_logger_fd(log_fd, format!("Log({})", cid))?;
+        let (log_fd, log_join_handle) =
+            clone_or_prepare_logger_fd(log_fd, format!("Log({})", cid))?;
         let dump_dt_fd = if let Some(fd) = dump_dt_fd {
             Some(clone_file(fd)?)
         } else if debug_config.dump_device_tree {
@@ -1048,6 +1049,8 @@ impl VirtualizationService {
                 temporary_directory,
                 requester_uid,
                 requester_debug_pid,
+                console_join_handle,
+                log_join_handle,
                 vm_context,
                 idle_compactor_balloon,
                 vendor_tee_services,
@@ -1997,7 +2000,7 @@ impl VirtualMachineCallbacks {
 /// The mutable state of the VirtualizationService. There should only be one instance of this
 /// struct.
 #[derive(Debug, Default)]
-struct State {
+pub struct State {
     /// The VMs which have been started. When VMs are started a weak reference is added to this
     /// list while a strong reference is returned to the caller over Binder. Once all copies of
     /// the Binder client are dropped the weak reference here will become invalid, and will be
@@ -2010,6 +2013,15 @@ impl State {
     fn vms(&self) -> Vec<Arc<VmInstance>> {
         // Attempt to upgrade the weak pointers to strong pointers.
         self.vms.iter().filter_map(Weak::upgrade).collect()
+    }
+
+    /// stop and reset all state
+    pub fn stop_all(&self) {
+        self.vms().into_iter().for_each(|vm| {
+            if let Err(e) = vm.kill() {
+                error!("VM did not die when I tried to kill it: {:#}", e);
+            }
+        });
     }
 
     /// Add a new VM to the list.
@@ -2244,9 +2256,9 @@ fn check_config_allowed_for_early_vms(config: &VirtualMachineConfig) -> binder::
 fn clone_or_prepare_logger_fd(
     fd: Option<&ParcelFileDescriptor>,
     tag: String,
-) -> Result<Option<File>, Status> {
+) -> Result<(Option<File>, Option<std::thread::JoinHandle<()>>), Status> {
     if let Some(fd) = fd {
-        return Ok(Some(clone_file(fd)?));
+        return Ok((Some(clone_file(fd)?), None));
     }
 
     let (read_fd, write_fd) =
@@ -2256,7 +2268,7 @@ fn clone_or_prepare_logger_fd(
     let write_fd = File::from(write_fd);
 
     let mut buf = vec![];
-    std::thread::spawn(move || loop {
+    let join_handle = std::thread::spawn(move || loop {
         buf.clear();
         buf.shrink_to(1024);
         match reader.read_until(b'\n', &mut buf) {
@@ -2281,7 +2293,7 @@ fn clone_or_prepare_logger_fd(
         };
     });
 
-    Ok(Some(write_fd))
+    Ok((Some(write_fd), Some(join_handle)))
 }
 
 /// Simple utility for referencing Borrowed or Owned. Similar to std::borrow::Cow, but
