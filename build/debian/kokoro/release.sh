@@ -12,10 +12,11 @@ show_help() {
 	echo "-a ARCH       Architecture of the image. Defaults to all supported architectures."
 	echo "-b BUILD_ID   Build ID to fetch. If omitted, latest build ID is selected."
 	echo "-t TAG        Tag name to attach to the release. Defaults to BUILD_ID."
+	echo "-c CONFIG     Kokoro config name. Default to continuous."
 }
 
 parse_opt() {
-	while getopts "ha:b:t:" option; do
+	while getopts "ha:b:t:c:" option; do
 		case ${option} in
 			h)
 				show_help
@@ -33,6 +34,9 @@ parse_opt() {
 			t)
 				tag="$OPTARG"
 				;;
+			c)
+				config="$OPTARG"
+				;;
 			*)
 				echo "Invalid option: $OPTARG"
 				exit
@@ -49,15 +53,19 @@ parse_opt() {
 arch=all
 build_id=latest
 tag=
-placer_url="/placer/test/home/kokoro-dedicated-qa/build_artifacts/qa/android-ferrochrome"
+placer_url="/placer/prod/home/kokoro-dedicated/build_artifacts/prod/ferrochrome"
 image_filename="images.tar.gz"
+config="continuous"
 
 get_build_id() {
 	local arch=$1
 	local build_id=$2
 	if [ "${build_id}" == "latest" ]; then
-		local pattern=${placer_url}/${arch}/continuous
+		local pattern=${placer_url}/${arch}/${config}
 		build_id=$(basename $(fileutil ls ${pattern} | sort -V | tail -1))
+	fi
+	if [ -z "${build_id}" ]; then
+    exit 1
 	fi
 	echo ${build_id}
 }
@@ -65,7 +73,7 @@ get_build_id() {
 get_image_path() {
 	local arch=$1
 	local build_id=$2
-	local pattern=${placer_url}/${arch}/continuous/${build_id}/*/${image_filename}
+	local pattern=${placer_url}/${arch}/${config}/${build_id}/*/${image_filename}
 	image=$(fileutil ls ${pattern} | tail -1)
 	if [ $? -ne 0 ]; then
 		echo "Cannot find image"
