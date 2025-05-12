@@ -80,4 +80,4 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag -b $build_id $shell"
+  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag -b \"$build_id\" $shell"

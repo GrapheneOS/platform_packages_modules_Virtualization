@@ -28,7 +28,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:ghuwv:" option; do
+	while getopts "a:ghuwv:b:" option; do
 		case ${option} in
 			h)
 				show_help ; exit
