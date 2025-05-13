@@ -275,7 +275,17 @@ impl DeviceTreeMask {
             newly_masked = true;
             iter = children.last_mut().unwrap()
         }
-        iter.children = leaf_mask;
+        match (&mut iter.children, leaf_mask) {
+            (
+                DeviceTreeChildrenMask::Partial(existing_children),
+                DeviceTreeChildrenMask::Partial(mut new_children),
+            ) => {
+                existing_children.append(&mut new_children);
+            }
+            (existing, new) => {
+                *existing = new;
+            }
+        }
         newly_masked
     }
 
