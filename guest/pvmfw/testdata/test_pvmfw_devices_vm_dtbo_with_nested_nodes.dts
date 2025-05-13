@@ -1,0 +1,78 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    host {
+        #address-cells = <0x2>;
+        #size-cells = <0x1>;
+        node_a {
+            reg = <0x0 0xF0000 0x1000>;
+            android,pvmfw,target = <&node_a>;
+        };
+        node_a_1_2 {
+            reg = <0x0 0xF1000 0x1000>;
+            android,pvmfw,target = <&node_a_1_2>;
+        };
+        // node_b_2_2 comes before node_b to test out-of-order VM DTBO declaration.
+        node_b_2_2 {
+            reg = <0x0 0xF3000 0x1000>;
+            android,pvmfw,target = <&node_b_2_2>;
+        };
+        node_b {
+            reg = <0x0 0xF2000 0x1000>;
+            android,pvmfw,target = <&node_b>;
+        };
+    };
+};
+
+&{/} {
+    node_a: node_a {
+        val = <0x6>;
+
+        node_a_1: node_a_1 {
+            val = <0x7>;
+
+            node_a_1_1: node_a_1_1 {
+                this_will_be_gone;
+            };
+
+            node_a_1_2: node_a_1_2 {
+                val = <0x8>;
+
+                node_a_1_2_z: node_a_1_2_z {
+                    subnode_is_not_included;
+                };
+            };
+        };
+
+        node_a_2: node_a_2 {
+            this_is_ignored;
+        };
+    };
+};
+
+&{/} {
+    node_b: node_b {
+        val = <0x6>;
+
+        node_b_1: node_b_1 {
+            this_is_ignored;
+        };
+
+        node_b_2: node_b_2 {
+            val = <0x7>;
+
+            node_b_2_1: node_b_2_1 {
+                this_will_be_gone;
+            };
+
+            node_b_2_2: node_b_2_2 {
+                val = <0x8>;
+
+                node_b_2_2_z: node_b_2_2_z {
+                    subnode_is_not_included;
+                };
+            };
+        };
+    };
+};
