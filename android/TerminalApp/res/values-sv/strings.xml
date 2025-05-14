@@ -20,7 +20,7 @@
     <string name="terminal_display" msgid="4810127497644015237">"Terminalskärm"</string>
     <string name="terminal_input" msgid="4602512831433433551">"Markör"</string>
     <string name="empty_line" msgid="5012067143408427178">"Tom rad"</string>
-    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Tryck snabbt två gånger för att skriva in data"</string>
+    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Dubbeltryck för att skriva in data"</string>
     <string name="installer_title_text" msgid="500663060973466805">"Installera Linux-terminalen"</string>
     <string name="installer_desc_text_format" msgid="5935117404303982823">"Om du vill starta Linux-terminalen måste du ladda ned ungefär <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> data via nätverket.\nVill du fortsätta?"</string>
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Ladda endast ned via wifi"</string>

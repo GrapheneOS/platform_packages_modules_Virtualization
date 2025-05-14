@@ -1,15 +1,12 @@
 // When adding or removing tests here, don't forget to amend _all_modules list in
 // wireless/android/busytown/ath_config/configs/prod/avf/tests.gcl
 {
-  // Only add critical tests and avoid time consuming tests.
-  // presubmit should be finished within 30m.
+  // Tests would be run by treehugger to validate pending CLs on AVF repo. These
+  // would run on limited target on git_main, and possibly with filtering.
+  // This MUST be finished within 30min, so keep this as simple as possible.
+  // Do not extend this test group outside of the Virtualization repo. It may
+  // introduce unexpected test growth, so tests maybe demoted to postsubmit.
   "avf-presubmit": [
-    {
-      "name": "AvfRkpdAppIntegrationTests"
-    },
-    {
-      "name": "AvfRkpdVmAttestationTestApp"
-    },
     {
       "name": "MicrodroidHostTestCases"
     },
@@ -18,6 +15,27 @@
     },
     {
       "name": "MicrodroidTestApp"
+    }
+  ],
+  // Tests runs after CLs are submitted. All AVF tests and benchmarks are here.
+  // Failure wouldn't be droidmonitored nor block build promotion.
+  // (i.e. FVT + postsubmit.failure_status = INFO).
+  // This would run on wider range of branch/targets than avf-postsubmit.
+  "avf-postsubmit": [
+    {
+      "name": "MicrodroidHostTestCases"
+    },
+    {
+      "name": "ComposHostTestCases"
+    },
+    {
+      "name": "MicrodroidTestApp"
+    },
+    {
+      "name": "AvfRkpdAppIntegrationTests"
+    },
+    {
+      "name": "AvfRkpdVmAttestationTestApp"
     },
     {
       "name": "MicrodroidTestAppNoPerm"
@@ -51,17 +69,9 @@
     },
     {
       "name": "old_images_avf_test"
-    }
-  ],
-  "avf-postsubmit": [
+    },
     {
       "name": "odsign_e2e_tests_full"
-    },
-    {
-      "name": "MicrodroidBenchmarkApp"
-    },
-    {
-      "name": "ComposBenchmarkApp"
     },
     {
       "name": "AVFHostTestCases"
@@ -81,6 +91,12 @@
     },
     {
       "name": "avf_early_vm_test"
+    },
+    {
+      "name": "MicrodroidBenchmarkApp"
+    },
+    {
+      "name": "ComposBenchmarkApp"
     }
   ],
   "postsubmit": [
