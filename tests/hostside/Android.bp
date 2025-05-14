@@ -10,7 +10,7 @@ java_defaults {
         "tradefed",
     ],
     static_libs: [
-        "MicrodroidHostTestHelper",
+        "MicrodroidHostTestLib",
         "compatibility-host-util",
         "cts-statsd-atom-host-test-utils",
         "microdroid_payload_metadata",

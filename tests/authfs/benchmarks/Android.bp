@@ -10,7 +10,7 @@ java_test_host {
     ],
     static_libs: [
         "AuthFsHostTestCommon",
-        "MicrodroidHostTestHelper",
+        "MicrodroidHostTestLib",
         "cts-host-utils",
         "MicrodroidTestPreparer", // Workaround for sandboxed test environment to install this
     ],

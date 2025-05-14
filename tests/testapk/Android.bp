@@ -38,7 +38,7 @@ java_defaults {
     srcs: ["src/java/**/*.java"],
     defaults: ["MicrodroidTestAppsDefaults"],
     static_libs: [
-        "MicrodroidDeviceTestHelper",
+        "MicrodroidDeviceTestLib",
         "VmAttestationTestUtil",
         "androidx.test.runner",
         "androidx.test.ext.junit",

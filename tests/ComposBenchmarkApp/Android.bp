@@ -11,8 +11,8 @@ android_test {
     static_libs: [
         "androidx.test.runner",
         "androidx.test.ext.junit",
-        "MicrodroidDeviceTestHelper",
-        "MicrodroidTestHelper",
+        "MicrodroidDeviceTestLib",
+        "MicrodroidCommonTestLib",
         "truth",
     ],
     sdk_version: "test_current",

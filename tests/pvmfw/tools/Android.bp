@@ -6,5 +6,5 @@ java_binary_host {
     name: "pvmfw-tool",
     manifest: "pvmfw-tool-manifest.txt",
     srcs: ["PvmfwTool.java"],
-    static_libs: ["PvmfwHostTestHelper"],
+    static_libs: ["PvmfwHostTestLib"],
 }

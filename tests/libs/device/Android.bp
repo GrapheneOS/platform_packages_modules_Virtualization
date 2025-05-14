@@ -1,0 +1,17 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+java_library_static {
+    name: "MicrodroidDeviceTestLib",
+    srcs: ["src/java/com/android/microdroid/test/device/*.java"],
+    static_libs: [
+        "androidx.test.runner",
+        "androidx.test.ext.junit",
+        "com.android.microdroid.testservice-java",
+        "com.android.virt.vm_attestation.testservice-java",
+        "MicrodroidCommonTestLib",
+        "truth",
+    ],
+    sdk_version: "test_current",
+}

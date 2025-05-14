@@ -3,15 +3,10 @@ package {
 }
 
 java_library_host {
-    name: "MicrodroidHostTestHelper",
+    name: "PvmfwHostTestLib",
     srcs: ["java/**/*.java"],
-    libs: [
-        "androidx.annotation_annotation",
-        "compatibility-tradefed",
-        "tradefed",
-        "truth",
-    ],
     static_libs: [
-        "MicrodroidTestHelper",
+        "androidx.annotation_annotation",
+        "truth",
     ],
 }
