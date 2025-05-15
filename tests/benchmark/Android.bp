@@ -9,8 +9,8 @@ android_test {
     ],
     srcs: ["src/java/**/*.java"],
     static_libs: [
-        "MicrodroidDeviceTestHelper",
-        "MicrodroidTestHelper",
+        "MicrodroidDeviceTestLib",
+        "MicrodroidCommonTestLib",
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "com.android.microdroid.testservice-java",

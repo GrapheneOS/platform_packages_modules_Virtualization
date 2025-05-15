@@ -5,8 +5,8 @@ package {
 android_test {
     name: "MicrodroidTestAppNoPerm",
     static_libs: [
-        "MicrodroidDeviceTestHelper",
-        "MicrodroidTestHelper",
+        "MicrodroidDeviceTestLib",
+        "MicrodroidCommonTestLib",
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "com.android.microdroid.testservice-java",

@@ -15,7 +15,7 @@ android_test {
         "androidx.test.core",
         "androidx.test.ext.junit",
         "junit",
-        "MicrodroidTestHelper",
+        "MicrodroidCommonTestLib",
     ],
     platform_apis: true,
     test_suites: ["general-tests"],

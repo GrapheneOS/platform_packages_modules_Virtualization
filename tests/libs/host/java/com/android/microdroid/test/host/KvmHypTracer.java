@@ -104,8 +104,7 @@ public final class KvmHypTracer {
     }
 
     private static String getHypEventsDir(String root) {
-        if (root.endsWith("/hypervisor/"))
-            return "events/hypervisor/";
+        if (root.endsWith("/hypervisor/")) return "events/hypervisor/";
 
         return "events/hyp/";
     }
@@ -120,9 +119,8 @@ public final class KvmHypTracer {
             return false;
         }
 
-        for (String event: events) {
-            if (!device.doesFileExist(dir + event + "/enable"))
-                return false;
+        for (String event : events) {
+            if (!device.doesFileExist(dir + event + "/enable")) return false;
         }
         return true;
     }
@@ -151,7 +149,7 @@ public final class KvmHypTracer {
         mRunner.run("echo 0 | tee " + mHypTracingRoot + "events/*/*/enable");
         setNode("buffer_size_kb", DEFAULT_BUF_SIZE_KB);
 
-        for (String event: mHypEvents) {
+        for (String event : mHypEvents) {
             setNode(getHypEventsDir(mHypTracingRoot) + event + "/enable", 1);
         }
 
