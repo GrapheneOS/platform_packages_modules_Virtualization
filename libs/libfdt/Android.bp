@@ -4,6 +4,17 @@ package {
 
 rust_bindgen {
     name: "liblibfdt_bindgen",
+    defaults: ["liblibfdt_bindgen_defaults"],
+    apex_available: ["com.android.virt"],
+}
+
+rust_bindgen_host {
+    name: "liblibfdt_bindgen_host",
+    defaults: ["liblibfdt_bindgen_defaults"],
+}
+
+rust_defaults {
+    name: "liblibfdt_bindgen_defaults",
     crate_name: "libfdt_bindgen",
     defaults: ["avf_build_flags_rust"],
     wrapper_src: "bindgen/fdt.h",
@@ -22,7 +33,6 @@ rust_bindgen {
     header_libs: [
         "libfdt",
     ],
-    apex_available: ["com.android.virt"],
 }
 
 rust_defaults {
@@ -31,19 +41,37 @@ rust_defaults {
     defaults: ["avf_build_flags_rust"],
     srcs: [
         "src/lib.rs",
-        ":liblibfdt_bindgen",
     ],
     edition: "2021",
     rustlibs: [
-        "liblibfdt_bindgen",
         "libstatic_assertions",
-        "libzerocopy_nostd",
     ],
+    target: {
+        android: {
+            srcs: [
+                ":liblibfdt_bindgen",
+            ],
+            rustlibs: [
+                "liblibfdt_bindgen",
+                "libzerocopy_nostd",
+            ],
+        },
+        host: {
+            srcs: [
+                ":liblibfdt_bindgen_host",
+            ],
+            rustlibs: [
+                "liblibfdt_bindgen_host",
+                "libzerocopy",
+            ],
+        },
+    },
 }
 
 rust_library_rlib {
     name: "liblibfdt",
     defaults: ["liblibfdt_defaults"],
+    host_supported: true,
     whole_static_libs: [
         "libfdt",
     ],
