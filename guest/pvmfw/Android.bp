@@ -87,6 +87,7 @@ rust_test {
         ":test_pvmfw_devices_vm_dtbo_with_duplicated_iommus",
         ":test_pvmfw_devices_overlapping_pvmfw",
         ":test_pvmfw_devices_vm_dtbo_with_dependencies",
+        ":test_pvmfw_devices_vm_dtbo_with_nested_nodes",
         ":test_pvmfw_devices_with_rng",
         ":test_pvmfw_devices_with_multiple_devices_iommus",
         ":test_pvmfw_devices_with_iommu_sharing",
@@ -98,6 +99,7 @@ rust_test {
         ":test_pvmfw_devices_with_dependency",
         ":test_pvmfw_devices_with_dependency_loop",
         ":test_pvmfw_devices_with_multiple_dependencies",
+        ":test_pvmfw_devices_with_nested_nodes",
         ":test_pvmfw_devices_expected_dt",
     ],
     data_bins: ["dtc_static"],
@@ -171,6 +173,14 @@ genrule {
     cmd: "$(location dtc) -@ -I dts -O dtb $(in) -o $(out)",
     srcs: ["testdata/test_pvmfw_devices_vm_dtbo_with_dependencies.dts"],
     out: ["test_pvmfw_devices_vm_dtbo_with_dependencies.dtbo"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_vm_dtbo_with_nested_nodes",
+    tools: ["dtc"],
+    cmd: "$(location dtc) -@ -I dts -O dtb $(in) -o $(out)",
+    srcs: ["testdata/test_pvmfw_devices_vm_dtbo_with_nested_nodes.dts"],
+    out: ["test_pvmfw_devices_vm_dtbo_with_nested_nodes.dtbo"],
 }
 
 genrule_defaults {
@@ -261,6 +271,13 @@ genrule {
     defaults: ["test_device_assignment_dts_to_dtb"],
     srcs: ["testdata/test_pvmfw_devices_with_dependency_loop.dts"],
     out: ["test_pvmfw_devices_with_dependency_loop.dtb"],
+}
+
+genrule {
+    name: "test_pvmfw_devices_with_nested_nodes",
+    defaults: ["test_device_assignment_dts_to_dtb"],
+    srcs: ["testdata/test_pvmfw_devices_with_nested_nodes.dts"],
+    out: ["test_pvmfw_devices_with_nested_nodes.dtb"],
 }
 
 // We can't use genrule because preprocessed platform DT is built with cc_object.
