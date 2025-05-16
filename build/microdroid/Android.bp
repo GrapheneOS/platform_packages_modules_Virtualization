@@ -121,6 +121,7 @@ android_system_image {
                 "encryptedstore",
                 "microdroid_kexec",
                 "microdroid_manager",
+                "pageout_bomb",
                 "zipfuse",
             ] + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
                 true: ["derive_microdroid_vendor_dice_node"],
