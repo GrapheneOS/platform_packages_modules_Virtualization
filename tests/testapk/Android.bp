@@ -209,14 +209,14 @@ android_test {
 
 android_test_helper_app {
     name: "MicrodroidTestHelperApp",
-    defaults: ["MicrodroidTestAppsDefaults"],
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV5.xml",
     min_sdk_version: "33",
 }
 
 android_test_helper_app {
     name: "MicrodroidTestHelperAppUpdated",
-    defaults: ["MicrodroidTestAppsDefaults"],
+    defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifestV6.xml",
     min_sdk_version: "33",
 }
