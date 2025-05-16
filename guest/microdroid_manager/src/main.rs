@@ -729,15 +729,7 @@ fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Resul
     // Never accept input from outside
     command.stdin(Stdio::null());
 
-    // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-    let (stdout, stderr) = if is_debuggable()? {
-        use std::os::fd::FromRawFd;
-        let kmsg_fd = env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap();
-        // SAFETY: no one closes kmsg_fd
-        unsafe { (Stdio::from_raw_fd(kmsg_fd), Stdio::from_raw_fd(kmsg_fd)) }
-    } else {
-        (Stdio::null(), Stdio::null())
-    };
+    let (stdout, stderr) = std_out_err()?;
     command.stdout(stdout);
     command.stderr(stderr);
 
@@ -795,15 +787,31 @@ fn find_library_path(name: &str) -> Result<String> {
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
+fn std_out_err() -> Result<(Stdio, Stdio)> {
+    // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
+    let fds = if is_debuggable()? {
+        use std::os::fd::FromRawFd;
+        let kmsg_fd = env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap();
+        // SAFETY: no one closes kmsg_fd
+        unsafe { (Stdio::from_raw_fd(kmsg_fd), Stdio::from_raw_fd(kmsg_fd)) }
+    } else {
+        (Stdio::null(), Stdio::null())
+    };
+    Ok(fds)
+}
+
 fn prepare_encryptedstore(vm_secret: &VmSecret) -> Result<Child> {
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     vm_secret.derive_encryptedstore_key(&mut key)?;
+    let (stdout, stderr) = std_out_err()?;
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
         .arg(hex::encode(&*key))
         .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
+        .stdout(stdout)
+        .stderr(stderr)
         .spawn()
         .context("encryptedstore failed")
 }
