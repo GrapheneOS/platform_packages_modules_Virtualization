@@ -929,6 +929,13 @@ impl IGuestAgent for GuestAgent {
             .unwrap();
         Ok(())
     }
+
+    fn trim(&self) -> binder::Result<()> {
+        if let Err(e) = system_properties::write("pageout_bomb.go", "1") {
+            error!("failed to set pageout_bomb.go: {:?}", e);
+        }
+        Ok(())
+    }
 }
 
 impl GuestAgent {
