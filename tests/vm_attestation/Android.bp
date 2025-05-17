@@ -9,7 +9,7 @@ java_defaults {
         "pts",
     ],
     static_libs: [
-        "MicrodroidDeviceTestHelper",
+        "MicrodroidDeviceTestLib",
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "com.android.virt.vm_attestation.testservice-java",

@@ -1,0 +1,41 @@
+/dts-v1/;
+
+/include/ "test_crosvm_dt_base.dtsi"
+
+/ {
+    node_a: node_a {
+        reg = <0x0 0xFF0000 0x0 0x1000>;
+        interrupts = <0x0 0xF 0x4>;
+        val = <0x6>;
+
+        node_a_1: node_a_1 {
+            #address-cells = <0x02>;
+            #size-cells = <0x02>;
+            val = <0x7>;
+
+            node_a_1_2: node_a_1_2 {
+                reg = <0x0 0xFF1000 0x0 0x1000>;
+                interrupts = <0x0 0xF 0x4>;
+                val = <0x8>;
+            };
+        };
+    };
+
+    node_b: node_b {
+        reg = <0x0 0xFF2000 0x0 0x1000>;
+        interrupts = <0x0 0xF 0x4>;
+        val = <0x6>;
+
+        node_b_2: node_b_2 {
+            #address-cells = <0x02>;
+            #size-cells = <0x02>;
+            val = <0x7>;
+
+            node_b_2_2: node_b_2_2 {
+                reg = <0x0 0xFF3000 0x0 0x1000>;
+                interrupts = <0x0 0xF 0x4>;
+                val = <0x8>;
+            };
+        };
+    };
+};

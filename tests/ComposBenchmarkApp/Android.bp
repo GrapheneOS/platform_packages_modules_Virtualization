@@ -11,8 +11,8 @@ android_test {
     static_libs: [
         "androidx.test.runner",
         "androidx.test.ext.junit",
-        "MicrodroidDeviceTestHelper",
-        "MicrodroidTestHelper",
+        "MicrodroidDeviceTestLib",
+        "MicrodroidCommonTestLib",
         "truth",
     ],
     sdk_version: "test_current",
@@ -20,4 +20,5 @@ android_test {
     compile_multilib: "64",
 
     host_required: ["MicrodroidTestPreparer"],
+    host_common_data: [":MicrodroidTestPreparer"],
 }

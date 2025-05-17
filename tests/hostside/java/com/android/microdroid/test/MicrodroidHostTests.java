@@ -1475,13 +1475,19 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
         prepareVirtualizationTestSetup(getDevice());
 
-        new CommandRunner(getDevice()).tryRun("pm", "clear", PACKAGE_NAME);
-        new CommandRunner(getDevice())
-                .tryRun(
-                        "pm",
-                        "grant",
-                        SHELL_PACKAGE_NAME,
-                        "android.permission.USE_CUSTOM_VIRTUAL_MACHINE");
+        CommandRunner runner = new CommandRunner(getDevice());
+
+        // Try to re-use the existing helper apk to save time.
+        // Re-installing the app for each test takes roughly 2 min out of 10 min of total test run.
+        CommandResult result = runner.runForResult("pm", "clear", PACKAGE_NAME);
+        if (result.getStatus() != CommandStatus.SUCCESS) {
+            // Previously failed test sometimes triggers device lost (i.e.
+            // NativeDevice#recoverDevice()), and helper apk is gone meanwhile.
+            // Root cause is still unknown, but re-installing the app can be a workaround.
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ true);
+        }
+        runner.tryRun(
+                "pm", "grant", SHELL_PACKAGE_NAME, "android.permission.USE_CUSTOM_VIRTUAL_MACHINE");
     }
 
     @After

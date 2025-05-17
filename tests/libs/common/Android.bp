@@ -1,0 +1,11 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+java_library_static {
+    name: "MicrodroidCommonTestLib",
+    srcs: ["src/java/com/android/microdroid/test/common/*.java"],
+    host_supported: true,
+    sdk_version: "system_current",
+    apex_available: ["com.android.virt"],
+}

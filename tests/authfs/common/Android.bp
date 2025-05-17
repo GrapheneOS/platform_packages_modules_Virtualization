@@ -11,7 +11,7 @@ java_library_host {
         "tradefed",
     ],
     static_libs: [
-        "MicrodroidHostTestHelper",
+        "MicrodroidHostTestLib",
     ],
 }
 

@@ -1,0 +1,16 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+java_test_helper_library {
+    name: "MicrodroidTestPreparer",
+    srcs: ["src/java/com/android/microdroid/test/preparer/*.java"],
+    libs: ["tradefed"],
+    test_suites: [
+        "cts",
+        "general-tests",
+    ],
+    host_supported: true,
+    device_supported: false,
+    sdk_version: "test_current",
+}

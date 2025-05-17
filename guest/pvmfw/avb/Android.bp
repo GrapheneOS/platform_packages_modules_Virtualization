@@ -12,6 +12,7 @@ rust_defaults {
 rust_library_rlib {
     name: "libpvmfw_avb",
     defaults: ["libpvmfw_avb.defaults"],
+    host_supported: true,
     rustlibs: [
         "libavb_rs",
         "libtinyvec",

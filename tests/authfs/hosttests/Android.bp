@@ -9,7 +9,7 @@ java_test_host {
         "tradefed",
     ],
     static_libs: [
-        "MicrodroidHostTestHelper",
+        "MicrodroidHostTestLib",
         "AuthFsHostTestCommon",
     ],
     test_suites: ["general-tests"],

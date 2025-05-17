@@ -275,7 +275,17 @@ impl DeviceTreeMask {
             newly_masked = true;
             iter = children.last_mut().unwrap()
         }
-        iter.children = leaf_mask;
+        match (&mut iter.children, leaf_mask) {
+            (
+                DeviceTreeChildrenMask::Partial(existing_children),
+                DeviceTreeChildrenMask::Partial(mut new_children),
+            ) => {
+                existing_children.append(&mut new_children);
+            }
+            (existing, new) => {
+                *existing = new;
+            }
+        }
         newly_masked
     }
 
@@ -1170,6 +1180,8 @@ mod tests {
         "test_pvmfw_devices_vm_dtbo_with_duplicated_iommus.dtbo";
     const VM_DTBO_WITH_DEPENDENCIES_FILE_PATH: &str =
         "test_pvmfw_devices_vm_dtbo_with_dependencies.dtbo";
+    const VM_DTBO_WITH_NESTED_NODES_FILE_PATH: &str =
+        "test_pvmfw_devices_vm_dtbo_with_nested_nodes.dtbo";
     const FDT_WITHOUT_IOMMUS_FILE_PATH: &str = "test_pvmfw_devices_without_iommus.dtb";
     const FDT_WITHOUT_DEVICE_FILE_PATH: &str = "test_pvmfw_devices_without_device.dtb";
     const FDT_FILE_PATH: &str = "test_pvmfw_devices_with_rng.dtb";
@@ -1186,6 +1198,7 @@ mod tests {
     const FDT_WITH_MULTIPLE_DEPENDENCIES_FILE_PATH: &str =
         "test_pvmfw_devices_with_multiple_dependencies.dtb";
     const FDT_WITH_DEPENDENCY_LOOP_FILE_PATH: &str = "test_pvmfw_devices_with_dependency_loop.dtb";
+    const FDT_WITH_NESTED_NODES_FILE_PATH: &str = "test_pvmfw_devices_with_nested_nodes.dtb";
 
     const EXPECTED_FDT_WITH_DEPENDENCY_FILE_PATH: &str = "expected_dt_with_dependency.dtb";
     const EXPECTED_FDT_WITH_MULTIPLE_DEPENDENCIES_FILE_PATH: &str =
@@ -1419,6 +1432,55 @@ mod tests {
         assert_eq!(backlight, None);
         let backlight_symbol = symbols.getprop_str(c"backlight").unwrap();
         assert_eq!(None, backlight_symbol);
+    }
+
+    #[test]
+    fn device_info_filter_nested() {
+        let mut fdt_data = fs::read(FDT_WITH_NESTED_NODES_FILE_PATH).unwrap();
+        let mut vm_dtbo_data = fs::read(VM_DTBO_WITH_NESTED_NODES_FILE_PATH).unwrap();
+        let fdt = Fdt::from_mut_slice(&mut fdt_data).unwrap();
+        let vm_dtbo = VmDtbo::from_mut_slice(&mut vm_dtbo_data).unwrap();
+
+        let hypervisor = MockHypervisor {
+            mmio_tokens: [
+                ((0xFF0000, 0x1000), 0xF0000),
+                ((0xFF1000, 0x1000), 0xF1000),
+                ((0xFF2000, 0x1000), 0xF2000),
+                ((0xFF3000, 0x1000), 0xF3000),
+            ]
+            .into(),
+            iommu_tokens: BTreeMap::new(),
+        };
+        const HYP_GRANULE: usize = SIZE_4KB;
+        let device_info =
+            DeviceAssignmentInfo::parse(fdt, vm_dtbo, &hypervisor, HYP_GRANULE).unwrap().unwrap();
+        device_info.filter(vm_dtbo).unwrap();
+
+        let vm_dtbo = vm_dtbo.as_mut();
+
+        let expected_node_paths = [
+            c"/fragment@0/__overlay__/node_a",
+            c"/fragment@0/__overlay__/node_a/node_a_1/node_a_1_2",
+            c"/fragment@1/__overlay__/node_b",
+            c"/fragment@1/__overlay__/node_b/node_b_2/node_b_2_2",
+        ];
+        for path in &expected_node_paths {
+            let node = vm_dtbo.node(path).unwrap();
+            assert_ne!(node, None, "Expected {path:?}, but didn't exist");
+        }
+
+        let unexpected_node_paths = [
+            c"/fragment@0/__overlay__/node_a/node_a_1/node_a_1_1",
+            c"/fragment@0/__overlay__/node_a/node_a_1/node_a_1_1_z",
+            c"/fragment@0/__overlay__/node_a/node_a_2",
+            c"/fragment@1/__overlay__/node_b/node_b_1",
+            c"/fragment@1/__overlay__/node_b/node_b_2/node_b_2_1",
+            c"/fragment@1/__overlay__/node_b/node_b_2/node_b_2_1_z",
+        ];
+        for path in &unexpected_node_paths {
+            let node = vm_dtbo.node(path).unwrap();
+            assert_eq!(None, node, "Didn't expected {path:?}, but was there");
+        }
     }
 
     #[test]

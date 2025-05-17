@@ -39,8 +39,8 @@ java_test_host {
         "tradefed",
     ],
     static_libs: [
-        "MicrodroidHostTestHelper",
-        "PvmfwHostTestHelper",
+        "MicrodroidHostTestLib",
+        "PvmfwHostTestLib",
         "compatibility-host-util",
     ],
     per_testcase_directory: true,

@@ -8,6 +8,7 @@ show_help() {
   echo "Usage: sudo $0 [OPTION]..."
   echo "Builds a debian image and save it to image.raw."
   echo "Options:"
+  echo "-t VIRT_TOP    Specify the virtualization repo top [default is deduced from script location]"
   echo "-i IMAGE_NAME  Specify the image name [default is ubuntu:22.04]"
   echo "-h             Print usage and this help message and exit."
   echo "-a ARCH        Architecture of the image [default is host arch: $(uname -m)]"
@@ -27,7 +28,7 @@ uboot_flag=
 image_name="ubuntu:22.04"
 build_id=$(echo eng-$(hostname)-$(date --utc))
 
-while getopts "a:b:i:ghsuw" option; do
+while getopts "a:b:i:ghsuwt:" option; do
   case ${option} in
     a)
       arch="$OPTARG"
@@ -53,6 +54,9 @@ while getopts "a:b:i:ghsuw" option; do
     b)
       build_id="$OPTARG"
       ;;
+    t)
+      virt_repo_top="$OPTARG"
+      ;;
     *)
       echo "Invalid option: $OPTARG" ; exit 1
       ;;
@@ -76,4 +80,4 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag -b $build_id $shell"
+  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag -b \"$build_id\" $shell"

@@ -11,7 +11,7 @@ java_test_host {
         "compatibility-host-util",
     ],
     static_libs: [
-        "MicrodroidHostTestHelper",
+        "MicrodroidHostTestLib",
     ],
     test_suites: [
         "general-tests",

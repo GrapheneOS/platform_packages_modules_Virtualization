@@ -25,7 +25,7 @@ android_app {
         // TODO(b/331708504): will be removed when AVF framework handles surface
         "libcrosvm_android_display_service-java",
         "VmTerminalApp.aidl-java",
-        "MicrodroidTestHelper", // for DeviceProperties class
+        "MicrodroidCommonTestLib", // for DeviceProperties class
     ],
     jni_libs: [
         "libforwarder_host_jni",

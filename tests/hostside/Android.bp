@@ -10,7 +10,7 @@ java_defaults {
         "tradefed",
     ],
     static_libs: [
-        "MicrodroidHostTestHelper",
+        "MicrodroidHostTestLib",
         "compatibility-host-util",
         "cts-statsd-atom-host-test-utils",
         "microdroid_payload_metadata",
@@ -66,6 +66,7 @@ java_test_host {
     ],
     device_common_data: DEVICE_DATA,
     data_native_bins: BINS,
+    data: [":MicrodroidTestPreparer"],
 }
 
 java_test_host {
@@ -88,6 +89,7 @@ java_test_host {
     },
     device_common_data: DEVICE_DATA,
     data_native_bins: BINS,
+    data: [":MicrodroidTestPreparer"],
 }
 
 java_test_host {
@@ -110,6 +112,7 @@ java_test_host {
     },
     device_common_data: DEVICE_DATA,
     data_native_bins: BINS,
+    data: [":MicrodroidTestPreparer"],
 }
 
 java_test_host {
@@ -132,4 +135,5 @@ java_test_host {
     },
     device_common_data: DEVICE_DATA,
     data_native_bins: BINS,
+    data: [":MicrodroidTestPreparer"],
 }

@@ -1,0 +1,7 @@
+#!/bin/bash
+export VK_ICD_FILENAMES=/home/droid/mesa/guest-build/src/gfxstream/guest/vulkan/gfxstream_vk_devenv_icd.$(uname -m).json
+. enable_display
+unset LIBGL_ALWAYS_SOFTWARE
+
+# remove this after TILING_OPTIMAL-based swap chain is used.
+export MESA_VK_WSI_DEBUG=sw,linear
