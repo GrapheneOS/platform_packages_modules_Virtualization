@@ -369,7 +369,7 @@ public class MainActivity :
         val notification: Notification =
             Notification.Builder(this, Application.CHANNEL_LONG_RUNNING_ID)
                 .setSilent(true)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(resources.getString(R.string.service_notification_title))
                 .setContentText(resources.getString(R.string.service_notification_content))
                 .setContentIntent(tapPendingIntent)

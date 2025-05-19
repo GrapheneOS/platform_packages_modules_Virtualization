@@ -105,7 +105,7 @@ internal class PortNotifier(val context: Context) {
                 .build()
         val notification: Notification =
             Notification.Builder(context, Application.CHANNEL_SYSTEM_EVENTS_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(content)
                 .setFullScreenIntent(tapPendingIntent, true)
