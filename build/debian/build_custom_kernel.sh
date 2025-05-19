@@ -49,7 +49,7 @@ build_custom_kernel() {
 	#       We track the latest Debian stable kernel version for the 6.1 branch,
 	#       which can be found at:
 	#       https://packages.debian.org/stable/linux-source-6.1
-	local debian_kver="6.1.123-1"
+	local debian_kver="6.1.135-1"
 
 	local dsc_file="linux_${debian_kver}.dsc"
 	local orig_ksrc_file="linux_${debian_kver%-*}.orig.tar.xz"
