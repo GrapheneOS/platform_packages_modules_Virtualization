@@ -73,7 +73,7 @@ class InstallerService : Service() {
         notification =
             Notification.Builder(this, Application.CHANNEL_LONG_RUNNING_ID)
                 .setSilent(true)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.installer_notif_title_text))
                 .setContentText(getString(R.string.installer_notif_desc_text))
                 .setOngoing(true)
