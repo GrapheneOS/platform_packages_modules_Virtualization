@@ -214,7 +214,9 @@ EOF
 
 	# Add the custom kernel packages to package_config/AVF for installation.
 	abi_flavour=$(cat "${debian_cloud_image}/localdebs/abi_flavour")
+	abi_common=$(cat "${debian_cloud_image}/localdebs/abi_common")
 	cat >> "${config_space}/package_config/AVF" <<EOF
+linux-headers-${abi_common}
 linux-headers-${abi_flavour}
 linux-image-${abi_flavour}-unsigned
 EOF
