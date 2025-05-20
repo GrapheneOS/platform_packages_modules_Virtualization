@@ -267,6 +267,8 @@ public class VirtualMachine implements AutoCloseable {
      */
     @NonNull private final List<ExtraApkSpec> mExtraApks;
 
+    @NonNull private final Executor mMemoryCallbackExecutor = Executors.newSingleThreadExecutor();
+
     private class MemoryManagementCallbacks implements ComponentCallbacks2 {
         @Override
         public void onConfigurationChanged(@NonNull Configuration newConfig) {}
@@ -276,20 +278,26 @@ public class VirtualMachine implements AutoCloseable {
 
         @Override
         public void onTrimMemory(int level) {
-            /* Treat level < TRIM_MEMORY_UI_HIDDEN as generic low-memory warnings */
-            int percent = 10;
+            final int currentLevel = level;
+            mMemoryCallbackExecutor.execute(
+                    () -> {
+                        int percent = 10;
 
-            if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
-                percent = 30;
+                        if (currentLevel >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+                            percent = 30;
+                        }
+
+                        if (currentLevel >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+                            percent = 50;
+                        }
+
+                        setMemoryBalloonByPercent(percent);
+                        Log.d(
+                                TAG,
+                                "onTrimMemory: Completed setMemoryBalloonByPercent on thread: "
+                                        + Thread.currentThread().getName());
+                    });
             }
-
-            if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
-                /* Release as much memory as we can. The app is on the LMKD LRU kill list. */
-                percent = 50;
-            }
-
-            setMemoryBalloonByPercent(percent);
-        }
     }
 
     /** Running instance of virtmgr that hosts VirtualizationService for this VM. */
