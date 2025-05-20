@@ -222,7 +222,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                         COMPOSD_CMD_BIN
                                 + " test-compile --os "
                                 + os
-                                + " && killall -w crosvm || true");
+                                + " && killall -w crosvm_ComposdTest || true");
         assertWithMessage("Failed to test compilation VM.")
                 .that(result)
                 .ignoringCase()
