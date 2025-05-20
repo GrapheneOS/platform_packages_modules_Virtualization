@@ -216,6 +216,9 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                 KvmHypTracer.isSupported(getDevice(), hypEvents));
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hypEvents);
 
+        CommandRunner android = new CommandRunner(getDevice());
+        boolean vm_contention = android.run("/apex/com.android.virt/bin/vm list").contains("cid:");
+
         /* We need to wait for crosvm to die so all the VM pages are reclaimed */
         String result =
                 tracer.run(
@@ -234,6 +237,12 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                 .that(values.size())
                 .isGreaterThan(2);
 
+        assertWithMessage("PSCI MEM_PROTECT counter didn't increment")
+                .that(Collections.max(values))
+                .isGreaterThan(0);
+
+        assumeFalse("Skip due to VM contention", vm_contention);
+
         assertWithMessage("PSCI MEM_PROTECT counter not starting from 0")
                 .that(values.get(0))
                 .isEqualTo(0);
@@ -241,10 +250,6 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         assertWithMessage("PSCI MEM_PROTECT counter not ending with 0")
                 .that(values.get(values.size() - 1))
                 .isEqualTo(0);
-
-        assertWithMessage("PSCI MEM_PROTECT counter didn't increment")
-                .that(Collections.max(values))
-                .isGreaterThan(0);
     }
 
     private void appStartupHelper(String launchIntentPackage) throws Exception {
