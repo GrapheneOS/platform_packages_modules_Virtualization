@@ -164,6 +164,12 @@ impl ApexInfo {
         }
         false
     }
+
+    fn size(&self) -> Result<u64> {
+        Ok(std::fs::metadata(&self.path)
+            .context(format!("Failed to get the size of APEX {} @ {:?}", &self.name, &self.path))?
+            .len())
+    }
 }
 
 struct PackageManager {
@@ -408,6 +414,16 @@ fn check_apexes_are_from_allowed_partitions(requested_apexes: &Vec<&ApexInfo>) -
     Ok(())
 }
 
+fn check_apexes_are_aligned(requested_apexes: &Vec<&ApexInfo>) -> Result<()> {
+    for apex in requested_apexes {
+        let size = apex.size()?;
+        if (size % 4096) != 0 {
+            bail!("APEX {} ({} bytes) is not aligned to 4K", apex.name, size);
+        }
+    }
+    Ok(())
+}
+
 // Collect ApexInfos from VM config
 fn collect_apex_infos<'a>(
     apex_list: &'a ApexInfoList,
@@ -430,6 +446,7 @@ fn collect_apex_infos<'a>(
         .collect();
 
     check_apexes_are_from_allowed_partitions(&apex_infos)?;
+    check_apexes_are_aligned(&apex_infos)?;
     Ok(apex_infos)
 }
 
