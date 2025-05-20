@@ -434,12 +434,21 @@ fn try_run_payload(
     // Wait until apex config is done. (e.g. linker configuration for apexes)
     wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
 
+    let std_redirect = if is_debuggable()? {
+        // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
+        Some(rustutils::inherited_fd::take_fd_ownership(
+            env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
+        )?)
+    } else {
+        None
+    };
+
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
         info!("Preparing encryptedstore ...");
-        Some(prepare_encryptedstore(&vm_secret).context("encryptedstore run")?)
+        Some(prepare_encryptedstore(&vm_secret, &std_redirect).context("encryptedstore run")?)
     } else {
         None
     };
@@ -486,7 +495,7 @@ fn try_run_payload(
         .context("set microdroid_manager.init_done")?;
 
     info!("boot completed, time to run payload");
-    exec_task(task, service).context("Failed to run payload")
+    exec_task(task, service, &std_redirect).context("Failed to run payload")
 }
 
 fn post_payload_work() -> Result<()> {
@@ -697,7 +706,11 @@ fn load_crashkernel_if_supported() -> Result<()> {
 }
 
 /// Executes the given task.
-fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Result<i32> {
+fn exec_task(
+    task: &Task,
+    service: &Strong<dyn IVirtualMachineService>,
+    std_redirect: &Option<OwnedFd>,
+) -> Result<i32> {
     info!("executing main task {:?}...", task);
     let mut command = match task.type_ {
         TaskType::Executable => {
@@ -729,12 +742,8 @@ fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Resul
     // Never accept input from outside
     command.stdin(Stdio::null());
 
-    // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-    let (stdout, stderr) = if is_debuggable()? {
-        use std::os::fd::FromRawFd;
-        let kmsg_fd = env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap();
-        // SAFETY: no one closes kmsg_fd
-        unsafe { (Stdio::from_raw_fd(kmsg_fd), Stdio::from_raw_fd(kmsg_fd)) }
+    let (stdout, stderr) = if let Some(fd) = std_redirect {
+        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
     } else {
         (Stdio::null(), Stdio::null())
     };
@@ -795,15 +804,22 @@ fn find_library_path(name: &str) -> Result<String> {
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(vm_secret: &VmSecret) -> Result<Child> {
+fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) -> Result<Child> {
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     vm_secret.derive_encryptedstore_key(&mut key)?;
+    let (stdout, stderr) = if let Some(fd) = std_redirect {
+        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
+    } else {
+        (Stdio::null(), Stdio::null())
+    };
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
         .arg(hex::encode(&*key))
         .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
+        .stdout(stdout)
+        .stderr(stderr)
         .spawn()
         .context("encryptedstore failed")
 }

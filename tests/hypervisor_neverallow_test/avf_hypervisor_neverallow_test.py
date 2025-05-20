@@ -67,9 +67,7 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
                             f"Error: {analyzer} does not exist. Is this binary "
                             "corrupted?\n")
             f.write(blob)
-        self.assertEqual(_RunCommand(["chmod", "+x", analyzer_path])[2], 0,
-                         "failed to set +x")
-
+        os.chmod(analyzer_path, 0o755)
         self._analyzer_path = analyzer_path
 
     def tearDown(self):
@@ -117,13 +115,14 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
         # be defined in the policy, which is important in case the context
         # parsing code breaks. Since we get the context from the device, it is
         # reasonable to require it to exist.
-        cmd = [self._analyzer_path, policy_path, "neverallow", "--warn", "-n", rule]
+        cmd = [self._analyzer_path, policy_path, "neverallow", "--warn", "-n",
+               rule]
         out, err, returncode = _RunCommand(cmd)
         self.assertTrue(
             returncode == 0 and 'Warning!' not in err,
-            "The following errors or warnings were encountered when validating the SELinux "
-            f"neverallow rule for {path}:\n{rule}\nreturncode: {returncode}\nstdout:\n{out}\n"
-            f"stderr:\n{err}\n")
+            "The following errors or warnings were encountered when validating "
+            f"the SELinux neverallow rule for {path}:\n{rule}\n"
+            f"returncode: {returncode}\nstdout:\n{out}\nstderr:\n{err}\n")
 
     def _isVmSupported(self):
         vm_supported = self._getProp("ro.boot.hypervisor.vm.supported")
