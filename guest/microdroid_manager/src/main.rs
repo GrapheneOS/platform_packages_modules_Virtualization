@@ -15,6 +15,7 @@
 //! Microdroid Manager
 
 mod dice;
+mod encrypted_store_kek;
 mod instance;
 mod ioutil;
 mod payload;
