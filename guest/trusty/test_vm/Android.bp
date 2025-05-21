@@ -47,6 +47,18 @@ prebuilt_etc {
 }
 
 prebuilt_etc {
+    name: "trusty_vm_kill_sh",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+    },
+    src: "trusty-vm-kill.sh",
+    filename: "trusty-vm-kill.sh",
+}
+
+prebuilt_etc {
     name: "trusty_wait_ready_sh",
     enabled: false,
     arch: {
@@ -77,6 +89,7 @@ sh_test {
         ":trusty_test_vm_elf",
         ":trusty_test_vm_config",
         "trusty-vm-launcher.sh",
+        "trusty-vm-kill.sh",
         "trusty-wait-ready.sh",
         ":trusty-ut-ctrl.system",
     ],
