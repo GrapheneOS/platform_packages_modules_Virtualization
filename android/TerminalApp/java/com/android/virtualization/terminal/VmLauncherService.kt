@@ -107,7 +107,7 @@ class VmLauncherService : Service() {
             intent.getParcelableExtra<ResultReceiver>(
                 Intent.EXTRA_RESULT_RECEIVER,
                 ResultReceiver::class.java,
-            )!!
+            )
 
         when (intent.action) {
             ACTION_START_VM -> {
@@ -125,7 +125,7 @@ class VmLauncherService : Service() {
                 // done.
                 val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
 
-                mainWorkerThread.execute({ doStart(displayInfo, diskSize, resultReceiver) })
+                mainWorkerThread.execute({ doStart(displayInfo, diskSize, resultReceiver!!) })
 
                 // Do this outside of the main worker thread, so that we don't cause
                 // ForegroundServiceDidNotStartInTimeException
