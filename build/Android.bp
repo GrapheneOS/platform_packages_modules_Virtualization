@@ -57,6 +57,9 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_VM_TO_HOST_SERVICES"), {
         true: ["vm_to_host_services"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_SUPPORT_LONG_RUNNING_VMS"), {
+        true: ["long_running_vms"],
+        default: [],
     }),
 }
 

@@ -22,6 +22,7 @@ use anyhow::{anyhow, ensure, Context, Result};
 use clap::arg;
 use dm::{crypt::CipherType, util};
 use log::{error, info, warn};
+use rustutils::system_properties;
 use std::ffi::CString;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{Error, Read, Write};
@@ -117,6 +118,10 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
     if cfg!(multi_tenant) && needs_formatting {
         set_root_dir_permissions(mountpoint)?;
+    }
+    if cfg!(long_running_vms) {
+        system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
+            .context("failed to write microdroid_metadata.encryptedstore_store.status sysprop")?;
     }
     Ok(())
 }

@@ -18,6 +18,7 @@ rust_defaults {
         "libmicrodroid_uids",
         "libnix",
         "libdm_rust",
+        "librustutils",
     ],
     multilib: {
         lib32: {

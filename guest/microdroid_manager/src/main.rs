@@ -92,6 +92,8 @@ const ENCRYPTEDSTORE_KEYSIZE: usize = 32;
 
 const DICE_CHAIN_FILE: &str = "/microdroid_resources/dice_chain.raw";
 
+const ENCRYPTED_STORE_STATUS_PROP: &str = "microdroid_manager.encrypted_store.status";
+
 #[derive(thiserror::Error, Debug)]
 enum MicrodroidError {
     #[error("Cannot connect to virtualization service: {0}")]
@@ -485,6 +487,9 @@ fn try_run_payload(
     if let Some(mut child) = encryptedstore_child {
         let exitcode = child.wait().context("Wait for encryptedstore child")?;
         ensure!(exitcode.success(), "Unable to prepare encrypted storage. Exitcode={}", exitcode);
+        // Wait until init performs restorecon on /mnt/encryptedstore
+        wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
+            .context("Wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
     }
 
     // Wait for init to have finished booting.
@@ -642,6 +647,19 @@ fn wait_for_property_true(property_name: &str) -> Result<()> {
         prop.wait(None)?;
         if system_properties::read_bool(property_name, false)? {
             break;
+        }
+    }
+    Ok(())
+}
+
+fn wait_for_property(property_name: &str, expected_value: &str) -> Result<()> {
+    let mut prop = PropertyWatcher::new(property_name)?;
+    loop {
+        prop.wait(None)?;
+        if let Some(value) = system_properties::read(property_name)? {
+            if value == expected_value {
+                break;
+            }
         }
     }
     Ok(())
