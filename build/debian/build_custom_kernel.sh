@@ -1,15 +1,36 @@
 #!/bin/bash
 
+set -x
+
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
+show_help() {
+	echo "Usage: sudo $0 [OPTION]... [FILE]"
+	echo "Builds debian packages for our custom kernel. [sudo is required]"
+	echo "Options:"
+	echo "-a ARCH      Architecture of the image [default is host arch: $(uname -m)]"
+	echo "-d DEST_DIR  Destination directory for packages [default: $SCRIPT_DIR]"
+	echo "-h           Print usage and this help message and exit."
+	echo "-w           Save temp work directory [for debugging]"
+}
+
+check_sudo() {
+	if [ "$EUID" -ne 0 ]; then
+		echo "Please run as root." ; exit 1
+	fi
+}
+
 parse_options() {
-	while getopts "a:d:w" option; do
+	while getopts "a:d:hw" option; do
 		case ${option} in
+			a)
+				arch="$OPTARG"
+				;;
 			d)
 				dest_dir="$OPTARG"
 				;;
-			a)
-				arch="$OPTARG"
+			h)
+				show_help ; exit
 				;;
 			w)
 				save_workdir=1
@@ -135,6 +156,7 @@ install_prerequisites() {
 		bison
 		build-essential
 		ca-certificates
+		cpio
 		debhelper
 		dh-exec
 		dh-python
@@ -176,5 +198,6 @@ workdir=$(mktemp -d)
 echo $workdir
 
 parse_options "$@"
+check_sudo
 install_prerequisites
 build_custom_kernel
