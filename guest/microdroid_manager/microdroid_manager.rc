@@ -13,3 +13,4 @@ service microdroid_manager /system/bin/microdroid_manager
     user root
     socket vm_payload_service stream 0666 system system
     socket rpc_servicemanager stream 0666 system system
+    reboot_on_failure reboot,microdroid-manager-failed
