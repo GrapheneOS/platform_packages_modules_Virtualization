@@ -33,7 +33,7 @@ use rpcbinder::{FileDescriptorTransportMode, RpcServer};
 use std::os::unix::io::{AsFd, RawFd};
 use std::sync::LazyLock;
 use clap::Parser;
-use nix::unistd::{write, Pid, Uid};
+use nix::unistd::{setpgid, write, Pid, Uid};
 use rustutils::inherited_fd::take_fd_ownership;
 use std::os::unix::raw::{pid_t, uid_t};
 
@@ -95,6 +95,9 @@ fn main() {
             .with_max_level(LevelFilter::Info)
             .with_log_buffer(android_logger::LogId::System),
     );
+
+    let pid_zero = Pid::from_raw(0);
+    setpgid(pid_zero, pid_zero).expect("Failed to become a process group leader");
 
     check_vm_support().unwrap();
 
