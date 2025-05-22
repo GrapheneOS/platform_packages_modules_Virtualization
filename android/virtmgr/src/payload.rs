@@ -292,6 +292,7 @@ fn make_payload_disk(
 
     // collect APEXes from config
     let mut apex_infos = collect_apex_infos(&apex_list, &vm_payload_config.apexes, debug_config)?;
+    check_apexes_are_aligned(&apex_infos)?;
 
     // Pass sorted list of apexes. Sorting key shouldn't use `path` because it will change after
     // reboot with prefer_staged. `last_update_seconds` is added to distinguish "samegrade"
@@ -446,7 +447,6 @@ fn collect_apex_infos<'a>(
         .collect();
 
     check_apexes_are_from_allowed_partitions(&apex_infos)?;
-    check_apexes_are_aligned(&apex_infos)?;
     Ok(apex_infos)
 }
 
