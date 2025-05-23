@@ -5,3 +5,6 @@ service.adb.listen_addrs=vsock:5555
 
 # Payload metadata partition
 apexd.payload_metadata.path=/dev/block/by-name/payload-metadata
+
+# Give 2 seconds to handle sys.shutdown.requested
+ro.build.shutdown.watchdog.timeout=2

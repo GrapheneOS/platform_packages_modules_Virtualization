@@ -958,8 +958,9 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         // Check VmExited atom
         AtomsProto.VmExited atomVmExited = data.get(2).getAtom().getVmExited();
         assertThat(atomVmExited.getVmIdentifier()).isEqualTo("test_telemetry_pushed_atoms");
-        assertThat(atomVmExited.getDeathReason()).isEqualTo(AtomsProto.VmExited.DeathReason.KILLED);
-        assertThat(atomVmExited.getExitSignal()).isEqualTo(9);
+        assertThat(atomVmExited.getDeathReason())
+                .isEqualTo(AtomsProto.VmExited.DeathReason.SHUTDOWN);
+        assertThat(atomVmExited.getExitSignal()).isEqualTo(0);
         // In CPU & memory related fields, check whether positive values are collected or not.
         if (isPkvmHypervisor()) {
             // Guest Time may not be updated on other hypervisors.

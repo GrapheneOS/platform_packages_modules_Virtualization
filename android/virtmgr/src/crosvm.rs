@@ -58,6 +58,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
 use binder::Strong;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
+use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
 
@@ -294,8 +295,10 @@ pub enum VmState {
         /// The crosvm child process.
         child: Arc<SharedChild>,
         /// The thread waiting for crosvm to finish.
-        monitor_vm_exit_thread: Option<JoinHandle<()>>,
+        monitor_vm_exit_thread: JoinHandle<()>,
     },
+    /// The VM is being shut down.
+    ShuttingDown,
     /// The VM died or was killed.
     Dead,
     /// The VM failed to start.
@@ -357,7 +360,7 @@ impl VmState {
 
             let child_clone = child.clone();
             let instance_clone = instance.clone();
-            let monitor_vm_exit_thread = Some(thread::spawn(move || {
+            let monitor_vm_exit_thread = thread::spawn(move || {
                 instance_clone.monitor_vm_exit(
                     child_clone,
                     failure_pipe_read,
@@ -365,7 +368,7 @@ impl VmState {
                     tap,
                     vhost_fs_devices,
                 );
-            }));
+            });
 
             if detect_hangup {
                 let child_clone = child.clone();
@@ -460,6 +463,8 @@ pub struct VmInstance {
     /// VirtualMachineService binder object for the VM.
     #[allow(dead_code)]
     pub vm_service: Mutex<Option<Strong<dyn IVirtualMachineService>>>,
+    /// Guest agent running on the VM
+    pub guest_agent: Mutex<Option<Strong<dyn IGuestAgent>>>,
     /// Recorded metrics of VM such as timestamp or cpu / memory usage.
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
@@ -527,6 +532,7 @@ impl VmInstance {
             join_handles: Mutex::new(VmJoinHandles { console_join_handle, log_join_handle }),
             callbacks: Default::default(),
             vm_service: Mutex::new(None),
+            guest_agent: Mutex::new(None),
             vm_metric: Mutex::new(Default::default()),
             payload_state: Mutex::new(PayloadState::Starting),
             payload_state_updated: Condvar::new(),
@@ -850,26 +856,62 @@ impl VmInstance {
         }
     }
 
-    /// Kills the crosvm instance, if it is running.
-    pub fn kill(&self) -> Result<(), Error> {
-        let monitor_vm_exit_thread = {
-            let vm_state = &mut *self.vm_state.lock().unwrap();
-            if let VmState::Running { child, monitor_vm_exit_thread } = vm_state {
-                let id = child.id();
-                debug!("Killing crosvm({})", id);
-                // TODO: Talk to crosvm to shutdown cleanly.
-                child.kill().with_context(|| format!("Error killing crosvm({id}) instance"))?;
-                monitor_vm_exit_thread.take()
-            } else {
-                // TODO: if it were ever running, we may still need to join
-                // logging handles, in monitor_vm_exit.
-                bail!("VM is not running")
-            }
-        };
+    fn try_shutdown(&self) -> bool {
+        if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
+            info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
+            return guest_agent
+                .shutdown()
+                .map_err(|e| error!("Failed to ask shut down: {e:?}"))
+                .is_ok();
+        }
+        false
+    }
 
-        // Wait for monitor_vm_exit() to finish. Must release vm_state lock
-        // first, as monitor_vm_exit() takes it as well.
-        monitor_vm_exit_thread.map(JoinHandle::join);
+    /// Kills the crosvm instance, if it is running. We try to shut it down gracefully, if guest
+    /// agent is installed there. If not, or the shutdown didn't finish on time, the VM is forcibly
+    /// shut down. In-flight data in the VM may be affected!
+    pub fn kill(&self) -> Result<(), Error> {
+        if self.is_vm_running() {
+            let mut vm_state_mg = self.vm_state.lock().unwrap();
+            let vm_state = std::mem::replace(&mut *vm_state_mg, VmState::ShuttingDown);
+            drop(vm_state_mg); // just to make sure self.vm_state is not held
+
+            if let VmState::Running { child, monitor_vm_exit_thread } = vm_state {
+                if !self.try_shutdown() {
+                    let id = child.id();
+                    warn!(
+                        "Killing VM (name: {}, cid: {}) forcibly. Data might be corrupted!!!",
+                        self.name, self.cid
+                    );
+                    child.kill().with_context(|| format!("Error killing crosvm({id}) instance"))?;
+                }
+
+                // Wait until the VM moves out of the ShuttingDown state. When the VM is shut down
+                // or killed, the state is set to Dead. See monitor_vm_exit_thread.
+                let shutdown_timeout = Duration::from_secs(5);
+                let result = self
+                    .vm_dead_convar
+                    .wait_timeout_while(self.vm_state.lock().unwrap(), shutdown_timeout, |state| {
+                        matches!(state, VmState::ShuttingDown)
+                    })
+                    .unwrap();
+                if result.1.timed_out() {
+                    warn!(
+                        "Failed to shut down the VM in {:?}. Killing. Data might be corrupted!.",
+                        shutdown_timeout
+                    );
+                    child.kill().unwrap();
+                }
+
+                // Wait once again. If the graceful shutdown was successful, this will return
+                // immediately.
+                monitor_vm_exit_thread.join().unwrap();
+            }
+        } else {
+            // TODO: if it were ever running, we may still need to join
+            // logging handles, in monitor_vm_exit.
+            bail!("VM is not running")
+        }
 
         // Now that the VM has been killed, shut down the VirtualMachineService
         // server to eagerly free up the server threads.
