@@ -58,12 +58,16 @@ use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
 use std::io::{Read, Write};
+use std::os::fd::AsRawFd;
+use std::os::raw::c_char;
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::OwnedFd;
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::ptr;
 use std::str;
 use std::time::Duration;
 use vm_secret::VmSecret;
@@ -150,6 +154,59 @@ fn write_death_reason_to_serial(err: &Error) -> Result<()> {
     // Block until the serial port trasmits all the data to the host.
     nix::sys::termios::tcdrain(&serial_file).context("tcdrain failed")?;
 
+    Ok(())
+}
+
+#[derive(Debug)]
+struct SeContext(*mut ::std::os::raw::c_char);
+impl SeContext {
+    fn new(file: &File) -> Result<Self> {
+        let fd = file.as_raw_fd();
+        let mut con: *mut c_char = ptr::null_mut();
+        // SAFETY: the returned pointer `con` is wrapped in SeContext which is freed with
+        // `freecon` when it is dropped.
+        match unsafe { selinux_bindgen::fgetfilecon(fd, &mut con) } {
+            1.. => {
+                if !con.is_null() {
+                    Ok(Self(con))
+                } else {
+                    Err(anyhow!("fgetfilecon returned a NULL context"))
+                }
+            }
+            _ => Err(anyhow!(std::io::Error::last_os_error())).context("fgetfilecon failed"),
+        }
+    }
+}
+
+impl Drop for SeContext {
+    fn drop(&mut self) {
+        // SAFETY: SeContext is created only with a pointer that is set by libselinux and
+        // has to be freed with freecon.
+        unsafe { selinux_bindgen::freecon(self.0) };
+    }
+}
+
+impl std::fmt::Display for SeContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            // SAFETY: the non-owned C string pointed by `p` is guaranteed to be valid (non-null
+            // and shorter than i32::MAX). It is freed when SeContext is dropped.
+            unsafe { std::ffi::CStr::from_ptr(self.0) }.to_str().unwrap_or("Invalid context")
+        )
+    }
+}
+
+fn debug_logs_encryptedstore() -> Result<()> {
+    let file = File::open(ENCRYPTEDSTORE_MOUNTPOINT)?;
+    // TODO: Ideally log this error instead of propagating it out of a debug function
+    let file_context = SeContext::new(&file)?;
+    log::info!(
+        "encryptedstore permission mode {:o}, file context {}",
+        file.metadata()?.permissions().mode(),
+        file_context
+    );
     Ok(())
 }
 
@@ -490,6 +547,7 @@ fn try_run_payload(
         // Wait until init performs restorecon on /mnt/encryptedstore
         wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
             .context("Wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
+        debug_logs_encryptedstore()?;
     }
 
     // Wait for init to have finished booting.
