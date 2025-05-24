@@ -939,7 +939,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                 "Rollback protected secrets are only available in Updatable VMs",
                 isUpdatableVmSupported());
         final int NUM_WARMUPS = 10;
-        final int NUM_REQUESTS = 10_000;
+        final int NUM_REQUESTS = 1000;
 
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")

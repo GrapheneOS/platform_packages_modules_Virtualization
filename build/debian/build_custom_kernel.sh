@@ -1,15 +1,36 @@
 #!/bin/bash
 
+set -x
+
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
+show_help() {
+	echo "Usage: sudo $0 [OPTION]... [FILE]"
+	echo "Builds debian packages for our custom kernel. [sudo is required]"
+	echo "Options:"
+	echo "-a ARCH      Architecture of the image [default is host arch: $(uname -m)]"
+	echo "-d DEST_DIR  Destination directory for packages [default: $SCRIPT_DIR]"
+	echo "-h           Print usage and this help message and exit."
+	echo "-w           Save temp work directory [for debugging]"
+}
+
+check_sudo() {
+	if [ "$EUID" -ne 0 ]; then
+		echo "Please run as root." ; exit 1
+	fi
+}
+
 parse_options() {
-	while getopts "a:d:w" option; do
+	while getopts "a:d:hw" option; do
 		case ${option} in
+			a)
+				arch="$OPTARG"
+				;;
 			d)
 				dest_dir="$OPTARG"
 				;;
-			a)
-				arch="$OPTARG"
+			h)
+				show_help ; exit
 				;;
 			w)
 				save_workdir=1
@@ -49,7 +70,7 @@ build_custom_kernel() {
 	#       We track the latest Debian stable kernel version for the 6.1 branch,
 	#       which can be found at:
 	#       https://packages.debian.org/stable/linux-source-6.1
-	local debian_kver="6.1.123-1"
+	local debian_kver="6.1.135-1"
 
 	local dsc_file="linux_${debian_kver}.dsc"
 	local orig_ksrc_file="linux_${debian_kver%-*}.orig.tar.xz"
@@ -86,6 +107,7 @@ build_custom_kernel() {
 
 	local abi_kver="$(sed -nE 's;Package: linux-support-(.*);\1;p' debian/control)"
 	local abi_flavour="${abi_kver}-${debarch_flavour}"
+	local abi_common="${abi_kver}-common"
 
 	# 2. Define our custom flavour and regenerate control file
 	# NOTE: Our flavour extends Debian's `cloud` config on the `none` featureset.
@@ -109,17 +131,21 @@ EOF
 
 	# 3. Build the kernel and generate Debian packages
 	./debian/rules source
+	export DEB_BUILD_PROFILES="nodoc"
 	[[ "$arch" == "$(uname -m)" ]] || export $(dpkg-architecture -a $debian_arch)
 	make -j$(nproc) -f debian/rules.gen \
+	     "binary-indep" \
 	     "binary-arch_${debian_arch}_none_${debarch_flavour}"
 
 	popd > /dev/null
 
 
 	# 4. Copy the packages to the destination dir
-	cp "linux-headers-${abi_flavour}_${debian_kver}_${debian_arch}.deb" \
+	cp "linux-headers-${abi_common}_${debian_kver}_all.deb" \
+	   "linux-headers-${abi_flavour}_${debian_kver}_${debian_arch}.deb" \
 	   "linux-image-${abi_flavour}-unsigned_${debian_kver}_${debian_arch}.deb" \
 	   "$dest_dir"
+	echo "${abi_common}" > "$dest_dir/abi_common"
 	echo "${abi_flavour}" > "$dest_dir/abi_flavour"
 }
 
@@ -130,8 +156,10 @@ install_prerequisites() {
 		bison
 		build-essential
 		ca-certificates
+		cpio
 		debhelper
 		dh-exec
+		dh-python
 		flex
 		gcc-12
 		kernel-wedge
@@ -170,5 +198,6 @@ workdir=$(mktemp -d)
 echo $workdir
 
 parse_options "$@"
+check_sudo
 install_prerequisites
 build_custom_kernel

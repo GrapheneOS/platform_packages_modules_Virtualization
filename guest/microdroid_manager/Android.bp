@@ -60,6 +60,7 @@ rust_defaults {
         "libvsock",
         "librand",
         "libzeroize",
+        "libselinux_bindgen",
     ],
     init_rc: ["microdroid_manager.rc"],
     multilib: {
@@ -67,6 +68,9 @@ rust_defaults {
             enabled: false,
         },
     },
+    shared_libs: [
+        "libselinux",
+    ],
 }
 
 rust_binary {

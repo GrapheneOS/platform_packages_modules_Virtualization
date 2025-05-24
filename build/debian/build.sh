@@ -13,12 +13,12 @@ show_help() {
 	echo "Usage: sudo $0 [OPTION]... [FILE]"
 	echo "Builds a debian image and save it to FILE. [sudo is required]"
 	echo "Options:"
-	echo "-h           Print usage and this help message and exit."
 	echo "-a ARCH      Architecture of the image [default is host arch: $(uname -m)]"
+	echo "-b BUILD_ID  Set build id [default is eng-\$(hostname)-\$(date --utc)]"
 	echo "-g           Use Debian generic kernel [default is our custom kernel]"
+	echo "-h           Print usage and this help message and exit."
 	echo "-u           Set VM boot mode to u-boot [default is to load kernel directly]"
 	echo "-w           Save temp work directory [for debugging]"
-	echo "-b BUILD_ID  Set build id [default is eng-\$(hostname)-\$(date --utc)]"
 }
 
 check_sudo() {
@@ -28,25 +28,25 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:ghuwv:b:" option; do
+	while getopts "a:b:ghuw" option; do
 		case ${option} in
-			h)
-				show_help ; exit
-				;;
 			a)
 				arch="$OPTARG"
 				;;
+			b)
+				build_id="$OPTARG"
+				;;
 			g)
 				use_generic_kernel=1
+				;;
+			h)
+				show_help ; exit
 				;;
 			u)
 				uboot=1
 				;;
 			w)
 				save_workdir=1
-				;;
-			b)
-				build_id="$OPTARG"
 				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
@@ -214,7 +214,9 @@ EOF
 
 	# Add the custom kernel packages to package_config/AVF for installation.
 	abi_flavour=$(cat "${debian_cloud_image}/localdebs/abi_flavour")
+	abi_common=$(cat "${debian_cloud_image}/localdebs/abi_common")
 	cat >> "${config_space}/package_config/AVF" <<EOF
+linux-headers-${abi_common}
 linux-headers-${abi_flavour}
 linux-image-${abi_flavour}-unsigned
 EOF

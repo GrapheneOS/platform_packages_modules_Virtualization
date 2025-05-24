@@ -18,10 +18,11 @@
 //! solution in a VM. This is based on dm-crypt & requires the (64 bytes') key & the backing device.
 //! It uses dm_rust lib.
 
-use anyhow::{ensure, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use clap::arg;
 use dm::{crypt::CipherType, util};
-use log::{error, info};
+use log::{error, info, warn};
+use rustutils::system_properties;
 use std::ffi::CString;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{Error, Read, Write};
@@ -34,6 +35,20 @@ const E2FSCK_BIN: &str = "/system/bin/e2fsck";
 const MK2FS_BIN: &str = "/system/bin/mke2fs";
 const RESIZE2FS_BIN: &str = "/system/bin/resize2fs";
 const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
+
+// man e2fsck defines the following exit codes
+#[allow(dead_code)]
+#[repr(i32)]
+enum FsckExitCode {
+    Success = 0,
+    ErrorCorrected = 1 << 0,
+    SystemShouldReboot = 1 << 1,
+    ErrorsLeftUncorrected = 1 << 2,
+    OperationalError = 1 << 3,
+    UsageOrSyntaxError = 1 << 4,
+    UserCancelled = 1 << 5,
+    SharedLibError = 1 << 7,
+}
 
 fn main() {
     android_logger::init_once(
@@ -94,12 +109,19 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
         info!("Freshly formatting the crypt device");
         format_ext4(&crypt_device)?;
     } else {
+        e2fsck(&crypt_device).context("e2fsck failed before potential resize")?;
         resize_fs(&crypt_device)?;
+        // Finally check again if we were successful.
+        e2fsck(&crypt_device).context("e2fsck failed after potential resize")?;
     }
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
     if cfg!(multi_tenant) && needs_formatting {
         set_root_dir_permissions(mountpoint)?;
+    }
+    if cfg!(long_running_vms) {
+        system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
+            .context("failed to write microdroid_metadata.encryptedstore_store.status sysprop")?;
     }
     Ok(())
 }
@@ -178,24 +200,32 @@ fn format_ext4(device: &Path) -> Result<()> {
     Ok(())
 }
 
-fn resize_fs(device: &Path) -> Result<()> {
-    // Check the partition
-    Command::new(E2FSCK_BIN)
+fn e2fsck(device: &Path) -> Result<()> {
+    let status = Command::new(E2FSCK_BIN)
         .arg("-fvy")
         .arg(device)
         .status()
         .context("failed to execute e2fsck")?;
+    if !status.success() {
+        match status.code() {
+            Some(code) => {
+                if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
+                    Err(anyhow!("File system errors left uncorrected: {code}"))
+                } else {
+                    warn!("e2fsck exited with exitCode: {code}");
+                    Ok(())
+                }
+            }
+            None => Err(anyhow!("Process terminated by signal")),
+        }
+    } else {
+        Ok(())
+    }
+}
 
+fn resize_fs(device: &Path) -> Result<()> {
     // Resize the filesystem to the size of the device.
     Command::new(RESIZE2FS_BIN).arg(device).status().context("failed to execute resize2fs")?;
-
-    // Finally check again if we were successful.
-    Command::new(E2FSCK_BIN)
-        .arg("-fvy")
-        .arg(device)
-        .status()
-        .context("failed to execute e2fsck")?;
-
     Ok(())
 }
 

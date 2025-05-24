@@ -107,7 +107,7 @@ class VmLauncherService : Service() {
             intent.getParcelableExtra<ResultReceiver>(
                 Intent.EXTRA_RESULT_RECEIVER,
                 ResultReceiver::class.java,
-            )!!
+            )
 
         when (intent.action) {
             ACTION_START_VM -> {
@@ -125,7 +125,7 @@ class VmLauncherService : Service() {
                 // done.
                 val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
 
-                mainWorkerThread.execute({ doStart(displayInfo, diskSize, resultReceiver) })
+                mainWorkerThread.execute({ doStart(displayInfo, diskSize, resultReceiver!!) })
 
                 // Do this outside of the main worker thread, so that we don't cause
                 // ForegroundServiceDidNotStartInTimeException
@@ -328,7 +328,7 @@ class VmLauncherService : Service() {
         val stopNotificationTitle: String? =
             resources.getString(R.string.service_notification_close_title)
         return Notification.Builder(this, Application.CHANNEL_SYSTEM_EVENTS_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(stopNotificationTitle)
             .setOngoing(true)
             .setSilent(true)

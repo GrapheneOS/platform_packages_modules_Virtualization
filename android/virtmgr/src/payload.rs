@@ -164,6 +164,12 @@ impl ApexInfo {
         }
         false
     }
+
+    fn size(&self) -> Result<u64> {
+        Ok(std::fs::metadata(&self.path)
+            .context(format!("Failed to get the size of APEX {} @ {:?}", &self.name, &self.path))?
+            .len())
+    }
 }
 
 struct PackageManager {
@@ -286,6 +292,7 @@ fn make_payload_disk(
 
     // collect APEXes from config
     let mut apex_infos = collect_apex_infos(&apex_list, &vm_payload_config.apexes, debug_config)?;
+    check_apexes_are_aligned(&apex_infos)?;
 
     // Pass sorted list of apexes. Sorting key shouldn't use `path` because it will change after
     // reboot with prefer_staged. `last_update_seconds` is added to distinguish "samegrade"
@@ -403,6 +410,16 @@ fn check_apexes_are_from_allowed_partitions(requested_apexes: &Vec<&ApexInfo>) -
     for apex in requested_apexes {
         if !ALLOWED_PARTITIONS.iter().any(|p| apex.preinstalled_path.starts_with(p)) {
             bail!("Non-system APEX {} is not supported in Microdroid", apex.name);
+        }
+    }
+    Ok(())
+}
+
+fn check_apexes_are_aligned(requested_apexes: &Vec<&ApexInfo>) -> Result<()> {
+    for apex in requested_apexes {
+        let size = apex.size()?;
+        if (size % 4096) != 0 {
+            bail!("APEX {} ({} bytes) is not aligned to 4K", apex.name, size);
         }
     }
     Ok(())

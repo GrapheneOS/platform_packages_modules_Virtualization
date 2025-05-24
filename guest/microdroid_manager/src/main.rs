@@ -58,12 +58,16 @@ use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
 use std::io::{Read, Write};
+use std::os::fd::AsRawFd;
+use std::os::raw::c_char;
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::OwnedFd;
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::ptr;
 use std::str;
 use std::time::Duration;
 use vm_secret::VmSecret;
@@ -91,6 +95,8 @@ const ENCRYPTEDSTORE_BACKING_DEVICE: &str = "/dev/block/by-name/encryptedstore";
 const ENCRYPTEDSTORE_KEYSIZE: usize = 32;
 
 const DICE_CHAIN_FILE: &str = "/microdroid_resources/dice_chain.raw";
+
+const ENCRYPTED_STORE_STATUS_PROP: &str = "microdroid_manager.encrypted_store.status";
 
 #[derive(thiserror::Error, Debug)]
 enum MicrodroidError {
@@ -148,6 +154,59 @@ fn write_death_reason_to_serial(err: &Error) -> Result<()> {
     // Block until the serial port trasmits all the data to the host.
     nix::sys::termios::tcdrain(&serial_file).context("tcdrain failed")?;
 
+    Ok(())
+}
+
+#[derive(Debug)]
+struct SeContext(*mut ::std::os::raw::c_char);
+impl SeContext {
+    fn new(file: &File) -> Result<Self> {
+        let fd = file.as_raw_fd();
+        let mut con: *mut c_char = ptr::null_mut();
+        // SAFETY: the returned pointer `con` is wrapped in SeContext which is freed with
+        // `freecon` when it is dropped.
+        match unsafe { selinux_bindgen::fgetfilecon(fd, &mut con) } {
+            1.. => {
+                if !con.is_null() {
+                    Ok(Self(con))
+                } else {
+                    Err(anyhow!("fgetfilecon returned a NULL context"))
+                }
+            }
+            _ => Err(anyhow!(std::io::Error::last_os_error())).context("fgetfilecon failed"),
+        }
+    }
+}
+
+impl Drop for SeContext {
+    fn drop(&mut self) {
+        // SAFETY: SeContext is created only with a pointer that is set by libselinux and
+        // has to be freed with freecon.
+        unsafe { selinux_bindgen::freecon(self.0) };
+    }
+}
+
+impl std::fmt::Display for SeContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            // SAFETY: the non-owned C string pointed by `p` is guaranteed to be valid (non-null
+            // and shorter than i32::MAX). It is freed when SeContext is dropped.
+            unsafe { std::ffi::CStr::from_ptr(self.0) }.to_str().unwrap_or("Invalid context")
+        )
+    }
+}
+
+fn debug_logs_encryptedstore() -> Result<()> {
+    let file = File::open(ENCRYPTEDSTORE_MOUNTPOINT)?;
+    // TODO: Ideally log this error instead of propagating it out of a debug function
+    let file_context = SeContext::new(&file)?;
+    log::info!(
+        "encryptedstore permission mode {:o}, file context {}",
+        file.metadata()?.permissions().mode(),
+        file_context
+    );
     Ok(())
 }
 
@@ -434,12 +493,21 @@ fn try_run_payload(
     // Wait until apex config is done. (e.g. linker configuration for apexes)
     wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
 
+    let std_redirect = if is_debuggable()? {
+        // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
+        Some(rustutils::inherited_fd::take_fd_ownership(
+            env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
+        )?)
+    } else {
+        None
+    };
+
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
         info!("Preparing encryptedstore ...");
-        Some(prepare_encryptedstore(&vm_secret).context("encryptedstore run")?)
+        Some(prepare_encryptedstore(&vm_secret, &std_redirect).context("encryptedstore run")?)
     } else {
         None
     };
@@ -476,6 +544,10 @@ fn try_run_payload(
     if let Some(mut child) = encryptedstore_child {
         let exitcode = child.wait().context("Wait for encryptedstore child")?;
         ensure!(exitcode.success(), "Unable to prepare encrypted storage. Exitcode={}", exitcode);
+        // Wait until init performs restorecon on /mnt/encryptedstore
+        wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
+            .context("Wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
+        debug_logs_encryptedstore()?;
     }
 
     // Wait for init to have finished booting.
@@ -486,7 +558,7 @@ fn try_run_payload(
         .context("set microdroid_manager.init_done")?;
 
     info!("boot completed, time to run payload");
-    exec_task(task, service).context("Failed to run payload")
+    exec_task(task, service, &std_redirect).context("Failed to run payload")
 }
 
 fn post_payload_work() -> Result<()> {
@@ -638,6 +710,19 @@ fn wait_for_property_true(property_name: &str) -> Result<()> {
     Ok(())
 }
 
+fn wait_for_property(property_name: &str, expected_value: &str) -> Result<()> {
+    let mut prop = PropertyWatcher::new(property_name)?;
+    loop {
+        prop.wait(None)?;
+        if let Some(value) = system_properties::read(property_name)? {
+            if value == expected_value {
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
     match payload_metadata {
         PayloadMetadata::ConfigPath(path) => {
@@ -697,7 +782,11 @@ fn load_crashkernel_if_supported() -> Result<()> {
 }
 
 /// Executes the given task.
-fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Result<i32> {
+fn exec_task(
+    task: &Task,
+    service: &Strong<dyn IVirtualMachineService>,
+    std_redirect: &Option<OwnedFd>,
+) -> Result<i32> {
     info!("executing main task {:?}...", task);
     let mut command = match task.type_ {
         TaskType::Executable => {
@@ -729,12 +818,8 @@ fn exec_task(task: &Task, service: &Strong<dyn IVirtualMachineService>) -> Resul
     // Never accept input from outside
     command.stdin(Stdio::null());
 
-    // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-    let (stdout, stderr) = if is_debuggable()? {
-        use std::os::fd::FromRawFd;
-        let kmsg_fd = env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap();
-        // SAFETY: no one closes kmsg_fd
-        unsafe { (Stdio::from_raw_fd(kmsg_fd), Stdio::from_raw_fd(kmsg_fd)) }
+    let (stdout, stderr) = if let Some(fd) = std_redirect {
+        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
     } else {
         (Stdio::null(), Stdio::null())
     };
@@ -795,15 +880,22 @@ fn find_library_path(name: &str) -> Result<String> {
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(vm_secret: &VmSecret) -> Result<Child> {
+fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) -> Result<Child> {
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     vm_secret.derive_encryptedstore_key(&mut key)?;
+    let (stdout, stderr) = if let Some(fd) = std_redirect {
+        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
+    } else {
+        (Stdio::null(), Stdio::null())
+    };
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
         .arg(hex::encode(&*key))
         .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
+        .stdout(stdout)
+        .stderr(stderr)
         .spawn()
         .context("encryptedstore failed")
 }
