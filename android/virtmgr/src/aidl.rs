@@ -52,6 +52,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
         BnVirtualMachineService, IVirtualMachineService
 };
+use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
     BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo,
     Vsock::Vsock,
@@ -2050,6 +2051,7 @@ fn get_state(instance: &VmInstance) -> VirtualMachineState {
             PayloadState::Finished => VirtualMachineState::FINISHED,
             PayloadState::Hangup => VirtualMachineState::DEAD,
         },
+        VmState::ShuttingDown => VirtualMachineState::FINISHED,
         VmState::Dead => VirtualMachineState::DEAD,
         VmState::Failed => VirtualMachineState::DEAD,
     }
@@ -2454,6 +2456,18 @@ impl IVirtualMachineService for VirtualMachineService {
             },
             BinderFeatures::default(),
         ))
+    }
+
+    fn registerGuestAgent(&self, guest_agent: &Strong<dyn IGuestAgent>) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
+            info!("VM with CID {} has registered a guest agent", cid);
+            Ok(())
+        } else {
+            error!("registerGuestAgent is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
     }
 }
 
