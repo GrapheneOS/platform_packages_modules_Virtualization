@@ -19,6 +19,7 @@ import android.hardware.security.secretkeeper.ISecretkeeper;
 import android.os.IRpcProvider;
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationcommon.ErrorCode;
+import android.system.virtualmachineservice.IGuestAgent;
 
 /** {@hide} */
 interface IVirtualMachineService {
@@ -80,4 +81,9 @@ interface IVirtualMachineService {
      * aren't aware of a vsock connection between the client and service.
      */
     IRpcProvider getHostRpcProvider();
+
+    /**
+     * Registers IGuestAgent
+     */
+    void registerGuestAgent(in IGuestAgent guestAgent);
 }

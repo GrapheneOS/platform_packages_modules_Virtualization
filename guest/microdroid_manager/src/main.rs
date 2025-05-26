@@ -30,13 +30,16 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
     VM_PAYLOAD_SERVICE_SOCKET_NAME,
     ENCRYPTEDSTORE_MOUNTPOINT,
 };
+use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::{
+        BnGuestAgent, IGuestAgent
+};
 
 use crate::dice::dice_derivation;
 use crate::instance::{InstanceDisk, MicrodroidData};
 use crate::verify::verify_payload;
 use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binder::Strong;
+use binder::{self, BinderFeatures, Interface, Strong};
 use dice_driver::DiceDriver;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
@@ -298,6 +301,9 @@ fn try_main() -> Result<()> {
     let service = get_vms_rpc_binder()
         .context("cannot connect to VirtualMachineService")
         .map_err(|e| MicrodroidError::FailedToConnectToVirtualizationService(e.to_string()))?;
+
+    let guest_agent = GuestAgent::new_binder();
+    service.registerGuestAgent(&guest_agent)?;
 
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
@@ -611,7 +617,9 @@ fn get_vms_rpc_binder() -> Result<Strong<dyn IVirtualMachineService>> {
     // The host is running a VirtualMachineService for this VM on a port equal
     // to the CID of this VM.
     let port = vsock::get_local_cid().context("Could not determine local CID")?;
-    RpcSession::new()
+    let session = RpcSession::new();
+    session.set_max_incoming_threads(1);
+    session
         .setup_vsock_client(VMADDR_CID_HOST, port)
         .context("Could not connect to IVirtualMachineService")
 }
@@ -898,4 +906,33 @@ fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) 
         .stderr(stderr)
         .spawn()
         .context("encryptedstore failed")
+}
+
+/// Implementation of `IGuestAgent`
+#[derive(Debug, Default)]
+struct GuestAgent {}
+
+impl Interface for GuestAgent {}
+
+impl IGuestAgent for GuestAgent {
+    fn shutdown(&self) -> binder::Result<()> {
+        info!("Shutdown requested. Broadcasting it.");
+        // Payload is required to monitor this sysprop and handle it in 2 seconds.  After that, the
+        // shutdown watchdog thread in init will trigger a forced shutdown using sys.powerctl. If
+        // that somehow doesn't shut the VM down in 5 seconds (from the moment the shutdown is
+        // requested), this entire VM will then be forcibly killed by virtmgr and in that case data
+        // corruption may happen! See kill() in crosvm.rs of virtmgr.
+        system_properties::write("sys.shutdown.requested", "0")
+            .map_err(|e| {
+                error!("failed to set sys.shutdown.requested: {:?}", e);
+            })
+            .unwrap();
+        Ok(())
+    }
+}
+
+impl GuestAgent {
+    fn new_binder() -> Strong<dyn IGuestAgent> {
+        BnGuestAgent::new_binder(GuestAgent {}, BinderFeatures::default())
+    }
 }
