@@ -2296,17 +2296,21 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(checkVmOutputIsRedirectedToLogcat(true)).isTrue();
     }
 
-    private boolean isDebugPolicyEnabled(String entry) {
+    private boolean isDebugPolicyPossiblyEnabled(String entry) {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         UiAutomation uiAutomation = instrumentation.getUiAutomation();
         String cmd = "/apex/com.android.virt/bin/vm info";
         String output = runInShellWithStderr(TAG, uiAutomation, cmd).trim();
         for (String line : output.split("\\v")) {
-            if (line.matches("^.*Debug policy.*" + entry + ": true.*$")) {
-                return true;
+            if (line.matches("^.*Debug policy.*$")) {
+                return line.matches("^.*" + entry + ": true.*$");
             }
         }
-        return false;
+
+        // If the test is running on the older device before `vm info` dumps debug policy,
+        // then there's no solid way to know whether debug policy is enabled or not in user build.
+        // Just return true to skip the test.
+        return true;
     }
 
     @Test
@@ -2314,8 +2318,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void outputIsNotRedirectedToLogcatIfNotDebuggable() throws Exception {
         assumeSupportedDevice();
 
-        // Debug policy shouldn't enable log
-        assumeFalse(isDebugPolicyEnabled("log"));
+        // Ensure that debug policy isn't enabled to *always log*.
+        assumeFalse(isDebugPolicyPossiblyEnabled("log"));
 
         assertThat(checkVmOutputIsRedirectedToLogcat(false)).isFalse();
     }
