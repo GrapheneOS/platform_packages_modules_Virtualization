@@ -2082,6 +2082,13 @@ public class VirtualMachine implements AutoCloseable {
         if (binder == null) {
             throw new VirtualMachineException("Failed to connect to vsock server");
         }
+        // b/420703082
+        // We don't allow 3P apps to host RPC Binder services. Additionally,
+        // our clients are updatable, so they can't allow blocking calls.
+        // Allow it here, to avoid all the spam/logs from these services.
+        // If we ever allow 3P apps to host these services, we should have
+        // a higher-level API that does not set this.
+        Binder.allowBlocking(binder);
         return binder;
     }
 
