@@ -27,7 +27,7 @@ use client_vm_csr::generate_attestation_key_and_csr;
 use coset::{CborSerializable, CoseMac0, CoseSign};
 use hwtrust::{
     rkp,
-    session::{RkpInstance, Session},
+    session::{Options, RkpInstance, Session},
 };
 use log::{info, warn};
 use service_vm_comm::{
@@ -282,9 +282,13 @@ fn check_certificate_for_client_vm(
 }
 
 fn check_csr(csr: Vec<u8>) -> Result<()> {
-    let mut session = Session::default();
-    session.set_allow_any_mode(true);
-    session.set_rkp_instance(RkpInstance::Avf);
+    let session = Session {
+        options: Options {
+            allow_any_mode: true,
+            rkp_instance: RkpInstance::Avf,
+            ..Options::default()
+        },
+    };
     let _csr = rkp::Csr::from_cbor(&session, &csr[..]).context("Failed to parse CSR")?;
     Ok(())
 }

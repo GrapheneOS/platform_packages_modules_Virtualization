@@ -199,7 +199,10 @@ mod tests {
     use diced_open_dice::KeyAlgorithm;
     use diced_open_dice::HIDDEN_SIZE;
     use diced_sample_inputs::make_sample_bcc_and_cdis;
-    use hwtrust::{dice, session::Session};
+    use hwtrust::{
+        dice,
+        session::{Options, Session},
+    };
     use pvmfw_avb::Capability;
     use pvmfw_avb::DebugLevel;
     use pvmfw_avb::Digest;
@@ -438,9 +441,7 @@ mod tests {
             )
             .expect("Failed to derive EcdsaP384 -> Ed25519 DICE chain");
         let handover3 = from_serialized_handover(&buffer);
-
-        let mut session = Session::default();
-        session.set_allow_any_mode(true);
+        let session = Session { options: Options { allow_any_mode: true, ..Default::default() } };
         let _chain = dice::Chain::from_cbor(&session, handover3.bcc().unwrap()).unwrap();
     }
 
