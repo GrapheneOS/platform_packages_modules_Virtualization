@@ -22,7 +22,7 @@ rust_binary {
         "libhypervisor_props",
         "liblog_rust",
         "libmicrodroid_payload_config",
-        "librand",
+        "librand-0.8",
         "libvmconfig",
         "libvmclient",
         "libnix",

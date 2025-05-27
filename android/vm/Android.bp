@@ -22,7 +22,7 @@ rust_defaults {
         "liblibc",
         "liblog_rust",
         "libmicrodroid_payload_config",
-        "librand",
+        "librand-0.8",
         "libserde_json",
         "libserde",
         "libvmconfig",
