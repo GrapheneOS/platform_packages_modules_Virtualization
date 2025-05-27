@@ -21,9 +21,15 @@ use anyhow::{anyhow, bail, Context, Error, Result};
 use binder::ParcelFileDescriptor;
 use command_fds::CommandFdExt;
 use libc::{sysconf, _SC_CLK_TCK};
+use psi_rs::{PsiResource, PsiStallType, init_psi_monitor, parse_psi_line, register_psi_monitor};
 use log::{debug, error, info, warn};
 use semver::{Version, VersionReq};
-use nix::{fcntl::OFlag, unistd::pipe2, unistd::Uid, unistd::User};
+use nix::{
+    fcntl::OFlag,
+    unistd::{pipe2, Uid, User},
+    sys::epoll::{Epoll, EpollCreateFlags, EpollEvent, EpollFlags, EpollTimeout},
+    sys::eventfd::EventFd,
+};
 use regex::{Captures, Regex};
 use rustutils::system_properties;
 use shared_child::SharedChild;
@@ -32,11 +38,11 @@ use std::cmp::max;
 use std::ffi::CString;
 use std::fmt;
 use std::fs::{read_to_string, File};
-use std::io::{self, Read};
+use std::io::{self, Read, Seek};
 use std::mem;
 use std::time::Instant;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::unix::io::{AsRawFd, OwnedFd};
+use std::os::unix::io::{AsFd, AsRawFd, OwnedFd};
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
@@ -352,14 +358,28 @@ impl VmState {
             thread::spawn(move || {
                 instance_monitor_status.clone().monitor_vm_status(child_monitor_status);
             });
-            if instance.trim_on_idle {
+
+            let psi_thread_and_evt_fd = if instance.trim_under_pressure {
+                let psi_monitor_kill_event = Arc::new(EventFd::new()?);
+                let psi_monitor_kill_event_clone = psi_monitor_kill_event.clone();
                 let instance = instance.clone();
-                thread::spawn(move || {
-                    if let Err(e) = instance.trim_on_idle_loop() {
-                        warn!("trim_on_idle_loop failed: {e:#}");
-                    }
-                });
-            }
+                Some((
+                    thread::spawn(move || {
+                        if let Err(e) = psi_monitor(&instance, psi_monitor_kill_event_clone) {
+                            error!("psi monitor failed: {:#}", e);
+                            // Spawn thread to kill VM, avoiding a deadlock as this thread joins
+                            thread::spawn(move || {
+                                if let Err(e) = instance.kill() {
+                                    error!("Error stopping VM with CID {}: {:?}", instance.cid, e);
+                                }
+                            });
+                        }
+                    }),
+                    psi_monitor_kill_event,
+                ))
+            } else {
+                None
+            };
 
             let child_clone = child.clone();
             let instance_clone = instance.clone();
@@ -370,6 +390,7 @@ impl VmState {
                     vfio_devices,
                     tap,
                     vhost_fs_devices,
+                    psi_thread_and_evt_fd,
                 );
             });
 
@@ -386,6 +407,76 @@ impl VmState {
         } else {
             *self = state;
             bail!("VM already started or failed")
+        }
+    }
+}
+
+fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: Arc<EventFd>) -> Result<()> {
+    // monitor memory, inflate balloon if some contention exists
+    // This will initialize a PSI monitor that monitors memory contention in
+    // windows of 500_000us. If "Some" processes are stalled for a preiod of
+    // 50_000us within the window period, an event gets fired.
+    let mut memory_pressure_file =
+        init_psi_monitor(PsiStallType::Some, 50000, 500000, PsiResource::Memory)?;
+    let epoll = Epoll::new(EpollCreateFlags::EPOLL_CLOEXEC)?;
+    register_psi_monitor(&epoll, memory_pressure_file.as_fd(), 0)?;
+    epoll
+        .add(psi_monitor_kill_event.as_fd(), EpollEvent::new(EpollFlags::EPOLLIN, 1))
+        .context("failed to register psi eventfd")?;
+
+    // Wait on event
+    let mut events = [EpollEvent::empty()];
+    let mut rate_limiter: Option<Instant> = None;
+    loop {
+        // Set timeout to -1, blocking indefinitely
+        // https://man7.org/linux/man-pages/man2/epoll_wait.2.html
+        epoll.wait(&mut events, EpollTimeout::NONE)?;
+        match events[0].data() {
+            0 => {
+                let mut psi_info = String::new();
+                memory_pressure_file.rewind().context("failed to rewind file")?;
+                memory_pressure_file
+                    .read_to_string(&mut psi_info)
+                    .context("Failed to read PSI monitor to buffer")?;
+                if let Some(time) = rate_limiter {
+                    if time.elapsed() <= Duration::from_secs(60) {
+                        // 1 minute has not passed since the last compaction. Wait more.
+                        continue;
+                    }
+                }
+                // There may be 2 entries in PSI info, as 2 monitors can be set. 1 monitor for
+                // `Some`, and 1 monitor for `Full`. We really want to shrink the VM when `Some`
+                // contention is detected, before we get to `Full`. `Some` ultimately is a subset
+                // of full, which means there will always be `Some` and `Full`, but never `Full`
+                // without `Some`.
+                let Some(stats) = psi_info
+                    .lines()
+                    .filter_map(|l| parse_psi_line(l, PsiStallType::Some).ok())
+                    .next()
+                else {
+                    error!("failed find 'some' psi line");
+                    continue;
+                };
+                // Over the past 10 seconds, 1% of the time some processes were waiting for
+                // memory resources
+                if stats.avg10 > 1.0 {
+                    rate_limiter = Some(Instant::now());
+                    // When the host is under memory pressure, send a trim request
+                    if let Some(guest_agent) = &*instance.guest_agent.lock().unwrap() {
+                        if let Err(e) = guest_agent.trim() {
+                            error!("IGuestAgent::trim failed: {e:#}");
+                        }
+                    }
+                }
+            }
+            1 => {
+                info!("psi_monitor: Epoll kill event triggered");
+                // EventFD triggered, return
+                return Ok(());
+            }
+            _ => {
+                return Err(anyhow!("Unknown event received: {:?}", events[0]));
+            }
         }
     }
 }
@@ -472,7 +563,7 @@ pub struct VmInstance {
     // Whether virtio-balloon is enabled
     pub balloon_enabled: bool,
     // Whether to send a trim request on app idle.
-    trim_on_idle: bool,
+    trim_under_pressure: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
     /// List of host services this VM might access.
@@ -510,7 +601,7 @@ impl VmInstance {
         console_join_handle: Option<JoinHandle<()>>,
         log_join_handle: Option<JoinHandle<()>>,
         vm_context: VmContext,
-        trim_on_idle: bool,
+        trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
         encrypted_store_kek: Option<Strong<dyn IEncryptedStoreKEK>>,
@@ -544,7 +635,7 @@ impl VmInstance {
             payload_state_updated: Condvar::new(),
             requester_uid_name,
             balloon_enabled,
-            trim_on_idle,
+            trim_under_pressure,
             vendor_tee_services,
             host_services,
             encrypted_store_kek,
@@ -575,6 +666,7 @@ impl VmInstance {
         vfio_devices: Vec<VfioDevice>,
         tap: Option<File>,
         vhost_user_devices: Vec<SharedChild>,
+        psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
     ) {
         let failure_reason_thread = std::thread::spawn(move || {
             // Read the pipe to see if any failure reason is written
@@ -665,6 +757,11 @@ impl VmInstance {
 
         // clean up VM state
         self.join_handles.lock().unwrap().join_all();
+
+        if let Some((psi_thread, evt_fd)) = psi_thread_and_evt_fd {
+            evt_fd.write(1).expect("failed to stop PSI thread");
+            psi_thread.join().unwrap();
+        }
 
         // Delete temporary files. The folder itself is removed by VirtualizationServiceInternal.
         remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
@@ -769,52 +866,6 @@ impl VmInstance {
             let (vm_state, _) = self.vm_dead_convar.wait_timeout(vm_state, wait_duration).unwrap();
             if let VmState::Dead = &*vm_state {
                 break;
-            }
-        }
-    }
-
-    /// When the app is idle, send a trim request.
-    fn trim_on_idle_loop(&self) -> Result<()> {
-        let mut vm_idle_prop_watcher = system_properties::PropertyWatcher::new("appsearch_vm.idle")
-            .expect("failed to create PropertyWatcher");
-        #[derive(PartialEq, Eq)]
-        enum VmState {
-            Idle,
-            Busy,
-        }
-        // `wait_for_state_change` waits for state change or timeout and then return current state
-        // (even on timeout).
-        //
-        // This is not racy because PropertyWatcher internally tracks the property's "serial". If
-        // the property changes between two `wait_for_state_change` calls, the second call will
-        // immediately return.
-        //
-        // Currently it seems to always return when the property is written, even when the value
-        // doesn't actually change. This may or may not be desirable.
-        let mut wait_for_state_change = |timeout: Option<Duration>| {
-            match vm_idle_prop_watcher.wait(timeout) {
-                Ok(()) | Err(system_properties::PropertyWatcherError::WaitFailed) => {}
-                Err(e) => return Err(e),
-            }
-            let r = vm_idle_prop_watcher.read(|_, v| Ok(v == "1" || v == "true"));
-            match r {
-                Ok(true) => Ok(VmState::Idle),
-                Ok(false) => Ok(VmState::Busy),
-                Err(system_properties::PropertyWatcherError::SystemPropertyAbsent) => {
-                    // Assume busy.
-                    Ok(VmState::Busy)
-                }
-                Err(e) => Err(e),
-            }
-        };
-        loop {
-            // Wait for idle.
-            if wait_for_state_change(None)? == VmState::Idle {
-                if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
-                    if let Err(e) = guest_agent.trim() {
-                        error!("IGuestAgent::trim failed: {e:#}");
-                    }
-                }
             }
         }
     }

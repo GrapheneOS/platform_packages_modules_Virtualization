@@ -1000,7 +1000,8 @@ impl VirtualizationService {
         // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
         // permission as a temporarily solution.
         // TODO(b/407079334): Replace with SystemApi.
-        let trim_on_idle = balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
+        let trim_under_pressure =
+            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
@@ -1058,7 +1059,7 @@ impl VirtualizationService {
                 console_join_handle,
                 log_join_handle,
                 vm_context,
-                trim_on_idle,
+                trim_under_pressure,
                 vendor_tee_services,
                 config.hostServices.clone(),
                 encrypted_store_kek,
