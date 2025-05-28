@@ -43,7 +43,7 @@ rust_defaults {
         "liblog_rust",
         "libnix",
         "libopenssl",
-        "librand",
+        "librand-0.8",
         "librkpd_client",
         "librusqlite",
         "librustutils",
