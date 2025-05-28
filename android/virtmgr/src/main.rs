@@ -37,6 +37,9 @@ use nix::unistd::{setpgid, write, Pid, Uid};
 use rustutils::inherited_fd::take_fd_ownership;
 use std::os::unix::raw::{pid_t, uid_t};
 
+#[cfg(early)]
+const LOG_TAG: &str = "early_virtmgr";
+#[cfg(not(early))]
 const LOG_TAG: &str = "virtmgr";
 
 static PID_CURRENT: LazyLock<Pid> = LazyLock::new(Pid::this);
