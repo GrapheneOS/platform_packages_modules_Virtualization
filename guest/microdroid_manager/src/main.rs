@@ -47,7 +47,7 @@ use log::{error, info, warn};
 use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
 use nix::mount::{umount2, MntFlags};
-use nix::sys::signal::Signal;
+use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
@@ -255,6 +255,18 @@ fn set_bail_on_out_of_puff() -> Result<()> {
     bail!("didn't find bail_on_out_of_puff sysfs entry")
 }
 
+/// Ignore SIGTERM so that we wait for the termination of microdroid_launcher.
+/// The termination of microdroid_launcher is also via SIGTERM sent to the process group where
+/// both processes belong to.
+fn setup_ignore_sigterm() -> Result<()> {
+    let sa = SigAction::new(SigHandler::SigIgn, SaFlags::empty(), SigSet::empty());
+
+    // SAFETY: we are not doing any action in the handler
+    unsafe { sigaction(Signal::SIGTERM, &sa) }
+        .context("Failed to set sigaction for SIGTERM")
+        .map(|_| ())
+}
+
 fn main() -> Result<()> {
     // SAFETY: This is very early in the process. Nobody has taken ownership of the inherited FDs
     // yet.
@@ -333,6 +345,7 @@ fn try_main() -> Result<()> {
             Ok(())
         }
         Err(err) => {
+            warn!("payload finished erroneously: {:?}", err);
             let (error_code, message) = translate_error(&err);
             service.notifyError(error_code, &message)?;
             Err(err)
@@ -564,7 +577,22 @@ fn try_run_payload(
         .context("set microdroid_manager.init_done")?;
 
     info!("boot completed, time to run payload");
-    exec_task(task, service, &std_redirect).context("Failed to run payload")
+    let mut payload_process =
+        exec_task(task, service, &std_redirect).context("Failed to run payload")?;
+    setup_ignore_sigterm()?;
+
+    let exit_status = payload_process.wait()?;
+    match exit_status.code() {
+        Some(exit_code) => Ok(exit_code),
+        None => Err(match exit_status.signal() {
+            Some(signal) => anyhow!(
+                "Payload exited due to signal: {} ({})",
+                signal,
+                Signal::try_from(signal).map_or("unknown", |s| s.as_str())
+            ),
+            None => anyhow!("Payload has neither exit code nor signal"),
+        }),
+    }
 }
 
 fn post_payload_work() -> Result<()> {
@@ -794,7 +822,7 @@ fn exec_task(
     task: &Task,
     service: &Strong<dyn IVirtualMachineService>,
     std_redirect: &Option<OwnedFd>,
-) -> Result<i32> {
+) -> Result<Child> {
     info!("executing main task {:?}...", task);
     let mut command = match task.type_ {
         TaskType::Executable => {
@@ -837,7 +865,7 @@ fn exec_task(
     info!("notifying payload started");
     service.notifyPayloadStarted()?;
 
-    let mut payload_process = command.spawn().context("failed to spawn payload process")?;
+    let payload_process = command.spawn().context("failed to spawn payload process")?;
     info!("payload pid = {:?}", payload_process.id());
 
     // SAFETY: setpriority doesn't take any pointers
@@ -850,19 +878,7 @@ fn exec_task(
             );
         }
     }
-
-    let exit_status = payload_process.wait()?;
-    match exit_status.code() {
-        Some(exit_code) => Ok(exit_code),
-        None => Err(match exit_status.signal() {
-            Some(signal) => anyhow!(
-                "Payload exited due to signal: {} ({})",
-                signal,
-                Signal::try_from(signal).map_or("unknown", |s| s.as_str())
-            ),
-            None => anyhow!("Payload has neither exit code nor signal"),
-        }),
-    }
+    Ok(payload_process)
 }
 
 fn find_library_path(name: &str) -> Result<String> {
@@ -916,17 +932,10 @@ impl Interface for GuestAgent {}
 
 impl IGuestAgent for GuestAgent {
     fn shutdown(&self) -> binder::Result<()> {
-        info!("Shutdown requested. Broadcasting it.");
-        // Payload is required to monitor this sysprop and handle it in 2 seconds.  After that, the
-        // shutdown watchdog thread in init will trigger a forced shutdown using sys.powerctl. If
-        // that somehow doesn't shut the VM down in 5 seconds (from the moment the shutdown is
-        // requested), this entire VM will then be forcibly killed by virtmgr and in that case data
-        // corruption may happen! See kill() in crosvm.rs of virtmgr.
-        system_properties::write("sys.shutdown.requested", "0")
-            .map_err(|e| {
-                error!("failed to set sys.shutdown.requested: {:?}", e);
-            })
-            .unwrap();
+        info!("Shutdown requested.");
+        if let Err(e) = system_properties::write("sys.powerctl", "shutdown") {
+            error!("failed to shutdown {:?}", e);
+        }
         Ok(())
     }
 }
