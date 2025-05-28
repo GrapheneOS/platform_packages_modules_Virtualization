@@ -902,6 +902,7 @@ impl VmInstance {
                     );
                     child.kill().unwrap();
                 }
+                drop(result); // unlock self.vm_state to avoid deadlock with the vm_exit thread.
 
                 // Wait once again. If the graceful shutdown was successful, this will return
                 // immediately.

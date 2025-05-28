@@ -17,7 +17,10 @@
 //! JNI bindings to call into `hwtrust` from Java.
 
 use anyhow::Result;
-use hwtrust::{dice, session::Session};
+use hwtrust::{
+    dice,
+    session::{Options, Session},
+};
 use jni::objects::{JByteArray, JClass};
 use jni::sys::jboolean;
 use jni::JNIEnv;
@@ -56,8 +59,12 @@ fn validate_dice_chain(
     allow_any_mode: jboolean,
 ) -> Result<()> {
     let dice_chain = env.convert_byte_array(jdice_chain)?;
-    let mut session = Session::default();
-    session.set_allow_any_mode(allow_any_mode == jboolean::from(true));
+    let session = Session {
+        options: Options {
+            allow_any_mode: (allow_any_mode == jboolean::from(true)),
+            ..Default::default()
+        },
+    };
     let _chain = dice::Chain::from_cbor(&session, &dice_chain)?;
     Ok(())
 }

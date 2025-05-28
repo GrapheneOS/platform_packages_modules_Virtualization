@@ -2420,13 +2420,19 @@ impl IVirtualMachineService for VirtualMachineService {
     fn notifyError(&self, error_code: ErrorCode, message: &str) -> binder::Result<()> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            info!("VM with CID {} encountered an error", cid);
+            info!(
+                "VM with CID {} encountered an error: {:?} message: {}",
+                cid, error_code, message
+            );
             vm.update_payload_state(PayloadState::Finished)
                 .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
             vm.callbacks.notify_error(cid, error_code, message);
             Ok(())
         } else {
-            error!("notifyError is called from an unknown CID {}", cid);
+            error!(
+                "notifyError is called from an unknown CID {}. error: {:?} message: {}",
+                cid, error_code, message
+            );
             Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
         }
     }
