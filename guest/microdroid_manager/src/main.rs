@@ -331,11 +331,10 @@ fn try_main() -> Result<()> {
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
     match try_run_payload(&service, vm_payload_service_fd) {
         Ok(code) => {
-            if code == 0 {
-                info!("task successfully finished");
-            } else {
-                error!("task exited with exit code: {}", code);
-            }
+            match code {
+                0 => info!("task successfully finished"),
+                v => error!("task exited with exit code: {}", v),
+            };
             if let Err(e) = post_payload_work() {
                 error!(
                     "Failed to run post payload work. It is possible that certain tasks
@@ -620,14 +619,18 @@ fn try_run_payload(
     let exit_status = payload_process.wait()?;
     match exit_status.code() {
         Some(exit_code) => Ok(exit_code),
-        None => Err(match exit_status.signal() {
-            Some(signal) => anyhow!(
+        None => match exit_status.signal() {
+            Some(val) if val == Signal::SIGTERM as i32 => {
+                info!("payload exited with SIGTERM");
+                Ok(0)
+            }
+            Some(signal) => Err(anyhow!(
                 "Payload exited due to signal: {} ({})",
                 signal,
                 Signal::try_from(signal).map_or("unknown", |s| s.as_str())
-            ),
-            None => anyhow!("Payload has neither exit code nor signal"),
-        }),
+            )),
+            None => Err(anyhow!("Payload has neither exit code nor signal")),
+        },
     }
 }
 
