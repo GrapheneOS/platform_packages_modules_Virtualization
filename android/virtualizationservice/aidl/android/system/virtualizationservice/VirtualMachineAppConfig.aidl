@@ -15,6 +15,7 @@
  */
 package android.system.virtualizationservice;
 
+import android.system.virtualizationcommon.IEncryptedStoreKEK;
 import android.system.virtualizationservice.CpuOptions;
 import android.system.virtualizationservice.VirtualMachinePayloadConfig;
 
@@ -155,4 +156,16 @@ parcelable VirtualMachineAppConfig {
 
     /** List of host services this VM wants to access */
     String[] hostServices;
+
+    /**
+     * Whether microdroid_manager should delay setup of encrypted store until later.
+     * If this is set to true, payload is expected to tell microdroid_manager when to do the
+     * setup.
+     */
+    boolean shouldDelayEncryptedStoreSetup;
+
+    /**
+     * KEK used to set up the encrypted store or {@code null} if encrypted store uses default mode.
+     */
+    @nullable IEncryptedStoreKEK encryptedStoreKEK;
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::instance::{ApexData, ApkData, MicrodroidData};
+use crate::instance::{ApexData, ApkData, EncryptedStoreMode, MicrodroidData};
 use crate::payload::{get_apex_data_from_payload, to_metadata};
 use crate::MicrodroidError;
 use anyhow::{anyhow, ensure, Context, Result};
@@ -204,6 +204,7 @@ fn get_data_from_apk(
         package_name: manifest_info.package,
         version_code: manifest_info.version_code,
         rollback_index: manifest_info.rollback_index,
+        encrypted_store_mode: EncryptedStoreMode::from(manifest_info.encrypted_store_mode),
     })
 }
 

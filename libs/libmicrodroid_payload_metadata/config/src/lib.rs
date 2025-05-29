@@ -56,6 +56,11 @@ pub struct VmPayloadConfig {
     /// https://docs.kernel.org/admin-guide/mm/transhuge.html
     #[serde(default)]
     pub hugepages: bool,
+
+    /// Whether to delay setup of the encrypted store. If set to true, microdroid_manager will
+    /// wait for the payload to send a signal to do the setup.
+    #[serde(default)]
+    pub delay_encrypted_store_setup: bool,
 }
 
 /// OS config

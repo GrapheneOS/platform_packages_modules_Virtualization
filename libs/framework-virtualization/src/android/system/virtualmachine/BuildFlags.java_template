@@ -28,6 +28,11 @@ public final class BuildFlags {
      */
     public static boolean VENDOR_MODULES_ENABLED = @vendor_modules_enabled_placeholder;
 
+    /**
+     * Value of the {@code RELEASE_AVF_SUPPORT_LONG_RUNNING_VMS} build flag.
+     */
+    public static boolean SUPPORT_LONG_RUNNING_VMS_ENABLED = @support_long_running_vms_placeholder;
+
     private BuildFlags() {};
 }
 

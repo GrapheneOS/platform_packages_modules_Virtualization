@@ -301,5 +301,10 @@ public class VmShareServiceImpl extends Service {
         public void checkLibIcuIsAccessible() {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public void requestEncryptedStoreSetup() {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }

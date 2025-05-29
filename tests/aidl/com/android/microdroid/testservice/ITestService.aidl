@@ -112,4 +112,10 @@ interface ITestService {
      * Checks that libicu is accessible to the payload that has com.android.i18n APEX mounted.
      */
     void checkLibIcuIsAccessible();
+
+    /**
+     * Sets the sysprop to tell microdroid_manager to setup the encrypted store.
+     * This method is used for testing the delay encrypted store setup feature.
+     */
+    void requestEncryptedStoreSetup();
 }
