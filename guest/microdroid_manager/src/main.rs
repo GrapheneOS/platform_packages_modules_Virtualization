@@ -15,6 +15,7 @@
 //! Microdroid Manager
 
 mod dice;
+mod encrypted_store_kek;
 mod instance;
 mod ioutil;
 mod payload;
@@ -35,7 +36,8 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 };
 
 use crate::dice::dice_derivation;
-use crate::instance::{InstanceDisk, MicrodroidData};
+use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
+use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::verify::verify_payload;
 use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
@@ -72,6 +74,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
+use std::sync::Arc;
 use std::time::Duration;
 use vm_secret::VmSecret;
 
@@ -100,6 +103,7 @@ const ENCRYPTEDSTORE_KEYSIZE: usize = 32;
 const DICE_CHAIN_FILE: &str = "/microdroid_resources/dice_chain.raw";
 
 const ENCRYPTED_STORE_STATUS_PROP: &str = "microdroid_manager.encrypted_store.status";
+const ENCRYPTED_STORE_SETUP_PROP: &str = "microdroid_manager.encrypted_store.setup";
 
 #[derive(thiserror::Error, Debug)]
 enum MicrodroidError {
@@ -453,8 +457,10 @@ fn try_run_payload(
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
     let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
-    let vm_secret = VmSecret::new(dice_artifacts, service, &mut state)
-        .context("Failed to create VM secrets")?;
+    let vm_secret = Arc::new(
+        VmSecret::new(dice_artifacts, service, &mut state)
+            .context("Failed to create VM secrets")?,
+    );
 
     let is_new_instance = match state {
         VmInstanceState::NewlyCreated => true,
@@ -514,19 +520,45 @@ fn try_run_payload(
 
     let std_redirect = if is_debuggable()? {
         // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-        Some(rustutils::inherited_fd::take_fd_ownership(
+        Arc::new(Some(rustutils::inherited_fd::take_fd_ownership(
             env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
-        )?)
+        )?))
     } else {
-        None
+        Arc::new(None)
     };
 
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        info!("Preparing encryptedstore ...");
-        Some(prepare_encryptedstore(&vm_secret, &std_redirect).context("encryptedstore run")?)
+        let std_redirect_for_enc_store = std_redirect.clone();
+        if config.delay_encrypted_store_setup {
+            let service_clone = service.clone();
+            let vm_secret_for_enc_store = vm_secret.clone();
+            let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
+            info!("Delaying preparation of encryptedstore as requested ...");
+            std::thread::spawn(move || {
+                // Should we violently crash here? Or should we just log the error and let payload
+                // decide what to do?
+                if let Err(e) = delayed_prepare_encryptedstore(
+                    encrypted_store_mode,
+                    service_clone,
+                    vm_secret_for_enc_store,
+                    std_redirect_for_enc_store,
+                ) {
+                    error!("delayed prepare encrypted store failed: {:#?}", e);
+                }
+            });
+            None
+        } else {
+            info!("Preparing encryptedstore ...");
+            let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+            vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
+            Some(
+                prepare_encryptedstore(&key, &std_redirect_for_enc_store)
+                    .context("encryptedstore run")?,
+            )
+        }
     } else {
         None
     };
@@ -573,8 +605,12 @@ fn try_run_payload(
     wait_for_property_true("dev.bootcomplete").context("failed waiting for dev.bootcomplete")?;
 
     // And then tell it we're done so unnecessary services can be shut down.
-    system_properties::write("microdroid_manager.init_done", "1")
-        .context("set microdroid_manager.init_done")?;
+    // Right now the only service we stop is ueventd. However, in case payload request to delay
+    // setup of the encrypted store, we should keep the ueventd around.
+    if !config.delay_encrypted_store_setup {
+        system_properties::write("microdroid_manager.init_done", "1")
+            .context("set microdroid_manager.init_done")?;
+    }
 
     info!("boot completed, time to run payload");
     let mut payload_process =
@@ -786,6 +822,7 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
                 export_tombstones: None,
                 enable_authfs: false,
                 hugepages: false,
+                delay_encrypted_store_setup: payload_config.delay_encrypted_store_setup,
             })
         }
         _ => bail!("Failed to match config against a config type."),
@@ -904,9 +941,7 @@ fn find_library_path(name: &str) -> Result<String> {
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) -> Result<Child> {
-    let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
-    vm_secret.derive_encryptedstore_key(&mut key)?;
+fn prepare_encryptedstore(key: &[u8], std_redirect: &Option<OwnedFd>) -> Result<Child> {
     let (stdout, stderr) = if let Some(fd) = std_redirect {
         (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
     } else {
@@ -916,7 +951,7 @@ fn prepare_encryptedstore(vm_secret: &VmSecret, std_redirect: &Option<OwnedFd>) 
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
-        .arg(hex::encode(&*key))
+        .arg(hex::encode(key))
         .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
         .stdout(stdout)
         .stderr(stderr)
@@ -944,4 +979,67 @@ impl GuestAgent {
     fn new_binder() -> Strong<dyn IGuestAgent> {
         BnGuestAgent::new_binder(GuestAgent {}, BinderFeatures::default())
     }
+}
+
+fn delayed_prepare_encryptedstore(
+    encrypted_store_mode: EncryptedStoreMode,
+    service: Strong<dyn IVirtualMachineService>,
+    vm_secret: Arc<VmSecret>,
+    std_redirect: Arc<Option<OwnedFd>>,
+) -> Result<()> {
+    info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
+    wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
+        .context("failed waiting for {ENCRYPTED_STORE_SETUP_PROP}")?;
+    info!("{ENCRYPTED_STORE_SETUP_PROP} is true. Preparing encryptedstore ...");
+
+    let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+    match encrypted_store_mode {
+        EncryptedStoreMode::KEKsStoredOnHost => {
+            get_encrypted_store_key(&service, &vm_secret, &mut key)
+                .context("get encrypted store key")?;
+        }
+        EncryptedStoreMode::DefaultKey => {
+            vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
+        }
+    }
+    prepare_encryptedstore(&key, &std_redirect)?
+        .wait()
+        .context("failed waiting for encryptedstore binary to finish")?;
+
+    wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
+        .context("wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
+
+    // Now we can tell ueventd to stop.
+    system_properties::write("microdroid_manager.init_done", "1")
+        .context("set microdroid_manager.init_done")
+}
+
+fn get_encrypted_store_key(
+    service: &Strong<dyn IVirtualMachineService>,
+    vm_secret: &VmSecret,
+    key: &mut [u8],
+) -> Result<()> {
+    let kek_wrapper = service.getEncryptedStoreKEK().context("failed to get KEK")?;
+    let kek_wrapper = if let Some(kek_wrapper) = kek_wrapper {
+        kek_wrapper
+    } else {
+        bail!("expected encrypted store KEK from host but got nothing");
+    };
+
+    // This key is used to encrypt the key used for encrypted store setup.
+    let mut encryption_key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+    vm_secret
+        .derive_encryptedstore_key_encryption_key(&mut encryption_key)
+        .context("failed to derive encryptedstore_key encryption key")?;
+    let kek = kek_wrapper.getKEK().context("failed to get KEK")?;
+    if let Some(kek) = kek {
+        let decrypted_key = decrypt_kek(&kek, &encryption_key).context("failed to decrypt KEK")?;
+        key.copy_from_slice(&decrypted_key);
+    } else {
+        vm_secret.derive_random_key(key).context("derive random key")?;
+        let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;
+        kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK to host")?;
+    }
+
+    Ok(())
 }

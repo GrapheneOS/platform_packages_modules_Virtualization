@@ -66,6 +66,7 @@ import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.system.virtualizationcommon.DeathReason;
 import android.system.virtualizationcommon.ErrorCode;
+import android.system.virtualizationcommon.IEncryptedStoreKEK;
 import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.IVirtualizationService;
@@ -235,6 +236,9 @@ public class VirtualMachine implements AutoCloseable {
     /** Name of the file backing the encrypted storage */
     private static final String ENCRYPTED_STORE_FILE = "storage.img";
 
+    /** Name of the file with KEK used to setup encrypted store */
+    private static final String ENCRYPTED_STORE_KEK_FILE = "encrypted_store_kek.bin";
+
     /** The package which owns this VM. */
     @NonNull private final String mPackageName;
 
@@ -257,6 +261,14 @@ public class VirtualMachine implements AutoCloseable {
 
     /** File that backs the encrypted storage - Will be null if not enabled. */
     @Nullable private final File mEncryptedStoreFilePath;
+
+    /**
+     * File that stores KEK used to setup encrypted store.
+     *
+     * <p>Is only set iff encrypted store is enabled in the {@link
+     * VirtualMachineConfig#ENCRYPTED_STORE_MODE_KEK_ON_CE} mode.
+     */
+    @Nullable private final EncryptedStoreKEK mEncryptedStoreKEK;
 
     /** File that contains the Id. This is NULL iff FEATURE_LLPVM is disabled */
     @Nullable private final File mInstanceIdPath;
@@ -441,6 +453,11 @@ public class VirtualMachine implements AutoCloseable {
                 (config.isEncryptedStorageEnabled())
                         ? new File(thisVmDir, ENCRYPTED_STORE_FILE)
                         : null;
+        if (config.getEncryptedStoreMode() == VirtualMachineConfig.ENCRYPTED_STORE_MODE_KEK_ON_CE) {
+            mEncryptedStoreKEK = new EncryptedStoreKEK(context, mName);
+        } else {
+            mEncryptedStoreKEK = null;
+        }
 
         mVmOutputCaptured = config.isVmOutputCaptured();
         mVmConsoleInputSupported = config.isVmConsoleInputSupported();
@@ -486,6 +503,7 @@ public class VirtualMachine implements AutoCloseable {
                 }
                 vm.importInstanceFrom(vmDescriptor.getInstanceImgFd());
 
+                // TODO(b/406258175): handle the encrypted store KEK for VM transfer.
                 if (vmDescriptor.getEncryptedStoreFd() != null) {
                     try {
                         vm.mEncryptedStoreFilePath.createNewFile();
@@ -623,6 +641,7 @@ public class VirtualMachine implements AutoCloseable {
         if (config.isEncryptedStorageEnabled() && !vm.mEncryptedStoreFilePath.exists()) {
             throw new VirtualMachineException("Storage image missing");
         }
+        // TODO(b/406258175): here we need to detect if migration is required.
         return vm;
     }
 
@@ -642,9 +661,13 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("VirtualMachineManager.sCreateLock")
     static void vmInstanceCleanup(Context context, String name) throws VirtualMachineException {
         File vmDir = getVmDir(context, name);
+        File ceVmDir = getVmDir(context.createCredentialProtectedStorageContext(), name);
         notifyInstanceRemoval(vmDir, VirtualizationService.getInstance());
         try {
             deleteRecursively(vmDir);
+            if (ceVmDir.exists() && !vmDir.getCanonicalPath().equals(ceVmDir.getCanonicalPath())) {
+                deleteRecursively(ceVmDir);
+            }
         } catch (IOException e) {
             throw new VirtualMachineException(e);
         }
@@ -1469,6 +1492,7 @@ public class VirtualMachine implements AutoCloseable {
             appConfig.payload.getPayloadConfig().extraApks = extraApkFiles;
         }
 
+        appConfig.encryptedStoreKEK = mEncryptedStoreKEK;
         try {
             createIdSigsAndUpdateConfig(service, appConfig);
         } catch (FileNotFoundException e) {
@@ -1599,6 +1623,8 @@ public class VirtualMachine implements AutoCloseable {
                 if (mConnectVmConsole) {
                     mVirtualMachine.setHostConsoleName(getHostConsoleName());
                 }
+                // TODO(b/406258175): here we need to register new callback to handle encrypted
+                // store KEK.
                 mVirtualMachine.start();
             } catch (IOException e) {
                 throw new VirtualMachineException("failed to persist files", e);
@@ -2500,6 +2526,43 @@ public class VirtualMachine implements AutoCloseable {
         private static boolean isErrnoError(Exception e, int expectedValue) {
             ErrnoException errno = asErrnoException(e);
             return errno != null && errno.errno == expectedValue;
+        }
+    }
+
+    private static class EncryptedStoreKEK extends IEncryptedStoreKEK.Stub {
+        private final File mKEKFile;
+
+        private EncryptedStoreKEK(Context context, String name) {
+            File vmDir = getVmDir(context.createCredentialProtectedStorageContext(), name);
+            mKEKFile = new File(vmDir, ENCRYPTED_STORE_KEK_FILE);
+        }
+
+        @Override
+        public byte[] getKEK() {
+            if (!mKEKFile.exists()) {
+                return null;
+            }
+            try {
+                return Files.readAllBytes(mKEKFile.toPath());
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to read " + mKEKFile.getAbsolutePath(), e);
+                return null;
+            }
+        }
+
+        @Override
+        public void onKEKCreated(byte[] kekBlob) {
+            try {
+                mKEKFile.getParentFile().mkdirs();
+                mKEKFile.createNewFile();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create " + mKEKFile.getAbsolutePath(), e);
+            }
+            try (FileOutputStream fos = new FileOutputStream(mKEKFile.getAbsolutePath())) {
+                fos.write(kekBlob);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to write to " + mKEKFile.getAbsolutePath(), e);
+            }
         }
     }
 }

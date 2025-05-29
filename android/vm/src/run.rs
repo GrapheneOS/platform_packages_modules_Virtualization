@@ -205,6 +205,8 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         hugePages: config.common.hugepages,
         boostUclamp: config.common.boost_uclamp,
         hostServices: host_services,
+        shouldDelayEncryptedStoreSetup: false,
+        encryptedStoreKEK: None,
     });
     run(
         service.as_ref(),

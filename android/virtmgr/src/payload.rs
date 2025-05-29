@@ -211,6 +211,7 @@ fn make_metadata_file(
         Payload::PayloadConfig(payload_config) => PayloadMetadata::Config(PayloadConfig {
             payload_binary_name: payload_config.payloadBinaryName.clone(),
             extra_apk_count: payload_config.extraApks.len().try_into()?,
+            delay_encrypted_store_setup: app_config.shouldDelayEncryptedStoreSetup,
             special_fields: Default::default(),
         }),
         Payload::ConfigPath(config_path) => {

@@ -19,6 +19,7 @@ import android.hardware.security.secretkeeper.ISecretkeeper;
 import android.os.IRpcProvider;
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationcommon.ErrorCode;
+import android.system.virtualizationcommon.IEncryptedStoreKEK;
 import android.system.virtualmachineservice.IGuestAgent;
 
 /** {@hide} */
@@ -86,4 +87,10 @@ interface IVirtualMachineService {
      * Registers IGuestAgent
      */
     void registerGuestAgent(in IGuestAgent guestAgent);
+
+    /**
+     * Returns a KEK used to set up the encrypted store, or {@code null} if default mode of the
+     * encrypted store is used.
+     */
+    @nullable IEncryptedStoreKEK getEncryptedStoreKEK();
 }

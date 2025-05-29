@@ -44,7 +44,10 @@ use std::process::{Command, ExitStatus};
 use std::sync::{Arc, Condvar, Mutex, LazyLock};
 use std::time::{Duration, SystemTime};
 use std::thread::{self, JoinHandle};
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
+    DeathReason::DeathReason,
+    IEncryptedStoreKEK::IEncryptedStoreKEK,
+};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     VirtualMachineAppConfig::DebugLevel::DebugLevel,
     AudioConfig::AudioConfig as AudioConfigParcelable,
@@ -475,6 +478,9 @@ pub struct VmInstance {
     pub vendor_tee_services: Vec<String>,
     /// List of host services this VM might access.
     pub host_services: Vec<String>,
+    /// Represents a Key Encryption Key (KEK) stored on app's private data directory. This KEK is
+    /// used to set up the encrypted store of guest.
+    pub encrypted_store_kek: Option<Strong<dyn IEncryptedStoreKEK>>,
     /// The latest lifecycle state which the payload reported itself to be in.
     payload_state: Mutex<PayloadState>,
     /// Represents the condition that payload_state was updated
@@ -508,6 +514,7 @@ impl VmInstance {
         idle_compactor_balloon: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
+        encrypted_store_kek: Option<Strong<dyn IEncryptedStoreKEK>>,
     ) -> Result<VmInstance, Error> {
         validate_config(&config)?;
         let cid = config.cid;
@@ -541,6 +548,7 @@ impl VmInstance {
             idle_compactor_balloon,
             vendor_tee_services,
             host_services,
+            encrypted_store_kek,
         };
         info!("{} created", &instance);
         Ok(instance)

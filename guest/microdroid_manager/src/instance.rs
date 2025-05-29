@@ -38,6 +38,7 @@ use crate::ioutil;
 use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use dice_driver::DiceDriver;
+use log::warn;
 use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
@@ -285,12 +286,35 @@ impl MicrodroidData {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[repr(u8)]
+pub enum EncryptedStoreMode {
+    DefaultKey = 0,
+    KEKsStoredOnHost = 1,
+}
+
+impl From<u8> for EncryptedStoreMode {
+    fn from(value: u8) -> Self {
+        if value == 0 {
+            Self::DefaultKey
+        } else if value == 1 {
+            Self::KEKsStoredOnHost
+        } else {
+            warn!("unexpected value {value}, falling back to default encrypted store mode");
+            Self::DefaultKey
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApkData {
     pub root_hash: Vec<u8>,
     pub cert_hash: Vec<u8>,
     pub package_name: String,
     pub version_code: u64,
     pub rollback_index: Option<u32>,
+    // ApkData struct doesn't feel like a right place for this.
+    // TODO(ioffe): figure out a better home for encrypted_store_mode.
+    pub encrypted_store_mode: EncryptedStoreMode,
 }
 
 impl ApkData {

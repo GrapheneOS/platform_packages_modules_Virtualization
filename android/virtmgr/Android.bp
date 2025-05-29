@@ -123,6 +123,7 @@ cc_fuzz {
     srcs: ["fuzzer.cpp"],
     static_libs: [
         "android.system.virtualizationservice-ndk",
+        "android.system.virtualizationcommon-ndk",
         "libbase",
     ],
     shared_libs: [
