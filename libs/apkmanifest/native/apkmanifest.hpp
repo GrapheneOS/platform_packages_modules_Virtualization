@@ -50,4 +50,6 @@ const uint32_t* getRollbackIndex(const ApkManifestInfo* info);
 // Give a valid ApkManifestInfo pointer, return the value of the
 // has_relaxed_rollback_protection_permission.
 bool hasRelaxedRollbackProtectionPermission(const ApkManifestInfo* info);
+
+uint8_t getEncryptedStoreMode(const ApkManifestInfo* info);
 }

@@ -78,4 +78,9 @@ message PayloadConfig {
   // Optional.
   // The number of extra APKs that are present.
   uint32 extra_apk_count = 2;
+
+  // Optional.
+  // Whether microdroid_manager should delay setup the encrypted store until
+  // payload sends the signal to do it.
+  bool delay_encrypted_store_setup = 3;
 }

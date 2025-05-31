@@ -27,12 +27,13 @@ use log::info;
 use rpcbinder::RpcServer;
 use crate::vm_secret::VmSecret;
 use std::os::unix::io::OwnedFd;
+use std::sync::Arc;
 
 /// Implementation of `IVmPayloadService`.
 struct VmPayloadService {
     allow_restricted_apis: bool,
     virtual_machine_service: Strong<dyn IVirtualMachineService>,
-    secret: VmSecret,
+    secret: Arc<VmSecret>,
     is_new_instance: bool,
 }
 
@@ -130,7 +131,7 @@ impl VmPayloadService {
     fn new(
         allow_restricted_apis: bool,
         vm_service: Strong<dyn IVirtualMachineService>,
-        secret: VmSecret,
+        secret: Arc<VmSecret>,
         is_new_instance: bool,
     ) -> VmPayloadService {
         Self { allow_restricted_apis, virtual_machine_service: vm_service, secret, is_new_instance }
@@ -151,7 +152,7 @@ impl VmPayloadService {
 pub(crate) fn register_vm_payload_service(
     allow_restricted_apis: bool,
     vm_service: Strong<dyn IVirtualMachineService>,
-    secret: VmSecret,
+    secret: Arc<VmSecret>,
     vm_payload_service_fd: OwnedFd,
     is_new_instance: bool,
 ) -> Result<()> {

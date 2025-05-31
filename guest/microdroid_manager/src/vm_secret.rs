@@ -44,6 +44,7 @@ use std::sync::Arc;
 use crate::VmInstanceState;
 
 const ENCRYPTEDSTORE_KEY_IDENTIFIER: &str = "encryptedstore_key";
+const ENCRYPTEDSTORE_KEY_ENCRYPTION_KEY_IDENTIFIER: &str = "encryptedstore_key_encryption_key";
 const AUTHORITY_HASH: i64 = -4670549;
 const MODE: i64 = -4670551;
 const CONFIG_DESC: i64 = -4670548;
@@ -64,6 +65,11 @@ const SALT_ENCRYPTED_STORE: &[u8] = &[
 const SALT_PAYLOAD_SERVICE: &[u8] = &[
     0x8B, 0x0F, 0xF0, 0xD3, 0xB1, 0x69, 0x2B, 0x95, 0x84, 0x2C, 0x9E, 0x3C, 0x99, 0x56, 0x7A, 0x22,
     0x55, 0xF8, 0x08, 0x23, 0x81, 0x5F, 0xF5, 0x16, 0x20, 0x3E, 0xBE, 0xBA, 0xB7, 0xA8, 0x43, 0x92,
+];
+const SALT_ENCRYPTED_STORE_ENCRYPTION_KEY: &[u8] = &[
+    0x5F, 0x5F, 0x25, 0x34, 0x60, 0x4B, 0x17, 0x5D, 0xCD, 0x6A, 0x59, 0x01, 0x77, 0x3C, 0x93, 0x91,
+    0xEB, 0xD9, 0x6C, 0x67, 0xEC, 0x43, 0xA5, 0x3B, 0x57, 0xB6, 0x85, 0x77, 0x4F, 0xFA, 0xA9, 0x23,
+    0xB3, 0xF9, 0x40, 0xCE, 0xDD, 0x99, 0x40, 0xAA, 0xA7, 0x0E, 0x92, 0x73, 0x90, 0x86, 0x4A, 0x75,
 ];
 
 const BACKOFF_SK_ACCESS_MS: u64 = 100;
@@ -175,6 +181,22 @@ impl VmSecret {
     /// Derive encryptedstore key. This uses hardcoded random salt & fixed identifier.
     pub fn derive_encryptedstore_key(&self, key: &mut [u8]) -> Result<()> {
         self.get_vm_secret(SALT_ENCRYPTED_STORE, ENCRYPTEDSTORE_KEY_IDENTIFIER.as_bytes(), key)
+    }
+
+    /// Derive key to encrypt encryptedstore key.
+    pub fn derive_encryptedstore_key_encryption_key(&self, key: &mut [u8]) -> Result<()> {
+        self.get_vm_secret(
+            SALT_ENCRYPTED_STORE_ENCRYPTION_KEY,
+            ENCRYPTEDSTORE_KEY_ENCRYPTION_KEY_IDENTIFIER.as_bytes(),
+            key,
+        )
+    }
+
+    /// Derives a key with random salt.
+    pub fn derive_random_key(&self, key: &mut [u8]) -> Result<()> {
+        let salt = rand::random::<[u8; 32]>();
+        let id = rand::random::<[u8; 16]>();
+        self.get_vm_secret(&salt, &id, key)
     }
 
     pub fn read_payload_data_rp(&self) -> Result<Option<[u8; SECRET_SIZE]>> {

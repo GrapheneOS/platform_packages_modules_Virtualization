@@ -149,9 +149,10 @@ impl VirtualizationService {
             let group_id = process.id().try_into().unwrap();
             process.wait().unwrap();
             info!("virtmgr kill detected. killing entire process group {}", process.id());
-            killpg(Pid::from_raw(group_id), SIGKILL)
-                .map_err(|e| warn!("failed to kill process group {}: {:?}", group_id, e))
-                .unwrap();
+            // Note: this can fail when virtmgr is the only process in the process group, which
+            // can happen when virtmgr fails even before it forks crosvm.
+            let _ = killpg(Pid::from_raw(group_id), SIGKILL)
+                .inspect_err(|e| warn!("failed to kill process group {}: {:?}", group_id, e));
         });
 
         // Wait for the child to signal that the RpcBinder server is read by closing its end of the

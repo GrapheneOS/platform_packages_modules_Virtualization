@@ -58,7 +58,7 @@ rust_defaults {
         "libthiserror",
         "libuuid",
         "libvsock",
-        "librand",
+        "librand-0.8",
         "libzeroize",
         "libselinux_bindgen",
     ],

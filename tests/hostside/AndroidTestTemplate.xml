@@ -19,6 +19,16 @@
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
     <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
 
+    <!-- Skip tests if DUT does not have the AVF feature -->
+    <object type="module_controller"
+            class="com.android.tradefed.testtype.suite.module.DeviceFeatureModuleController">
+        <option name="required-feature" value="android.software.virtualization_framework" />
+    </object>
+
+    <!-- Controller that will skip the module if a native bridge situation is detected -->
+    <!-- For example: module wants to run arm and device is x86 -->
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
+
     <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer">
         <!-- Permission checks are bypassed if shell is root -->
         <option name="force-root" value="false"/>
@@ -32,10 +42,6 @@
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
         <option name="jar" value="{MODULE}.jar" />
     </test>
-
-    <!-- Controller that will skip the module if a native bridge situation is detected -->
-    <!-- For example: module wants to run arm and device is x86 -->
-    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
 
     {EXTRA_CONFIGS}
 </configuration>

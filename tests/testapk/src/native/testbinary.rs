@@ -142,6 +142,9 @@ impl ITestService for TestService {
     fn checkLibIcuIsAccessible(&self) -> BinderResult<()> {
         unimplemented()
     }
+    fn requestEncryptedStoreSetup(&self) -> BinderResult<()> {
+        unimplemented()
+    }
 }
 
 fn unimplemented<T>() -> BinderResult<T> {

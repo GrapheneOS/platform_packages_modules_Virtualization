@@ -71,6 +71,7 @@ DATA = [
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index",
+    ":MicrodroidTestHelperEncStoreKEKOnCE_V6",
     ":MicrodroidVmShareApp",
     ":test_microdroid_vendor_image",
     ":test_microdroid_vendor_image_unsigned",
@@ -127,6 +128,16 @@ android_test_helper_app {
     jni_libs: [
         "MicrodroidTestNativeLib",
         "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperEncStoreKEKOnCE_V6",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifestV6_enc_store_kek_on_ce.xml",
+    jni_libs: [
+        "MicrodroidTestNativeLib",
     ],
     min_sdk_version: "33",
 }

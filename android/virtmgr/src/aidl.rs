@@ -28,6 +28,8 @@ use android_system_virtualizationcommon::aidl::android::system::virtualizationco
     Certificate::Certificate,
     DeathReason::DeathReason,
     ErrorCode::ErrorCode,
+    IEncryptedStoreKEK::BnEncryptedStoreKEK,
+    IEncryptedStoreKEK::IEncryptedStoreKEK,
 };
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     AssignedDevices::AssignedDevices,
@@ -52,6 +54,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
         BnVirtualMachineService, IVirtualMachineService
 };
+use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
     BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo,
     Vsock::Vsock,
@@ -650,6 +653,9 @@ impl VirtualizationService {
         let calling_partition = find_partition(CALLING_EXE_PATH.as_deref())?;
 
         let instance_id = extract_instance_id(config);
+
+        let encrypted_store_kek = extract_encrypted_store_kek(config);
+
         // Require vendor instance IDs to start with a specific prefix so that they don't conflict
         // with system instance IDs.
         //
@@ -1055,6 +1061,7 @@ impl VirtualizationService {
                 idle_compactor_balloon,
                 vendor_tee_services,
                 config.hostServices.clone(),
+                encrypted_store_kek,
             )
             .with_context(|| format!("Failed to create VM with config {:?}", config))
             .with_log()
@@ -2050,6 +2057,7 @@ fn get_state(instance: &VmInstance) -> VirtualMachineState {
             PayloadState::Finished => VirtualMachineState::FINISHED,
             PayloadState::Hangup => VirtualMachineState::DEAD,
         },
+        VmState::ShuttingDown => VirtualMachineState::FINISHED,
         VmState::Dead => VirtualMachineState::DEAD,
         VmState::Failed => VirtualMachineState::DEAD,
     }
@@ -2153,6 +2161,15 @@ fn extract_gdb_port(config: &VirtualMachineConfig) -> Option<NonZeroU16> {
     }
 }
 
+fn extract_encrypted_store_kek(
+    config: &VirtualMachineConfig,
+) -> Option<Strong<dyn IEncryptedStoreKEK>> {
+    match config {
+        VirtualMachineConfig::RawConfig(_) => None,
+        VirtualMachineConfig::AppConfig(config) => config.encryptedStoreKEK.clone(),
+    }
+}
+
 fn check_no_vendor_modules(config: &VirtualMachineConfig) -> binder::Result<()> {
     let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if let Some(custom_config) = &config.customConfig {
@@ -2216,6 +2233,15 @@ fn check_no_tee_services(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
+fn check_no_delay_enc_store(config: &VirtualMachineConfig) -> binder::Result<()> {
+    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if config.shouldDelayEncryptedStoreSetup {
+        return Err(anyhow!("long_running_vms feature is disabled"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+    }
+    Ok(())
+}
+
 fn check_protected_vm_is_supported() -> binder::Result<()> {
     let is_pvm_supported =
         hypervisor_props::is_protected_vm_supported().or_service_specific_exception(-1)?;
@@ -2242,6 +2268,9 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     }
     if !cfg!(tee_services_allowlist) {
         check_no_tee_services(config)?;
+    }
+    if !cfg!(long_running_vms) {
+        check_no_delay_enc_store(config)?;
     }
     Ok(())
 }
@@ -2418,13 +2447,19 @@ impl IVirtualMachineService for VirtualMachineService {
     fn notifyError(&self, error_code: ErrorCode, message: &str) -> binder::Result<()> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            info!("VM with CID {} encountered an error", cid);
+            info!(
+                "VM with CID {} encountered an error: {:?} message: {}",
+                cid, error_code, message
+            );
             vm.update_payload_state(PayloadState::Finished)
                 .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
             vm.callbacks.notify_error(cid, error_code, message);
             Ok(())
         } else {
-            error!("notifyError is called from an unknown CID {}", cid);
+            error!(
+                "notifyError is called from an unknown CID {}. error: {:?} message: {}",
+                cid, error_code, message
+            );
             Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
         }
     }
@@ -2454,6 +2489,62 @@ impl IVirtualMachineService for VirtualMachineService {
             },
             BinderFeatures::default(),
         ))
+    }
+
+    fn registerGuestAgent(&self, guest_agent: &Strong<dyn IGuestAgent>) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
+            info!("VM with CID {} has registered a guest agent", cid);
+            Ok(())
+        } else {
+            error!("registerGuestAgent is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn getEncryptedStoreKEK(&self) -> binder::Result<Option<Strong<dyn IEncryptedStoreKEK>>> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            if let Some(encrypted_store_kek) = &vm.encrypted_store_kek {
+                let kek_wrapper = BnEncryptedStoreKEK::new_binder(
+                    EncryptedStoreKEKWrapper::new(encrypted_store_kek),
+                    BinderFeatures::default(),
+                );
+                Ok(Some(kek_wrapper))
+            } else {
+                Ok(None)
+            }
+        } else {
+            error!("getEncryptedStoreKek is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+}
+
+// Unfortunately it looks like we can't pass the IEncryptedStoreKEK object we got from the app all
+// the way to microdroid_manager, as calling functions on it fails with the "Cannot send binder
+// from unrelated binder RPC session" error. Hence we create another IEncryptedStoreKEK that wraps
+// the original one, and pass the wrapper to the microdroid_manager.
+struct EncryptedStoreKEKWrapper {
+    wrapped_kek: Strong<dyn IEncryptedStoreKEK>,
+}
+
+impl EncryptedStoreKEKWrapper {
+    fn new(kek: &Strong<dyn IEncryptedStoreKEK>) -> Self {
+        Self { wrapped_kek: kek.clone() }
+    }
+}
+
+impl Interface for EncryptedStoreKEKWrapper {}
+
+impl IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
+    fn getKEK(&self) -> binder::Result<Option<Vec<u8>>> {
+        self.wrapped_kek.getKEK()
+    }
+
+    fn onKEKCreated(&self, kek: &[u8]) -> binder::Result<()> {
+        self.wrapped_kek.onKEKCreated(kek)
     }
 }
 
