@@ -116,8 +116,8 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     }
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
-    if cfg!(multi_tenant) && needs_formatting {
-        set_root_dir_permissions(mountpoint)?;
+    if cfg!(multi_tenant) {
+        ensure_root_dir_permissions(mountpoint)?;
     }
     if cfg!(long_running_vms) {
         system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
@@ -126,13 +126,19 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     Ok(())
 }
 
-fn set_root_dir_permissions(mountpoint: &Path) -> Result<()> {
+fn ensure_root_dir_permissions(mountpoint: &Path) -> Result<()> {
     // mke2fs hardwires the root dir permissions as 0o755 which doesn't match what we want.
     // We want to allow full access by both root and the payload group, and no access by anything
     // else. And we want the sticky bit set, so different payload UIDs can create sub-directories
     // that other payloads can't delete.
-    let permissions = PermissionsExt::from_mode(0o770 | libc::S_ISVTX);
-    std::fs::set_permissions(mountpoint, permissions).context("Failed to chmod root directory")
+    let want = 0o770 | libc::S_ISVTX;
+    let cur = std::fs::metadata(mountpoint)?.permissions().mode() & 0o7777;
+    if cur == want {
+        return Ok(());
+    }
+    warn!("Mode at {mountpoint:?}({cur:o}) is not {want:o}). Adjusting");
+    std::fs::set_permissions(mountpoint, PermissionsExt::from_mode(want))
+        .context("Failed to chmod root directory")
 }
 
 fn enable_crypt(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
