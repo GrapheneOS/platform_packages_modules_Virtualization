@@ -486,9 +486,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
 
     fn allocateInstanceId(&self) -> binder::Result<[u8; 64]> {
         let mut id = [0u8; 64];
-        id.try_fill(&mut rand::thread_rng())
-            .context("Failed to allocate instance_id")
-            .or_service_specific_exception(-1)?;
+        id.fill(&mut rand::thread_rng());
         // Randomly allocated IDs always start with all 7s to avoid colliding with statically
         // assigned IDs.
         id[..4].fill(0x77);

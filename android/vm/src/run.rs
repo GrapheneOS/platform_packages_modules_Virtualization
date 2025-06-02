@@ -32,7 +32,7 @@ use anyhow::{anyhow, bail, Context, Error};
 use binder::ParcelFileDescriptor;
 use glob::glob;
 use microdroid_payload_config::VmPayloadConfig;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
