@@ -26,6 +26,7 @@ use rustutils::system_properties;
 use std::ffi::CString;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{Error, Read, Write};
+use std::os::android::fs::MetadataExt;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -117,7 +118,7 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
     if cfg!(multi_tenant) {
-        ensure_root_dir_permissions(mountpoint)?;
+        ensure_root_dir_status(mountpoint)?;
     }
     if cfg!(long_running_vms) {
         system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
@@ -126,18 +127,28 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     Ok(())
 }
 
-fn ensure_root_dir_permissions(mountpoint: &Path) -> Result<()> {
+fn ensure_root_dir_status(mountpoint: &Path) -> Result<()> {
+    let metadata = std::fs::metadata(mountpoint)?;
+    let cur_owner = (metadata.st_uid(), metadata.st_gid());
+    let want_owner = (microdroid_uids::ROOT_UID, microdroid_uids::MICRODROID_PAYLOAD_GID);
+    if cur_owner != want_owner {
+        warn!(
+            "{mountpoint:?} owner ({cur_owner:?}) doesn't match with ({want_owner:?}). Adjusting"
+        );
+        nix::unistd::chown(mountpoint, Some(want_owner.0.into()), Some(want_owner.1.into()))?;
+    }
+
     // mke2fs hardwires the root dir permissions as 0o755 which doesn't match what we want.
     // We want to allow full access by both root and the payload group, and no access by anything
     // else. And we want the sticky bit set, so different payload UIDs can create sub-directories
     // that other payloads can't delete.
-    let want = 0o770 | libc::S_ISVTX;
-    let cur = std::fs::metadata(mountpoint)?.permissions().mode() & 0o7777;
-    if cur == want {
+    let want_mode = 0o770 | libc::S_ISVTX;
+    let cur_mode = metadata.permissions().mode() & 0o7777;
+    if cur_mode == want_mode {
         return Ok(());
     }
-    warn!("Mode at {mountpoint:?}({cur:o}) is not {want:o}). Adjusting");
-    std::fs::set_permissions(mountpoint, PermissionsExt::from_mode(want))
+    warn!("Mode at {mountpoint:?}({cur_mode:o}) is not {want_mode:o}. Adjusting");
+    std::fs::set_permissions(mountpoint, PermissionsExt::from_mode(want_mode))
         .context("Failed to chmod root directory")
 }
 
