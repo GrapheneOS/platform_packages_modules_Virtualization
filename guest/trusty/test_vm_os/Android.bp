@@ -51,6 +51,7 @@ sh_test {
         ":trusty_test_vm_os_elf",
         ":test_vm_os.trusty_test_vm_config",
         "trusty-vm-launcher.sh",
+        "trusty-vm-kill.sh",
         "trusty-wait-ready.sh",
         ":trusty-ut-ctrl.system",
     ],

@@ -27,6 +27,7 @@
         <option name="push-file" key="trusty-ut-ctrl.system" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl" />
         <option name="push-file" key="trusty-ut-ctrl.sh" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh" />
         <option name="push-file" key="trusty-vm-launcher.sh" value="/data/local/tmp/trusty_test_vm/trusty-vm-launcher.sh" />
+        <option name="push-file" key="trusty-vm-kill.sh" value="/data/local/tmp/trusty_test_vm/trusty-vm-kill.sh" />
         <option name="push-file" key="trusty-wait-ready.sh" value="/data/local/tmp/trusty_test_vm/trusty-wait-ready.sh" />
         <option name="push-file" key="trusty-test_vm-config.json" value="/data/local/tmp/trusty_test_vm/trusty-test_vm-config.json" />
         <option name="push-file" key="trusty_test_vm.elf" value="/data/local/tmp/trusty_test_vm/trusty_test_vm.elf" />
@@ -40,6 +41,7 @@
         <option name="run-command" value="start storageproxyd_test_vm" />
         <option name="teardown-command" value="stop storageproxyd_test_vm" />
         <option name="teardown-command" value="killall storageproxyd_test_vm || true" />
+        <option name="teardown-command" value="sh /data/local/tmp/trusty_test_vm/trusty-vm-kill.sh" />
         <!--option name="teardown-command" value="rm -rf /data/local/trusty_test_vm"/-->
     </target_preparer>
     <test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >

@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /data/local/tmp/trusty_test_vm/logs || true
-nohup sh -c 'exec -a "trusty_test_vm_run" /apex/com.android.virt/bin/vm run \
-   --console /data/local/tmp/trusty_test_vm/logs/test_vm_console.log \
-   /data/local/tmp/trusty_test_vm/trusty-test_vm-config.json' > /data/local/tmp/trusty_test_vm/nohup.out &
-sh /data/local/tmp/trusty_test_vm/trusty-wait-ready.sh
+test_vm_pid=$(ps | grep trusty_test_vm_run | grep -v grep | awk '{print $2}')
+echo killing process trusty_test_vm_run = $(test_vm_pid)
+kill $test_vm_pid
