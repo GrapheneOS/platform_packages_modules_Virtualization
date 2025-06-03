@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2024 The Android Open Source Project
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+    <configuration description="Runs {MODULE}">
+    <option name="test-suite-tag" value="vts" />
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.CommandSuccessModuleController">
+        <!--Skip the test when trusty VM is not enabled. -->
+        <option name="run-command" value="getprop trusty.security_vm.enabled | grep 1" />
+    </object>
+    <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer" />
+    <!-- Target Preparers - Run Shell Commands -->
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="cleanup" value="true" />
+        <option name="push-file" key="trusty-ut-ctrl.system" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl" />
+        <option name="push-file" key="trusty-ut-ctrl.sh" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh" />
+        <option name="push-file" key="trusty-vm-launcher.sh" value="/data/local/tmp/trusty_test_vm/trusty-vm-launcher.sh" />
+        <option name="push-file" key="trusty-vm-kill.sh" value="/data/local/tmp/trusty_test_vm/trusty-vm-kill.sh" />
+        <option name="push-file" key="trusty-wait-ready.sh" value="/data/local/tmp/trusty_test_vm/trusty-wait-ready.sh" />
+        <option name="push-file" key="trusty-test_vm-config.json" value="/data/local/tmp/trusty_test_vm/trusty-test_vm-config.json" />
+        <option name="push-file" key="trusty_test_vm_instance_id" value="/data/local/tmp/trusty_test_vm/trusty_test_vm_instance_id" />
+        <option name="push-file" key="trusty_test_vm.elf" value="/data/local/tmp/trusty_test_vm/trusty_test_vm.elf" />
+    </target_preparer>
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="throw-if-cmd-fail" value="true" />
+        <option name="log-command-output" value="true" />
+        <!--Note: the first run-command shall not expect the background command to have started -->
+        <option name="run-bg-command" value="sh /data/local/tmp/trusty_test_vm/trusty-vm-launcher.sh" />
+        <option name="run-command" value="sh /data/local/tmp/trusty_test_vm/trusty-wait-ready.sh" />
+        <option name="teardown-command" value="sh /data/local/tmp/trusty_test_vm/trusty-vm-kill.sh" />
+        <!--option name="teardown-command" value="rm -rf /data/local/trusty_test_vm"/-->
+    </target_preparer>
+    <test class="com.android.tradefed.testtype.binary.ExecutableTargetTest" >
+        <option name="parse-gtest" value="true" />
+        <option name="abort-if-device-lost" value="true"/>
+        <option name="abort-if-root-lost" value="true" />
+        <option name="per-binary-timeout" value="10m" />
+        <option name="test-command-line" key="com.android.ipc-unittest.ctrl" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.ipc-unittest.ctrl"/>
+    </test>
+    <metrics_collector class="com.android.tradefed.device.metric.FilePullerLogCollector">
+        <option name="directory-keys" value="/data/local/tmp/trusty_test_vm/logs" />
+        <option name="clean-up" value="false"/>
+    </metrics_collector>
+    </configuration>

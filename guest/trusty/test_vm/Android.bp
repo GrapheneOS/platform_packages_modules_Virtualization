@@ -71,8 +71,10 @@ prebuilt_etc {
 }
 
 sh_test {
-    // VTS tests for all Trusted HALs defined
-    // under hardware/interfaces/security/see
+    // SEE HAL VTS test
+    // (SEE HAL are defined under hardware/interfaces/security/see)
+    // the VM payload enables the remote Trusted HAL services
+    // accessed via AuthMgrFE over virtio-vsock over virtio-msg-ffa
     name: "VtsSeeHalTargetTest",
     src: "trusty-ut-ctrl.sh",
     enabled: false,
@@ -94,10 +96,45 @@ sh_test {
         ":trusty-ut-ctrl.system",
         ":trusty_test_vm_instance_id",
     ],
-    test_config_template: "AndroidTest.xml",
+    test_config_template: "AndroidTest.vts.xml",
     test_suites: [
         "general-tests",
         "vts",
+    ],
+}
+
+sh_test {
+    // raw vsock tests running over virtio-msg-ffa
+    // This test is meant for be used as an early integration test,
+    // before full bring-up of the remote SEE HALs.
+    // - the unit test is configured to connect to a
+    //   remote vsock device on CID=0x8001, port 0.
+    // - the VM payload is configured to enable device discovery
+    //   on virtio-msg-ffa transport
+    name: "VirtioVsockOverVirtioMsgFFATargetTest",
+    src: "trusty-ut-ctrl.sh",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+        x86_64: {
+            enabled: true,
+        },
+    },
+    filename_from_src: true,
+    data: [
+        ":trusty_test_vm_elf",
+        ":trusty_test_vm_config",
+        "trusty-vm-launcher.sh",
+        "trusty-vm-kill.sh",
+        "trusty-wait-ready.sh",
+        ":trusty-ut-ctrl.system",
+        ":trusty_test_vm_instance_id",
+    ],
+    test_config_template: "AndroidTest.vsock.xml",
+    test_suites: [
+        "general-tests",
     ],
 }
 
