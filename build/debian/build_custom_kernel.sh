@@ -106,8 +106,8 @@ build_custom_kernel() {
 	local debarch_flavour="${custom_flavour}-${debian_arch}"
 
 	local abi_kver="$(sed -nE 's;Package: linux-support-(.*);\1;p' debian/control)"
-	local abi_flavour="${abi_kver}-${debarch_flavour}"
 	local abi_common="${abi_kver}-common"
+	abi_flavour="${abi_kver}-${debarch_flavour}"
 
 	# 2. Define our custom flavour and regenerate control file
 	# NOTE: Our flavour extends Debian's `cloud` config on the `none` featureset.
@@ -139,14 +139,105 @@ EOF
 
 	popd > /dev/null
 
+	# 4. Create the kernel_extras disk image.
+	mkdir kernel_extras
+	dpkg-deb --extract "linux-image-${abi_flavour}-unsigned_${debian_kver}_${debian_arch}.deb" \
+	                   kernel_extras
+	dpkg-deb --extract "linux-headers-${abi_flavour}_${debian_kver}_${debian_arch}.deb" \
+	                   kernel_extras
+	dpkg-deb --extract "linux-headers-${abi_common}_${debian_kver}_all.deb" \
+	                   kernel_extras
+	depmod -b kernel_extras $abi_flavour
 
-	# 4. Copy the packages to the destination dir
-	cp "linux-headers-${abi_common}_${debian_kver}_all.deb" \
-	   "linux-headers-${abi_flavour}_${debian_kver}_${debian_arch}.deb" \
-	   "linux-image-${abi_flavour}-unsigned_${debian_kver}_${debian_arch}.deb" \
-	   "$dest_dir"
-	echo "${abi_common}" > "$dest_dir/abi_common"
-	echo "${abi_flavour}" > "$dest_dir/abi_flavour"
+	mv kernel_extras/boot/vmlinuz* vmlinuz
+	if [[ "$arch" == "aarch64" ]]; then
+		lz4 -BD -12 -q vmlinuz vmlinuz.lz4
+		mv vmlinuz.lz4 vmlinuz
+	fi
+	mv vmlinuz "${dest_dir}/vmlinuz"
+
+	rm -rf kernel_extras/{boot,usr/share}
+
+	mkfs.erofs kernel_extras_part kernel_extras
+	kernel_extras_loopdev="$(losetup -f --show kernel_extras_part)"
+	kernel_extras_guid="$(blkid -s UUID -o value "${kernel_extras_loopdev}")"
+	losetup -d "${kernel_extras_loopdev}"
+	mv kernel_extras_part "${dest_dir}/kernel_extras_part"
+	mv kernel_extras "${dest_dir}/kernel_extras"
+}
+
+build_initrd() {
+	mkdir -p "${workdir}/initrd"
+	pushd "${workdir}/initrd" > /dev/null
+
+	local initrd_modules
+	mapfile -t initrd_modules < <(grep -vE '^\s*#|^\s*$' "${SCRIPT_DIR}/initrd/modules")
+
+	local modules_src="$(realpath "${dest_dir}/kernel_extras/lib/modules/${abi_flavour}")"
+	for modname in "${initrd_modules[@]}" ; do
+		modprobe --dirname "${dest_dir}/kernel_extras" \
+		         --set-version "$abi_flavour" \
+		         --show-depends \
+		         "$modname" | awk '/insmod/ {print $2}'
+	done | sort -u | sed "s;^${modules_src}\/;;" > modules.list
+
+	mkdir -p archive/{bin,lib,sbin}
+	cp -arv "${SCRIPT_DIR}/initrd/scripts" archive/
+
+	local busybox_base_url="https://busybox.net/downloads/"
+	local busybox_version="1.37.0"
+
+	wget "${busybox_base_url}/busybox-${busybox_version}.tar.bz2"
+	wget "${busybox_base_url}/busybox-${busybox_version}.tar.bz2.sha256"
+	sha256sum --check busybox-${busybox_version}.tar.bz2.sha256
+	tar -xf busybox-${busybox_version}.tar.bz2
+
+	pushd "busybox-${busybox_version}" > /dev/null
+	if [[ "$arch" != "$(uname -m)" ]]; then
+		export ARCH="${arch}"
+		export CROSS_COMPILE="${arch}-linux-gnu-"
+	fi
+	make distclean
+	make defconfig
+	# NOTE: Overrides for busybox default configs must be PREPENDED.
+	mv .config .config.orig
+	cat "${SCRIPT_DIR}/initrd/busybox/config" > .config
+	cat .config.orig >> .config
+	make oldconfig
+	make -j$(nproc)
+	make install CONFIG_PREFIX="${workdir}/initrd/archive"
+	popd > /dev/null
+
+	pushd "${workdir}/initrd/archive" > /dev/null
+	local modules_dest="lib/modules/${abi_flavour}"
+	mkdir -p "${modules_dest}"
+	pushd "${modules_dest}" > /dev/null
+	while read -r modpath ; do
+		mkdir -p "$(dirname "$modpath")"
+		cp -av "${modules_src}/${modpath}" "$modpath"
+	done < "${workdir}/initrd/modules.list"
+	popd > /dev/null
+	depmod -b . $abi_flavour
+
+	echo "KERNEL_EXTRAS_UUID=${kernel_extras_guid}" >> scripts/env-setup
+	cat > sbin/early_load_modules <<EOF
+#!/bin/sh
+set -e
+
+. /scripts/env-setup
+. /scripts/helper-utils
+
+EOF
+	for mod in "${initrd_modules[@]}" ; do
+		echo "modprobe $mod || __error 'Failed to load $mod'" >> sbin/early_load_modules
+	done
+	cp "${SCRIPT_DIR}/initrd/init" init
+	chmod +x init sbin/early_load_modules
+
+	find . | cpio --create --format=newc | zstd -19 -f -o "${dest_dir}/initrd.img"
+
+	popd > /dev/null
+	popd > /dev/null
 }
 
 install_prerequisites() {
@@ -160,8 +251,10 @@ install_prerequisites() {
 		debhelper
 		dh-exec
 		dh-python
+		erofs-utils
 		flex
 		gcc-12
+		initramfs-tools
 		kernel-wedge
 		libelf-dev
 		libpci-dev
@@ -173,9 +266,11 @@ install_prerequisites() {
 		quilt
 		rsync
 		wget
+		zstd
 	)
 	if [[ "$arch" == "aarch64" ]]; then
 		packages+=(
+			gcc-aarch64-linux-gnu
 			gcc-12-aarch64-linux-gnu
 			gcc-arm-linux-gnueabihf
 			libc6-dev-arm64-cross
@@ -192,6 +287,8 @@ clean_up() {
 set -e
 trap clean_up EXIT
 
+abi_flavour=
+kernel_extras_guid=
 save_workdir=0
 dest_dir=$SCRIPT_DIR
 workdir=$(mktemp -d)
@@ -201,3 +298,4 @@ parse_options "$@"
 check_sudo
 install_prerequisites
 build_custom_kernel
+build_initrd
