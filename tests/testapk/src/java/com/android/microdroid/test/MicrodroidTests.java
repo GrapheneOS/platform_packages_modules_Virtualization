@@ -3128,9 +3128,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // Now pVM shouldn't boot.
         BootResult bootResult = tryBootVm(TAG, vm);
         assertThat(bootResult.deathReason)
-                .isEqualTo(
-                        // TODO(ioffe): this should probably be payload verification error?
-                        VirtualMachineCallback.STOP_REASON_MICRODROID_UNKNOWN_RUNTIME_ERROR);
+                .isEqualTo(VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_HAS_CHANGED);
     }
 
     @Test
