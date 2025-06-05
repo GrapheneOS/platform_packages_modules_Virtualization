@@ -506,11 +506,12 @@ fn find_partition(path: Option<&Path>) -> binder::Result<CallingPartition> {
     if path.starts_with("/system/system_ext/") {
         return Ok(CallingPartition::SystemExt);
     }
-    if path.starts_with("/system/product/") {
+    if path.starts_with("/system/product/") || path.starts_with("/mnt/product/") {
         return Ok(CallingPartition::Product);
     }
     if path.starts_with("/data/nativetest/vendor/")
         || path.starts_with("/data/nativetest64/vendor/")
+        || path.starts_with("/mnt/vendor/")
     {
         return Ok(CallingPartition::Vendor);
     }
