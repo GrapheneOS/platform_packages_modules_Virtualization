@@ -442,8 +442,8 @@ Result<void> start_test_service() {
             if (__system_property_set("microdroid_manager.encrypted_store.setup", "true") != 0) {
                 return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
                                                                    "Failed to set "
-                                                                   "microdroid_manager.setup_"
-                                                                   "encrypted_store sysprop");
+                                                                   "microdroid_manager.encrypted_"
+                                                                   "store.setup sysprop");
             }
 
             if (!WaitForProperty("microdroid_manager.encrypted_store.status", "ready", 5s)) {
