@@ -1,2 +1,6 @@
 androidboot.hardware = microdroid
 kernel.8250.nr_uarts = 4
+# Allow VIRTIO_BALLOON_F_PAGE_REPORTING to reclaim individual hugepages (2MB).
+# Default is 10 (4MB).
+# TODO: Choose a different value for 16k page size.
+kernel.page_reporting.page_reporting_order = 9
