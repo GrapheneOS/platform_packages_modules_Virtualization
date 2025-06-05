@@ -111,11 +111,18 @@ impl Subcomponent {
 
     fn for_apex(apex: &ApexData, instance_data: &MicrodroidData) -> Self {
         // TODO(b/414602022): rollback index only allowed for relaxed rollback APEX
-        let dice_version = if instance_data.apk_data.rollback_index.is_some()
-            && apex.manifest_name.as_ref().unwrap().contains("appsearch")
-        {
-            // b/414312074 - allow appsearch to be flashed between branches.
-            1_u64
+        let dice_version = if instance_data.apk_data.rollback_index.is_some() {
+            if apex.manifest_name.as_ref().unwrap().contains("appsearch") {
+                // b/414312074 - allow appsearch to be flashed between branches.
+                1_u64
+            } else if is_debuggable().unwrap_or(false)
+                && apex.manifest_name.as_ref().unwrap().contains("adbd")
+            {
+                // b/414312074 - allow adb, used by appsearch, to be flashed between branches.
+                400000004_u64
+            } else {
+                apex.manifest_version.unwrap() as u64
+            }
         } else {
             apex.manifest_version.unwrap() as u64
         };
