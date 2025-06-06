@@ -110,11 +110,20 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
         info!("Freshly formatting the crypt device");
         format_ext4(&crypt_device)?;
     } else {
+        info!("Running e2fsck before potential resize");
         e2fsck(&crypt_device).context("e2fsck failed before potential resize")?;
-        resize_fs(&crypt_device)?;
-        // Finally check again if we were successful.
-        e2fsck(&crypt_device).context("e2fsck failed after potential resize")?;
+        info!("Completed e2fsck before potential resize");
+        info!("Running resize2fs");
+        if resize_fs(&crypt_device)? {
+            info!("Resized the device");
+            info!("Running e2fsck after resize");
+            e2fsck(&crypt_device).context("e2fsck failed after resize")?;
+            info!("Completed e2fsck after resize");
+        } else {
+            info!("Skipped e2fsck since no resize was needed");
+        }
     }
+
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
     if cfg!(multi_tenant) {
@@ -218,12 +227,14 @@ fn format_ext4(device: &Path) -> Result<()> {
 }
 
 fn e2fsck(device: &Path) -> Result<()> {
+    info!("Running e2fsck");
     let status = Command::new(E2FSCK_BIN)
         .arg("-fvy")
         .arg(device)
         .status()
         .context("failed to execute e2fsck")?;
     if !status.success() {
+        info!("e2fsck wasn't successful");
         match status.code() {
             Some(code) => {
                 if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
@@ -236,14 +247,34 @@ fn e2fsck(device: &Path) -> Result<()> {
             None => Err(anyhow!("Process terminated by signal")),
         }
     } else {
+        info!("e2fsck was successful");
         Ok(())
     }
 }
 
-fn resize_fs(device: &Path) -> Result<()> {
+/// Resizes the filesystem to the size of the device.
+///
+/// Returns `true` if the filesystem was resized, `false` if no resize was needed.
+fn resize_fs(device: &Path) -> Result<bool> {
+    info!("Running resize2fs");
     // Resize the filesystem to the size of the device.
-    Command::new(RESIZE2FS_BIN).arg(device).status().context("failed to execute resize2fs")?;
-    Ok(())
+    let output = Command::new(RESIZE2FS_BIN)
+        .arg(device)
+        .output()
+        .context("failed to execute resize2fs")
+        .unwrap();
+
+    let stderr_str = String::from_utf8_lossy(&output.stderr);
+    info!("stderr_str: {}", stderr_str);
+    if output.status.success() {
+        info!("resize2fs command succeeded");
+        let resized = !stderr_str.contains("Nothing to do!");
+        info!("resized: {}", resized);
+        Ok(resized)
+    } else {
+        warn!("resize failed exited with exitCode: {}", stderr_str);
+        Ok(false)
+    }
 }
 
 fn mount(source: &Path, mountpoint: &Path) -> Result<()> {
