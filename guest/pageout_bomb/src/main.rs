@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! pageout_bomb. Attempts to MADV_PAGEOUT all mapped userspace memory.
+//! pageout_bomb. madvise's all mapped userspace memory.
 
 use anyhow::Context;
 use std::os::fd::AsFd;
@@ -20,6 +20,8 @@ use std::os::fd::AsRawFd;
 use std::os::fd::BorrowedFd;
 use std::os::fd::FromRawFd;
 use std::os::fd::OwnedFd;
+
+const ADVICE: libc::c_int = libc::MADV_COLD;
 
 fn main() {
     android_logger::init_once(
@@ -110,7 +112,7 @@ fn pageout_process(pid: u32) -> anyhow::Result<()> {
     // the `iovec`s and dropping ranges hit `EINVAL` as needed.
     let mut advised_bytes = 0;
     while !ranges.is_empty() {
-        let mut n = match process_madvise(pidfd.as_fd(), &ranges[..], libc::MADV_PAGEOUT) {
+        let mut n = match process_madvise(pidfd.as_fd(), &ranges[..], ADVICE) {
             Ok(n) => n,
             Err(e) => {
                 if e.raw_os_error() == Some(libc::EINVAL) {
