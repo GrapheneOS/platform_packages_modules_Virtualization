@@ -97,6 +97,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
@@ -1616,7 +1617,7 @@ public class VirtualMachine implements AutoCloseable {
                 mVirtualMachine =
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
-                mVirtualMachine.registerCallback(new CallbackTranslator(service));
+                mVirtualMachine.registerCallback(new CallbackTranslator(this, service));
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 }
@@ -2373,51 +2374,77 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    /** Map the raw AIDL (& binder) callbacks to what the client expects. */
-    private class CallbackTranslator extends IVirtualMachineCallback.Stub {
-        private final IVirtualizationService mService;
+    /** Map the raw AIDL (& binder) callbacks to what the client expects.
+     *
+     * Must to be static to avoid keeping an implicit strong reference on the
+     * parent VirtualMachine object, otherwise, because IVirtualizationService
+     * will have a cross-process reference, we can end up with a cross-process
+     * circular ref count, resulting in a leak.
+     */
+    private static class CallbackTranslator extends IVirtualMachineCallback.Stub {
+        private final WeakReference<VirtualMachine> mVirtualMachine;
+        private final WeakReference<IVirtualizationService> mService;
         private final DeathRecipient mDeathRecipient;
 
         // The VM should only be observed to die once
         private final AtomicBoolean mOnDiedCalled = new AtomicBoolean(false);
 
-        public CallbackTranslator(IVirtualizationService service) throws RemoteException {
-            this.mService = service;
+        public CallbackTranslator(VirtualMachine virtualMachine, IVirtualizationService service) throws RemoteException {
+            this.mVirtualMachine = new WeakReference<>(virtualMachine);
+            this.mService = new WeakReference<>(service);
             this.mDeathRecipient = () -> reportStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
             service.asBinder().linkToDeath(mDeathRecipient, 0);
         }
 
         @Override
         public void onPayloadStarted(int cid) {
-            executeCallback((cb) -> cb.onPayloadStarted(VirtualMachine.this));
+            VirtualMachine vm = mVirtualMachine.get();
+            if (vm != null) {
+                vm.executeCallback((cb) -> cb.onPayloadStarted(vm));
+            }
         }
 
         @Override
         public void onPayloadReady(int cid) {
-            executeCallback((cb) -> cb.onPayloadReady(VirtualMachine.this));
+            VirtualMachine vm = mVirtualMachine.get();
+            if (vm != null) {
+                vm.executeCallback((cb) -> cb.onPayloadReady(vm));
+            }
         }
 
         @Override
         public void onPayloadFinished(int cid, int exitCode) {
-            executeCallback((cb) -> cb.onPayloadFinished(VirtualMachine.this, exitCode));
+            VirtualMachine vm = mVirtualMachine.get();
+            if (vm != null) {
+                vm.executeCallback((cb) -> cb.onPayloadFinished(vm, exitCode));
+            }
         }
 
         @Override
         public void onError(int cid, int errorCode, String message) {
             int translatedError = getTranslatedError(errorCode);
-            executeCallback((cb) -> cb.onError(VirtualMachine.this, translatedError, message));
+            VirtualMachine vm = mVirtualMachine.get();
+            if (vm != null) {
+                vm.executeCallback((cb) -> cb.onError(vm, translatedError, message));
+            }
         }
 
         @Override
         public void onDied(int cid, int reason) {
             int translatedReason = getTranslatedReason(reason);
             reportStopped(translatedReason);
-            mService.asBinder().unlinkToDeath(mDeathRecipient, 0);
+            var service = mService.get();
+            if (service != null) {
+                service.asBinder().unlinkToDeath(mDeathRecipient, 0);
+            }
         }
 
         private void reportStopped(@VirtualMachineCallback.StopReason int reason) {
             if (mOnDiedCalled.compareAndSet(false, true)) {
-                executeCallback((cb) -> cb.onStopped(VirtualMachine.this, reason));
+                VirtualMachine vm = mVirtualMachine.get();
+                if (vm != null) {
+                    vm.executeCallback((cb) -> cb.onStopped(vm, reason));
+                }
             }
         }
 

@@ -21,4 +21,7 @@ interface IGuestAgent {
      * Shuts the VM down gracefully.
      */
     oneway void shutdown();
+
+    /** Requests the VM to trim its memory usage. */
+    oneway void trim();
 }

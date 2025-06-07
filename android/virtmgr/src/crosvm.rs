@@ -352,11 +352,11 @@ impl VmState {
             thread::spawn(move || {
                 instance_monitor_status.clone().monitor_vm_status(child_monitor_status);
             });
-            if instance.idle_compactor_balloon {
+            if instance.trim_on_idle {
                 let instance = instance.clone();
                 thread::spawn(move || {
-                    if let Err(e) = instance.idle_compactor_balloon_loop() {
-                        warn!("idle_compactor_balloon_loop failed: {e:#}");
+                    if let Err(e) = instance.trim_on_idle_loop() {
+                        warn!("trim_on_idle_loop failed: {e:#}");
                     }
                 });
             }
@@ -472,8 +472,8 @@ pub struct VmInstance {
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
     pub balloon_enabled: bool,
-    // Whether to inflate the balloon on app idle.
-    idle_compactor_balloon: bool,
+    // Whether to send a trim request on app idle.
+    trim_on_idle: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
     /// List of host services this VM might access.
@@ -511,7 +511,7 @@ impl VmInstance {
         console_join_handle: Option<JoinHandle<()>>,
         log_join_handle: Option<JoinHandle<()>>,
         vm_context: VmContext,
-        idle_compactor_balloon: bool,
+        trim_on_idle: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
         encrypted_store_kek: Option<Strong<dyn IEncryptedStoreKEK>>,
@@ -545,7 +545,7 @@ impl VmInstance {
             payload_state_updated: Condvar::new(),
             requester_uid_name,
             balloon_enabled,
-            idle_compactor_balloon,
+            trim_on_idle,
             vendor_tee_services,
             host_services,
             encrypted_store_kek,
@@ -759,16 +759,8 @@ impl VmInstance {
         }
     }
 
-    /// When the app is idle, temporarily inflate the balloon almost as much as possible to force
-    /// the guest to contract its memory usage, and then deflate the balloon.
-    fn idle_compactor_balloon_loop(&self) -> Result<()> {
-        // We'll size the balloon so that the guest only ends up with this many bytes available.
-        const TARGET_AVAILABLE_BYTES: u64 = 10_000_000;
-        // We'll stop the inflate when available bytes goes this low.
-        const INFLATE_DONE_BYTES: i64 = 15_000_000;
-        // We'll stop the inflate if this much time passes.
-        const INFLATE_TIMEOUT: Duration = Duration::from_secs(15);
-
+    /// When the app is idle, send a trim request.
+    fn trim_on_idle_loop(&self) -> Result<()> {
         let mut vm_idle_prop_watcher = system_properties::PropertyWatcher::new("appsearch_vm.idle")
             .expect("failed to create PropertyWatcher");
         #[derive(PartialEq, Eq)]
@@ -804,39 +796,11 @@ impl VmInstance {
         loop {
             // Wait for idle.
             if wait_for_state_change(None)? == VmState::Idle {
-                info!("idle compactor balloon inflate starting");
-                // Read current balloon size and available memory in guest.
-                let (balloon_actual, stats) = self.get_balloon_stats()?;
-                // Make the balloon big enough to consume all available memory, minus a constant.
-                let balloon_target = balloon_actual
-                    .checked_add_signed(stats.available_memory)
-                    .context("balloon_actual + available_memory overflow")?
-                    .saturating_sub(TARGET_AVAILABLE_BYTES);
-                self.set_memory_balloon(balloon_target)?;
-
-                // Wait for the balloon to finish inflating all the way.
-                // If the VM becomes non-idle or too much time passes, give up.
-                let inflate_start = std::time::Instant::now();
-                loop {
-                    if wait_for_state_change(Some(Duration::from_millis(50)))? != VmState::Idle {
-                        info!("idle compactor balloon inflate aborted");
-                        break;
-                    }
-                    let (_, stats) = self.get_balloon_stats()?;
-                    if inflate_start.elapsed() > INFLATE_TIMEOUT
-                        || stats.available_memory < INFLATE_DONE_BYTES
-                    {
-                        info!(
-                            "idle compactor balloon inflate took {} seconds, final available_memory {} bytes",
-                            inflate_start.elapsed().as_secs_f64(), stats.available_memory
-                        );
-                        break;
+                if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
+                    if let Err(e) = guest_agent.trim() {
+                        error!("IGuestAgent::trim failed: {e:#}");
                     }
                 }
-                // Deflate the balloon. Note that the VM RSS will not immediately increase in
-                // response to this, we are just notifying the guest it is free to use the memory
-                // again.
-                self.set_memory_balloon(0)?;
             }
         }
     }

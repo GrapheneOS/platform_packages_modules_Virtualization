@@ -1,0 +1,15 @@
+service pageout_bomb /system/bin/pageout_bomb
+    disabled
+    # print android log to kmsg
+    file /dev/kmsg w
+    oneshot
+    # SYS_NICE needed to call process_madvise.
+    # SYS_PTRACE needed to access /proc/pid/maps of other processes.
+    capabilities SYS_NICE SYS_PTRACE
+    user root
+
+on property:pageout_bomb.go=1
+    setprop pageout_bomb.go 0
+    exec_start pageout_bomb
+    exec /system/bin/sync
+    write /proc/sys/vm/drop_caches 3
