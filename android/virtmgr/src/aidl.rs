@@ -506,11 +506,12 @@ fn find_partition(path: Option<&Path>) -> binder::Result<CallingPartition> {
     if path.starts_with("/system/system_ext/") {
         return Ok(CallingPartition::SystemExt);
     }
-    if path.starts_with("/system/product/") {
+    if path.starts_with("/system/product/") || path.starts_with("/mnt/product/") {
         return Ok(CallingPartition::Product);
     }
     if path.starts_with("/data/nativetest/vendor/")
         || path.starts_with("/data/nativetest64/vendor/")
+        || path.starts_with("/mnt/vendor/")
     {
         return Ok(CallingPartition::Vendor);
     }
@@ -999,8 +1000,7 @@ impl VirtualizationService {
         // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
         // permission as a temporarily solution.
         // TODO(b/407079334): Replace with SystemApi.
-        let idle_compactor_balloon =
-            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
+        let trim_on_idle = balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
@@ -1058,7 +1058,7 @@ impl VirtualizationService {
                 console_join_handle,
                 log_join_handle,
                 vm_context,
-                idle_compactor_balloon,
+                trim_on_idle,
                 vendor_tee_services,
                 config.hostServices.clone(),
                 encrypted_store_kek,

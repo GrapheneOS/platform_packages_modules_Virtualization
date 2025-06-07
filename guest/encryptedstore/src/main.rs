@@ -26,6 +26,7 @@ use rustutils::system_properties;
 use std::ffi::CString;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{Error, Read, Write};
+use std::os::android::fs::MetadataExt;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -109,15 +110,24 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
         info!("Freshly formatting the crypt device");
         format_ext4(&crypt_device)?;
     } else {
+        info!("Running e2fsck before potential resize");
         e2fsck(&crypt_device).context("e2fsck failed before potential resize")?;
-        resize_fs(&crypt_device)?;
-        // Finally check again if we were successful.
-        e2fsck(&crypt_device).context("e2fsck failed after potential resize")?;
+        info!("Completed e2fsck before potential resize");
+        info!("Running resize2fs");
+        if resize_fs(&crypt_device)? {
+            info!("Resized the device");
+            info!("Running e2fsck after resize");
+            e2fsck(&crypt_device).context("e2fsck failed after resize")?;
+            info!("Completed e2fsck after resize");
+        } else {
+            info!("Skipped e2fsck since no resize was needed");
+        }
     }
+
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
     if cfg!(multi_tenant) {
-        ensure_root_dir_permissions(mountpoint)?;
+        ensure_root_dir_status(mountpoint)?;
     }
     if cfg!(long_running_vms) {
         system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
@@ -126,18 +136,28 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     Ok(())
 }
 
-fn ensure_root_dir_permissions(mountpoint: &Path) -> Result<()> {
+fn ensure_root_dir_status(mountpoint: &Path) -> Result<()> {
+    let metadata = std::fs::metadata(mountpoint)?;
+    let cur_owner = (metadata.st_uid(), metadata.st_gid());
+    let want_owner = (microdroid_uids::ROOT_UID, microdroid_uids::MICRODROID_PAYLOAD_GID);
+    if cur_owner != want_owner {
+        warn!(
+            "{mountpoint:?} owner ({cur_owner:?}) doesn't match with ({want_owner:?}). Adjusting"
+        );
+        nix::unistd::chown(mountpoint, Some(want_owner.0.into()), Some(want_owner.1.into()))?;
+    }
+
     // mke2fs hardwires the root dir permissions as 0o755 which doesn't match what we want.
     // We want to allow full access by both root and the payload group, and no access by anything
     // else. And we want the sticky bit set, so different payload UIDs can create sub-directories
     // that other payloads can't delete.
-    let want = 0o770 | libc::S_ISVTX;
-    let cur = std::fs::metadata(mountpoint)?.permissions().mode() & 0o7777;
-    if cur == want {
+    let want_mode = 0o770 | libc::S_ISVTX;
+    let cur_mode = metadata.permissions().mode() & 0o7777;
+    if cur_mode == want_mode {
         return Ok(());
     }
-    warn!("Mode at {mountpoint:?}({cur:o}) is not {want:o}). Adjusting");
-    std::fs::set_permissions(mountpoint, PermissionsExt::from_mode(want))
+    warn!("Mode at {mountpoint:?}({cur_mode:o}) is not {want_mode:o}. Adjusting");
+    std::fs::set_permissions(mountpoint, PermissionsExt::from_mode(want_mode))
         .context("Failed to chmod root directory")
 }
 
@@ -207,12 +227,14 @@ fn format_ext4(device: &Path) -> Result<()> {
 }
 
 fn e2fsck(device: &Path) -> Result<()> {
+    info!("Running e2fsck");
     let status = Command::new(E2FSCK_BIN)
         .arg("-fvy")
         .arg(device)
         .status()
         .context("failed to execute e2fsck")?;
     if !status.success() {
+        info!("e2fsck wasn't successful");
         match status.code() {
             Some(code) => {
                 if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
@@ -225,14 +247,34 @@ fn e2fsck(device: &Path) -> Result<()> {
             None => Err(anyhow!("Process terminated by signal")),
         }
     } else {
+        info!("e2fsck was successful");
         Ok(())
     }
 }
 
-fn resize_fs(device: &Path) -> Result<()> {
+/// Resizes the filesystem to the size of the device.
+///
+/// Returns `true` if the filesystem was resized, `false` if no resize was needed.
+fn resize_fs(device: &Path) -> Result<bool> {
+    info!("Running resize2fs");
     // Resize the filesystem to the size of the device.
-    Command::new(RESIZE2FS_BIN).arg(device).status().context("failed to execute resize2fs")?;
-    Ok(())
+    let output = Command::new(RESIZE2FS_BIN)
+        .arg(device)
+        .output()
+        .context("failed to execute resize2fs")
+        .unwrap();
+
+    let stderr_str = String::from_utf8_lossy(&output.stderr);
+    info!("stderr_str: {}", stderr_str);
+    if output.status.success() {
+        info!("resize2fs command succeeded");
+        let resized = !stderr_str.contains("Nothing to do!");
+        info!("resized: {}", resized);
+        Ok(resized)
+    } else {
+        warn!("resize failed exited with exitCode: {}", stderr_str);
+        Ok(false)
+    }
 }
 
 fn mount(source: &Path, mountpoint: &Path) -> Result<()> {

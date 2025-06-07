@@ -370,10 +370,14 @@ impl SkVmSession {
         } else {
             let error =
                 SecretkeeperError::deserialize_from_packet(get_response).map_err(anyhow_err)?;
-            if *error == SecretkeeperError::EntryNotFound {
-                return Ok(None);
+            match *error {
+                SecretkeeperError::EntryNotFound => Ok(None),
+                SecretkeeperError::DicePolicyError => {
+                    Err(super::MicrodroidError::PayloadChanged("Dice policy error".to_string())
+                        .into())
+                }
+                _ => Err(anyhow!("Secretkeeper get failed: {error:?}")),
             }
-            Err(anyhow!("Secretkeeper get failed: {error:?}"))
         }
     }
 }

@@ -1,5 +1,7 @@
 PACKAGES install
 
+kmod
+udev
 avahi-daemon
 avahi-utils
 bpfcc-tools

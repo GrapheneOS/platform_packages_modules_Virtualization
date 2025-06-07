@@ -15,6 +15,8 @@
 # limitations under the License.
 
 mkdir -p /data/local/tmp/trusty_test_vm_os/logs || true
-/apex/com.android.virt/bin/vm run \
-   --console /data/local/tmp/trusty_test_vm_os/logs/console.log \
-   /data/local/tmp/trusty_test_vm_os/trusty-test_vm-config.json
+nohup sh -c 'exec -a "trusty_test_vm_os_run" /apex/com.android.virt/bin/vm run \
+   --console /data/local/tmp/trusty_test_vm_os/logs/test_vm_os_console.log \
+   /data/local/tmp/trusty_test_vm_os/trusty-test_vm-config.json' > /data/local/tmp/trusty_test_vm_os/nohup.out &
+sh /data/local/tmp/trusty_test_vm_os/trusty-wait-ready.sh
+

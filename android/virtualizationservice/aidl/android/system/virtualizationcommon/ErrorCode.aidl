@@ -32,7 +32,8 @@ enum ErrorCode {
     PAYLOAD_VERIFICATION_FAILED = 1,
 
     /**
-     * Error code indicating that the payload is verified, but has changed since the last boot.
+     * Error code indicating that the payload is verified, but has changed to be incompatible with
+     * the previous payload. This payload has not been allowed to boot to protect the VM's data.
      */
     PAYLOAD_CHANGED = 2,
 

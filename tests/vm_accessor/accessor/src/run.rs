@@ -25,7 +25,7 @@ use anyhow::{bail, Context, Error};
 use binder::{ParcelFileDescriptor, Strong};
 use glob::glob;
 use log::{error, info};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;

@@ -59,7 +59,7 @@ else
   shell=""
 fi
 
-docker run $interactive \
+docker run --privileged $interactive \
   -v /dev:/dev \
   -v "$virt_repo_top:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
