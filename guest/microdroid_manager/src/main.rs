@@ -867,24 +867,58 @@ fn exec_task(
     std_redirect: &Option<OwnedFd>,
 ) -> Result<Child> {
     info!("executing main task {:?}...", task);
-    let mut command = match task.type_ {
+    let (mut command, uid_gid) = match task.type_ {
         TaskType::Executable => {
             // TODO(b/297501338): Figure out how to handle non-root for system payloads.
-            Command::new(&task.command)
+            (Command::new(&task.command), None)
         }
         TaskType::MicrodroidLauncher => {
             let mut command = Command::new("/system/bin/microdroid_launcher");
             command.arg(find_library_path(&task.command)?);
-            command.uid(microdroid_uids::MICRODROID_PAYLOAD_UID);
-            command.gid(microdroid_uids::MICRODROID_PAYLOAD_GID);
-            command
+            (
+                command,
+                Some((
+                    microdroid_uids::MICRODROID_PAYLOAD_UID,
+                    microdroid_uids::MICRODROID_PAYLOAD_GID,
+                )),
+            )
         }
+    };
+
+    let cgroup_path = if command
+        .get_args()
+        .next()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .contains("com.android.appsearch")
+    {
+        Some("/sys/fs/cgroup/microdroid_launcher/cgroup.procs")
+    } else {
+        None
     };
 
     // SAFETY: We are not accessing any resource of the parent process. This means we can't make any
     // log calls inside the closure.
     unsafe {
-        command.pre_exec(|| {
+        command.pre_exec(move || {
+            // Move the payload process into a cgroup.
+            //
+            // We can't ignore errors here because we rely on the cgroup to restrict the process'
+            // resource usage. We can't log, so just abort on error and microdroid_manager will see
+            // something is wrong.
+            if let Some(cgroup_path) = &cgroup_path {
+                let mut buffer = itoa::Buffer::new();
+                let pid_str = buffer.format(std::process::id()).as_bytes();
+                std::fs::write(cgroup_path, pid_str).unwrap_or_else(|_| std::process::abort());
+            }
+            // Set UID and GID. Has to happen after changing the cgroup. Can't use rust's
+            // `Command::uid/gid` because they are applied before the `pre_exec` hook.
+            if let Some((uid, gid)) = uid_gid {
+                nix::unistd::setgid(nix::unistd::Gid::from_raw(gid))
+                    .unwrap_or_else(|_| std::process::abort());
+                nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))
+                    .unwrap_or_else(|_| std::process::abort());
+            }
             // It is OK to continue with payload execution even if the calls below fail, since
             // whether process can use a capability is controlled by the SELinux. Dropping the
             // capabilities here is just another defense-in-depth layer.

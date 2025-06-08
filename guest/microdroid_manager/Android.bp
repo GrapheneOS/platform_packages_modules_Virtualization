@@ -37,6 +37,7 @@ rust_defaults {
         "libglob",
         "libhex",
         "libitertools",
+        "libitoa",
         "libkeystore2_crypto_rust",
         "liblibc",
         "liblog_rust",
