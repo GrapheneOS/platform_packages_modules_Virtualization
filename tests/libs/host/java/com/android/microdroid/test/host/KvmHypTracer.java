@@ -30,9 +30,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -53,7 +57,7 @@ class KvmHypEvent {
         Matcher matcher = LOST_EVENT_PATTERN.matcher(str);
         if (matcher.find()) throw new OutOfMemoryError("Lost " + matcher.group(1) + " events");
 
-        Pattern pattern = Pattern.compile("^\\[([0-9]*)\\][ \t]*([0-9]*\\.[0-9]*): (\\S+) (.*)");
+        Pattern pattern = Pattern.compile("^\\[([0-9]*)\\][ \t]*([0-9]*\\.[0-9]*): (\\S+)\\s*(.*)");
 
         matcher = pattern.matcher(str);
         if (!matcher.find()) {
@@ -181,15 +185,27 @@ public final class KvmHypTracer {
         mRunner.run("echo " + val + " > " + mHypTracingRoot + node);
     }
 
-    public String run(String payload_cmd) throws Exception {
+    private void setNodeString(String node, String val) throws Exception {
+        mRunner.run("echo '" + val + "' > " + mHypTracingRoot + node);
+    }
+
+    public String run(String payload_cmd, String[] notrace, int buffer_size) throws Exception {
         mTraces.clear();
 
         setNode("tracing_on", 0);
         mRunner.run("echo 0 | tee " + mHypTracingRoot + "events/*/*/enable");
-        setNode("buffer_size_kb", DEFAULT_BUF_SIZE_KB);
+        setNode("buffer_size_kb", buffer_size);
 
         for (String event : mHypEvents) {
             setNode(getHypEventsDir(mHypTracingRoot) + event + "/enable", 1);
+        }
+
+        if (hasEvent("func") || hasEvent("func_ret")) {
+            setNodeString("set_ftrace_filter", "*");
+
+            for (String func : notrace) {
+                setNodeString("set_ftrace_notrace", func);
+            }
         }
 
         setNode("trace", 0);
@@ -250,11 +266,17 @@ public final class KvmHypTracer {
         return res;
     }
 
+    public String run(String payload_cmd) throws Exception {
+        return run(payload_cmd, new String[0], DEFAULT_BUF_SIZE_KB);
+    }
+
+    private boolean hasEvent(String event) {
+        return Arrays.asList(mHypEvents).contains(event);
+    }
+
     private boolean hasEvents(String[] events) {
         for (String event : events) {
-            if (!Arrays.asList(mHypEvents).contains(event)) {
-                return false;
-            }
+            if (!hasEvent(event)) return false;
         }
 
         return true;
@@ -315,7 +337,7 @@ public final class KvmHypTracer {
                         case "hyp_enter":
                             break;
                         default:
-                            throw new ParseException("Unexpected line in trace " + event, 0);
+                            continue;
                     }
 
                     prevEvent = event;
@@ -395,5 +417,57 @@ public final class KvmHypTracer {
         }
 
         return psciMemProtect;
+    }
+
+    public Map<String, Double> getFuncDurations(double start, double end, int cpu)
+            throws Exception {
+        String[] reqEvents = {"func", "func_ret"};
+        Map<String, Double> funcDurations = new HashMap<String, Double>();
+
+        assertWithMessage("KvmHypTracer() is missing events " + String.join(",", reqEvents))
+                .that(hasEvents(reqEvents))
+                .isTrue();
+
+        for (File trace : mTraces) {
+            try (BufferedReader br = openTrace(trace)) {
+                KvmHypEvent event = getNextEvent(br);
+                if (event == null || event.cpu != cpu) continue;
+
+                Deque<Pair<String, Double>> stack = new ArrayDeque<>();
+                do {
+                    if (event.timestamp < start) continue;
+                    if (event.timestamp > end) break;
+
+                    Pair<String, Double> prev = stack.peekFirst();
+                    String func = event.args.split(" ")[0];
+
+                    switch (event.name) {
+                        case "func":
+                            stack.push(Pair.create(func, event.timestamp));
+                            break;
+                        case "func_ret":
+                            if (prev == null) break;
+
+                            if (!prev.first.equals(func)) {
+                                throw new Exception(
+                                        "Event " + event + " does not match '" + prev.first + "'");
+                            }
+
+                            funcDurations.put(
+                                    func,
+                                    funcDurations.getOrDefault(func, Double.valueOf(0))
+                                            + event.timestamp
+                                            - prev.second);
+
+                            stack.pop();
+                            break;
+                        default:
+                            break;
+                    }
+                } while ((event = getNextEvent(br)) != null);
+            }
+        }
+
+        return funcDurations;
     }
 }
