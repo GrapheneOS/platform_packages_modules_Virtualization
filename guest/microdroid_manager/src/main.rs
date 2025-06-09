@@ -277,7 +277,7 @@ fn main() -> Result<()> {
     unsafe { rustutils::inherited_fd::init_once()? };
 
     // If debuggable, print full backtrace to console log with stdio_to_kmsg
-    if is_debuggable()? {
+    if is_debuggable() {
         env::set_var("RUST_BACKTRACE", "full");
     }
 
@@ -517,7 +517,7 @@ fn try_run_payload(
     // Wait until apex config is done. (e.g. linker configuration for apexes)
     wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
 
-    let std_redirect = if is_debuggable()? {
+    let std_redirect = if is_debuggable() {
         // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
         Arc::new(Some(rustutils::inherited_fd::take_fd_ownership(
             env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
@@ -699,32 +699,28 @@ fn is_verified_boot() -> bool {
     !Path::new(DEBUG_MICRODROID_NO_VERIFIED_BOOT).exists()
 }
 
-fn is_debuggable() -> Result<bool> {
-    Ok(system_properties::read_bool(DEBUGGABLE_PROP, true)?)
+/// Returns true iff the VM is successfully identified as being debuggable.
+fn is_debuggable() -> bool {
+    system_properties::read_bool(DEBUGGABLE_PROP, false).unwrap_or(false)
 }
 
 fn should_export_tombstones(config: &VmPayloadConfig) -> bool {
     match config.export_tombstones {
         Some(b) => b,
-        None => is_debuggable().unwrap_or(false),
+        None => is_debuggable(),
     }
 }
 
-/// Get debug policy value in bool. It's true iff the value is explicitly set to <1>.
-fn get_debug_policy_bool(path: &'static str) -> Result<Option<bool>> {
-    let mut file = match File::open(path) {
-        Ok(dp) => dp,
-        Err(e) => {
-            info!(
-                "Assumes that debug policy is disabled because failed to read debug policy ({e:?})"
-            );
-            return Ok(Some(false));
-        }
-    };
+/// Get debug policy value in bool. It's true iff the value was successfully read and explicitly
+/// set to <1>.
+fn get_debug_policy_bool(path: &'static str) -> bool {
     let mut log: [u8; 4] = Default::default();
-    file.read_exact(&mut log).context("Malformed data in {path}")?;
-    // DT spec uses big endian although Android is always little endian.
-    Ok(Some(u32::from_be_bytes(log) == 1))
+    if let Err(e) = File::open(path).map(|mut f| f.read_exact(&mut log)) {
+        info!("Assume debug policy is disabled because of a failed read ({e:?})");
+        false
+    } else {
+        u32::from_be_bytes(log) == 1
+    }
 }
 
 enum MountForExec {
@@ -843,8 +839,8 @@ fn load_crashkernel_if_supported() -> Result<()> {
         return Ok(());
     }
 
-    let debuggable = is_debuggable()?;
-    let ramdump = get_debug_policy_bool(AVF_DEBUG_POLICY_RAMDUMP)?.unwrap_or_default();
+    let debuggable = is_debuggable();
+    let ramdump = get_debug_policy_bool(AVF_DEBUG_POLICY_RAMDUMP);
     let requested = debuggable | ramdump;
 
     if requested {

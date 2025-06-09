@@ -1908,7 +1908,20 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
     }
 
     fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
-        self.instance.vm_context.global_context.setHostConsoleName(ptsname)
+        let Some(global_context) = self
+            .instance
+            .vm_context
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|vm_context| vm_context.global_context.clone())
+        else {
+            return Err(Status::new_service_specific_error_str(
+                IVirtualMachine::ERROR_UNEXPECTED,
+                Some("Virtual Machine is not running"),
+            ));
+        };
+        global_context.setHostConsoleName(ptsname)
     }
 
     fn suspend(&self) -> binder::Result<()> {

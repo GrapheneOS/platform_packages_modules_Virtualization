@@ -442,8 +442,7 @@ pub struct VmInstance {
     /// Condvar that is notified when `vm_state` becomes `Dead`.
     vm_dead_convar: Condvar,
     /// Global resources allocated for this VM.
-    #[allow(dead_code)] // Keeps the context alive
-    pub(crate) vm_context: VmContext,
+    pub(crate) vm_context: Mutex<Option<VmContext>>,
     /// The CID assigned to the VM for vsock communication.
     pub cid: Cid,
     /// Path to crosvm control socket
@@ -528,7 +527,7 @@ impl VmInstance {
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
             vm_dead_convar: Condvar::new(),
-            vm_context,
+            vm_context: Mutex::new(Some(vm_context)),
             cid,
             crosvm_control_socket_path: temporary_directory.join("crosvm.sock"),
             name,
@@ -681,6 +680,21 @@ impl VmInstance {
         }
 
         drop(vfio_devices); // Cleanup devices.
+
+        // Remove the VmContext to "unregister" from virtualizationservice, so that, for example,
+        // the VM no longer shows up in the list of running VMs.
+        //
+        // We don't want to wait for the VmInstance to be dropped because some clients of the
+        // IVirtualMachine binder service may be very slow to free it (e.g. Java GC).
+        let vm_context = self.vm_context.lock().unwrap().take().expect("VmContext missing");
+
+        // Now that the VM is gone, shut down the VirtualMachineService server to eagerly free up
+        // the server threads.
+        if let Some(vm_server) = &vm_context.vm_server {
+            if let Err(e) = vm_server.shutdown() {
+                error!("Failed to shutdown VirtualMachineService RPC Binder server: {e:#}");
+            }
+        }
     }
 
     /// Waits until payload is started, or timeout expires. When timeout occurs, kill
@@ -884,12 +898,6 @@ impl VmInstance {
             // TODO: if it were ever running, we may still need to join
             // logging handles, in monitor_vm_exit.
             bail!("VM is not running")
-        }
-
-        // Now that the VM has been killed, shut down the VirtualMachineService
-        // server to eagerly free up the server threads.
-        if let Some(vm_server) = &self.vm_context.vm_server {
-            vm_server.shutdown()?;
         }
 
         Ok(())

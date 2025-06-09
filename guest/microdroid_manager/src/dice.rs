@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::instance::{ApexData, ApkData};
-use crate::{is_debuggable, is_strict_boot, MicrodroidData};
+use crate::{is_debuggable, is_strict_boot, MicrodroidData, DEBUGGABLE_PROP};
 use anyhow::{bail, Context, Result};
 use ciborium::{cbor, Value};
 use coset::CborSerializable;
@@ -21,6 +21,7 @@ use dice_driver::DiceDriver;
 use diced_open_dice::{Hidden, OwnedDiceArtifacts, HIDDEN_SIZE};
 use microdroid_metadata::PayloadMetadata;
 use openssl::sha::{sha512, Sha512};
+use rustutils::system_properties;
 use std::iter::once;
 
 /// Perform an open DICE derivation for the payload.
@@ -49,8 +50,11 @@ pub fn dice_derivation(
     let code_hash = code_hash_ctx.finish();
     let authority_hash = authority_hash_ctx.finish();
 
-    // Check debuggability, conservatively assuming it is debuggable
-    let debuggable = is_debuggable()?;
+    // Check debuggability, conservatively assuming it's debuggable to avoid mistakenly attributing
+    // a normal mode which would compromise VM security. Note that this is in contrast to
+    // `is_debuggable` which conservatively assumes it isn't debuggable in order disable debug
+    // features.
+    let debuggable = system_properties::read_bool(DEBUGGABLE_PROP, true).unwrap_or(true);
 
     // Send the details to diced
     let hidden = hidden_input_from_instance_id()?;
@@ -115,9 +119,7 @@ impl Subcomponent {
             if apex.manifest_name.as_ref().unwrap().contains("appsearch") {
                 // b/414312074 - allow appsearch to be flashed between branches.
                 1_u64
-            } else if is_debuggable().unwrap_or(false)
-                && apex.manifest_name.as_ref().unwrap().contains("adbd")
-            {
+            } else if is_debuggable() && apex.manifest_name.as_ref().unwrap().contains("adbd") {
                 // b/414312074 - allow adb, used by appsearch, to be flashed between branches.
                 400000004_u64
             } else {
