@@ -40,9 +40,7 @@ use android_system_virtualizationservice::{
     },
 };
 use command_fds::CommandFdExt;
-use log::{info, warn};
-use nix::sys::signal::{killpg, Signal::SIGKILL};
-use nix::unistd::Pid;
+use log::warn;
 use rpcbinder::{FileDescriptorTransportMode, RpcSession};
 use shared_child::SharedChild;
 use std::ffi::{c_char, c_int, c_void, CString};
@@ -144,16 +142,7 @@ impl VirtualizationService {
         command.arg("--ready-fd").arg(format!("{}", ready_fd.as_raw_fd()));
         command.preserved_fds(vec![server_fd, ready_fd]);
 
-        let process = SharedChild::spawn(&mut command)?;
-        std::thread::spawn(move || {
-            let group_id = process.id().try_into().unwrap();
-            process.wait().unwrap();
-            info!("virtmgr kill detected. killing entire process group {}", process.id());
-            // Note: this can fail when virtmgr is the only process in the process group, which
-            // can happen when virtmgr fails even before it forks crosvm.
-            let _ = killpg(Pid::from_raw(group_id), SIGKILL)
-                .inspect_err(|e| warn!("failed to kill process group {}: {:?}", group_id, e));
-        });
+        SharedChild::spawn(&mut command)?;
 
         // Wait for the child to signal that the RpcBinder server is read by closing its end of the
         // pipe. Failing to read (especially EACCESS or EPERM) can happen if the client lacks the
