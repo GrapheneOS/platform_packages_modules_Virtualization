@@ -2030,18 +2030,9 @@ pub struct State {
 
 impl State {
     /// Get a list of VMs which still have Binder references to them.
-    fn vms(&self) -> Vec<Arc<VmInstance>> {
+    pub fn vms(&self) -> Vec<Arc<VmInstance>> {
         // Attempt to upgrade the weak pointers to strong pointers.
         self.vms.iter().filter_map(Weak::upgrade).collect()
-    }
-
-    /// stop and reset all state
-    pub fn stop_all(&self) {
-        self.vms().into_iter().for_each(|vm| {
-            if let Err(e) = vm.kill() {
-                error!("VM did not die when I tried to kill it: {:#}", e);
-            }
-        });
     }
 
     /// Add a new VM to the list.

@@ -28,7 +28,7 @@ use crate::aidl::{GLOBAL_SERVICE, VirtualizationService};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
-use log::{info, LevelFilter};
+use log::{error, info, LevelFilter};
 use rpcbinder::{FileDescriptorTransportMode, RpcServer};
 use std::os::unix::io::{AsFd, RawFd};
 use std::sync::LazyLock;
@@ -147,7 +147,17 @@ fn main() {
     info!("Shutting down VirtualizationService RpcServer");
 
     // Do all the standard cleanup we can, mainly to make sure we join logging threads.
-    state_ptr.lock().unwrap().stop_all();
+    let vms = {
+        // scope is needed to not hold State (state_ptr) after we have the list of VMs. Otherwise,
+        // we may hit a deadlock if notifyPayload* is called from the guest. notifyPayload* would
+        // like to hold the State object.
+        state_ptr.lock().unwrap().vms()
+    };
+    vms.into_iter().for_each(|vm| {
+        if let Err(e) = vm.kill() {
+            error!("VM (cid: {}) did not die when I tried to kill it: {:#}", vm.cid, e);
+        }
+    });
 
     info!("All VMs halted.");
 }
