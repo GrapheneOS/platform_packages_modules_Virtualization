@@ -4,3 +4,6 @@ kernel.8250.nr_uarts = 4
 # Default is 10 (4MB).
 # TODO: Choose a different value for 16k page size.
 kernel.page_reporting.page_reporting_order = 9
+
+# b/419364025 b/423127919
+kernel.vmw_vsock_virtio_transport_common.virtio_transport_max_vsock_pkt_buf_size=16384
