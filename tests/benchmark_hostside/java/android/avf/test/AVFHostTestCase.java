@@ -39,6 +39,7 @@ import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.Pair;
 import com.android.tradefed.util.SimpleStats;
 
 import org.junit.After;
@@ -49,6 +50,7 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -187,13 +189,36 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         String os = SUPPORTED_OSES.get(osKey);
 
         String[] hypEvents = {"hyp_enter", "hyp_exit"};
-
         assumeTrue(
                 "Skip without hypervisor tracing",
                 KvmHypTracer.isSupported(getDevice(), hypEvents));
 
-        KvmHypTracer tracer = new KvmHypTracer(getDevice(), hypEvents);
-        String result = tracer.run(COMPOSD_CMD_BIN + " test-compile --os " + os);
+        String[] hypEventFuncs = {"hyp_enter", "hyp_exit", "func", "func_ret"};
+        boolean hasFunc = KvmHypTracer.isSupported(getDevice(), hypEventFuncs);
+
+        final String[] NO_TRACE = {
+            "*handle_trap",
+            "*pgtable_walk",
+            "*map_walker*",
+            "*phys_to_virt",
+            "*get_loaded_hyp_vcpu",
+            "*psci_mem_protect*",
+            "*_serror",
+            "*__hyp_enter",
+            "*__hyp_exit",
+            "*hyp_per_cpu_offset",
+            "*handle_host_dynamic_hcall",
+            "*hyp_page_count",
+            "*_get_page",
+            "*_put_page",
+            "*stage2_pte_prot",
+            "*stage2_force_pte",
+            "*force_pte_cb",
+            "*pte_is_counted",
+        };
+        String cmd = COMPOSD_CMD_BIN + " test-compile --os " + os;
+        KvmHypTracer tracer = new KvmHypTracer(getDevice(), hasFunc ? hypEventFuncs : hypEvents);
+        String result = hasFunc ? tracer.run(cmd, NO_TRACE, 128 << 10) : tracer.run(cmd);
         assertWithMessage("Failed to test compilation VM.")
                 .that(result)
                 .ignoringCase()
@@ -201,6 +226,34 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
         SimpleStats stats = tracer.getDurationStats();
         reportMetric(stats.getData(), "hyp_sections", "s");
+
+        if (hasFunc) {
+            Pair<Double, Double> sec = tracer.getMaxDurationSection();
+            int cpu = tracer.getMaxDurationCpu();
+            Map<String, Double> durations;
+
+            durations = tracer.getFuncDurations(sec.first, sec.second, cpu);
+
+            List<Map.Entry<String, Double>> ordered = new ArrayList<>(durations.entrySet());
+            Collections.sort(ordered, Map.Entry.comparingByValue(Comparator.reverseOrder()));
+
+            CLog.i(
+                    "The longest hyp section was %f seconds from %f on CPU%d",
+                    sec.second - sec.first, sec.first, cpu);
+
+            int count = 0;
+            for (Map.Entry<String, Double> entry : ordered) {
+                /* Only print the 5 biggest contributions */
+                if (++count > 5) break;
+
+                double pct = entry.getValue() * 100 / (sec.second - sec.first);
+                mMetrics.addTestMetric(
+                        "hyp_longest_section_func_" + String.format("%.2f", pct) + "%",
+                        entry.getKey());
+                CLog.i("%s: \t\t\t%.2f%%", entry.getKey(), pct);
+            }
+        }
+
         CLog.i("Hypervisor traces parsed successfully.");
     }
 
@@ -568,10 +621,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     }
 
     private void reportMetric(List<Double> data, String name, String unit) {
-        CLog.d("Report metric " + name + "(" + unit + ") : " + data.toString());
         Map<String, Double> stats = mMetricsProcessor.computeStats(data, name, unit);
         for (Map.Entry<String, Double> entry : stats.entrySet()) {
-            CLog.d("Add test metrics " + entry.getKey() + " : " + entry.getValue().toString());
             mMetrics.addTestMetric(entry.getKey(), entry.getValue().toString());
         }
     }
