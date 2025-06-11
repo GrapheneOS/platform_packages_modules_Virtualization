@@ -24,10 +24,10 @@ rust_binary {
         "android.system.virtualizationservice-rust",
         "libanyhow",
         "libclap",
+        "libhypervisor_props",
         "libvmclient",
     ],
     bootstrap: true,
-    apex_available: ["//apex_available:platform"],
     system_ext_specific: true,
     enabled: select(soong_config_variable("trusty_system_vm", "enabled"), {
         true: true,
