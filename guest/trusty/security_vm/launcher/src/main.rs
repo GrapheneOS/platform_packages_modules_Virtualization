@@ -22,6 +22,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 use android_system_virtualizationservice::binder::{ParcelFileDescriptor, Strong};
 use anyhow::{Context, Result};
 use clap::Parser;
+use hypervisor_props::is_protected_vm_supported;
 use std::fs::File;
 use std::path::PathBuf;
 use vmclient::VmInstance;
@@ -81,11 +82,20 @@ fn main() -> Result<()> {
     let (kernel, bootloader) =
         if args.load_kernel_as_bootloader { (None, Some(kernel)) } else { (Some(kernel), None) };
 
+    let protected_vm = if is_protected_vm_supported().unwrap_or(false) {
+        args.protected
+    } else {
+        if args.protected {
+            println!("protected VM is not supported; launch non-protected VM");
+        }
+        false
+    };
+
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: args.name.to_owned(),
         kernel,
         bootloader,
-        protectedVm: args.protected,
+        protectedVm: protected_vm,
         memoryMib: args.memory_size_mib,
         cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
         platformVersion: "~1.0".to_owned(),
