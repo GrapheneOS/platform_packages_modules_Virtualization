@@ -50,6 +50,7 @@ rust_defaults {
         "libnested_virt",
         "libnix",
         "libonce_cell",
+        "libpsi_rs",
         "libregex",
         "librpcbinder_rs",
         "librustutils",

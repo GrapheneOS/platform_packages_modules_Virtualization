@@ -14,5 +14,6 @@ rust_library {
     apex_available: [
         "com.android.compos",
         "com.android.virt",
+        "//apex_available:platform",
     ],
 }
