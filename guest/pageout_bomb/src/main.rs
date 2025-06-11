@@ -141,7 +141,7 @@ fn pageout_process(pid: u32) -> anyhow::Result<()> {
         }
     }
 
-    log::info!("pid {pid}: madvise'd {} KiB of {}", advised_bytes / 1024, mapped_bytes / 1024);
+    log::trace!("pid {pid}: madvise'd {} KiB of {}", advised_bytes / 1024, mapped_bytes / 1024);
 
     Ok(())
 }
