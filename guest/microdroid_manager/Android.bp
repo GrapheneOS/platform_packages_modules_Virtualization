@@ -36,6 +36,7 @@ rust_defaults {
         "libexplicitkeydice",
         "libglob",
         "libhex",
+        "libinotify",
         "libitertools",
         "libitoa",
         "libkeystore2_crypto_rust",

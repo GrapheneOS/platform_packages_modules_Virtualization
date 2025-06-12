@@ -14,6 +14,7 @@
 
 //! Microdroid Manager
 
+mod cgroup_monitor;
 mod dice;
 mod encrypted_store_kek;
 mod instance;
@@ -35,6 +36,7 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
     BnGuestAgent, IGuestAgent, DUMP_SERVICE_PORT,
 };
 
+use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
@@ -336,6 +338,8 @@ fn try_main() -> Result<()> {
     )?;
 
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
+
+    let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor()?;
     match try_run_payload(&service, vm_payload_service_fd) {
         Ok(code) => {
             match code {
@@ -352,12 +356,16 @@ fn try_main() -> Result<()> {
 
             info!("notifying payload finished");
             service.notifyPayloadFinished(code)?;
+            // TODO: (khei@)
+            // Send cgroup kill signal and join cgroup thread for graceful shutdown
             Ok(())
         }
         Err(err) => {
             warn!("payload finished erroneously: {:?}", err);
             let (error_code, message) = translate_error(&err);
             service.notifyError(error_code, &message)?;
+            // TODO: (khei@)
+            // Send cgroup kill signal and join cgroup thread for graceful shutdown
             Err(err)
         }
     }
