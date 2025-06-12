@@ -578,13 +578,14 @@ public class VirtualMachine implements AutoCloseable {
                 }
             }
 
-            try {
+            try (ParcelFileDescriptor fd =
+                    ParcelFileDescriptor.open(vm.mInstanceFilePath, MODE_READ_WRITE)) {
                 service.initializeWritablePartition(
-                        ParcelFileDescriptor.open(vm.mInstanceFilePath, MODE_READ_WRITE),
-                        INSTANCE_FILE_SIZE,
-                        PartitionType.ANDROID_VM_INSTANCE);
+                        fd, INSTANCE_FILE_SIZE, PartitionType.ANDROID_VM_INSTANCE);
             } catch (FileNotFoundException e) {
                 throw new VirtualMachineException("instance image missing", e);
+            } catch (IOException e) {
+                throw new VirtualMachineException("failed to initialize instance partition", e);
             } catch (RemoteException e) {
                 throw e.rethrowAsRuntimeException();
             } catch (ServiceSpecificException | IllegalArgumentException e) {
@@ -592,13 +593,15 @@ public class VirtualMachine implements AutoCloseable {
             }
 
             if (config.isEncryptedStorageEnabled()) {
-                try {
+                try (ParcelFileDescriptor fd =
+                        ParcelFileDescriptor.open(vm.mEncryptedStoreFilePath, MODE_READ_WRITE)) {
                     service.initializeWritablePartition(
-                            ParcelFileDescriptor.open(vm.mEncryptedStoreFilePath, MODE_READ_WRITE),
-                            config.getEncryptedStorageBytes(),
-                            PartitionType.ENCRYPTEDSTORE);
+                            fd, config.getEncryptedStorageBytes(), PartitionType.ENCRYPTEDSTORE);
                 } catch (FileNotFoundException e) {
                     throw new VirtualMachineException("encrypted storage image missing", e);
+                } catch (IOException e) {
+                    throw new VirtualMachineException(
+                            "failed to initialize encrypted store partition", e);
                 } catch (RemoteException e) {
                     throw e.rethrowAsRuntimeException();
                 } catch (ServiceSpecificException | IllegalArgumentException e) {
@@ -1009,7 +1012,7 @@ public class VirtualMachine implements AutoCloseable {
                     Pair.create(InputEventType.MOUSE, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.toString());
+            Log.w(TAG, "Exception in sendMouseEvent(), " + e.toString());
             return false;
         }
     }
@@ -1109,7 +1112,7 @@ public class VirtualMachine implements AutoCloseable {
                     Pair.create(InputEventType.TOUCH, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.toString());
+            Log.w(TAG, "Exception in sendMultiTouchEvent(), " + e.toString());
             return false;
         }
     }
@@ -1226,7 +1229,7 @@ public class VirtualMachine implements AutoCloseable {
                     Pair.create(InputEventType.TRACKPAD, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.toString());
+            Log.w(TAG, "Exception in sendTrackpadEvent(), " + e.toString());
             return false;
         }
     }
@@ -1591,7 +1594,11 @@ public class VirtualMachine implements AutoCloseable {
                                     }
                                     event.second.recycle();
                                 } catch (Exception e) {
-                                    Log.e(TAG, e.toString());
+                                    Log.w(
+                                            TAG,
+                                            "Exception in input event executor. Maybe shutting"
+                                                    + " down? "
+                                                    + e.toString());
                                 }
                             }
                         });

@@ -25,13 +25,14 @@ use android_system_virtualizationmaintenance::aidl::android::system::virtualizat
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice;
 use android_system_virtualizationservice_internal as android_vs_internal;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice;
+use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::DUMP_SERVICE_PORT;
 use android_system_vmtethering::aidl::android::system::vmtethering;
 use android_vs_internal::aidl::android::system::virtualizationservice_internal;
 use anyhow::{anyhow, ensure, Context, Result};
 use avflog::LogResult;
 use binder::{
     self, wait_for_interface, BinderFeatures, ExceptionCode, Interface, IntoBinderResult,
-    LazyServiceGuard, ParcelFileDescriptor, Status, Strong,
+    LazyServiceGuard, ParcelFileDescriptor, Status, StatusCode, Strong,
 };
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
@@ -46,12 +47,15 @@ use rustutils::{
 use serde::Deserialize;
 use service_vm_comm::Response;
 use std::collections::{HashMap, HashSet};
+use std::ffi::CStr;
 use std::fs::{self, create_dir, remove_dir_all, remove_file, set_permissions, File, Permissions};
 use std::io::{Read, Write};
+use std::net::Shutdown;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::{pid_t, uid_t};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, LazyLock, Mutex, Weak};
+use std::time::Duration;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
 use virtualizationmaintenance::{
@@ -218,9 +222,100 @@ impl VirtualizationServiceInternal {
             info!("ignoring update of Secretkeeper entry as no ISecretkeeper");
         }
     }
+
+    fn debug_list_vms_unchecked(&self) -> Vec<VirtualMachineDebugInfo> {
+        let state = &mut *self.state.lock().unwrap();
+        state
+            .held_contexts
+            .iter()
+            .filter_map(|(_, inst)| Weak::upgrade(inst))
+            .map(|vm| {
+                let vm = vm.lock().unwrap();
+                VirtualMachineDebugInfo {
+                    name: vm.name.clone(),
+                    cid: vm.cid as i32,
+                    temporaryDirectory: vm.get_temp_dir().to_string_lossy().to_string(),
+                    requesterUid: vm.requester_uid as i32,
+                    requesterPid: vm.requester_debug_pid,
+                    hostConsoleName: vm.host_console_name.clone(),
+                }
+            })
+            .collect()
+    }
+
+    fn handle_dump(
+        &self,
+        writer: &mut dyn Write,
+        vm: &VirtualMachineDebugInfo,
+        args: &[String],
+    ) -> Result<()> {
+        let mut stream =
+            match VsockStream::connect_with_cid_port(vm.cid as u32, DUMP_SERVICE_PORT as u32) {
+                Ok(stream) => stream,
+                Err(e) => {
+                    if e.kind() == std::io::ErrorKind::ConnectionReset {
+                        writeln!(writer, "\tskipping dump: not debuggable or server unavailable")?;
+                        return Ok(());
+                    }
+                    writeln!(writer, "\tskipping dump: failed to connect: {:?}", e)?;
+                    return Ok(());
+                }
+            };
+
+        // 5 seconds must be much longer than required.
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .context("Failed to set read timeout")?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(5)))
+            .context("Failed to set read timeout")?;
+
+        if let Err(e) = stream.write_all(args.join("\n").as_bytes()) {
+            writeln!(writer, "\tskipping dump: failed to send args: {:?}", e)?;
+            return Ok(());
+        }
+
+        if let Err(e) = stream.shutdown(Shutdown::Write) {
+            writeln!(writer, "\tskipping dump: failed to shutdown write: {:?}", e)?;
+            return Ok(());
+        }
+
+        writeln!(writer, "\tVM dump begin")?;
+
+        if let Err(e) = std::io::copy(&mut stream, writer) {
+            writeln!(writer, "\tfailed to read dump: {:?}", e)?;
+        }
+
+        writeln!(writer, "\n\tVM dump end")?;
+
+        Ok(())
+    }
 }
 
-impl Interface for VirtualizationServiceInternal {}
+impl Interface for VirtualizationServiceInternal {
+    fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), StatusCode> {
+        check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
+
+        // TODO(b/418877672): connect to virtmgr and get vm list, rather than this global state.
+        let vms = self.debug_list_vms_unchecked();
+        writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
+        let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
+
+        for vm in vms {
+            writeln!(writer, "VM CID: {}", vm.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\tname: {}", &vm.name).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\ttemporary_directory: {}", &vm.temporaryDirectory)
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\trequester_uid: {}", vm.requesterUid)
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\trequester_debug_pid: {}", vm.requesterPid)
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+
+            self.handle_dump(writer, &vm, &args).or(Err(StatusCode::UNKNOWN_ERROR))?;
+        }
+        Ok(())
+    }
+}
 
 impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     fn setDisplayService(
@@ -304,24 +399,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     fn debugListVms(&self) -> binder::Result<Vec<VirtualMachineDebugInfo>> {
         check_debug_access()?;
 
-        let state = &mut *self.state.lock().unwrap();
-        let cids = state
-            .held_contexts
-            .iter()
-            .filter_map(|(_, inst)| Weak::upgrade(inst))
-            .map(|vm| {
-                let vm = vm.lock().unwrap();
-                VirtualMachineDebugInfo {
-                    name: vm.name.clone(),
-                    cid: vm.cid as i32,
-                    temporaryDirectory: vm.get_temp_dir().to_string_lossy().to_string(),
-                    requesterUid: vm.requester_uid as i32,
-                    requesterPid: vm.requester_debug_pid,
-                    hostConsoleName: vm.host_console_name.clone(),
-                }
-            })
-            .collect();
-        Ok(cids)
+        Ok(self.debug_list_vms_unchecked())
     }
 
     fn enableTestAttestation(&self) -> binder::Result<()> {

@@ -32,7 +32,7 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
     ENCRYPTEDSTORE_MOUNTPOINT,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::{
-        BnGuestAgent, IGuestAgent
+    BnGuestAgent, IGuestAgent, DUMP_SERVICE_PORT,
 };
 
 use crate::dice::dice_derivation;
@@ -43,6 +43,7 @@ use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binder::{self, BinderFeatures, Interface, Strong};
 use dice_driver::DiceDriver;
+use glob::glob;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
 use log::{error, info, warn};
@@ -62,7 +63,8 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::net::Shutdown;
 use std::os::fd::AsRawFd;
 use std::os::raw::c_char;
 use std::os::unix::fs::PermissionsExt;
@@ -77,6 +79,7 @@ use std::str;
 use std::sync::Arc;
 use std::time::Duration;
 use vm_secret::VmSecret;
+use vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
 
 const WAIT_TIMEOUT: Duration = Duration::from_secs(10);
 const AVF_STRICT_BOOT: &str = "/proc/device-tree/chosen/avf,strict-boot";
@@ -320,6 +323,10 @@ fn try_main() -> Result<()> {
 
     let guest_agent = GuestAgent::new_binder();
     service.registerGuestAgent(&guest_agent)?;
+
+    if is_debuggable() {
+        start_dump_service()?;
+    }
 
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
@@ -1046,6 +1053,87 @@ fn get_encrypted_store_key(
         let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;
         kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK to host")?;
     }
+
+    Ok(())
+}
+
+fn start_dump_service() -> Result<()> {
+    let addr = VsockAddr::new(VMADDR_CID_ANY, DUMP_SERVICE_PORT as u32);
+    let listener = VsockListener::bind(&addr).context("Can't bind vsock")?;
+
+    std::thread::spawn(move || {
+        for incoming_stream in listener.incoming() {
+            let stream = match incoming_stream {
+                Err(e) => {
+                    error!("failed to accept on dump service: {e:?}");
+                    continue;
+                }
+                Ok(s) => s,
+            };
+
+            if let Err(e) = handle_dump_to_client(stream) {
+                error!("failed to dump: {e:?}");
+            }
+        }
+    });
+
+    Ok(())
+}
+
+fn read_and_write_file(stream: &mut VsockStream, file_path: &Path) -> Result<()> {
+    let path_str = file_path.display().to_string();
+    let header = format!("---- {} begin ----\n", &path_str);
+    stream.write_all(header.as_bytes())?; // Write the file path header
+
+    match File::open(file_path) {
+        Ok(mut f) => {
+            if let Err(e) = std::io::copy(&mut f, stream) {
+                stream.write_all(format!("failed to read {}: {:?}", &path_str, e).as_bytes())?;
+            }
+        }
+        Err(e) => {
+            stream.write_all(format!("failed to open {}: {:?}", &path_str, e).as_bytes())?;
+        }
+    }
+
+    let footer = format!("\n---- {} end ----\n", &path_str);
+    stream.write_all(footer.as_bytes())?;
+
+    Ok(())
+}
+
+fn read_and_write_glob_files(stream: &mut VsockStream, pattern: &str) -> Result<()> {
+    for entry in glob(pattern).unwrap() {
+        match entry {
+            Ok(path) => {
+                if path.starts_with("/proc/self") || path.starts_with("/proc/thread-self") {
+                    continue;
+                }
+                read_and_write_file(stream, &path)?;
+            }
+            Err(e) => {
+                stream.write_all(format!("glob error for {pattern}: {e:?}\n").as_bytes())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
+    // 5 seconds must be much longer than required.
+    stream.set_read_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
+    stream.set_write_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
+
+    let args = BufReader::new(&stream).lines().map_while(Result::ok).collect::<Vec<_>>();
+
+    info!("Default dump handler with args: {:?}", args);
+
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
+    read_and_write_glob_files(&mut stream, "/proc/*/maps")?;
+    read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;
+
+    stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
 
     Ok(())
 }

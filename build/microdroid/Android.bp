@@ -59,6 +59,7 @@ android_system_image {
         "microdroid_init_rc",
         "microdroid_ueventd_rc",
         "microdroid_launcher",
+        "microdroid_cgroups_json",
 
         "libbinder_ndk",
         "libstdc++",
@@ -74,8 +75,6 @@ android_system_image {
         "apexd.microdroid",
         "debuggerd",
         "linker",
-        "cgroups.json",
-        "task_profiles.json",
         "public.libraries.android.txt",
 
         "microdroid_event-log-tags",
@@ -167,6 +166,13 @@ prebuilt_etc {
     src: "init.rc",
     relative_install_path: "init/hw",
     no_full_install: true, // avoid collision with system partition's init.rc
+}
+
+prebuilt_etc {
+    name: "microdroid_cgroups_json",
+    filename: "cgroups.json",
+    src: "cgroups.json",
+    no_full_install: true, // avoid collision with system partition's cgroups.json
 }
 
 prebuilt_etc {
