@@ -43,6 +43,7 @@ use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binder::{self, BinderFeatures, Interface, Strong};
 use dice_driver::DiceDriver;
+use glob::glob;
 use keystore2_crypto::ZVec;
 use libc::VMADDR_CID_HOST;
 use log::{error, info, warn};
@@ -63,6 +64,7 @@ use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
+use std::net::Shutdown;
 use std::os::fd::AsRawFd;
 use std::os::raw::c_char;
 use std::os::unix::fs::PermissionsExt;
@@ -1078,6 +1080,46 @@ fn start_dump_service() -> Result<()> {
     Ok(())
 }
 
+fn read_and_write_file(stream: &mut VsockStream, file_path: &Path) -> Result<()> {
+    let path_str = file_path.display().to_string();
+    let header = format!("---- {} begin ----\n", &path_str);
+    stream.write_all(header.as_bytes())?; // Write the file path header
+
+    match File::open(file_path) {
+        Ok(mut f) => {
+            if let Err(e) = std::io::copy(&mut f, stream) {
+                stream.write_all(format!("failed to read {}: {:?}", &path_str, e).as_bytes())?;
+            }
+        }
+        Err(e) => {
+            stream.write_all(format!("failed to open {}: {:?}", &path_str, e).as_bytes())?;
+        }
+    }
+
+    let footer = format!("\n---- {} end ----\n", &path_str);
+    stream.write_all(footer.as_bytes())?;
+
+    Ok(())
+}
+
+fn read_and_write_glob_files(stream: &mut VsockStream, pattern: &str) -> Result<()> {
+    for entry in glob(pattern).unwrap() {
+        match entry {
+            Ok(path) => {
+                if path.starts_with("/proc/self") || path.starts_with("/proc/thread-self") {
+                    continue;
+                }
+                read_and_write_file(stream, &path)?;
+            }
+            Err(e) => {
+                stream.write_all(format!("glob error for {pattern}: {e:?}\n").as_bytes())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     // 5 seconds must be much longer than required.
     stream.set_read_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
@@ -1085,12 +1127,13 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
 
     let args = BufReader::new(&stream).lines().map_while(Result::ok).collect::<Vec<_>>();
 
-    info!("Handling dump to client with args: {:?}", args);
+    info!("Default dump handler with args: {:?}", args);
 
-    // TODO(b/418877672): Implement a real dump service.
-    let dump_data = format!("Dump arguments received: {:?}\nHello from microdroid_manager", args);
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
+    read_and_write_glob_files(&mut stream, "/proc/*/maps")?;
+    read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;
 
-    stream.write_all(dump_data.as_bytes()).context("Failed to send dump data to client")?;
+    stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
 
     Ok(())
 }
