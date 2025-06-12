@@ -32,7 +32,7 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
     ENCRYPTEDSTORE_MOUNTPOINT,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::{
-        BnGuestAgent, IGuestAgent
+    BnGuestAgent, IGuestAgent, DUMP_SERVICE_PORT,
 };
 
 use crate::dice::dice_derivation;
@@ -62,7 +62,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::fd::AsRawFd;
 use std::os::raw::c_char;
 use std::os::unix::fs::PermissionsExt;
@@ -77,6 +77,7 @@ use std::str;
 use std::sync::Arc;
 use std::time::Duration;
 use vm_secret::VmSecret;
+use vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
 
 const WAIT_TIMEOUT: Duration = Duration::from_secs(10);
 const AVF_STRICT_BOOT: &str = "/proc/device-tree/chosen/avf,strict-boot";
@@ -320,6 +321,10 @@ fn try_main() -> Result<()> {
 
     let guest_agent = GuestAgent::new_binder();
     service.registerGuestAgent(&guest_agent)?;
+
+    if is_debuggable() {
+        start_dump_service()?;
+    }
 
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
@@ -1046,6 +1051,46 @@ fn get_encrypted_store_key(
         let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;
         kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK to host")?;
     }
+
+    Ok(())
+}
+
+fn start_dump_service() -> Result<()> {
+    let addr = VsockAddr::new(VMADDR_CID_ANY, DUMP_SERVICE_PORT as u32);
+    let listener = VsockListener::bind(&addr).context("Can't bind vsock")?;
+
+    std::thread::spawn(move || {
+        for incoming_stream in listener.incoming() {
+            let stream = match incoming_stream {
+                Err(e) => {
+                    error!("failed to accept on dump service: {e:?}");
+                    continue;
+                }
+                Ok(s) => s,
+            };
+
+            if let Err(e) = handle_dump_to_client(stream) {
+                error!("failed to dump: {e:?}");
+            }
+        }
+    });
+
+    Ok(())
+}
+
+fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
+    // 5 seconds must be much longer than required.
+    stream.set_read_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
+    stream.set_write_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
+
+    let args = BufReader::new(&stream).lines().map_while(Result::ok).collect::<Vec<_>>();
+
+    info!("Handling dump to client with args: {:?}", args);
+
+    // TODO(b/418877672): Implement a real dump service.
+    let dump_data = format!("Dump arguments received: {:?}\nHello from microdroid_manager", args);
+
+    stream.write_all(dump_data.as_bytes()).context("Failed to send dump data to client")?;
 
     Ok(())
 }
