@@ -1009,7 +1009,7 @@ public class VirtualMachine implements AutoCloseable {
                     Pair.create(InputEventType.MOUSE, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.toString());
+            Log.w(TAG, "Exception in sendMouseEvent(), " + e.toString());
             return false;
         }
     }
@@ -1109,7 +1109,7 @@ public class VirtualMachine implements AutoCloseable {
                     Pair.create(InputEventType.TOUCH, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.toString());
+            Log.w(TAG, "Exception in sendMultiTouchEvent(), " + e.toString());
             return false;
         }
     }
@@ -1226,7 +1226,7 @@ public class VirtualMachine implements AutoCloseable {
                     Pair.create(InputEventType.TRACKPAD, MotionEvent.obtainNoHistory(event)));
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.toString());
+            Log.w(TAG, "Exception in sendTrackpadEvent(), " + e.toString());
             return false;
         }
     }
@@ -1591,7 +1591,11 @@ public class VirtualMachine implements AutoCloseable {
                                     }
                                     event.second.recycle();
                                 } catch (Exception e) {
-                                    Log.e(TAG, e.toString());
+                                    Log.w(
+                                            TAG,
+                                            "Exception in input event executor. Maybe shutting"
+                                                    + " down? "
+                                                    + e.toString());
                                 }
                             }
                         });
