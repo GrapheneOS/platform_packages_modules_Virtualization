@@ -14,7 +14,11 @@
 
 //! Platform initialization
 
-use crate::arch::x86_64::{layout::UART_PORTS, uart::Uart};
+use crate::arch::x86_64::{
+    layout::{KBC_CMD_PORT, UART_PORTS},
+    port,
+    uart::Uart,
+};
 use core::mem::MaybeUninit;
 use spin::{mutex::SpinMutex, once::Once};
 
@@ -89,9 +93,14 @@ pub fn shutdown() -> ! {
     loop {}
 }
 
-/// Makes a hypercall to reboot the VM.
+/// Trigger a system reset via the PS/2 keyboard controller.
 pub fn reboot() -> ! {
-    // TODO(b/354116267): implement for x86_64
+    const KBC_CMD_PULSE_RESET_LINE: u8 = 0xFE;
+
+    // SAFETY: Writing to this port will reboot the system, terminating execution, so no further
+    // code will run.
+    unsafe { port::write_u8(KBC_CMD_PORT, KBC_CMD_PULSE_RESET_LINE) };
+
     #[allow(clippy::empty_loop)]
     loop {}
 }
