@@ -35,6 +35,7 @@
         <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk" />
         <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk" />
         <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk" />
+        <option name="push" value="MicrodroidTestHelperEncStoreKEKOnCE_V5.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperEncStoreKEKOnCE_V5.apk" />
         <option name="push" value="MicrodroidTestHelperEncStoreKEKOnCE_V6.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperEncStoreKEKOnCE_V6.apk" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >

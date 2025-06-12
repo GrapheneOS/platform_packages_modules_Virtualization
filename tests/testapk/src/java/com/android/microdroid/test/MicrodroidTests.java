@@ -3219,6 +3219,53 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mFileContent).isEqualTo("Hello!");
     }
 
+    /**
+     * Verifies that changing the encrypted store is an incompatible config change.
+     *
+     * <p>NOTE: this is a separate test case from {@link #compatibleConfigTests} because we don't
+     * expose set/get encrypted store mode APIs as @SystemApis yet.
+     *
+     * @see VirtualMachineConfig#isCompatibleWith
+     */
+    @Test
+    public void changingEncryptedStoreModeOnUpdateTests() throws Exception {
+        assumeSupportedDevice();
+
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V5.apk");
+        Context context =
+                getContext()
+                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
+                        .createDeviceProtectedStorageContext();
+
+        VirtualMachineConfig config1 =
+                new VirtualMachineConfig.Builder(context)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .setMemoryBytes(minMemoryRequired())
+                        .build();
+
+        // Simulate update that changes the encrypted store mode.
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
+
+        // The encrypted store mode is read from the AndroidManifest.xml of the app represented by
+        // the context object passed to the builder c-tor. The V6 update installed above has the
+        // android.system.virtualmachine.ENCRYPTED_STORE_MODE property set to 1.
+        VirtualMachineConfig config2 =
+                new VirtualMachineConfig.Builder(context)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .setMemoryBytes(minMemoryRequired())
+                        .build();
+
+        assertThat(config1.isCompatibleWith(config2)).isFalse();
+    }
+
     private static class VmShareServiceConnection implements ServiceConnection {
 
         private final CountDownLatch mLatch = new CountDownLatch(1);
