@@ -1,0 +1,15 @@
+{
+  "Cgroups2": {
+    "Path": "/sys/fs/cgroup",
+    "Mode": "0775",
+    "UID": "root",
+    "GID": "root",
+    "Controllers": [
+      {
+        "Controller": "memory",
+        "Path": ".",
+        "NeedsActivation": true
+      }
+    ]
+  }
+}
