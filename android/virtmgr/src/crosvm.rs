@@ -55,6 +55,7 @@ use android_system_virtualizationcommon::aidl::android::system::virtualizationco
     DeathReason::DeathReason,
     IEncryptedStoreKEK::IEncryptedStoreKEK,
 };
+use std::sync::mpsc;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     VirtualMachineAppConfig::DebugLevel::DebugLevel,
     AudioConfig::AudioConfig as AudioConfigParcelable,
@@ -307,7 +308,10 @@ pub enum VmState {
         monitor_vm_exit_thread: JoinHandle<()>,
     },
     /// The VM is being shut down.
-    ShuttingDown,
+    ShuttingDown {
+        // The receiver half of this channel will be closed when shutdown is finished.
+        shutdown_finished_tx: mpsc::SyncSender<()>,
+    },
     /// The VM died or was killed.
     Dead,
     /// The VM failed to start.
@@ -689,6 +693,7 @@ impl VmInstance {
 
         let result = child.wait();
         match &result {
+            // TODO: This should be fatal, we lost the crosvm process.
             Err(e) => error!("Error waiting for crosvm({}) instance to die: {}", child.id(), e),
             Ok(status) => {
                 info!("crosvm({}) exited with status {}", child.id(), status);
@@ -914,12 +919,25 @@ impl VmInstance {
     /// agent is installed there. If not, or the shutdown didn't finish on time, the VM is forcibly
     /// shut down. In-flight data in the VM may be affected!
     pub fn kill(&self) -> Result<(), Error> {
-        if self.is_vm_running() {
-            let mut vm_state_mg = self.vm_state.lock().unwrap();
-            let vm_state = std::mem::replace(&mut *vm_state_mg, VmState::ShuttingDown);
-            drop(vm_state_mg); // just to make sure self.vm_state is not held
+        let mut vm_state_mg = self.vm_state.lock().unwrap();
+        match &*vm_state_mg {
+            VmState::Running { .. } => {
+                // We use an `mpsc` in a backwards way as a poor man's broadcast channel. The
+                // buffer is set to 0 to make this into a "rendezvous channel". Code that wants to
+                // wait for shutdown to finish will `send` on the channel, which will block until
+                // we `recv` (we never do) or `drop`.
+                let (shutdown_finished_tx, shutdown_finished_rx) = mpsc::sync_channel(0);
 
-            if let VmState::Running { child, monitor_vm_exit_thread } = vm_state {
+                let vm_state = std::mem::replace(
+                    &mut *vm_state_mg,
+                    VmState::ShuttingDown { shutdown_finished_tx },
+                );
+                drop(vm_state_mg); // make sure self.vm_state is not held
+
+                let VmState::Running { child, monitor_vm_exit_thread } = vm_state else {
+                    unreachable!();
+                };
+
                 if !self.try_shutdown() {
                     let id = child.id();
                     warn!(
@@ -935,7 +953,7 @@ impl VmInstance {
                 let result = self
                     .vm_dead_convar
                     .wait_timeout_while(self.vm_state.lock().unwrap(), shutdown_timeout, |state| {
-                        matches!(state, VmState::ShuttingDown)
+                        matches!(state, VmState::ShuttingDown { .. })
                     })
                     .unwrap();
                 if result.1.timed_out() {
@@ -950,11 +968,33 @@ impl VmInstance {
                 // Wait once again. If the graceful shutdown was successful, this will return
                 // immediately.
                 monitor_vm_exit_thread.join().unwrap();
+
+                // Drop the channel to signal shutdown is finished.
+                // Done explicitly just for code visibility.
+                drop(shutdown_finished_rx);
             }
-        } else {
-            // TODO: if it were ever running, we may still need to join
-            // logging handles, in monitor_vm_exit.
-            bail!("VM is not running")
+            VmState::ShuttingDown { shutdown_finished_tx } => {
+                let shutdown_finished_tx = shutdown_finished_tx.clone();
+                drop(vm_state_mg); // make sure self.vm_state is not held
+
+                // Wait for the shutdown to finish.
+                //
+                // We might consider adding a timeout here just in case, but note that, if this has
+                // a case where it blocks indefinitely, then the `Running` branch above must have
+                // such a case a well (because it never dropped the other half).
+                #[allow(clippy::single_match)]
+                match shutdown_finished_tx.send(()) {
+                    Ok(()) => unreachable!(),
+                    Err(mpsc::SendError(())) => {} // success!
+                }
+            }
+            VmState::NotStarted { .. } | VmState::Dead | VmState::Failed => {
+                drop(vm_state_mg); // make sure self.vm_state is not held
+
+                // TODO: if it were ever running, we may still need to join
+                // logging handles, in monitor_vm_exit.
+                bail!("VM is not running")
+            }
         }
 
         Ok(())
