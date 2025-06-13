@@ -66,7 +66,6 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
 use binder::Strong;
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
@@ -553,9 +552,6 @@ pub struct VmInstance {
     pub join_handles: Mutex<VmJoinHandles>,
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
-    /// VirtualMachineService binder object for the VM.
-    #[allow(dead_code)]
-    pub vm_service: Mutex<Option<Strong<dyn IVirtualMachineService>>>,
     /// Guest agent running on the VM
     pub guest_agent: Mutex<Option<Strong<dyn IGuestAgent>>>,
     /// Recorded metrics of VM such as timestamp or cpu / memory usage.
@@ -628,7 +624,6 @@ impl VmInstance {
             requester_debug_pid,
             join_handles: Mutex::new(VmJoinHandles { console_join_handle, log_join_handle }),
             callbacks: Default::default(),
-            vm_service: Mutex::new(None),
             guest_agent: Mutex::new(None),
             vm_metric: Mutex::new(Default::default()),
             payload_state: Mutex::new(PayloadState::Starting),
