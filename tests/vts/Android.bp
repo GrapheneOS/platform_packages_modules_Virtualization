@@ -9,6 +9,7 @@ prebuilt_etc {
     },
     installable: false,
     visibility: ["//visibility:private"],
+    vendor: true,
 }
 
 rust_test {

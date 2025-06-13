@@ -14,6 +14,7 @@ rust_bindgen {
         "//packages/modules/Virtualization/tests/vts",
         "//packages/modules/Virtualization/tests/old_images_avf_test",
     ],
+    vendor_available: true,
 }
 
 rust_defaults {

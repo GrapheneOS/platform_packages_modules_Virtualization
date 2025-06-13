@@ -38,4 +38,5 @@ rust_library {
         "liblog_rust",
         "libserde",
     ],
+    vendor_available: true,
 }
