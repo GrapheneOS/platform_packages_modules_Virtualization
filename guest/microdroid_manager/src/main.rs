@@ -1137,7 +1137,6 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     info!("Default dump handler with args: {:?}", args);
 
     read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
-    read_and_write_glob_files(&mut stream, "/proc/*/maps")?;
     read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;
 
     stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
