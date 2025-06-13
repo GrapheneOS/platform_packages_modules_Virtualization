@@ -119,6 +119,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -483,6 +484,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 () -> getVirtualMachineManager().delete("test_vm"), "not in stopped state");
 
         vm.stop();
+
+        assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
+
         getVirtualMachineManager().delete("test_vm");
         assertThat(vm.getStatus()).isEqualTo(STATUS_DELETED);
 
@@ -497,6 +501,74 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // This is indistinguishable from the VM having never existed, so the message
         // is non-specific.
         assertThrowsVmException(() -> getVirtualMachineManager().delete("test_vm"));
+    }
+
+    private void testCrashInternal(String vmName, String killProcessName) throws Exception {
+        assumeSupportedDevice();
+
+        // kill() requires debuggable build
+        assumeDebuggableBuild();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+
+        try (VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config)) {
+            assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
+
+            CountDownLatch started = new CountDownLatch(1);
+            CountDownLatch stopped = new CountDownLatch(1);
+            vm.setCallback(
+                    Executors.newSingleThreadExecutor(),
+                    new VirtualMachineCallback() {
+                        @Override
+                        public void onPayloadStarted(VirtualMachine vm) {
+                            started.countDown();
+                        }
+
+                        @Override
+                        public void onPayloadReady(VirtualMachine vm) {}
+
+                        @Override
+                        public void onPayloadFinished(VirtualMachine vm, int exitCode) {}
+
+                        @Override
+                        public void onError(VirtualMachine vm, int errorCode, String message) {}
+
+                        @Override
+                        public void onStopped(VirtualMachine vm, int reason) {
+                            stopped.countDown();
+                        }
+                    });
+
+            vm.run();
+            assertThat(vm.getStatus()).isEqualTo(STATUS_RUNNING);
+
+            // Let globalTimeout to handle timeout.
+            started.await();
+
+            kill(TAG, killProcessName);
+
+            // Let globalTimeout to handle timeout.
+            stopped.await();
+
+            assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
+
+            assertThrowsVmExceptionContaining(() -> vm.stop(), "not running");
+        }
+    }
+
+    @Test
+    public void vm_crosvmCrash() throws Exception {
+        String vmConfigName = "test_vm_crosvmCrash";
+        testCrashInternal(vmConfigName, "crosvm_" + vmConfigName);
+    }
+
+    @Test
+    public void vm_virtmgrCrash() throws Exception {
+        testCrashInternal("test_vm_virtmgrCrash", "virtmgr");
     }
 
     @Test

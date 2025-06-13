@@ -118,7 +118,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.zip.ZipFile;
 
@@ -239,6 +238,10 @@ public class VirtualMachine implements AutoCloseable {
 
     /** Name of the file with KEK used to setup encrypted store */
     private static final String ENCRYPTED_STORE_KEK_FILE = "encrypted_store_kek.bin";
+
+    // Both binders are for virtmgr, and not virtualizationservice
+    @NonNull private final IBinder.DeathRecipient mVSDeathRecipient;
+    @NonNull private final IBinder.DeathRecipient mVMDeathRecipient;
 
     /** The package which owns this VM. */
     @NonNull private final String mPackageName;
@@ -398,6 +401,9 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("mLock")
     private boolean mWasDeleted = false;
 
+    @GuardedBy("mLock")
+    private boolean mStopHandled = false;
+
     /** The registered callback */
     @GuardedBy("mCallbackLock")
     @Nullable
@@ -470,6 +476,18 @@ public class VirtualMachine implements AutoCloseable {
             mMemoryManagementCallbacks = new MemoryManagementCallbacks();
         } else {
             mMemoryManagementCallbacks = null;
+        }
+
+        mVSDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
+        mVMDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
+        // Set death recipient at the last moment, so it's only called after fully initialized.
+        try {
+            mVirtualizationService
+                    .getBinder()
+                    .asBinder()
+                    .linkToDeath(mVSDeathRecipient, /* flags= */ 0);
+        } catch (RemoteException e) {
+            throw e.rethrowAsRuntimeException();
         }
     }
 
@@ -800,7 +818,7 @@ public class VirtualMachine implements AutoCloseable {
             // A VM can quite happily keep running if its backing files have been deleted.
             // But once it stops, it's gone forever.
             synchronized (mLock) {
-                dropVm();
+                mWasDeleted = true;
             }
             return STATUS_DELETED;
         }
@@ -824,22 +842,28 @@ public class VirtualMachine implements AutoCloseable {
     // Throw an appropriate exception if we have a running VM, or the VM has been deleted.
     @GuardedBy("mLock")
     private void checkStopped() throws VirtualMachineException {
-        if (mWasDeleted || !mVmRootPath.exists()) {
-            throw new VirtualMachineException("VM has been deleted");
-        }
-        if (mVirtualMachine == null) {
-            return;
-        }
-        try {
-            if (stateToStatus(mVirtualMachine.getState()) != STATUS_STOPPED) {
+        switch (getStatus()) {
+            case STATUS_STOPPED:
+                // no-op
+                return;
+            case STATUS_RUNNING:
                 throw new VirtualMachineException("VM is not in stopped state");
-            }
-        } catch (RemoteException e) {
-            throw e.rethrowAsRuntimeException();
+            case STATUS_DELETED:
+                throw new VirtualMachineException("VM has been deleted");
         }
-        // It's stopped, but we still have a reference to it - we can fix that.
-        dropVm();
     }
+
+    private void handleStopped(@VirtualMachineCallback.StopReason int reason) {
+        synchronized (mLock) {
+            if (mStopHandled) {
+                return;
+            }
+            mStopHandled = true;
+            dropVm();
+        }
+        executeCallback((cb) -> cb.onStopped(VirtualMachine.this, reason));
+    }
+
 
     /**
      * This should only be called when we know our VM has stopped; we no longer need to hold a
@@ -855,25 +879,25 @@ public class VirtualMachine implements AutoCloseable {
         if (mMemoryManagementCallbacks != null) {
             mContext.unregisterComponentCallbacks(mMemoryManagementCallbacks);
         }
-        mVirtualMachine = null;
+        if (mVirtualMachine != null) {
+            mVirtualMachine.asBinder().unlinkToDeath(mVMDeathRecipient, /* flags= */ 0);
+            mVirtualMachine = null;
+        }
     }
 
     /** If we have an IVirtualMachine in the running state return it, otherwise throw. */
     @GuardedBy("mLock")
     private IVirtualMachine getRunningVm() throws VirtualMachineException {
-        try {
-            if (mVirtualMachine != null
-                    && stateToStatus(mVirtualMachine.getState()) == STATUS_RUNNING) {
+        switch (getStatus()) {
+            case STATUS_STOPPED:
+                throw new VirtualMachineException("VM is not in running state");
+            case STATUS_RUNNING:
                 return mVirtualMachine;
-            } else {
-                if (mWasDeleted || !mVmRootPath.exists()) {
-                    throw new VirtualMachineException("VM has been deleted");
-                } else {
-                    throw new VirtualMachineException("VM is not in running state");
-                }
-            }
-        } catch (RemoteException e) {
-            throw e.rethrowAsRuntimeException();
+            case STATUS_DELETED:
+                throw new VirtualMachineException("VM has been deleted");
+            default:
+                // unreachable code. Just make compiler happy.
+                return null;
         }
     }
 
@@ -1525,6 +1549,8 @@ public class VirtualMachine implements AutoCloseable {
         synchronized (mLock) {
             checkStopped();
 
+            mStopHandled = false;
+
             try {
                 mIdsigFilePath.createNewFile();
                 for (ExtraApkSpec extraApk : mExtraApks) {
@@ -1625,6 +1651,7 @@ public class VirtualMachine implements AutoCloseable {
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
                 mVirtualMachine.registerCallback(new CallbackTranslator(this, service));
+                mVirtualMachine.asBinder().linkToDeath(mVMDeathRecipient, /* flags= */ 0);
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 }
@@ -1865,18 +1892,19 @@ public class VirtualMachine implements AutoCloseable {
     @WorkerThread
     public void stop() throws VirtualMachineException {
         synchronized (mLock) {
-            if (mVirtualMachine == null) {
-                throw new VirtualMachineException("VM is not running");
-            }
-            try {
-                mVirtualMachine.stop();
-                dropVm();
-            } catch (RemoteException e) {
-                throw e.rethrowAsRuntimeException();
-            } catch (ServiceSpecificException e) {
-                throw new VirtualMachineException(e);
+            if (getStatus() == STATUS_RUNNING) {
+                try {
+                    mVirtualMachine.stop();
+                    dropVm();
+                    return;
+                } catch (RemoteException e) {
+                    throw e.rethrowAsRuntimeException();
+                } catch (ServiceSpecificException e) {
+                    throw new VirtualMachineException(e);
+                }
             }
         }
+        throw new VirtualMachineException("VM is not running");
     }
 
     /** @hide */
@@ -1923,20 +1951,17 @@ public class VirtualMachine implements AutoCloseable {
     @WorkerThread
     @Override
     public void close() {
-        synchronized (mLock) {
-            if (mVirtualMachine == null) {
-                return;
-            }
-            try {
-                if (stateToStatus(mVirtualMachine.getState()) == STATUS_RUNNING) {
-                    mVirtualMachine.stop();
-                    dropVm();
-                }
-            } catch (RemoteException | ServiceSpecificException e) {
-                // Deliberately ignored; this almost certainly means the VM exited just as
-                // we tried to stop it.
-                Log.i(TAG, "Ignoring error on close()", e);
-            }
+        try {
+            stop();
+
+            mVirtualizationService
+                    .getBinder()
+                    .asBinder()
+                    .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+        } catch (Exception e) {
+            // Deliberately ignored; this almost certainly means the VM exited just as
+            // we tried to stop it.
+            Log.i(TAG, "Ignoring error on close()", e);
         }
     }
 
@@ -2391,16 +2416,11 @@ public class VirtualMachine implements AutoCloseable {
     private static class CallbackTranslator extends IVirtualMachineCallback.Stub {
         private final WeakReference<VirtualMachine> mVirtualMachine;
         private final WeakReference<IVirtualizationService> mService;
-        private final DeathRecipient mDeathRecipient;
 
-        // The VM should only be observed to die once
-        private final AtomicBoolean mOnDiedCalled = new AtomicBoolean(false);
-
-        public CallbackTranslator(VirtualMachine virtualMachine, IVirtualizationService service) throws RemoteException {
+        public CallbackTranslator(VirtualMachine virtualMachine, IVirtualizationService service)
+                throws RemoteException {
             this.mVirtualMachine = new WeakReference<>(virtualMachine);
             this.mService = new WeakReference<>(service);
-            this.mDeathRecipient = () -> reportStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
-            service.asBinder().linkToDeath(mDeathRecipient, 0);
         }
 
         @Override
@@ -2439,19 +2459,9 @@ public class VirtualMachine implements AutoCloseable {
         @Override
         public void onDied(int cid, int reason) {
             int translatedReason = getTranslatedReason(reason);
-            reportStopped(translatedReason);
-            var service = mService.get();
-            if (service != null) {
-                service.asBinder().unlinkToDeath(mDeathRecipient, 0);
-            }
-        }
-
-        private void reportStopped(@VirtualMachineCallback.StopReason int reason) {
-            if (mOnDiedCalled.compareAndSet(false, true)) {
-                VirtualMachine vm = mVirtualMachine.get();
-                if (vm != null) {
-                    vm.executeCallback((cb) -> cb.onStopped(vm, reason));
-                }
+            VirtualMachine vm = mVirtualMachine.get();
+            if (vm != null) {
+                vm.handleStopped(translatedReason);
             }
         }
 
