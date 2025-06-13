@@ -701,7 +701,8 @@ public final class VirtualMachineConfig {
                 && Objects.equals(this.mPayloadBinaryName, other.mPayloadBinaryName)
                 && Objects.equals(this.mPackageName, other.mPackageName)
                 && Objects.equals(this.mOs, other.mOs)
-                && Objects.equals(this.mExtraApks, other.mExtraApks);
+                && Objects.equals(this.mExtraApks, other.mExtraApks)
+                && this.mEncryptedStoreMode == other.mEncryptedStoreMode;
     }
 
     private ParcelFileDescriptor openOrNull(File file, int mode) {
