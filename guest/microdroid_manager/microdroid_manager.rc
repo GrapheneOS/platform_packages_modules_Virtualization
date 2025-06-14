@@ -15,6 +15,5 @@ service microdroid_manager /system/bin/microdroid_manager
     # readproc to dump /proc/{pid}/maps
     group root readproc
     socket vm_payload_service stream 0666 system system
-    socket vm_internal_service stream 0666 system system
     socket rpc_servicemanager stream 0666 system system
     reboot_on_failure reboot,microdroid-manager-failed
