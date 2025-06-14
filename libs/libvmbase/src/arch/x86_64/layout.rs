@@ -43,3 +43,6 @@ pub const UART_PORTS: [u16; 4] = [0x3f8, 0x2f8, 0x3e8, 0x2e8];
 pub fn console_uart_page() -> Option<Range<VirtualAddress>> {
     None
 }
+
+/// I/O port number of the PS/2 keyboard controller command register
+pub const KBC_CMD_PORT: u16 = 0x64;

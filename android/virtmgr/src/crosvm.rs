@@ -25,6 +25,7 @@ use psi_rs::{PsiResource, PsiStallType, init_psi_monitor, parse_psi_line, regist
 use log::{debug, error, info, warn};
 use semver::{Version, VersionReq};
 use nix::{
+    errno::Errno,
     fcntl::OFlag,
     unistd::{pipe2, Uid, User},
     sys::epoll::{Epoll, EpollCreateFlags, EpollEvent, EpollFlags, EpollTimeout},
@@ -34,7 +35,7 @@ use regex::{Captures, Regex};
 use rustutils::system_properties;
 use shared_child::SharedChild;
 use std::borrow::Cow;
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::ffi::CString;
 use std::fmt;
 use std::fs::{read_to_string, File};
@@ -66,7 +67,6 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
 use binder::Strong;
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
@@ -364,17 +364,19 @@ impl VmState {
                 let psi_monitor_kill_event_clone = psi_monitor_kill_event.clone();
                 let instance = instance.clone();
                 Some((
-                    thread::spawn(move || {
-                        if let Err(e) = psi_monitor(&instance, psi_monitor_kill_event_clone) {
-                            error!("psi monitor failed: {:#}", e);
-                            // Spawn thread to kill VM, avoiding a deadlock as this thread joins
-                            thread::spawn(move || {
-                                if let Err(e) = instance.kill() {
-                                    error!("Error stopping VM with CID {}: {:?}", instance.cid, e);
-                                }
-                            });
-                        }
-                    }),
+                    thread::Builder::new().name("virt_psi_monitor".to_string()).spawn(
+                        move || {
+                            let mut expo_bo = 1;
+                            // TODO: add metrics to see how often we restart the thread
+                            while let Err(e) = psi_monitor(&instance, &psi_monitor_kill_event_clone)
+                            {
+                                error!("psi monitor failed: {:#}", e);
+                                thread::sleep(Duration::from_secs(expo_bo));
+                                // Exponential backoff, capped at 60 seconds
+                                expo_bo = min(expo_bo * 2, 60);
+                            }
+                        },
+                    )?,
                     psi_monitor_kill_event,
                 ))
             } else {
@@ -411,7 +413,7 @@ impl VmState {
     }
 }
 
-fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: Arc<EventFd>) -> Result<()> {
+fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>) -> Result<()> {
     // monitor memory, inflate balloon if some contention exists
     // This will initialize a PSI monitor that monitors memory contention in
     // windows of 500_000us. If "Some" processes are stalled for a preiod of
@@ -430,7 +432,15 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: Arc<EventFd>)
     loop {
         // Set timeout to -1, blocking indefinitely
         // https://man7.org/linux/man-pages/man2/epoll_wait.2.html
-        epoll.wait(&mut events, EpollTimeout::NONE)?;
+        let epoll_res = epoll.wait(&mut events, EpollTimeout::NONE);
+        if let Err(e) = epoll_res {
+            if e == Errno::EINTR {
+                // Ignore interrupts and wait again
+                continue;
+            } else {
+                return Err(e.into());
+            }
+        }
         match events[0].data() {
             0 => {
                 let mut psi_info = String::new();
@@ -553,9 +563,6 @@ pub struct VmInstance {
     pub join_handles: Mutex<VmJoinHandles>,
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
-    /// VirtualMachineService binder object for the VM.
-    #[allow(dead_code)]
-    pub vm_service: Mutex<Option<Strong<dyn IVirtualMachineService>>>,
     /// Guest agent running on the VM
     pub guest_agent: Mutex<Option<Strong<dyn IGuestAgent>>>,
     /// Recorded metrics of VM such as timestamp or cpu / memory usage.
@@ -628,7 +635,6 @@ impl VmInstance {
             requester_debug_pid,
             join_handles: Mutex::new(VmJoinHandles { console_join_handle, log_join_handle }),
             callbacks: Default::default(),
-            vm_service: Mutex::new(None),
             guest_agent: Mutex::new(None),
             vm_metric: Mutex::new(Default::default()),
             payload_state: Mutex::new(PayloadState::Starting),

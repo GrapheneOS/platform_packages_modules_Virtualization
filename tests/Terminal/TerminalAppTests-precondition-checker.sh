@@ -24,12 +24,14 @@ INSTALLED_IMAGE_SIZE=8388608    # 8GB
 free_space=$(adb shell df /data | tail -1 | awk '{print $4}')
 if [[ ${free_space} -lt ${INSTALLED_IMAGE_SIZE} ]]; then
   >&2 echo "Insufficient space on DUT. Need ${INSTALLED_IMAGE_SIZE}, but was ${free_space}"
+  adb shell df /data
   exit 1
 fi
 
 free_space=$(df /tmp | tail -1 | awk '{print $4}')
 if [[ ${free_space} -lt ${COMPRESSED_IMAGE_SIZE} ]]; then
   >&2 echo "Insufficient space on host. Need ${COMPRESSED_IMAGE_SIZE}, but was ${free_space}"
+  df /tmp
   exit 1
 fi
 

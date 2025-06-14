@@ -40,6 +40,7 @@ import android.system.virtualmachine.VirtualMachineCallback;
 import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.CallSuper;
@@ -296,6 +297,15 @@ public abstract class MicrodroidDeviceTestBase {
 
     protected void assumeNoUpdatableVmSupport() throws VirtualMachineException {
         assume().withMessage("Secretkeeper not supported").that(isUpdatableVmSupported()).isFalse();
+    }
+
+    protected void assumeDebuggableBuild() {
+        // SystemProperties can't be used due to the sepolicy denial.
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        UiAutomation uiAutomation = instrumentation.getUiAutomation();
+        assume().withMessage("Test requires debuggable build")
+                .that(runInShell(TAG, uiAutomation, "getprop ro.debuggable").trim())
+                .isEqualTo("1");
     }
 
     protected boolean isUpdatableVmSupported() throws VirtualMachineException {
@@ -631,6 +641,28 @@ public abstract class MicrodroidDeviceTestBase {
         } catch (IOException e) {
             Log.e(tag, "Error executing: " + command, e);
             throw new RuntimeException("Failed to run the command.", e);
+        }
+    }
+
+    protected void kill(String tag, String processName) {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        UiAutomation uiAutomation = instrumentation.getUiAutomation();
+        uiAutomation.adoptShellPermissionIdentity();
+        try {
+            String pid = runInShell(TAG, uiAutomation, "pidof " + processName).trim();
+            if (TextUtils.isEmpty(pid)) {
+                Log.i(tag, "Process " + processName + " isn't running. Skipping kill()");
+                return;
+            }
+
+            String res = runInShellWithStderr(TAG, uiAutomation, "su 0 kill -9 " + pid).trim();
+            if (TextUtils.isEmpty(res)) {
+                Log.i(tag, "Process " + processName + " (pid=" + pid + ") is killed");
+            } else {
+                throw new RuntimeException("Failed to kill process. Is this a debuggable build?");
+            }
+        } finally {
+            uiAutomation.dropShellPermissionIdentity();
         }
     }
 
