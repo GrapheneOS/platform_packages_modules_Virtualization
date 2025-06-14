@@ -503,6 +503,30 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThrowsVmException(() -> getVirtualMachineManager().delete("test_vm"));
     }
 
+    private static class SimpleVirtualMachineCallback implements VirtualMachineCallback {
+        public final CountDownLatch started = new CountDownLatch(1);
+        public final CountDownLatch stopped = new CountDownLatch(1);
+
+        @Override
+        public void onPayloadStarted(VirtualMachine vm) {
+            started.countDown();
+        }
+
+        @Override
+        public void onPayloadReady(VirtualMachine vm) {}
+
+        @Override
+        public void onPayloadFinished(VirtualMachine vm, int exitCode) {}
+
+        @Override
+        public void onError(VirtualMachine vm, int errorCode, String message) {}
+
+        @Override
+        public void onStopped(VirtualMachine vm, int reason) {
+            stopped.countDown();
+        }
+    }
+
     private void testCrashInternal(String vmName, String killProcessName) throws Exception {
         assumeSupportedDevice();
 
@@ -518,45 +542,29 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         try (VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config)) {
             assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
 
-            CountDownLatch started = new CountDownLatch(1);
-            CountDownLatch stopped = new CountDownLatch(1);
-            vm.setCallback(
-                    Executors.newSingleThreadExecutor(),
-                    new VirtualMachineCallback() {
-                        @Override
-                        public void onPayloadStarted(VirtualMachine vm) {
-                            started.countDown();
-                        }
-
-                        @Override
-                        public void onPayloadReady(VirtualMachine vm) {}
-
-                        @Override
-                        public void onPayloadFinished(VirtualMachine vm, int exitCode) {}
-
-                        @Override
-                        public void onError(VirtualMachine vm, int errorCode, String message) {}
-
-                        @Override
-                        public void onStopped(VirtualMachine vm, int reason) {
-                            stopped.countDown();
-                        }
-                    });
+            SimpleVirtualMachineCallback beforeCrash = new SimpleVirtualMachineCallback();
+            vm.setCallback(Executors.newSingleThreadExecutor(), beforeCrash);
 
             vm.run();
             assertThat(vm.getStatus()).isEqualTo(STATUS_RUNNING);
 
             // Let globalTimeout to handle timeout.
-            started.await();
+            beforeCrash.started.await();
 
             kill(TAG, killProcessName);
 
             // Let globalTimeout to handle timeout.
-            stopped.await();
-
+            beforeCrash.stopped.await();
             assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
-
             assertThrowsVmExceptionContaining(() -> vm.stop(), "not running");
+
+            // Try run again. It should recover virtmgr and run VM.
+            SimpleVirtualMachineCallback afterCrash = new SimpleVirtualMachineCallback();
+            vm.setCallback(Executors.newSingleThreadExecutor(), afterCrash);
+            vm.run();
+
+            // Let globalTimeout to handle timeout.
+            afterCrash.started.await();
         }
     }
 
