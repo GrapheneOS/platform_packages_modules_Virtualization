@@ -18,13 +18,10 @@
 //! solution in a VM. This is based on dm-crypt & requires the (64 bytes') key & the backing device.
 //! It uses dm_rust lib.
 
-use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{IVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME};
 use anyhow::{anyhow, ensure, Context, Result};
-use binder::Strong;
 use clap::arg;
 use dm::{crypt::CipherType, util};
 use log::{error, info, warn};
-use rpcbinder::RpcSession;
 use rustutils::system_properties;
 use std::ffi::CString;
 use std::fs::{create_dir_all, OpenOptions};
@@ -34,19 +31,11 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::LazyLock;
 
 const E2FSCK_BIN: &str = "/system/bin/e2fsck";
 const MK2FS_BIN: &str = "/system/bin/mke2fs";
 const RESIZE2FS_BIN: &str = "/system/bin/resize2fs";
 const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
-
-static INTERNAL_CONNECTION: LazyLock<Strong<dyn IVmInternalService>> = LazyLock::new(|| {
-    warn!("acquiring new connection to IVmInternalService");
-    RpcSession::new().setup_unix_domain_client(VM_INTERNAL_SERVICE_SOCKET_NAME).unwrap_or_else(
-        |_| panic!("Failed to connect to service: {}", VM_INTERNAL_SERVICE_SOCKET_NAME),
-    )
-});
 
 // man e2fsck defines the following exit codes
 #[allow(dead_code)]
@@ -246,10 +235,8 @@ fn e2fsck(device: &Path) -> Result<()> {
         .context("failed to execute e2fsck")?;
     if !status.success() {
         info!("e2fsck wasn't successful");
-        let mut exit_code = "None".to_string();
-        let result = match status.code() {
+        match status.code() {
             Some(code) => {
-                exit_code = code.to_string();
                 if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
                     Err(anyhow!("File system errors left uncorrected: {code}"))
                 } else {
@@ -258,16 +245,7 @@ fn e2fsck(device: &Path) -> Result<()> {
                 }
             }
             None => Err(anyhow!("Process terminated by signal")),
-        };
-
-        match INTERNAL_CONNECTION
-            .writeToHostDropBox("encryptedstore", &format!("e2fsck exited with code: {exit_code}"))
-        {
-            Ok(()) => warn!("Wrote e2fsck exit code {exit_code} to dropbox"),
-            Err(e) => error!("Failed to write e2fsck exit code {exit_code} to dropbox: {e}"),
-        };
-
-        result
+        }
     } else {
         info!("e2fsck was successful");
         Ok(())

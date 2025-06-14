@@ -9,10 +9,8 @@ rust_defaults {
     edition: "2021",
     prefer_rlib: true,
     rustlibs: [
-        "android.system.virtualization.internal-rust",
         "libandroid_logger",
         "libanyhow",
-        "libbinder_rs",
         "liblibc",
         "libclap",
         "libhex",
@@ -20,7 +18,6 @@ rust_defaults {
         "libmicrodroid_uids",
         "libnix",
         "libdm_rust",
-        "librpcbinder_rs",
         "librustutils",
     ],
     multilib: {

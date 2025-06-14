@@ -40,7 +40,6 @@ rust_defaults {
         "libcrosvm_control_static",
         "libcommand_fds",
         "libdisk",
-        "libdropbox_rs",
         "libglob",
         "libhex",
         "libhypervisor_props",
@@ -70,7 +69,6 @@ rust_defaults {
         "liblibfdt",
         "libfsfdt",
         "libhypervisor_props",
-        "libvirt_dropbox",
         "libzerocopy",
         "libuuid",
         // TODO(b/202115393) stabilize the interface
