@@ -1880,8 +1880,6 @@ public class VirtualMachine implements AutoCloseable {
      * {@linkplain #connectToVsockServer binder request}, and wait for {@link
      * VirtualMachineCallback#onPayloadFinished} to be called.
      *
-     * <p>A stopped virtual machine cannot be re-started.
-     *
      * <p>NOTE: This method may block and should not be called on the main thread.
      *
      * @throws VirtualMachineException if the virtual machine is not running or could not be
