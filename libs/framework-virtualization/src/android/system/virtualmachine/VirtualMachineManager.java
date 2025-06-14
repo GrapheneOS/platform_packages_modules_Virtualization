@@ -226,7 +226,12 @@ public class VirtualMachineManager {
     @GuardedBy("sCreateLock")
     private VirtualMachine createLocked(@NonNull String name, @NonNull VirtualMachineConfig config)
             throws VirtualMachineException {
-        VirtualMachine vm = VirtualMachine.create(mContext, name, config);
+        VirtualMachine vm = getVmByName(name);
+        if (vm != null) {
+            throw new VirtualMachineException(
+                    "Failed to create VirtualMachine with name " + name + ". Already exist");
+        }
+        vm = VirtualMachine.create(mContext, name, config);
         mVmsByName.put(name, new WeakReference<>(vm));
         return vm;
     }
@@ -289,6 +294,11 @@ public class VirtualMachineManager {
             throws VirtualMachineException {
         VirtualMachine vm;
         synchronized (sCreateLock) {
+            vm = getVmByName(name);
+            if (vm != null) {
+                throw new VirtualMachineException(
+                        "Failed to import VirtualMachine with name " + name + ". Already exist");
+            }
             vm = VirtualMachine.fromDescriptor(mContext, name, vmDescriptor);
             mVmsByName.put(name, new WeakReference<>(vm));
         }

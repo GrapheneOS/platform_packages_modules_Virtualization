@@ -223,6 +223,20 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    public void createTwice() throws Exception {
+        VirtualMachineManager vmm = getVirtualMachineManager();
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        String name = "test_vm_createTwice";
+        deleteVirtualMachineIfExists(name);
+        try (VirtualMachine vm = vmm.create(name, config)) {
+            assertThrows(VirtualMachineException.class, () -> vmm.create(name, config));
+        }
+    }
+
+    @Test
     @CddTest
     public void createAndConnectToVm() throws Exception {
         createAndConnectToVmHelper(CPU_TOPOLOGY_ONE_CPU, /* shouldUseHugepages= */ false);
@@ -407,8 +421,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
-        VirtualMachineDescriptor descriptor = vm.toDescriptor();
+        VirtualMachineDescriptor descriptor;
+        try (VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config)) {
+            descriptor = vm.toDescriptor();
+        }
 
         Parcel parcel = Parcel.obtain();
         try (descriptor) {
@@ -436,8 +452,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
-        VirtualMachineDescriptor descriptor = vm.toDescriptor();
+        VirtualMachineDescriptor descriptor;
+        try (VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config)) {
+            descriptor = vm.toDescriptor();
+        }
 
         getVirtualMachineManager().importFromDescriptor("imported_vm", descriptor);
         try {
@@ -453,6 +471,22 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    public void importVmDescriptorForExistingVm() throws Exception {
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachineDescriptor descriptor;
+        String name = "test_vm";
+        try (VirtualMachine vm = forceCreateNewVirtualMachine(name, config)) {
+            descriptor = vm.toDescriptor();
+
+            assertThrows(
+                    VirtualMachineException.class,
+                    () -> getVirtualMachineManager().importFromDescriptor(name, descriptor));
+        }
+    }
+
     @CddTest
     public void vmLifecycleChecks() throws Exception {
         assumeSupportedDevice();
