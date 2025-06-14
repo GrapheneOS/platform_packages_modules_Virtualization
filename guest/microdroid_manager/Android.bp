@@ -16,7 +16,6 @@ rust_defaults {
         "android.system.virtualizationcommon-rust",
         "android.system.virtualizationservice-rust",
         "android.system.virtualmachineservice-rust",
-        "android.system.virtualization.internal-rust",
         "android.system.virtualization.payload-rust",
         "libandroid_logger",
         "libanyhow",
