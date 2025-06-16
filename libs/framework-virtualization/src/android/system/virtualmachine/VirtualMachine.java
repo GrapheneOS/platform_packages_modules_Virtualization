@@ -316,9 +316,6 @@ public class VirtualMachine implements AutoCloseable {
             }
     }
 
-    /** Running instance of virtmgr that hosts VirtualizationService for this VM. */
-    @NonNull private final VirtualizationService mVirtualizationService;
-
     private final MemoryManagementCallbacks mMemoryManagementCallbacks;
 
     @NonNull private final Context mContext;
@@ -343,6 +340,11 @@ public class VirtualMachine implements AutoCloseable {
     private final Executor mConsoleExecutor = Executors.newSingleThreadExecutor();
 
     private ExecutorService mInputEventExecutor;
+
+    /** Running instance of virtmgr that hosts VirtualizationService for this VM. */
+    @GuardedBy("mLock")
+    @Nullable
+    private VirtualizationService mVirtualizationService;
 
     /** The configuration that is currently associated with this VM. */
     @GuardedBy("mLock")
@@ -437,15 +439,13 @@ public class VirtualMachine implements AutoCloseable {
         mPackageName = context.getPackageName();
         mName = requireNonNull(name, "Name must not be null");
         mConfig = requireNonNull(config, "Config must not be null");
-        mVirtualizationService = service;
 
         File thisVmDir = getVmDir(context, mName);
         mVmRootPath = thisVmDir;
         mConfigFilePath = new File(thisVmDir, CONFIG_FILE);
         try {
             mInstanceIdPath =
-                    (mVirtualizationService
-                                    .getBinder()
+                    (service.getBinder()
                                     .isFeatureEnabled(IVirtualizationService.FEATURE_LLPVM_CHANGES))
                             ? new File(thisVmDir, INSTANCE_ID_FILE)
                             : null;
@@ -480,15 +480,6 @@ public class VirtualMachine implements AutoCloseable {
 
         mVSDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
         mVMDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
-        // Set death recipient at the last moment, so it's only called after fully initialized.
-        try {
-            mVirtualizationService
-                    .getBinder()
-                    .asBinder()
-                    .linkToDeath(mVSDeathRecipient, /* flags= */ 0);
-        } catch (RemoteException e) {
-            throw e.rethrowAsRuntimeException();
-        }
     }
 
     /**
@@ -513,7 +504,8 @@ public class VirtualMachine implements AutoCloseable {
             VirtualMachine vm;
             try (vmDescriptor) {
                 VirtualMachineConfig config = VirtualMachineConfig.from(vmDescriptor.getConfigFd());
-                vm = new VirtualMachine(context, name, config, VirtualizationService.getInstance());
+                VirtualizationService service = VirtualizationService.getInstance();
+                vm = new VirtualMachine(context, name, config, service);
                 config.serialize(vm.mConfigFilePath);
                 try {
                     vm.mInstanceFilePath.createNewFile();
@@ -534,7 +526,7 @@ public class VirtualMachine implements AutoCloseable {
                 }
                 if (vm.mInstanceIdPath != null) {
                     vm.importInstanceIdFrom(vmDescriptor.getInstanceIdFd());
-                    vm.claimInstance();
+                    vm.claimInstance(service);
                 }
             }
             return vm;
@@ -562,8 +554,8 @@ public class VirtualMachine implements AutoCloseable {
         File vmDir = createVmDir(context, name);
 
         try {
-            VirtualMachine vm =
-                    new VirtualMachine(context, name, config, VirtualizationService.getInstance());
+            VirtualizationService virtualizationService = VirtualizationService.getInstance();
+            VirtualMachine vm = new VirtualMachine(context, name, config, virtualizationService);
             config.serialize(vm.mConfigFilePath);
             try {
                 vm.mInstanceFilePath.createNewFile();
@@ -579,7 +571,7 @@ public class VirtualMachine implements AutoCloseable {
                 }
             }
 
-            IVirtualizationService service = vm.mVirtualizationService.getBinder();
+            IVirtualizationService service = virtualizationService.getBinder();
 
             if (vm.mInstanceIdPath != null) {
                 try (FileOutputStream stream = new FileOutputStream(vm.mInstanceIdPath)) {
@@ -710,12 +702,11 @@ public class VirtualMachine implements AutoCloseable {
 
     // Claim the instance. This notifies the global VS about the ownership of this
     // instance_id for housekeeping purpose.
-    void claimInstance() throws VirtualMachineException {
+    void claimInstance(@NonNull VirtualizationService service) throws VirtualMachineException {
         if (mInstanceIdPath != null) {
-            IVirtualizationService service = mVirtualizationService.getBinder();
             try {
                 byte[] instanceId = Files.readAllBytes(mInstanceIdPath.toPath());
-                service.claimVmInstance(instanceId);
+                service.getBinder().claimVmInstance(instanceId);
             } catch (IOException e) {
                 throw new VirtualMachineException("failed to read instance_id", e);
             } catch (RemoteException e) {
@@ -880,8 +871,26 @@ public class VirtualMachine implements AutoCloseable {
             mContext.unregisterComponentCallbacks(mMemoryManagementCallbacks);
         }
         if (mVirtualMachine != null) {
-            mVirtualMachine.asBinder().unlinkToDeath(mVMDeathRecipient, /* flags= */ 0);
+            try {
+                mVirtualMachine.asBinder().unlinkToDeath(mVMDeathRecipient, /* flags= */ 0);
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Ignore exception unlinkToDeath() for IVirtualMachine, exception=" + e);
+            }
             mVirtualMachine = null;
+        }
+        if (mVirtualizationService != null) {
+            try {
+                mVirtualizationService
+                        .getBinder()
+                        .asBinder()
+                        .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+            } catch (RuntimeException e) {
+                Log.w(
+                        TAG,
+                        "Ignore exception unlinkToDeath() for IVirtualizationService, exception="
+                                + e);
+            }
+            mVirtualizationService = null;
         }
     }
 
@@ -1549,6 +1558,7 @@ public class VirtualMachine implements AutoCloseable {
         synchronized (mLock) {
             checkStopped();
 
+            mVirtualizationService = VirtualizationService.getInstance();
             mStopHandled = false;
 
             try {
@@ -1643,8 +1653,8 @@ public class VirtualMachine implements AutoCloseable {
 
                 if (vmConfig.isEncryptedStorageEnabled()) {
                     service.setEncryptedStorageSize(
-                        ParcelFileDescriptor.open(mEncryptedStoreFilePath, MODE_READ_WRITE),
-                        vmConfig.getEncryptedStorageBytes());
+                            ParcelFileDescriptor.open(mEncryptedStoreFilePath, MODE_READ_WRITE),
+                            vmConfig.getEncryptedStorageBytes());
                 }
 
                 mVirtualMachine =
@@ -1652,6 +1662,7 @@ public class VirtualMachine implements AutoCloseable {
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
                 mVirtualMachine.registerCallback(new CallbackTranslator(this, service));
                 mVirtualMachine.asBinder().linkToDeath(mVMDeathRecipient, /* flags= */ 0);
+                service.asBinder().linkToDeath(mVSDeathRecipient, /* flags= */ 0);
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 }
@@ -2209,11 +2220,12 @@ public class VirtualMachine implements AutoCloseable {
      *
      * @hide
      */
+    // TODO: Make this static API.
     @TestApi
     @RequiresPermission(USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
     public void enableTestAttestation() throws VirtualMachineException {
         try {
-            mVirtualizationService.getBinder().enableTestAttestation();
+            VirtualizationService.getInstance().getBinder().enableTestAttestation();
         } catch (RemoteException e) {
             throw e.rethrowAsRuntimeException();
         }
