@@ -138,3 +138,4 @@ AVF currently supports the following debugging features:
 * [Attaching GDB to the kernel](gdb_kernel.md)
 * [Attaching GDB to the userspace process](gdb_userspace.md) (only for Microdroid)
 * [Tracing hypervisor events](tracing.md)
+* [Dumping backtrace of the userspace processes](backtrace_userspace.md) (only for Microdroid)

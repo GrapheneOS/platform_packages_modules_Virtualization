@@ -76,6 +76,7 @@ android_system_image {
         "debuggerd",
         "linker",
         "public.libraries.android.txt",
+        "tombstoned.microdroid",
 
         "microdroid_event-log-tags",
         "microdroid_file_contexts",
