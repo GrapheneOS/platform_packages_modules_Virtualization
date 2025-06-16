@@ -13,3 +13,4 @@ on property:pageout_bomb.go=1
     exec_start pageout_bomb
     exec /system/bin/sync
     write /proc/sys/vm/drop_caches 3
+    write /proc/sys/vm/compact_memory 1
