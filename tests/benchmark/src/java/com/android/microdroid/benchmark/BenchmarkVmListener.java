@@ -59,9 +59,12 @@ class BenchmarkVmListener extends VmEventListener {
             mListener.onPayloadReady(vm, benchmarkService);
         } catch (Exception e) {
             Log.e(TAG, "Error inside onPayloadReady():" + e);
-            throw new RuntimeException(e);
         }
-        forceStop(vm);
+        try {
+            forceStop(vm);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to forceStop:" + e);
+        }
     }
 
     @Override
