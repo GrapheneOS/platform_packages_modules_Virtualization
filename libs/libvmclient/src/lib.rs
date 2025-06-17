@@ -49,6 +49,7 @@ use shared_child::SharedChild;
 use std::ffi::{c_char, c_int, c_void, CString};
 use std::io::{self, Read};
 use std::os::fd::RawFd;
+use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::{
     fmt::{self, Debug, Formatter},
@@ -138,12 +139,20 @@ impl VirtualizationService {
     fn new_with_path(virtmgr_path: &str) -> Result<VirtualizationService, io::Error> {
         let (wait_fd, ready_fd) = posix_pipe()?;
         let (client_fd, server_fd) = posix_socketpair()?;
-
         let mut command = Command::new(virtmgr_path);
         // Can't use BorrowedFd as it doesn't implement Display
         command.arg("--rpc-server-fd").arg(format!("{}", server_fd.as_raw_fd()));
         command.arg("--ready-fd").arg(format!("{}", ready_fd.as_raw_fd()));
         command.preserved_fds(vec![server_fd, ready_fd]);
+
+        // ps uses -o NAME by default, which shows the last path element of argv[0].
+        if let Some(arg0) = std::env::args().nth(0) {
+            let prog_name = match arg0.rfind('/') {
+                Some(idx) => &arg0[idx + 1..],
+                None => &arg0,
+            };
+            command.arg0(format!("virtmgr_{prog_name}"));
+        }
 
         let process = SharedChild::spawn(&mut command)?;
         let is_tty = isatty(std::io::stdout().as_raw_fd())?;

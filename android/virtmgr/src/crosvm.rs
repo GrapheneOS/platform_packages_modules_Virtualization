@@ -417,13 +417,22 @@ impl VmState {
     }
 }
 
+fn trigger_trim(instance: &Arc<VmInstance>) {
+    // When the host is under memory pressure, send a trim request
+    // Full contention detected, send a trim request
+    if let Some(guest_agent) = &*instance.guest_agent.lock().unwrap() {
+        if let Err(e) = guest_agent.trim() {
+            error!("IGuestAgent::trim failed: {e:#}");
+        }
+    }
+}
 fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>) -> Result<()> {
     // monitor memory, inflate balloon if some contention exists
     // This will initialize a PSI monitor that monitors memory contention in
     // windows of 500_000us. If "Some" processes are stalled for a preiod of
     // 50_000us within the window period, an event gets fired.
     let mut memory_pressure_file =
-        init_psi_monitor(PsiStallType::Some, 50000, 500000, PsiResource::Memory)?;
+        init_psi_monitor(PsiStallType::Some, 50000, 1000000, PsiResource::Memory)?;
     let epoll = Epoll::new(EpollCreateFlags::EPOLL_CLOEXEC)?;
     register_psi_monitor(&epoll, memory_pressure_file.as_fd(), 0)?;
     epoll
@@ -433,6 +442,7 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
     // Wait on event
     let mut events = [EpollEvent::empty()];
     let mut rate_limiter: Option<Instant> = None;
+    let mut last_was_full = false;
     loop {
         // Set timeout to -1, blocking indefinitely
         // https://man7.org/linux/man-pages/man2/epoll_wait.2.html
@@ -452,35 +462,37 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
                 memory_pressure_file
                     .read_to_string(&mut psi_info)
                     .context("Failed to read PSI monitor to buffer")?;
-                if let Some(time) = rate_limiter {
-                    if time.elapsed() <= Duration::from_secs(60) {
-                        // 1 minute has not passed since the last compaction. Wait more.
-                        continue;
-                    }
-                }
-                // There may be 2 entries in PSI info, as 2 monitors can be set. 1 monitor for
-                // `Some`, and 1 monitor for `Full`. We really want to shrink the VM when `Some`
-                // contention is detected, before we get to `Full`. `Some` ultimately is a subset
-                // of full, which means there will always be `Some` and `Full`, but never `Full`
-                // without `Some`.
-                let Some(stats) = psi_info
+                // Monitor both Some and Full contention monitors.
+                // If the system was not under memory contention, and then becomes under memory
+                // contention, send a trim request directly.
+                // If the system was under "Some" contention and went to "Full" contention, send a
+                // trim request directly.
+                // If the system was under memory contention and detected new contention, check if
+                // timeout was hit.
+                let full_stats = psi_info
+                    .lines()
+                    .filter_map(|l| parse_psi_line(l, PsiStallType::Full).ok())
+                    .next();
+                let some_stats = psi_info
                     .lines()
                     .filter_map(|l| parse_psi_line(l, PsiStallType::Some).ok())
-                    .next()
-                else {
-                    error!("failed find 'some' psi line");
-                    continue;
+                    .next();
+                let full_triggered = full_stats.is_some() && full_stats.unwrap().avg10 > 1.0;
+                let some_triggered = some_stats.is_some() && some_stats.unwrap().avg10 > 1.0;
+                let is_rate_limited = rate_limiter.is_some()
+                    && rate_limiter.unwrap().elapsed() > Duration::from_secs(60);
+
+                let should_trim = if is_rate_limited {
+                    !last_was_full && full_triggered
+                } else {
+                    full_triggered || some_triggered
                 };
-                // Over the past 10 seconds, 1% of the time some processes were waiting for
-                // memory resources
-                if stats.avg10 > 1.0 {
+
+                last_was_full = full_triggered;
+
+                if should_trim {
                     rate_limiter = Some(Instant::now());
-                    // When the host is under memory pressure, send a trim request
-                    if let Some(guest_agent) = &*instance.guest_agent.lock().unwrap() {
-                        if let Err(e) = guest_agent.trim() {
-                            error!("IGuestAgent::trim failed: {e:#}");
-                        }
-                    }
+                    trigger_trim(instance);
                 }
             }
             1 => {
@@ -693,7 +705,6 @@ impl VmInstance {
 
         let result = child.wait();
         match &result {
-            // TODO: This should be fatal, we lost the crosvm process.
             Err(e) => error!("Error waiting for crosvm({}) instance to die: {}", child.id(), e),
             Ok(status) => {
                 info!("crosvm({}) exited with status {}", child.id(), status);
