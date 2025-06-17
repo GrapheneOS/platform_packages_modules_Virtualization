@@ -705,7 +705,6 @@ impl VmInstance {
 
         let result = child.wait();
         match &result {
-            // TODO: This should be fatal, we lost the crosvm process.
             Err(e) => error!("Error waiting for crosvm({}) instance to die: {}", child.id(), e),
             Ok(status) => {
                 info!("crosvm({}) exited with status {}", child.id(), status);
