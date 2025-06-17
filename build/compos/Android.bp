@@ -93,4 +93,5 @@ rust_aconfig_library {
     name: "libaconfig_compos_flags_rust",
     crate_name: "aconfig_compos_flags_rust",
     aconfig_declarations: "aconfig_compos_flags",
+    apex_available: ["com.android.compos"],
 }
