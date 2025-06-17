@@ -20,7 +20,6 @@ import static android.content.pm.PackageManager.FEATURE_LEANBACK;
 import static android.content.pm.PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
 
-import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
@@ -724,10 +723,10 @@ public abstract class MicrodroidDeviceTestBase {
                 };
         listener.runToFinish(TAG, vm);
 
-        assertThat(payloadReady.getNow(false)).isTrue();
-        assertThat(exception.getNow(null)).isNull();
+        assertWithMessage("Payload was never ready").that(payloadReady.getNow(false)).isTrue();
+        assertWithMessage("There was an exception").that(exception.getNow(null)).isNull();
         SigningResult signingResult = signingResultFuture.getNow(null);
-        assertThat(signingResult).isNotNull();
+        assertWithMessage("Signing result is null").that(signingResult).isNotNull();
         return signingResult;
     }
 
@@ -797,9 +796,9 @@ public abstract class MicrodroidDeviceTestBase {
                 };
 
         listener.runToFinish(logTag, vm);
-        assertThat(payloadStarted.getNow(false)).isTrue();
-        assertThat(payloadReady.getNow(false)).isTrue();
-        assertThat(payloadFinished.getNow(false)).isTrue();
+        assertWithMessage("Payload didn't start").that(payloadStarted.getNow(false)).isTrue();
+        assertWithMessage("Payload was not ready").that(payloadStarted.getNow(false)).isTrue();
+        assertWithMessage("Payload did not finish").that(payloadFinished.getNow(false)).isTrue();
         return testResults;
     }
 
@@ -811,7 +810,7 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     protected long minMemoryRequired() {
-        assertThat(Build.SUPPORTED_ABIS).isNotEmpty();
+        assertWithMessage("Build.SUPPORTED_ABIS is empty").that(Build.SUPPORTED_ABIS).isNotEmpty();
         String primaryAbi = Build.SUPPORTED_ABIS[0];
         switch (primaryAbi) {
             case "x86_64":

@@ -16,7 +16,7 @@
 
 package com.android.microdroid.benchmark;
 
-import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.os.RemoteException;
 import android.system.virtualmachine.VirtualMachine;
@@ -54,7 +54,7 @@ class BenchmarkVmListener extends VmEventListener {
             IBenchmarkService benchmarkService =
                     IBenchmarkService.Stub.asInterface(
                             vm.connectToVsockServer(IBenchmarkService.PORT));
-            assertThat(benchmarkService).isNotNull();
+            assertWithMessage("Benchmark service is null").that(benchmarkService).isNotNull();
 
             mListener.onPayloadReady(vm, benchmarkService);
         } catch (Exception e) {
@@ -78,6 +78,6 @@ class BenchmarkVmListener extends VmEventListener {
             throws VirtualMachineException, InterruptedException {
         mPayloadReady = false;
         super.runToFinish(logTag, vm);
-        assertThat(mPayloadReady).isTrue();
+        assertWithMessage("Payload was never ready").that(mPayloadReady).isTrue();
     }
 }
