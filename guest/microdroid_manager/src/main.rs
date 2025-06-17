@@ -1234,6 +1234,12 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     read_and_write_glob_files(&mut stream, "/proc/pressure/*", &[])?;
     read_and_write_glob_files(&mut stream, "/sys/fs/cgroup/*/memory.*", &["memory.reclaim"])?;
     read_and_write_glob_files(&mut stream, "/proc/*/smaps_rollup", &[])?;
+    // Useful for understanding the amount of higher order pages in the system.
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/pagetypeinfo"))?;
+    // Useful for global memory management stats.
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/vmstat"))?;
+    // Useful for per-zone stats (e.g. watermarks).
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/zoneinfo"))?;
 
     if is_debuggable() {
         read_and_write_glob_files(&mut stream, "/proc/*/maps", &[])?;
