@@ -130,6 +130,11 @@ on post-fs
 
     mkdir /data/misc/authfs 0700 root root
 
+    # for tombstoned
+    # these aren't used but make tombstoned happy.
+    mkdir /data/anr 0555 system system
+    mkdir /data/tombstones 0555 system system
+
 on late-fs && property:ro.debuggable=1
     # Ensure that tracefs has the correct permissions.
     # This does not work correctly if it is called in post-fs.
