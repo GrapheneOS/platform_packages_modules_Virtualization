@@ -52,14 +52,6 @@ on init
     # Allow the payload access to the console (default is 0600)
     chmod 0666 /dev/console
 
-    # Microdroid_manager will add microdroid_launcher into this cgroup after it has created
-    # and knows the PID to write into /sys/fs/cgroup/microdroid_launcher/cgroup.procs.
-    mkdir /sys/fs/cgroup/microdroid_launcher
-
-    # Change this value to limit how much memory processes in the microdroid_launcher
-    # cgroup can consume before reclaim starts running on that cgroup.
-    write /sys/fs/cgroup/microdroid_launcher/memory.high 80M
-
     # Microdroid_manager starts apkdmverity/zipfuse/apexd
     start microdroid_manager
 

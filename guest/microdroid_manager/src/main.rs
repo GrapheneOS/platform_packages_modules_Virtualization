@@ -339,7 +339,6 @@ fn try_main() -> Result<()> {
 
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
 
-    let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor()?;
     match try_run_payload(&service, vm_payload_service_fd) {
         Ok(code) => {
             match code {
@@ -356,16 +355,12 @@ fn try_main() -> Result<()> {
 
             info!("notifying payload finished");
             service.notifyPayloadFinished(code)?;
-            // TODO: (khei@)
-            // Send cgroup kill signal and join cgroup thread for graceful shutdown
             Ok(())
         }
         Err(err) => {
             warn!("payload finished erroneously: {:?}", err);
             let (error_code, message) = translate_error(&err);
             service.notifyError(error_code, &message)?;
-            // TODO: (khei@)
-            // Send cgroup kill signal and join cgroup thread for graceful shutdown
             Err(err)
         }
     }
@@ -441,6 +436,13 @@ enum VmInstanceState {
     PreviouslySeen,
 }
 
+struct CgroupConfig {
+    name: &'static str,
+    // Limits how much memory the cgroup (generally just the payload process) can consume before
+    // reclaim starts running on that cgroup.
+    memory_high_mib: u64,
+}
+
 fn try_run_payload(
     service: &Strong<dyn IVirtualMachineService>,
     vm_payload_service_fd: OwnedFd,
@@ -463,6 +465,31 @@ fn try_run_payload(
     } else {
         verify_payload_with_instance_img(&metadata, &dice, &mut state)?
     };
+
+    // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
+    // appsearch's VM, which we detect indirectly via the rollback_index field.
+    let cgroup_config = if instance_data.apk_data.rollback_index.is_some() {
+        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 80 })
+    } else {
+        None
+    };
+
+    if let Some(cgroup_config) = cgroup_config.as_ref() {
+        // We create and configure the cgroup now, then the child process adds itself to the group
+        // before `exec`ing the payload binary (see `exec_task` code).
+        let cgroup_dir = std::path::Path::new("/sys/fs/cgroup").join(cgroup_config.name);
+        std::fs::create_dir(&cgroup_dir).context("failed to create cgroup dir")?;
+        std::fs::write(
+            cgroup_dir.join("memory.high"),
+            format!("{}M", cgroup_config.memory_high_mib),
+        )
+        .context("failed to set cgroup memory.high")?;
+
+        // Spawn thread to monitor the cgroup's behavior.
+        // TODO: (khei@)
+        // Send cgroup kill signal and join cgroup thread for graceful shutdown
+        let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(cgroup_config.name)?;
+    }
 
     let payload_metadata = metadata.payload.ok_or_else(|| {
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
@@ -627,8 +654,8 @@ fn try_run_payload(
     }
 
     info!("boot completed, time to run payload");
-    let mut payload_process =
-        exec_task(task, service, &std_redirect).context("Failed to run payload")?;
+    let mut payload_process = exec_task(task, cgroup_config.as_ref(), service, &std_redirect)
+        .context("Failed to run payload")?;
     setup_ignore_sigterm()?;
 
     let exit_status = payload_process.wait()?;
@@ -871,6 +898,7 @@ fn load_crashkernel_if_supported() -> Result<()> {
 /// Executes the given task.
 fn exec_task(
     task: &Task,
+    cgroup_config: Option<&CgroupConfig>,
     service: &Strong<dyn IVirtualMachineService>,
     std_redirect: &Option<OwnedFd>,
 ) -> Result<Child> {
@@ -893,17 +921,7 @@ fn exec_task(
         }
     };
 
-    let cgroup_path = if command
-        .get_args()
-        .next()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .contains("com.android.appsearch")
-    {
-        Some("/sys/fs/cgroup/microdroid_launcher/cgroup.procs")
-    } else {
-        None
-    };
+    let cgroup_path = cgroup_config.map(|c| format!("/sys/fs/cgroup/{}/cgroup.procs", c.name));
 
     // SAFETY: We are not accessing any resource of the parent process. This means we can't make any
     // log calls inside the closure.
