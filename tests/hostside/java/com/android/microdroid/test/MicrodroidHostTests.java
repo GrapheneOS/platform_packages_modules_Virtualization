@@ -1468,6 +1468,64 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         }
     }
 
+    private void checkBacktraceGeneratedWithDebuggerd(
+            boolean protectedVm, String os, String configPath) throws Exception {
+        MicrodroidBuilder microdroidBuilder =
+                MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
+                        .debugLevel(DEBUG_LEVEL_FULL)
+                        .memoryMib(minMemorySize())
+                        .cpuTopology("match_host")
+                        .protectedVm(protectedVm);
+
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
+        mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
+        mMicrodroidDevice.enableAdbRoot();
+
+        CommandRunner microdroid = new CommandRunner(mMicrodroidDevice);
+        String result =
+                microdroid.run("start tombstoned && debuggerd -b $(pidof microdroid_launcher)");
+
+        /*
+         * Checks if the result contains expected lines from "debuggerd -b".
+         *
+         * Example output of "debuggerd -b":
+         *
+         * ----- pid 66 at 2025-06-18 07:54:57.753371479+0000 -----
+         * Cmd line: /system/bin/microdroid_launcher /mnt/apk/lib/x86_64/...
+         * ABI: 'x86_64'
+         *
+         * "microdroid_laun" sysTid=66
+         *     #00 pc 00000000000df4a7  /apex/com.android.runtime/lib64/bionic/libc.so (...)
+         *     #01 pc 000000000008449c  /apex/com.android.runtime/lib64/bionic/libc.so (...)
+         *     #02 pc 000000000007d0a5  /apex/com.android.runtime/lib64/bionic/libc.so (...)
+         *     #03 pc 00000000000040e4  /mnt/apk/lib/x86_64/MicrodroidEmptyPayloadJniLib.so (...)
+         *     #04 pc 0000000000009871  /system/bin/microdroid_launcher (...)
+         *     #05 pc 0000000000064c0f  /apex/com.android.runtime/lib64/bionic/libc.so (...)
+         *
+         * ----- end 66 -----
+         */
+        assertThat(result).contains("----- pid");
+        assertThat(result).contains("Cmd line: /system/bin/microdroid_launcher");
+        assertThat(result).contains("#00 pc ");
+        assertThat(result).contains("----- end");
+    }
+
+    @Test
+    @Parameters(method = "params")
+    @TestCaseName("{method}_protectedVm_{0}_os_{1}")
+    public void testDebuggerdBacktrace(boolean protectedVm, String os) throws Exception {
+        // Preconditions
+        assumeKernelSupported(os);
+        assumeVmTypeSupported(os, protectedVm);
+        // TODO(b/291867858): tombstones are failing in HWASAN enabled Microdroid.
+        assumeFalse("tombstones are failing in HWASAN enabled Microdroid.", isHwasan());
+        checkBacktraceGeneratedWithDebuggerd(protectedVm, os, "assets/vm_config.json");
+    }
+
     @Before
     public void setUp() throws Exception {
         assumeDeviceIsCapable(getDevice());
