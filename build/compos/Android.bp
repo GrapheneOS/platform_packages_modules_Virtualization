@@ -81,3 +81,16 @@ prebuilt_etc {
     filename: "init.rc",
     installable: false,
 }
+
+aconfig_declarations {
+    name: "aconfig_compos_flags",
+    package: "com.android.compos.flags",
+    container: "com.android.compos",
+    srcs: ["compos_flags.aconfig"],
+}
+
+rust_aconfig_library {
+    name: "libaconfig_compos_flags_rust",
+    crate_name: "aconfig_compos_flags_rust",
+    aconfig_declarations: "aconfig_compos_flags",
+}
