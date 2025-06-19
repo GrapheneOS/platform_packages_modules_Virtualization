@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--  Copyright 2025 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+ -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/modifier_keys"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_f1"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f1_text" />
+
+        <Button
+            android:id="@+id/btn_f2"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f2_text" />
+
+        <Button
+            android:id="@+id/btn_f3"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f3_text" />
+
+        <Button
+            android:id="@+id/btn_f4"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f4_text" />
+
+        <Button
+            android:id="@+id/btn_f5"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f5_text" />
+
+        <Button
+            android:id="@+id/btn_f6"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f6_text" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_f7"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f7_text" />
+
+        <Button
+            android:id="@+id/btn_f8"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f8_text" />
+
+        <Button
+            android:id="@+id/btn_f9"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f9_text" />
+
+        <Button
+            android:id="@+id/btn_f10"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f10_text" />
+
+        <Button
+            android:id="@+id/btn_f11"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f11_text" />
+
+        <Button
+            android:id="@+id/btn_f12"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_f12_text" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_esc"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_esc_text" />
+
+        <Button
+            android:id="@+id/btn_tab"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_tab_text" />
+
+        <Button
+            android:id="@+id/btn_home"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_home_text" />
+
+        <Button
+            android:id="@+id/btn_up"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_up_text" />
+
+        <Button
+            android:id="@+id/btn_end"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_end_text" />
+
+        <Button
+            android:id="@+id/btn_pgup"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_pgup_text" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_ctrl"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_ctrl_text" />
+
+        <Button
+            android:id="@+id/btn_alt"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_alt_text" />
+
+        <Button
+            android:id="@+id/btn_left"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_left_text" />
+
+        <Button
+            android:id="@+id/btn_down"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_down_text" />
+
+        <Button
+            android:id="@+id/btn_right"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_right_text" />
+
+        <Button
+            android:id="@+id/btn_pgdn"
+            style="@style/ModifierKeyStyle"
+            android:text="@string/btn_pgdn_text" />
+    </LinearLayout>
+</LinearLayout>

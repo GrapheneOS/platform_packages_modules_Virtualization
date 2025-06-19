@@ -15,36 +15,140 @@
  */
 package com.android.virtualization.terminal
 
+import android.app.PictureInPictureParams
+import android.graphics.Rect
 import android.os.Bundle
+import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineManager
+import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.SurfaceView
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
+import android.widget.RelativeLayout
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import com.google.android.material.button.MaterialButton
 
 class DisplayActivity : BaseActivity() {
+    private lateinit var mainView: DisplaySurfaceView
+    private lateinit var cursorView: SurfaceView
+    private lateinit var pipButton: Button
+    private lateinit var fullscreenButton: MaterialButton
+    private lateinit var keyboardButton: MaterialButton
+    private lateinit var modifierKeysButton: MaterialButton
+    private lateinit var modifierKeysContainer: ViewGroup
+    private lateinit var displayFlow: androidx.constraintlayout.helper.widget.Flow
     private lateinit var displayProvider: DisplayProvider
+    private lateinit var pictureInPictureParams: PictureInPictureParams
+    private var debianVm: VirtualMachine? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_display)
-        val mainView = findViewById<SurfaceView>(R.id.surface_view)
-        val cursorView = findViewById<SurfaceView>(R.id.cursor_surface_view)
-        makeFullscreen()
-        // Connect the views to the VM
-        displayProvider = DisplayProvider(mainView, cursorView)
+        initializeViews()
         val vmm =
-            applicationContext.getSystemService<VirtualMachineManager>(
+            applicationContext.getSystemService(
                 VirtualMachineManager::class.java
             )
-        val debianVm = vmm.get("debian")
-        if (debianVm != null) {
-            InputForwarder(
-                this,
-                debianVm,
-                findViewById(R.id.background_touch_view),
-                findViewById(R.id.surface_view),
-                findViewById(R.id.surface_view),
+        debianVm = vmm?.get("debian")
+        // TODO: Add error handling if vmm is missing
+        debianVm?.let { vm ->
+            setupDisplayAndInput(vm)
+            setupUI()
+        }
+    }
+
+    private fun setupDisplayAndInput(vm: VirtualMachine) {
+        // Connect the views to the VM
+        displayProvider = DisplayProvider(mainView, cursorView)
+        InputForwarder(
+            this,
+            vm,
+            mainView,
+            mainView,
+            mainView,
+        )
+        // Calculate the screen ratio of the VM
+        val ratio =
+            android.util.Rational(
+                vm.config.customImageConfig?.displayConfig!!.width,
+                vm.config.customImageConfig?.displayConfig!!.height
             )
+        (mainView.layoutParams as ConstraintLayout.LayoutParams).dimensionRatio = ratio.toFloat().toString()
+        mainView.post {
+            val sourceRectHint = Rect()
+            mainView.getGlobalVisibleRect(sourceRectHint)
+            pictureInPictureParams = PictureInPictureParams.Builder()
+                .setAspectRatio(ratio)
+                .setSourceRectHint(sourceRectHint)
+                .setAutoEnterEnabled(true)
+                .build()
+            setPictureInPictureParams(pictureInPictureParams)
+        }
+    }
+
+    private fun initializeViews() {
+        mainView = findViewById(R.id.surface_view)
+        cursorView = findViewById(R.id.cursor_surface_view)
+        pipButton = findViewById(R.id.pip_button)
+        fullscreenButton = findViewById(R.id.fullscreen_button)
+        keyboardButton = findViewById(R.id.keyboard_button)
+        modifierKeysButton = findViewById(R.id.modifier_keys_button)
+        modifierKeysContainer = findViewById(R.id.display_activity_modifier_keys_container)
+        displayFlow = findViewById(R.id.display_flow)
+    }
+
+    private fun setupUI() {
+        setupButtons()
+        setupModifierKeys()
+    }
+
+    private fun setupButtons() {
+        pipButton.setOnClickListener {
+            this.enterPictureInPictureMode(pictureInPictureParams)
+        }
+
+        fullscreenButton.setOnClickListener {
+            toggleFullscreen()
+        }
+
+        keyboardButton.setOnClickListener {
+            showSoftKeyboard()
+        }
+    }
+
+    private fun setupModifierKeys() {
+        val modifierKeysContainerView =
+            findViewById<RelativeLayout>(R.id.display_activity_modifier_keys_container) as ViewGroup
+        val modifierKeysView = LayoutInflater.from(this).inflate(R.layout.modifier_keys_display, modifierKeysContainerView)
+        modifierKeysView.isVisible = false
+
+        findViewById<MaterialButton>(R.id.modifier_keys_button).setOnClickListener {
+            modifierKeysView.isVisible = !modifierKeysView.isVisible
+        }
+
+        // Use a onTouchListener to catch the press and release event for combination keys like Ctrl-T
+        val listener = View.OnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP -> {
+                    BTN_KEY_CODE_MAP[view.id]?.let { keyCode ->
+                        debianVm?.sendKeyEvent(keyCode, event.action == MotionEvent.ACTION_DOWN)
+                    }
+                }
+            }
+            // Return false to let the next lister to handle the touch event for accessibility.
+            false
+        }
+
+        BTN_KEY_CODE_MAP.keys.forEach { buttonId ->
+            modifierKeysView.findViewById<View>(buttonId).setOnTouchListener(listener)
         }
     }
 
@@ -53,13 +157,75 @@ class DisplayActivity : BaseActivity() {
         displayProvider.notifyDisplayIsGoingToInvisible()
     }
 
+    private fun showSoftKeyboard() {
+        mainView.requestFocus()
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(mainView, InputMethodManager.SHOW_IMPLICIT)
+    }
+
     private fun makeFullscreen() {
-        val w = window
-        w.setDecorFitsSystemWindows(false)
-        val insetsCtrl = w.insetsController
-        insetsCtrl?.hide(WindowInsets.Type.systemBars())
-        insetsCtrl?.setSystemBarsBehavior(
-            WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        )
+        window.setDecorFitsSystemWindows(false)
+        window.insetsController?.run {
+            hide(WindowInsets.Type.systemBars())
+            systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun exitFullscreen() {
+        window.setDecorFitsSystemWindows(true)
+        window.insetsController?.run {
+            show(WindowInsets.Type.systemBars())
+            systemBarsBehavior = WindowInsetsController.BEHAVIOR_DEFAULT
+        }
+    }
+
+    private fun isFullscreen(): Boolean {
+        val insets = ViewCompat.getRootWindowInsets(window.decorView)
+        return insets?.isVisible(WindowInsetsCompat.Type.statusBars()) == false
+    }
+
+    private fun toggleFullscreen() {
+        if (!isFullscreen()) {
+            makeFullscreen()
+            fullscreenButton.setIconResource(R.drawable.ic_fullscreen_exit)
+        } else {
+            exitFullscreen()
+            fullscreenButton.setIconResource(R.drawable.ic_fullscreen)
+        }
+    }
+
+    companion object {
+        /**
+         * Map of button IDs to Linux key codes.
+         * The key codes are defined in linux/input-event-codes.h
+         * https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/input-event-codes.h
+         */
+        val BTN_KEY_CODE_MAP =
+            mapOf<Int, Short>(
+                R.id.btn_f1 to 0x3B,
+                R.id.btn_f2 to 0x3C,
+                R.id.btn_f3 to 0x3D,
+                R.id.btn_f4 to 0x3E,
+                R.id.btn_f5 to 0x3F,
+                R.id.btn_f6 to 0x40,
+                R.id.btn_f7 to 0x41,
+                R.id.btn_f8 to 0x42,
+                R.id.btn_f9 to 0x43,
+                R.id.btn_f10 to 0x44,
+                R.id.btn_f11 to 0x57,
+                R.id.btn_f12 to 0x58,
+                R.id.btn_ctrl to 0x1D,
+                R.id.btn_tab to 0x0F,
+                R.id.btn_alt to 0x38,
+                R.id.btn_esc to 0x01,
+                R.id.btn_left to 0x69,
+                R.id.btn_right to 0x6A,
+                R.id.btn_up to 0x67,
+                R.id.btn_down to 0x6C,
+                R.id.btn_home to 0x66,
+                R.id.btn_end to 0x6b,
+                R.id.btn_pgup to 0x68,
+                R.id.btn_pgdn to 0x6d,
+            )
     }
 }

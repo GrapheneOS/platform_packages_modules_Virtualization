@@ -78,7 +78,6 @@ import android.system.virtualizationservice.VirtualMachineState;
 import android.util.JsonReader;
 import android.util.Log;
 import android.util.Pair;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 
 import com.android.internal.annotations.GuardedBy;
@@ -202,6 +201,9 @@ public class VirtualMachine implements AutoCloseable {
 
     /** The virtual machine is running. */
     public static final int STATUS_RUNNING = 1;
+
+    @NonNull
+    private Float touchScale = 1F;
 
     /**
      * The virtual machine has been deleted. This is an irreversible state. Once a virtual machine
@@ -1020,7 +1022,7 @@ public class VirtualMachine implements AutoCloseable {
     private static record InputEvent(short type, short code, int value) {}
 
     /** @hide */
-    public boolean sendKeyEvent(KeyEvent event) {
+    public boolean sendKeyEvent(short hardwareKeyCode, boolean down) {
         if (mKeySock == null) {
             Log.d(TAG, "mKeySock == null");
             return false;
@@ -1029,12 +1031,11 @@ public class VirtualMachine implements AutoCloseable {
         short EV_SYN = 0x00;
         short EV_KEY = 0x01;
         short SYN_REPORT = 0x00;
-        boolean down = event.getAction() != MotionEvent.ACTION_UP;
 
         return writeEventsToSock(
                 mKeySock,
                 Arrays.asList(
-                        new InputEvent(EV_KEY, (short) event.getScanCode(), down ? 1 : 0),
+                        new InputEvent(EV_KEY, hardwareKeyCode, down ? 1 : 0),
                         new InputEvent(EV_SYN, SYN_REPORT, 0)));
     }
 
@@ -1177,8 +1178,8 @@ public class VirtualMachine implements AutoCloseable {
                                         + 1 /*SYN*/);
                 for (int actionIdx = 0; actionIdx < event.getPointerCount(); actionIdx++) {
                     int pointerId = event.getPointerId(actionIdx);
-                    int x = (int) event.getRawX(actionIdx);
-                    int y = (int) event.getRawY(actionIdx);
+                    int x = (int) (event.getX(actionIdx) * touchScale);
+                    int y = (int) (event.getY(actionIdx) * touchScale);
                     events.add(new InputEvent(EV_ABS, ABS_MT_SLOT, pointerId));
                     events.add(new InputEvent(EV_ABS, ABS_MT_TRACKING_ID, pointerId));
                     events.add(new InputEvent(EV_ABS, ABS_MT_POSITION_X, x));
@@ -1202,8 +1203,8 @@ public class VirtualMachine implements AutoCloseable {
                         || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN;
         int actionIdx = event.getActionIndex();
         int pointerId = event.getPointerId(actionIdx);
-        int x = (int) event.getRawX(actionIdx);
-        int y = (int) event.getRawY(actionIdx);
+        int x = (int) (event.getX(actionIdx) * touchScale);
+        int y = (int) (event.getY(actionIdx) * touchScale);
         return writeEventsToSock(
                 mTouchSock,
                 Arrays.asList(
@@ -2618,5 +2619,10 @@ public class VirtualMachine implements AutoCloseable {
                 throw new RuntimeException("Failed to write to " + mKEKFile.getAbsolutePath(), e);
             }
         }
+    }
+
+    /** @hide */
+    public void setTouchScale(Float touchScale) {
+        this.touchScale = touchScale;
     }
 }
