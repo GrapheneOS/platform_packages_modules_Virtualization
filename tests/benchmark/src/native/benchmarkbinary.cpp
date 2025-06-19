@@ -67,9 +67,9 @@ public:
         return resultStatus(res);
     }
 
-    ndk::ScopedAStatus measureWriteRate(const std::string& filename, int64_t size_bytes,
-                                        double* out) override {
-        auto res = measure_write_rate(filename, size_bytes);
+    ndk::ScopedAStatus measureWriteRate(const std::string& filename, int64_t sizeBytes,
+                                        bool synchronizedIo, double* out) override {
+        auto res = measure_write_rate(filename, sizeBytes, synchronizedIo);
         if (res.ok()) {
             *out = res.value();
         }
@@ -157,19 +157,23 @@ private:
      * Measures the throughput of writing random data to the given file.
      * @return The write rate in MB/s.
      */
-    Result<double> measure_write_rate(const std::string& filename, int64_t size_bytes) {
+    Result<double> measure_write_rate(const std::string& filename, int64_t size_bytes,
+                                      bool synchronized_io) {
         struct stat file_stats;
         const int64_t block_count = size_bytes / kBlockSizeBytes;
         char buf[kBlockSizeBytes];
-        int fd_rand = open("/dev/urandom", O_RDONLY);
+        int fd_rand = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
         read(fd_rand, buf, kBlockSizeBytes);
 
         struct timespec start;
         if (clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
             return ErrnoError() << "failed to clock_gettime";
         }
-        // TODO(b/390648694): Ideally open with O_SYNC instead of syncfs().
-        unique_fd fd(open(filename.c_str(), O_CREAT | O_WRONLY, 00666));
+        int flags = O_CREAT | O_WRONLY | O_CLOEXEC;
+        if (synchronized_io) {
+            flags = flags | O_SYNC;
+        }
+        unique_fd fd(open(filename.c_str(), flags, 00666));
         if (fd.get() == -1) {
             return ErrnoError() << "Write: opening " << filename << " failed";
         }
@@ -185,7 +189,9 @@ private:
                 return ErrnoError() << "failed to write";
             }
         }
-        syncfs(fd);
+        if (!synchronized_io) {
+            syncfs(fd);
+        }
         struct timespec finish;
         if (clock_gettime(CLOCK_MONOTONIC, &finish) == -1) {
             return ErrnoError() << "failed to clock_gettime";
