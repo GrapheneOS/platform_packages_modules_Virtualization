@@ -1123,6 +1123,62 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         reportMetrics(readThroughput, "encryptedstore/sequential_read", "mb_per_sec");
     }
 
+    @Test
+    public void encryptedstoreRecoverFromCorruption() throws Exception {
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_io.json")
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setShouldUseHugepages(true)
+                        .setEncryptedStorageBytes(ENCRYPTED_STORE_SIZE)
+                        .build();
+        final VirtualMachine vm = forceCreateNewVirtualMachine("stress_vm_encryptedstore", config);
+        CompletableFuture<List<Double>> writeFuture =
+                CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                List<Double> writeThroughput = new ArrayList<>();
+                                BenchmarkVmListener.create(
+                                                new EncryptedstoreBenchmarkListener(
+                                                        writeThroughput, /* measureWrite */
+                                                        true, /* synchronizedIo */
+                                                        true))
+                                        .runToFinish(TAG, vm);
+                                return writeThroughput;
+                            } catch (Exception e) {
+                                throw new CompletionException(e);
+                            }
+                        });
+
+        try {
+            // Kill the VM in the middle of write operation  with 160 MB/s, 0.75G will approx
+            // 5s to be written, kill after 5s hoping with that (accounting for boot time) this
+            // will kill the VM in the middle of writes.
+            Thread.sleep(5000);
+            vm.stop();
+        } catch (Exception e) {
+            Log.e(TAG, "Error in stopping the VM in the middle write:" + e);
+            throw new RuntimeException(e);
+        }
+
+        writeFuture.get();
+        CompletableFuture<List<Double>> readFuture =
+                CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                List<Double> readThroughput = new ArrayList<>(1);
+                                BenchmarkVmListener.create(
+                                                new EncryptedstoreBenchmarkListener(
+                                                        readThroughput, /* measureWrite */ false))
+                                        .runToFinish(TAG, vm);
+                                return readThroughput;
+                            } catch (Exception e) {
+                                throw new CompletionException(e);
+                            }
+                        });
+        List<Double> readRate = readFuture.get();
+        assertWithMessage("encryptedstore readRate is 0!!").that(readRate.get(0)).isGreaterThan(0);
+    }
+
     private static class EncryptedstoreBenchmarkListener
             implements BenchmarkVmListener.InnerListener {
         private static final String FILENAME = "/mnt/encryptedstore/test_file";
@@ -1130,6 +1186,14 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         private final List<Double> mIoThroughput;
         // Set to true iff write is to be measured, read throughput is measured otherwise
         private final boolean mMeasureWrite;
+        // Set to true iff write are to be synchronized always! This is irrelevant for reads
+        private boolean mSynchronizedIo = false;
+
+        EncryptedstoreBenchmarkListener(
+                List<Double> ioThroughput, boolean measureWrite, boolean synchronizedIo) {
+            this(ioThroughput, measureWrite);
+            mSynchronizedIo = synchronizedIo;
+        }
 
         EncryptedstoreBenchmarkListener(List<Double> ioThroughput, boolean measureWrite) {
             mIoThroughput = ioThroughput;
@@ -1144,7 +1208,9 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                 // Fill 3/4 of the storage by writing (random) data into a file!
                 rate =
                         benchmarkService.measureWriteRate(
-                                FILENAME, /*sizeBytes */ (ENCRYPTED_STORE_SIZE * 3) / 4);
+                                FILENAME, /*sizeBytes */
+                                (ENCRYPTED_STORE_SIZE * 3) / 4,
+                                mSynchronizedIo);
             } else {
                 // Sequentially read the file, just written.
                 rate = benchmarkService.measureReadRate(FILENAME, /*isRand */ false);

@@ -32,7 +32,7 @@ interface IBenchmarkService {
      *
      * @return The write rate in MB/s.
      */
-    double measureWriteRate(String filename, long size_bytes);
+    double measureWriteRate(String filename, long sizeBytes, boolean synchronizedIo);
 
     /** Returns an entry from /proc/meminfo. */
     long getMemInfoEntry(String name);
