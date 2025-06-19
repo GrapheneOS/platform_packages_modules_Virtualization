@@ -33,7 +33,7 @@ use secretkeeper_comm::data_types::response::Response;
 use secretkeeper_comm::data_types::packet::{ResponsePacket, ResponseType};
 use secretkeeper_comm::data_types::request_response_impl::{
     StoreSecretRequest, GetSecretResponse, GetSecretRequest};
-use secretkeeper_comm::data_types::error::SecretkeeperError;
+use secretkeeper_comm::data_types::error::{SecretkeeperErrorCode, SecretkeeperError};
 use std::fs;
 use std::thread;
 use rand::Rng;
@@ -370,11 +370,11 @@ impl SkVmSession {
         } else {
             let error =
                 SecretkeeperError::deserialize_from_packet(get_response).map_err(anyhow_err)?;
-            match *error {
-                SecretkeeperError::EntryNotFound => Ok(None),
-                SecretkeeperError::DicePolicyError => {
-                    Err(super::MicrodroidError::PayloadChanged("Dice policy error".to_string())
-                        .into())
+            match error.code {
+                SecretkeeperErrorCode::EntryNotFound => Ok(None),
+                SecretkeeperErrorCode::DicePolicyError => {
+                    let err_str = format!("DicePolicyError: {}", error.msg);
+                    Err(super::MicrodroidError::PayloadChanged(err_str).into())
                 }
                 _ => Err(anyhow!("Secretkeeper get failed: {error:?}")),
             }

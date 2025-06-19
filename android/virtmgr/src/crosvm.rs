@@ -376,7 +376,8 @@ impl VmState {
                             {
                                 error!("psi monitor failed: {:#}", e);
                                 thread::sleep(Duration::from_secs(expo_bo));
-                                // Exponential backoff, capped at 60 seconds
+                                // Exponential backoff, capped at 60 seconds. This number is
+                                // arbitrary
                                 expo_bo = min(expo_bo * 2, 60);
                             }
                         },
@@ -477,10 +478,10 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
                     .lines()
                     .filter_map(|l| parse_psi_line(l, PsiStallType::Some).ok())
                     .next();
-                let full_triggered = full_stats.is_some() && full_stats.unwrap().avg10 > 1.0;
-                let some_triggered = some_stats.is_some() && some_stats.unwrap().avg10 > 1.0;
+                let full_triggered = full_stats.is_some() && full_stats.unwrap().avg10 > 0.0;
+                let some_triggered = some_stats.is_some() && some_stats.unwrap().avg10 > 0.0;
                 let is_rate_limited = rate_limiter.is_some()
-                    && rate_limiter.unwrap().elapsed() > Duration::from_secs(60);
+                    && rate_limiter.unwrap().elapsed() > Duration::from_secs(22);
 
                 let should_trim = if is_rate_limited {
                     !last_was_full && full_triggered
