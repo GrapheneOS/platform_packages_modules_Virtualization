@@ -14,6 +14,7 @@
 
 //! Microdroid Manager
 
+mod cgroup_monitor;
 mod dice;
 mod encrypted_store_kek;
 mod instance;
@@ -35,6 +36,7 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
     BnGuestAgent, IGuestAgent, DUMP_SERVICE_PORT,
 };
 
+use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
@@ -336,6 +338,7 @@ fn try_main() -> Result<()> {
     )?;
 
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
+
     match try_run_payload(&service, vm_payload_service_fd) {
         Ok(code) => {
             match code {
@@ -433,6 +436,13 @@ enum VmInstanceState {
     PreviouslySeen,
 }
 
+struct CgroupConfig {
+    name: &'static str,
+    // Limits how much memory the cgroup (generally just the payload process) can consume before
+    // reclaim starts running on that cgroup.
+    memory_high_mib: u64,
+}
+
 fn try_run_payload(
     service: &Strong<dyn IVirtualMachineService>,
     vm_payload_service_fd: OwnedFd,
@@ -455,6 +465,31 @@ fn try_run_payload(
     } else {
         verify_payload_with_instance_img(&metadata, &dice, &mut state)?
     };
+
+    // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
+    // appsearch's VM, which we detect indirectly via the rollback_index field.
+    let cgroup_config = if instance_data.apk_data.rollback_index.is_some() {
+        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 80 })
+    } else {
+        None
+    };
+
+    if let Some(cgroup_config) = cgroup_config.as_ref() {
+        // We create and configure the cgroup now, then the child process adds itself to the group
+        // before `exec`ing the payload binary (see `exec_task` code).
+        let cgroup_dir = std::path::Path::new("/sys/fs/cgroup").join(cgroup_config.name);
+        std::fs::create_dir(&cgroup_dir).context("failed to create cgroup dir")?;
+        std::fs::write(
+            cgroup_dir.join("memory.high"),
+            format!("{}M", cgroup_config.memory_high_mib),
+        )
+        .context("failed to set cgroup memory.high")?;
+
+        // Spawn thread to monitor the cgroup's behavior.
+        // TODO: (khei@)
+        // Send cgroup kill signal and join cgroup thread for graceful shutdown
+        let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(cgroup_config.name)?;
+    }
 
     let payload_metadata = metadata.payload.ok_or_else(|| {
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
@@ -619,8 +654,8 @@ fn try_run_payload(
     }
 
     info!("boot completed, time to run payload");
-    let mut payload_process =
-        exec_task(task, service, &std_redirect).context("Failed to run payload")?;
+    let mut payload_process = exec_task(task, cgroup_config.as_ref(), service, &std_redirect)
+        .context("Failed to run payload")?;
     setup_ignore_sigterm()?;
 
     let exit_status = payload_process.wait()?;
@@ -863,28 +898,53 @@ fn load_crashkernel_if_supported() -> Result<()> {
 /// Executes the given task.
 fn exec_task(
     task: &Task,
+    cgroup_config: Option<&CgroupConfig>,
     service: &Strong<dyn IVirtualMachineService>,
     std_redirect: &Option<OwnedFd>,
 ) -> Result<Child> {
     info!("executing main task {:?}...", task);
-    let mut command = match task.type_ {
+    let (mut command, uid_gid) = match task.type_ {
         TaskType::Executable => {
             // TODO(b/297501338): Figure out how to handle non-root for system payloads.
-            Command::new(&task.command)
+            (Command::new(&task.command), None)
         }
         TaskType::MicrodroidLauncher => {
             let mut command = Command::new("/system/bin/microdroid_launcher");
             command.arg(find_library_path(&task.command)?);
-            command.uid(microdroid_uids::MICRODROID_PAYLOAD_UID);
-            command.gid(microdroid_uids::MICRODROID_PAYLOAD_GID);
-            command
+            (
+                command,
+                Some((
+                    microdroid_uids::MICRODROID_PAYLOAD_UID,
+                    microdroid_uids::MICRODROID_PAYLOAD_GID,
+                )),
+            )
         }
     };
+
+    let cgroup_path = cgroup_config.map(|c| format!("/sys/fs/cgroup/{}/cgroup.procs", c.name));
 
     // SAFETY: We are not accessing any resource of the parent process. This means we can't make any
     // log calls inside the closure.
     unsafe {
-        command.pre_exec(|| {
+        command.pre_exec(move || {
+            // Move the payload process into a cgroup.
+            //
+            // We can't ignore errors here because we rely on the cgroup to restrict the process'
+            // resource usage. We can't log, so just abort on error and microdroid_manager will see
+            // something is wrong.
+            if let Some(cgroup_path) = &cgroup_path {
+                let mut buffer = itoa::Buffer::new();
+                let pid_str = buffer.format(std::process::id()).as_bytes();
+                std::fs::write(cgroup_path, pid_str).unwrap_or_else(|_| std::process::abort());
+            }
+            // Set UID and GID. Has to happen after changing the cgroup. Can't use rust's
+            // `Command::uid/gid` because they are applied before the `pre_exec` hook.
+            if let Some((uid, gid)) = uid_gid {
+                nix::unistd::setgid(nix::unistd::Gid::from_raw(gid))
+                    .unwrap_or_else(|_| std::process::abort());
+                nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))
+                    .unwrap_or_else(|_| std::process::abort());
+            }
             // It is OK to continue with payload execution even if the calls below fail, since
             // whether process can use a capability is controlled by the SELinux. Dropping the
             // capabilities here is just another defense-in-depth layer.
