@@ -64,7 +64,6 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     GpuConfig::GpuConfig as GpuConfigParcelable,
     UsbConfig::UsbConfig as UsbConfigParcelable,
 };
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
 use binder::{
     DeathRecipient,
@@ -514,19 +513,14 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
 /// Internal struct that holds the handles to globally unique resources of a VM.
 #[derive(Debug)]
 pub struct VmContext {
-    #[allow(dead_code)] // Keeps the global context alive
-    pub(crate) global_context: Strong<dyn IGlobalVmContext>,
     #[allow(dead_code)] // Keeps the server alive
     vm_server: Option<RpcServer>,
 }
 
 impl VmContext {
     /// Construct new VmContext.
-    pub fn new(
-        global_context: Strong<dyn IGlobalVmContext>,
-        vm_server: Option<RpcServer>,
-    ) -> VmContext {
-        VmContext { global_context, vm_server }
+    pub fn new(vm_server: Option<RpcServer>) -> VmContext {
+        VmContext { vm_server }
     }
 }
 
@@ -605,6 +599,8 @@ pub struct VmInstance {
     requester_uid_name: String,
     /// Death recipient for the global service. (this doesn't implement Debug trait)
     pub global_service_death_recipient: Mutex<Option<DeathRecipient>>,
+    /// Host console name
+    pub host_console_name: Mutex<Option<String>>,
 }
 
 impl fmt::Display for VmInstance {
@@ -667,6 +663,7 @@ impl VmInstance {
             host_services,
             encrypted_store_kek,
             global_service_death_recipient: Mutex::new(None),
+            host_console_name: Mutex::new(None),
         };
         info!("{} created", &instance);
         Ok(instance)
@@ -898,7 +895,8 @@ impl VmInstance {
         }
     }
 
-    fn is_vm_running(&self) -> bool {
+    /// Tells if VM is running or not
+    pub fn is_vm_running(&self) -> bool {
         matches!(&*self.vm_state.lock().unwrap(), VmState::Running { .. })
     }
 
@@ -941,7 +939,7 @@ impl VmInstance {
         scopeguard::defer! {
             let cid = self.cid.try_into().unwrap();
             if let Err(e) = global_service().unregisterVirtualMachine(cid) {
-                error!("Failed to unregister virtual machine: {e:?}");
+                error!("Failed to unregister virtual machine ({cid}): {e:?}");
             }
         }
         let mut vm_state_mg = self.vm_state.lock().unwrap();

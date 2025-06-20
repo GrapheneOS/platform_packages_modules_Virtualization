@@ -33,14 +33,17 @@ interface IVirtualizationServiceInternal {
      */
     void removeMemlockRlimit();
 
+    parcelable VmContext {
+        int cid;
+        String tempDir;
+    }
+
     /**
      * Allocates global context for a new VM.
      *
      * This allocates VM's globally unique resources such as the CID.
-     * The resources will not be recycled as long as there is a strong reference
-     * to the returned object.
      */
-    IGlobalVmContext allocateGlobalVmContext(String name, int requesterDebugPid);
+    VmContext allocateVmContext();
 
     /**
      * Registers a new VirtualMachine object into this global registry, for accounting purpose.
