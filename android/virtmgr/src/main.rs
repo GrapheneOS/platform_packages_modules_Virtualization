@@ -24,7 +24,7 @@ mod host_services;
 mod payload;
 mod selinux;
 
-use crate::aidl::{GLOBAL_SERVICE, VirtualizationService};
+use crate::aidl::{global_service, VirtualizationService};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
@@ -126,7 +126,7 @@ fn main() {
             panic!("Unexpected return value from prlimit(): {ret}");
         }
     } else {
-        GLOBAL_SERVICE.removeMemlockRlimit().expect("Failed to remove memlock rlimit");
+        global_service().removeMemlockRlimit().expect("Failed to remove memlock rlimit");
     }
 
     let service = VirtualizationService::init();
