@@ -37,8 +37,9 @@ use binder::{
     BinderFeatures, ExceptionCode, Interface, IntoBinderResult, Result as BinderResult, Strong,
 };
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
-    BnCompOsService, ICompOsService, OdrefreshArgs::OdrefreshArgs,
+    BnCompOsService, Dex2OatArg::Dex2OatArg, ICompOsService, OdrefreshArgs::OdrefreshArgs,
 };
+use compos_aidl_interface::aidl::com::android::compos::IVerifiedDex2OatTaskCallback::IVerifiedDex2OatTaskCallback;
 use compos_common::binder::to_binder_result;
 use compos_common::odrefresh::{is_system_property_interesting, ODREFRESH_PATH};
 use rpcbinder::RpcSession;
@@ -97,13 +98,23 @@ impl ICompOsService for CompOsService {
     }
 
     fn odrefresh(&self, args: &OdrefreshArgs) -> BinderResult<i8> {
-        let initialized = *self.initialized.read().unwrap();
-        if !initialized.unwrap_or(false) {
-            return Err("Service has not been initialized")
-                .or_binder_exception(ExceptionCode::ILLEGAL_STATE);
-        }
-
+        self.check_initialized()?;
         to_binder_result(self.do_odrefresh(args))
+    }
+
+    #[allow(unused_variables)]
+    fn verifiedDex2Oat(
+        &self,
+        args: &[Dex2OatArg],
+        manifest_fd: i32,
+        cb: &Strong<dyn IVerifiedDex2OatTaskCallback>,
+    ) -> BinderResult<()> {
+        if !aconfig_compos_flags_rust::verified_dex2oat() {
+            return Err("verifiedDex2Oat feature is not enabled.")
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        self.check_initialized()?;
+        todo!("Finish implementing app compilation");
     }
 
     fn getPublicKey(&self) -> BinderResult<Vec<u8>> {
@@ -122,6 +133,15 @@ impl ICompOsService for CompOsService {
 }
 
 impl CompOsService {
+    fn check_initialized(&self) -> BinderResult<()> {
+        let initialized = *self.initialized.read().unwrap();
+        if !initialized.unwrap_or(false) {
+            return Err("Service has not been initialized")
+                .or_binder_exception(ExceptionCode::ILLEGAL_STATE);
+        }
+        Ok(())
+    }
+
     fn do_odrefresh(&self, args: &OdrefreshArgs) -> Result<i8> {
         log::debug!("Prepare to connect to {}", AUTHFS_SERVICE_SOCKET_NAME);
         let authfs_service: Strong<dyn IAuthFsService> = RpcSession::new()
@@ -132,7 +152,6 @@ impl CompOsService {
             // under the output directory.
             let mut artifact_signer = ArtifactSigner::new(&output_dir);
             add_artifacts(&output_dir, &mut artifact_signer)?;
-
             artifact_signer.write_info_and_signature(&output_dir.join("compos.info"))
         })
         .context("odrefresh failed")?;

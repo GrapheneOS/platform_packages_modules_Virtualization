@@ -10,6 +10,7 @@ rust_defaults {
     rustlibs: [
         "authfs_aidl_interface-rust",
         "compos_aidl_interface-rust",
+        "libaconfig_compos_flags_rust",
         "libandroid_logger",
         "libanyhow",
         "libbinder_rs",
