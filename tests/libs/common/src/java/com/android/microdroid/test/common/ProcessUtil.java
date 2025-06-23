@@ -27,7 +27,6 @@ import java.util.stream.IntStream;
 /** This class provides process utility for both device tests and host tests. */
 public final class ProcessUtil {
     private static final String CROSVM_BIN = "/apex/com.android.virt/bin/crosvm";
-    private static final String VIRTMGR_BIN = "/apex/com.android.virt/bin/virtmgr";
 
     /** A memory map entry from /proc/{pid}/smaps */
     public static class SMapEntry {
@@ -124,7 +123,7 @@ public final class ProcessUtil {
     }
 
     public static int getVirtmgrPid(int parentPid, Function<String, String> shellExecutor) {
-        return getSingleChildProcess(parentPid, VIRTMGR_BIN, shellExecutor);
+        return getSingleChildProcess(parentPid, "virtmgr_vm", shellExecutor);
     }
 
     public static int getCrosvmPid(

@@ -14,7 +14,7 @@
 
 //! Functions for creating and collecting atoms.
 
-use crate::aidl::{clone_file, GLOBAL_SERVICE};
+use crate::aidl::{clone_file, global_service};
 use crate::crosvm::VmMetric;
 use crate::get_calling_uid;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
@@ -160,7 +160,7 @@ pub fn write_vm_creation_stats(
 
     info!("Writing VmCreationRequested atom into statsd.");
     thread::spawn(move || {
-        GLOBAL_SERVICE.atomVmCreationRequested(&atom).unwrap_or_else(|e| {
+        global_service().atomVmCreationRequested(&atom).unwrap_or_else(|e| {
             warn!("Failed to write VmCreationRequested atom: {e}");
         });
     });
@@ -189,7 +189,7 @@ pub fn write_vm_booted_stats(
 
     info!("Writing VmBooted atom into statsd.");
     thread::spawn(move || {
-        GLOBAL_SERVICE.atomVmBooted(&atom).unwrap_or_else(|e| {
+        global_service().atomVmBooted(&atom).unwrap_or_else(|e| {
             warn!("Failed to write VmBooted atom: {e}");
         });
     });
@@ -224,7 +224,7 @@ pub fn write_vm_exited_stats_sync(
     };
 
     info!("Writing VmExited atom into statsd.");
-    GLOBAL_SERVICE.atomVmExited(&atom).unwrap_or_else(|e| {
+    global_service().atomVmExited(&atom).unwrap_or_else(|e| {
         warn!("Failed to write VmExited atom: {e}");
     });
 }
