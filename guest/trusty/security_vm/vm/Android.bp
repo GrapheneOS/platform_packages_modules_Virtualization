@@ -51,6 +51,11 @@ cc_binary {
         // Use a standard page size of 4096, smaller than the default 16384, to avoid padding
         // with extra bytes.
         "-Wl,-z,max-page-size=4096",
+        // Disable the packing of dynamic relocations. By default, the linker may
+        // create a `.rela.dyn` section. The presence of this extra loadable ELF
+        // section corrupts the integrity of the security VM, preventing it from
+        // loading. This flag prevents the creation of that section.
+        "-Wl,--pack-dyn-relocs=none",
     ],
     nocrt: true,
     no_libcrt: true,
