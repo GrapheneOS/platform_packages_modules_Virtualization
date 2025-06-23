@@ -145,14 +145,20 @@ impl VirtualizationService {
         command.arg("--ready-fd").arg(format!("{}", ready_fd.as_raw_fd()));
         command.preserved_fds(vec![server_fd, ready_fd]);
 
-        // ps uses -o NAME by default, which shows the last path element of argv[0].
-        if let Some(arg0) = std::env::args().nth(0) {
-            let prog_name = match arg0.rfind('/') {
+        // Determine the name of this process in many ways. Try arg[0], COMM, and PID in that
+        // order.
+        let prog_name = if let Some(arg0) = std::env::args().nth(0) {
+            match arg0.rfind('/') {
                 Some(idx) => &arg0[idx + 1..],
                 None => &arg0,
-            };
-            command.arg0(format!("virtmgr_{prog_name}"));
-        }
+            }
+            .to_owned()
+        } else if let Ok(comm) = std::fs::read_to_string("/proc/self/comm") {
+            comm.trim().to_string()
+        } else {
+            std::process::id().to_string()
+        };
+        command.arg0(format!("virtmgr_{prog_name}"));
 
         let process = SharedChild::spawn(&mut command)?;
         let is_tty = isatty(std::io::stdout().as_raw_fd())?;

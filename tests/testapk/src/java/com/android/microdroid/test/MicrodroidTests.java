@@ -610,7 +610,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     public void vm_virtmgrCrash() throws Exception {
-        testCrashInternal("test_vm_virtmgrCrash", "virtmgr");
+        testCrashInternal("test_vm_virtmgrCrash", "virtmgr_microdroid.test");
     }
 
     @Test
