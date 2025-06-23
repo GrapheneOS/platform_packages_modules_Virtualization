@@ -1,0 +1,17 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_library {
+    name: "libvirt_dropbox",
+    crate_name: "virt_dropbox",
+    srcs: ["src/lib.rs"],
+    prefer_rlib: true,
+    rustlibs: [
+        "libanyhow",
+        "liblog_rust",
+        "liblogger",
+        "librustutils",
+    ],
+    apex_available: ["com.android.virt"],
+}

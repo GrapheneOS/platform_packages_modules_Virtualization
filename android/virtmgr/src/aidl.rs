@@ -75,6 +75,7 @@ use binder::{
     self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, ExceptionCode, Interface, ParcelFileDescriptor,
     SpIBinder, Status, StatusCode, Strong, IntoBinderResult,
 };
+use dropbox_rs::DropBoxManager;
 use glob::glob;
 use libc::{AF_VSOCK, sa_family_t, sockaddr_vm};
 use log::{debug, error, info, warn};
@@ -98,6 +99,7 @@ use std::os::unix::raw::pid_t;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak, LazyLock};
 use vbmeta::VbMetaImage;
+use virt_dropbox::build_dropbox_report;
 use vmconfig::{VmConfig, get_debug_level};
 use vsock::VsockStream;
 use zip::ZipArchive;
@@ -2534,6 +2536,20 @@ impl IVirtualMachineService for VirtualMachineService {
             error!("getEncryptedStoreKek is called from an unknown CID {}", cid);
             Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
         }
+    }
+
+    fn writeToDropBox(&self, tag: &str, message: &str) -> binder::Result<()> {
+        let drop_box_manager =
+            DropBoxManager::new().or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        let cid = self.cid;
+        let name = &self.state.lock().unwrap().get_vm(cid).unwrap().name;
+        let vm_info = format!("cid: {}, name: {}", cid, name);
+        let report = build_dropbox_report(&vm_info, message)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        drop_box_manager
+            .add_text(tag, &report)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        Ok(())
     }
 }
 
