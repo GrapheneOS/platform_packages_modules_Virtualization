@@ -14,17 +14,11 @@
 
 //! Implementation of the AIDL interface `IVmPayloadService`.
 
-use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{
-    BnVmInternalService, IVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME,
-};
+use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::IVmInternalService;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
-use anyhow::Result;
-use binder::{Interface, BinderFeatures, Strong};
-use log::info;
-use rpcbinder::RpcServer;
-use std::os::unix::io::OwnedFd;
+use binder::{Interface, Strong};
 
-struct VmInternalService {
+pub(crate) struct VmInternalService {
     virtual_machine_service: Strong<dyn IVirtualMachineService>,
 }
 
@@ -37,28 +31,7 @@ impl IVmInternalService for VmInternalService {
 impl Interface for VmInternalService {}
 
 impl VmInternalService {
-    fn new(virtual_machine_service: Strong<dyn IVirtualMachineService>) -> Self {
+    pub(crate) fn new(virtual_machine_service: Strong<dyn IVirtualMachineService>) -> Self {
         Self { virtual_machine_service }
     }
-}
-
-/// Registers the `IVmInternalService` service.
-pub(crate) fn register_vm_internal_service(
-    virtual_machine_service: Strong<dyn IVirtualMachineService>,
-    vm_internal_service_fd: OwnedFd,
-) -> Result<()> {
-    let vm_internal_binder = BnVmInternalService::new_binder(
-        VmInternalService::new(virtual_machine_service),
-        BinderFeatures::default(),
-    );
-
-    let server =
-        RpcServer::new_bound_socket(vm_internal_binder.as_binder(), vm_internal_service_fd)?;
-    info!("The RPC server '{}' is running.", VM_INTERNAL_SERVICE_SOCKET_NAME);
-
-    // Move server reference into a background thread and run it forever.
-    std::thread::spawn(move || {
-        server.join();
-    });
-    Ok(())
 }
