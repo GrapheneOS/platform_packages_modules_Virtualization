@@ -1139,26 +1139,16 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                                 List<Double> writeThroughput = new ArrayList<>();
                                 BenchmarkVmListener.create(
                                                 new EncryptedstoreBenchmarkListener(
-                                                        writeThroughput, /* measureWrite */
-                                                        true, /* synchronizedIo */
-                                                        true))
+                                                        writeThroughput,
+                                                        /* measureWrite */ true,
+                                                        /* synchronizedIo */ true,
+                                                        /* stopVmWhilstPayloadIsRunning */ true))
                                         .runToFinish(TAG, vm);
                                 return writeThroughput;
                             } catch (Exception e) {
                                 throw new CompletionException(e);
                             }
                         });
-
-        try {
-            // Kill the VM in the middle of write operation  with 160 MB/s, 0.75G will approx
-            // 5s to be written, kill after 5s hoping with that (accounting for boot time) this
-            // will kill the VM in the middle of writes.
-            Thread.sleep(5000);
-            vm.stop();
-        } catch (Exception e) {
-            Log.e(TAG, "Error in stopping the VM in the middle write:" + e);
-            throw new RuntimeException(e);
-        }
 
         writeFuture.get();
         CompletableFuture<List<Double>> readFuture =
@@ -1188,11 +1178,18 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         private final boolean mMeasureWrite;
         // Set to true iff write are to be synchronized always! This is irrelevant for reads
         private boolean mSynchronizedIo = false;
+        // Stop the VM in the middle of payload operation. This is is used to test for corruption.
+        private boolean mStopVmWhilstPayloadIsRunning = false;
 
+        // TODO: The constructor is getting complicated, implement a builder class!
         EncryptedstoreBenchmarkListener(
-                List<Double> ioThroughput, boolean measureWrite, boolean synchronizedIo) {
+                List<Double> ioThroughput,
+                boolean measureWrite,
+                boolean synchronizedIo,
+                boolean stopVmWhilstPayloadIsRunning) {
             this(ioThroughput, measureWrite);
             mSynchronizedIo = synchronizedIo;
+            mStopVmWhilstPayloadIsRunning = stopVmWhilstPayloadIsRunning;
         }
 
         EncryptedstoreBenchmarkListener(List<Double> ioThroughput, boolean measureWrite) {
@@ -1203,19 +1200,54 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         @Override
         public void onPayloadReady(VirtualMachine vm, IBenchmarkService benchmarkService)
                 throws RemoteException {
-            double rate;
-            if (mMeasureWrite) {
-                // Fill 3/4 of the storage by writing (random) data into a file!
-                rate =
-                        benchmarkService.measureWriteRate(
-                                FILENAME, /*sizeBytes */
-                                (ENCRYPTED_STORE_SIZE * 3) / 4,
-                                mSynchronizedIo);
-            } else {
-                // Sequentially read the file, just written.
-                rate = benchmarkService.measureReadRate(FILENAME, /*isRand */ false);
+            Runnable measureIo =
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                double rate;
+                                if (mMeasureWrite) {
+                                    // Fill 3/4 of the storage by writing (random) data into a file!
+                                    rate =
+                                            benchmarkService.measureWriteRate(
+                                                    FILENAME, /*sizeBytes */
+                                                    (ENCRYPTED_STORE_SIZE * 3) / 4,
+                                                    mSynchronizedIo);
+                                } else {
+                                    rate =
+                                            benchmarkService.measureReadRate(
+                                                    FILENAME, /*isRand */ false);
+                                }
+                                mIoThroughput.add(rate);
+                            } catch (RemoteException e) {
+                                throw new CompletionException(e);
+                            }
+                        }
+                    };
+            CompletableFuture<Void> measureIoFuture = CompletableFuture.runAsync(measureIo);
+            if (mStopVmWhilstPayloadIsRunning) {
+                try {
+                    // Assuming ~ 160 MB/s full access will take 5 sec.
+                    // Stop the VM midway!
+                    long sleep_ms = 20000;
+                    Log.e(
+                            TAG,
+                            "Thread sleeping for "
+                                    + sleep_ms
+                                    + " and will then proceed to kill the VM");
+                    Thread.sleep(sleep_ms);
+                    vm.stop();
+                } catch (Exception e) {
+                    Log.e(TAG, "Error in vm.stop():" + e);
+                    throw new RuntimeException(e);
+                }
             }
-            mIoThroughput.add(rate);
+            try {
+                measureIoFuture.get();
+            } catch (Exception e) {
+                Log.e(TAG, "Error in running payload:" + e);
+                if (!mStopVmWhilstPayloadIsRunning) throw new RuntimeException(e);
+            }
         }
     }
 }
