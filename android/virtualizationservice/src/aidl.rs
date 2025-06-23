@@ -254,7 +254,7 @@ impl VirtualizationServiceInternal {
                 Ok(stream) => stream,
                 Err(e) => {
                     if e.kind() == std::io::ErrorKind::ConnectionReset {
-                        writeln!(writer, "\tskipping dump: not debuggable or server unavailable")?;
+                        writeln!(writer, "\tskipping dump: server unavailable")?;
                         return Ok(());
                     }
                     writeln!(writer, "\tskipping dump: failed to connect: {:?}", e)?;
