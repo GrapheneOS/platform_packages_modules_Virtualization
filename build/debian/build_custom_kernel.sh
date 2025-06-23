@@ -12,6 +12,7 @@ show_help() {
 	echo "-d DEST_DIR  Destination directory for packages [default: $SCRIPT_DIR]"
 	echo "-h           Print usage and this help message and exit."
 	echo "-w           Save temp work directory [for debugging]"
+	echo "-W WORK_DIR  Specify work dir instead of temporarily creating. Imply -w [for debugging]"
 }
 
 check_sudo() {
@@ -21,7 +22,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:d:hw" option; do
+	while getopts "a:d:hwW:" option; do
 		case ${option} in
 			a)
 				arch="$OPTARG"
@@ -33,6 +34,10 @@ parse_options() {
 				show_help ; exit
 				;;
 			w)
+				save_workdir=1
+				;;
+			W)
+				workdir="${OPTARG%/}"
 				save_workdir=1
 				;;
 			*)
@@ -291,11 +296,18 @@ abi_flavour=
 kernel_extras_guid=
 save_workdir=0
 dest_dir=$SCRIPT_DIR
-workdir=$(mktemp -d)
+workdir=
+
+check_sudo
+parse_options "$@"
+
+if [[ -n "${workdir}" ]]; then
+	mkdir -p "${workdir}" || true
+else
+	workdir=$(mktemp -d)
+fi
 echo $workdir
 
-parse_options "$@"
-check_sudo
 install_prerequisites
 build_custom_kernel
 build_initrd

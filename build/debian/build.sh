@@ -19,6 +19,7 @@ show_help() {
 	echo "-h           Print usage and this help message and exit."
 	echo "-u           Set VM boot mode to u-boot [default is to load kernel directly]"
 	echo "-w           Save temp work directory [for debugging]"
+	echo "-W WORK_DIR  Specify work dir instead of temporarily creating. Imply -w [for debugging]"
 }
 
 check_sudo() {
@@ -28,7 +29,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:b:ghuw" option; do
+	while getopts "a:b:ghuwW:" option; do
 		case ${option} in
 			a)
 				arch="$OPTARG"
@@ -46,6 +47,10 @@ parse_options() {
 				uboot=1
 				;;
 			w)
+				save_workdir=1
+				;;
+			W)
+				workdir="${OPTARG%/}"
 				save_workdir=1
 				;;
 			*)
@@ -146,15 +151,23 @@ build_rust_as_deb() {
 build_ttyd() {
 	local ttyd_version=1.7.7
 	local url="https://github.com/tsl0922/ttyd/archive/refs/tags/${ttyd_version}.tar.gz"
+	local build_env=(
+		"BUILD_TARGET=${arch}"
+		"CROSS_ROOT=${workdir}/tmp.ttyd/cross"
+		"STAGE_ROOT=${workdir}/tmp.ttyd/stage"
+		"BUILD_ROOT=${workdir}/tmp.ttyd/build"
+	)
+	local out="${workdir}/tmp.ttyd/stage/${arch}-linux-musl"
+
 	cp -r "$SCRIPT_DIR/ttyd" "${workdir}/ttyd"
 
 	pushd "${workdir}" > /dev/null
 	wget "${url}" -O - | tar xz
 	cp ttyd/* ttyd-${ttyd_version}/scripts
 	pushd "$workdir/ttyd-${ttyd_version}" > /dev/null
-	bash -c "env BUILD_TARGET=${arch} ./scripts/cross-build.sh"
+	bash -c "env ${build_env[*]} ./scripts/cross-build.sh"
 	mkdir -p "${dst}/files/usr/local/bin/ttyd"
-	cp "/tmp/stage/${arch}-linux-musl/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
+	cp "${out}/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
 	chmod 777 "${dst}/files/usr/local/bin/ttyd/AVF"
 	mkdir -p "${dst}/files/usr/share/doc/ttyd/copyright"
 	cp LICENSE "${dst}/files/usr/share/doc/ttyd/copyright/AVF"
@@ -200,7 +213,7 @@ EOF
 	)
 
 	if [[ "$save_workdir" -eq 1 ]]; then
-		cmd_args+=(-w)
+		cmd_args+=(-W "${workdir}/tmp.kernel")
 	fi
 	$SCRIPT_DIR/build_custom_kernel.sh "${cmd_args[@]}"
 }
@@ -282,21 +295,29 @@ clean_up() {
 set -e
 trap clean_up EXIT
 
+check_sudo
+
 output=images.tar.gz
-workdir=$(mktemp -d)
-raw_disk_image=${workdir}/image.raw
 build_id=$(echo eng-$(hostname)-$(date --utc))
-debian_cloud_image=${workdir}/debian_cloud_image
 debian_version=bookworm
-config_space=${debian_cloud_image}/config_space/${debian_version}
-resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
 arch="$(uname -m)"
 save_workdir=0
 use_generic_kernel=0
 uboot=0
 
 parse_options "$@"
-check_sudo
+
+if [[ -n "${workdir}" ]]; then
+	mkdir -p "${workdir}" || true
+else
+	workdir=$(mktemp -d)
+fi
+
+raw_disk_image=${workdir}/image.raw
+debian_cloud_image=${workdir}/debian_cloud_image
+config_space=${debian_cloud_image}/config_space/${debian_version}
+resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
+
 install_prerequisites
 download_debian_cloud_image
 copy_android_config
