@@ -135,15 +135,25 @@ const PARTITION_GRANULARITY_BYTES: u64 = 4096;
 
 const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 
-pub static GLOBAL_SERVICE: LazyLock<Strong<dyn IVirtualizationServiceInternal>> =
-    LazyLock::new(|| {
-        if cfg!(early) {
-            panic!("Early virtmgr must not connect to VirtualizatinoServiceInternal")
-        } else {
+static GLOBAL_SERVICE: Mutex<Option<Strong<dyn IVirtualizationServiceInternal>>> = Mutex::new(None);
+
+pub fn global_service() -> Strong<dyn IVirtualizationServiceInternal> {
+    use binder::IBinder; // for ping_binder
+
+    if cfg!(early) {
+        panic!("Early virtmgr must not connect to {BINDER_SERVICE_IDENTIFIER}")
+    }
+
+    let mut service = GLOBAL_SERVICE.lock().unwrap();
+    if service.is_none() || service.as_ref().unwrap().as_binder().ping_binder().is_err() {
+        *service = Some(
             wait_for_interface(BINDER_SERVICE_IDENTIFIER)
-                .expect("Could not connect to VirtualizationServiceInternal")
-        }
-    });
+                .expect("Could not connect to {BINDER_SERVICE_IDENTIFIER}"),
+        );
+    }
+    service.as_ref().unwrap().clone()
+}
+
 static SUPPORTED_OS_NAMES: LazyLock<HashSet<String>> =
     LazyLock::new(|| get_supported_os_names().expect("Failed to get list of supported os names"));
 
@@ -280,7 +290,7 @@ impl IVirtualizationService for VirtualizationService {
     /// Allocate a new instance_id to the VM
     fn allocateInstanceId(&self) -> binder::Result<[u8; 64]> {
         check_manage_access()?;
-        GLOBAL_SERVICE.allocateInstanceId()
+        global_service().allocateInstanceId()
     }
 
     /// Initialise an empty partition image of the given size to be used as a writable partition.
@@ -369,13 +379,13 @@ impl IVirtualizationService for VirtualizationService {
     /// and as such is only permitted from the shell user.
     fn debugListVms(&self) -> binder::Result<Vec<VirtualMachineDebugInfo>> {
         // Delegate to the global service, including checking the debug permission.
-        GLOBAL_SERVICE.debugListVms()
+        global_service().debugListVms()
     }
 
     /// Get a list of assignable device types.
     fn getAssignableDevices(&self) -> binder::Result<Vec<AssignableDevice>> {
         // Delegate to the global service, including checking the permission.
-        GLOBAL_SERVICE.getAssignableDevices()
+        global_service().getAssignableDevices()
     }
 
     /// Get a list of supported OSes.
@@ -396,12 +406,12 @@ impl IVirtualizationService for VirtualizationService {
     }
 
     fn enableTestAttestation(&self) -> binder::Result<()> {
-        GLOBAL_SERVICE.enableTestAttestation()
+        global_service().enableTestAttestation()
     }
 
     fn isRemoteAttestationSupported(&self) -> binder::Result<bool> {
         check_manage_access()?;
-        GLOBAL_SERVICE.isRemoteAttestationSupported()
+        global_service().isRemoteAttestationSupported()
     }
 
     fn isUpdatableVmSupported(&self) -> binder::Result<bool> {
@@ -414,12 +424,12 @@ impl IVirtualizationService for VirtualizationService {
 
     fn removeVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
         check_manage_access()?;
-        GLOBAL_SERVICE.removeVmInstance(instance_id)
+        global_service().removeVmInstance(instance_id)
     }
 
     fn claimVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
         check_manage_access()?;
-        GLOBAL_SERVICE.claimVmInstance(instance_id)
+        global_service().claimVmInstance(instance_id)
     }
 }
 
@@ -612,7 +622,7 @@ impl VirtualizationService {
         let name = get_name(config);
 
         for _ in 0..NUM_ATTEMPTS {
-            let vm_context = GLOBAL_SERVICE.allocateGlobalVmContext(name, requester_debug_pid)?;
+            let vm_context = global_service().allocateGlobalVmContext(name, requester_debug_pid)?;
             let cid = vm_context.getCid()? as Cid;
             let temp_dir: PathBuf = vm_context.getTemporaryDirectory()?.into();
 
@@ -884,9 +894,9 @@ impl VirtualizationService {
                             .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
                     }
                 }
-                let devices = GLOBAL_SERVICE.bindDevicesToVfioDriver(devices)?;
+                let devices = global_service().bindDevicesToVfioDriver(devices)?;
                 let dtbo_file = File::from(
-                    GLOBAL_SERVICE
+                    global_service()
                         .getDtboFile()?
                         .as_ref()
                         .try_clone()
@@ -937,7 +947,7 @@ impl VirtualizationService {
                     .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)?;
             }
             Some(File::from(
-                GLOBAL_SERVICE
+                global_service()
                     .createTapInterface(&get_this_pid().to_string())?
                     .as_ref()
                     .try_clone()
@@ -2478,11 +2488,11 @@ impl IVirtualMachineService for VirtualMachineService {
     }
 
     fn requestAttestation(&self, csr: &[u8], test_mode: bool) -> binder::Result<Vec<Certificate>> {
-        GLOBAL_SERVICE.requestAttestation(csr, get_calling_uid() as i32, test_mode)
+        global_service().requestAttestation(csr, get_calling_uid() as i32, test_mode)
     }
 
     fn claimSecretkeeperEntry(&self, id: &[u8; 64]) -> binder::Result<()> {
-        GLOBAL_SERVICE.claimSecretkeeperEntry(id)
+        global_service().claimSecretkeeperEntry(id)
     }
 
     fn getHostRpcProvider(&self) -> binder::Result<Strong<dyn IRpcProvider>> {

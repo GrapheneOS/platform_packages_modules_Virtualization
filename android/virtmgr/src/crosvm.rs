@@ -14,7 +14,7 @@
 
 //! Functions for running instances of `crosvm`.
 
-use crate::aidl::{remove_temporary_files, Cid, GLOBAL_SERVICE, VirtualMachineCallbacks};
+use crate::aidl::{remove_temporary_files, Cid, global_service, VirtualMachineCallbacks};
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
@@ -792,7 +792,7 @@ impl VmInstance {
         });
 
         if let Some(tap_file) = tap {
-            GLOBAL_SERVICE
+            global_service()
                 .deleteTapInterface(&ParcelFileDescriptor::new(OwnedFd::from(tap_file)))
                 .unwrap_or_else(|e| {
                     error!("Error deleting TAP interface: {e:?}");
