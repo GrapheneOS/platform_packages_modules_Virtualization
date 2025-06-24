@@ -123,7 +123,7 @@ public final class ProcessUtil {
     }
 
     public static int getVirtmgrPid(int parentPid, Function<String, String> shellExecutor) {
-        return getSingleChildProcess(parentPid, "virtmgr_vm", shellExecutor);
+        return getSingleChildProcess(parentPid, "virtmgr_", shellExecutor);
     }
 
     public static int getCrosvmPid(
