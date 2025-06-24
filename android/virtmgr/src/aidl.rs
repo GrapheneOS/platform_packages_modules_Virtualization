@@ -2197,16 +2197,6 @@ fn check_no_devices(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
-fn check_no_extra_apks(config: &VirtualMachineConfig) -> binder::Result<()> {
-    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
-    let Payload::PayloadConfig(payload_config) = &config.payload else { return Ok(()) };
-    if !payload_config.extraApks.is_empty() {
-        return Err(anyhow!("multi-tenant feature is disabled"))
-            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-    }
-    Ok(())
-}
-
 fn check_no_extra_kernel_cmdline_params(config: &VirtualMachineConfig) -> binder::Result<()> {
     let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if let Some(custom_config) = &config.customConfig {
@@ -2264,9 +2254,6 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     }
     if !cfg!(device_assignment) {
         check_no_devices(config)?;
-    }
-    if !cfg!(multi_tenant) {
-        check_no_extra_apks(config)?;
     }
     if !cfg!(debuggable_vms_improvements) {
         check_no_extra_kernel_cmdline_params(config)?;

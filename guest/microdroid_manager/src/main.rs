@@ -491,7 +491,6 @@ fn try_run_payload(
 
     // Before reading a file from the APK, start zipfuse
     zipfuse.mount(
-        MountForExec::Allowed,
         "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:system_file:s0",
         Path::new(verify::DM_MOUNTED_APK_PATH),
         Path::new(VM_APK_CONTENTS_PATH),
@@ -672,11 +671,8 @@ fn mount_extra_apks(config: &VmPayloadConfig, zipfuse: &mut Zipfuse) -> Result<(
         let mount_dir = format!("/mnt/extra-apk/{i}");
         create_dir(Path::new(&mount_dir)).context("Failed to create mount dir for extra apks")?;
 
-        let mount_for_exec =
-            if cfg!(multi_tenant) { MountForExec::Allowed } else { MountForExec::Disallowed };
         // These run asynchronously in parallel - we wait later for them to complete.
         zipfuse.mount(
-            mount_for_exec,
             "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:extra_apk_file:s0",
             Path::new(&format!("/dev/block/mapper/extra-apk-{i}")),
             Path::new(&mount_dir),
@@ -730,11 +726,6 @@ fn get_debug_policy_bool(path: &'static str) -> bool {
     }
 }
 
-enum MountForExec {
-    Allowed,
-    Disallowed,
-}
-
 #[derive(Default)]
 struct Zipfuse {
     ready_properties: Vec<String>,
@@ -743,16 +734,12 @@ struct Zipfuse {
 impl Zipfuse {
     fn mount(
         &mut self,
-        noexec: MountForExec,
         option: &str,
         zip_path: &Path,
         mount_dir: &Path,
         ready_prop: String,
     ) -> Result<Child> {
         let mut cmd = Command::new(ZIPFUSE_BIN);
-        if let MountForExec::Disallowed = noexec {
-            cmd.arg("--noexec");
-        }
         // Let root own the files in APK, so we can access them, but set the group to
         // allow all payloads to have access too.
         let (uid, gid) = (microdroid_uids::ROOT_UID, microdroid_uids::MICRODROID_PAYLOAD_GID);

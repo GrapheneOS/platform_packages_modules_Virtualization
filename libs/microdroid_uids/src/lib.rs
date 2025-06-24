@@ -29,7 +29,7 @@ pub const ROOT_UID: u32 = 0;
 // helps avoid confusion.)
 
 /// Group ID shared by all payload users.
-pub const MICRODROID_PAYLOAD_GID: u32 = if cfg!(multi_tenant) { 6000 } else { 0 };
+pub const MICRODROID_PAYLOAD_GID: u32 = 6000;
 
 /// User ID for the initial payload user.
-pub const MICRODROID_PAYLOAD_UID: u32 = if cfg!(multi_tenant) { 6000 } else { 0 };
+pub const MICRODROID_PAYLOAD_UID: u32 = 6000;

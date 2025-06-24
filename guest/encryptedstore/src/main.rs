@@ -126,9 +126,7 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
 
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
-    if cfg!(multi_tenant) {
-        ensure_root_dir_status(mountpoint)?;
-    }
+    ensure_root_dir_status(mountpoint)?;
     if cfg!(long_running_vms) {
         system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
             .context("failed to write microdroid_metadata.encryptedstore_store.status sysprop")?;

@@ -31,15 +31,8 @@ pub type Inode = u64;
 const INVALID: Inode = 0;
 const ROOT: Inode = 1;
 
-#[cfg(multi_tenant)]
 const READ_MODE: u32 = libc::S_IRUSR | libc::S_IRGRP;
-#[cfg(multi_tenant)]
 const EXECUTE_MODE: u32 = libc::S_IXUSR | libc::S_IXGRP;
-
-#[cfg(not(multi_tenant))]
-const READ_MODE: u32 = libc::S_IRUSR;
-#[cfg(not(multi_tenant))]
-const EXECUTE_MODE: u32 = libc::S_IXUSR;
 
 const DEFAULT_DIR_MODE: u32 = READ_MODE | EXECUTE_MODE;
 // b/264668376 some files in APK don't have unix permissions specified. Default to 400
