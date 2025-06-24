@@ -22,11 +22,13 @@ mod ioutil;
 mod payload;
 mod swap;
 mod verify;
+mod vm_internal_service;
 mod vm_payload_service;
 mod vm_secret;
 
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::ErrorCode::ErrorCode;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
+use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::VM_INTERNAL_SERVICE_SOCKET_NAME;
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
     VM_APK_CONTENTS_PATH,
     VM_PAYLOAD_SERVICE_SOCKET_NAME,
@@ -41,6 +43,7 @@ use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::verify::verify_payload;
+use crate::vm_internal_service::register_vm_internal_service;
 use crate::vm_payload_service::register_vm_payload_service;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binder::{self, BinderFeatures, Interface, Strong};
@@ -326,9 +329,7 @@ fn try_main() -> Result<()> {
     let guest_agent = GuestAgent::new_binder();
     service.registerGuestAgent(&guest_agent)?;
 
-    if is_debuggable() {
-        start_dump_service()?;
-    }
+    start_dump_service()?;
 
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
@@ -337,9 +338,10 @@ fn try_main() -> Result<()> {
             .context("failed to set up the host RPC provider from the host")?,
     )?;
 
+    let vm_internal_service_fd = android_get_control_socket(VM_INTERNAL_SERVICE_SOCKET_NAME)?;
     let vm_payload_service_fd = android_get_control_socket(VM_PAYLOAD_SERVICE_SOCKET_NAME)?;
 
-    match try_run_payload(&service, vm_payload_service_fd) {
+    match try_run_payload(&service, vm_internal_service_fd, vm_payload_service_fd) {
         Ok(code) => {
             match code {
                 0 => info!("task successfully finished"),
@@ -445,6 +447,7 @@ struct CgroupConfig {
 
 fn try_run_payload(
     service: &Strong<dyn IVirtualMachineService>,
+    vm_internal_service_fd: OwnedFd,
     vm_payload_service_fd: OwnedFd,
 ) -> Result<i32> {
     let metadata = load_metadata().context("Failed to load payload metadata")?;
@@ -567,6 +570,8 @@ fn try_run_payload(
     } else {
         Arc::new(None)
     };
+
+    register_vm_internal_service(service.clone(), vm_internal_service_fd)?;
 
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
@@ -1191,6 +1196,10 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
 
     read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
     read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;
+
+    if is_debuggable() {
+        read_and_write_glob_files(&mut stream, "/proc/*/maps")?;
+    }
 
     stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
 

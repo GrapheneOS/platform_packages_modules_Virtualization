@@ -4,5 +4,5 @@
     "platform_version": "1.0",
     "cpu_topology": "one_cpu",
     "memory_mib": 112,
-    "protected": true
+    "protected": false
 }
