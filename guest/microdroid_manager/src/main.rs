@@ -326,9 +326,7 @@ fn try_main() -> Result<()> {
     let guest_agent = GuestAgent::new_binder();
     service.registerGuestAgent(&guest_agent)?;
 
-    if is_debuggable() {
-        start_dump_service()?;
-    }
+    start_dump_service()?;
 
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
@@ -1191,6 +1189,10 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
 
     read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
     read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;
+
+    if is_debuggable() {
+        read_and_write_glob_files(&mut stream, "/proc/*/maps")?;
+    }
 
     stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
 
