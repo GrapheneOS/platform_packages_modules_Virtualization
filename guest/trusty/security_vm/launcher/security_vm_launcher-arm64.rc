@@ -2,8 +2,8 @@
 service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher \
 --name trusty_security_vm_launcher \
 --kernel /system_ext/etc/vm/trusty_vm/trusty_security_vm.elf \
---memory-size-mib 32 \
---protected
+--memory-size-mib 32
+# TODO(b/427128726): Launch the VM in protected mode once vcpu error is fixed.
     disabled
     user system
     group system virtualmachine
