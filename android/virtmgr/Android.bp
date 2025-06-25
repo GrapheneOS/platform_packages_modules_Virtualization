@@ -73,6 +73,7 @@ rust_defaults {
         "libvirt_dropbox",
         "libzerocopy",
         "libuuid",
+        "libscopeguard",
         // TODO(b/202115393) stabilize the interface
         "packagemanager_aidl-rust",
         "rpc_servicemanager_aidl-rust",

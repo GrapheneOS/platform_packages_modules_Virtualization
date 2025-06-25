@@ -31,8 +31,8 @@ use android_vs_internal::aidl::android::system::virtualizationservice_internal;
 use anyhow::{anyhow, ensure, Context, Result};
 use avflog::LogResult;
 use binder::{
-    self, wait_for_interface, BinderFeatures, ExceptionCode, Interface, IntoBinderResult,
-    LazyServiceGuard, ParcelFileDescriptor, Status, StatusCode, Strong,
+    self, wait_for_interface, DeathRecipient, ExceptionCode, IBinder, Interface, IntoBinderResult,
+    ParcelFileDescriptor, Status, StatusCode, Strong,
 };
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
@@ -52,9 +52,9 @@ use std::fs::{self, create_dir, remove_dir_all, remove_file, set_permissions, Fi
 use std::io::{Read, Write};
 use std::net::Shutdown;
 use std::os::unix::fs::PermissionsExt;
-use std::os::unix::raw::{pid_t, uid_t};
+use std::os::unix::raw::uid_t;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, LazyLock, Mutex, Weak};
+use std::sync::{Arc, Condvar, LazyLock, Mutex};
 use std::time::Duration;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
@@ -63,17 +63,19 @@ use virtualizationmaintenance::{
     IVirtualizationReconciliationCallback::IVirtualizationReconciliationCallback,
 };
 use virtualizationservice::{
-    AssignableDevice::AssignableDevice, VirtualMachineDebugInfo::VirtualMachineDebugInfo,
+    AssignableDevice::AssignableDevice,
+    IVirtualMachine::IVirtualMachine,
+    VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
 use virtualizationservice_internal::{
     AtomVmBooted::AtomVmBooted,
     AtomVmCreationRequested::AtomVmCreationRequested,
     AtomVmExited::AtomVmExited,
     IBoundDevice::IBoundDevice,
-    IGlobalVmContext::{BnGlobalVmContext, IGlobalVmContext},
     IVfioHandler::VfioDev::VfioDev,
     IVfioHandler::{BpVfioHandler, IVfioHandler},
     IVirtualizationServiceInternal::IVirtualizationServiceInternal,
+    IVirtualizationServiceInternal::VmContext::VmContext,
     IVmnic::{BpVmnic, IVmnic},
 };
 use virtualmachineservice::IVirtualMachineService::VM_TOMBSTONES_SERVICE_PORT;
@@ -224,43 +226,33 @@ impl VirtualizationServiceInternal {
     }
 
     fn debug_list_vms_unchecked(&self) -> Vec<VirtualMachineDebugInfo> {
-        let state = &mut *self.state.lock().unwrap();
-        state
-            .held_contexts
+        self.state
+            .lock()
+            .unwrap()
+            .virtual_machines
             .iter()
-            .filter_map(|(_, inst)| Weak::upgrade(inst))
-            .map(|vm| {
-                let vm = vm.lock().unwrap();
-                VirtualMachineDebugInfo {
-                    name: vm.name.clone(),
-                    cid: vm.cid as i32,
-                    temporaryDirectory: vm.get_temp_dir().to_string_lossy().to_string(),
-                    requesterUid: vm.requester_uid as i32,
-                    requesterPid: vm.requester_debug_pid,
-                    hostConsoleName: vm.host_console_name.clone(),
-                }
+            .filter_map(|(cid, vm)| {
+                vm.0.getDebugInfo()
+                    .inspect_err(|e| {
+                        error!("Failed to get debug info for VM with CID {cid}: {e:?}")
+                    })
+                    .ok()
             })
             .collect()
     }
 
-    fn handle_dump(
-        &self,
-        writer: &mut dyn Write,
-        vm: &VirtualMachineDebugInfo,
-        args: &[String],
-    ) -> Result<()> {
-        let mut stream =
-            match VsockStream::connect_with_cid_port(vm.cid as u32, DUMP_SERVICE_PORT as u32) {
-                Ok(stream) => stream,
-                Err(e) => {
-                    if e.kind() == std::io::ErrorKind::ConnectionReset {
-                        writeln!(writer, "\tskipping dump: server unavailable")?;
-                        return Ok(());
-                    }
-                    writeln!(writer, "\tskipping dump: failed to connect: {:?}", e)?;
+    fn handle_dump(&self, writer: &mut dyn Write, cid: Cid, args: &[String]) -> Result<()> {
+        let mut stream = match VsockStream::connect_with_cid_port(cid, DUMP_SERVICE_PORT as u32) {
+            Ok(stream) => stream,
+            Err(e) => {
+                if e.kind() == std::io::ErrorKind::ConnectionReset {
+                    writeln!(writer, "\tskipping dump: server unavailable")?;
                     return Ok(());
                 }
-            };
+                writeln!(writer, "\tskipping dump: failed to connect: {:?}", e)?;
+                return Ok(());
+            }
+        };
 
         // 5 seconds must be much longer than required.
         stream
@@ -296,7 +288,6 @@ impl Interface for VirtualizationServiceInternal {
     fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), StatusCode> {
         check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
 
-        // TODO(b/418877672): connect to virtmgr and get vm list, rather than this global state.
         let vms = self.debug_list_vms_unchecked();
         writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
         let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
@@ -311,7 +302,8 @@ impl Interface for VirtualizationServiceInternal {
             writeln!(writer, "\trequester_debug_pid: {}", vm.requesterPid)
                 .or(Err(StatusCode::UNKNOWN_ERROR))?;
 
-            self.handle_dump(writer, &vm, &args).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            let cid = vm.cid.try_into().unwrap();
+            self.handle_dump(writer, cid, &args).or(Err(StatusCode::UNKNOWN_ERROR))?;
         }
         Ok(())
     }
@@ -366,18 +358,35 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
-    fn allocateGlobalVmContext(
-        &self,
-        name: &str,
-        requester_debug_pid: i32,
-    ) -> binder::Result<Strong<dyn IGlobalVmContext>> {
+    fn allocateVmContext(&self) -> binder::Result<VmContext> {
         check_manage_access()?;
 
-        let requester_uid = get_calling_uid();
-        let requester_debug_pid = requester_debug_pid as pid_t;
-        let state = &mut *self.state.lock().unwrap();
-        state
-            .allocate_vm_context(name, requester_uid, requester_debug_pid)
+        self.state
+            .lock()
+            .unwrap()
+            .allocate_vm_context()
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
+    }
+
+    fn registerVirtualMachine(
+        &self,
+        cid: i32,
+        vm: &Strong<dyn IVirtualMachine>,
+    ) -> binder::Result<()> {
+        check_manage_access()?;
+        self.state
+            .lock()
+            .unwrap()
+            .register_virtual_machine(cid as Cid, vm)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
+    }
+
+    fn unregisterVirtualMachine(&self, cid: i32) -> binder::Result<()> {
+        check_manage_access()?;
+        self.state
+            .lock()
+            .unwrap()
+            .unregister_virtual_machine(cid as Cid)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
@@ -398,6 +407,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
 
     fn debugListVms(&self) -> binder::Result<Vec<VirtualMachineDebugInfo>> {
         check_debug_access()?;
+        info!("debugListVMs");
 
         Ok(self.debug_list_vms_unchecked())
     }
@@ -744,33 +754,12 @@ fn split_x509_certificate_chain(mut cert_chain: &[u8]) -> Result<Vec<Certificate
     Ok(out)
 }
 
-#[derive(Debug, Default)]
-struct GlobalVmInstance {
-    /// Name of the VM
-    name: String,
-    /// The unique CID assigned to the VM for vsock communication.
-    cid: Cid,
-    /// UID of the client who requested this VM instance.
-    requester_uid: uid_t,
-    /// PID of the client who requested this VM instance.
-    requester_debug_pid: pid_t,
-    /// Name of the host console.
-    host_console_name: Option<String>,
-}
-
-impl GlobalVmInstance {
-    fn get_temp_dir(&self) -> PathBuf {
-        let cid = self.cid;
-        format!("{TEMPORARY_DIRECTORY}/{cid}").into()
-    }
-}
-
 /// The mutable state of the VirtualizationServiceInternal. There should only be one instance
 /// of this struct.
+#[derive(Default)]
 struct GlobalState {
-    /// VM contexts currently allocated to running VMs. A CID is never recycled as long
-    /// as there is a strong reference held by a GlobalVmContext.
-    held_contexts: HashMap<Cid, Weak<Mutex<GlobalVmInstance>>>,
+    /// List of VMs currently running.
+    virtual_machines: HashMap<Cid, (Strong<dyn IVirtualMachine>, DeathRecipient)>,
 
     /// State relating to secrets held by (optional) Secretkeeper instance on behalf of VMs.
     sk_state: Option<maintenance::State>,
@@ -780,11 +769,7 @@ struct GlobalState {
 
 impl GlobalState {
     fn new() -> Self {
-        Self {
-            held_contexts: HashMap::new(),
-            sk_state: maintenance::State::new(),
-            display_service: None,
-        }
+        Self { sk_state: maintenance::State::new(), ..Default::default() }
     }
 
     /// Get the next available CID, or an error if we have run out. The last CID used is stored in
@@ -834,31 +819,49 @@ impl GlobalState {
     where
         I: Iterator<Item = Cid>,
     {
-        range.find(|cid| !self.held_contexts.contains_key(cid))
+        range.find(|cid| !self.virtual_machines.contains_key(cid))
     }
 
-    fn allocate_vm_context(
-        &mut self,
-        name: &str,
-        requester_uid: uid_t,
-        requester_debug_pid: pid_t,
-    ) -> Result<Strong<dyn IGlobalVmContext>> {
-        // Garbage collect unused VM contexts.
-        self.held_contexts.retain(|_, instance| instance.strong_count() > 0);
-
+    fn allocate_vm_context(&mut self) -> Result<VmContext> {
         let cid = self.get_next_available_cid()?;
-        let instance = Arc::new(Mutex::new(GlobalVmInstance {
-            name: name.to_owned(),
-            cid,
-            requester_uid,
-            requester_debug_pid,
-            ..Default::default()
-        }));
-        create_temporary_directory(&instance.lock().unwrap().get_temp_dir(), Some(requester_uid))?;
+        let temp_dir = format!("{TEMPORARY_DIRECTORY}/{cid}").into();
+        let requester_uid = get_calling_uid();
 
-        self.held_contexts.insert(cid, Arc::downgrade(&instance));
-        let binder = GlobalVmContext { instance, ..Default::default() };
-        Ok(BnGlobalVmContext::new_binder(binder, BinderFeatures::default()))
+        create_temporary_directory(&temp_dir, Some(requester_uid))?;
+        Ok(VmContext {
+            cid: cid.try_into().unwrap(),
+            tempDir: temp_dir.to_string_lossy().to_string(),
+        })
+    }
+
+    fn register_virtual_machine(
+        &mut self,
+        cid: Cid,
+        vm: &Strong<dyn IVirtualMachine>,
+    ) -> Result<()> {
+        let mut dr = DeathRecipient::new(move || {
+            let temp_dir = format!("{TEMPORARY_DIRECTORY}/{cid}").into();
+            remove_temporary_dir(&temp_dir).unwrap_or_else(|e| {
+                warn!("Could not delete temporary directory {:?}: {}", temp_dir, e);
+            });
+        });
+        vm.as_binder().link_to_death(&mut dr)?;
+        let old_vm = self.virtual_machines.insert(cid, (vm.clone(), dr));
+        if let Some(_old_vm) = old_vm {
+            warn!("CID ({cid}) reuse detected!");
+            // TODO(b/418877672): print more information about old_vm
+        }
+        info!("Virtual machine with CID {cid} registered");
+        Ok(())
+    }
+
+    fn unregister_virtual_machine(&mut self, cid: Cid) -> Result<()> {
+        if self.virtual_machines.remove(&cid).is_some() {
+            info!("Virtual machine with CID {cid} unregistered");
+            Ok(())
+        } else {
+            Err(anyhow!("Unknown CID {cid}"))
+        }
     }
 
     fn get_dtbo_file(&mut self) -> Result<File> {
@@ -919,33 +922,6 @@ fn get_or_create_common_dir() -> Result<PathBuf> {
         create_temporary_directory(&path, None)?;
     }
     Ok(path)
-}
-
-/// Implementation of the AIDL `IGlobalVmContext` interface.
-#[derive(Debug, Default)]
-struct GlobalVmContext {
-    /// Strong reference to the context's instance data structure.
-    instance: Arc<Mutex<GlobalVmInstance>>,
-    /// Keeps our service process running as long as this VM context exists.
-    #[allow(dead_code)]
-    lazy_service_guard: LazyServiceGuard,
-}
-
-impl Interface for GlobalVmContext {}
-
-impl IGlobalVmContext for GlobalVmContext {
-    fn getCid(&self) -> binder::Result<i32> {
-        Ok(self.instance.lock().unwrap().cid as i32)
-    }
-
-    fn getTemporaryDirectory(&self) -> binder::Result<String> {
-        Ok(self.instance.lock().unwrap().get_temp_dir().to_string_lossy().to_string())
-    }
-
-    fn setHostConsoleName(&self, pathname: &str) -> binder::Result<()> {
-        self.instance.lock().unwrap().host_console_name = Some(pathname.to_string());
-        Ok(())
-    }
 }
 
 fn handle_stream_connection_tombstoned() -> Result<()> {

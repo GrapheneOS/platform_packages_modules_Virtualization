@@ -34,7 +34,6 @@ fn build_report_header() -> Result<String> {
     let mut header = String::new();
     writeln!(&mut header, "Build: {}", &get_system_property("ro.build.fingerprint"))?;
     writeln!(&mut header, "Hardware: {}", &get_system_property("ro.product.device"))?;
-    writeln!(&mut header, "Model: {}", &get_model())?;
     writeln!(&mut header, "Revision: {}", &get_system_property("ro.revision"))?;
     writeln!(&mut header, "Kernel: {}", &get_kernel_version())?;
     writeln!(&mut header, "Subsystem: {}", SUBSYSTEM)?;
@@ -75,25 +74,4 @@ fn get_kernel_version() -> String {
         return UNKNOWN_VALUE.to_string();
     }
     version
-}
-
-fn get_model() -> String {
-    let hwid = get_system_property("ro.boot.product.hardware.id");
-    extract_model_from_hwid(hwid)
-}
-
-fn extract_model_from_hwid(hwid: String) -> String {
-    // e.g. ANAHERA-TY00 123-456-ABC-DEF -> ANAHERA-TY00
-    let split_hwid_on_space: Vec<&str> = hwid.split(" ").collect();
-    if split_hwid_on_space.len() < 2 {
-        error!("Unable to determine model from HWID '{hwid}'");
-        return UNKNOWN_VALUE.to_string();
-    }
-    // e.g. ANAHERA-TY00 -> anahera
-    let split_hwid_on_dash = split_hwid_on_space[0].split("-").next();
-    if let Some(split_hwid_on_dash) = split_hwid_on_dash {
-        split_hwid_on_dash.to_string().to_lowercase()
-    } else {
-        split_hwid_on_space[0].to_lowercase()
-    }
 }

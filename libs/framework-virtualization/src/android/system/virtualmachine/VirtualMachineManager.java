@@ -120,7 +120,6 @@ public class VirtualMachineManager {
             value = {
                 FEATURE_DICE_CHANGES,
                 FEATURE_LLPVM_CHANGES,
-                FEATURE_MULTI_TENANT,
                 FEATURE_NETWORK,
                 FEATURE_REMOTE_ATTESTATION,
                 FEATURE_VENDOR_MODULES,
@@ -134,14 +133,6 @@ public class VirtualMachineManager {
      */
     @TestApi
     public static final String FEATURE_DICE_CHANGES = IVirtualizationService.FEATURE_DICE_CHANGES;
-
-    /**
-     * Feature to run payload as non-root user.
-     *
-     * @hide
-     */
-    @TestApi
-    public static final String FEATURE_MULTI_TENANT = IVirtualizationService.FEATURE_MULTI_TENANT;
 
     /**
      * Feature to allow network features in VM.

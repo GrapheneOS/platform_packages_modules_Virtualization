@@ -49,7 +49,6 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     VirtualMachineRawConfig::VirtualMachineRawConfig,
     VirtualMachineState::VirtualMachineState,
 };
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal::IVirtualizationServiceInternal;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
         BnVirtualMachineService, IVirtualMachineService
@@ -72,7 +71,7 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkverify::{HashAlgorithm, V4Signature};
 use avflog::LogResult;
 use binder::{
-    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, ExceptionCode, Interface, ParcelFileDescriptor,
+    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, DeathRecipient, ExceptionCode, IBinder, Interface, ParcelFileDescriptor,
     SpIBinder, Status, StatusCode, Strong, IntoBinderResult,
 };
 use dropbox_rs::DropBoxManager;
@@ -95,7 +94,6 @@ use std::iter;
 use std::num::{NonZeroU16, NonZeroU32};
 use std::ops::Range;
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
-use std::os::unix::raw::pid_t;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak, LazyLock};
 use vbmeta::VbMetaImage;
@@ -174,8 +172,8 @@ static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
     }
 });
 
-// TODO(ioffe): add service for guest-ffa.
-const KNOWN_TEE_SERVICES: [&str; 0] = [];
+const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
 
 fn check_known_tee_service(tee_service: &str) -> binder::Result<()> {
     if !KNOWN_TEE_SERVICES.contains(&tee_service) {
@@ -435,53 +433,6 @@ impl IVirtualizationService for VirtualizationService {
     }
 }
 
-/// Implementation of the AIDL `IGlobalVmContext` interface for early VMs.
-#[derive(Debug, Default)]
-struct EarlyVmContext {
-    /// The unique CID assigned to the VM for vsock communication.
-    cid: Cid,
-    /// Temporary directory for this VM instance.
-    temp_dir: PathBuf,
-}
-
-impl EarlyVmContext {
-    fn new(cid: Cid, temp_dir: PathBuf) -> Result<Self> {
-        // Remove the entire directory before creating a VM. Early VMs use predefined CIDs and AVF
-        // should trust clients, e.g. they won't run two VMs at the same time
-        let _ = remove_dir_all(&temp_dir);
-        create_dir_all(&temp_dir).context(format!("can't create '{}'", temp_dir.display()))?;
-
-        Ok(Self { cid, temp_dir })
-    }
-}
-
-impl Interface for EarlyVmContext {}
-
-impl Drop for EarlyVmContext {
-    fn drop(&mut self) {
-        if let Err(e) = remove_dir_all(&self.temp_dir) {
-            error!("Cannot remove {} upon dropping: {e}", self.temp_dir.display());
-        }
-    }
-}
-
-impl IGlobalVmContext for EarlyVmContext {
-    fn getCid(&self) -> binder::Result<i32> {
-        Ok(self.cid as i32)
-    }
-
-    fn getTemporaryDirectory(&self) -> binder::Result<String> {
-        Ok(self.temp_dir.to_string_lossy().to_string())
-    }
-
-    fn setHostConsoleName(&self, _pathname: &str) -> binder::Result<()> {
-        Err(Status::new_exception_str(
-            ExceptionCode::UNSUPPORTED_OPERATION,
-            Some("Early VM doesn't support setting host console name"),
-        ))
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum CallingPartition {
     Odm,
@@ -596,9 +547,9 @@ impl VirtualizationService {
 
         let cid = early_vm.cid as Cid;
         let temp_dir = PathBuf::from(format!("/mnt/vm/early/{cid}"));
-
-        let context = EarlyVmContext::new(cid, temp_dir.clone())
-            .context(format!("Can't create early vm contexts for {cid}"))
+        let _ = remove_dir_all(&temp_dir);
+        create_dir_all(&temp_dir)
+            .context(format!("can't create '{}'", temp_dir.display()))
             .or_service_specific_exception(-1)?;
 
         if requires_vm_service(config) {
@@ -609,28 +560,25 @@ impl VirtualizationService {
                 .context(format!("Could not start RpcServer on port {port}"))
                 .or_service_specific_exception(-1)?;
             vm_server.start();
-            Ok((VmContext::new(Strong::new(Box::new(context)), Some(vm_server)), cid, temp_dir))
+            Ok((VmContext::new(Some(vm_server)), cid, temp_dir))
         } else {
-            Ok((VmContext::new(Strong::new(Box::new(context)), None), cid, temp_dir))
+            Ok((VmContext::new(None), cid, temp_dir))
         }
     }
 
     fn create_vm_context(
         &self,
-        requester_debug_pid: pid_t,
         config: &VirtualMachineConfig,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         const NUM_ATTEMPTS: usize = 5;
-        let name = get_name(config);
-
         for _ in 0..NUM_ATTEMPTS {
-            let vm_context = global_service().allocateGlobalVmContext(name, requester_debug_pid)?;
-            let cid = vm_context.getCid()? as Cid;
-            let temp_dir: PathBuf = vm_context.getTemporaryDirectory()?.into();
+            let vm_context = global_service().allocateVmContext()?;
+            let cid = vm_context.cid as Cid;
+            let temp_dir: PathBuf = vm_context.tempDir.clone().into();
 
             // We don't need to start the VM service for custom VMs.
             if !requires_vm_service(config) {
-                return Ok((VmContext::new(vm_context, None), cid, temp_dir));
+                return Ok((VmContext::new(None), cid, temp_dir));
             }
 
             let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
@@ -640,7 +588,7 @@ impl VirtualizationService {
             match RpcServer::new_vsock(service, cid, port) {
                 Ok((vm_server, _)) => {
                     vm_server.start();
-                    return Ok((VmContext::new(vm_context, Some(vm_server)), cid, temp_dir));
+                    return Ok((VmContext::new(Some(vm_server)), cid, temp_dir));
                 }
                 Err(err) => {
                     warn!("Could not start RpcServer on port {}: {}", port, err);
@@ -699,7 +647,7 @@ impl VirtualizationService {
         let (vm_context, cid, temporary_directory) = if cfg!(early) {
             self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref(), calling_partition)?
         } else {
-            self.create_vm_context(requester_debug_pid, config)?
+            self.create_vm_context(config)?
         };
 
         if is_custom_config(config) {
@@ -798,12 +746,6 @@ impl VirtualizationService {
                 "requesting access to tee services requires {VM_CAPABILITIES_HAL_IDENTIFIER}"
             ))
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
-
-        // TODO(b/391774181): remove this check in a follow-up patch.
-        if !system_tee_services.is_empty() {
-            return Err(anyhow!("support for system tee services is coming soon!"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
         // Verify the VM owner has permissions to get all of these host services
@@ -1061,6 +1003,7 @@ impl VirtualizationService {
             instance_id,
             custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
+            enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
         };
         let instance = Arc::new(
             VmInstance::new(
@@ -1081,8 +1024,48 @@ impl VirtualizationService {
             .or_service_specific_exception(-1)?,
         );
         state.add_vm(Arc::downgrade(&instance));
-        Ok(VirtualMachine::create(instance))
+
+        let instance_clone = instance.clone();
+        let vm = VirtualMachine::create(instance);
+
+        register_to_global_service(instance_clone, &vm)
+            .context(format!("Failed to register VM ({cid}) to the global service"))
+            .or_service_specific_exception(-1)?;
+
+        Ok(vm)
     }
+}
+
+/// Register the VM to the global service so that the list of all VMs in the system can be
+/// retrieved via the global service. Also set up a death recipient so that the VMs are "re"
+/// registered to the global service if the service goes down and then is brought up again.
+fn register_to_global_service(
+    instance: Arc<VmInstance>,
+    vm: &Strong<dyn IVirtualMachine::IVirtualMachine>,
+) -> binder::Result<()> {
+    if cfg!(early) {
+        return Ok(());
+    }
+
+    let instance_clone = instance.clone();
+    let cid = instance.cid;
+    global_service().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+
+    let weak_vm = Strong::downgrade(vm);
+    let mut dr = DeathRecipient::new(move || {
+        // No need to re-register the VM if it's already dead
+        if let Ok(vm) = weak_vm.upgrade() {
+            let _ = register_to_global_service(instance.clone(), &vm).map_err(|e| {
+                error!("Failed to re-register VM ({cid}) to the global service: {e:?}")
+            });
+        }
+    });
+    global_service().as_binder().link_to_death(&mut dr)?;
+
+    // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
+    // automatically unlinked.
+    *instance_clone.global_service_death_recipient.lock().unwrap() = Some(dr);
+    Ok(())
 }
 
 /// Returns whether a VM config represents a "custom" virtual machine, which requires the
@@ -1123,14 +1106,6 @@ fn requires_vm_service(config: &VirtualMachineConfig) -> bool {
     match config {
         VirtualMachineConfig::AppConfig(_) => true,
         VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
-    }
-}
-
-/// Returns the name of the config
-fn get_name(config: &VirtualMachineConfig) -> &str {
-    match config {
-        VirtualMachineConfig::AppConfig(config) => &config.name,
-        VirtualMachineConfig::RawConfig(config) => &config.name,
     }
 }
 
@@ -1771,7 +1746,6 @@ fn check_label_for_file(
 }
 
 /// Implementation of the AIDL `IVirtualMachine` interface. Used as a handle to a VM.
-#[derive(Debug)]
 struct VirtualMachine {
     instance: Arc<VmInstance>,
 }
@@ -1921,20 +1895,14 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
     }
 
     fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
-        let Some(global_context) = self
-            .instance
-            .vm_context
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map(|vm_context| vm_context.global_context.clone())
-        else {
+        if !self.instance.is_vm_running() {
             return Err(Status::new_service_specific_error_str(
                 IVirtualMachine::ERROR_UNEXPECTED,
                 Some("Virtual Machine is not running"),
             ));
-        };
-        global_context.setHostConsoleName(ptsname)
+        }
+        *self.instance.host_console_name.lock().unwrap() = Some(ptsname.to_string());
+        Ok(())
     }
 
     fn suspend(&self) -> binder::Result<()> {
@@ -1952,11 +1920,23 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
             .with_log()
             .or_service_specific_exception(-1)
     }
+
+    fn getDebugInfo(&self) -> binder::Result<VirtualMachineDebugInfo> {
+        info!("getDebugInfo called");
+        Ok(VirtualMachineDebugInfo {
+            name: self.instance.name.clone(),
+            cid: self.instance.cid.try_into().unwrap(),
+            temporaryDirectory: self.instance.temporary_directory.to_string_lossy().to_string(),
+            requesterUid: self.instance.requester_uid.try_into().unwrap(),
+            requesterPid: self.instance.requester_debug_pid,
+            hostConsoleName: self.instance.host_console_name.lock().unwrap().clone(),
+        })
+    }
 }
 
 impl Drop for VirtualMachine {
     fn drop(&mut self) {
-        debug!("Dropping {:?}", self);
+        info!("Dropping {}", self.instance);
         if let Err(e) = self.instance.kill() {
             debug!("Error stopping dropped VM with CID {}: {:?}", self.instance.cid, e);
         }
@@ -2209,16 +2189,6 @@ fn check_no_devices(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
-fn check_no_extra_apks(config: &VirtualMachineConfig) -> binder::Result<()> {
-    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
-    let Payload::PayloadConfig(payload_config) = &config.payload else { return Ok(()) };
-    if !payload_config.extraApks.is_empty() {
-        return Err(anyhow!("multi-tenant feature is disabled"))
-            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-    }
-    Ok(())
-}
-
 fn check_no_extra_kernel_cmdline_params(config: &VirtualMachineConfig) -> binder::Result<()> {
     let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if let Some(custom_config) = &config.customConfig {
@@ -2276,9 +2246,6 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     }
     if !cfg!(device_assignment) {
         check_no_devices(config)?;
-    }
-    if !cfg!(multi_tenant) {
-        check_no_extra_apks(config)?;
     }
     if !cfg!(debuggable_vms_improvements) {
         check_no_extra_kernel_cmdline_params(config)?;

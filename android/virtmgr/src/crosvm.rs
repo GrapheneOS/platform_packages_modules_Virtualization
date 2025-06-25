@@ -18,7 +18,6 @@ use crate::aidl::{remove_temporary_files, Cid, global_service, VirtualMachineCal
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
-use binder::ParcelFileDescriptor;
 use command_fds::CommandFdExt;
 use libc::{sysconf, _SC_CLK_TCK};
 use psi_rs::{PsiResource, PsiStallType, init_psi_monitor, parse_psi_line, register_psi_monitor};
@@ -65,9 +64,12 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     GpuConfig::GpuConfig as GpuConfigParcelable,
     UsbConfig::UsbConfig as UsbConfigParcelable,
 };
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
-use binder::Strong;
+use binder::{
+    DeathRecipient,
+    ParcelFileDescriptor,
+    Strong,
+};
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
@@ -161,6 +163,7 @@ pub struct CrosvmConfig {
     // (memfd, guest address, size)
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
+    pub enable_guest_ffa: bool,
 }
 
 #[derive(Debug)]
@@ -511,19 +514,14 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
 /// Internal struct that holds the handles to globally unique resources of a VM.
 #[derive(Debug)]
 pub struct VmContext {
-    #[allow(dead_code)] // Keeps the global context alive
-    pub(crate) global_context: Strong<dyn IGlobalVmContext>,
     #[allow(dead_code)] // Keeps the server alive
     vm_server: Option<RpcServer>,
 }
 
 impl VmContext {
     /// Construct new VmContext.
-    pub fn new(
-        global_context: Strong<dyn IGlobalVmContext>,
-        vm_server: Option<RpcServer>,
-    ) -> VmContext {
-        VmContext { global_context, vm_server }
+    pub fn new(vm_server: Option<RpcServer>) -> VmContext {
+        VmContext { vm_server }
     }
 }
 
@@ -553,7 +551,6 @@ impl VmJoinHandles {
 }
 
 /// Information about a particular instance of a VM which may be running.
-#[derive(Debug)]
 pub struct VmInstance {
     /// The current state of the VM.
     pub vm_state: Mutex<VmState>,
@@ -601,6 +598,10 @@ pub struct VmInstance {
     payload_state_updated: Condvar,
     /// The human readable name of requester_uid
     requester_uid_name: String,
+    /// Death recipient for the global service. (this doesn't implement Debug trait)
+    pub global_service_death_recipient: Mutex<Option<DeathRecipient>>,
+    /// Host console name
+    pub host_console_name: Mutex<Option<String>>,
 }
 
 impl fmt::Display for VmInstance {
@@ -662,6 +663,8 @@ impl VmInstance {
             vendor_tee_services,
             host_services,
             encrypted_store_kek,
+            global_service_death_recipient: Mutex::new(None),
+            host_console_name: Mutex::new(None),
         };
         info!("{} created", &instance);
         Ok(instance)
@@ -893,7 +896,8 @@ impl VmInstance {
         }
     }
 
-    fn is_vm_running(&self) -> bool {
+    /// Tells if VM is running or not
+    pub fn is_vm_running(&self) -> bool {
         matches!(&*self.vm_state.lock().unwrap(), VmState::Running { .. })
     }
 
@@ -931,6 +935,14 @@ impl VmInstance {
     /// agent is installed there. If not, or the shutdown didn't finish on time, the VM is forcibly
     /// shut down. In-flight data in the VM may be affected!
     pub fn kill(&self) -> Result<(), Error> {
+        // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
+        // delete it. Otherwise there'll be a memory leak.
+        scopeguard::defer! {
+            let cid = self.cid.try_into().unwrap();
+            if let Err(e) = global_service().unregisterVirtualMachine(cid) {
+                error!("Failed to unregister virtual machine ({cid}): {e:?}");
+            }
+        }
         let mut vm_state_mg = self.vm_state.lock().unwrap();
         match &*vm_state_mg {
             VmState::Running { .. } => {
@@ -1762,6 +1774,10 @@ fn run_vm(
 
     if config.start_suspended {
         command.arg("--suspended");
+    }
+
+    if config.enable_guest_ffa {
+        command.arg("--ffa=auto");
     }
 
     print_crosvm_args(&command);

@@ -16,6 +16,7 @@
 package android.system.virtualizationservice;
 
 import android.system.virtualizationservice.IVirtualMachineCallback;
+import android.system.virtualizationservice.VirtualMachineDebugInfo;
 import android.system.virtualizationservice.VirtualMachineState;
 
 interface IVirtualMachine {
@@ -77,4 +78,7 @@ interface IVirtualMachine {
 
     /** Resumes the suspended VM vcpus. */
     void resume();
+
+    /** Returns debug info for this virtual machine */
+    VirtualMachineDebugInfo getDebugInfo();
 }

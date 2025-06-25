@@ -96,13 +96,9 @@ android_system_image {
         "traced",
         "traced_probes",
         "perfetto",
-    ] + select(release_flag("RELEASE_AVF_ENABLE_MULTI_TENANT_MICRODROID_VM"), {
-        true: [
-            "microdroid_etc_passwd",
-            "microdroid_etc_group",
-        ],
-        default: [],
-    }) + microdroid_shell_and_utilities,
+        "microdroid_etc_passwd",
+        "microdroid_etc_group",
+    ] + microdroid_shell_and_utilities,
     multilib: {
         common: {
             deps: [

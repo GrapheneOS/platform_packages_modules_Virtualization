@@ -28,8 +28,11 @@ mod vm_secret;
 
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::ErrorCode::ErrorCode;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
-use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::VM_INTERNAL_SERVICE_SOCKET_NAME;
+use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{
+    BnVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME,
+};
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
+    BnVmPayloadService,
     VM_APK_CONTENTS_PATH,
     VM_PAYLOAD_SERVICE_SOCKET_NAME,
     ENCRYPTEDSTORE_MOUNTPOINT,
@@ -43,10 +46,10 @@ use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::verify::verify_payload;
-use crate::vm_internal_service::register_vm_internal_service;
-use crate::vm_payload_service::register_vm_payload_service;
+use crate::vm_internal_service::VmInternalService;
+use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binder::{self, BinderFeatures, Interface, Strong};
+use binder::{self, BinderFeatures, Interface, SpIBinder, Strong};
 use dice_driver::DiceDriver;
 use glob::glob;
 use keystore2_crypto::ZVec;
@@ -59,7 +62,7 @@ use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
-use rpcbinder::RpcSession;
+use rpcbinder::{RpcServer, RpcSession};
 use rustutils::sockets::android_get_control_socket;
 use rustutils::system_properties;
 use rustutils::system_properties::PropertyWatcher;
@@ -529,7 +532,6 @@ fn try_run_payload(
 
     // Before reading a file from the APK, start zipfuse
     zipfuse.mount(
-        MountForExec::Allowed,
         "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:system_file:s0",
         Path::new(verify::DM_MOUNTED_APK_PATH),
         Path::new(VM_APK_CONTENTS_PATH),
@@ -571,7 +573,16 @@ fn try_run_payload(
         Arc::new(None)
     };
 
-    register_vm_internal_service(service.clone(), vm_internal_service_fd)?;
+    let vm_internal_binder = BnVmInternalService::new_binder(
+        VmInternalService::new(service.clone()),
+        BinderFeatures::default(),
+    );
+
+    spawn_binder_rpc_server(
+        vm_internal_binder.as_binder(),
+        vm_internal_service_fd,
+        VM_INTERNAL_SERVICE_SOCKET_NAME,
+    )?;
 
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
@@ -609,12 +620,20 @@ fn try_run_payload(
         None
     };
 
-    register_vm_payload_service(
-        allow_restricted_apis,
-        service.clone(),
-        vm_secret,
+    let vm_payload_binder = BnVmPayloadService::new_binder(
+        VmPayloadService::new(
+            allow_restricted_apis,
+            service.clone(),
+            vm_secret.clone(),
+            is_new_instance,
+        ),
+        BinderFeatures::default(),
+    );
+
+    spawn_binder_rpc_server(
+        vm_payload_binder.as_binder(),
         vm_payload_service_fd,
-        is_new_instance,
+        VM_PAYLOAD_SERVICE_SOCKET_NAME,
     )?;
 
     // Set export_tombstones if enabled
@@ -681,6 +700,18 @@ fn try_run_payload(
     }
 }
 
+fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result<()> {
+    let server = RpcServer::new_bound_socket(binder, fd)?;
+    info!("The RPC server '{name}' is running.");
+
+    // Move server reference into a background thread and run it forever.
+    std::thread::spawn(move || {
+        server.join();
+    });
+
+    Ok(())
+}
+
 fn post_payload_work() -> Result<()> {
     // Sync the encrypted storage filesystem (flushes the filesystem caches).
     if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
@@ -712,11 +743,8 @@ fn mount_extra_apks(config: &VmPayloadConfig, zipfuse: &mut Zipfuse) -> Result<(
         let mount_dir = format!("/mnt/extra-apk/{i}");
         create_dir(Path::new(&mount_dir)).context("Failed to create mount dir for extra apks")?;
 
-        let mount_for_exec =
-            if cfg!(multi_tenant) { MountForExec::Allowed } else { MountForExec::Disallowed };
         // These run asynchronously in parallel - we wait later for them to complete.
         zipfuse.mount(
-            mount_for_exec,
             "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:extra_apk_file:s0",
             Path::new(&format!("/dev/block/mapper/extra-apk-{i}")),
             Path::new(&mount_dir),
@@ -770,11 +798,6 @@ fn get_debug_policy_bool(path: &'static str) -> bool {
     }
 }
 
-enum MountForExec {
-    Allowed,
-    Disallowed,
-}
-
 #[derive(Default)]
 struct Zipfuse {
     ready_properties: Vec<String>,
@@ -783,16 +806,12 @@ struct Zipfuse {
 impl Zipfuse {
     fn mount(
         &mut self,
-        noexec: MountForExec,
         option: &str,
         zip_path: &Path,
         mount_dir: &Path,
         ready_prop: String,
     ) -> Result<Child> {
         let mut cmd = Command::new(ZIPFUSE_BIN);
-        if let MountForExec::Disallowed = noexec {
-            cmd.arg("--noexec");
-        }
         // Let root own the files in APK, so we can access them, but set the group to
         // allow all payloads to have access too.
         let (uid, gid) = (microdroid_uids::ROOT_UID, microdroid_uids::MICRODROID_PAYLOAD_GID);

@@ -137,9 +137,7 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
 
     mount(&crypt_device, mountpoint)
         .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
-    if cfg!(multi_tenant) {
-        ensure_root_dir_status(mountpoint)?;
-    }
+    ensure_root_dir_status(mountpoint)?;
     if cfg!(long_running_vms) {
         system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
             .context("failed to write microdroid_metadata.encryptedstore_store.status sysprop")?;
@@ -244,34 +242,35 @@ fn e2fsck(device: &Path) -> Result<()> {
         .arg(device)
         .status()
         .context("failed to execute e2fsck")?;
-    if !status.success() {
-        info!("e2fsck wasn't successful");
-        let mut exit_code = "None".to_string();
-        let result = match status.code() {
-            Some(code) => {
-                exit_code = code.to_string();
-                if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
-                    Err(anyhow!("File system errors left uncorrected: {code}"))
-                } else {
-                    warn!("e2fsck exited with exitCode: {code}");
-                    Ok(())
-                }
-            }
-            None => Err(anyhow!("Process terminated by signal")),
-        };
 
-        match INTERNAL_CONNECTION
-            .writeToHostDropBox("encryptedstore", &format!("e2fsck exited with code: {exit_code}"))
-        {
-            Ok(()) => warn!("Wrote e2fsck exit code {exit_code} to dropbox"),
-            Err(e) => error!("Failed to write e2fsck exit code {exit_code} to dropbox: {e}"),
-        };
-
-        result
-    } else {
+    if status.success() {
         info!("e2fsck was successful");
-        Ok(())
+        return Ok(());
     }
+
+    info!("e2fsck wasn't successful");
+    let mut exit_code = "None".to_string();
+    let result = match status.code() {
+        Some(code) => {
+            exit_code = code.to_string();
+            if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
+                Err(anyhow!("File system errors left uncorrected: {code}"))
+            } else {
+                warn!("e2fsck exited with exitCode: {code}");
+                Ok(())
+            }
+        }
+        None => Err(anyhow!("Process terminated by signal")),
+    };
+
+    match INTERNAL_CONNECTION
+        .writeToHostDropBox("encryptedstore", &format!("e2fsck exited with code: {exit_code}"))
+    {
+        Ok(()) => warn!("Wrote e2fsck exit code {exit_code} to dropbox"),
+        Err(e) => error!("Failed to write e2fsck exit code {exit_code} to dropbox: {e}"),
+    };
+
+    result
 }
 
 /// Resizes the filesystem to the size of the device.
