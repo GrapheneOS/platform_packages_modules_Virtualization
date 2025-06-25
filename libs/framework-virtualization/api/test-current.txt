@@ -30,7 +30,6 @@ package android.system.virtualmachine {
     method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isUpdatableVmSupported() throws android.system.virtualmachine.VirtualMachineException;
     field public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
     field public static final String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
-    field public static final String FEATURE_MULTI_TENANT = "com.android.kvm.MULTI_TENANT";
     field public static final String FEATURE_NETWORK = "com.android.kvm.NETWORK";
     field public static final String FEATURE_REMOTE_ATTESTATION = "com.android.kvm.REMOTE_ATTESTATION";
     field public static final String FEATURE_VENDOR_MODULES = "com.android.kvm.VENDOR_MODULES";

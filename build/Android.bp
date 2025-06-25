@@ -29,9 +29,6 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_LLPVM_CHANGES"), {
         true: ["llpvm_changes"],
         default: [],
-    }) + select(release_flag("RELEASE_AVF_ENABLE_MULTI_TENANT_MICRODROID_VM"), {
-        true: ["multi_tenant"],
-        default: [],
     }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
         true: ["network"],
         default: [],

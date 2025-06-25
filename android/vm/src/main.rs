@@ -254,7 +254,6 @@ pub struct RunAppConfig {
     payload_binary_name: Option<String>,
 
     /// Paths to extra apk files.
-    #[cfg(multi_tenant)]
     #[arg(long = "extra-apk")]
     #[clap(conflicts_with = "config_path")]
     extra_apks: Vec<PathBuf>,
@@ -265,16 +264,6 @@ pub struct RunAppConfig {
 }
 
 impl RunAppConfig {
-    fn extra_apks(&self) -> &[PathBuf] {
-        cfg_if::cfg_if! {
-            if #[cfg(multi_tenant)] {
-                &self.extra_apks
-            } else {
-                &[]
-            }
-        }
-    }
-
     fn set_instance_id(&mut self, instance_id_file: PathBuf) {
         self.instance_id = instance_id_file;
     }

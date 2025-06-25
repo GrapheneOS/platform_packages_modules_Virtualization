@@ -51,7 +51,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
 
     let extra_apks = match config.config_path.as_deref() {
         Some(path) => parse_extra_apk_list(&config.apk, path)?,
-        None => config.extra_apks().to_vec(),
+        None => config.extra_apks.to_vec(),
     };
 
     if extra_apks.len() != config.extra_idsigs.len() {
