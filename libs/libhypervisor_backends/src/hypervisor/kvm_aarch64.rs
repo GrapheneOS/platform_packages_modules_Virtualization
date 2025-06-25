@@ -63,8 +63,8 @@ const VENDOR_HYP_KVM_MMIO_GUARD_ENROLL_FUNC_ID: u32 = 0xc6000006;
 const VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID: u32 = 0xc6000007;
 const VENDOR_HYP_KVM_MMIO_GUARD_UNMAP_FUNC_ID: u32 = 0xc6000008;
 
-const VENDOR_HYP_KVM_DEV_REQ_MMIO_FUNC_ID: u32 = 0xc6000012;
-const VENDOR_HYP_KVM_DEV_REQ_DMA_FUNC_ID: u32 = 0xc600001b;
+const VENDOR_HYP_KVM_DEV_REQ_MMIO_FUNC_ID: u32 = 0xc600003f;
+const VENDOR_HYP_KVM_DEV_REQ_DMA_FUNC_ID: u32 = 0xc600003d;
 
 pub(super) struct RegularKvmHypervisor;
 
@@ -167,6 +167,9 @@ impl MemSharingHypervisor for ProtectedKvmHypervisor {
 
 impl DeviceAssigningHypervisor for ProtectedKvmHypervisor {
     fn get_phys_mmio_token(&self, base_ipa: u64) -> Result<u64> {
+        // pKVM requires to IO guard pages first before requesting them.
+        self.map(base_ipa.try_into().unwrap())?;
+
         let mut args = [0u64; 17];
         args[0] = base_ipa;
 
