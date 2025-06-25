@@ -163,6 +163,7 @@ pub struct CrosvmConfig {
     // (memfd, guest address, size)
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
+    pub enable_guest_ffa: bool,
 }
 
 #[derive(Debug)]
@@ -1773,6 +1774,10 @@ fn run_vm(
 
     if config.start_suspended {
         command.arg("--suspended");
+    }
+
+    if config.enable_guest_ffa {
+        command.arg("--ffa=auto");
     }
 
     print_crosvm_args(&command);
