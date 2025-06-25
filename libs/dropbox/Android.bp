@@ -14,4 +14,7 @@ rust_library {
         "librustutils",
     ],
     apex_available: ["com.android.virt"],
+    // Limit visibility as only virtualizationmanager, running in host, has the capabilities that the library needs to
+    // populate the dropbox header properly.
+    visibility: ["//packages/modules/Virtualization/android/virtmgr"],
 }

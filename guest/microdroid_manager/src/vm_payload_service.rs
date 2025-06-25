@@ -15,22 +15,19 @@
 //! Implementation of the AIDL interface `IVmPayloadService`.
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
-    BnVmPayloadService, IVmPayloadService, VM_PAYLOAD_SERVICE_SOCKET_NAME, AttestationResult::AttestationResult,
+    IVmPayloadService, AttestationResult::AttestationResult,
     STATUS_FAILED_TO_PREPARE_CSR_AND_KEY
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context};
 use avflog::LogResult;
-use binder::{Interface, BinderFeatures, ExceptionCode, Strong, IntoBinderResult, Status};
+use binder::{Interface, ExceptionCode, Strong, IntoBinderResult, Status};
 use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
-use log::info;
-use rpcbinder::RpcServer;
 use crate::vm_secret::VmSecret;
-use std::os::unix::io::OwnedFd;
 use std::sync::Arc;
 
 /// Implementation of `IVmPayloadService`.
-struct VmPayloadService {
+pub(crate) struct VmPayloadService {
     allow_restricted_apis: bool,
     virtual_machine_service: Strong<dyn IVirtualMachineService>,
     secret: Arc<VmSecret>,
@@ -128,7 +125,7 @@ impl Interface for VmPayloadService {}
 
 impl VmPayloadService {
     /// Creates a new `VmPayloadService` instance from the `IVirtualMachineService` reference.
-    fn new(
+    pub(crate) fn new(
         allow_restricted_apis: bool,
         vm_service: Strong<dyn IVirtualMachineService>,
         secret: Arc<VmSecret>,
@@ -146,27 +143,4 @@ impl VmPayloadService {
                 .or_binder_exception(ExceptionCode::SECURITY)
         }
     }
-}
-
-/// Registers the `IVmPayloadService` service.
-pub(crate) fn register_vm_payload_service(
-    allow_restricted_apis: bool,
-    vm_service: Strong<dyn IVirtualMachineService>,
-    secret: Arc<VmSecret>,
-    vm_payload_service_fd: OwnedFd,
-    is_new_instance: bool,
-) -> Result<()> {
-    let vm_payload_binder = BnVmPayloadService::new_binder(
-        VmPayloadService::new(allow_restricted_apis, vm_service, secret, is_new_instance),
-        BinderFeatures::default(),
-    );
-
-    let server = RpcServer::new_bound_socket(vm_payload_binder.as_binder(), vm_payload_service_fd)?;
-    info!("The RPC server '{}' is running.", VM_PAYLOAD_SERVICE_SOCKET_NAME);
-
-    // Move server reference into a background thread and run it forever.
-    std::thread::spawn(move || {
-        server.join();
-    });
-    Ok(())
 }
