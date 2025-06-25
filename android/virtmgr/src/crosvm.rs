@@ -18,7 +18,6 @@ use crate::aidl::{remove_temporary_files, Cid, global_service, VirtualMachineCal
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
-use binder::ParcelFileDescriptor;
 use command_fds::CommandFdExt;
 use libc::{sysconf, _SC_CLK_TCK};
 use psi_rs::{PsiResource, PsiStallType, init_psi_monitor, parse_psi_line, register_psi_monitor};
@@ -67,7 +66,11 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 };
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IGlobalVmContext::IGlobalVmContext;
 use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
-use binder::Strong;
+use binder::{
+    DeathRecipient,
+    ParcelFileDescriptor,
+    Strong,
+};
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
@@ -553,7 +556,6 @@ impl VmJoinHandles {
 }
 
 /// Information about a particular instance of a VM which may be running.
-#[derive(Debug)]
 pub struct VmInstance {
     /// The current state of the VM.
     pub vm_state: Mutex<VmState>,
@@ -601,6 +603,8 @@ pub struct VmInstance {
     payload_state_updated: Condvar,
     /// The human readable name of requester_uid
     requester_uid_name: String,
+    /// Death recipient for the global service. (this doesn't implement Debug trait)
+    pub global_service_death_recipient: Mutex<Option<DeathRecipient>>,
 }
 
 impl fmt::Display for VmInstance {
@@ -662,6 +666,7 @@ impl VmInstance {
             vendor_tee_services,
             host_services,
             encrypted_store_kek,
+            global_service_death_recipient: Mutex::new(None),
         };
         info!("{} created", &instance);
         Ok(instance)
@@ -931,6 +936,14 @@ impl VmInstance {
     /// agent is installed there. If not, or the shutdown didn't finish on time, the VM is forcibly
     /// shut down. In-flight data in the VM may be affected!
     pub fn kill(&self) -> Result<(), Error> {
+        // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
+        // delete it. Otherwise there'll be a memory leak.
+        scopeguard::defer! {
+            let cid = self.cid.try_into().unwrap();
+            if let Err(e) = global_service().unregisterVirtualMachine(cid) {
+                error!("Failed to unregister virtual machine: {e:?}");
+            }
+        }
         let mut vm_state_mg = self.vm_state.lock().unwrap();
         match &*vm_state_mg {
             VmState::Running { .. } => {

@@ -32,7 +32,7 @@ use anyhow::{anyhow, ensure, Context, Result};
 use avflog::LogResult;
 use binder::{
     self, wait_for_interface, BinderFeatures, ExceptionCode, Interface, IntoBinderResult,
-    LazyServiceGuard, ParcelFileDescriptor, Status, StatusCode, Strong,
+    LazyServiceGuard, ParcelFileDescriptor, Status, StatusCode, Strong
 };
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
@@ -63,7 +63,9 @@ use virtualizationmaintenance::{
     IVirtualizationReconciliationCallback::IVirtualizationReconciliationCallback,
 };
 use virtualizationservice::{
-    AssignableDevice::AssignableDevice, VirtualMachineDebugInfo::VirtualMachineDebugInfo,
+    AssignableDevice::AssignableDevice,
+    IVirtualMachine::IVirtualMachine,
+    VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
 use virtualizationservice_internal::{
     AtomVmBooted::AtomVmBooted,
@@ -378,6 +380,28 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         let state = &mut *self.state.lock().unwrap();
         state
             .allocate_vm_context(name, requester_uid, requester_debug_pid)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
+    }
+
+    fn registerVirtualMachine(
+        &self,
+        cid: i32,
+        vm: &Strong<dyn IVirtualMachine>,
+    ) -> binder::Result<()> {
+        check_manage_access()?;
+        self.state
+            .lock()
+            .unwrap()
+            .register_virtual_machine(cid as Cid, vm)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
+    }
+
+    fn unregisterVirtualMachine(&self, cid: i32) -> binder::Result<()> {
+        check_manage_access()?;
+        self.state
+            .lock()
+            .unwrap()
+            .unregister_virtual_machine(cid as Cid)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
@@ -767,10 +791,15 @@ impl GlobalVmInstance {
 
 /// The mutable state of the VirtualizationServiceInternal. There should only be one instance
 /// of this struct.
+#[derive(Default)]
 struct GlobalState {
     /// VM contexts currently allocated to running VMs. A CID is never recycled as long
     /// as there is a strong reference held by a GlobalVmContext.
+    // TODO(b/418877672) remove this in favor of virtual_machines below
     held_contexts: HashMap<Cid, Weak<Mutex<GlobalVmInstance>>>,
+
+    /// List of VMs currently running.
+    virtual_machines: HashMap<Cid, Strong<dyn IVirtualMachine>>,
 
     /// State relating to secrets held by (optional) Secretkeeper instance on behalf of VMs.
     sk_state: Option<maintenance::State>,
@@ -780,11 +809,7 @@ struct GlobalState {
 
 impl GlobalState {
     fn new() -> Self {
-        Self {
-            held_contexts: HashMap::new(),
-            sk_state: maintenance::State::new(),
-            display_service: None,
-        }
+        Self { sk_state: maintenance::State::new(), ..Default::default() }
     }
 
     /// Get the next available CID, or an error if we have run out. The last CID used is stored in
@@ -859,6 +884,29 @@ impl GlobalState {
         self.held_contexts.insert(cid, Arc::downgrade(&instance));
         let binder = GlobalVmContext { instance, ..Default::default() };
         Ok(BnGlobalVmContext::new_binder(binder, BinderFeatures::default()))
+    }
+
+    fn register_virtual_machine(
+        &mut self,
+        cid: Cid,
+        vm: &Strong<dyn IVirtualMachine>,
+    ) -> Result<()> {
+        let old_vm = self.virtual_machines.insert(cid, vm.clone());
+        if let Some(_old_vm) = old_vm {
+            warn!("CID ({cid}) reuse detected!");
+            // TODO(b/418877672): print more information about old_vm
+        }
+        info!("Virtual machine with CID {cid} registered");
+        Ok(())
+    }
+
+    fn unregister_virtual_machine(&mut self, cid: Cid) -> Result<()> {
+        if self.virtual_machines.remove(&cid).is_some() {
+            info!("Virtual machine with CID {cid} unregistered");
+            Ok(())
+        } else {
+            Err(anyhow!("Unknown CID {cid}"))
+        }
     }
 
     fn get_dtbo_file(&mut self) -> Result<File> {

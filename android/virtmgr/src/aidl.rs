@@ -72,7 +72,7 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkverify::{HashAlgorithm, V4Signature};
 use avflog::LogResult;
 use binder::{
-    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, ExceptionCode, Interface, ParcelFileDescriptor,
+    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, DeathRecipient, ExceptionCode, IBinder, Interface, ParcelFileDescriptor,
     SpIBinder, Status, StatusCode, Strong, IntoBinderResult,
 };
 use dropbox_rs::DropBoxManager;
@@ -1081,8 +1081,48 @@ impl VirtualizationService {
             .or_service_specific_exception(-1)?,
         );
         state.add_vm(Arc::downgrade(&instance));
-        Ok(VirtualMachine::create(instance))
+
+        let instance_clone = instance.clone();
+        let vm = VirtualMachine::create(instance);
+
+        register_to_global_service(instance_clone, &vm)
+            .context("Failed to register VM ({cid}) to the global service")
+            .or_service_specific_exception(-1)?;
+
+        Ok(vm)
     }
+}
+
+/// Register the VM to the global service so that the list of all VMs in the system can be
+/// retrieved via the global service. Also set up a death recipient so that the VMs are "re"
+/// registered to the global service if the service goes down and then is brought up again.
+fn register_to_global_service(
+    instance: Arc<VmInstance>,
+    vm: &Strong<dyn IVirtualMachine::IVirtualMachine>,
+) -> binder::Result<()> {
+    if cfg!(early) {
+        return Ok(());
+    }
+
+    let instance_clone = instance.clone();
+    let cid = instance.cid;
+    global_service().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+
+    let weak_vm = Strong::downgrade(vm);
+    let mut dr = DeathRecipient::new(move || {
+        // No need to re-register the VM if it's already dead
+        if let Ok(vm) = weak_vm.upgrade() {
+            let _ = register_to_global_service(instance.clone(), &vm).map_err(|e| {
+                error!("Failed to re-register VM ({cid}) to the global service: {e:?}")
+            });
+        }
+    });
+    global_service().as_binder().link_to_death(&mut dr)?;
+
+    // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
+    // automatically unlinked.
+    *instance_clone.global_service_death_recipient.lock().unwrap() = Some(dr);
+    Ok(())
 }
 
 /// Returns whether a VM config represents a "custom" virtual machine, which requires the
@@ -1771,7 +1811,6 @@ fn check_label_for_file(
 }
 
 /// Implementation of the AIDL `IVirtualMachine` interface. Used as a handle to a VM.
-#[derive(Debug)]
 struct VirtualMachine {
     instance: Arc<VmInstance>,
 }
@@ -1956,7 +1995,7 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
 
 impl Drop for VirtualMachine {
     fn drop(&mut self) {
-        debug!("Dropping {:?}", self);
+        debug!("Dropping {}", self.instance);
         if let Err(e) = self.instance.kill() {
             debug!("Error stopping dropped VM with CID {}: {:?}", self.instance.cid, e);
         }

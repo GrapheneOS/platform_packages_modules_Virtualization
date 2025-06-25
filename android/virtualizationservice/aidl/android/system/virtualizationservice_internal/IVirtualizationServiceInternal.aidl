@@ -17,6 +17,7 @@ package android.system.virtualizationservice_internal;
 
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationservice.AssignableDevice;
+import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.VirtualMachineDebugInfo;
 import android.system.virtualizationservice_internal.AtomVmBooted;
 import android.system.virtualizationservice_internal.AtomVmCreationRequested;
@@ -40,6 +41,16 @@ interface IVirtualizationServiceInternal {
      * to the returned object.
      */
     IGlobalVmContext allocateGlobalVmContext(String name, int requesterDebugPid);
+
+    /**
+     * Registers a new VirtualMachine object into this global registry, for accounting purpose.
+     */
+    void registerVirtualMachine(int cid, IVirtualMachine vm);
+
+    /**
+     * Unregisters the VirtualMachine object
+     */
+    void unregisterVirtualMachine(int cid);
 
     /** Forwards a VmBooted atom to statsd. */
     void atomVmBooted(in AtomVmBooted atom);
