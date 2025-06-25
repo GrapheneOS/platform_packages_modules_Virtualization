@@ -31,7 +31,7 @@ use android_vs_internal::aidl::android::system::virtualizationservice_internal;
 use anyhow::{anyhow, ensure, Context, Result};
 use avflog::LogResult;
 use binder::{
-    self, wait_for_interface, ExceptionCode, Interface, IntoBinderResult,
+    self, wait_for_interface, DeathRecipient, ExceptionCode, IBinder, Interface, IntoBinderResult,
     ParcelFileDescriptor, Status, StatusCode, Strong,
 };
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
@@ -232,7 +232,7 @@ impl VirtualizationServiceInternal {
             .virtual_machines
             .iter()
             .filter_map(|(cid, vm)| {
-                vm.getDebugInfo()
+                vm.0.getDebugInfo()
                     .inspect_err(|e| {
                         error!("Failed to get debug info for VM with CID {cid}: {e:?}")
                     })
@@ -759,7 +759,7 @@ fn split_x509_certificate_chain(mut cert_chain: &[u8]) -> Result<Vec<Certificate
 #[derive(Default)]
 struct GlobalState {
     /// List of VMs currently running.
-    virtual_machines: HashMap<Cid, Strong<dyn IVirtualMachine>>,
+    virtual_machines: HashMap<Cid, (Strong<dyn IVirtualMachine>, DeathRecipient)>,
 
     /// State relating to secrets held by (optional) Secretkeeper instance on behalf of VMs.
     sk_state: Option<maintenance::State>,
@@ -839,7 +839,14 @@ impl GlobalState {
         cid: Cid,
         vm: &Strong<dyn IVirtualMachine>,
     ) -> Result<()> {
-        let old_vm = self.virtual_machines.insert(cid, vm.clone());
+        let mut dr = DeathRecipient::new(move || {
+            let temp_dir = format!("{TEMPORARY_DIRECTORY}/{cid}").into();
+            remove_temporary_dir(&temp_dir).unwrap_or_else(|e| {
+                warn!("Could not delete temporary directory {:?}: {}", temp_dir, e);
+            });
+        });
+        vm.as_binder().link_to_death(&mut dr)?;
+        let old_vm = self.virtual_machines.insert(cid, (vm.clone(), dr));
         if let Some(_old_vm) = old_vm {
             warn!("CID ({cid}) reuse detected!");
             // TODO(b/418877672): print more information about old_vm
