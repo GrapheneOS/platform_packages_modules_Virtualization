@@ -45,6 +45,7 @@ rust_library {
     features: [
         "std",
     ],
+    vendor_available: true,
 }
 
 rust_defaults {

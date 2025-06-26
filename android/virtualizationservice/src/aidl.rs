@@ -55,6 +55,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::uid_t;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, LazyLock, Mutex};
+use std::thread::JoinHandle;
 use std::time::Duration;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
@@ -185,6 +186,7 @@ fn is_valid_guest_cid(cid: Cid) -> bool {
 pub struct VirtualizationServiceInternal {
     state: Arc<Mutex<GlobalState>>,
     display_service_set: Arc<Condvar>,
+    shutdown_monitor: Arc<Mutex<ShutdownMonitor>>,
 }
 
 impl VirtualizationServiceInternal {
@@ -192,7 +194,24 @@ impl VirtualizationServiceInternal {
         let service = VirtualizationServiceInternal {
             state: Arc::new(Mutex::new(GlobalState::new())),
             display_service_set: Arc::new(Condvar::new()),
+            shutdown_monitor: Arc::new(Mutex::new(ShutdownMonitor::new())),
         };
+        let service_clone = service.clone();
+
+        service.shutdown_monitor.lock().unwrap().start(move |prop| {
+            info!("Prop {} triggered. Stopping VMs...", prop);
+            service_clone.state.lock().unwrap().virtual_machines.iter().for_each(|(key, value)| {
+                let cid = *key;
+                let vm = value.0.clone();
+                // Don't wait for the VM to be completely killed. Move on to the next VM as soon as
+                // possible.
+                std::thread::spawn(move || {
+                    let _ = vm.stop().inspect_err(|e| {
+                        error!("Failed to stop virtual machine ({}): {:?}", cid, e);
+                    });
+                });
+            });
+        });
 
         std::thread::spawn(|| {
             if let Err(e) = handle_stream_connection_tombstoned() {
@@ -1024,6 +1043,67 @@ fn check_use_custom_virtual_machine() -> binder::Result<()> {
 /// establish connection between the VM and the Internet.
 fn check_internet_permission() -> binder::Result<()> {
     check_permission("android.permission.INTERNET")
+}
+
+// Encapsulates the routine for detecting the system-wide shutdown and executing a handler.
+// VirtualizationServiceInternal uses this to shut the all virtual machines down before init tries
+// to unmount the data partition. If we don't do this, a VM (i.e: the crosvm process) will survive
+// until the very end of the shutdown process because it runs in its own process group which is not
+// under control of init. As a result, init will fail to unmount /data, which eventually force init
+// to close the filesystem down forcibly, which could lead I/O errors.
+#[derive(Default)]
+struct ShutdownMonitor {
+    threads: [Option<JoinHandle<()>>; 2],
+}
+
+impl ShutdownMonitor {
+    fn new() -> Self {
+        Default::default()
+    }
+
+    fn start<F>(&mut self, handler: F)
+    where
+        F: FnOnce(&str) + std::marker::Send + std::clone::Clone + 'static,
+    {
+        // When the system enters a reboot or shutdown, either attended or unattened, the sysprop
+        // `sys.shutdown.requested` is set first by the ShutdownThread in the system server to give
+        // an early notice to everybody in the system. Once the system server is ready to really
+        // shutdown, it triggers `sys.powerctl` which is handled by init for the final step.
+        //
+        // We need to handle sys.powerctl as well, since in an emergency case (ex: thermal reboot),
+        // the system may enter the shutdown sequence without sending `sys.shutdown.requested` and
+        // waiting for everyone to react.
+        self.threads[0] = Some(Self::new_thread("sys.shutdown.requested", handler.clone()));
+        self.threads[1] = Some(Self::new_thread("sys.powerctl", handler));
+    }
+
+    fn new_thread<F>(prop_name: &str, handler: F) -> JoinHandle<()>
+    where
+        F: FnOnce(&str) + std::marker::Send + 'static,
+    {
+        let prop_name = prop_name.to_owned();
+        std::thread::spawn(move || {
+            let mut watcher = system_properties::PropertyWatcher::new(&prop_name).unwrap();
+            while watcher.wait(None).is_err() {}
+            handler(&prop_name);
+        })
+    }
+
+    fn shutdown_thread(thread: JoinHandle<()>) {
+        // TODO(b/427089988): Once we can interrupt __system_property_wait, send SIGTERM to the
+        // thread and then join on it.
+        drop(thread);
+    }
+}
+
+impl Drop for ShutdownMonitor {
+    fn drop(&mut self) {
+        self.threads.iter_mut().for_each(|t| {
+            if let Some(t) = t.take() {
+                ShutdownMonitor::shutdown_thread(t);
+            }
+        })
+    }
 }
 
 #[cfg(test)]
