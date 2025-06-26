@@ -14,25 +14,12 @@
 
 //! Functions for creating and collecting atoms.
 
+use crate::aidl;
 use crate::virtualmachine;
 use crate::crosvm::VmMetric;
 use crate::get_calling_uid;
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuOptions::CpuOptions,
-    CpuOptions::CpuTopology::CpuTopology,
-    IVirtualMachine::IVirtualMachine,
-    VirtualMachineAppConfig::{Payload::Payload, VirtualMachineAppConfig},
-    VirtualMachineConfig::VirtualMachineConfig,
-};
-use android_system_virtualizationservice::binder::{Status, Strong};
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::{
-    AtomVmBooted::AtomVmBooted,
-    AtomVmCreationRequested::AtomVmCreationRequested,
-    AtomVmExited::AtomVmExited,
-};
 use anyhow::{anyhow, Result};
-use binder::ParcelFileDescriptor;
+use binder::{ParcelFileDescriptor, Status, Strong};
 use log::{info, warn};
 use microdroid_payload_config::VmPayloadConfig;
 use statslog_virtualization_rust::vm_creation_requested;
@@ -42,10 +29,10 @@ use zip::ZipArchive;
 
 const INVALID_NUM_CPUS: i32 = -1;
 
-fn get_apex_list(config: &VirtualMachineAppConfig) -> String {
+fn get_apex_list(config: &aidl::VirtualMachineAppConfig) -> String {
     match &config.payload {
-        Payload::PayloadConfig(_) => String::new(),
-        Payload::ConfigPath(config_path) => {
+        aidl::Payload::PayloadConfig(_) => String::new(),
+        aidl::Payload::ConfigPath(config_path) => {
             let vm_payload_config = get_vm_payload_config(&config.apk, config_path);
             if let Ok(vm_payload_config) = vm_payload_config {
                 vm_payload_config
@@ -93,24 +80,24 @@ pub(crate) fn get_num_cpus() -> Option<usize> {
     }
 }
 
-fn get_num_vcpus(cpu_options: &CpuOptions) -> i32 {
+fn get_num_vcpus(cpu_options: &aidl::CpuOptions) -> i32 {
     match cpu_options.cpuTopology {
-        CpuTopology::MatchHost(_) => {
+        aidl::CpuTopology::MatchHost(_) => {
             get_num_cpus().and_then(|v| v.try_into().ok()).unwrap_or_else(|| {
                 warn!("Failed to determine the number of CPUs in the host");
                 INVALID_NUM_CPUS
             })
         }
-        CpuTopology::CpuCount(count) => count,
+        aidl::CpuTopology::CpuCount(count) => count,
     }
 }
 
 /// Write the stats of VMCreation to statsd
 /// The function creates a separate thread which waits for statsd to start to push atom
 pub fn write_vm_creation_stats(
-    config: &VirtualMachineConfig,
+    config: &aidl::VirtualMachineConfig,
     is_protected: bool,
-    ret: &binder::Result<Strong<dyn IVirtualMachine>>,
+    ret: &binder::Result<Strong<dyn aidl::IVirtualMachine>>,
 ) {
     if cfg!(early) {
         info!("Writing VmCreationRequested atom for early VMs is not implemented; skipping");
@@ -130,14 +117,14 @@ pub fn write_vm_creation_stats(
     }
 
     let (vm_identifier, config_type, num_cpus, memory_mib, apexes) = match config {
-        VirtualMachineConfig::AppConfig(config) => (
+        aidl::VirtualMachineConfig::AppConfig(config) => (
             config.name.clone(),
             vm_creation_requested::ConfigType::VirtualMachineAppConfig,
             get_num_vcpus(&config.cpuOptions),
             config.memoryMib,
             get_apex_list(config),
         ),
-        VirtualMachineConfig::RawConfig(config) => (
+        aidl::VirtualMachineConfig::RawConfig(config) => (
             config.name.clone(),
             vm_creation_requested::ConfigType::VirtualMachineRawConfig,
             get_num_vcpus(&config.cpuOptions),
@@ -146,7 +133,7 @@ pub fn write_vm_creation_stats(
         ),
     };
 
-    let atom = AtomVmCreationRequested {
+    let atom = aidl::AtomVmCreationRequested {
         uid: get_calling_uid() as i32,
         vmIdentifier: vm_identifier,
         isProtected: is_protected,
@@ -181,7 +168,7 @@ pub fn write_vm_booted_stats(
     let vm_identifier = vm_identifier.to_owned();
     let duration = get_duration(vm_start_timestamp);
 
-    let atom = AtomVmBooted {
+    let atom = aidl::AtomVmBooted {
         uid,
         vmIdentifier: vm_identifier,
         elapsedTimeMillis: duration.as_millis() as i64,
@@ -199,7 +186,7 @@ pub fn write_vm_booted_stats(
 pub fn write_vm_exited_stats_sync(
     uid: i32,
     vm_identifier: &str,
-    reason: DeathReason,
+    reason: aidl::DeathReason,
     exit_signal: Option<i32>,
     vm_metric: &VmMetric,
 ) {
@@ -212,7 +199,7 @@ pub fn write_vm_exited_stats_sync(
     let guest_time_millis = vm_metric.cpu_guest_time.unwrap_or_default();
     let rss = vm_metric.rss.unwrap_or_default();
 
-    let atom = AtomVmExited {
+    let atom = aidl::AtomVmExited {
         uid,
         vmIdentifier: vm_identifier,
         elapsedTimeMillis: elapsed_time_millis,

@@ -14,6 +14,7 @@
 
 //! Android Virtualization Manager
 
+mod aidl;
 mod atom;
 mod composite;
 mod crosvm;
@@ -25,7 +26,6 @@ mod selinux;
 mod virtualmachine;
 
 use crate::virtualmachine::VirtualizationService;
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
 use log::{error, info, LevelFilter};
@@ -132,7 +132,7 @@ fn main() {
     let service = VirtualizationService::init();
     let state_ptr = service.state.clone();
 
-    let service = BnVirtualizationService::new_binder(service, BinderFeatures::default());
+    let service = aidl::BnVirtualizationService::new_binder(service, BinderFeatures::default());
     let service_binder = service.as_binder();
 
     let server = RpcServer::new_unix_domain_bootstrap(service_binder, rpc_server_fd)

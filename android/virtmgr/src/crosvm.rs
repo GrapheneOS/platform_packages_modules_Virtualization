@@ -14,6 +14,13 @@
 
 //! Functions for running instances of `crosvm`.
 
+use crate::aidl::{
+    self,
+    AudioConfig as AudioConfigParcelable,
+    DisplayConfig as DisplayConfigParcelable,
+    GpuConfig as GpuConfigParcelable,
+    UsbConfig as UsbConfigParcelable,
+};
 use crate::virtualmachine::{self, Cid, VirtualMachineCallbacks};
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
@@ -50,27 +57,12 @@ use std::process::{Command, ExitStatus};
 use std::sync::{Arc, Condvar, Mutex, LazyLock};
 use std::time::{Duration, SystemTime};
 use std::thread::{self, JoinHandle};
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
-    DeathReason::DeathReason,
-    IEncryptedStoreKEK::IEncryptedStoreKEK,
-};
 use std::sync::mpsc;
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    VirtualMachineAppConfig::DebugLevel::DebugLevel,
-    AudioConfig::AudioConfig as AudioConfigParcelable,
-    CpuOptions::CpuOptions,
-    CpuOptions::CpuTopology::CpuTopology,
-    DisplayConfig::DisplayConfig as DisplayConfigParcelable,
-    GpuConfig::GpuConfig as GpuConfigParcelable,
-    UsbConfig::UsbConfig as UsbConfigParcelable,
-};
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IBoundDevice::IBoundDevice;
 use binder::{
     DeathRecipient,
     ParcelFileDescriptor,
     Strong,
 };
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
 use rpcbinder::RpcServer;
 
@@ -135,7 +127,7 @@ pub struct CrosvmConfig {
     pub debug_config: DebugConfig,
     pub memory_mib: NonZeroU32,
     pub swiotlb_mib: Option<NonZeroU32>,
-    pub cpus: CpuOptions,
+    pub cpus: aidl::CpuOptions,
     pub console_out_fd: Option<File>,
     pub console_in_fd: Option<File>,
     pub log_fd: Option<File>,
@@ -280,7 +272,7 @@ pub enum InputDeviceOption {
     MultiTouch { file: File, width: u32, height: u32, name: Option<String> },
 }
 
-type VfioDevice = Strong<dyn IBoundDevice>;
+type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
 ///
@@ -578,7 +570,7 @@ pub struct VmInstance {
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
     /// Guest agent running on the VM
-    pub guest_agent: Mutex<Option<Strong<dyn IGuestAgent>>>,
+    pub guest_agent: Mutex<Option<Strong<dyn aidl::IGuestAgent>>>,
     /// Recorded metrics of VM such as timestamp or cpu / memory usage.
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
@@ -591,7 +583,7 @@ pub struct VmInstance {
     pub host_services: Vec<String>,
     /// Represents a Key Encryption Key (KEK) stored on app's private data directory. This KEK is
     /// used to set up the encrypted store of guest.
-    pub encrypted_store_kek: Option<Strong<dyn IEncryptedStoreKEK>>,
+    pub encrypted_store_kek: Option<Strong<dyn aidl::IEncryptedStoreKEK>>,
     /// The latest lifecycle state which the payload reported itself to be in.
     payload_state: Mutex<PayloadState>,
     /// Represents the condition that payload_state was updated
@@ -629,7 +621,7 @@ impl VmInstance {
         trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
-        encrypted_store_kek: Option<Strong<dyn IEncryptedStoreKEK>>,
+        encrypted_store_kek: Option<Strong<dyn aidl::IEncryptedStoreKEK>>,
     ) -> Result<VmInstance, Error> {
         validate_config(&config)?;
         let cid = config.cid;
@@ -1245,7 +1237,9 @@ fn get_rss(pid: u32) -> Result<Rss> {
     Ok(Rss { vm: rss_vm_total, crosvm: rss_crosvm_total })
 }
 
-fn death_reason(result: &Result<ExitStatus, io::Error>, mut failure_reason: &str) -> DeathReason {
+fn death_reason(result: &Result<ExitStatus, io::Error>, mut failure_reason: &str) -> aidl::DeathReason {
+    use aidl::DeathReason;
+
     if let Some((reason, info)) = failure_reason.split_once('|') {
         // Separator indicates extra context information is present after the failure name.
         error!("Failure info: {info}");
@@ -1471,7 +1465,7 @@ fn run_vm(
     } else if config.ramdump.is_some() {
         command.arg("--params").arg(format!("crashkernel={RAMDUMP_RESERVED_MIB}M"));
     }
-    if config.debug_config.debug_level == DebugLevel::NONE
+    if config.debug_config.debug_level == aidl::DebugLevel::NONE
         && config.debug_config.should_prepare_console_output()
     {
         // bootconfig.normal will be used, but we need log.
@@ -1495,7 +1489,7 @@ fn run_vm(
         command.arg("--cpus").arg(count.to_string());
     }
     match config.cpus.cpuTopology {
-        CpuTopology::MatchHost(_) => {
+        aidl::CpuTopology::MatchHost(_) => {
             if check_if_all_cpus_allowed()? {
                 command.arg("--host-cpu-topology");
                 #[cfg(target_arch = "aarch64")]
@@ -1515,7 +1509,7 @@ fn run_vm(
                 )
             }
         }
-        CpuTopology::CpuCount(count) => {
+        aidl::CpuTopology::CpuCount(count) => {
             cpu_arg_command(&mut command, count.try_into().context("invalid cpu count")?)
         }
     }

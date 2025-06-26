@@ -14,6 +14,7 @@
 
 //! Implementation of the AIDL interface of the VirtualizationService.
 
+use crate::aidl::{self, Arc as AuthgraphArc};
 use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
@@ -23,49 +24,9 @@ use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_D
 use crate::payload::{ApexInfoList, add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
 use crate::selinux::{check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext};
 use crate::host_services;
-use android_os_permissions_aidl::aidl::android::os::IPermissionController;
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
-    Certificate::Certificate,
-    DeathReason::DeathReason,
-    ErrorCode::ErrorCode,
-    IEncryptedStoreKEK::BnEncryptedStoreKEK,
-    IEncryptedStoreKEK::IEncryptedStoreKEK,
-};
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    AssignedDevices::AssignedDevices,
-    AssignableDevice::AssignableDevice,
-    DiskImage::DiskImage,
-    SharedPath::SharedPath,
-    InputDevice::InputDevice,
-    IVirtualMachine::{self, BnVirtualMachine},
-    IVirtualMachineCallback::IVirtualMachineCallback,
-    IVirtualizationService::IVirtualizationService,
-    Partition::Partition,
-    PartitionType::PartitionType,
-    VirtualMachineAppConfig::{DebugLevel::DebugLevel, Payload::Payload, VirtualMachineAppConfig},
-    VirtualMachineConfig::VirtualMachineConfig,
-    VirtualMachineDebugInfo::VirtualMachineDebugInfo,
-    VirtualMachinePayloadConfig::VirtualMachinePayloadConfig,
-    VirtualMachineRawConfig::VirtualMachineRawConfig,
-    VirtualMachineState::VirtualMachineState,
-};
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal::IVirtualizationServiceInternal;
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::{
-        BnVirtualMachineService, IVirtualMachineService
-};
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::IGuestAgent;
 use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
     BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo,
     Vsock::Vsock,
-};
-use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::{BnSecretkeeper, ISecretkeeper};
-use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::SecretId::SecretId;
-use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::PublicKey::PublicKey;
-use android_hardware_security_authgraph::aidl::android::hardware::security::authgraph::{
-    Arc::Arc as AuthgraphArc, IAuthGraphKeyExchange::IAuthGraphKeyExchange,
-    IAuthGraphKeyExchange::BnAuthGraphKeyExchange, Identity::Identity, KeInitResult::KeInitResult,
-    Key::Key, PubKey::PubKey, SessionIdSignature::SessionIdSignature, SessionInfo::SessionInfo,
-    SessionInitiationInfo::SessionInitiationInfo,
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkverify::{HashAlgorithm, V4Signature};
@@ -135,9 +96,9 @@ const PARTITION_GRANULARITY_BYTES: u64 = 4096;
 
 const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 
-static GLOBAL_SERVICE: Mutex<Option<Strong<dyn IVirtualizationServiceInternal>>> = Mutex::new(None);
+static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> = Mutex::new(None);
 
-pub fn global_service() -> Strong<dyn IVirtualizationServiceInternal> {
+pub fn global_service() -> Strong<dyn aidl::IVirtualizationServiceInternal> {
     use binder::IBinder; // for ping_binder
 
     if cfg!(early) {
@@ -261,19 +222,19 @@ impl Interface for VirtualizationService {
         Ok(())
     }
 }
-impl IVirtualizationService for VirtualizationService {
+impl aidl::IVirtualizationService for VirtualizationService {
     /// Creates (but does not start) a new VM with the given configuration, assigning it the next
     /// available CID.
     ///
     /// Returns a binder `IVirtualMachine` object referring to it, as a handle for the client.
     fn createVm(
         &self,
-        config: &VirtualMachineConfig,
+        config: &aidl::VirtualMachineConfig,
         console_out_fd: Option<&ParcelFileDescriptor>,
         console_in_fd: Option<&ParcelFileDescriptor>,
         log_fd: Option<&ParcelFileDescriptor>,
         dump_dt_fd: Option<&ParcelFileDescriptor>,
-    ) -> binder::Result<Strong<dyn IVirtualMachine::IVirtualMachine>> {
+    ) -> binder::Result<Strong<dyn aidl::IVirtualMachine>> {
         let mut is_protected = false;
         let ret = self.create_vm_internal(
             config,
@@ -298,7 +259,7 @@ impl IVirtualizationService for VirtualizationService {
         &self,
         image_fd: &ParcelFileDescriptor,
         size_bytes: i64,
-        partition_type: PartitionType,
+        partition_type: aidl::PartitionType,
     ) -> binder::Result<()> {
         check_manage_access()?;
         let size_bytes = size_bytes
@@ -320,6 +281,7 @@ impl IVirtualizationService for VirtualizationService {
             .context("Failed to extend file")
             .or_service_specific_exception(-1)?;
 
+        use aidl::PartitionType;
         match partition_type {
             PartitionType::RAW => Ok(()),
             PartitionType::ANDROID_VM_INSTANCE => format_as_android_vm_instance(&mut image),
@@ -377,13 +339,13 @@ impl IVirtualizationService for VirtualizationService {
 
     /// Get a list of all currently running VMs. This method is only intended for debug purposes,
     /// and as such is only permitted from the shell user.
-    fn debugListVms(&self) -> binder::Result<Vec<VirtualMachineDebugInfo>> {
+    fn debugListVms(&self) -> binder::Result<Vec<aidl::VirtualMachineDebugInfo>> {
         // Delegate to the global service, including checking the debug permission.
         global_service().debugListVms()
     }
 
     /// Get a list of assignable device types.
-    fn getAssignableDevices(&self) -> binder::Result<Vec<AssignableDevice>> {
+    fn getAssignableDevices(&self) -> binder::Result<Vec<aidl::AssignableDevice>> {
         // Delegate to the global service, including checking the permission.
         global_service().getAssignableDevices()
     }
@@ -526,13 +488,13 @@ impl VirtualizationService {
 
     fn create_early_vm_context(
         &self,
-        config: &VirtualMachineConfig,
+        config: &aidl::VirtualMachineConfig,
         calling_exe_path: Option<&Path>,
         calling_partition: CallingPartition,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         let name = match config {
-            VirtualMachineConfig::RawConfig(config) => &config.name,
-            VirtualMachineConfig::AppConfig(config) => &config.name,
+            aidl::VirtualMachineConfig::RawConfig(config) => &config.name,
+            aidl::VirtualMachineConfig::AppConfig(config) => &config.name,
         };
         let early_vm = find_early_vm_for_partition(calling_partition, name)
             .or_service_specific_exception(-1)?;
@@ -568,7 +530,7 @@ impl VirtualizationService {
 
     fn create_vm_context(
         &self,
-        config: &VirtualMachineConfig,
+        config: &aidl::VirtualMachineConfig,
     ) -> binder::Result<(VmContext, Cid, PathBuf)> {
         const NUM_ATTEMPTS: usize = 5;
         for _ in 0..NUM_ATTEMPTS {
@@ -601,13 +563,13 @@ impl VirtualizationService {
 
     fn create_vm_internal(
         &self,
-        config: &VirtualMachineConfig,
+        config: &aidl::VirtualMachineConfig,
         console_out_fd: Option<&ParcelFileDescriptor>,
         console_in_fd: Option<&ParcelFileDescriptor>,
         log_fd: Option<&ParcelFileDescriptor>,
         is_protected: &mut bool,
         dump_dt_fd: Option<&ParcelFileDescriptor>,
-    ) -> binder::Result<Strong<dyn IVirtualMachine::IVirtualMachine>> {
+    ) -> binder::Result<Strong<dyn aidl::IVirtualMachine>> {
         let requester_uid = get_calling_uid();
         let requester_debug_pid = get_calling_pid();
 
@@ -705,8 +667,8 @@ impl VirtualizationService {
         let mut indirect_files = vec![];
 
         let (is_app_config, config) = match config {
-            VirtualMachineConfig::RawConfig(config) => (false, BorrowedOrOwned::Borrowed(config)),
-            VirtualMachineConfig::AppConfig(config) => {
+            aidl::VirtualMachineConfig::RawConfig(config) => (false, BorrowedOrOwned::Borrowed(config)),
+            aidl::VirtualMachineConfig::AppConfig(config) => {
                 let config = load_app_config(config, &debug_config, &temporary_directory)
                     .or_service_specific_exception_with(-1, |e| {
                         *is_protected = config.protectedVm;
@@ -827,7 +789,7 @@ impl VirtualizationService {
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
 
         let (vfio_devices, dtbo) = match &config.devices {
-            AssignedDevices::Devices(devices) if !devices.is_empty() => {
+            aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
                 let mut set = HashSet::new();
                 for device in devices.iter() {
                     let path = canonicalize(device)
@@ -1041,7 +1003,7 @@ impl VirtualizationService {
 /// registered to the global service if the service goes down and then is brought up again.
 fn register_to_global_service(
     instance: Arc<VmInstance>,
-    vm: &Strong<dyn IVirtualMachine::IVirtualMachine>,
+    vm: &Strong<dyn aidl::IVirtualMachine>,
 ) -> binder::Result<()> {
     if cfg!(early) {
         return Ok(());
@@ -1070,11 +1032,11 @@ fn register_to_global_service(
 
 /// Returns whether a VM config represents a "custom" virtual machine, which requires the
 /// USE_CUSTOM_VIRTUAL_MACHINE.
-fn is_custom_config(config: &VirtualMachineConfig) -> bool {
+fn is_custom_config(config: &aidl::VirtualMachineConfig) -> bool {
     match config {
         // Any raw (non-Microdroid) VM is considered custom.
-        VirtualMachineConfig::RawConfig(_) => true,
-        VirtualMachineConfig::AppConfig(config) => {
+        aidl::VirtualMachineConfig::RawConfig(_) => true,
+        aidl::VirtualMachineConfig::AppConfig(config) => {
             // Some features are reserved for platform apps only, even when using
             // VirtualMachineAppConfig. Almost all of these features are grouped in the
             // CustomConfig struct:
@@ -1090,8 +1052,8 @@ fn is_custom_config(config: &VirtualMachineConfig) -> bool {
                 // - specifying extra APKs;
                 // - specifying an OS other than Microdroid.
                 (match &config.payload {
-                    Payload::ConfigPath(_) => true,
-                    Payload::PayloadConfig(payload_config) => !payload_config.extraApks.is_empty(),
+                    aidl::Payload::ConfigPath(_) => true,
+                    aidl::Payload::PayloadConfig(payload_config) => !payload_config.extraApks.is_empty(),
                 }) || config.osName != MICRODROID_OS_NAME
             }
         }
@@ -1102,15 +1064,15 @@ fn is_custom_config(config: &VirtualMachineConfig) -> bool {
 /// VM (i.e. AppConfig) requires it. However, a few Microdroid tests use RawConfig for Microdroid
 /// VM. To handle the exceptional case, we use name as a second criteria; if the name is
 /// "microdroid" we run VirtualMachineService
-fn requires_vm_service(config: &VirtualMachineConfig) -> bool {
+fn requires_vm_service(config: &aidl::VirtualMachineConfig) -> bool {
     match config {
-        VirtualMachineConfig::AppConfig(_) => true,
-        VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
+        aidl::VirtualMachineConfig::AppConfig(_) => true,
+        aidl::VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
     }
 }
 
-fn extract_vendor_hashtree_digest(config: &VirtualMachineConfig) -> Result<Option<Vec<u8>>> {
-    let VirtualMachineConfig::AppConfig(config) = config else {
+fn extract_vendor_hashtree_digest(config: &aidl::VirtualMachineConfig) -> Result<Option<Vec<u8>>> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else {
         return Ok(None);
     };
     let Some(custom_config) = &config.customConfig else {
@@ -1136,7 +1098,7 @@ fn extract_vendor_hashtree_digest(config: &VirtualMachineConfig) -> Result<Optio
 }
 
 fn maybe_create_reference_dt_overlay(
-    config: &VirtualMachineConfig,
+    config: &aidl::VirtualMachineConfig,
     instance_id: &[u8; 64],
     temporary_directory: &Path,
 ) -> binder::Result<Option<File>> {
@@ -1175,10 +1137,10 @@ fn maybe_create_reference_dt_overlay(
             // Let guest know that it can defer rollback protection to Secretkeeper by setting
             // an empty property in untrusted node in DT. This enables Updatable VMs.
             untrusted_props.push((c"defer-rollback-protection", &[]));
-            let sk: Strong<dyn ISecretkeeper> =
+            let sk: Strong<dyn aidl::ISecretkeeper> =
                 binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
             if sk.getInterfaceVersion()? >= 2 {
-                let PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
+                let aidl::PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
                 key_material = keyMaterial;
                 trusted_props.push((c"secretkeeper_public_key", key_material.as_slice()));
             }
@@ -1203,12 +1165,12 @@ fn maybe_create_reference_dt_overlay(
     Ok(device_tree_overlay)
 }
 
-fn get_dtbo(config: &VirtualMachineConfig) -> Option<&ParcelFileDescriptor> {
-    let VirtualMachineConfig::RawConfig(config) = config else {
+fn get_dtbo(config: &aidl::VirtualMachineConfig) -> Option<&ParcelFileDescriptor> {
+    let aidl::VirtualMachineConfig::RawConfig(config) = config else {
         return None;
     };
     match &config.devices {
-        AssignedDevices::Dtbo(dtbo) => dtbo.as_ref(),
+        aidl::AssignedDevices::Dtbo(dtbo) => dtbo.as_ref(),
         _ => None,
     }
 }
@@ -1244,7 +1206,8 @@ fn round_up(input: u64, granularity: u64) -> u64 {
     (result / granularity) * granularity
 }
 
-fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDeviceOption> {
+fn to_input_device_option_from(input_device: &aidl::InputDevice) -> Result<InputDeviceOption> {
+    use aidl::InputDevice;
     Ok(match input_device {
         InputDevice::SingleTouch(single_touch) => InputDeviceOption::SingleTouch {
             file: clone_file(single_touch.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
@@ -1284,7 +1247,7 @@ fn to_input_device_option_from(input_device: &InputDevice) -> Result<InputDevice
 }
 
 fn assemble_shared_paths(
-    shared_paths: &[SharedPath],
+    shared_paths: &[aidl::SharedPath],
     temporary_directory: &Path,
 ) -> Result<Vec<SharedPathConfig>, Status> {
     if shared_paths.is_empty() {
@@ -1317,7 +1280,7 @@ fn assemble_shared_paths(
 ///
 /// This may involve assembling a composite disk from a set of partition images.
 fn assemble_disk_image(
-    disk: &DiskImage,
+    disk: &aidl::DiskImage,
     zero_filler_path: &Path,
     temporary_directory: &Path,
     next_temporary_image_id: &mut u64,
@@ -1359,7 +1322,7 @@ fn assemble_disk_image(
     Ok(DiskFile { image, writable: disk.writable })
 }
 
-fn append_kernel_param(param: &str, vm_config: &mut VirtualMachineRawConfig) {
+fn append_kernel_param(param: &str, vm_config: &mut aidl::VirtualMachineRawConfig) {
     if let Some(ref mut params) = vm_config.params {
         params.push(' ');
         params.push_str(param)
@@ -1396,21 +1359,21 @@ fn is_valid_os(os_name: &str) -> bool {
     SUPPORTED_OS_NAMES.contains(os_name)
 }
 
-fn uses_gki_kernel(config: &VirtualMachineConfig) -> bool {
+fn uses_gki_kernel(config: &aidl::VirtualMachineConfig) -> bool {
     if !cfg!(vendor_modules) {
         return false;
     }
     match config {
-        VirtualMachineConfig::RawConfig(_) => false,
-        VirtualMachineConfig::AppConfig(config) => config.osName.starts_with("microdroid_gki-"),
+        aidl::VirtualMachineConfig::RawConfig(_) => false,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.osName.starts_with("microdroid_gki-"),
     }
 }
 
 fn load_app_config(
-    config: &VirtualMachineAppConfig,
+    config: &aidl::VirtualMachineAppConfig,
     debug_config: &DebugConfig,
     temporary_directory: &Path,
-) -> Result<VirtualMachineRawConfig> {
+) -> Result<aidl::VirtualMachineRawConfig> {
     let apk_file = clone_file(config.apk.as_ref().unwrap())?;
     let idsig_file = clone_file(config.idsig.as_ref().unwrap())?;
     let instance_file = clone_file(config.instanceImage.as_ref().unwrap())?;
@@ -1424,7 +1387,7 @@ fn load_app_config(
     let vm_payload_config;
     let extra_apk_files: Vec<_>;
     match &config.payload {
-        Payload::ConfigPath(config_path) => {
+        aidl::Payload::ConfigPath(config_path) => {
             vm_payload_config =
                 load_vm_payload_config_from_file(&apk_file, config_path.as_str())
                     .with_context(|| format!("Couldn't read config from {}", config_path))?;
@@ -1438,7 +1401,7 @@ fn load_app_config(
                 })
                 .collect::<Result<_>>()?;
         }
-        Payload::PayloadConfig(payload_config) => {
+        aidl::Payload::PayloadConfig(payload_config) => {
             vm_payload_config = create_vm_payload_config(payload_config)?;
             extra_apk_files =
                 payload_config.extraApks.iter().map(clone_file).collect::<binder::Result<_>>()?;
@@ -1473,7 +1436,7 @@ fn load_app_config(
             append_kernel_param("androidboot.microdroid.mount_vendor=1", &mut vm_config)
         }
 
-        vm_config.devices = AssignedDevices::Devices(custom_config.devices.clone());
+        vm_config.devices = aidl::AssignedDevices::Devices(custom_config.devices.clone());
         vm_config.networkSupported = custom_config.networkSupported;
 
         for param in custom_config.extraKernelCmdlineParams.iter() {
@@ -1540,7 +1503,7 @@ fn check_partition_for_file(
 }
 
 fn check_partitions_for_files(
-    config: &VirtualMachineRawConfig,
+    config: &aidl::VirtualMachineRawConfig,
     calling_partition: CallingPartition,
 ) -> Result<()> {
     config
@@ -1573,7 +1536,7 @@ fn load_vm_payload_config_from_file(apk_file: &File, config_path: &str) -> Resul
 }
 
 fn create_vm_payload_config(
-    payload_config: &VirtualMachinePayloadConfig,
+    payload_config: &aidl::VirtualMachinePayloadConfig,
 ) -> Result<VmPayloadConfig> {
     // There isn't an actual config file. Construct a synthetic VmPayloadConfig from the explicit
     // parameters we've been given. Microdroid will do something equivalent inside the VM using the
@@ -1647,7 +1610,7 @@ fn check_permission(perm: &str) -> binder::Result<()> {
     if calling_uid == 0 {
         return Ok(());
     }
-    let perm_svc: Strong<dyn IPermissionController::IPermissionController> =
+    let perm_svc: Strong<dyn aidl::IPermissionController> =
         binder::wait_for_interface("permission")?;
     if perm_svc.checkPermission(perm, calling_pid, calling_uid as i32)? {
         Ok(())
@@ -1715,7 +1678,7 @@ fn check_label_is_allowed(context: &SeContext, calling_partition: CallingPartiti
 }
 
 fn check_label_for_partition(
-    partition: &Partition,
+    partition: &aidl::Partition,
     calling_partition: CallingPartition,
 ) -> Result<()> {
     let file = partition.image.as_ref().unwrap().as_ref();
@@ -1751,8 +1714,8 @@ struct VirtualMachine {
 }
 
 impl VirtualMachine {
-    fn create(instance: Arc<VmInstance>) -> Strong<dyn IVirtualMachine::IVirtualMachine> {
-        BnVirtualMachine::new_binder(VirtualMachine { instance }, BinderFeatures::default())
+    fn create(instance: Arc<VmInstance>) -> Strong<dyn aidl::IVirtualMachine> {
+        aidl::BnVirtualMachine::new_binder(VirtualMachine { instance }, BinderFeatures::default())
     }
 
     fn handle_vendor_tee_services(&self) -> binder::Result<()> {
@@ -1768,14 +1731,14 @@ impl VirtualMachine {
 
 impl Interface for VirtualMachine {}
 
-impl IVirtualMachine::IVirtualMachine for VirtualMachine {
+impl aidl::IVirtualMachine for VirtualMachine {
     fn getCid(&self) -> binder::Result<i32> {
         // Don't check permission. The owner of the VM might have passed this binder object to
         // others.
         Ok(self.instance.cid as i32)
     }
 
-    fn getState(&self) -> binder::Result<VirtualMachineState> {
+    fn getState(&self) -> binder::Result<aidl::VirtualMachineState> {
         // Don't check permission. The owner of the VM might have passed this binder object to
         // others.
         Ok(get_state(&self.instance))
@@ -1783,7 +1746,7 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
 
     fn registerCallback(
         &self,
-        callback: &Strong<dyn IVirtualMachineCallback>,
+        callback: &Strong<dyn aidl::IVirtualMachineCallback>,
     ) -> binder::Result<()> {
         // Don't check permission. The owner of the VM might have passed this binder object to
         // others.
@@ -1847,34 +1810,34 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
     fn connectVsock(&self, port: i32) -> binder::Result<ParcelFileDescriptor> {
         if !matches!(&*self.instance.vm_state.lock().unwrap(), VmState::Running { .. }) {
             return Err(Status::new_service_specific_error_str(
-                IVirtualMachine::ERROR_UNEXPECTED,
+                aidl::ERROR_UNEXPECTED,
                 Some("Virtual Machine is not running"),
             ));
         }
         let port = port as u32;
         if port < VSOCK_PRIV_PORT_MAX {
             return Err(Status::new_service_specific_error_str(
-                IVirtualMachine::ERROR_UNEXPECTED,
+                aidl::ERROR_UNEXPECTED,
                 Some("Can't connect to privileged port {port}"),
             ));
         }
         let stream = VsockStream::connect_with_cid_port(self.instance.cid, port)
             .context("Failed to connect")
-            .or_service_specific_exception(IVirtualMachine::ERROR_UNEXPECTED)?;
+            .or_service_specific_exception(aidl::ERROR_UNEXPECTED)?;
         Ok(vsock_stream_to_pfd(stream))
     }
 
     fn createAccessorBinder(&self, name: &str, port: i32) -> binder::Result<SpIBinder> {
         if !matches!(&*self.instance.vm_state.lock().unwrap(), VmState::Running { .. }) {
             return Err(Status::new_service_specific_error_str(
-                IVirtualMachine::ERROR_UNEXPECTED,
+                aidl::ERROR_UNEXPECTED,
                 Some("Virtual Machine is not running"),
             ));
         }
         let port = port as u32;
         if port < VSOCK_PRIV_PORT_MAX {
             return Err(Status::new_service_specific_error_str(
-                IVirtualMachine::ERROR_UNEXPECTED,
+                aidl::ERROR_UNEXPECTED,
                 Some("Can't connect to privileged port {port}"),
             ));
         }
@@ -1891,13 +1854,13 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
         accessor
             .as_binder()
             .context("The newly created Accessor should always have a binder")
-            .or_service_specific_exception(IVirtualMachine::ERROR_UNEXPECTED)
+            .or_service_specific_exception(aidl::ERROR_UNEXPECTED)
     }
 
     fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
         if !self.instance.is_vm_running() {
             return Err(Status::new_service_specific_error_str(
-                IVirtualMachine::ERROR_UNEXPECTED,
+                aidl::ERROR_UNEXPECTED,
                 Some("Virtual Machine is not running"),
             ));
         }
@@ -1921,9 +1884,9 @@ impl IVirtualMachine::IVirtualMachine for VirtualMachine {
             .or_service_specific_exception(-1)
     }
 
-    fn getDebugInfo(&self) -> binder::Result<VirtualMachineDebugInfo> {
+    fn getDebugInfo(&self) -> binder::Result<aidl::VirtualMachineDebugInfo> {
         info!("getDebugInfo called");
-        Ok(VirtualMachineDebugInfo {
+        Ok(aidl::VirtualMachineDebugInfo {
             name: self.instance.name.clone(),
             cid: self.instance.cid.try_into().unwrap(),
             temporaryDirectory: self.instance.temporary_directory.to_string_lossy().to_string(),
@@ -1946,7 +1909,7 @@ impl Drop for VirtualMachine {
 /// A set of Binders to be called back in response to various events on the VM, such as when it
 /// dies.
 #[derive(Debug, Default)]
-pub struct VirtualMachineCallbacks(Mutex<Vec<Strong<dyn IVirtualMachineCallback>>>);
+pub struct VirtualMachineCallbacks(Mutex<Vec<Strong<dyn aidl::IVirtualMachineCallback>>>);
 
 impl VirtualMachineCallbacks {
     /// Call all registered callbacks to notify that the payload has started.
@@ -1980,7 +1943,7 @@ impl VirtualMachineCallbacks {
     }
 
     /// Call all registered callbacks to say that the VM encountered an error.
-    pub fn notify_error(&self, cid: Cid, error_code: ErrorCode, message: &str) {
+    pub fn notify_error(&self, cid: Cid, error_code: aidl::ErrorCode, message: &str) {
         let callbacks = &*self.0.lock().unwrap();
         for callback in callbacks {
             if let Err(e) = callback.onError(cid as i32, error_code, message) {
@@ -1990,7 +1953,7 @@ impl VirtualMachineCallbacks {
     }
 
     /// Call all registered callbacks to say that the VM has died.
-    pub fn callback_on_died(&self, cid: Cid, reason: DeathReason) {
+    pub fn callback_on_died(&self, cid: Cid, reason: aidl::DeathReason) {
         let mut callbacks = self.0.lock().unwrap();
         for callback in &*callbacks {
             if let Err(e) = callback.onDied(cid as i32, reason) {
@@ -2005,7 +1968,7 @@ impl VirtualMachineCallbacks {
     }
 
     /// Add a new callback to the set.
-    fn add(&self, callback: Strong<dyn IVirtualMachineCallback>) {
+    fn add(&self, callback: Strong<dyn aidl::IVirtualMachineCallback>) {
         self.0.lock().unwrap().push(callback);
     }
 }
@@ -2044,7 +2007,8 @@ impl State {
 }
 
 /// Gets the `VirtualMachineState` of the given `VmInstance`.
-fn get_state(instance: &VmInstance) -> VirtualMachineState {
+fn get_state(instance: &VmInstance) -> aidl::VirtualMachineState {
+    use aidl::VirtualMachineState;
     match &*instance.vm_state.lock().unwrap() {
         VmState::NotStarted { .. } => VirtualMachineState::NOT_STARTED,
         VmState::Running { .. } => match instance.payload_state() {
@@ -2111,20 +2075,20 @@ fn prepare_dump_dt_file(temporary_directory: &Path) -> binder::Result<File> {
     Ok(file)
 }
 
-fn is_protected(config: &VirtualMachineConfig) -> bool {
+fn is_protected(config: &aidl::VirtualMachineConfig) -> bool {
     match config {
-        VirtualMachineConfig::RawConfig(config) => config.protectedVm,
-        VirtualMachineConfig::AppConfig(config) => config.protectedVm,
+        aidl::VirtualMachineConfig::RawConfig(config) => config.protectedVm,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.protectedVm,
     }
 }
 
-fn check_gdb_allowed(config: &VirtualMachineConfig) -> binder::Result<()> {
+fn check_gdb_allowed(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     if is_protected(config) {
         return Err(anyhow!("Can't use gdb with protected VMs"))
             .or_binder_exception(ExceptionCode::SECURITY);
     }
 
-    if get_debug_level(config) == Some(DebugLevel::NONE) {
+    if get_debug_level(config) == Some(aidl::DebugLevel::NONE) {
         return Err(anyhow!("Can't use gdb with non-debuggable VMs"))
             .or_binder_exception(ExceptionCode::SECURITY);
     }
@@ -2132,43 +2096,43 @@ fn check_gdb_allowed(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
-fn extract_instance_id(config: &VirtualMachineConfig) -> [u8; 64] {
+fn extract_instance_id(config: &aidl::VirtualMachineConfig) -> [u8; 64] {
     match config {
-        VirtualMachineConfig::RawConfig(config) => config.instanceId,
-        VirtualMachineConfig::AppConfig(config) => config.instanceId,
+        aidl::VirtualMachineConfig::RawConfig(config) => config.instanceId,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.instanceId,
     }
 }
 
-fn extract_want_updatable(config: &VirtualMachineConfig) -> bool {
+fn extract_want_updatable(config: &aidl::VirtualMachineConfig) -> bool {
     match config {
-        VirtualMachineConfig::RawConfig(_) => true,
-        VirtualMachineConfig::AppConfig(config) => {
+        aidl::VirtualMachineConfig::RawConfig(_) => true,
+        aidl::VirtualMachineConfig::AppConfig(config) => {
             let Some(custom) = &config.customConfig else { return true };
             custom.wantUpdatable
         }
     }
 }
 
-fn extract_gdb_port(config: &VirtualMachineConfig) -> Option<NonZeroU16> {
+fn extract_gdb_port(config: &aidl::VirtualMachineConfig) -> Option<NonZeroU16> {
     match config {
-        VirtualMachineConfig::RawConfig(config) => NonZeroU16::new(config.gdbPort as u16),
-        VirtualMachineConfig::AppConfig(config) => {
+        aidl::VirtualMachineConfig::RawConfig(config) => NonZeroU16::new(config.gdbPort as u16),
+        aidl::VirtualMachineConfig::AppConfig(config) => {
             NonZeroU16::new(config.customConfig.as_ref().map(|c| c.gdbPort).unwrap_or(0) as u16)
         }
     }
 }
 
 fn extract_encrypted_store_kek(
-    config: &VirtualMachineConfig,
-) -> Option<Strong<dyn IEncryptedStoreKEK>> {
+    config: &aidl::VirtualMachineConfig,
+) -> Option<Strong<dyn aidl::IEncryptedStoreKEK>> {
     match config {
-        VirtualMachineConfig::RawConfig(_) => None,
-        VirtualMachineConfig::AppConfig(config) => config.encryptedStoreKEK.clone(),
+        aidl::VirtualMachineConfig::RawConfig(_) => None,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.encryptedStoreKEK.clone(),
     }
 }
 
-fn check_no_vendor_modules(config: &VirtualMachineConfig) -> binder::Result<()> {
-    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+fn check_no_vendor_modules(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if let Some(custom_config) = &config.customConfig {
         if custom_config.vendorImage.is_some() || custom_config.customKernelImage.is_some() {
             return Err(anyhow!("vendor modules feature is disabled"))
@@ -2178,8 +2142,8 @@ fn check_no_vendor_modules(config: &VirtualMachineConfig) -> binder::Result<()> 
     Ok(())
 }
 
-fn check_no_devices(config: &VirtualMachineConfig) -> binder::Result<()> {
-    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+fn check_no_devices(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if let Some(custom_config) = &config.customConfig {
         if !custom_config.devices.is_empty() {
             return Err(anyhow!("device assignment feature is disabled"))
@@ -2189,8 +2153,8 @@ fn check_no_devices(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
-fn check_no_extra_kernel_cmdline_params(config: &VirtualMachineConfig) -> binder::Result<()> {
-    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+fn check_no_extra_kernel_cmdline_params(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if let Some(custom_config) = &config.customConfig {
         if !custom_config.extraKernelCmdlineParams.is_empty() {
             return Err(anyhow!("debuggable_vms_improvements feature is disabled"))
@@ -2200,15 +2164,15 @@ fn check_no_extra_kernel_cmdline_params(config: &VirtualMachineConfig) -> binder
     Ok(())
 }
 
-fn check_no_tee_services(config: &VirtualMachineConfig) -> binder::Result<()> {
+fn check_no_tee_services(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     match config {
-        VirtualMachineConfig::RawConfig(config) => {
+        aidl::VirtualMachineConfig::RawConfig(config) => {
             if !config.teeServices.is_empty() {
                 return Err(anyhow!("tee_services_allowlist feature is disabled"))
                     .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
             }
         }
-        VirtualMachineConfig::AppConfig(config) => {
+        aidl::VirtualMachineConfig::AppConfig(config) => {
             if let Some(custom_config) = &config.customConfig {
                 if !custom_config.teeServices.is_empty() {
                     return Err(anyhow!("tee_services_allowlist feature is disabled"))
@@ -2220,8 +2184,8 @@ fn check_no_tee_services(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
-fn check_no_delay_enc_store(config: &VirtualMachineConfig) -> binder::Result<()> {
-    let VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+fn check_no_delay_enc_store(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if config.shouldDelayEncryptedStoreSetup {
         return Err(anyhow!("long_running_vms feature is disabled"))
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
@@ -2240,7 +2204,7 @@ fn check_protected_vm_is_supported() -> binder::Result<()> {
     }
 }
 
-fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
+fn check_config_features(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     if !cfg!(vendor_modules) {
         check_no_vendor_modules(config)?;
     }
@@ -2259,7 +2223,7 @@ fn check_config_features(config: &VirtualMachineConfig) -> binder::Result<()> {
     Ok(())
 }
 
-fn check_config_allowed_for_early_vms(config: &VirtualMachineConfig) -> binder::Result<()> {
+fn check_config_allowed_for_early_vms(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     check_no_vendor_modules(config)?;
     check_no_devices(config)?;
 
@@ -2382,7 +2346,7 @@ struct VirtualMachineService {
 
 impl Interface for VirtualMachineService {}
 
-impl IVirtualMachineService for VirtualMachineService {
+impl aidl::IVirtualMachineService for VirtualMachineService {
     fn notifyPayloadStarted(&self) -> binder::Result<()> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
@@ -2428,7 +2392,7 @@ impl IVirtualMachineService for VirtualMachineService {
         }
     }
 
-    fn notifyError(&self, error_code: ErrorCode, message: &str) -> binder::Result<()> {
+    fn notifyError(&self, error_code: aidl::ErrorCode, message: &str) -> binder::Result<()> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
             info!(
@@ -2448,15 +2412,15 @@ impl IVirtualMachineService for VirtualMachineService {
         }
     }
 
-    fn getSecretkeeper(&self) -> binder::Result<Strong<dyn ISecretkeeper>> {
+    fn getSecretkeeper(&self) -> binder::Result<Strong<dyn aidl::ISecretkeeper>> {
         if !is_secretkeeper_supported() {
             return Err(StatusCode::NAME_NOT_FOUND)?;
         }
         let sk = binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
-        Ok(BnSecretkeeper::new_binder(SecretkeeperProxy(sk), BinderFeatures::default()))
+        Ok(aidl::BnSecretkeeper::new_binder(SecretkeeperProxy(sk), BinderFeatures::default()))
     }
 
-    fn requestAttestation(&self, csr: &[u8], test_mode: bool) -> binder::Result<Vec<Certificate>> {
+    fn requestAttestation(&self, csr: &[u8], test_mode: bool) -> binder::Result<Vec<aidl::Certificate>> {
         global_service().requestAttestation(csr, get_calling_uid() as i32, test_mode)
     }
 
@@ -2475,7 +2439,7 @@ impl IVirtualMachineService for VirtualMachineService {
         ))
     }
 
-    fn registerGuestAgent(&self, guest_agent: &Strong<dyn IGuestAgent>) -> binder::Result<()> {
+    fn registerGuestAgent(&self, guest_agent: &Strong<dyn aidl::IGuestAgent>) -> binder::Result<()> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
             *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
@@ -2487,11 +2451,11 @@ impl IVirtualMachineService for VirtualMachineService {
         }
     }
 
-    fn getEncryptedStoreKEK(&self) -> binder::Result<Option<Strong<dyn IEncryptedStoreKEK>>> {
+    fn getEncryptedStoreKEK(&self) -> binder::Result<Option<Strong<dyn aidl::IEncryptedStoreKEK>>> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
             if let Some(encrypted_store_kek) = &vm.encrypted_store_kek {
-                let kek_wrapper = BnEncryptedStoreKEK::new_binder(
+                let kek_wrapper = aidl::BnEncryptedStoreKEK::new_binder(
                     EncryptedStoreKEKWrapper::new(encrypted_store_kek),
                     BinderFeatures::default(),
                 );
@@ -2525,18 +2489,18 @@ impl IVirtualMachineService for VirtualMachineService {
 // from unrelated binder RPC session" error. Hence we create another IEncryptedStoreKEK that wraps
 // the original one, and pass the wrapper to the microdroid_manager.
 struct EncryptedStoreKEKWrapper {
-    wrapped_kek: Strong<dyn IEncryptedStoreKEK>,
+    wrapped_kek: Strong<dyn aidl::IEncryptedStoreKEK>,
 }
 
 impl EncryptedStoreKEKWrapper {
-    fn new(kek: &Strong<dyn IEncryptedStoreKEK>) -> Self {
+    fn new(kek: &Strong<dyn aidl::IEncryptedStoreKEK>) -> Self {
         Self { wrapped_kek: kek.clone() }
     }
 }
 
 impl Interface for EncryptedStoreKEKWrapper {}
 
-impl IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
+impl aidl::IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
     fn getKEK(&self) -> binder::Result<Option<Vec<u8>>> {
         self.wrapped_kek.getKEK()
     }
@@ -2557,30 +2521,30 @@ fn is_vm_capabilities_hal_supported() -> bool {
 }
 
 impl VirtualMachineService {
-    fn new_binder(state: Arc<Mutex<State>>, cid: Cid) -> Strong<dyn IVirtualMachineService> {
-        BnVirtualMachineService::new_binder(
+    fn new_binder(state: Arc<Mutex<State>>, cid: Cid) -> Strong<dyn aidl::IVirtualMachineService> {
+        aidl::BnVirtualMachineService::new_binder(
             VirtualMachineService { state, cid },
             BinderFeatures::default(),
         )
     }
 }
 
-struct SecretkeeperProxy(Strong<dyn ISecretkeeper>);
+struct SecretkeeperProxy(Strong<dyn aidl::ISecretkeeper>);
 
 impl Interface for SecretkeeperProxy {}
 
-impl ISecretkeeper for SecretkeeperProxy {
+impl aidl::ISecretkeeper for SecretkeeperProxy {
     fn processSecretManagementRequest(&self, req: &[u8]) -> binder::Result<Vec<u8>> {
         // Pass the request to the channel, and read the response.
         self.0.processSecretManagementRequest(req)
     }
 
-    fn getAuthGraphKe(&self) -> binder::Result<Strong<dyn IAuthGraphKeyExchange>> {
+    fn getAuthGraphKe(&self) -> binder::Result<Strong<dyn aidl::IAuthGraphKeyExchange>> {
         let ag = AuthGraphKeyExchangeProxy(self.0.getAuthGraphKe()?);
-        Ok(BnAuthGraphKeyExchange::new_binder(ag, BinderFeatures::default()))
+        Ok(aidl::BnAuthGraphKeyExchange::new_binder(ag, BinderFeatures::default()))
     }
 
-    fn deleteIds(&self, ids: &[SecretId]) -> binder::Result<()> {
+    fn deleteIds(&self, ids: &[aidl::SecretId]) -> binder::Result<()> {
         self.0.deleteIds(ids)
     }
 
@@ -2588,7 +2552,7 @@ impl ISecretkeeper for SecretkeeperProxy {
         self.0.deleteAll()
     }
 
-    fn getSecretkeeperIdentity(&self) -> binder::Result<PublicKey> {
+    fn getSecretkeeperIdentity(&self) -> binder::Result<aidl::PublicKey> {
         // SecretkeeperProxy is really a RPC binder service for PVM (It is called by
         // MicrodroidManager). PVMs do not & must not (for security reason) rely on
         // getSecretKeeperIdentity, so we throw an exception if someone attempts to
@@ -2597,40 +2561,40 @@ impl ISecretkeeper for SecretkeeperProxy {
     }
 }
 
-struct AuthGraphKeyExchangeProxy(Strong<dyn IAuthGraphKeyExchange>);
+struct AuthGraphKeyExchangeProxy(Strong<dyn aidl::IAuthGraphKeyExchange>);
 
 impl Interface for AuthGraphKeyExchangeProxy {}
 
-impl IAuthGraphKeyExchange for AuthGraphKeyExchangeProxy {
-    fn create(&self) -> binder::Result<SessionInitiationInfo> {
+impl aidl::IAuthGraphKeyExchange for AuthGraphKeyExchangeProxy {
+    fn create(&self) -> binder::Result<aidl::SessionInitiationInfo> {
         self.0.create()
     }
 
     fn init(
         &self,
-        peer_pub_key: &PubKey,
-        peer_id: &Identity,
+        peer_pub_key: &aidl::PubKey,
+        peer_id: &aidl::Identity,
         peer_nonce: &[u8],
         peer_version: i32,
-    ) -> binder::Result<KeInitResult> {
+    ) -> binder::Result<aidl::KeInitResult> {
         self.0.init(peer_pub_key, peer_id, peer_nonce, peer_version)
     }
 
     fn finish(
         &self,
-        peer_pub_key: &PubKey,
-        peer_id: &Identity,
-        peer_signature: &SessionIdSignature,
+        peer_pub_key: &aidl::PubKey,
+        peer_id: &aidl::Identity,
+        peer_signature: &aidl::SessionIdSignature,
         peer_nonce: &[u8],
         peer_version: i32,
-        own_key: &Key,
-    ) -> binder::Result<SessionInfo> {
+        own_key: &aidl::Key,
+    ) -> binder::Result<aidl::SessionInfo> {
         self.0.finish(peer_pub_key, peer_id, peer_signature, peer_nonce, peer_version, own_key)
     }
 
     fn authenticationComplete(
         &self,
-        peer_signature: &SessionIdSignature,
+        peer_signature: &aidl::SessionIdSignature,
         shared_keys: &[AuthgraphArc; 2],
     ) -> binder::Result<[AuthgraphArc; 2]> {
         self.0.authenticationComplete(peer_signature, shared_keys)
@@ -2911,15 +2875,17 @@ mod tests {
     }
     #[test]
     fn test_append_kernel_param_first_param() {
-        let mut vm_config = VirtualMachineRawConfig { ..Default::default() };
+        let mut vm_config = aidl::VirtualMachineRawConfig { ..Default::default() };
         append_kernel_param("foo=1", &mut vm_config);
         assert_eq!(vm_config.params, Some("foo=1".to_owned()))
     }
 
     #[test]
     fn test_append_kernel_param() {
-        let mut vm_config =
-            VirtualMachineRawConfig { params: Some("foo=5".to_owned()), ..Default::default() };
+        let mut vm_config = aidl::VirtualMachineRawConfig {
+            params: Some("foo=5".to_owned()),
+            ..Default::default()
+        };
         append_kernel_param("bar=42", &mut vm_config);
         assert_eq!(vm_config.params, Some("foo=5 bar=42".to_owned()))
     }
