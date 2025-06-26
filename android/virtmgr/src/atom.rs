@@ -14,7 +14,7 @@
 
 //! Functions for creating and collecting atoms.
 
-use crate::virtualmachine::{clone_file, global_service};
+use crate::virtualmachine;
 use crate::crosvm::VmMetric;
 use crate::get_calling_uid;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
@@ -66,7 +66,7 @@ fn get_vm_payload_config(
     config_path: &str,
 ) -> Result<VmPayloadConfig> {
     let apk = apk_fd.as_ref().ok_or_else(|| anyhow!("APK is none"))?;
-    let apk_file = clone_file(apk)?;
+    let apk_file = virtualmachine::clone_file(apk)?;
     let mut apk_zip = ZipArchive::new(&apk_file)?;
     let config_file = apk_zip.by_name(config_path)?;
     let vm_payload_config: VmPayloadConfig = serde_json::from_reader(config_file)?;
@@ -160,7 +160,7 @@ pub fn write_vm_creation_stats(
 
     info!("Writing VmCreationRequested atom into statsd.");
     thread::spawn(move || {
-        global_service().atomVmCreationRequested(&atom).unwrap_or_else(|e| {
+        virtualmachine::global_service().atomVmCreationRequested(&atom).unwrap_or_else(|e| {
             warn!("Failed to write VmCreationRequested atom: {e}");
         });
     });
@@ -189,7 +189,7 @@ pub fn write_vm_booted_stats(
 
     info!("Writing VmBooted atom into statsd.");
     thread::spawn(move || {
-        global_service().atomVmBooted(&atom).unwrap_or_else(|e| {
+        virtualmachine::global_service().atomVmBooted(&atom).unwrap_or_else(|e| {
             warn!("Failed to write VmBooted atom: {e}");
         });
     });
@@ -224,7 +224,7 @@ pub fn write_vm_exited_stats_sync(
     };
 
     info!("Writing VmExited atom into statsd.");
-    global_service().atomVmExited(&atom).unwrap_or_else(|e| {
+    virtualmachine::global_service().atomVmExited(&atom).unwrap_or_else(|e| {
         warn!("Failed to write VmExited atom: {e}");
     });
 }

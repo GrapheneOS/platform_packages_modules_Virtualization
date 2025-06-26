@@ -24,7 +24,7 @@ mod payload;
 mod selinux;
 mod virtualmachine;
 
-use crate::virtualmachine::{global_service, VirtualizationService};
+use crate::virtualmachine::VirtualizationService;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
@@ -126,7 +126,7 @@ fn main() {
             panic!("Unexpected return value from prlimit(): {ret}");
         }
     } else {
-        global_service().removeMemlockRlimit().expect("Failed to remove memlock rlimit");
+        virtualmachine::global_service().removeMemlockRlimit().expect("Failed to remove memlock rlimit");
     }
 
     let service = VirtualizationService::init();

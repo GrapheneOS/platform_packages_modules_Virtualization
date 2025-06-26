@@ -14,7 +14,7 @@
 
 //! Functions for running instances of `crosvm`.
 
-use crate::virtualmachine::{remove_temporary_files, Cid, global_service, VirtualMachineCallbacks};
+use crate::virtualmachine::{self, Cid, VirtualMachineCallbacks};
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
@@ -790,12 +790,12 @@ impl VmInstance {
         }
 
         // Delete temporary files. The folder itself is removed by VirtualizationServiceInternal.
-        remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
+        virtualmachine::remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
             error!("Error removing temporary files from {:?}: {}", self.temporary_directory, e);
         });
 
         if let Some(tap_file) = tap {
-            global_service()
+            virtualmachine::global_service()
                 .deleteTapInterface(&ParcelFileDescriptor::new(OwnedFd::from(tap_file)))
                 .unwrap_or_else(|e| {
                     error!("Error deleting TAP interface: {e:?}");
@@ -939,7 +939,7 @@ impl VmInstance {
         // delete it. Otherwise there'll be a memory leak.
         scopeguard::defer! {
             let cid = self.cid.try_into().unwrap();
-            if let Err(e) = global_service().unregisterVirtualMachine(cid) {
+            if let Err(e) = virtualmachine::global_service().unregisterVirtualMachine(cid) {
                 error!("Failed to unregister virtual machine ({cid}): {e:?}");
             }
         }
