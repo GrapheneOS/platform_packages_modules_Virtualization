@@ -22,6 +22,7 @@ mod debug_config;
 mod dt_overlay;
 mod host_services;
 mod payload;
+mod secretkeeper;
 mod selinux;
 mod virtualmachine;
 

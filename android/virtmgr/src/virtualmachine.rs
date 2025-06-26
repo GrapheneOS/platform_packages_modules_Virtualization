@@ -14,7 +14,7 @@
 
 //! Implementation of the AIDL interface of the VirtualizationService.
 
-use crate::aidl::{self, Arc as AuthgraphArc};
+use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{
@@ -28,6 +28,7 @@ use crate::payload::{
     add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image,
     ApexInfoList,
 };
+use crate::secretkeeper::{self, SecretkeeperProxy, IDENTIFIER as SECRETKEEPER_IDENTIFIER};
 use crate::selinux::{
     check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext,
 };
@@ -92,9 +93,6 @@ const ANDROID_VM_INSTANCE_MAGIC: &str = "Android-VM-instance";
 const ANDROID_VM_INSTANCE_VERSION: u16 = 1;
 
 const MICRODROID_OS_NAME: &str = "microdroid";
-
-const SECRETKEEPER_IDENTIFIER: &str =
-    "android.hardware.security.secretkeeper.ISecretkeeper/default";
 
 const VM_CAPABILITIES_HAL_IDENTIFIER: &str =
     "android.hardware.virtualization.capabilities.IVmCapabilitiesService/default";
@@ -392,7 +390,7 @@ impl aidl::IVirtualizationService for VirtualizationService {
         // supports Secretkeeper. Guest OS needs to use Secretkeeper based secrets. Microdroid does
         // this, however other guest OSes may do things differently.
         check_manage_access()?;
-        Ok(is_secretkeeper_supported())
+        Ok(secretkeeper::is_supported())
     }
 
     fn removeVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
@@ -1148,7 +1146,7 @@ fn maybe_create_reference_dt_overlay(
     if cfg!(llpvm_changes) {
         untrusted_props.push((c"instance-id", &instance_id[..]));
         let want_updatable = extract_want_updatable(config);
-        if want_updatable && is_secretkeeper_supported() {
+        if want_updatable && secretkeeper::is_supported() {
             // Let guest know that it can defer rollback protection to Secretkeeper by setting
             // an empty property in untrusted node in DT. This enables Updatable VMs.
             untrusted_props.push((c"defer-rollback-protection", &[]));
@@ -2430,7 +2428,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
     }
 
     fn getSecretkeeper(&self) -> binder::Result<Strong<dyn aidl::ISecretkeeper>> {
-        if !is_secretkeeper_supported() {
+        if !secretkeeper::is_supported() {
             return Err(StatusCode::NAME_NOT_FOUND)?;
         }
         let sk = binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
@@ -2534,11 +2532,6 @@ impl aidl::IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
     }
 }
 
-fn is_secretkeeper_supported() -> bool {
-    binder::is_declared(SECRETKEEPER_IDENTIFIER)
-        .expect("Could not check for declared Secretkeeper interface")
-}
-
 fn is_vm_capabilities_hal_supported() -> bool {
     binder::is_declared(VM_CAPABILITIES_HAL_IDENTIFIER)
         .expect("failed to check if {VM_CAPABILITIES_HAL_IDENTIFIER} is present")
@@ -2550,78 +2543,6 @@ impl VirtualMachineService {
             VirtualMachineService { state, cid },
             BinderFeatures::default(),
         )
-    }
-}
-
-struct SecretkeeperProxy(Strong<dyn aidl::ISecretkeeper>);
-
-impl Interface for SecretkeeperProxy {}
-
-impl aidl::ISecretkeeper for SecretkeeperProxy {
-    fn processSecretManagementRequest(&self, req: &[u8]) -> binder::Result<Vec<u8>> {
-        // Pass the request to the channel, and read the response.
-        self.0.processSecretManagementRequest(req)
-    }
-
-    fn getAuthGraphKe(&self) -> binder::Result<Strong<dyn aidl::IAuthGraphKeyExchange>> {
-        let ag = AuthGraphKeyExchangeProxy(self.0.getAuthGraphKe()?);
-        Ok(aidl::BnAuthGraphKeyExchange::new_binder(ag, BinderFeatures::default()))
-    }
-
-    fn deleteIds(&self, ids: &[aidl::SecretId]) -> binder::Result<()> {
-        self.0.deleteIds(ids)
-    }
-
-    fn deleteAll(&self) -> binder::Result<()> {
-        self.0.deleteAll()
-    }
-
-    fn getSecretkeeperIdentity(&self) -> binder::Result<aidl::PublicKey> {
-        // SecretkeeperProxy is really a RPC binder service for PVM (It is called by
-        // MicrodroidManager). PVMs do not & must not (for security reason) rely on
-        // getSecretKeeperIdentity, so we throw an exception if someone attempts to
-        // use this API from the proxy.
-        Err(ExceptionCode::SECURITY.into())
-    }
-}
-
-struct AuthGraphKeyExchangeProxy(Strong<dyn aidl::IAuthGraphKeyExchange>);
-
-impl Interface for AuthGraphKeyExchangeProxy {}
-
-impl aidl::IAuthGraphKeyExchange for AuthGraphKeyExchangeProxy {
-    fn create(&self) -> binder::Result<aidl::SessionInitiationInfo> {
-        self.0.create()
-    }
-
-    fn init(
-        &self,
-        peer_pub_key: &aidl::PubKey,
-        peer_id: &aidl::Identity,
-        peer_nonce: &[u8],
-        peer_version: i32,
-    ) -> binder::Result<aidl::KeInitResult> {
-        self.0.init(peer_pub_key, peer_id, peer_nonce, peer_version)
-    }
-
-    fn finish(
-        &self,
-        peer_pub_key: &aidl::PubKey,
-        peer_id: &aidl::Identity,
-        peer_signature: &aidl::SessionIdSignature,
-        peer_nonce: &[u8],
-        peer_version: i32,
-        own_key: &aidl::Key,
-    ) -> binder::Result<aidl::SessionInfo> {
-        self.0.finish(peer_pub_key, peer_id, peer_signature, peer_nonce, peer_version, own_key)
-    }
-
-    fn authenticationComplete(
-        &self,
-        peer_signature: &aidl::SessionIdSignature,
-        shared_keys: &[AuthgraphArc; 2],
-    ) -> binder::Result<[AuthgraphArc; 2]> {
-        self.0.authenticationComplete(peer_signature, shared_keys)
     }
 }
 
