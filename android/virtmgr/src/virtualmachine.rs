@@ -15,51 +15,61 @@
 //! Implementation of the AIDL interface of the VirtualizationService.
 
 use crate::aidl::{self, Arc as AuthgraphArc};
-use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
-use crate::crosvm::{AudioConfig, CrosvmConfig, DiskFile, SharedPathConfig, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState, UsbConfig, VmContext, VmInstance, VmState};
+use crate::crosvm::{
+    AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState,
+    SharedPathConfig, UsbConfig, VmContext, VmInstance, VmState,
+};
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
-use crate::payload::{ApexInfoList, add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image};
-use crate::selinux::{check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext};
 use crate::host_services;
-use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
-    BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo,
-    Vsock::Vsock,
+use crate::payload::{
+    add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image,
+    ApexInfoList,
 };
+use crate::selinux::{
+    check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext,
+};
+use crate::{get_calling_pid, get_calling_uid, get_this_pid};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkverify::{HashAlgorithm, V4Signature};
 use avflog::LogResult;
 use binder::{
-    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, DeathRecipient, ExceptionCode, IBinder, Interface, ParcelFileDescriptor,
-    SpIBinder, Status, StatusCode, Strong, IntoBinderResult,
+    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, DeathRecipient,
+    ExceptionCode, IBinder, Interface, IntoBinderResult, ParcelFileDescriptor, SpIBinder, Status,
+    StatusCode, Strong,
 };
 use dropbox_rs::DropBoxManager;
 use glob::glob;
-use libc::{AF_VSOCK, sa_family_t, sockaddr_vm};
+use libc::{sa_family_t, sockaddr_vm, AF_VSOCK};
 use log::{debug, error, info, warn};
 use microdroid_payload_config::{ApexConfig, ApkConfig, Task, TaskType, VmPayloadConfig};
 use nix::unistd::pipe;
+use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
+    BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo, Vsock::Vsock,
+};
 use rpcbinder::RpcServer;
 use rustutils::system_properties;
 use semver::VersionReq;
 use serde::Deserialize;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::fs;
 use std::ffi::CStr;
-use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions};
+use std::fs;
+use std::fs::{
+    canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions,
+};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::{NonZeroU16, NonZeroU32};
 use std::ops::Range;
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, Weak, LazyLock};
+use std::sync::{Arc, LazyLock, Mutex, Weak};
 use vbmeta::VbMetaImage;
 use virt_dropbox::build_dropbox_report;
-use vmconfig::{VmConfig, get_debug_level};
+use vmconfig::{get_debug_level, VmConfig};
 use vsock::VsockStream;
 use zip::ZipArchive;
 
@@ -96,7 +106,8 @@ const PARTITION_GRANULARITY_BYTES: u64 = 4096;
 
 const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 
-static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> = Mutex::new(None);
+static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
+    Mutex::new(None);
 
 pub fn global_service() -> Strong<dyn aidl::IVirtualizationServiceInternal> {
     use binder::IBinder; // for ping_binder
@@ -667,7 +678,9 @@ impl VirtualizationService {
         let mut indirect_files = vec![];
 
         let (is_app_config, config) = match config {
-            aidl::VirtualMachineConfig::RawConfig(config) => (false, BorrowedOrOwned::Borrowed(config)),
+            aidl::VirtualMachineConfig::RawConfig(config) => {
+                (false, BorrowedOrOwned::Borrowed(config))
+            }
             aidl::VirtualMachineConfig::AppConfig(config) => {
                 let config = load_app_config(config, &debug_config, &temporary_directory)
                     .or_service_specific_exception_with(-1, |e| {
@@ -1053,7 +1066,9 @@ fn is_custom_config(config: &aidl::VirtualMachineConfig) -> bool {
                 // - specifying an OS other than Microdroid.
                 (match &config.payload {
                     aidl::Payload::ConfigPath(_) => true,
-                    aidl::Payload::PayloadConfig(payload_config) => !payload_config.extraApks.is_empty(),
+                    aidl::Payload::PayloadConfig(payload_config) => {
+                        !payload_config.extraApks.is_empty()
+                    }
                 }) || config.osName != MICRODROID_OS_NAME
             }
         }
@@ -1365,7 +1380,9 @@ fn uses_gki_kernel(config: &aidl::VirtualMachineConfig) -> bool {
     }
     match config {
         aidl::VirtualMachineConfig::RawConfig(_) => false,
-        aidl::VirtualMachineConfig::AppConfig(config) => config.osName.starts_with("microdroid_gki-"),
+        aidl::VirtualMachineConfig::AppConfig(config) => {
+            config.osName.starts_with("microdroid_gki-")
+        }
     }
 }
 
@@ -2420,7 +2437,11 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         Ok(aidl::BnSecretkeeper::new_binder(SecretkeeperProxy(sk), BinderFeatures::default()))
     }
 
-    fn requestAttestation(&self, csr: &[u8], test_mode: bool) -> binder::Result<Vec<aidl::Certificate>> {
+    fn requestAttestation(
+        &self,
+        csr: &[u8],
+        test_mode: bool,
+    ) -> binder::Result<Vec<aidl::Certificate>> {
         global_service().requestAttestation(csr, get_calling_uid() as i32, test_mode)
     }
 
@@ -2439,7 +2460,10 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         ))
     }
 
-    fn registerGuestAgent(&self, guest_agent: &Strong<dyn aidl::IGuestAgent>) -> binder::Result<()> {
+    fn registerGuestAgent(
+        &self,
+        guest_agent: &Strong<dyn aidl::IGuestAgent>,
+    ) -> binder::Result<()> {
         let cid = self.cid;
         if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
             *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());

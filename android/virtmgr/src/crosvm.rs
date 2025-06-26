@@ -15,30 +15,29 @@
 //! Functions for running instances of `crosvm`.
 
 use crate::aidl::{
-    self,
-    AudioConfig as AudioConfigParcelable,
-    DisplayConfig as DisplayConfigParcelable,
-    GpuConfig as GpuConfigParcelable,
-    UsbConfig as UsbConfigParcelable,
+    self, AudioConfig as AudioConfigParcelable, DisplayConfig as DisplayConfigParcelable,
+    GpuConfig as GpuConfigParcelable, UsbConfig as UsbConfigParcelable,
 };
-use crate::virtualmachine::{self, Cid, VirtualMachineCallbacks};
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
+use crate::virtualmachine::{self, Cid, VirtualMachineCallbacks};
 use anyhow::{anyhow, bail, Context, Error, Result};
+use binder::{DeathRecipient, ParcelFileDescriptor, Strong};
 use command_fds::CommandFdExt;
 use libc::{sysconf, _SC_CLK_TCK};
-use psi_rs::{PsiResource, PsiStallType, init_psi_monitor, parse_psi_line, register_psi_monitor};
 use log::{debug, error, info, warn};
-use semver::{Version, VersionReq};
 use nix::{
     errno::Errno,
     fcntl::OFlag,
-    unistd::{pipe2, Uid, User},
     sys::epoll::{Epoll, EpollCreateFlags, EpollEvent, EpollFlags, EpollTimeout},
     sys::eventfd::EventFd,
+    unistd::{pipe2, Uid, User},
 };
+use psi_rs::{init_psi_monitor, parse_psi_line, register_psi_monitor, PsiResource, PsiStallType};
 use regex::{Captures, Regex};
+use rpcbinder::RpcServer;
 use rustutils::system_properties;
+use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::{max, min};
@@ -47,24 +46,18 @@ use std::fmt;
 use std::fs::{read_to_string, File};
 use std::io::{self, Read, Seek};
 use std::mem;
-use std::time::Instant;
 use std::num::{NonZeroU16, NonZeroU32};
 use std::os::unix::io::{AsFd, AsRawFd, OwnedFd};
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
-use std::sync::{Arc, Condvar, Mutex, LazyLock};
-use std::time::{Duration, SystemTime};
-use std::thread::{self, JoinHandle};
 use std::sync::mpsc;
-use binder::{
-    DeathRecipient,
-    ParcelFileDescriptor,
-    Strong,
-};
-use tombstoned_client::{TombstonedConnection, DebuggerdDumpType};
-use rpcbinder::RpcServer;
+use std::sync::{Arc, Condvar, LazyLock, Mutex};
+use std::thread::{self, JoinHandle};
+use std::time::Instant;
+use std::time::{Duration, SystemTime};
+use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 
 const CROSVM_PATH: &str = "/apex/com.android.virt/bin/crosvm";
 
@@ -1237,7 +1230,10 @@ fn get_rss(pid: u32) -> Result<Rss> {
     Ok(Rss { vm: rss_vm_total, crosvm: rss_crosvm_total })
 }
 
-fn death_reason(result: &Result<ExitStatus, io::Error>, mut failure_reason: &str) -> aidl::DeathReason {
+fn death_reason(
+    result: &Result<ExitStatus, io::Error>,
+    mut failure_reason: &str,
+) -> aidl::DeathReason {
     use aidl::DeathReason;
 
     if let Some((reason, info)) = failure_reason.split_once('|') {

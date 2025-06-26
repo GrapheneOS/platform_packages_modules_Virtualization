@@ -15,9 +15,9 @@
 //! Functions for creating and collecting atoms.
 
 use crate::aidl;
-use crate::virtualmachine;
 use crate::crosvm::VmMetric;
 use crate::get_calling_uid;
+use crate::virtualmachine;
 use anyhow::{anyhow, Result};
 use binder::{ParcelFileDescriptor, Status, Strong};
 use log::{info, warn};

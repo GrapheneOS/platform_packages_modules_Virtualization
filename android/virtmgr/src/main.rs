@@ -28,14 +28,14 @@ mod virtualmachine;
 use crate::virtualmachine::VirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
-use log::{error, info, LevelFilter};
-use rpcbinder::{FileDescriptorTransportMode, RpcServer};
-use std::os::unix::io::{AsFd, RawFd};
-use std::sync::LazyLock;
 use clap::Parser;
+use log::{error, info, LevelFilter};
 use nix::unistd::{setpgid, write, Pid, Uid};
+use rpcbinder::{FileDescriptorTransportMode, RpcServer};
 use rustutils::inherited_fd::take_fd_ownership;
+use std::os::unix::io::{AsFd, RawFd};
 use std::os::unix::raw::{pid_t, uid_t};
+use std::sync::LazyLock;
 
 #[cfg(early)]
 const LOG_TAG: &str = "early_virtmgr";
@@ -126,7 +126,9 @@ fn main() {
             panic!("Unexpected return value from prlimit(): {ret}");
         }
     } else {
-        virtualmachine::global_service().removeMemlockRlimit().expect("Failed to remove memlock rlimit");
+        virtualmachine::global_service()
+            .removeMemlockRlimit()
+            .expect("Failed to remove memlock rlimit");
     }
 
     let service = VirtualizationService::init();
