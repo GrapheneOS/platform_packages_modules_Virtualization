@@ -14,7 +14,7 @@
 
 //! Functions for creating and collecting atoms.
 
-use crate::aidl::{clone_file, global_service};
+use crate::virtualmachine::{clone_file, global_service};
 use crate::crosvm::VmMetric;
 use crate::get_calling_uid;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;

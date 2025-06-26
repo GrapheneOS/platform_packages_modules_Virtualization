@@ -14,7 +14,6 @@
 
 //! Android Virtualization Manager
 
-mod aidl;
 mod atom;
 mod composite;
 mod crosvm;
@@ -23,8 +22,9 @@ mod dt_overlay;
 mod host_services;
 mod payload;
 mod selinux;
+mod virtualmachine;
 
-use crate::aidl::{global_service, VirtualizationService};
+use crate::virtualmachine::{global_service, VirtualizationService};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::IVirtualizationService::BnVirtualizationService;
 use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};

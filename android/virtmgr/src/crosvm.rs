@@ -14,7 +14,7 @@
 
 //! Functions for running instances of `crosvm`.
 
-use crate::aidl::{remove_temporary_files, Cid, global_service, VirtualMachineCallbacks};
+use crate::virtualmachine::{remove_temporary_files, Cid, global_service, VirtualMachineCallbacks};
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use anyhow::{anyhow, bail, Context, Error, Result};
