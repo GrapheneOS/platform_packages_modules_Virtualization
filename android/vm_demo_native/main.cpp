@@ -178,6 +178,48 @@ Result<ScopedFileDescriptor> create_instance_image_file_if_needed(IVirtualizatio
     return instance;
 }
 
+// This looks up instance-id in local file if it exists, otherwise requests virtualizationservice
+// to allocate it one & then persists it in the instance-id file. VM uses this instance-id for
+// Secret Management.
+Result<void> get_or_allocate_instance_id(IVirtualizationService& service,
+                                         const std::string& work_dir,
+                                         std::array<uint8_t, 64>* instance_id) {
+    std::string path = work_dir + "/instance_id";
+    bool instance_id_exists;
+    if (access(path.c_str(), F_OK) == 0) {
+        instance_id_exists = true;
+    } else {
+        instance_id_exists = false;
+    }
+    unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, S_IRUSR | S_IWUSR));
+    if (fd.get() == -1) {
+        return ErrnoError() << "opening " << path << " failed";
+    }
+
+    if (instance_id_exists) {
+        // If instance_id_file already exists, read from it!
+        int n = read(fd, instance_id, instance_id->size());
+        if (n < 0) {
+            return ErrnoError() << "reading " << path << " failed";
+        } else if (n != instance_id->size()) {
+            return Error() << "Incomplete read of " << path;
+        }
+    } else {
+        // If the instance-id does not exist, request for allocation & persist in the file
+        ScopedAStatus ret = service.allocateInstanceId(instance_id);
+        if (!ret.isOk()) {
+            return Error() << "Failed to allocate Instance Id: ";
+        }
+        int n = write(fd, instance_id, instance_id->size());
+        if (n < 0) {
+            return ErrnoError() << "Writing " << path << " failed";
+        } else if (n != instance_id->size()) {
+            return Error() << "Incomplete write of " << path;
+        }
+    }
+    return {};
+}
+
 // Construct VirtualMachineAppConfig for a Microdroid-based VM named `vm_name` that executes a
 // shared library named `paylaod_binary_name` in the apk `main_apk_path`.
 Result<VirtualMachineAppConfig> create_vm_config(
@@ -189,7 +231,8 @@ Result<VirtualMachineAppConfig> create_vm_config(
             OR_RETURN(create_or_update_idsig_file(service, work_dir, main_apk));
     ScopedFileDescriptor instance =
             OR_RETURN(create_instance_image_file_if_needed(service, work_dir));
-
+    std::array<uint8_t, 64> instance_id;
+    OR_RETURN(get_or_allocate_instance_id(service, work_dir, &instance_id));
     // There are two ways to specify the payload. The simpler way is by specifying the name of the
     // payload binary as shown below. The other way (which is allowed only to system-level VMs) is
     // by passing the path to the JSON file in the main APK which has detailed specification about
@@ -203,6 +246,7 @@ Result<VirtualMachineAppConfig> create_vm_config(
     app_config.apk = std::move(main_apk);
     app_config.idsig = std::move(idsig);
     app_config.instanceImage = std::move(instance);
+    app_config.instanceId = instance_id;
     app_config.payload = std::move(payload);
     if (debuggable) {
         app_config.debugLevel = VirtualMachineAppConfig::DebugLevel::FULL;
