@@ -998,10 +998,9 @@ impl VirtualizationService {
         );
         state.add_vm(Arc::downgrade(&instance));
 
-        let instance_clone = instance.clone();
         let vm = VirtualMachine::create(instance);
 
-        register_to_global_service(instance_clone, &vm)
+        register_to_global_service(&vm)
             .context(format!("Failed to register VM ({cid}) to the global service"))
             .or_service_specific_exception(-1)?;
 
@@ -1012,15 +1011,20 @@ impl VirtualizationService {
 /// Register the VM to the global service so that the list of all VMs in the system can be
 /// retrieved via the global service. Also set up a death recipient so that the VMs are "re"
 /// registered to the global service if the service goes down and then is brought up again.
-fn register_to_global_service(
-    instance: Arc<VmInstance>,
-    vm: &Strong<dyn aidl::IVirtualMachine>,
-) -> binder::Result<()> {
+fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder::Result<()> {
+    use binder::binder_impl::Binder;
     if cfg!(early) {
         return Ok(());
     }
 
-    let instance_clone = instance.clone();
+    // Dereference `VmInstance` from the strong pointer to IVirtualMachine.
+    let local_binder: Binder<aidl::BnVirtualMachine> =
+        vm.as_binder().try_into().expect("Strong<dyn aidl::IVirtualMachine> is not a local binder");
+    let obj = local_binder
+        .downcast_binder::<VirtualMachine>()
+        .expect("IVirtualMachine is not implemented by VirtualMachine");
+    let instance = &obj.instance;
+
     let cid = instance.cid;
     global_service().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
 
@@ -1028,7 +1032,7 @@ fn register_to_global_service(
     let mut dr = DeathRecipient::new(move || {
         // No need to re-register the VM if it's already dead
         if let Ok(vm) = weak_vm.upgrade() {
-            let _ = register_to_global_service(instance.clone(), &vm).map_err(|e| {
+            let _ = register_to_global_service(&vm).map_err(|e| {
                 error!("Failed to re-register VM ({cid}) to the global service: {e:?}")
             });
         }
@@ -1037,7 +1041,7 @@ fn register_to_global_service(
 
     // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
     // automatically unlinked.
-    *instance_clone.global_service_death_recipient.lock().unwrap() = Some(dr);
+    *instance.global_service_death_recipient.lock().unwrap() = Some(dr);
     Ok(())
 }
 
