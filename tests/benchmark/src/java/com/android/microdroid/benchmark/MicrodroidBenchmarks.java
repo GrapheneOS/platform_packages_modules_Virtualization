@@ -944,6 +944,8 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_NONE)
+                        .setShouldUseHugepages(true)
+                        .setShouldBoostUclamp(true)
                         .build();
 
         byte[] data = new byte[32];
@@ -1015,6 +1017,8 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setMemoryBytes(vmSize)
+                        .setShouldUseHugepages(true)
+                        .setShouldBoostUclamp(true)
                         .build();
 
         byte[] data = new byte[32];
