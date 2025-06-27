@@ -68,6 +68,7 @@ use std::ops::{Deref, Range};
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
+use std::time::Duration;
 use vbmeta::VbMetaImage;
 use virt_dropbox::build_dropbox_report;
 use vmconfig::{get_debug_level, VmConfig};
@@ -1731,7 +1732,53 @@ impl Deref for VirtualMachineBinder {
     }
 }
 
-impl Interface for VirtualMachine {}
+impl Interface for VirtualMachine {
+    fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), binder::StatusCode> {
+        if !self.instance.is_vm_running() {
+            writeln!(writer, "skipping dump: VM is not running")
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            return Ok(());
+        }
+
+        let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
+
+        let port = {
+            let Some(guest_agent) = &*self.instance.guest_agent.lock().unwrap() else {
+                writeln!(writer, "skipping dump: guest agent isn't registered")
+                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                return Ok(());
+            };
+
+            match guest_agent.startDumpVsockServer(&args) {
+                Ok(port) => port,
+                Err(e) => {
+                    writeln!(writer, "skipping dump: failed to start dump vsock server: {e:?}")
+                        .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                    return Ok(());
+                }
+            }
+        };
+
+        let mut stream = match VsockStream::connect_with_cid_port(self.instance.cid, port as u32) {
+            Ok(stream) => stream,
+            Err(e) => {
+                writeln!(writer, "skipping dump: failed to connect to dump vsock server: {e:?}")
+                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                return Ok(());
+            }
+        };
+
+        // 5 seconds must be much longer than required.
+        stream.set_read_timeout(Some(Duration::from_secs(5))).or(Err(StatusCode::UNKNOWN_ERROR))?;
+
+        if let Err(e) = std::io::copy(&mut stream, writer) {
+            writeln!(writer, "skipping dump: failed to copy dump stream: {e:?}")
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+        }
+
+        Ok(())
+    }
+}
 
 impl aidl::IVirtualMachine for VirtualMachine {
     fn getCid(&self) -> binder::Result<i32> {

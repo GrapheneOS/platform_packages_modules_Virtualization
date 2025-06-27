@@ -410,8 +410,8 @@ fn trigger_trim(instance: &Arc<VmInstance>) {
     // When the host is under memory pressure, send a trim request
     // Full contention detected, send a trim request
     if let Some(guest_agent) = &*instance.guest_agent.lock().unwrap() {
-        if let Err(e) = guest_agent.trim() {
-            error!("IGuestAgent::trim failed: {e:#}");
+        if let Err(e) = guest_agent.trimAsync() {
+            error!("IGuestAgent::trimAsync failed: {e:#}");
         }
     }
 }
@@ -892,7 +892,7 @@ impl VmInstance {
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
             return guest_agent
-                .shutdown()
+                .shutdownAsync()
                 .map_err(|e| error!("Failed to ask shut down: {e:?}"))
                 .is_ok();
         }
