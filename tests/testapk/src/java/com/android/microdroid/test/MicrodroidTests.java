@@ -2393,7 +2393,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .command(
                                 "logcat",
                                 "-e",
-                                "virtualizationmanager::aidl: (Console|Log).*executing main task",
+                                "virtualizationmanager.* (Console|Log).*executing main task",
                                 "-t",
                                 time)
                         .start();

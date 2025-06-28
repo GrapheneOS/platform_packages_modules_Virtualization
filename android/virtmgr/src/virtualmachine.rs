@@ -1,0 +1,3092 @@
+// Copyright 2021, The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Implementation of the AIDL interface of the VirtualizationService.
+
+use crate::aidl;
+use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
+use crate::composite::make_composite_image;
+use crate::crosvm::{
+    AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState,
+    SharedPathConfig, UsbConfig, VmContext, VmInstance, VmState,
+};
+use crate::debug_config::{DebugConfig, DebugPolicy};
+use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
+use crate::host_services;
+use crate::payload::{
+    add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image,
+    ApexInfoList,
+};
+use crate::secretkeeper::{self, SecretkeeperProxy, IDENTIFIER as SECRETKEEPER_IDENTIFIER};
+use crate::selinux::{
+    check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext,
+};
+use crate::{get_calling_pid, get_calling_uid, get_this_pid};
+use anyhow::{anyhow, bail, ensure, Context, Result};
+use apkverify::{HashAlgorithm, V4Signature};
+use avflog::LogResult;
+use binder::{
+    self, wait_for_interface, Accessor, BinderFeatures, ConnectionInfo, DeathRecipient,
+    ExceptionCode, IBinder, Interface, IntoBinderResult, ParcelFileDescriptor, SpIBinder, Status,
+    StatusCode, Strong,
+};
+use dropbox_rs::DropBoxManager;
+use glob::glob;
+use libc::{sa_family_t, sockaddr_vm, AF_VSOCK};
+use log::{debug, error, info, warn};
+use microdroid_payload_config::{ApexConfig, ApkConfig, Task, TaskType, VmPayloadConfig};
+use nix::unistd::pipe;
+use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
+    BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo, Vsock::Vsock,
+};
+use rpcbinder::RpcServer;
+use rustutils::system_properties;
+use semver::VersionReq;
+use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
+use std::ffi::CStr;
+use std::fs;
+use std::fs::{
+    canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions,
+};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
+use std::iter;
+use std::num::{NonZeroU16, NonZeroU32};
+use std::ops::Range;
+use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock, Mutex, Weak};
+use vbmeta::VbMetaImage;
+use virt_dropbox::build_dropbox_report;
+use vmconfig::{get_debug_level, VmConfig};
+use vsock::VsockStream;
+use zip::ZipArchive;
+
+/// The unique ID of a VM used (together with a port number) for vsock communication.
+pub type Cid = u32;
+
+pub const BINDER_SERVICE_IDENTIFIER: &str = "android.system.virtualizationservice";
+
+/// Vsock privileged ports are below this number.
+const VSOCK_PRIV_PORT_MAX: u32 = 1024;
+
+/// The size of zero.img.
+/// Gaps in composite disk images are filled with a shared zero.img.
+const ZERO_FILLER_SIZE: u64 = 4096;
+
+/// Magic string for the instance image
+const ANDROID_VM_INSTANCE_MAGIC: &str = "Android-VM-instance";
+
+/// Version of the instance image format
+const ANDROID_VM_INSTANCE_VERSION: u16 = 1;
+
+const MICRODROID_OS_NAME: &str = "microdroid";
+
+const VM_CAPABILITIES_HAL_IDENTIFIER: &str =
+    "android.hardware.virtualization.capabilities.IVmCapabilitiesService/default";
+
+const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
+
+/// crosvm requires all partitions to be a multiple of 4KiB.
+const PARTITION_GRANULARITY_BYTES: u64 = 4096;
+
+const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
+
+static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
+    Mutex::new(None);
+
+pub fn global_service() -> Strong<dyn aidl::IVirtualizationServiceInternal> {
+    use binder::IBinder; // for ping_binder
+
+    if cfg!(early) {
+        panic!("Early virtmgr must not connect to {BINDER_SERVICE_IDENTIFIER}")
+    }
+
+    let mut service = GLOBAL_SERVICE.lock().unwrap();
+    if service.is_none() || service.as_ref().unwrap().as_binder().ping_binder().is_err() {
+        *service = Some(
+            wait_for_interface(BINDER_SERVICE_IDENTIFIER)
+                .expect("Could not connect to {BINDER_SERVICE_IDENTIFIER}"),
+        );
+    }
+    service.as_ref().unwrap().clone()
+}
+
+static SUPPORTED_OS_NAMES: LazyLock<HashSet<String>> =
+    LazyLock::new(|| get_supported_os_names().expect("Failed to get list of supported os names"));
+
+static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
+    let calling_exe_link = format!("/proc/{}/exe", get_calling_pid());
+    match fs::read_link(&calling_exe_link) {
+        Ok(calling_exe_path) => Some(calling_exe_path),
+        Err(e) => {
+            // virtmgr forked from apps fails to read /proc probably due to hidepid=2. As we
+            // discourage vendor apps, regarding such cases as system is safer.
+            // TODO(b/383969737): determine if this is okay. Or find a way how to track origins of
+            // apps.
+            warn!("can't read_link '{calling_exe_link}': {e:?}; regarding as system");
+            None
+        }
+    }
+});
+
+const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
+
+fn check_known_tee_service(tee_service: &str) -> binder::Result<()> {
+    if !KNOWN_TEE_SERVICES.contains(&tee_service) {
+        return Err(anyhow!("unknown tee_service {tee_service}"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+    }
+    Ok(())
+}
+
+fn create_or_update_idsig_file(
+    input_fd: &ParcelFileDescriptor,
+    idsig_fd: &ParcelFileDescriptor,
+) -> Result<()> {
+    let mut input = clone_file(input_fd)?;
+    let metadata = input.metadata().context("failed to get input metadata")?;
+    if !metadata.is_file() {
+        bail!("input is not a regular file");
+    }
+    let mut sig =
+        V4Signature::create(&mut input, get_current_sdk()?, 4096, &[], HashAlgorithm::SHA256)
+            .context("failed to create idsig")?;
+
+    let mut output = clone_file(idsig_fd)?;
+
+    // Optimization. We don't have to update idsig file whenever a VM is started. Don't update it,
+    // if the idsig file already has the same APK digest.
+    if output.metadata()?.len() > 0 {
+        if let Ok(out_sig) = V4Signature::from_idsig(&mut output) {
+            if out_sig.signing_info.apk_digest == sig.signing_info.apk_digest {
+                debug!("idsig {:?} is up-to-date with apk {:?}.", output, input);
+                return Ok(());
+            }
+        }
+        // if we fail to read v4signature from output, that's fine. User can pass a random file.
+        // We will anyway overwrite the file to the v4signature generated from input_fd.
+    }
+
+    output
+        .seek(SeekFrom::Start(0))
+        .context("failed to move cursor to start on the idsig output")?;
+    output.set_len(0).context("failed to set_len on the idsig output")?;
+    sig.write_into(&mut output).context("failed to write idsig")?;
+    Ok(())
+}
+
+fn get_current_sdk() -> Result<u32> {
+    let current_sdk = system_properties::read("ro.build.version.sdk")?;
+    let current_sdk = current_sdk.ok_or_else(|| anyhow!("SDK version missing"))?;
+    current_sdk.parse().context("Malformed SDK version")
+}
+
+pub fn remove_temporary_files(path: &PathBuf) -> Result<()> {
+    for dir_entry in read_dir(path)? {
+        remove_file(dir_entry?.path())?;
+    }
+    Ok(())
+}
+
+/// Implementation of `IVirtualizationService`, the entry point of the AIDL service.
+#[derive(Debug, Default)]
+pub struct VirtualizationService {
+    pub state: Arc<Mutex<State>>,
+}
+
+impl Interface for VirtualizationService {
+    fn dump(&self, writer: &mut dyn Write, _args: &[&CStr]) -> Result<(), StatusCode> {
+        check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
+        let state = &mut *self.state.lock().unwrap();
+        let vms = state.vms();
+        writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
+        for vm in vms {
+            writeln!(writer, "VM CID: {}", vm.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\tState: {:?}", vm.vm_state.lock().unwrap())
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\tPayload state {:?}", vm.payload_state())
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\tProtected: {}", vm.protected).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\ttemporary_directory: {}", vm.temporary_directory.to_string_lossy())
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\trequester_uid: {}", vm.requester_uid)
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\trequester_debug_pid: {}", vm.requester_debug_pid)
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+        }
+        Ok(())
+    }
+}
+impl aidl::IVirtualizationService for VirtualizationService {
+    /// Creates (but does not start) a new VM with the given configuration, assigning it the next
+    /// available CID.
+    ///
+    /// Returns a binder `IVirtualMachine` object referring to it, as a handle for the client.
+    fn createVm(
+        &self,
+        config: &aidl::VirtualMachineConfig,
+        console_out_fd: Option<&ParcelFileDescriptor>,
+        console_in_fd: Option<&ParcelFileDescriptor>,
+        log_fd: Option<&ParcelFileDescriptor>,
+        dump_dt_fd: Option<&ParcelFileDescriptor>,
+    ) -> binder::Result<Strong<dyn aidl::IVirtualMachine>> {
+        let mut is_protected = false;
+        let ret = self.create_vm_internal(
+            config,
+            console_out_fd,
+            console_in_fd,
+            log_fd,
+            &mut is_protected,
+            dump_dt_fd,
+        );
+        write_vm_creation_stats(config, is_protected, &ret);
+        ret
+    }
+
+    /// Allocate a new instance_id to the VM
+    fn allocateInstanceId(&self) -> binder::Result<[u8; 64]> {
+        check_manage_access()?;
+        global_service().allocateInstanceId()
+    }
+
+    /// Initialise an empty partition image of the given size to be used as a writable partition.
+    fn initializeWritablePartition(
+        &self,
+        image_fd: &ParcelFileDescriptor,
+        size_bytes: i64,
+        partition_type: aidl::PartitionType,
+    ) -> binder::Result<()> {
+        check_manage_access()?;
+        let size_bytes = size_bytes
+            .try_into()
+            .with_context(|| format!("Invalid size: {}", size_bytes))
+            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?;
+        let size_bytes = round_up(size_bytes, PARTITION_GRANULARITY_BYTES);
+        let mut image = clone_file(image_fd)?;
+        // initialize the file. Any data in the file will be erased.
+        image
+            .seek(SeekFrom::Start(0))
+            .context("failed to move cursor to start")
+            .or_service_specific_exception(-1)?;
+        image.set_len(0).context("Failed to reset a file").or_service_specific_exception(-1)?;
+        // Set the file length. In most filesystems, this will not allocate any physical disk
+        // space, it will only change the logical size.
+        image
+            .set_len(size_bytes)
+            .context("Failed to extend file")
+            .or_service_specific_exception(-1)?;
+
+        use aidl::PartitionType;
+        match partition_type {
+            PartitionType::RAW => Ok(()),
+            PartitionType::ANDROID_VM_INSTANCE => format_as_android_vm_instance(&mut image),
+            PartitionType::ENCRYPTEDSTORE => format_as_encryptedstore(&mut image),
+            _ => Err(Error::new(
+                ErrorKind::Unsupported,
+                format!("Unsupported partition type {:?}", partition_type),
+            )),
+        }
+        .with_context(|| format!("Failed to initialize partition as {:?}", partition_type))
+        .or_service_specific_exception(-1)?;
+
+        Ok(())
+    }
+
+    fn setEncryptedStorageSize(
+        &self,
+        image_fd: &ParcelFileDescriptor,
+        size: i64,
+    ) -> binder::Result<()> {
+        check_manage_access()?;
+
+        let size = size
+            .try_into()
+            .with_context(|| format!("Invalid size: {}", size))
+            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?;
+        let size = round_up(size, PARTITION_GRANULARITY_BYTES);
+
+        let image = clone_file(image_fd)?;
+        let image_size = image.metadata().unwrap().len();
+
+        if image_size > size {
+            return Err(Status::new_exception_str(
+                ExceptionCode::ILLEGAL_ARGUMENT,
+                Some("Can't shrink encrypted storage"),
+            ));
+        }
+        // Reset the file length. In most filesystems, this will not allocate any physical disk
+        // space, it will only change the logical size.
+        image.set_len(size).context("Failed to extend file").or_service_specific_exception(-1)?;
+        Ok(())
+    }
+
+    /// Creates or update the idsig file by digesting the input APK file.
+    fn createOrUpdateIdsigFile(
+        &self,
+        input_fd: &ParcelFileDescriptor,
+        idsig_fd: &ParcelFileDescriptor,
+    ) -> binder::Result<()> {
+        check_manage_access()?;
+
+        create_or_update_idsig_file(input_fd, idsig_fd).or_service_specific_exception(-1)?;
+        Ok(())
+    }
+
+    /// Get a list of all currently running VMs. This method is only intended for debug purposes,
+    /// and as such is only permitted from the shell user.
+    fn debugListVms(&self) -> binder::Result<Vec<aidl::VirtualMachineDebugInfo>> {
+        // Delegate to the global service, including checking the debug permission.
+        global_service().debugListVms()
+    }
+
+    /// Get a list of assignable device types.
+    fn getAssignableDevices(&self) -> binder::Result<Vec<aidl::AssignableDevice>> {
+        // Delegate to the global service, including checking the permission.
+        global_service().getAssignableDevices()
+    }
+
+    /// Get a list of supported OSes.
+    fn getSupportedOSList(&self) -> binder::Result<Vec<String>> {
+        Ok(Vec::from_iter(SUPPORTED_OS_NAMES.iter().cloned()))
+    }
+
+    /// Get printable debug policy for testing and debugging
+    fn getDebugPolicy(&self) -> binder::Result<String> {
+        let debug_policy = DebugPolicy::from_host();
+        Ok(format!("{debug_policy:?}"))
+    }
+
+    /// Returns whether given feature is enabled
+    fn isFeatureEnabled(&self, feature: &str) -> binder::Result<bool> {
+        check_manage_access()?;
+        Ok(avf_features::is_feature_enabled(feature))
+    }
+
+    fn enableTestAttestation(&self) -> binder::Result<()> {
+        global_service().enableTestAttestation()
+    }
+
+    fn isRemoteAttestationSupported(&self) -> binder::Result<bool> {
+        check_manage_access()?;
+        global_service().isRemoteAttestationSupported()
+    }
+
+    fn isUpdatableVmSupported(&self) -> binder::Result<bool> {
+        // The response is specific to Microdroid. Updatable VMs are only possible if device
+        // supports Secretkeeper. Guest OS needs to use Secretkeeper based secrets. Microdroid does
+        // this, however other guest OSes may do things differently.
+        check_manage_access()?;
+        Ok(secretkeeper::is_supported())
+    }
+
+    fn removeVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
+        check_manage_access()?;
+        global_service().removeVmInstance(instance_id)
+    }
+
+    fn claimVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
+        check_manage_access()?;
+        global_service().claimVmInstance(instance_id)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum CallingPartition {
+    Odm,
+    Product,
+    System,
+    SystemExt,
+    Vendor,
+    Unknown,
+}
+
+impl CallingPartition {
+    fn as_str(&self) -> &'static str {
+        match self {
+            CallingPartition::Odm => "odm",
+            CallingPartition::Product => "product",
+            CallingPartition::System => "system",
+            CallingPartition::SystemExt => "system_ext",
+            CallingPartition::Vendor => "vendor",
+            CallingPartition::Unknown => "[unknown]",
+        }
+    }
+}
+
+impl std::fmt::Display for CallingPartition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+fn find_partition(path: Option<&Path>) -> binder::Result<CallingPartition> {
+    let Some(path) = path else {
+        return Ok(CallingPartition::System);
+    };
+    if path.starts_with("/system/system_ext/") {
+        return Ok(CallingPartition::SystemExt);
+    }
+    if path.starts_with("/system/product/") || path.starts_with("/mnt/product/") {
+        return Ok(CallingPartition::Product);
+    }
+    if path.starts_with("/data/nativetest/vendor/")
+        || path.starts_with("/data/nativetest64/vendor/")
+        || path.starts_with("/mnt/vendor/")
+    {
+        return Ok(CallingPartition::Vendor);
+    }
+
+    let partition = {
+        let mut components = path.components();
+        let Some(std::path::Component::Normal(partition)) = components.nth(1) else {
+            return Err(anyhow!("Can't find partition in '{}'", path.display()))
+                .or_service_specific_exception(-1);
+        };
+
+        // If path is under /apex, find a partition of the preinstalled .apex path
+        if partition == "apex" {
+            let Some(std::path::Component::Normal(apex_name)) = components.next() else {
+                return Err(anyhow!("Can't find apex name for '{}'", path.display()))
+                    .or_service_specific_exception(-1);
+            };
+            let apex_info_list = ApexInfoList::load()
+                .context("Failed to get apex info list")
+                .or_service_specific_exception(-1)?;
+            apex_info_list
+                .list
+                .iter()
+                .find(|apex_info| apex_info.name.as_str() == apex_name)
+                .map(|apex_info| apex_info.partition.to_lowercase())
+                .ok_or(anyhow!("Can't find apex info for {apex_name:?}"))
+                .or_service_specific_exception(-1)?
+        } else {
+            partition.to_string_lossy().into_owned()
+        }
+    };
+    Ok(match partition.as_str() {
+        "odm" => CallingPartition::Odm,
+        "product" => CallingPartition::Product,
+        "system" => CallingPartition::System,
+        "system_ext" => CallingPartition::SystemExt,
+        "vendor" => CallingPartition::Vendor,
+        _ => {
+            warn!("unknown partition for '{}'", path.display());
+            CallingPartition::Unknown
+        }
+    })
+}
+
+impl VirtualizationService {
+    pub fn init() -> VirtualizationService {
+        VirtualizationService::default()
+    }
+
+    fn create_early_vm_context(
+        &self,
+        config: &aidl::VirtualMachineConfig,
+        calling_exe_path: Option<&Path>,
+        calling_partition: CallingPartition,
+    ) -> binder::Result<(VmContext, Cid, PathBuf)> {
+        let name = match config {
+            aidl::VirtualMachineConfig::RawConfig(config) => &config.name,
+            aidl::VirtualMachineConfig::AppConfig(config) => &config.name,
+        };
+        let early_vm = find_early_vm_for_partition(calling_partition, name)
+            .or_service_specific_exception(-1)?;
+        let calling_exe_path = match calling_exe_path {
+            Some(path) => path,
+            None => {
+                return Err(anyhow!("Can't verify the path of PID {}", get_calling_pid()))
+                    .or_service_specific_exception(-1)
+            }
+        };
+        early_vm.check_exe_paths_match(calling_exe_path)?;
+
+        let cid = early_vm.cid as Cid;
+        let temp_dir = PathBuf::from(format!("/mnt/vm/early/{cid}"));
+        let _ = remove_dir_all(&temp_dir);
+        create_dir_all(&temp_dir)
+            .context(format!("can't create '{}'", temp_dir.display()))
+            .or_service_specific_exception(-1)?;
+
+        if requires_vm_service(config) {
+            // Start VM service listening for connections from the new CID on port=CID.
+            let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
+            let port = cid;
+            let (vm_server, _) = RpcServer::new_vsock(service, cid, port)
+                .context(format!("Could not start RpcServer on port {port}"))
+                .or_service_specific_exception(-1)?;
+            vm_server.start();
+            Ok((VmContext::new(Some(vm_server)), cid, temp_dir))
+        } else {
+            Ok((VmContext::new(None), cid, temp_dir))
+        }
+    }
+
+    fn create_vm_context(
+        &self,
+        config: &aidl::VirtualMachineConfig,
+    ) -> binder::Result<(VmContext, Cid, PathBuf)> {
+        const NUM_ATTEMPTS: usize = 5;
+        for _ in 0..NUM_ATTEMPTS {
+            let vm_context = global_service().allocateVmContext()?;
+            let cid = vm_context.cid as Cid;
+            let temp_dir: PathBuf = vm_context.tempDir.clone().into();
+
+            // We don't need to start the VM service for custom VMs.
+            if !requires_vm_service(config) {
+                return Ok((VmContext::new(None), cid, temp_dir));
+            }
+
+            let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
+
+            // Start VM service listening for connections from the new CID on port=CID.
+            let port = cid;
+            match RpcServer::new_vsock(service, cid, port) {
+                Ok((vm_server, _)) => {
+                    vm_server.start();
+                    return Ok((VmContext::new(Some(vm_server)), cid, temp_dir));
+                }
+                Err(err) => {
+                    warn!("Could not start RpcServer on port {}: {}", port, err);
+                }
+            }
+        }
+        Err(anyhow!("Too many attempts to create VM context failed"))
+            .or_service_specific_exception(-1)
+    }
+
+    fn create_vm_internal(
+        &self,
+        config: &aidl::VirtualMachineConfig,
+        console_out_fd: Option<&ParcelFileDescriptor>,
+        console_in_fd: Option<&ParcelFileDescriptor>,
+        log_fd: Option<&ParcelFileDescriptor>,
+        is_protected: &mut bool,
+        dump_dt_fd: Option<&ParcelFileDescriptor>,
+    ) -> binder::Result<Strong<dyn aidl::IVirtualMachine>> {
+        let requester_uid = get_calling_uid();
+        let requester_debug_pid = get_calling_pid();
+
+        let calling_partition = find_partition(CALLING_EXE_PATH.as_deref())?;
+
+        let instance_id = extract_instance_id(config);
+
+        let encrypted_store_kek = extract_encrypted_store_kek(config);
+
+        // Require vendor instance IDs to start with a specific prefix so that they don't conflict
+        // with system instance IDs.
+        //
+        // We should also make sure that non-vendor VMs do not use the vendor prefix, but there are
+        // already system VMs in the wild that may have randomly generated IDs with the prefix, so,
+        // for now, we only check in one direction.
+        const INSTANCE_ID_VENDOR_PREFIX: &[u8] = &[0xFF, 0xFF, 0xFF, 0xFF];
+        if matches!(calling_partition, CallingPartition::Vendor | CallingPartition::Odm)
+            && !instance_id.starts_with(INSTANCE_ID_VENDOR_PREFIX)
+        {
+            return Err(anyhow!(
+                "vendor initiated VMs must have instance IDs starting with 0xFFFFFFFF, got {}",
+                hex::encode(instance_id)
+            ))
+            .or_service_specific_exception(-1);
+        }
+
+        check_config_features(config)?;
+
+        if cfg!(early) {
+            check_config_allowed_for_early_vms(config)?;
+        }
+
+        let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
+        info!("callers secontext: {}", caller_secontext);
+
+        // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
+        let (vm_context, cid, temporary_directory) = if cfg!(early) {
+            self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref(), calling_partition)?
+        } else {
+            self.create_vm_context(config)?
+        };
+
+        if is_custom_config(config) {
+            check_use_custom_virtual_machine()?;
+        }
+
+        let gdb_port = extract_gdb_port(config);
+
+        // Additional permission checks if caller request gdb.
+        if gdb_port.is_some() {
+            check_gdb_allowed(config)?;
+        }
+
+        let mut device_tree_overlays = vec![];
+        if let Some(dt_overlay) =
+            maybe_create_reference_dt_overlay(config, &instance_id, &temporary_directory)?
+        {
+            device_tree_overlays.push(dt_overlay);
+        }
+        if let Some(dtbo) = get_dtbo(config) {
+            let dtbo = File::from(
+                dtbo.as_ref()
+                    .try_clone()
+                    .context("Failed to create VM DTBO from ParcelFileDescriptor")
+                    .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
+            );
+            device_tree_overlays.push(dtbo);
+        }
+
+        let debug_config = DebugConfig::new(config);
+        let ramdump = if !uses_gki_kernel(config) && debug_config.is_ramdump_needed() {
+            Some(prepare_ramdump_file(&temporary_directory)?)
+        } else {
+            None
+        };
+
+        let state = &mut *self.state.lock().unwrap();
+        let (console_out_fd, console_join_handle) =
+            clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
+        let console_in_fd = console_in_fd.map(clone_file).transpose()?;
+        let (log_fd, log_join_handle) =
+            clone_or_prepare_logger_fd(log_fd, format!("Log({})", cid))?;
+        let dump_dt_fd = if let Some(fd) = dump_dt_fd {
+            Some(clone_file(fd)?)
+        } else if debug_config.dump_device_tree {
+            Some(prepare_dump_dt_file(&temporary_directory)?)
+        } else {
+            None
+        };
+
+        // Counter to generate unique IDs for temporary image files.
+        let mut next_temporary_image_id = 0;
+        // Files which are referred to from composite images. These must be mapped to the crosvm
+        // child process, and not closed before it is started.
+        let mut indirect_files = vec![];
+
+        let (is_app_config, config) = match config {
+            aidl::VirtualMachineConfig::RawConfig(config) => {
+                (false, BorrowedOrOwned::Borrowed(config))
+            }
+            aidl::VirtualMachineConfig::AppConfig(config) => {
+                let config = load_app_config(config, &debug_config, &temporary_directory)
+                    .or_service_specific_exception_with(-1, |e| {
+                        *is_protected = config.protectedVm;
+                        let message = format!("Failed to load app config: {:?}", e);
+                        error!("{}", message);
+                        message
+                    })?;
+                (true, BorrowedOrOwned::Owned(config))
+            }
+        };
+        let config = config.as_ref();
+        *is_protected = config.protectedVm;
+
+        if !config.teeServices.is_empty() {
+            if !config.protectedVm {
+                return Err(anyhow!("only protected VMs can request tee services"))
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+            }
+            check_tee_service_permission(&caller_secontext, &config.teeServices)
+                .with_log()
+                .or_binder_exception(ExceptionCode::SECURITY)?;
+        }
+
+        let mut system_tee_services = Vec::new();
+        let mut vendor_tee_services = Vec::new();
+        for tee_service in config.teeServices.clone() {
+            if !tee_service.starts_with("vendor.") {
+                check_known_tee_service(&tee_service)?;
+                system_tee_services.push(tee_service);
+            } else {
+                vendor_tee_services.push(tee_service);
+            }
+        }
+
+        if !vendor_tee_services.is_empty() && !is_vm_capabilities_hal_supported() {
+            return Err(anyhow!(
+                "requesting access to tee services requires {VM_CAPABILITIES_HAL_IDENTIFIER}"
+            ))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+
+        // Verify the VM owner has permissions to get all of these host services
+        // now to get early feedback. Each individual service is checked again
+        // when the client in the VM is requesting the specific services.
+        if !config.hostServices.is_empty() {
+            check_host_service_permission(
+                &caller_secontext,
+                &config.hostServices,
+                requester_debug_pid,
+                requester_uid,
+            )
+            .with_log()
+            .or_binder_exception(ExceptionCode::SECURITY)?;
+        }
+        let kernel = maybe_clone_file(&config.kernel)?;
+        let initrd = maybe_clone_file(&config.initrd)?;
+
+        if config.protectedVm {
+            // Fail fast with a meaningful error message in case device doesn't support pVMs.
+            check_protected_vm_is_supported()?;
+
+            // In a protected VM, we require custom kernels to come from a trusted source
+            // (b/237054515).
+            check_label_for_kernel_files(&kernel, &initrd, calling_partition)
+                .or_service_specific_exception(-1)?;
+
+            // Check if partition images are labeled incorrectly. This is to prevent random images
+            // which are not protected by the Android Verified Boot (e.g. bits downloaded by apps)
+            // from being loaded in a pVM. This applies to everything but the instance image in the
+            // raw config, and everything but the non-executable, generated partitions in the app
+            // config.
+            config
+                .disks
+                .iter()
+                .flat_map(|disk| disk.image.as_ref())
+                .try_for_each(|image| check_label_for_file(image, "disk image", calling_partition))
+                .or_service_specific_exception(-1)?;
+            config
+                .disks
+                .iter()
+                .flat_map(|disk| disk.partitions.iter())
+                .filter(|partition| {
+                    if is_app_config {
+                        !is_safe_app_partition(&partition.label)
+                    } else {
+                        !is_safe_raw_partition(&partition.label)
+                    }
+                })
+                .try_for_each(|partition| check_label_for_partition(partition, calling_partition))
+                .or_service_specific_exception(-1)?;
+        }
+
+        // Check if files for payloads and bases are on the same side of the Treble boundary as the
+        // calling process, as they may have unstable interfaces.
+        check_partitions_for_files(config, calling_partition).or_service_specific_exception(-1)?;
+
+        let zero_filler_path = temporary_directory.join("zero.img");
+        write_zero_filler(&zero_filler_path)
+            .context("Failed to make composite image")
+            .with_log()
+            .or_service_specific_exception(-1)?;
+
+        // Assemble disk images if needed.
+        let disks = config
+            .disks
+            .iter()
+            .map(|disk| {
+                assemble_disk_image(
+                    disk,
+                    &zero_filler_path,
+                    &temporary_directory,
+                    &mut next_temporary_image_id,
+                    &mut indirect_files,
+                )
+            })
+            .collect::<Result<Vec<DiskFile>, _>>()?;
+
+        let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
+
+        let (vfio_devices, dtbo) = match &config.devices {
+            aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
+                let mut set = HashSet::new();
+                for device in devices.iter() {
+                    let path = canonicalize(device)
+                        .with_context(|| format!("can't canonicalize {device}"))
+                        .or_service_specific_exception(-1)?;
+                    if !set.insert(path) {
+                        return Err(anyhow!("duplicated device {device}"))
+                            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
+                    }
+                }
+                let devices = global_service().bindDevicesToVfioDriver(devices)?;
+                let dtbo_file = File::from(
+                    global_service()
+                        .getDtboFile()?
+                        .as_ref()
+                        .try_clone()
+                        .context("Failed to create VM DTBO from ParcelFileDescriptor")
+                        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
+                );
+                (devices, Some(dtbo_file))
+            }
+            _ => (vec![], None),
+        };
+        let display_config = if cfg!(paravirtualized_devices) {
+            config
+                .displayConfig
+                .as_ref()
+                .map(DisplayConfig::new)
+                .transpose()
+                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
+        } else {
+            None
+        };
+        let gpu_config = if cfg!(paravirtualized_devices) {
+            config
+                .gpuConfig
+                .as_ref()
+                .map(GpuConfig::new)
+                .transpose()
+                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
+        } else {
+            None
+        };
+
+        let input_device_options = if cfg!(paravirtualized_devices) {
+            config
+                .inputDevices
+                .iter()
+                .map(to_input_device_option_from)
+                .collect::<Result<Vec<InputDeviceOption>, _>>()
+                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
+        } else {
+            vec![]
+        };
+
+        // Create TAP network interface if the VM supports network.
+        let tap = if cfg!(network) && config.networkSupported {
+            if *is_protected {
+                return Err(anyhow!("Network feature is not supported for pVM yet"))
+                    .with_log()
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)?;
+            }
+            Some(File::from(
+                global_service()
+                    .createTapInterface(&get_this_pid().to_string())?
+                    .as_ref()
+                    .try_clone()
+                    .context("Failed to get TAP interface from ParcelFileDescriptor")
+                    .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
+            ))
+        } else {
+            None
+        };
+
+        let audio_config = if cfg!(paravirtualized_devices) {
+            config.audioConfig.as_ref().map(AudioConfig::new)
+        } else {
+            None
+        };
+
+        let usb_config = config
+            .usbConfig
+            .as_ref()
+            .map(UsbConfig::new)
+            .unwrap_or(Ok(UsbConfig { controller: false }))
+            .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?;
+
+        let detect_hangup = is_app_config && gdb_port.is_none();
+
+        let custom_memory_backing_files = config
+            .customMemoryBackingFiles
+            .iter()
+            .map(|memory_backing_file| {
+                Ok((
+                    clone_file(
+                        memory_backing_file
+                            .file
+                            .as_ref()
+                            .context("missing CustomMemoryBackingFile FD")
+                            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?,
+                    )?
+                    .into(),
+                    memory_backing_file.rangeStart as u64,
+                    memory_backing_file.size as u64,
+                ))
+            })
+            .collect::<binder::Result<_>>()?;
+
+        let memory_reclaim_supported =
+            system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
+                .unwrap_or(false);
+
+        let balloon = config.balloon && memory_reclaim_supported;
+
+        if !balloon {
+            warn!(
+                "Memory balloon not enabled:
+                config.balloon={},hypervisor.memory_reclaim.supported={}",
+                config.balloon, memory_reclaim_supported
+            );
+        }
+
+        // It is too late to add a system API to control the ballooning behavior, so we automically
+        // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
+        // permission as a temporarily solution.
+        // TODO(b/407079334): Replace with SystemApi.
+        let trim_under_pressure =
+            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
+
+        // Actually start the VM.
+        let crosvm_config = CrosvmConfig {
+            cid,
+            name: config.name.clone(),
+            bootloader: maybe_clone_file(&config.bootloader)?,
+            kernel,
+            initrd,
+            disks,
+            shared_paths,
+            params: config.params.to_owned(),
+            protected: *is_protected,
+            debug_config,
+            memory_mib: config
+                .memoryMib
+                .try_into()
+                .ok()
+                .and_then(NonZeroU32::new)
+                .unwrap_or(NonZeroU32::new(256).unwrap()),
+            swiotlb_mib: config.swiotlbMib.try_into().ok().and_then(NonZeroU32::new),
+            cpus: config.cpuOptions.clone(),
+            console_out_fd,
+            console_in_fd,
+            log_fd,
+            ramdump,
+            indirect_files,
+            platform_version: parse_platform_version_req(&config.platformVersion)?,
+            detect_hangup,
+            gdb_port,
+            vfio_devices,
+            dtbo,
+            device_tree_overlays,
+            display_config,
+            input_device_options,
+            hugepages: config.hugePages,
+            tap,
+            console_input_device: config.consoleInputDevice.clone(),
+            boost_uclamp: config.boostUclamp,
+            gpu_config,
+            audio_config,
+            balloon,
+            usb_config,
+            dump_dt_fd,
+            enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
+            instance_id,
+            custom_memory_backing_files,
+            start_suspended: !vendor_tee_services.is_empty(),
+            enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
+        };
+        let instance = Arc::new(
+            VmInstance::new(
+                crosvm_config,
+                temporary_directory,
+                requester_uid,
+                requester_debug_pid,
+                console_join_handle,
+                log_join_handle,
+                vm_context,
+                trim_under_pressure,
+                vendor_tee_services,
+                config.hostServices.clone(),
+                encrypted_store_kek,
+            )
+            .with_context(|| format!("Failed to create VM with config {:?}", config))
+            .with_log()
+            .or_service_specific_exception(-1)?,
+        );
+        state.add_vm(Arc::downgrade(&instance));
+
+        let vm = VirtualMachine::create(instance);
+
+        register_to_global_service(&vm)
+            .context(format!("Failed to register VM ({cid}) to the global service"))
+            .or_service_specific_exception(-1)?;
+
+        Ok(vm)
+    }
+}
+
+/// Register the VM to the global service so that the list of all VMs in the system can be
+/// retrieved via the global service. Also set up a death recipient so that the VMs are "re"
+/// registered to the global service if the service goes down and then is brought up again.
+fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder::Result<()> {
+    use binder::binder_impl::Binder;
+    if cfg!(early) {
+        return Ok(());
+    }
+
+    // Dereference `VmInstance` from the strong pointer to IVirtualMachine.
+    let local_binder: Binder<aidl::BnVirtualMachine> =
+        vm.as_binder().try_into().expect("Strong<dyn aidl::IVirtualMachine> is not a local binder");
+    let obj = local_binder
+        .downcast_binder::<VirtualMachine>()
+        .expect("IVirtualMachine is not implemented by VirtualMachine");
+    let instance = &obj.instance;
+
+    let cid = instance.cid;
+    global_service().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+
+    let weak_vm = Strong::downgrade(vm);
+    let mut dr = DeathRecipient::new(move || {
+        // No need to re-register the VM if it's already dead
+        if let Ok(vm) = weak_vm.upgrade() {
+            let _ = register_to_global_service(&vm).map_err(|e| {
+                error!("Failed to re-register VM ({cid}) to the global service: {e:?}")
+            });
+        }
+    });
+    global_service().as_binder().link_to_death(&mut dr)?;
+
+    // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
+    // automatically unlinked.
+    *instance.global_service_death_recipient.lock().unwrap() = Some(dr);
+    Ok(())
+}
+
+/// Returns whether a VM config represents a "custom" virtual machine, which requires the
+/// USE_CUSTOM_VIRTUAL_MACHINE.
+fn is_custom_config(config: &aidl::VirtualMachineConfig) -> bool {
+    match config {
+        // Any raw (non-Microdroid) VM is considered custom.
+        aidl::VirtualMachineConfig::RawConfig(_) => true,
+        aidl::VirtualMachineConfig::AppConfig(config) => {
+            // Some features are reserved for platform apps only, even when using
+            // VirtualMachineAppConfig. Almost all of these features are grouped in the
+            // CustomConfig struct:
+            // - controlling CPUs;
+            // - gdbPort is set, meaning that crosvm will start a gdb server;
+            // - using anything other than the default kernel;
+            // - specifying devices to be assigned.
+            if config.customConfig.is_some() {
+                true
+            } else {
+                // Additional custom features not included in CustomConfig:
+                // - specifying a config file;
+                // - specifying extra APKs;
+                // - specifying an OS other than Microdroid.
+                (match &config.payload {
+                    aidl::Payload::ConfigPath(_) => true,
+                    aidl::Payload::PayloadConfig(payload_config) => {
+                        !payload_config.extraApks.is_empty()
+                    }
+                }) || config.osName != MICRODROID_OS_NAME
+            }
+        }
+    }
+}
+
+/// Returns whether a VM config requires VirtualMachineService running on the host. Only Microdroid
+/// VM (i.e. AppConfig) requires it. However, a few Microdroid tests use RawConfig for Microdroid
+/// VM. To handle the exceptional case, we use name as a second criteria; if the name is
+/// "microdroid" we run VirtualMachineService
+fn requires_vm_service(config: &aidl::VirtualMachineConfig) -> bool {
+    match config {
+        aidl::VirtualMachineConfig::AppConfig(_) => true,
+        aidl::VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
+    }
+}
+
+fn extract_vendor_hashtree_digest(config: &aidl::VirtualMachineConfig) -> Result<Option<Vec<u8>>> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else {
+        return Ok(None);
+    };
+    let Some(custom_config) = &config.customConfig else {
+        return Ok(None);
+    };
+    let Some(file) = custom_config.vendorImage.as_ref() else {
+        return Ok(None);
+    };
+
+    let file = clone_file(file)?;
+    let size =
+        file.metadata().context("Failed to get metadata from microdroid vendor image")?.len();
+    let vbmeta = VbMetaImage::verify_reader_region(&file, 0, size)
+        .context("Failed to get vbmeta from microdroid-vendor.img")?;
+
+    for descriptor in vbmeta.descriptors()?.iter() {
+        if let vbmeta::Descriptor::Hashtree(_) = descriptor {
+            let root_digest = hex::encode(descriptor.to_hashtree()?.root_digest());
+            return Ok(Some(root_digest.as_bytes().to_vec()));
+        }
+    }
+    Err(anyhow!("No hashtree digest is extracted from microdroid vendor image"))
+}
+
+fn maybe_create_reference_dt_overlay(
+    config: &aidl::VirtualMachineConfig,
+    instance_id: &[u8; 64],
+    temporary_directory: &Path,
+) -> binder::Result<Option<File>> {
+    // Currently, VirtMgr adds the host copy of reference DT & untrusted properties
+    // (e.g. instance-id)
+    let host_ref_dt = Path::new(VM_REFERENCE_DT_ON_HOST_PATH);
+    let host_ref_dt = if host_ref_dt.exists()
+        && read_dir(host_ref_dt).or_service_specific_exception(-1)?.next().is_some()
+    {
+        Some(host_ref_dt)
+    } else {
+        warn!("VM reference DT doesn't exist in host DT");
+        None
+    };
+
+    let vendor_hashtree_digest = extract_vendor_hashtree_digest(config)
+        .context("Failed to extract vendor hashtree digest")
+        .or_service_specific_exception(-1)?;
+
+    let mut trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
+        info!(
+            "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
+                match the trusted digest in the pvmfw config, causing the VM to fail to start."
+        );
+        vec![(c"vendor_hashtree_descriptor_root_digest", vendor_hashtree_digest.as_slice())]
+    } else {
+        vec![]
+    };
+
+    let key_material;
+    let mut untrusted_props = Vec::with_capacity(2);
+    if cfg!(llpvm_changes) {
+        untrusted_props.push((c"instance-id", &instance_id[..]));
+        let want_updatable = extract_want_updatable(config);
+        if want_updatable && secretkeeper::is_supported() {
+            // Let guest know that it can defer rollback protection to Secretkeeper by setting
+            // an empty property in untrusted node in DT. This enables Updatable VMs.
+            untrusted_props.push((c"defer-rollback-protection", &[]));
+            let sk: Strong<dyn aidl::ISecretkeeper> =
+                binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
+            if sk.getInterfaceVersion()? >= 2 {
+                let aidl::PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
+                key_material = keyMaterial;
+                trusted_props.push((c"secretkeeper_public_key", key_material.as_slice()));
+            }
+        }
+    }
+
+    let device_tree_overlay = if host_ref_dt.is_some()
+        || !untrusted_props.is_empty()
+        || !trusted_props.is_empty()
+    {
+        let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
+        let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let fdt =
+            create_device_tree_overlay(&mut data, host_ref_dt, &untrusted_props, &trusted_props)
+                .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
+                .or_service_specific_exception(-1)?;
+        fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
+        Some(File::open(dt_output).or_service_specific_exception(-1)?)
+    } else {
+        None
+    };
+    Ok(device_tree_overlay)
+}
+
+fn get_dtbo(config: &aidl::VirtualMachineConfig) -> Option<&ParcelFileDescriptor> {
+    let aidl::VirtualMachineConfig::RawConfig(config) = config else {
+        return None;
+    };
+    match &config.devices {
+        aidl::AssignedDevices::Dtbo(dtbo) => dtbo.as_ref(),
+        _ => None,
+    }
+}
+
+fn write_zero_filler(zero_filler_path: &Path) -> Result<()> {
+    let file = OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(zero_filler_path)
+        .with_context(|| "Failed to create zero.img")?;
+    file.set_len(ZERO_FILLER_SIZE)?;
+    Ok(())
+}
+
+fn format_as_android_vm_instance(part: &mut dyn Write) -> std::io::Result<()> {
+    part.write_all(ANDROID_VM_INSTANCE_MAGIC.as_bytes())?;
+    part.write_all(&ANDROID_VM_INSTANCE_VERSION.to_le_bytes())?;
+    part.flush()
+}
+
+fn format_as_encryptedstore(part: &mut dyn Write) -> std::io::Result<()> {
+    part.write_all(UNFORMATTED_STORAGE_MAGIC.as_bytes())?;
+    part.flush()
+}
+
+fn round_up(input: u64, granularity: u64) -> u64 {
+    if granularity == 0 {
+        return input;
+    }
+    // If the input is absurdly large we round down instead of up; it's going to fail anyway.
+    let result = input.checked_add(granularity - 1).unwrap_or(input);
+    (result / granularity) * granularity
+}
+
+fn to_input_device_option_from(input_device: &aidl::InputDevice) -> Result<InputDeviceOption> {
+    use aidl::InputDevice;
+    Ok(match input_device {
+        InputDevice::SingleTouch(single_touch) => InputDeviceOption::SingleTouch {
+            file: clone_file(single_touch.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
+            height: u32::try_from(single_touch.height)?,
+            width: u32::try_from(single_touch.width)?,
+            name: if !single_touch.name.is_empty() {
+                Some(single_touch.name.clone())
+            } else {
+                None
+            },
+        },
+        InputDevice::EvDev(evdev) => InputDeviceOption::EvDev(clone_file(
+            evdev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
+        InputDevice::Keyboard(keyboard) => InputDeviceOption::Keyboard(clone_file(
+            keyboard.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
+        InputDevice::Mouse(mouse) => InputDeviceOption::Mouse(clone_file(
+            mouse.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
+        InputDevice::Switches(switches) => InputDeviceOption::Switches(clone_file(
+            switches.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
+        )?),
+        InputDevice::Trackpad(trackpad) => InputDeviceOption::MultiTouchTrackpad {
+            file: clone_file(trackpad.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
+            height: u32::try_from(trackpad.height)?,
+            width: u32::try_from(trackpad.width)?,
+            name: if !trackpad.name.is_empty() { Some(trackpad.name.clone()) } else { None },
+        },
+        InputDevice::MultiTouch(multi_touch) => InputDeviceOption::MultiTouch {
+            file: clone_file(multi_touch.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
+            height: u32::try_from(multi_touch.height)?,
+            width: u32::try_from(multi_touch.width)?,
+            name: if !multi_touch.name.is_empty() { Some(multi_touch.name.clone()) } else { None },
+        },
+    })
+}
+
+fn assemble_shared_paths(
+    shared_paths: &[aidl::SharedPath],
+    temporary_directory: &Path,
+) -> Result<Vec<SharedPathConfig>, Status> {
+    if shared_paths.is_empty() {
+        return Ok(Vec::new()); // Return an empty vector if shared_paths is empty
+    }
+
+    shared_paths
+        .iter()
+        .map(|path| {
+            Ok(SharedPathConfig {
+                path: path.sharedPath.clone(),
+                host_uid: path.hostUid,
+                host_gid: path.hostGid,
+                guest_uid: path.guestUid,
+                guest_gid: path.guestGid,
+                mask: path.mask,
+                tag: path.tag.clone(),
+                socket_path: temporary_directory
+                    .join(&path.socketPath)
+                    .to_string_lossy()
+                    .to_string(),
+                socket_fd: maybe_clone_file(&path.socketFd)?,
+                app_domain: path.appDomain,
+            })
+        })
+        .collect()
+}
+
+/// Given the configuration for a disk image, assembles the `DiskFile` to pass to crosvm.
+///
+/// This may involve assembling a composite disk from a set of partition images.
+fn assemble_disk_image(
+    disk: &aidl::DiskImage,
+    zero_filler_path: &Path,
+    temporary_directory: &Path,
+    next_temporary_image_id: &mut u64,
+    indirect_files: &mut Vec<File>,
+) -> Result<DiskFile, Status> {
+    let image = if !disk.partitions.is_empty() {
+        if disk.image.is_some() {
+            warn!("DiskImage {:?} contains both image and partitions.", disk);
+            return Err(anyhow!("DiskImage contains both image and partitions"))
+                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
+        }
+
+        let composite_image_filenames =
+            make_composite_image_filenames(temporary_directory, next_temporary_image_id);
+        let (image, partition_files) = make_composite_image(
+            &disk.partitions,
+            zero_filler_path,
+            &composite_image_filenames.composite,
+            &composite_image_filenames.header,
+            &composite_image_filenames.footer,
+        )
+        .with_context(|| format!("Failed to make composite disk image with config {:?}", disk))
+        .with_log()
+        .or_service_specific_exception(-1)?;
+
+        // Pass the file descriptors for the various partition files to crosvm when it
+        // is run.
+        indirect_files.extend(partition_files);
+
+        image
+    } else if let Some(image) = &disk.image {
+        clone_file(image)?
+    } else {
+        warn!("DiskImage {:?} didn't contain image or partitions.", disk);
+        return Err(anyhow!("DiskImage didn't contain image or partitions."))
+            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
+    };
+
+    Ok(DiskFile { image, writable: disk.writable })
+}
+
+fn append_kernel_param(param: &str, vm_config: &mut aidl::VirtualMachineRawConfig) {
+    if let Some(ref mut params) = vm_config.params {
+        params.push(' ');
+        params.push_str(param)
+    } else {
+        vm_config.params = Some(param.to_owned())
+    }
+}
+
+fn extract_os_name_from_config_path(config: &Path) -> Option<String> {
+    if config.extension()?.to_str()? != "json" {
+        return None;
+    }
+
+    Some(config.with_extension("").file_name()?.to_str()?.to_owned())
+}
+
+fn extract_os_names_from_configs(config_glob_pattern: &str) -> Result<HashSet<String>> {
+    let configs = glob(config_glob_pattern)?.collect::<Result<Vec<_>, _>>()?;
+    let os_names =
+        configs.iter().filter_map(|x| extract_os_name_from_config_path(x)).collect::<HashSet<_>>();
+
+    Ok(os_names)
+}
+
+fn get_supported_os_names() -> Result<HashSet<String>> {
+    if !cfg!(vendor_modules) {
+        return Ok(iter::once(MICRODROID_OS_NAME.to_owned()).collect());
+    }
+
+    extract_os_names_from_configs("/apex/com.android.virt/etc/microdroid*.json")
+}
+
+fn is_valid_os(os_name: &str) -> bool {
+    SUPPORTED_OS_NAMES.contains(os_name)
+}
+
+fn uses_gki_kernel(config: &aidl::VirtualMachineConfig) -> bool {
+    if !cfg!(vendor_modules) {
+        return false;
+    }
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(_) => false,
+        aidl::VirtualMachineConfig::AppConfig(config) => {
+            config.osName.starts_with("microdroid_gki-")
+        }
+    }
+}
+
+fn load_app_config(
+    config: &aidl::VirtualMachineAppConfig,
+    debug_config: &DebugConfig,
+    temporary_directory: &Path,
+) -> Result<aidl::VirtualMachineRawConfig> {
+    let apk_file = clone_file(config.apk.as_ref().unwrap())?;
+    let idsig_file = clone_file(config.idsig.as_ref().unwrap())?;
+    let instance_file = clone_file(config.instanceImage.as_ref().unwrap())?;
+
+    let storage_image = if let Some(file) = config.encryptedStorageImage.as_ref() {
+        Some(clone_file(file)?)
+    } else {
+        None
+    };
+
+    let vm_payload_config;
+    let extra_apk_files: Vec<_>;
+    match &config.payload {
+        aidl::Payload::ConfigPath(config_path) => {
+            vm_payload_config =
+                load_vm_payload_config_from_file(&apk_file, config_path.as_str())
+                    .with_context(|| format!("Couldn't read config from {}", config_path))?;
+            extra_apk_files = vm_payload_config
+                .extra_apks
+                .iter()
+                .enumerate()
+                .map(|(i, apk)| {
+                    File::open(PathBuf::from(&apk.path))
+                        .with_context(|| format!("Failed to open extra apk #{i} {}", apk.path))
+                })
+                .collect::<Result<_>>()?;
+        }
+        aidl::Payload::PayloadConfig(payload_config) => {
+            vm_payload_config = create_vm_payload_config(payload_config)?;
+            extra_apk_files =
+                payload_config.extraApks.iter().map(clone_file).collect::<binder::Result<_>>()?;
+        }
+    };
+
+    let payload_config_os = vm_payload_config.os.name.as_str();
+    if !payload_config_os.is_empty() && payload_config_os != "microdroid" {
+        bail!("'os' in payload config is deprecated");
+    }
+
+    // For now, the only supported OS is Microdroid and Microdroid GKI
+    let os_name = config.osName.as_str();
+    if !is_valid_os(os_name) {
+        bail!("Unknown OS \"{}\"", os_name);
+    }
+
+    // It is safe to construct a filename based on the os_name because we've already checked that it
+    // is one of the allowed values.
+    let vm_config_path = PathBuf::from(format!("/apex/com.android.virt/etc/{}.json", os_name));
+    let vm_config_file = File::open(vm_config_path)?;
+    let mut vm_config = VmConfig::load(&vm_config_file)?.to_parcelable()?;
+
+    if let Some(custom_config) = &config.customConfig {
+        if let Some(file) = custom_config.customKernelImage.as_ref() {
+            vm_config.kernel = Some(ParcelFileDescriptor::new(clone_file(file)?))
+        }
+        vm_config.gdbPort = custom_config.gdbPort;
+
+        if let Some(file) = custom_config.vendorImage.as_ref() {
+            add_microdroid_vendor_image(clone_file(file)?, &mut vm_config);
+            append_kernel_param("androidboot.microdroid.mount_vendor=1", &mut vm_config)
+        }
+
+        vm_config.devices = aidl::AssignedDevices::Devices(custom_config.devices.clone());
+        vm_config.networkSupported = custom_config.networkSupported;
+
+        for param in custom_config.extraKernelCmdlineParams.iter() {
+            append_kernel_param(param, &mut vm_config);
+        }
+
+        vm_config.teeServices.clone_from(&custom_config.teeServices);
+    }
+
+    if config.memoryMib > 0 {
+        vm_config.memoryMib = config.memoryMib;
+    }
+
+    vm_config.name.clone_from(&config.name);
+    vm_config.protectedVm = config.protectedVm;
+    vm_config.cpuOptions = config.cpuOptions.clone();
+    vm_config.hugePages = config.hugePages || vm_payload_config.hugepages;
+    vm_config.boostUclamp = config.boostUclamp;
+    vm_config.hostServices = config.hostServices.clone();
+
+    // Microdroid takes additional init ramdisk & (optionally) storage image
+    add_microdroid_system_images(config, instance_file, storage_image, os_name, &mut vm_config)?;
+
+    // Include Microdroid payload disk (contains apks, idsigs) in vm config
+    add_microdroid_payload_images(
+        config,
+        debug_config,
+        temporary_directory,
+        apk_file,
+        idsig_file,
+        extra_apk_files,
+        &vm_payload_config,
+        &mut vm_config,
+    )?;
+
+    Ok(vm_config)
+}
+
+fn check_partition_for_file(
+    fd: &ParcelFileDescriptor,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    let path = format!("/proc/self/fd/{}", fd.as_raw_fd());
+    let link = fs::read_link(&path).with_context(|| format!("can't read_link {path}"))?;
+
+    // microdroid vendor image is OK
+    if cfg!(vendor_modules) && link == Path::new("/vendor/etc/avf/microdroid/microdroid_vendor.img")
+    {
+        return Ok(());
+    }
+
+    let fd_partition = find_partition(Some(&link))
+        .with_context(|| format!("can't find_partition {}", link.display()))?;
+    let is_fd_vendor =
+        fd_partition == CallingPartition::Vendor || fd_partition == CallingPartition::Odm;
+    let is_caller_vendor =
+        calling_partition == CallingPartition::Vendor || calling_partition == CallingPartition::Odm;
+
+    if is_fd_vendor != is_caller_vendor {
+        bail!("{} can't be used for VM client in {calling_partition}", link.display());
+    }
+
+    Ok(())
+}
+
+fn check_partitions_for_files(
+    config: &aidl::VirtualMachineRawConfig,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    config
+        .disks
+        .iter()
+        .flat_map(|disk| disk.partitions.iter())
+        .filter_map(|partition| partition.image.as_ref())
+        .try_for_each(|fd| check_partition_for_file(fd, calling_partition))?;
+
+    config
+        .disks
+        .iter()
+        .filter_map(|disk| disk.image.as_ref())
+        .try_for_each(|fd| check_partition_for_file(fd, calling_partition))?;
+
+    config.kernel.as_ref().map_or(Ok(()), |fd| check_partition_for_file(fd, calling_partition))?;
+    config.initrd.as_ref().map_or(Ok(()), |fd| check_partition_for_file(fd, calling_partition))?;
+    config
+        .bootloader
+        .as_ref()
+        .map_or(Ok(()), |fd| check_partition_for_file(fd, calling_partition))?;
+
+    Ok(())
+}
+
+fn load_vm_payload_config_from_file(apk_file: &File, config_path: &str) -> Result<VmPayloadConfig> {
+    let mut apk_zip = ZipArchive::new(apk_file)?;
+    let config_file = apk_zip.by_name(config_path)?;
+    Ok(serde_json::from_reader(config_file)?)
+}
+
+fn create_vm_payload_config(
+    payload_config: &aidl::VirtualMachinePayloadConfig,
+) -> Result<VmPayloadConfig> {
+    // There isn't an actual config file. Construct a synthetic VmPayloadConfig from the explicit
+    // parameters we've been given. Microdroid will do something equivalent inside the VM using the
+    // payload config that we send it via the metadata file.
+
+    let payload_binary_name = &payload_config.payloadBinaryName;
+    if payload_binary_name.contains('/') {
+        bail!("Payload binary name must not specify a path: {payload_binary_name}");
+    }
+
+    let task = Task { type_: TaskType::MicrodroidLauncher, command: payload_binary_name.clone() };
+
+    // The VM only cares about how many there are, these names are actually ignored.
+    let extra_apk_count = payload_config.extraApks.len();
+    let extra_apks =
+        (0..extra_apk_count).map(|i| ApkConfig { path: format!("extra-apk-{i}") }).collect();
+
+    if check_use_relaxed_microdroid_rollback_protection().is_ok() {
+        // The only payload delivered via Mainline module in this release requires
+        // com.android.i18n apex. However, we are past all the reasonable deadlines to add new
+        // APIs, so we use the fact that the payload is granted
+        // USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission as a signal that we should include
+        // com.android.i18n APEX.
+        // TODO: remove this after we provide a stable @SystemApi to load additional APEXes to
+        // Microdroid pVMs. Note - changing this breaks existing DICE chain.
+        // b/406856088 - added appsearch here as well, which is needed for .so shareing.
+        let apexes = vec![
+            ApexConfig { name: String::from("com.android.i18n") },
+            ApexConfig { name: String::from("com.android.appsearch") },
+        ];
+        Ok(VmPayloadConfig { task: Some(task), apexes, extra_apks, ..Default::default() })
+    } else {
+        Ok(VmPayloadConfig { task: Some(task), extra_apks, ..Default::default() })
+    }
+}
+
+/// Generates a unique filename to use for a composite disk image.
+fn make_composite_image_filenames(
+    temporary_directory: &Path,
+    next_temporary_image_id: &mut u64,
+) -> CompositeImageFilenames {
+    let id = *next_temporary_image_id;
+    *next_temporary_image_id += 1;
+    CompositeImageFilenames {
+        composite: temporary_directory.join(format!("composite-{}.img", id)),
+        header: temporary_directory.join(format!("composite-{}-header.img", id)),
+        footer: temporary_directory.join(format!("composite-{}-footer.img", id)),
+    }
+}
+
+/// Filenames for a composite disk image, including header and footer partitions.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CompositeImageFilenames {
+    /// The composite disk image itself.
+    composite: PathBuf,
+    /// The header partition image.
+    header: PathBuf,
+    /// The footer partition image.
+    footer: PathBuf,
+}
+
+/// Checks whether the caller has a specific permission
+fn check_permission(perm: &str) -> binder::Result<()> {
+    if cfg!(early) {
+        // Skip permission check for early VMs, in favor of SELinux
+        return Ok(());
+    }
+    let calling_pid = get_calling_pid();
+    let calling_uid = get_calling_uid();
+    // Root can do anything
+    if calling_uid == 0 {
+        return Ok(());
+    }
+    let perm_svc: Strong<dyn aidl::IPermissionController> =
+        binder::wait_for_interface("permission")?;
+    if perm_svc.checkPermission(perm, calling_pid, calling_uid as i32)? {
+        Ok(())
+    } else {
+        Err(anyhow!("does not have the {} permission", perm))
+            .or_binder_exception(ExceptionCode::SECURITY)
+    }
+}
+
+/// Check whether the caller of the current Binder method is allowed to manage VMs
+fn check_manage_access() -> binder::Result<()> {
+    check_permission("android.permission.MANAGE_VIRTUAL_MACHINE")
+}
+
+/// Check whether the caller of the current Binder method is allowed to create custom VMs
+fn check_use_custom_virtual_machine() -> binder::Result<()> {
+    check_permission("android.permission.USE_CUSTOM_VIRTUAL_MACHINE")
+}
+
+/// Check whether the caller of the current binder method is allowed to use relaxed microdroid
+/// rollback protection schema.
+fn check_use_relaxed_microdroid_rollback_protection() -> binder::Result<()> {
+    check_permission("android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION")
+}
+
+/// Return whether a partition is exempt from selinux label checks, because we know that it does
+/// not contain code and is likely to be generated in an app-writable directory.
+fn is_safe_app_partition(label: &str) -> bool {
+    // See add_microdroid_system_images & add_microdroid_payload_images in payload.rs.
+    label == "vm-instance"
+        || label == "encryptedstore"
+        || label == "microdroid-apk-idsig"
+        || label == "payload-metadata"
+        || label.starts_with("extra-idsig-")
+}
+
+/// Returns whether a partition with the given label is safe for a raw config VM.
+fn is_safe_raw_partition(label: &str) -> bool {
+    label == "vm-instance"
+}
+
+/// Check that a file SELinux label is acceptable.
+///
+/// We only want to allow code in a VM to be sourced from places that apps, and the
+/// system or vendor, do not have write access to.
+///
+/// Note that sepolicy must also grant read access for these types to both virtualization
+/// service and crosvm.
+///
+/// App private data files are deliberately excluded, to avoid arbitrary payloads being run on
+/// user devices (W^X).
+fn check_label_is_allowed(context: &SeContext, calling_partition: CallingPartition) -> Result<()> {
+    match context.selinux_type()? {
+        | "apk_data_file" // APKs of an installed app
+        | "shell_data_file" // test files created via adb shell
+        | "staging_data_file" // updated/staged APEX images
+        | "system_file" // immutable dm-verity protected partition
+        | "virtualizationservice_data_file" // files created by VS / VirtMgr
+        | "vendor_microdroid_file" // immutable dm-verity protected partition (/vendor/etc/avf/microdroid/.*)
+         => Ok(()),
+        // It is difficult to require specific label types for vendor initiated VM's files.
+        _ if calling_partition == CallingPartition::Vendor => Ok(()),
+        _ => bail!("Label {} is not allowed", context),
+    }
+}
+
+fn check_label_for_partition(
+    partition: &aidl::Partition,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    let file = partition.image.as_ref().unwrap().as_ref();
+    check_label_is_allowed(&getfilecon(file)?, calling_partition)
+        .with_context(|| format!("Partition {} invalid", &partition.label))
+}
+
+fn check_label_for_kernel_files(
+    kernel: &Option<File>,
+    initrd: &Option<File>,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    if let Some(f) = kernel {
+        check_label_for_file(f, "kernel", calling_partition)?;
+    }
+    if let Some(f) = initrd {
+        check_label_for_file(f, "initrd", calling_partition)?;
+    }
+    Ok(())
+}
+fn check_label_for_file(
+    file: &impl AsRawFd,
+    name: &str,
+    calling_partition: CallingPartition,
+) -> Result<()> {
+    check_label_is_allowed(&getfilecon(file)?, calling_partition)
+        .with_context(|| format!("{} file invalid", name))
+}
+
+/// Implementation of the AIDL `IVirtualMachine` interface. Used as a handle to a VM.
+struct VirtualMachine {
+    instance: Arc<VmInstance>,
+}
+
+impl VirtualMachine {
+    fn create(instance: Arc<VmInstance>) -> Strong<dyn aidl::IVirtualMachine> {
+        aidl::BnVirtualMachine::new_binder(VirtualMachine { instance }, BinderFeatures::default())
+    }
+
+    fn handle_vendor_tee_services(&self) -> binder::Result<()> {
+        // TODO(b/360102915): get vm_fd from crosvm
+        // TODO(b/360102915): talk to HAL
+        self.instance
+            .resume_full()
+            .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+}
+
+impl Interface for VirtualMachine {}
+
+impl aidl::IVirtualMachine for VirtualMachine {
+    fn getCid(&self) -> binder::Result<i32> {
+        // Don't check permission. The owner of the VM might have passed this binder object to
+        // others.
+        Ok(self.instance.cid as i32)
+    }
+
+    fn getState(&self) -> binder::Result<aidl::VirtualMachineState> {
+        // Don't check permission. The owner of the VM might have passed this binder object to
+        // others.
+        Ok(get_state(&self.instance))
+    }
+
+    fn registerCallback(
+        &self,
+        callback: &Strong<dyn aidl::IVirtualMachineCallback>,
+    ) -> binder::Result<()> {
+        // Don't check permission. The owner of the VM might have passed this binder object to
+        // others.
+
+        // Only register callback if it may be notified.
+        // This also ensures no cyclic reference between callback and VmInstance after VM is died.
+        let vm_state = self.instance.vm_state.lock().unwrap();
+        if matches!(*vm_state, VmState::Dead) {
+            warn!("Ignoring registerCallback() after VM is died");
+        } else {
+            self.instance.callbacks.add(callback.clone());
+        }
+        drop(vm_state);
+
+        Ok(())
+    }
+
+    fn start(&self) -> binder::Result<()> {
+        self.instance
+            .start()
+            .with_context(|| format!("Error starting VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        if !self.instance.vendor_tee_services.is_empty() {
+            self.handle_vendor_tee_services()
+        } else {
+            Ok(())
+        }
+    }
+
+    fn stop(&self) -> binder::Result<()> {
+        self.instance
+            .kill()
+            .with_context(|| format!("Error stopping VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn isMemoryBalloonEnabled(&self) -> binder::Result<bool> {
+        Ok(self.instance.balloon_enabled)
+    }
+
+    fn getActualMemoryBalloonBytes(&self) -> binder::Result<i64> {
+        let balloon = self
+            .instance
+            .get_actual_memory_balloon_bytes()
+            .with_context(|| format!("Error getting balloon for VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        Ok(balloon.try_into().unwrap())
+    }
+
+    fn setMemoryBalloon(&self, num_bytes: i64) -> binder::Result<()> {
+        self.instance
+            .set_memory_balloon(num_bytes.try_into().unwrap())
+            .with_context(|| format!("Error setting balloon for VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn connectVsock(&self, port: i32) -> binder::Result<ParcelFileDescriptor> {
+        if !matches!(&*self.instance.vm_state.lock().unwrap(), VmState::Running { .. }) {
+            return Err(Status::new_service_specific_error_str(
+                aidl::ERROR_UNEXPECTED,
+                Some("Virtual Machine is not running"),
+            ));
+        }
+        let port = port as u32;
+        if port < VSOCK_PRIV_PORT_MAX {
+            return Err(Status::new_service_specific_error_str(
+                aidl::ERROR_UNEXPECTED,
+                Some("Can't connect to privileged port {port}"),
+            ));
+        }
+        let stream = VsockStream::connect_with_cid_port(self.instance.cid, port)
+            .context("Failed to connect")
+            .or_service_specific_exception(aidl::ERROR_UNEXPECTED)?;
+        Ok(vsock_stream_to_pfd(stream))
+    }
+
+    fn createAccessorBinder(&self, name: &str, port: i32) -> binder::Result<SpIBinder> {
+        if !matches!(&*self.instance.vm_state.lock().unwrap(), VmState::Running { .. }) {
+            return Err(Status::new_service_specific_error_str(
+                aidl::ERROR_UNEXPECTED,
+                Some("Virtual Machine is not running"),
+            ));
+        }
+        let port = port as u32;
+        if port < VSOCK_PRIV_PORT_MAX {
+            return Err(Status::new_service_specific_error_str(
+                aidl::ERROR_UNEXPECTED,
+                Some("Can't connect to privileged port {port}"),
+            ));
+        }
+        let cid = self.instance.cid;
+        let addr = sockaddr_vm {
+            svm_family: AF_VSOCK as sa_family_t,
+            svm_reserved1: 0,
+            svm_port: port,
+            svm_cid: cid,
+            svm_zero: [0u8; 4],
+        };
+        let get_connection_info = move |_instance: &str| Some(ConnectionInfo::Vsock(addr));
+        let accessor = Accessor::new(name, get_connection_info);
+        accessor
+            .as_binder()
+            .context("The newly created Accessor should always have a binder")
+            .or_service_specific_exception(aidl::ERROR_UNEXPECTED)
+    }
+
+    fn setHostConsoleName(&self, ptsname: &str) -> binder::Result<()> {
+        if !self.instance.is_vm_running() {
+            return Err(Status::new_service_specific_error_str(
+                aidl::ERROR_UNEXPECTED,
+                Some("Virtual Machine is not running"),
+            ));
+        }
+        *self.instance.host_console_name.lock().unwrap() = Some(ptsname.to_string());
+        Ok(())
+    }
+
+    fn suspend(&self) -> binder::Result<()> {
+        self.instance
+            .suspend()
+            .with_context(|| format!("Error suspending VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn resume(&self) -> binder::Result<()> {
+        self.instance
+            .resume()
+            .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn getDebugInfo(&self) -> binder::Result<aidl::VirtualMachineDebugInfo> {
+        info!("getDebugInfo called");
+        Ok(aidl::VirtualMachineDebugInfo {
+            name: self.instance.name.clone(),
+            cid: self.instance.cid.try_into().unwrap(),
+            temporaryDirectory: self.instance.temporary_directory.to_string_lossy().to_string(),
+            requesterUid: self.instance.requester_uid.try_into().unwrap(),
+            requesterPid: self.instance.requester_debug_pid,
+            hostConsoleName: self.instance.host_console_name.lock().unwrap().clone(),
+        })
+    }
+}
+
+impl Drop for VirtualMachine {
+    fn drop(&mut self) {
+        info!("Dropping {}", self.instance);
+        if let Err(e) = self.instance.kill() {
+            debug!("Error stopping dropped VM with CID {}: {:?}", self.instance.cid, e);
+        }
+    }
+}
+
+/// A set of Binders to be called back in response to various events on the VM, such as when it
+/// dies.
+#[derive(Debug, Default)]
+pub struct VirtualMachineCallbacks(Mutex<Vec<Strong<dyn aidl::IVirtualMachineCallback>>>);
+
+impl VirtualMachineCallbacks {
+    /// Call all registered callbacks to notify that the payload has started.
+    pub fn notify_payload_started(&self, cid: Cid) {
+        let callbacks = &*self.0.lock().unwrap();
+        for callback in callbacks {
+            if let Err(e) = callback.onPayloadStarted(cid as i32) {
+                error!("Error notifying payload start event from VM CID {}: {:?}", cid, e);
+            }
+        }
+    }
+
+    /// Call all registered callbacks to notify that the payload is ready to serve.
+    pub fn notify_payload_ready(&self, cid: Cid) {
+        let callbacks = &*self.0.lock().unwrap();
+        for callback in callbacks {
+            if let Err(e) = callback.onPayloadReady(cid as i32) {
+                error!("Error notifying payload ready event from VM CID {}: {:?}", cid, e);
+            }
+        }
+    }
+
+    /// Call all registered callbacks to notify that the payload has finished.
+    pub fn notify_payload_finished(&self, cid: Cid, exit_code: i32) {
+        let callbacks = &*self.0.lock().unwrap();
+        for callback in callbacks {
+            if let Err(e) = callback.onPayloadFinished(cid as i32, exit_code) {
+                error!("Error notifying payload finish event from VM CID {}: {:?}", cid, e);
+            }
+        }
+    }
+
+    /// Call all registered callbacks to say that the VM encountered an error.
+    pub fn notify_error(&self, cid: Cid, error_code: aidl::ErrorCode, message: &str) {
+        let callbacks = &*self.0.lock().unwrap();
+        for callback in callbacks {
+            if let Err(e) = callback.onError(cid as i32, error_code, message) {
+                error!("Error notifying error event from VM CID {}: {:?}", cid, e);
+            }
+        }
+    }
+
+    /// Call all registered callbacks to say that the VM has died.
+    pub fn callback_on_died(&self, cid: Cid, reason: aidl::DeathReason) {
+        let mut callbacks = self.0.lock().unwrap();
+        for callback in &*callbacks {
+            if let Err(e) = callback.onDied(cid as i32, reason) {
+                error!("Error notifying exit of VM CID {}: {:?}", cid, e);
+            }
+        }
+
+        // Nothing to notify afterward because VM cannot be restarted.
+        // Explicitly clear callbacks to prevent potential cyclic references
+        // between callback and VmInstance.
+        (*callbacks).clear();
+    }
+
+    /// Add a new callback to the set.
+    fn add(&self, callback: Strong<dyn aidl::IVirtualMachineCallback>) {
+        self.0.lock().unwrap().push(callback);
+    }
+}
+
+/// The mutable state of the VirtualizationService. There should only be one instance of this
+/// struct.
+#[derive(Debug, Default)]
+pub struct State {
+    /// The VMs which have been started. When VMs are started a weak reference is added to this
+    /// list while a strong reference is returned to the caller over Binder. Once all copies of
+    /// the Binder client are dropped the weak reference here will become invalid, and will be
+    /// removed from the list opportunistically the next time `add_vm` is called.
+    vms: Vec<Weak<VmInstance>>,
+}
+
+impl State {
+    /// Get a list of VMs which still have Binder references to them.
+    pub fn vms(&self) -> Vec<Arc<VmInstance>> {
+        // Attempt to upgrade the weak pointers to strong pointers.
+        self.vms.iter().filter_map(Weak::upgrade).collect()
+    }
+
+    /// Add a new VM to the list.
+    fn add_vm(&mut self, vm: Weak<VmInstance>) {
+        // Garbage collect any entries from the stored list which no longer exist.
+        self.vms.retain(|vm| vm.strong_count() > 0);
+
+        // Actually add the new VM.
+        self.vms.push(vm);
+    }
+
+    /// Get a VM that corresponds to the given cid
+    fn get_vm(&self, cid: Cid) -> Option<Arc<VmInstance>> {
+        self.vms().into_iter().find(|vm| vm.cid == cid)
+    }
+}
+
+/// Gets the `VirtualMachineState` of the given `VmInstance`.
+fn get_state(instance: &VmInstance) -> aidl::VirtualMachineState {
+    use aidl::VirtualMachineState;
+    match &*instance.vm_state.lock().unwrap() {
+        VmState::NotStarted { .. } => VirtualMachineState::NOT_STARTED,
+        VmState::Running { .. } => match instance.payload_state() {
+            PayloadState::Starting => VirtualMachineState::STARTING,
+            PayloadState::Started => VirtualMachineState::STARTED,
+            PayloadState::Ready => VirtualMachineState::READY,
+            PayloadState::Finished => VirtualMachineState::FINISHED,
+            PayloadState::Hangup => VirtualMachineState::DEAD,
+        },
+        VmState::ShuttingDown { .. } => VirtualMachineState::FINISHED,
+        VmState::Dead => VirtualMachineState::DEAD,
+        VmState::Failed => VirtualMachineState::DEAD,
+    }
+}
+
+/// Converts a `&ParcelFileDescriptor` to a `File` by cloning the file.
+pub fn clone_file(file: &ParcelFileDescriptor) -> binder::Result<File> {
+    file.as_ref()
+        .try_clone()
+        .context("Failed to clone File from ParcelFileDescriptor")
+        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)
+        .map(File::from)
+}
+
+/// Converts an `&Option<ParcelFileDescriptor>` to an `Option<File>` by cloning the file.
+fn maybe_clone_file(file: &Option<ParcelFileDescriptor>) -> binder::Result<Option<File>> {
+    file.as_ref().map(clone_file).transpose()
+}
+
+/// Converts a `VsockStream` to a `ParcelFileDescriptor`.
+fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
+    // SAFETY: ownership is transferred from stream to f
+    let f = unsafe { File::from_raw_fd(stream.into_raw_fd()) };
+    ParcelFileDescriptor::new(f)
+}
+
+/// Parses the platform version requirement string.
+fn parse_platform_version_req(s: &str) -> binder::Result<VersionReq> {
+    VersionReq::parse(s)
+        .with_context(|| format!("Invalid platform version requirement {}", s))
+        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)
+}
+
+/// Create the empty ramdump file
+fn prepare_ramdump_file(temporary_directory: &Path) -> binder::Result<File> {
+    // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1 where
+    // VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e. the VM
+    // owner) for readout.
+    let ramdump_path = temporary_directory.join("ramdump");
+    let ramdump = File::create(ramdump_path)
+        .context("Failed to prepare ramdump file")
+        .with_log()
+        .or_service_specific_exception(-1)?;
+    Ok(ramdump)
+}
+
+/// Create the empty device tree dump file
+fn prepare_dump_dt_file(temporary_directory: &Path) -> binder::Result<File> {
+    let path = temporary_directory.join("device_tree.dtb");
+    let file = File::create(path)
+        .context("Failed to prepare device tree dump file")
+        .with_log()
+        .or_service_specific_exception(-1)?;
+    Ok(file)
+}
+
+fn is_protected(config: &aidl::VirtualMachineConfig) -> bool {
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(config) => config.protectedVm,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.protectedVm,
+    }
+}
+
+fn check_gdb_allowed(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    if is_protected(config) {
+        return Err(anyhow!("Can't use gdb with protected VMs"))
+            .or_binder_exception(ExceptionCode::SECURITY);
+    }
+
+    if get_debug_level(config) == Some(aidl::DebugLevel::NONE) {
+        return Err(anyhow!("Can't use gdb with non-debuggable VMs"))
+            .or_binder_exception(ExceptionCode::SECURITY);
+    }
+
+    Ok(())
+}
+
+fn extract_instance_id(config: &aidl::VirtualMachineConfig) -> [u8; 64] {
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(config) => config.instanceId,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.instanceId,
+    }
+}
+
+fn extract_want_updatable(config: &aidl::VirtualMachineConfig) -> bool {
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(_) => true,
+        aidl::VirtualMachineConfig::AppConfig(config) => {
+            let Some(custom) = &config.customConfig else { return true };
+            custom.wantUpdatable
+        }
+    }
+}
+
+fn extract_gdb_port(config: &aidl::VirtualMachineConfig) -> Option<NonZeroU16> {
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(config) => NonZeroU16::new(config.gdbPort as u16),
+        aidl::VirtualMachineConfig::AppConfig(config) => {
+            NonZeroU16::new(config.customConfig.as_ref().map(|c| c.gdbPort).unwrap_or(0) as u16)
+        }
+    }
+}
+
+fn extract_encrypted_store_kek(
+    config: &aidl::VirtualMachineConfig,
+) -> Option<Strong<dyn aidl::IEncryptedStoreKEK>> {
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(_) => None,
+        aidl::VirtualMachineConfig::AppConfig(config) => config.encryptedStoreKEK.clone(),
+    }
+}
+
+fn check_no_vendor_modules(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if let Some(custom_config) = &config.customConfig {
+        if custom_config.vendorImage.is_some() || custom_config.customKernelImage.is_some() {
+            return Err(anyhow!("vendor modules feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+    }
+    Ok(())
+}
+
+fn check_no_devices(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if let Some(custom_config) = &config.customConfig {
+        if !custom_config.devices.is_empty() {
+            return Err(anyhow!("device assignment feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+    }
+    Ok(())
+}
+
+fn check_no_extra_kernel_cmdline_params(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if let Some(custom_config) = &config.customConfig {
+        if !custom_config.extraKernelCmdlineParams.is_empty() {
+            return Err(anyhow!("debuggable_vms_improvements feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+    }
+    Ok(())
+}
+
+fn check_no_tee_services(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    match config {
+        aidl::VirtualMachineConfig::RawConfig(config) => {
+            if !config.teeServices.is_empty() {
+                return Err(anyhow!("tee_services_allowlist feature is disabled"))
+                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+            }
+        }
+        aidl::VirtualMachineConfig::AppConfig(config) => {
+            if let Some(custom_config) = &config.customConfig {
+                if !custom_config.teeServices.is_empty() {
+                    return Err(anyhow!("tee_services_allowlist feature is disabled"))
+                        .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+                }
+            }
+        }
+    };
+    Ok(())
+}
+
+fn check_no_delay_enc_store(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if config.shouldDelayEncryptedStoreSetup {
+        return Err(anyhow!("long_running_vms feature is disabled"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+    }
+    Ok(())
+}
+
+fn check_protected_vm_is_supported() -> binder::Result<()> {
+    let is_pvm_supported =
+        hypervisor_props::is_protected_vm_supported().or_service_specific_exception(-1)?;
+    if is_pvm_supported {
+        Ok(())
+    } else {
+        Err(anyhow!("pVM is not supported"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+    }
+}
+
+fn check_config_features(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    if !cfg!(vendor_modules) {
+        check_no_vendor_modules(config)?;
+    }
+    if !cfg!(device_assignment) {
+        check_no_devices(config)?;
+    }
+    if !cfg!(debuggable_vms_improvements) {
+        check_no_extra_kernel_cmdline_params(config)?;
+    }
+    if !cfg!(tee_services_allowlist) {
+        check_no_tee_services(config)?;
+    }
+    if !cfg!(long_running_vms) {
+        check_no_delay_enc_store(config)?;
+    }
+    Ok(())
+}
+
+fn check_config_allowed_for_early_vms(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    check_no_vendor_modules(config)?;
+    check_no_devices(config)?;
+
+    Ok(())
+}
+
+fn clone_or_prepare_logger_fd(
+    fd: Option<&ParcelFileDescriptor>,
+    tag: String,
+) -> Result<(Option<File>, Option<std::thread::JoinHandle<()>>), Status> {
+    if let Some(fd) = fd {
+        return Ok((Some(clone_file(fd)?), None));
+    }
+
+    let (read_fd, write_fd) =
+        pipe().context("Failed to create pipe").or_service_specific_exception(-1)?;
+
+    let mut reader = BufReader::new(File::from(read_fd));
+    let write_fd = File::from(write_fd);
+
+    let mut buf = vec![];
+    let join_handle = std::thread::spawn(move || loop {
+        buf.clear();
+        buf.shrink_to(1024);
+        match reader.read_until(b'\n', &mut buf) {
+            Ok(0) => {
+                info!("{}: EOF", &tag);
+                return;
+            }
+            Ok(_size) => {
+                if buf.last() == Some(&b'\n') {
+                    buf.pop();
+                    // Logs sent via TTY usually end lines with "\r\n".
+                    if buf.last() == Some(&b'\r') {
+                        buf.pop();
+                    }
+                }
+                info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
+            }
+            Err(e) => {
+                error!("Could not read console pipe: {:?}", e);
+                return;
+            }
+        };
+    });
+
+    Ok((Some(write_fd), Some(join_handle)))
+}
+
+/// Simple utility for referencing Borrowed or Owned. Similar to std::borrow::Cow, but
+/// it doesn't require that T implements Clone.
+enum BorrowedOrOwned<'a, T> {
+    Borrowed(&'a T),
+    Owned(T),
+}
+
+impl<T> AsRef<T> for BorrowedOrOwned<'_, T> {
+    fn as_ref(&self) -> &T {
+        match self {
+            Self::Borrowed(b) => b,
+            Self::Owned(o) => o,
+        }
+    }
+}
+
+struct HostRpcProvider {
+    state: Arc<Mutex<State>>,
+    cid: Cid,
+    // Keep a map of instances to ports to know if we've already set up a proxy
+    proxied_services: Mutex<HashMap<String, Vsock>>,
+}
+
+impl Interface for HostRpcProvider {}
+impl IRpcProvider for HostRpcProvider {
+    fn getServiceConnectionInfo(&self, name: &str) -> binder::Result<ServiceConnectionInfo> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            if !vm.host_services.iter().any(|i| i == name) {
+                return Err(anyhow!(
+                    "This VM is not configured to access the host service \
+                        {name}. The service must be added to the VM configuration in \
+                        the hostServices field."
+                ))
+                .or_service_specific_exception(-1);
+            }
+            // Check with servicemanager to make sure the VM owner still has permission to get this
+            // service
+            let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
+            check_host_service_permission(
+                &caller_secontext,
+                &[name.to_string()],
+                vm.requester_debug_pid,
+                vm.requester_uid,
+            )
+            .with_log()
+            .or_binder_exception(ExceptionCode::SECURITY)?;
+        } else {
+            error!("notifyError is called from an unknown CID {}", cid);
+            return Err(anyhow!("cannot find a VM with CID {}", cid))
+                .or_service_specific_exception(-1);
+        }
+
+        // If we've previously proxied this service, we only need to return the connection info
+        if let Some(p) = self.proxied_services.lock().unwrap().get(name) {
+            return Ok(ServiceConnectionInfo::Vsock(p.clone()));
+        }
+
+        let info = host_services::get_service_connection_info(name, cid)?;
+        self.proxied_services.lock().unwrap().insert(name.to_string(), info.clone());
+        Ok(ServiceConnectionInfo::Vsock(info.clone()))
+    }
+}
+
+/// Implementation of `IVirtualMachineService`, the entry point of the AIDL service.
+#[derive(Debug, Default)]
+struct VirtualMachineService {
+    state: Arc<Mutex<State>>,
+    cid: Cid,
+}
+
+impl Interface for VirtualMachineService {}
+
+impl aidl::IVirtualMachineService for VirtualMachineService {
+    fn notifyPayloadStarted(&self) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            info!("VM with CID {} started payload", cid);
+            vm.update_payload_state(PayloadState::Started)
+                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+            vm.callbacks.notify_payload_started(cid);
+
+            let vm_start_timestamp = vm.vm_metric.lock().unwrap().start_timestamp;
+            write_vm_booted_stats(vm.requester_uid as i32, &vm.name, vm_start_timestamp);
+            Ok(())
+        } else {
+            error!("notifyPayloadStarted is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn notifyPayloadReady(&self) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            info!("VM with CID {} reported payload is ready", cid);
+            vm.update_payload_state(PayloadState::Ready)
+                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+            vm.callbacks.notify_payload_ready(cid);
+            Ok(())
+        } else {
+            error!("notifyPayloadReady is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn notifyPayloadFinished(&self, exit_code: i32) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            info!("VM with CID {} finished payload", cid);
+            vm.update_payload_state(PayloadState::Finished)
+                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+            vm.callbacks.notify_payload_finished(cid, exit_code);
+            Ok(())
+        } else {
+            error!("notifyPayloadFinished is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn notifyError(&self, error_code: aidl::ErrorCode, message: &str) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            info!(
+                "VM with CID {} encountered an error: {:?} message: {}",
+                cid, error_code, message
+            );
+            vm.update_payload_state(PayloadState::Finished)
+                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+            vm.callbacks.notify_error(cid, error_code, message);
+            Ok(())
+        } else {
+            error!(
+                "notifyError is called from an unknown CID {}. error: {:?} message: {}",
+                cid, error_code, message
+            );
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn getSecretkeeper(&self) -> binder::Result<Strong<dyn aidl::ISecretkeeper>> {
+        if !secretkeeper::is_supported() {
+            return Err(StatusCode::NAME_NOT_FOUND)?;
+        }
+        let sk = binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
+        Ok(aidl::BnSecretkeeper::new_binder(SecretkeeperProxy(sk), BinderFeatures::default()))
+    }
+
+    fn requestAttestation(
+        &self,
+        csr: &[u8],
+        test_mode: bool,
+    ) -> binder::Result<Vec<aidl::Certificate>> {
+        global_service().requestAttestation(csr, get_calling_uid() as i32, test_mode)
+    }
+
+    fn claimSecretkeeperEntry(&self, id: &[u8; 64]) -> binder::Result<()> {
+        global_service().claimSecretkeeperEntry(id)
+    }
+
+    fn getHostRpcProvider(&self) -> binder::Result<Strong<dyn IRpcProvider>> {
+        Ok(BnRpcProvider::new_binder(
+            HostRpcProvider {
+                state: self.state.clone(),
+                cid: self.cid,
+                proxied_services: Default::default(),
+            },
+            BinderFeatures::default(),
+        ))
+    }
+
+    fn registerGuestAgent(
+        &self,
+        guest_agent: &Strong<dyn aidl::IGuestAgent>,
+    ) -> binder::Result<()> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
+            info!("VM with CID {} has registered a guest agent", cid);
+            Ok(())
+        } else {
+            error!("registerGuestAgent is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn getEncryptedStoreKEK(&self) -> binder::Result<Option<Strong<dyn aidl::IEncryptedStoreKEK>>> {
+        let cid = self.cid;
+        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
+            if let Some(encrypted_store_kek) = &vm.encrypted_store_kek {
+                let kek_wrapper = aidl::BnEncryptedStoreKEK::new_binder(
+                    EncryptedStoreKEKWrapper::new(encrypted_store_kek),
+                    BinderFeatures::default(),
+                );
+                Ok(Some(kek_wrapper))
+            } else {
+                Ok(None)
+            }
+        } else {
+            error!("getEncryptedStoreKek is called from an unknown CID {}", cid);
+            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+        }
+    }
+
+    fn writeToDropBox(&self, tag: &str, message: &str) -> binder::Result<()> {
+        let drop_box_manager =
+            DropBoxManager::new().or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        let cid = self.cid;
+        let name = &self.state.lock().unwrap().get_vm(cid).unwrap().name;
+        let vm_info = format!("cid: {}, name: {}", cid, name);
+        let report = build_dropbox_report(&vm_info, message)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        drop_box_manager
+            .add_text(tag, &report)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        Ok(())
+    }
+}
+
+// Unfortunately it looks like we can't pass the IEncryptedStoreKEK object we got from the app all
+// the way to microdroid_manager, as calling functions on it fails with the "Cannot send binder
+// from unrelated binder RPC session" error. Hence we create another IEncryptedStoreKEK that wraps
+// the original one, and pass the wrapper to the microdroid_manager.
+struct EncryptedStoreKEKWrapper {
+    wrapped_kek: Strong<dyn aidl::IEncryptedStoreKEK>,
+}
+
+impl EncryptedStoreKEKWrapper {
+    fn new(kek: &Strong<dyn aidl::IEncryptedStoreKEK>) -> Self {
+        Self { wrapped_kek: kek.clone() }
+    }
+}
+
+impl Interface for EncryptedStoreKEKWrapper {}
+
+impl aidl::IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
+    fn getKEK(&self) -> binder::Result<Option<Vec<u8>>> {
+        self.wrapped_kek.getKEK()
+    }
+
+    fn onKEKCreated(&self, kek: &[u8]) -> binder::Result<()> {
+        self.wrapped_kek.onKEKCreated(kek)
+    }
+}
+
+fn is_vm_capabilities_hal_supported() -> bool {
+    binder::is_declared(VM_CAPABILITIES_HAL_IDENTIFIER)
+        .expect("failed to check if {VM_CAPABILITIES_HAL_IDENTIFIER} is present")
+}
+
+impl VirtualMachineService {
+    fn new_binder(state: Arc<Mutex<State>>, cid: Cid) -> Strong<dyn aidl::IVirtualMachineService> {
+        aidl::BnVirtualMachineService::new_binder(
+            VirtualMachineService { state, cid },
+            BinderFeatures::default(),
+        )
+    }
+}
+
+// KEEP IN SYNC WITH early_vms.xsd
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+struct EarlyVm {
+    name: String,
+    cid: i32,
+    path: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct EarlyVms {
+    early_vm: Vec<EarlyVm>,
+}
+
+impl EarlyVm {
+    /// Verifies that the provided executable path matches the expected path stored in the XML
+    /// configuration.
+    /// If the provided path starts with `/system`, it will be stripped before comparison.
+    fn check_exe_paths_match<P: AsRef<Path>>(&self, calling_exe_path: P) -> binder::Result<()> {
+        let actual_path = calling_exe_path.as_ref();
+        if Path::new(&self.path)
+            == Path::new("/").join(actual_path.strip_prefix("/system").unwrap_or(actual_path))
+        {
+            return Ok(());
+        }
+        Err(Status::new_service_specific_error_str(
+            -1,
+            Some(format!(
+                "Early VM '{}' executable paths do not match. Expected: {}. Found: {:?}.",
+                self.name,
+                self.path,
+                actual_path.display()
+            )),
+        ))
+    }
+}
+
+static EARLY_VMS_CACHE: LazyLock<Mutex<HashMap<CallingPartition, Vec<EarlyVm>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn range_for_partition(partition: CallingPartition) -> Range<Cid> {
+    match partition {
+        CallingPartition::System => 100..200,
+        CallingPartition::SystemExt | CallingPartition::Product => 200..300,
+        CallingPartition::Vendor | CallingPartition::Odm => 300..400,
+        CallingPartition::Unknown => 0..0,
+    }
+}
+
+fn get_early_vms_in_path(xml_path: &Path) -> Result<Vec<EarlyVm>> {
+    if !xml_path.exists() {
+        bail!("{} doesn't exist", xml_path.display());
+    }
+
+    let xml =
+        fs::read(xml_path).with_context(|| format!("Failed to read {}", xml_path.display()))?;
+    let xml = String::from_utf8(xml)
+        .with_context(|| format!("{} is not a valid UTF-8 file", xml_path.display()))?;
+    let early_vms: EarlyVms = serde_xml_rs::from_str(&xml)
+        .with_context(|| format!("Can't parse {}", xml_path.display()))?;
+
+    Ok(early_vms.early_vm)
+}
+
+fn validate_cid_range(early_vms: &[EarlyVm], cid_range: &Range<Cid>) -> Result<()> {
+    for early_vm in early_vms {
+        let cid = early_vm
+            .cid
+            .try_into()
+            .with_context(|| format!("VM '{}' uses Invalid CID {}", early_vm.name, early_vm.cid))?;
+
+        ensure!(
+            cid_range.contains(&cid),
+            "VM '{}' uses CID {cid} which is out of range. Available CIDs: {cid_range:?}",
+            early_vm.name
+        );
+    }
+    Ok(())
+}
+
+fn get_early_vms_in_partition(partition: CallingPartition) -> Result<Vec<EarlyVm>> {
+    let mut cache = EARLY_VMS_CACHE.lock().unwrap();
+
+    if let Some(result) = cache.get(&partition) {
+        return Ok(result.clone());
+    }
+
+    let pattern = format!("/{partition}/etc/avf/early_vms*.xml");
+    let mut early_vms = Vec::new();
+    for entry in glob::glob(&pattern).with_context(|| format!("Failed to glob {}", &pattern))? {
+        match entry {
+            Ok(path) => early_vms.extend(get_early_vms_in_path(&path)?),
+            Err(e) => error!("Error while globbing (but continuing) {}: {}", &pattern, e),
+        }
+    }
+
+    validate_cid_range(&early_vms, &range_for_partition(partition))
+        .with_context(|| format!("CID validation for {partition} failed"))?;
+
+    cache.insert(partition, early_vms.clone());
+
+    Ok(early_vms)
+}
+
+fn find_early_vm<'a>(early_vms: &'a [EarlyVm], name: &str) -> Result<&'a EarlyVm> {
+    let mut found_vm: Option<&EarlyVm> = None;
+
+    for early_vm in early_vms {
+        if early_vm.name != name {
+            continue;
+        }
+
+        if found_vm.is_some() {
+            bail!("Multiple VMs named '{name}' are found");
+        }
+
+        found_vm = Some(early_vm);
+    }
+
+    found_vm.ok_or_else(|| anyhow!("Can't find a VM named '{name}'"))
+}
+
+fn find_early_vm_for_partition(partition: CallingPartition, name: &str) -> Result<EarlyVm> {
+    let early_vms = get_early_vms_in_partition(partition)
+        .with_context(|| format!("Failed to get early VMs from {partition}"))?;
+
+    Ok(find_early_vm(&early_vms, name)
+        .with_context(|| format!("Failed to find early VM '{name}' in {partition}"))?
+        .clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_allowed_label_for_partition() -> Result<()> {
+        let expected_results = vec![
+            (CallingPartition::System, "u:object_r:system_file:s0", true),
+            (CallingPartition::System, "u:object_r:apk_data_file:s0", true),
+            (CallingPartition::System, "u:object_r:app_data_file:s0", false),
+            (CallingPartition::System, "u:object_r:app_data_file:s0:c512,c768", false),
+            (CallingPartition::System, "u:object_r:privapp_data_file:s0:c512,c768", false),
+            (CallingPartition::System, "invalid", false),
+            (CallingPartition::System, "user:role:apk_data_file:severity:categories", true),
+            (
+                CallingPartition::System,
+                "user:role:apk_data_file:severity:categories:extraneous",
+                false,
+            ),
+            (CallingPartition::System, "u:object_r:vendor_unknowable:s0", false),
+            (CallingPartition::Vendor, "u:object_r:vendor_unknowable:s0", true),
+        ];
+
+        for (calling_partition, label, expected_valid) in expected_results {
+            let context = SeContext::new(label)?;
+            let result = check_label_is_allowed(&context, calling_partition);
+            if expected_valid != result.is_ok() {
+                bail!(
+                    "Expected label {label} to be {} for {calling_partition} partition",
+                    if expected_valid { "allowed" } else { "disallowed" }
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_or_update_idsig_file_empty_apk() -> Result<()> {
+        let apk = tempfile::tempfile().unwrap();
+        let idsig = tempfile::tempfile().unwrap();
+
+        let ret = create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk),
+            &ParcelFileDescriptor::new(idsig),
+        );
+        assert!(ret.is_err(), "should fail");
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_or_update_idsig_dir_instead_of_file_for_apk() -> Result<()> {
+        let tmp_dir = tempfile::TempDir::new().unwrap();
+        let apk = File::open(tmp_dir.path()).unwrap();
+        let idsig = tempfile::tempfile().unwrap();
+
+        let ret = create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk),
+            &ParcelFileDescriptor::new(idsig),
+        );
+        assert!(ret.is_err(), "should fail");
+        Ok(())
+    }
+
+    /// Verifies that create_or_update_idsig_file won't oom if a fd that corresponds to a directory
+    /// on ext4 filesystem is passed.
+    /// On ext4 lseek on a directory fd will return (off_t)-1 (see:
+    /// https://bugzilla.kernel.org/show_bug.cgi?id=200043), which will result in
+    /// create_or_update_idsig_file ooming while attempting to allocate petabytes of memory.
+    #[test]
+    fn test_create_or_update_idsig_does_not_crash_dir_on_ext4() -> Result<()> {
+        // APEXes are backed by the ext4.
+        let apk = File::open("/apex/com.android.virt/").unwrap();
+        let idsig = tempfile::tempfile().unwrap();
+
+        let ret = create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk),
+            &ParcelFileDescriptor::new(idsig),
+        );
+        assert!(ret.is_err(), "should fail");
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_or_update_idsig_does_not_update_if_already_valid() -> Result<()> {
+        use std::io::Seek;
+
+        // Pick any APK
+        let mut apk = File::open("/system/priv-app/Shell/Shell.apk").unwrap();
+        let mut idsig = tempfile::tempfile().unwrap();
+
+        create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk.try_clone()?),
+            &ParcelFileDescriptor::new(idsig.try_clone()?),
+        )?;
+        let modified_orig = idsig.metadata()?.modified()?;
+        apk.rewind()?;
+        idsig.rewind()?;
+
+        // Call the function again
+        create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk.try_clone()?),
+            &ParcelFileDescriptor::new(idsig.try_clone()?),
+        )?;
+        let modified_new = idsig.metadata()?.modified()?;
+        assert!(modified_orig == modified_new, "idsig file was updated unnecessarily");
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_or_update_idsig_on_non_empty_file() -> Result<()> {
+        use std::io::Read;
+
+        // Pick any APK
+        let mut apk = File::open("/system/priv-app/Shell/Shell.apk").unwrap();
+        let idsig_empty = tempfile::tempfile().unwrap();
+        let mut idsig_invalid = tempfile::tempfile().unwrap();
+        idsig_invalid.write_all(b"Oops")?;
+
+        // Create new idsig
+        create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk.try_clone()?),
+            &ParcelFileDescriptor::new(idsig_empty.try_clone()?),
+        )?;
+        apk.rewind()?;
+
+        // Update idsig_invalid
+        create_or_update_idsig_file(
+            &ParcelFileDescriptor::new(apk.try_clone()?),
+            &ParcelFileDescriptor::new(idsig_invalid.try_clone()?),
+        )?;
+
+        // Ensure the 2 idsig files have same size!
+        assert!(
+            idsig_empty.metadata()?.len() == idsig_invalid.metadata()?.len(),
+            "idsig files differ in size"
+        );
+        // Ensure the 2 idsig files have same content!
+        for (b1, b2) in idsig_empty.bytes().zip(idsig_invalid.bytes()) {
+            assert!(b1.unwrap() == b2.unwrap(), "idsig files differ")
+        }
+        Ok(())
+    }
+    #[test]
+    fn test_append_kernel_param_first_param() {
+        let mut vm_config = aidl::VirtualMachineRawConfig { ..Default::default() };
+        append_kernel_param("foo=1", &mut vm_config);
+        assert_eq!(vm_config.params, Some("foo=1".to_owned()))
+    }
+
+    #[test]
+    fn test_append_kernel_param() {
+        let mut vm_config = aidl::VirtualMachineRawConfig {
+            params: Some("foo=5".to_owned()),
+            ..Default::default()
+        };
+        append_kernel_param("bar=42", &mut vm_config);
+        assert_eq!(vm_config.params, Some("foo=5 bar=42".to_owned()))
+    }
+
+    fn test_extract_os_name_from_config_path(
+        path: &Path,
+        expected_result: Option<&str>,
+    ) -> Result<()> {
+        let result = extract_os_name_from_config_path(path);
+        if result.as_deref() != expected_result {
+            bail!("Expected {:?} but was {:?}", expected_result, &result)
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_extract_os_name_from_microdroid_config() -> Result<()> {
+        test_extract_os_name_from_config_path(
+            Path::new("/apex/com.android.virt/etc/microdroid.json"),
+            Some("microdroid"),
+        )
+    }
+
+    #[test]
+    fn test_extract_os_name_from_microdroid_16k_config() -> Result<()> {
+        test_extract_os_name_from_config_path(
+            Path::new("/apex/com.android.virt/etc/microdroid_16k.json"),
+            Some("microdroid_16k"),
+        )
+    }
+
+    #[test]
+    fn test_extract_os_name_from_microdroid_gki_config() -> Result<()> {
+        test_extract_os_name_from_config_path(
+            Path::new("/apex/com.android.virt/etc/microdroid_gki-android14-6.1.json"),
+            Some("microdroid_gki-android14-6.1"),
+        )
+    }
+
+    #[test]
+    fn test_extract_os_name_from_invalid_path() -> Result<()> {
+        test_extract_os_name_from_config_path(
+            Path::new("/apex/com.android.virt/etc/microdroid.img"),
+            None,
+        )
+    }
+
+    #[test]
+    fn test_extract_os_name_from_configs() -> Result<()> {
+        let tmp_dir = tempfile::TempDir::new()?;
+        let tmp_dir_path = tmp_dir.path().to_owned();
+
+        let mut os_names: HashSet<String> = HashSet::new();
+        os_names.insert("microdroid".to_owned());
+        os_names.insert("microdroid_gki-android14-6.1".to_owned());
+        os_names.insert("microdroid_gki-android15-6.1".to_owned());
+
+        // config files
+        for os_name in &os_names {
+            std::fs::write(tmp_dir_path.join(os_name.to_owned() + ".json"), b"")?;
+        }
+
+        // fake files not related to configs
+        std::fs::write(tmp_dir_path.join("microdroid_super.img"), b"")?;
+        std::fs::write(tmp_dir_path.join("microdroid_foobar.apk"), b"")?;
+
+        let glob_pattern = match tmp_dir_path.join("microdroid*.json").to_str() {
+            Some(s) => s.to_owned(),
+            None => bail!("tmp_dir_path {:?} is not UTF-8", tmp_dir_path),
+        };
+
+        let result = extract_os_names_from_configs(&glob_pattern)?;
+        if result != os_names {
+            bail!("Expected {:?} but was {:?}", os_names, result);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_early_vms_from_xml() -> Result<()> {
+        let tmp_dir = tempfile::TempDir::new()?;
+        let tmp_dir_path = tmp_dir.path().to_owned();
+        let xml_path = tmp_dir_path.join("early_vms.xml");
+
+        std::fs::write(
+            &xml_path,
+            br#"<?xml version="1.0" encoding="utf-8"?>
+        <early_vms>
+            <early_vm>
+                <name>vm_demo_native_early</name>
+                <cid>123</cid>
+                <path>/system/bin/vm_demo_native_early</path>
+            </early_vm>
+            <early_vm>
+                <name>vm_demo_native_early_2</name>
+                <cid>456</cid>
+                <path>/system/bin/vm_demo_native_early_2</path>
+            </early_vm>
+        </early_vms>
+        "#,
+        )?;
+
+        let cid_range = 100..1000;
+
+        let early_vms = get_early_vms_in_path(&xml_path)?;
+        validate_cid_range(&early_vms, &cid_range)?;
+
+        let test_cases = [
+            (
+                "vm_demo_native_early",
+                EarlyVm {
+                    name: "vm_demo_native_early".to_owned(),
+                    cid: 123,
+                    path: "/system/bin/vm_demo_native_early".to_owned(),
+                },
+            ),
+            (
+                "vm_demo_native_early_2",
+                EarlyVm {
+                    name: "vm_demo_native_early_2".to_owned(),
+                    cid: 456,
+                    path: "/system/bin/vm_demo_native_early_2".to_owned(),
+                },
+            ),
+        ];
+
+        for (name, expected) in test_cases {
+            let result = find_early_vm(&early_vms, name)?;
+            assert_eq!(result, &expected);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_invalid_cid_validation() -> Result<()> {
+        let tmp_dir = tempfile::TempDir::new()?;
+        let xml_path = tmp_dir.path().join("early_vms.xml");
+
+        let cid_range = 100..1000;
+
+        for cid in [-1, 999999] {
+            std::fs::write(
+                &xml_path,
+                format!(
+                    r#"<?xml version="1.0" encoding="utf-8"?>
+        <early_vms>
+            <early_vm>
+                <name>vm_demo_invalid_cid</name>
+                <cid>{cid}</cid>
+                <path>/system/bin/vm_demo_invalid_cid</path>
+            </early_vm>
+        </early_vms>
+        "#
+                ),
+            )?;
+
+            let early_vms = get_early_vms_in_path(&xml_path)?;
+            assert!(validate_cid_range(&early_vms, &cid_range).is_err(), "should fail");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink_to_system_ext_supported() -> Result<()> {
+        let link_path = Path::new("/system/system_ext/file");
+        let partition = find_partition(Some(link_path)).unwrap();
+        assert_eq!(CallingPartition::SystemExt, partition);
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink_to_product_supported() -> Result<()> {
+        let link_path = Path::new("/system/product/file");
+        let partition = find_partition(Some(link_path)).unwrap();
+        assert_eq!(CallingPartition::Product, partition);
+        Ok(())
+    }
+
+    #[test]
+    fn test_vendor_in_data() {
+        assert_eq!(
+            CallingPartition::Vendor,
+            find_partition(Some(Path::new("/data/nativetest64/vendor/file"))).unwrap()
+        );
+    }
+
+    #[test]
+    fn early_vm_exe_paths_match_succeeds_with_same_paths() {
+        let early_vm = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system_ext/bin/vm_demo_native_early".to_owned(),
+        };
+        let calling_exe_path = "/system_ext/bin/vm_demo_native_early";
+        assert!(early_vm.check_exe_paths_match(calling_exe_path).is_ok())
+    }
+
+    #[test]
+    fn early_vm_exe_paths_match_succeeds_with_calling_exe_path_from_system() {
+        let early_vm = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system_ext/bin/vm_demo_native_early".to_owned(),
+        };
+        let calling_exe_path = "/system/system_ext/bin/vm_demo_native_early";
+        assert!(early_vm.check_exe_paths_match(calling_exe_path).is_ok())
+    }
+
+    #[test]
+    fn early_vm_exe_paths_match_fails_with_unmatched_paths() {
+        let early_vm = EarlyVm {
+            name: "vm_demo_native_early".to_owned(),
+            cid: 123,
+            path: "/system_ext/bin/vm_demo_native_early".to_owned(),
+        };
+        let calling_exe_path = "/system/etc/system_ext/bin/vm_demo_native_early";
+        assert!(early_vm.check_exe_paths_match(calling_exe_path).is_err())
+    }
+
+    #[test]
+    fn test_duplicated_early_vms() -> Result<()> {
+        let tmp_dir = tempfile::TempDir::new()?;
+        let tmp_dir_path = tmp_dir.path().to_owned();
+        let xml_path = tmp_dir_path.join("early_vms.xml");
+
+        std::fs::write(
+            &xml_path,
+            br#"<?xml version="1.0" encoding="utf-8"?>
+        <early_vms>
+            <early_vm>
+                <name>vm_demo_duplicated_name</name>
+                <cid>456</cid>
+                <path>/system/bin/vm_demo_duplicated_name_1</path>
+            </early_vm>
+            <early_vm>
+                <name>vm_demo_duplicated_name</name>
+                <cid>789</cid>
+                <path>/system/bin/vm_demo_duplicated_name_2</path>
+            </early_vm>
+        </early_vms>
+        "#,
+        )?;
+
+        let cid_range = 100..1000;
+
+        let early_vms = get_early_vms_in_path(&xml_path)?;
+        validate_cid_range(&early_vms, &cid_range)?;
+
+        assert!(find_early_vm(&early_vms, "vm_demo_duplicated_name").is_err(), "should fail");
+
+        Ok(())
+    }
+}
