@@ -1666,12 +1666,13 @@ public class VirtualMachine implements AutoCloseable {
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 }
-                if (mConnectVmConsole) {
-                    mVirtualMachine.setHostConsoleName(getHostConsoleName());
-                }
                 // TODO(b/406258175): here we need to register new callback to handle encrypted
                 // store KEK.
                 mVirtualMachine.start();
+
+                if (mConnectVmConsole) {
+                    mVirtualMachine.setHostConsoleName(getHostConsoleName());
+                }
             } catch (IOException e) {
                 throw new VirtualMachineException("failed to persist files", e);
             } catch (IllegalStateException | ServiceSpecificException e) {
