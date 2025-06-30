@@ -19,7 +19,7 @@ use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{
     AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState,
-    SharedPathConfig, UsbConfig, VmContext, VmInstance, VmState,
+    SharedPathConfig, UsbConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -500,7 +500,7 @@ impl VirtualizationService {
         config: &aidl::VirtualMachineConfig,
         calling_exe_path: Option<&Path>,
         calling_partition: CallingPartition,
-    ) -> binder::Result<(VmContext, Cid, PathBuf)> {
+    ) -> binder::Result<(Cid, PathBuf)> {
         let name = match config {
             aidl::VirtualMachineConfig::RawConfig(config) => &config.name,
             aidl::VirtualMachineConfig::AppConfig(config) => &config.name,
@@ -523,51 +523,14 @@ impl VirtualizationService {
             .context(format!("can't create '{}'", temp_dir.display()))
             .or_service_specific_exception(-1)?;
 
-        if requires_vm_service(config) {
-            // Start VM service listening for connections from the new CID on port=CID.
-            let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
-            let port = cid;
-            let (vm_server, _) = RpcServer::new_vsock(service, cid, port)
-                .context(format!("Could not start RpcServer on port {port}"))
-                .or_service_specific_exception(-1)?;
-            vm_server.start();
-            Ok((VmContext::new(Some(vm_server)), cid, temp_dir))
-        } else {
-            Ok((VmContext::new(None), cid, temp_dir))
-        }
+        Ok((cid, temp_dir))
     }
 
-    fn create_vm_context(
-        &self,
-        config: &aidl::VirtualMachineConfig,
-    ) -> binder::Result<(VmContext, Cid, PathBuf)> {
-        const NUM_ATTEMPTS: usize = 5;
-        for _ in 0..NUM_ATTEMPTS {
-            let vm_context = global_service().allocateVmContext()?;
-            let cid = vm_context.cid as Cid;
-            let temp_dir: PathBuf = vm_context.tempDir.clone().into();
-
-            // We don't need to start the VM service for custom VMs.
-            if !requires_vm_service(config) {
-                return Ok((VmContext::new(None), cid, temp_dir));
-            }
-
-            let service = VirtualMachineService::new_binder(self.state.clone(), cid).as_binder();
-
-            // Start VM service listening for connections from the new CID on port=CID.
-            let port = cid;
-            match RpcServer::new_vsock(service, cid, port) {
-                Ok((vm_server, _)) => {
-                    vm_server.start();
-                    return Ok((VmContext::new(Some(vm_server)), cid, temp_dir));
-                }
-                Err(err) => {
-                    warn!("Could not start RpcServer on port {}: {}", port, err);
-                }
-            }
-        }
-        Err(anyhow!("Too many attempts to create VM context failed"))
-            .or_service_specific_exception(-1)
+    fn create_vm_context(&self) -> binder::Result<(Cid, PathBuf)> {
+        let vm_context = global_service().allocateVmContext()?;
+        let cid = vm_context.cid as Cid;
+        let temp_dir: PathBuf = vm_context.tempDir.clone().into();
+        Ok((cid, temp_dir))
     }
 
     fn create_vm_internal(
@@ -587,6 +550,14 @@ impl VirtualizationService {
         let instance_id = extract_instance_id(config);
 
         let encrypted_store_kek = extract_encrypted_store_kek(config);
+        // Determine whether a VM config requires VirtualMachineService running on the host. Only
+        // Microdroid VM (i.e. AppConfig) requires it. However, a few Microdroid tests use
+        // RawConfig for Microdroid VM. To handle the exceptional case, we use name as a second
+        // criteria; if the name is "microdroid" we run VirtualMachineService
+        let requires_vm_service = match config {
+            aidl::VirtualMachineConfig::AppConfig(_) => true,
+            aidl::VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
+        };
 
         // Require vendor instance IDs to start with a specific prefix so that they don't conflict
         // with system instance IDs.
@@ -615,10 +586,10 @@ impl VirtualizationService {
         info!("callers secontext: {}", caller_secontext);
 
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
-        let (vm_context, cid, temporary_directory) = if cfg!(early) {
+        let (cid, temporary_directory) = if cfg!(early) {
             self.create_early_vm_context(config, CALLING_EXE_PATH.as_deref(), calling_partition)?
         } else {
-            self.create_vm_context(config)?
+            self.create_vm_context()?
         };
 
         if is_custom_config(config) {
@@ -986,7 +957,7 @@ impl VirtualizationService {
                 requester_debug_pid,
                 console_join_handle,
                 log_join_handle,
-                vm_context,
+                requires_vm_service,
                 trim_under_pressure,
                 vendor_tee_services,
                 config.hostServices.clone(),
@@ -1066,17 +1037,6 @@ fn is_custom_config(config: &aidl::VirtualMachineConfig) -> bool {
                 }) || config.osName != MICRODROID_OS_NAME
             }
         }
-    }
-}
-
-/// Returns whether a VM config requires VirtualMachineService running on the host. Only Microdroid
-/// VM (i.e. AppConfig) requires it. However, a few Microdroid tests use RawConfig for Microdroid
-/// VM. To handle the exceptional case, we use name as a second criteria; if the name is
-/// "microdroid" we run VirtualMachineService
-fn requires_vm_service(config: &aidl::VirtualMachineConfig) -> bool {
-    match config {
-        aidl::VirtualMachineConfig::AppConfig(_) => true,
-        aidl::VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
     }
 }
 
@@ -1795,6 +1755,17 @@ impl aidl::IVirtualMachine for VirtualMachine {
     }
 
     fn start(&self) -> binder::Result<()> {
+        if self.instance.requires_vm_service {
+            let cid = self.instance.cid;
+            // Start VM service listening for connections from the new CID on port=CID.
+            let service = VirtualMachineService::new_binder(self.instance.clone()).as_binder();
+            let port = cid;
+            let (vm_server, _) = RpcServer::new_vsock(service, cid, port)
+                .context(format!("Could not start RpcServer on port {port}"))
+                .or_service_specific_exception(-1)?;
+            vm_server.start();
+            *self.instance.vm_service.lock().unwrap() = Some(vm_server);
+        }
         self.instance
             .start()
             .with_context(|| format!("Error starting VM with CID {}", self.instance.cid))
@@ -2028,11 +1999,6 @@ impl State {
 
         // Actually add the new VM.
         self.vms.push(vm);
-    }
-
-    /// Get a VM that corresponds to the given cid
-    fn get_vm(&self, cid: Cid) -> Option<Arc<VmInstance>> {
-        self.vms().into_iter().find(|vm| vm.cid == cid)
     }
 }
 
@@ -2320,8 +2286,7 @@ impl<T> AsRef<T> for BorrowedOrOwned<'_, T> {
 }
 
 struct HostRpcProvider {
-    state: Arc<Mutex<State>>,
-    cid: Cid,
+    vm_instance: Arc<VmInstance>,
     // Keep a map of instances to ports to know if we've already set up a proxy
     proxied_services: Mutex<HashMap<String, Vsock>>,
 }
@@ -2329,32 +2294,27 @@ struct HostRpcProvider {
 impl Interface for HostRpcProvider {}
 impl IRpcProvider for HostRpcProvider {
     fn getServiceConnectionInfo(&self, name: &str) -> binder::Result<ServiceConnectionInfo> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            if !vm.host_services.iter().any(|i| i == name) {
-                return Err(anyhow!(
-                    "This VM is not configured to access the host service \
-                        {name}. The service must be added to the VM configuration in \
-                        the hostServices field."
-                ))
-                .or_service_specific_exception(-1);
-            }
-            // Check with servicemanager to make sure the VM owner still has permission to get this
-            // service
-            let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
-            check_host_service_permission(
-                &caller_secontext,
-                &[name.to_string()],
-                vm.requester_debug_pid,
-                vm.requester_uid,
-            )
-            .with_log()
-            .or_binder_exception(ExceptionCode::SECURITY)?;
-        } else {
-            error!("notifyError is called from an unknown CID {}", cid);
-            return Err(anyhow!("cannot find a VM with CID {}", cid))
-                .or_service_specific_exception(-1);
+        let vm = &self.vm_instance;
+        let cid = vm.cid;
+        if !vm.host_services.iter().any(|i| i == name) {
+            return Err(anyhow!(
+                "This VM is not configured to access the host service \
+                    {name}. The service must be added to the VM configuration in \
+                    the hostServices field."
+            ))
+            .or_service_specific_exception(-1);
         }
+        // Check with servicemanager to make sure the VM owner still has permission to get this
+        // service
+        let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
+        check_host_service_permission(
+            &caller_secontext,
+            &[name.to_string()],
+            vm.requester_debug_pid,
+            vm.requester_uid,
+        )
+        .with_log()
+        .or_binder_exception(ExceptionCode::SECURITY)?;
 
         // If we've previously proxied this service, we only need to return the connection info
         if let Some(p) = self.proxied_services.lock().unwrap().get(name) {
@@ -2368,78 +2328,54 @@ impl IRpcProvider for HostRpcProvider {
 }
 
 /// Implementation of `IVirtualMachineService`, the entry point of the AIDL service.
-#[derive(Debug, Default)]
 struct VirtualMachineService {
-    state: Arc<Mutex<State>>,
-    cid: Cid,
+    vm_instance: Arc<VmInstance>,
 }
 
 impl Interface for VirtualMachineService {}
 
 impl aidl::IVirtualMachineService for VirtualMachineService {
     fn notifyPayloadStarted(&self) -> binder::Result<()> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            info!("VM with CID {} started payload", cid);
-            vm.update_payload_state(PayloadState::Started)
-                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
-            vm.callbacks.notify_payload_started(cid);
+        let vm = &self.vm_instance;
+        let cid = vm.cid;
+        info!("VM with CID {} started payload", cid);
+        vm.update_payload_state(PayloadState::Started)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        vm.callbacks.notify_payload_started(cid);
 
-            let vm_start_timestamp = vm.vm_metric.lock().unwrap().start_timestamp;
-            write_vm_booted_stats(vm.requester_uid as i32, &vm.name, vm_start_timestamp);
-            Ok(())
-        } else {
-            error!("notifyPayloadStarted is called from an unknown CID {}", cid);
-            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
-        }
+        let vm_start_timestamp = vm.vm_metric.lock().unwrap().start_timestamp;
+        write_vm_booted_stats(vm.requester_uid as i32, &vm.name, vm_start_timestamp);
+        Ok(())
     }
 
     fn notifyPayloadReady(&self) -> binder::Result<()> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            info!("VM with CID {} reported payload is ready", cid);
-            vm.update_payload_state(PayloadState::Ready)
-                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
-            vm.callbacks.notify_payload_ready(cid);
-            Ok(())
-        } else {
-            error!("notifyPayloadReady is called from an unknown CID {}", cid);
-            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
-        }
+        let vm = &self.vm_instance;
+        let cid = vm.cid;
+        info!("VM with CID {} reported payload is ready", cid);
+        vm.update_payload_state(PayloadState::Ready)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        vm.callbacks.notify_payload_ready(cid);
+        Ok(())
     }
 
     fn notifyPayloadFinished(&self, exit_code: i32) -> binder::Result<()> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            info!("VM with CID {} finished payload", cid);
-            vm.update_payload_state(PayloadState::Finished)
-                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
-            vm.callbacks.notify_payload_finished(cid, exit_code);
-            Ok(())
-        } else {
-            error!("notifyPayloadFinished is called from an unknown CID {}", cid);
-            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
-        }
+        let vm = &self.vm_instance;
+        let cid = vm.cid;
+        info!("VM with CID {} finished payload", cid);
+        vm.update_payload_state(PayloadState::Finished)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        vm.callbacks.notify_payload_finished(cid, exit_code);
+        Ok(())
     }
 
     fn notifyError(&self, error_code: aidl::ErrorCode, message: &str) -> binder::Result<()> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            info!(
-                "VM with CID {} encountered an error: {:?} message: {}",
-                cid, error_code, message
-            );
-            vm.update_payload_state(PayloadState::Finished)
-                .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
-            vm.callbacks.notify_error(cid, error_code, message);
-            Ok(())
-        } else {
-            error!(
-                "notifyError is called from an unknown CID {}. error: {:?} message: {}",
-                cid, error_code, message
-            );
-            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
-        }
+        let vm = &self.vm_instance;
+        let cid = vm.cid;
+        info!("VM with CID {} encountered an error: {:?} message: {}", cid, error_code, message);
+        vm.update_payload_state(PayloadState::Finished)
+            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        vm.callbacks.notify_error(cid, error_code, message);
+        Ok(())
     }
 
     fn getSecretkeeper(&self) -> binder::Result<Strong<dyn aidl::ISecretkeeper>> {
@@ -2465,8 +2401,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
     fn getHostRpcProvider(&self) -> binder::Result<Strong<dyn IRpcProvider>> {
         Ok(BnRpcProvider::new_binder(
             HostRpcProvider {
-                state: self.state.clone(),
-                cid: self.cid,
+                vm_instance: self.vm_instance.clone(),
                 proxied_services: Default::default(),
             },
             BinderFeatures::default(),
@@ -2477,41 +2412,31 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         &self,
         guest_agent: &Strong<dyn aidl::IGuestAgent>,
     ) -> binder::Result<()> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
-            info!("VM with CID {} has registered a guest agent", cid);
-            Ok(())
-        } else {
-            error!("registerGuestAgent is called from an unknown CID {}", cid);
-            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
-        }
+        let vm = &self.vm_instance;
+        let cid = vm.cid;
+        *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
+        info!("VM with CID {} has registered a guest agent", cid);
+        Ok(())
     }
 
     fn getEncryptedStoreKEK(&self) -> binder::Result<Option<Strong<dyn aidl::IEncryptedStoreKEK>>> {
-        let cid = self.cid;
-        if let Some(vm) = self.state.lock().unwrap().get_vm(cid) {
-            if let Some(encrypted_store_kek) = &vm.encrypted_store_kek {
-                let kek_wrapper = aidl::BnEncryptedStoreKEK::new_binder(
-                    EncryptedStoreKEKWrapper::new(encrypted_store_kek),
-                    BinderFeatures::default(),
-                );
-                Ok(Some(kek_wrapper))
-            } else {
-                Ok(None)
-            }
+        let vm = &self.vm_instance;
+        if let Some(encrypted_store_kek) = &vm.encrypted_store_kek {
+            let kek_wrapper = aidl::BnEncryptedStoreKEK::new_binder(
+                EncryptedStoreKEKWrapper::new(encrypted_store_kek),
+                BinderFeatures::default(),
+            );
+            Ok(Some(kek_wrapper))
         } else {
-            error!("getEncryptedStoreKek is called from an unknown CID {}", cid);
-            Err(anyhow!("cannot find a VM with CID {}", cid)).or_service_specific_exception(-1)
+            Ok(None)
         }
     }
 
     fn writeToDropBox(&self, tag: &str, message: &str) -> binder::Result<()> {
         let drop_box_manager =
             DropBoxManager::new().or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
-        let cid = self.cid;
-        let name = &self.state.lock().unwrap().get_vm(cid).unwrap().name;
-        let vm_info = format!("cid: {}, name: {}", cid, name);
+        let vm = &self.vm_instance;
+        let vm_info = format!("cid: {}, name: {}", vm.cid, vm.name);
         let report = build_dropbox_report(&vm_info, message)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         drop_box_manager
@@ -2553,9 +2478,9 @@ fn is_vm_capabilities_hal_supported() -> bool {
 }
 
 impl VirtualMachineService {
-    fn new_binder(state: Arc<Mutex<State>>, cid: Cid) -> Strong<dyn aidl::IVirtualMachineService> {
+    fn new_binder(vm_instance: Arc<VmInstance>) -> Strong<dyn aidl::IVirtualMachineService> {
         aidl::BnVirtualMachineService::new_binder(
-            VirtualMachineService { state, cid },
+            VirtualMachineService { vm_instance },
             BinderFeatures::default(),
         )
     }

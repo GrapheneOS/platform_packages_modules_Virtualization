@@ -496,20 +496,6 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
     }
 }
 
-/// Internal struct that holds the handles to globally unique resources of a VM.
-#[derive(Debug)]
-pub struct VmContext {
-    #[allow(dead_code)] // Keeps the server alive
-    vm_server: Option<RpcServer>,
-}
-
-impl VmContext {
-    /// Construct new VmContext.
-    pub fn new(vm_server: Option<RpcServer>) -> VmContext {
-        VmContext { vm_server }
-    }
-}
-
 // TODO: may want to check if these are ever dropped without joining,
 // as logs could be lost in these cases.
 #[derive(Debug)]
@@ -541,8 +527,10 @@ pub struct VmInstance {
     pub vm_state: Mutex<VmState>,
     /// Condvar that is notified when `vm_state` becomes `Dead`.
     vm_dead_convar: Condvar,
-    /// Global resources allocated for this VM.
-    pub(crate) vm_context: Mutex<Option<VmContext>>,
+    /// Whether this VmInstance requires VirtualMachineService
+    pub requires_vm_service: bool,
+    /// Hold the reference to RpcServer running VirtualMachineService
+    pub vm_service: Mutex<Option<RpcServer>>,
     /// The CID assigned to the VM for vsock communication.
     pub cid: Cid,
     /// Path to crosvm control socket
@@ -610,7 +598,7 @@ impl VmInstance {
         requester_debug_pid: i32,
         console_join_handle: Option<JoinHandle<()>>,
         log_join_handle: Option<JoinHandle<()>>,
-        vm_context: VmContext,
+        requires_vm_service: bool,
         trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
@@ -628,7 +616,8 @@ impl VmInstance {
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
             vm_dead_convar: Condvar::new(),
-            vm_context: Mutex::new(Some(vm_context)),
+            requires_vm_service,
+            vm_service: Mutex::new(None),
             cid,
             crosvm_control_socket_path: temporary_directory.join("crosvm.sock"),
             name,
@@ -789,17 +778,11 @@ impl VmInstance {
 
         drop(vfio_devices); // Cleanup devices.
 
-        // Remove the VmContext to "unregister" from virtualizationservice, so that, for example,
-        // the VM no longer shows up in the list of running VMs.
-        //
-        // We don't want to wait for the VmInstance to be dropped because some clients of the
-        // IVirtualMachine binder service may be very slow to free it (e.g. Java GC).
-        let vm_context = self.vm_context.lock().unwrap().take().expect("VmContext missing");
-
         // Now that the VM is gone, shut down the VirtualMachineService server to eagerly free up
         // the server threads.
-        if let Some(vm_server) = &vm_context.vm_server {
-            if let Err(e) = vm_server.shutdown() {
+        let vm_service = self.vm_service.lock().unwrap();
+        if let Some(service) = &*vm_service {
+            if let Err(e) = service.shutdown() {
                 error!("Failed to shutdown VirtualMachineService RPC Binder server: {e:#}");
             }
         }
