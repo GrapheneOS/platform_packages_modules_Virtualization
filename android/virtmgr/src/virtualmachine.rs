@@ -205,14 +205,17 @@ pub fn remove_temporary_files(path: &PathBuf) -> Result<()> {
 /// Implementation of `IVirtualizationService`, the entry point of the AIDL service.
 #[derive(Debug, Default)]
 pub struct VirtualizationService {
-    pub state: Arc<Mutex<State>>,
+    /// The VMs which have been created. When VMs are created a weak reference is added to this
+    /// list while a strong reference is returned to the caller over Binder. Once all copies of
+    /// the Binder client are dropped the weak reference here will become invalid, and will be
+    /// removed from the list opportunistically the next time `add_vm` is called.
+    pub vms: Mutex<Vec<Weak<VmInstance>>>,
 }
 
 impl Interface for VirtualizationService {
     fn dump(&self, writer: &mut dyn Write, _args: &[&CStr]) -> Result<(), StatusCode> {
         check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
-        let state = &mut *self.state.lock().unwrap();
-        let vms = state.vms();
+        let vms = self.get_vms();
         writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
         for vm in vms {
             writeln!(writer, "VM CID: {}", vm.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
@@ -626,7 +629,6 @@ impl VirtualizationService {
             None
         };
 
-        let state = &mut *self.state.lock().unwrap();
         let (console_out_fd, console_join_handle) =
             clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
         let console_in_fd = console_in_fd.map(clone_file).transpose()?;
@@ -967,7 +969,13 @@ impl VirtualizationService {
             .with_log()
             .or_service_specific_exception(-1)?,
         );
-        state.add_vm(Arc::downgrade(&instance));
+        {
+            let mut vms = self.vms.lock().unwrap();
+            // Garbage collect any entries from the stored list which no longer exist.
+            vms.retain(|vm| vm.strong_count() > 0);
+            // Actually add the new VM.
+            vms.push(Arc::downgrade(&instance));
+        }
 
         let vm = VirtualMachine::create(instance);
 
@@ -976,6 +984,10 @@ impl VirtualizationService {
             .or_service_specific_exception(-1)?;
 
         Ok(vm)
+    }
+
+    pub fn get_vms(&self) -> Vec<Arc<VmInstance>> {
+        self.vms.lock().unwrap().iter().filter_map(Weak::upgrade).collect()
     }
 }
 
@@ -1971,34 +1983,6 @@ impl VirtualMachineCallbacks {
     /// Add a new callback to the set.
     fn add(&self, callback: Strong<dyn aidl::IVirtualMachineCallback>) {
         self.0.lock().unwrap().push(callback);
-    }
-}
-
-/// The mutable state of the VirtualizationService. There should only be one instance of this
-/// struct.
-#[derive(Debug, Default)]
-pub struct State {
-    /// The VMs which have been started. When VMs are started a weak reference is added to this
-    /// list while a strong reference is returned to the caller over Binder. Once all copies of
-    /// the Binder client are dropped the weak reference here will become invalid, and will be
-    /// removed from the list opportunistically the next time `add_vm` is called.
-    vms: Vec<Weak<VmInstance>>,
-}
-
-impl State {
-    /// Get a list of VMs which still have Binder references to them.
-    pub fn vms(&self) -> Vec<Arc<VmInstance>> {
-        // Attempt to upgrade the weak pointers to strong pointers.
-        self.vms.iter().filter_map(Weak::upgrade).collect()
-    }
-
-    /// Add a new VM to the list.
-    fn add_vm(&mut self, vm: Weak<VmInstance>) {
-        // Garbage collect any entries from the stored list which no longer exist.
-        self.vms.retain(|vm| vm.strong_count() > 0);
-
-        // Actually add the new VM.
-        self.vms.push(vm);
     }
 }
 
