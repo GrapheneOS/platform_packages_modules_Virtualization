@@ -64,7 +64,7 @@ use std::fs::{
 use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::ops::Range;
+use std::ops::{Deref, Range};
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
@@ -1012,19 +1012,11 @@ impl VirtualizationService {
 /// retrieved via the global service. Also set up a death recipient so that the VMs are "re"
 /// registered to the global service if the service goes down and then is brought up again.
 fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder::Result<()> {
-    use binder::binder_impl::Binder;
     if cfg!(early) {
         return Ok(());
     }
 
-    // Dereference `VmInstance` from the strong pointer to IVirtualMachine.
-    let local_binder: Binder<aidl::BnVirtualMachine> =
-        vm.as_binder().try_into().expect("Strong<dyn aidl::IVirtualMachine> is not a local binder");
-    let obj = local_binder
-        .downcast_binder::<VirtualMachine>()
-        .expect("IVirtualMachine is not implemented by VirtualMachine");
-    let instance = &obj.instance;
-
+    let instance = &to_local_object(vm).expect("not a local object").instance;
     let cid = instance.cid;
     global_service().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
 
@@ -1745,6 +1737,25 @@ impl VirtualMachine {
             .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))
             .with_log()
             .or_service_specific_exception(-1)
+    }
+}
+
+/// Converts a strong binder reference to a local object if the reference is local. This function
+/// actually doesn't return the local object, but a holder object (VirtualMachineBinder) which is
+/// automatically dereferenced to the local object
+fn to_local_object(
+    binder: &Strong<dyn aidl::IVirtualMachine>,
+) -> Result<impl Deref<Target = VirtualMachine>> {
+    let binder = binder.as_binder().try_into().context("Not a local reference")?;
+    Ok(VirtualMachineBinder(binder))
+}
+
+struct VirtualMachineBinder(binder::binder_impl::Binder<aidl::BnVirtualMachine>);
+
+impl Deref for VirtualMachineBinder {
+    type Target = VirtualMachine;
+    fn deref(&self) -> &Self::Target {
+        self.0.downcast_binder().expect("IVirtualMachine is not implemented by VirtualMachine")
     }
 }
 
