@@ -475,7 +475,7 @@ fn try_run_payload(
     // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
     // appsearch's VM, which we detect indirectly via the rollback_index field.
     let cgroup_config = if instance_data.apk_data.rollback_index.is_some() {
-        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 80 })
+        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 30 })
     } else {
         None
     };
