@@ -31,7 +31,6 @@ pub use android_system_virtualizationservice::aidl::android::system::virtualizat
     CpuOptions::CpuTopology::CpuTopology,
     DiskImage::DiskImage,
     DisplayConfig::DisplayConfig,
-    GpuConfig::GpuConfig,
     IVirtualMachine::{IVirtualMachine, BnVirtualMachine, ERROR_UNEXPECTED},
     IVirtualMachineCallback::IVirtualMachineCallback,
     IVirtualizationService::{BnVirtualizationService, IVirtualizationService},
