@@ -236,7 +236,7 @@ impl FromAddrCells for u64 {
     fn from_addr_cells(cells: &mut CellIterator, cell_count: AddrCells) -> Option<Self> {
         Some(match cell_count {
             AddrCells::Single => cells.next()?.into(),
-            AddrCells::Double => (cells.next()? as Self) << 32 | cells.next()? as Self,
+            AddrCells::Double => ((cells.next()? as Self) << 32) | cells.next()? as Self,
             _ => panic!("Invalid addr_cells {:?} for u64", cell_count),
         })
     }
@@ -246,7 +246,7 @@ impl FromAddrCells for (u32, u64) {
     fn from_addr_cells(cells: &mut CellIterator, cell_count: AddrCells) -> Option<Self> {
         Some(match cell_count {
             AddrCells::Triple => {
-                (cells.next()?, (cells.next()? as u64) << 32 | cells.next()? as u64)
+                (cells.next()?, ((cells.next()? as u64) << 32) | cells.next()? as u64)
             }
             _ => panic!("Invalid addr_cells {:?} for (u32, u64)", cell_count),
         })
@@ -261,7 +261,7 @@ impl FromSizeCells for u64 {
     fn from_size_cells(cells: &mut CellIterator, cell_count: SizeCells) -> Option<Self> {
         Some(match cell_count {
             SizeCells::Single => cells.next()?.into(),
-            SizeCells::Double => (cells.next()? as Self) << 32 | cells.next()? as Self,
+            SizeCells::Double => ((cells.next()? as Self) << 32) | cells.next()? as Self,
             _ => panic!("Invalid size_cells {:?} for u64", cell_count),
         })
     }

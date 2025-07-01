@@ -14,14 +14,8 @@
 
 //! Payload disk image
 
+use crate::aidl;
 use crate::debug_config::DebugConfig;
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    DiskImage::DiskImage,
-    Partition::Partition,
-    VirtualMachineAppConfig::DebugLevel::DebugLevel,
-    VirtualMachineAppConfig::{Payload::Payload, VirtualMachineAppConfig},
-    VirtualMachineRawConfig::VirtualMachineRawConfig,
-};
 use anyhow::{anyhow, bail, Context, Result};
 use binder::{wait_for_interface, ParcelFileDescriptor};
 use log::{info, warn};
@@ -203,18 +197,18 @@ impl PackageManager {
 }
 
 fn make_metadata_file(
-    app_config: &VirtualMachineAppConfig,
+    app_config: &aidl::VirtualMachineAppConfig,
     apex_infos: &[&ApexInfo],
     temporary_directory: &Path,
 ) -> Result<ParcelFileDescriptor> {
     let payload_metadata = match &app_config.payload {
-        Payload::PayloadConfig(payload_config) => PayloadMetadata::Config(PayloadConfig {
+        aidl::Payload::PayloadConfig(payload_config) => PayloadMetadata::Config(PayloadConfig {
             payload_binary_name: payload_config.payloadBinaryName.clone(),
             extra_apk_count: payload_config.extraApks.len().try_into()?,
             delay_encrypted_store_setup: app_config.shouldDelayEncryptedStoreSetup,
             special_fields: Default::default(),
         }),
-        Payload::ConfigPath(config_path) => {
+        aidl::Payload::ConfigPath(config_path) => {
             PayloadMetadata::ConfigPath(format!("/mnt/apk/{}", config_path))
         }
     };
@@ -272,14 +266,14 @@ fn make_metadata_file(
 ///   extra-idsig-1: additional idsig 1
 ///   ..
 fn make_payload_disk(
-    app_config: &VirtualMachineAppConfig,
+    app_config: &aidl::VirtualMachineAppConfig,
     debug_config: &DebugConfig,
     apk_file: File,
     idsig_file: File,
     extra_apk_files: Vec<File>,
     vm_payload_config: &VmPayloadConfig,
     temporary_directory: &Path,
-) -> Result<DiskImage> {
+) -> Result<aidl::DiskImage> {
     if extra_apk_files.len() != app_config.extraIdsigs.len() {
         bail!(
             "payload config has {} apks, but app config has {} idsigs",
@@ -303,7 +297,7 @@ fn make_payload_disk(
 
     let metadata_file = make_metadata_file(app_config, &apex_infos, temporary_directory)?;
     // put metadata at the first partition
-    let mut partitions = vec![Partition {
+    let mut partitions = vec![aidl::Partition {
         label: "payload-metadata".to_owned(),
         image: Some(metadata_file),
         writable: false,
@@ -321,20 +315,20 @@ fn make_payload_disk(
             &apex_info.path
         };
         let apex_file = open_parcel_file(path, false)?;
-        partitions.push(Partition {
+        partitions.push(aidl::Partition {
             label: format!("microdroid-apex-{}", i),
             image: Some(apex_file),
             writable: false,
             guid: None,
         });
     }
-    partitions.push(Partition {
+    partitions.push(aidl::Partition {
         label: "microdroid-apk".to_owned(),
         image: Some(ParcelFileDescriptor::new(apk_file)),
         writable: false,
         guid: None,
     });
-    partitions.push(Partition {
+    partitions.push(aidl::Partition {
         label: "microdroid-apk-idsig".to_owned(),
         image: Some(ParcelFileDescriptor::new(idsig_file)),
         writable: false,
@@ -346,14 +340,14 @@ fn make_payload_disk(
     for (i, (extra_apk_file, extra_idsig)) in
         extra_apk_files.into_iter().zip(extra_idsigs.iter()).enumerate()
     {
-        partitions.push(Partition {
+        partitions.push(aidl::Partition {
             label: format!("extra-apk-{i}"),
             image: Some(ParcelFileDescriptor::new(extra_apk_file)),
             writable: false,
             guid: None,
         });
 
-        partitions.push(Partition {
+        partitions.push(aidl::Partition {
             label: format!("extra-idsig-{i}"),
             image: Some(ParcelFileDescriptor::new(
                 extra_idsig
@@ -366,7 +360,7 @@ fn make_payload_disk(
         });
     }
 
-    Ok(DiskImage { image: None, partitions, writable: false })
+    Ok(aidl::DiskImage { image: None, partitions, writable: false })
 }
 
 fn run_derive_classpath() -> Result<String> {
@@ -451,11 +445,14 @@ fn collect_apex_infos<'a>(
     Ok(apex_infos)
 }
 
-pub fn add_microdroid_vendor_image(vendor_image: File, vm_config: &mut VirtualMachineRawConfig) {
-    vm_config.disks.push(DiskImage {
+pub fn add_microdroid_vendor_image(
+    vendor_image: File,
+    vm_config: &mut aidl::VirtualMachineRawConfig,
+) {
+    vm_config.disks.push(aidl::DiskImage {
         image: None,
         writable: false,
-        partitions: vec![Partition {
+        partitions: vec![aidl::Partition {
             label: "microdroid-vendor".to_owned(),
             image: Some(ParcelFileDescriptor::new(vendor_image)),
             writable: false,
@@ -465,21 +462,21 @@ pub fn add_microdroid_vendor_image(vendor_image: File, vm_config: &mut VirtualMa
 }
 
 pub fn add_microdroid_system_images(
-    config: &VirtualMachineAppConfig,
+    config: &aidl::VirtualMachineAppConfig,
     instance_file: File,
     storage_image: Option<File>,
     os_name: &str,
-    vm_config: &mut VirtualMachineRawConfig,
+    vm_config: &mut aidl::VirtualMachineRawConfig,
 ) -> Result<()> {
     let debug_suffix = match config.debugLevel {
-        DebugLevel::NONE => "normal",
-        DebugLevel::FULL => "debuggable",
+        aidl::DebugLevel::NONE => "normal",
+        aidl::DebugLevel::FULL => "debuggable",
         _ => return Err(anyhow!("unsupported debug level: {:?}", config.debugLevel)),
     };
     let initrd = format!("/apex/com.android.virt/etc/{os_name}_initrd_{debug_suffix}.img");
     vm_config.initrd = Some(open_parcel_file(Path::new(&initrd), false)?);
 
-    let mut writable_partitions = vec![Partition {
+    let mut writable_partitions = vec![aidl::Partition {
         label: "vm-instance".to_owned(),
         image: Some(ParcelFileDescriptor::new(instance_file)),
         writable: true,
@@ -487,7 +484,7 @@ pub fn add_microdroid_system_images(
     }];
 
     if let Some(file) = storage_image {
-        writable_partitions.push(Partition {
+        writable_partitions.push(aidl::Partition {
             label: "encryptedstore".to_owned(),
             image: Some(ParcelFileDescriptor::new(file)),
             writable: true,
@@ -495,7 +492,7 @@ pub fn add_microdroid_system_images(
         });
     }
 
-    vm_config.disks.push(DiskImage {
+    vm_config.disks.push(aidl::DiskImage {
         image: None,
         partitions: writable_partitions,
         writable: true,
@@ -506,14 +503,14 @@ pub fn add_microdroid_system_images(
 
 #[allow(clippy::too_many_arguments)] // TODO: Fewer arguments
 pub fn add_microdroid_payload_images(
-    config: &VirtualMachineAppConfig,
+    config: &aidl::VirtualMachineAppConfig,
     debug_config: &DebugConfig,
     temporary_directory: &Path,
     apk_file: File,
     idsig_file: File,
     extra_apk_files: Vec<File>,
     vm_payload_config: &VmPayloadConfig,
-    vm_config: &mut VirtualMachineRawConfig,
+    vm_config: &mut aidl::VirtualMachineRawConfig,
 ) -> Result<()> {
     vm_config.disks.push(make_payload_disk(
         config,
@@ -677,7 +674,7 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
             collect_apex_infos(
                 &apex_info_list,
                 &apex_configs,
-                &DebugConfig::new_with_debug_level(DebugLevel::FULL)
+                &DebugConfig::new_with_debug_level(aidl::DebugLevel::FULL)
             )?,
             vec![
                 // Pass active/required APEXes
@@ -709,7 +706,7 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
         let ret = collect_apex_infos(
             &apex_info_list,
             &apex_configs,
-            &DebugConfig::new_with_debug_level(DebugLevel::NONE),
+            &DebugConfig::new_with_debug_level(aidl::DebugLevel::NONE),
         );
         assert!(ret
             .is_err_and(|ret| ret.to_string()
@@ -736,7 +733,7 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
             collect_apex_infos(
                 &apex_info_list,
                 &apex_configs,
-                &DebugConfig::new_with_debug_level(DebugLevel::NONE)
+                &DebugConfig::new_with_debug_level(aidl::DebugLevel::NONE)
             )?,
             vec![&apex_info_list.list[0]]
         );

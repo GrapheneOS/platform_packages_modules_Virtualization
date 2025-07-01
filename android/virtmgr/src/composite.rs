@@ -14,7 +14,7 @@
 
 //! Functions for creating a composite disk image.
 
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::Partition::Partition;
+use crate::aidl;
 use anyhow::{bail, Context, Error};
 use disk::{create_composite_disk, ImagePartitionType, PartitionInfo};
 use std::fs::{File, OpenOptions};
@@ -34,7 +34,7 @@ use uuid::Uuid;
 /// to any process which wants to use it. This is necessary because the composite image contains
 /// paths of the form `/proc/self/fd/N` for the partition images.
 pub fn make_composite_image(
-    partitions: &[Partition],
+    partitions: &[aidl::Partition],
     zero_filler_path: &Path,
     output_path: &Path,
     header_path: &Path,
@@ -84,7 +84,9 @@ pub fn make_composite_image(
 /// Given the AIDL config containing a list of partitions, with a [`ParcelFileDescriptor`] for each
 /// partition, returns the corresponding list of PartitionInfo and the list of files whose file
 /// descriptors must be passed to any process using the composite image.
-fn convert_partitions(partitions: &[Partition]) -> Result<(Vec<PartitionInfo>, Vec<File>), Error> {
+fn convert_partitions(
+    partitions: &[aidl::Partition],
+) -> Result<(Vec<PartitionInfo>, Vec<File>), Error> {
     // File descriptors to pass to child process.
     let mut files = vec![];
 

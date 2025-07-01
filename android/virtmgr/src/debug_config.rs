@@ -14,9 +14,7 @@
 
 //! Functions for AVF debug policy and debug level
 
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    VirtualMachineAppConfig::DebugLevel::DebugLevel, VirtualMachineConfig::VirtualMachineConfig,
-};
+use crate::aidl;
 use anyhow::{anyhow, Context, Error, Result};
 use libfdt::{Fdt, FdtError};
 use log::{info, warn};
@@ -183,14 +181,14 @@ impl DebugPolicy {
 /// Debug configurations for both debug level and debug policy
 #[derive(Debug, Default)]
 pub struct DebugConfig {
-    pub debug_level: DebugLevel,
+    pub debug_level: aidl::DebugLevel,
     pub dump_device_tree: bool,
     debug_policy: DebugPolicy,
 }
 
 impl DebugConfig {
-    pub fn new(config: &VirtualMachineConfig) -> Self {
-        let debug_level = get_debug_level(config).unwrap_or(DebugLevel::NONE);
+    pub fn new(config: &aidl::VirtualMachineConfig) -> Self {
+        let debug_level = get_debug_level(config).unwrap_or(aidl::DebugLevel::NONE);
         let debug_policy = Self::get_debug_policy(config).unwrap_or_else(|| {
             info!("Debug policy is disabled");
             Default::default()
@@ -204,8 +202,8 @@ impl DebugConfig {
         Self { debug_level, debug_policy, dump_device_tree }
     }
 
-    fn get_debug_policy(config: &VirtualMachineConfig) -> Option<DebugPolicy> {
-        if matches!(config, VirtualMachineConfig::RawConfig(_)) {
+    fn get_debug_policy(config: &aidl::VirtualMachineConfig) -> Option<DebugPolicy> {
+        if matches!(config, aidl::VirtualMachineConfig::RawConfig(_)) {
             info!("Debug policy ignored for non-Microdroid VM");
             return None;
         }
@@ -241,24 +239,24 @@ impl DebugConfig {
 
     #[cfg(test)]
     /// Creates a new DebugConfig with debug level. Only use this for test purpose.
-    pub(crate) fn new_with_debug_level(debug_level: DebugLevel) -> Self {
+    pub(crate) fn new_with_debug_level(debug_level: aidl::DebugLevel) -> Self {
         Self { debug_level, ..Default::default() }
     }
 
     /// Get whether console output should be configred for VM to leave console and adb log.
     /// Caller should create pipe and prepare for receiving VM log with it.
     pub fn should_prepare_console_output(&self) -> bool {
-        self.debug_level != DebugLevel::NONE || self.debug_policy.log || self.debug_policy.adb
+        self.debug_level != aidl::DebugLevel::NONE || self.debug_policy.log || self.debug_policy.adb
     }
 
     /// Get whether debug apexes (MICRODROID_REQUIRED_APEXES_DEBUG) are required.
     pub fn should_include_debug_apexes(&self) -> bool {
-        self.debug_level != DebugLevel::NONE || self.debug_policy.adb
+        self.debug_level != aidl::DebugLevel::NONE || self.debug_policy.adb
     }
 
     /// Decision to support ramdump
     pub fn is_ramdump_needed(&self) -> bool {
-        self.debug_level != DebugLevel::NONE || self.debug_policy.ramdump
+        self.debug_level != aidl::DebugLevel::NONE || self.debug_policy.ramdump
     }
 }
 
@@ -329,12 +327,12 @@ mod tests {
     #[test]
     fn test_new_with_debug_level() -> Result<()> {
         assert_eq!(
-            DebugConfig::new_with_debug_level(DebugLevel::NONE).debug_level,
-            DebugLevel::NONE
+            DebugConfig::new_with_debug_level(aidl::DebugLevel::NONE).debug_level,
+            aidl::DebugLevel::NONE
         );
         assert_eq!(
-            DebugConfig::new_with_debug_level(DebugLevel::FULL).debug_level,
-            DebugLevel::FULL
+            DebugConfig::new_with_debug_level(aidl::DebugLevel::FULL).debug_level,
+            aidl::DebugLevel::FULL
         );
 
         Ok(())
