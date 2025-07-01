@@ -373,6 +373,7 @@ class VmLauncherService : Service() {
                     .setRendererUseSurfaceless(true)
                     .setRendererUseVulkan(true)
                     .setContextTypes(arrayOf<String>("gfxstream-vulkan", "gfxstream-composer"))
+                    .setRendererFeatures("VulkanDisableCoherentMemoryAndEmulate:enabled")
                     .build()
             )
             runOnMainThread { Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show() }
