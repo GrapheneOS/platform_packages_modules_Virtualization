@@ -133,12 +133,8 @@ fn main() {
     }
 
     let service = VirtualizationService::init();
-    let state_ptr = service.state.clone();
-
     let service = aidl::BnVirtualizationService::new_binder(service, BinderFeatures::default());
-    let service_binder = service.as_binder();
-
-    let server = RpcServer::new_unix_domain_bootstrap(service_binder, rpc_server_fd)
+    let server = RpcServer::new_unix_domain_bootstrap(service.as_binder(), rpc_server_fd)
         .expect("Failed to start RpcServer");
     server.set_supported_file_descriptor_transport_modes(&[FileDescriptorTransportMode::Unix]);
 
@@ -153,13 +149,10 @@ fn main() {
     info!("Shutting down VirtualizationService RpcServer");
 
     // Do all the standard cleanup we can, mainly to make sure we join logging threads.
-    let vms = {
-        // scope is needed to not hold State (state_ptr) after we have the list of VMs. Otherwise,
-        // we may hit a deadlock if notifyPayload* is called from the guest. notifyPayload* would
-        // like to hold the State object.
-        state_ptr.lock().unwrap().vms()
-    };
-    vms.into_iter().for_each(|vm| {
+    use binder::binder_impl::Binder;
+    let binder: Binder<aidl::BnVirtualizationService> = service.as_binder().try_into().unwrap();
+    let service: &VirtualizationService = binder.downcast_binder().unwrap();
+    service.get_vms().iter().for_each(|vm| {
         if let Err(e) = vm.kill() {
             error!("VM (cid: {}) did not die when I tried to kill it: {:#}", vm.cid, e);
         }
