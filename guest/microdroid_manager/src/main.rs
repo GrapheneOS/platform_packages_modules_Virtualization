@@ -1186,11 +1186,18 @@ fn read_and_write_file(stream: &mut VsockStream, file_path: &Path) -> Result<()>
     Ok(())
 }
 
-fn read_and_write_glob_files(stream: &mut VsockStream, pattern: &str) -> Result<()> {
+fn read_and_write_glob_files(
+    stream: &mut VsockStream,
+    pattern: &str,
+    filter: &[&str],
+) -> Result<()> {
     for entry in glob(pattern).unwrap() {
         match entry {
             Ok(path) => {
-                if path.starts_with("/proc/self") || path.starts_with("/proc/thread-self") {
+                if path.starts_with("/proc/self")
+                    || path.starts_with("/proc/thread-self")
+                    || filter.iter().any(|x| path.to_string_lossy().contains(x))
+                {
                     continue;
                 }
                 read_and_write_file(stream, &path)?;
@@ -1214,10 +1221,11 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     info!("Default dump handler with args: {:?}", args);
 
     read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
-    read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;
+    read_and_write_glob_files(&mut stream, "/proc/pressure/*", &[])?;
+    read_and_write_glob_files(&mut stream, "/sys/fs/cgroup/*/memory.*", &["memory.reclaim"])?;
 
     if is_debuggable() {
-        read_and_write_glob_files(&mut stream, "/proc/*/maps")?;
+        read_and_write_glob_files(&mut stream, "/proc/*/maps", &[])?;
     }
 
     stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
