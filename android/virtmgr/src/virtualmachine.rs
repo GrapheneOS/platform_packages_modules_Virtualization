@@ -18,8 +18,7 @@ use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{
-    AudioConfig, CrosvmCommand, CrosvmConfig, DiskFile, DisplayConfig, InputDeviceOption,
-    PayloadState, SharedPathConfig, UsbConfig, VmInstance, VmState,
+    CrosvmCommand, CrosvmConfig, DiskFile, PayloadState, SharedPathConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -798,27 +797,6 @@ impl VirtualizationService {
             }
             _ => (vec![], None),
         };
-        let display_config = if cfg!(paravirtualized_devices) {
-            config
-                .displayConfig
-                .as_ref()
-                .map(DisplayConfig::new)
-                .transpose()
-                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
-        } else {
-            None
-        };
-
-        let input_device_options = if cfg!(paravirtualized_devices) {
-            config
-                .inputDevices
-                .iter()
-                .map(to_input_device_option_from)
-                .collect::<Result<Vec<InputDeviceOption>, _>>()
-                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
-        } else {
-            vec![]
-        };
 
         // Create TAP network interface if the VM supports network.
         let tap = if cfg!(network) && config.networkSupported {
@@ -838,19 +816,6 @@ impl VirtualizationService {
         } else {
             None
         };
-
-        let audio_config = if cfg!(paravirtualized_devices) {
-            config.audioConfig.as_ref().map(AudioConfig::new)
-        } else {
-            None
-        };
-
-        let usb_config = config
-            .usbConfig
-            .as_ref()
-            .map(UsbConfig::new)
-            .unwrap_or(Ok(UsbConfig { controller: false }))
-            .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?;
 
         let detect_hangup = is_app_config && gdb_port.is_none();
 
@@ -927,15 +892,11 @@ impl VirtualizationService {
             vfio_devices,
             dtbo,
             device_tree_overlays,
-            display_config,
-            input_device_options,
             hugepages: config.hugePages,
             tap,
             console_input_device: config.consoleInputDevice.clone(),
             boost_uclamp: config.boostUclamp,
-            audio_config,
             balloon,
-            usb_config,
             dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
@@ -1179,46 +1140,6 @@ fn round_up(input: u64, granularity: u64) -> u64 {
     // If the input is absurdly large we round down instead of up; it's going to fail anyway.
     let result = input.checked_add(granularity - 1).unwrap_or(input);
     (result / granularity) * granularity
-}
-
-fn to_input_device_option_from(input_device: &aidl::InputDevice) -> Result<InputDeviceOption> {
-    use aidl::InputDevice;
-    Ok(match input_device {
-        InputDevice::SingleTouch(single_touch) => InputDeviceOption::SingleTouch {
-            file: clone_file(single_touch.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
-            height: u32::try_from(single_touch.height)?,
-            width: u32::try_from(single_touch.width)?,
-            name: if !single_touch.name.is_empty() {
-                Some(single_touch.name.clone())
-            } else {
-                None
-            },
-        },
-        InputDevice::EvDev(evdev) => InputDeviceOption::EvDev(clone_file(
-            evdev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
-        )?),
-        InputDevice::Keyboard(keyboard) => InputDeviceOption::Keyboard(clone_file(
-            keyboard.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
-        )?),
-        InputDevice::Mouse(mouse) => InputDeviceOption::Mouse(clone_file(
-            mouse.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
-        )?),
-        InputDevice::Switches(switches) => InputDeviceOption::Switches(clone_file(
-            switches.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?,
-        )?),
-        InputDevice::Trackpad(trackpad) => InputDeviceOption::MultiTouchTrackpad {
-            file: clone_file(trackpad.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
-            height: u32::try_from(trackpad.height)?,
-            width: u32::try_from(trackpad.width)?,
-            name: if !trackpad.name.is_empty() { Some(trackpad.name.clone()) } else { None },
-        },
-        InputDevice::MultiTouch(multi_touch) => InputDeviceOption::MultiTouch {
-            file: clone_file(multi_touch.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?)?,
-            height: u32::try_from(multi_touch.height)?,
-            width: u32::try_from(multi_touch.width)?,
-            name: if !multi_touch.name.is_empty() { Some(multi_touch.name.clone()) } else { None },
-        },
-    })
 }
 
 fn assemble_shared_paths(
