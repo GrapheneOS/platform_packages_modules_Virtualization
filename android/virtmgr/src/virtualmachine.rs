@@ -18,8 +18,8 @@ use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{
-    AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState,
-    SharedPathConfig, UsbConfig, VmInstance, VmState,
+    AudioConfig, CrosvmCommand, CrosvmConfig, DiskFile, DisplayConfig, InputDeviceOption,
+    PayloadState, SharedPathConfig, UsbConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -808,16 +808,6 @@ impl VirtualizationService {
         } else {
             None
         };
-        let gpu_config = if cfg!(paravirtualized_devices) {
-            config
-                .gpuConfig
-                .as_ref()
-                .map(GpuConfig::new)
-                .transpose()
-                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
-        } else {
-            None
-        };
 
         let input_device_options = if cfg!(paravirtualized_devices) {
             config
@@ -904,6 +894,8 @@ impl VirtualizationService {
         let trim_under_pressure =
             balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
+        let command = CrosvmCommand::build_from(config).or_service_specific_exception(-1)?;
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -941,7 +933,6 @@ impl VirtualizationService {
             tap,
             console_input_device: config.consoleInputDevice.clone(),
             boost_uclamp: config.boostUclamp,
-            gpu_config,
             audio_config,
             balloon,
             usb_config,
@@ -951,7 +942,9 @@ impl VirtualizationService {
             custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
+            command,
         };
+
         let instance = Arc::new(
             VmInstance::new(
                 crosvm_config,
