@@ -16,7 +16,7 @@
 
 use crate::aidl::{
     self, AudioConfig as AudioConfigParcelable, DisplayConfig as DisplayConfigParcelable,
-    GpuConfig as GpuConfigParcelable, UsbConfig as UsbConfigParcelable,
+    UsbConfig as UsbConfigParcelable,
 };
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
@@ -41,7 +41,7 @@ use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::{max, min};
-use std::ffi::CString;
+use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
 use std::fs::{read_to_string, File};
 use std::io::{self, Read, Seek};
@@ -138,7 +138,6 @@ pub struct CrosvmConfig {
     pub tap: Option<File>,
     pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
-    pub gpu_config: Option<GpuConfig>,
     pub audio_config: Option<AudioConfig>,
     pub balloon: bool,
     pub usb_config: UsbConfig,
@@ -149,6 +148,7 @@ pub struct CrosvmConfig {
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
+    pub command: CrosvmCommand,
 }
 
 #[derive(Debug)]
@@ -194,37 +194,6 @@ impl DisplayConfig {
     }
 }
 
-#[derive(Debug)]
-pub struct GpuConfig {
-    pub backend: Option<String>,
-    pub context_types: Option<Vec<String>>,
-    pub pci_address: Option<String>,
-    pub renderer_features: Option<String>,
-    pub renderer_use_egl: Option<bool>,
-    pub renderer_use_gles: Option<bool>,
-    pub renderer_use_glx: Option<bool>,
-    pub renderer_use_surfaceless: Option<bool>,
-    pub renderer_use_vulkan: Option<bool>,
-}
-
-impl GpuConfig {
-    pub fn new(raw_config: &GpuConfigParcelable) -> Result<GpuConfig> {
-        Ok(GpuConfig {
-            backend: raw_config.backend.clone(),
-            context_types: raw_config.contextTypes.clone().map(|context_types| {
-                context_types.iter().filter_map(|context_type| context_type.clone()).collect()
-            }),
-            pci_address: raw_config.pciAddress.clone(),
-            renderer_features: raw_config.rendererFeatures.clone(),
-            renderer_use_egl: Some(raw_config.rendererUseEgl),
-            renderer_use_gles: Some(raw_config.rendererUseGles),
-            renderer_use_glx: Some(raw_config.rendererUseGlx),
-            renderer_use_surfaceless: Some(raw_config.rendererUseSurfaceless),
-            renderer_use_vulkan: Some(raw_config.rendererUseVulkan),
-        })
-    }
-}
-
 fn try_into_non_zero_u32(value: i32) -> Result<NonZeroU32> {
     let u32_value = value.try_into()?;
     NonZeroU32::new(u32_value).ok_or(anyhow!("value should be greater than 0"))
@@ -266,6 +235,99 @@ pub enum InputDeviceOption {
 }
 
 type VfioDevice = Strong<dyn aidl::IBoundDevice>;
+
+/// Parses VirtualMachineRawConfig parcelable into raw arguments which will be used to construct a
+/// crosvm command. The parsing is done when the virtual machine is created, and the construction
+/// of the crosvm command is done when the virtual machine is started.
+#[derive(Debug)]
+pub struct CrosvmCommand {
+    arg0: OsString,
+    args: Vec<OsString>,
+    preserved_fds: Vec<OwnedFd>,
+}
+
+impl CrosvmCommand {
+    pub fn build_from(config: &aidl::VirtualMachineRawConfig) -> Result<Self> {
+        let mut command =
+            Self { arg0: OsString::new(), args: Vec::new(), preserved_fds: Vec::new() };
+        command
+            .arg("--extended-status")
+            .args(["--log-level", "info,disk=warn"])
+            .arg("run")
+            .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
+
+        command.add_name_arg(config);
+        command.add_gpu_arg(config);
+        Ok(command)
+    }
+
+    fn arg<S: AsRef<OsStr>>(&mut self, arg: S) -> &mut Self {
+        self.args.push(arg.as_ref().into());
+        self
+    }
+
+    fn args<I: IntoIterator<Item = S>, S: AsRef<OsStr>>(&mut self, args: I) -> &mut Self {
+        for arg in args {
+            self.arg(arg.as_ref());
+        }
+        self
+    }
+
+    #[allow(unused)]
+    fn add_preserved_fd<F: Into<OwnedFd>>(&mut self, file: F) -> String {
+        let fd = file.into();
+        let raw_fd = fd.as_raw_fd();
+        self.preserved_fds.push(fd);
+        format!("/proc/self/fd/{}", raw_fd)
+    }
+
+    fn add_name_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+        let name = "crosvm_".to_owned() + &config.name;
+        self.arg0 = OsString::from(name.clone());
+        self.args(["--name", &name]);
+    }
+
+    fn add_gpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+        if let Some(config) = &config.gpuConfig {
+            if !cfg!(paravirtualized_devices) {
+                warn!("GPU configuration not supported. Ignoring");
+                return;
+            }
+
+            let mut gpu_args = Vec::new();
+            if let Some(b) = &config.backend {
+                gpu_args.push(format!("backend={}", b));
+            }
+            if let Some(t) = &config.contextTypes {
+                // flatten is to convert Vec<Option<String>> into Vec<String>
+                let t: Vec<_> = t.clone().into_iter().flatten().collect();
+                gpu_args.push(format!("context-types={}", t.join(":")));
+            }
+            if let Some(a) = &config.pciAddress {
+                gpu_args.push(format!("pci-address={}", a));
+            }
+            if let Some(f) = &config.rendererFeatures {
+                gpu_args.push(format!("renderer-features={}", f));
+            }
+            if config.rendererUseEgl {
+                gpu_args.push("egl=true".to_string());
+            }
+            if config.rendererUseGles {
+                gpu_args.push("gles=true".to_string());
+            }
+            if config.rendererUseGlx {
+                gpu_args.push("glx=true".to_string());
+            }
+            if config.rendererUseSurfaceless {
+                gpu_args.push("surfaceless=true".to_string());
+            }
+            if config.rendererUseVulkan {
+                gpu_args.push("vulkan=true".to_string());
+            }
+            self.arg(format!("--gpu={}", gpu_args.join(",")));
+        }
+    }
+}
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
 ///
@@ -410,8 +472,8 @@ fn trigger_trim(instance: &Arc<VmInstance>) {
     // When the host is under memory pressure, send a trim request
     // Full contention detected, send a trim request
     if let Some(guest_agent) = &*instance.guest_agent.lock().unwrap() {
-        if let Err(e) = guest_agent.trim() {
-            error!("IGuestAgent::trim failed: {e:#}");
+        if let Err(e) = guest_agent.trimAsync() {
+            error!("IGuestAgent::trimAsync failed: {e:#}");
         }
     }
 }
@@ -892,7 +954,7 @@ impl VmInstance {
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
             return guest_agent
-                .shutdown()
+                .shutdownAsync()
                 .map_err(|e| error!("Failed to ask shut down: {e:?}"))
                 .is_ok();
         }
@@ -1341,21 +1403,9 @@ fn run_vm(
 
     let mut command = Command::new(CROSVM_PATH);
 
-    let vm_name = "crosvm_".to_owned() + &config.name;
-    command.arg0(vm_name.clone());
-    // TODO(qwandor): Remove --disable-sandbox.
-    command
-        .arg("--extended-status")
-        // Configure the logger for the crosvm process to silence logs from the disk crate which
-        // don't provide much information to us (but do spamming us).
-        .arg("--log-level")
-        .arg("info,disk=warn")
-        .arg("run")
-        .arg("--name")
-        .arg(vm_name)
-        .arg("--disable-sandbox")
-        .arg("--cid")
-        .arg(config.cid.to_string());
+    command.arg0(config.command.arg0);
+    command.args(config.command.args);
+    command.arg("--cid").arg(config.cid.to_string());
 
     if config.balloon {
         command.arg("--balloon-page-reporting");
@@ -1499,7 +1549,8 @@ fn run_vm(
     }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
-    let mut preserved_fds = config.indirect_files.into_iter().map(|f| f.into()).collect();
+    let mut preserved_fds: Vec<_> = config.indirect_files.into_iter().map(|f| f.into()).collect();
+    preserved_fds.extend(config.command.preserved_fds);
 
     if let Some(dump_dt_fd) = config.dump_dt_fd {
         let dump_dt_fd = add_preserved_fd(&mut preserved_fds, dump_dt_fd);
@@ -1594,37 +1645,6 @@ fn run_vm(
     });
 
     if cfg!(paravirtualized_devices) {
-        if let Some(gpu_config) = &config.gpu_config {
-            let mut gpu_args = Vec::new();
-            if let Some(backend) = &gpu_config.backend {
-                gpu_args.push(format!("backend={}", backend));
-            }
-            if let Some(context_types) = &gpu_config.context_types {
-                gpu_args.push(format!("context-types={}", context_types.join(":")));
-            }
-            if let Some(pci_address) = &gpu_config.pci_address {
-                gpu_args.push(format!("pci-address={}", pci_address));
-            }
-            if let Some(renderer_features) = &gpu_config.renderer_features {
-                gpu_args.push(format!("renderer-features={}", renderer_features));
-            }
-            if gpu_config.renderer_use_egl.unwrap_or(false) {
-                gpu_args.push("egl=true".to_string());
-            }
-            if gpu_config.renderer_use_gles.unwrap_or(false) {
-                gpu_args.push("gles=true".to_string());
-            }
-            if gpu_config.renderer_use_glx.unwrap_or(false) {
-                gpu_args.push("glx=true".to_string());
-            }
-            if gpu_config.renderer_use_surfaceless.unwrap_or(false) {
-                gpu_args.push("surfaceless=true".to_string());
-            }
-            if gpu_config.renderer_use_vulkan.unwrap_or(false) {
-                gpu_args.push("vulkan=true".to_string());
-            }
-            command.arg(format!("--gpu={}", gpu_args.join(",")));
-        }
         if let Some(display_config) = &config.display_config {
             command
                 .arg(format!(

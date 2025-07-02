@@ -25,18 +25,19 @@ use android_system_virtualizationmaintenance::aidl::android::system::virtualizat
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice;
 use android_system_virtualizationservice_internal as android_vs_internal;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice;
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::DUMP_SERVICE_PORT;
 use android_system_vmtethering::aidl::android::system::vmtethering;
 use android_vs_internal::aidl::android::system::virtualizationservice_internal;
 use anyhow::{anyhow, ensure, Context, Result};
 use avflog::LogResult;
+use binder::binder_impl::IBinderInternal;
 use binder::{
     self, wait_for_interface, DeathRecipient, ExceptionCode, IBinder, Interface, IntoBinderResult,
     ParcelFileDescriptor, Status, StatusCode, Strong,
 };
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
-use nix::unistd::{chown, Uid};
+use nix::fcntl::OFlag;
+use nix::unistd::{chown, pipe2, Uid};
 use openssl::x509::X509;
 use rand::Fill;
 use rkpd_client::get_rkpd_attestation_key;
@@ -50,13 +51,11 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::fs::{self, create_dir, remove_dir_all, remove_file, set_permissions, File, Permissions};
 use std::io::{Read, Write};
-use std::net::Shutdown;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::uid_t;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, LazyLock, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::Certificate::Certificate;
 use virtualizationmaintenance::{
@@ -64,8 +63,7 @@ use virtualizationmaintenance::{
     IVirtualizationReconciliationCallback::IVirtualizationReconciliationCallback,
 };
 use virtualizationservice::{
-    AssignableDevice::AssignableDevice,
-    IVirtualMachine::IVirtualMachine,
+    AssignableDevice::AssignableDevice, IVirtualMachine::IVirtualMachine,
     VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
 use virtualizationservice_internal::{
@@ -259,70 +257,66 @@ impl VirtualizationServiceInternal {
             })
             .collect()
     }
-
-    fn handle_dump(&self, writer: &mut dyn Write, cid: Cid, args: &[String]) -> Result<()> {
-        let mut stream = match VsockStream::connect_with_cid_port(cid, DUMP_SERVICE_PORT as u32) {
-            Ok(stream) => stream,
-            Err(e) => {
-                if e.kind() == std::io::ErrorKind::ConnectionReset {
-                    writeln!(writer, "\tskipping dump: server unavailable")?;
-                    return Ok(());
-                }
-                writeln!(writer, "\tskipping dump: failed to connect: {:?}", e)?;
-                return Ok(());
-            }
-        };
-
-        // 5 seconds must be much longer than required.
-        stream
-            .set_read_timeout(Some(Duration::from_secs(5)))
-            .context("Failed to set read timeout")?;
-        stream
-            .set_write_timeout(Some(Duration::from_secs(5)))
-            .context("Failed to set read timeout")?;
-
-        if let Err(e) = stream.write_all(args.join("\n").as_bytes()) {
-            writeln!(writer, "\tskipping dump: failed to send args: {:?}", e)?;
-            return Ok(());
-        }
-
-        if let Err(e) = stream.shutdown(Shutdown::Write) {
-            writeln!(writer, "\tskipping dump: failed to shutdown write: {:?}", e)?;
-            return Ok(());
-        }
-
-        writeln!(writer, "\tVM dump begin")?;
-
-        if let Err(e) = std::io::copy(&mut stream, writer) {
-            writeln!(writer, "\tfailed to read dump: {:?}", e)?;
-        }
-
-        writeln!(writer, "\n\tVM dump end")?;
-
-        Ok(())
-    }
 }
 
 impl Interface for VirtualizationServiceInternal {
     fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), StatusCode> {
         check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
 
-        let vms = self.debug_list_vms_unchecked();
+        // We also need handles for the VMs, so we can't call debug_list_vms_unchecked here
+        let vms = self
+            .state
+            .lock()
+            .unwrap()
+            .virtual_machines
+            .iter()
+            .filter_map(|(cid, vm)| {
+                vm.0.getDebugInfo()
+                    .inspect_err(|e| {
+                        error!("Failed to get debug info for VM with CID {cid}: {e:?}")
+                    })
+                    .ok()
+                    .map(|debug_info| (vm.0.as_binder(), debug_info))
+            })
+            .collect::<Vec<_>>();
         writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
+
         let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
 
         for vm in vms {
-            writeln!(writer, "VM CID: {}", vm.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\tname: {}", &vm.name).or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\ttemporary_directory: {}", &vm.temporaryDirectory)
+            writeln!(writer, "VM CID: {}", vm.1.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\tname: {}", &vm.1.name).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\ttemporary_directory: {}", &vm.1.temporaryDirectory)
                 .or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\trequester_uid: {}", vm.requesterUid)
+            writeln!(writer, "\trequester_uid: {}", vm.1.requesterUid)
                 .or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\trequester_debug_pid: {}", vm.requesterPid)
+            writeln!(writer, "\trequester_debug_pid: {}", vm.1.requesterPid)
                 .or(Err(StatusCode::UNKNOWN_ERROR))?;
 
-            let cid = vm.cid.try_into().unwrap();
-            self.handle_dump(writer, cid, &args).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writeln!(writer, "\tVM dump begin").or(Err(StatusCode::UNKNOWN_ERROR))?;
+
+            // For whatever reason, calling vm.dump() directly doesn't work.
+            // Workaround it by calling vm.as_binder().dump() instead.
+            // TODO(b/429048207): Use vm.dump().
+            let (read_fd, write_fd) = pipe2(OFlag::O_CLOEXEC).or(Err(StatusCode::UNKNOWN_ERROR))?;
+            let args = args.clone();
+            let mut vm_binder = vm.0;
+            // Spawn a thread for vm_binder.dump() call, so std::io::copy(...) can be done
+            // simultaneously. If read_fd isn't consumed by std::io::copy, writing to write_fd may
+            // be blocked.
+            let handle = std::thread::spawn(move || {
+                let args = args.iter().map(|x| x.as_str()).collect::<Vec<_>>();
+                vm_binder.dump(&ParcelFileDescriptor::new(write_fd), &args)
+            });
+            if let Err(e) = std::io::copy(&mut File::from(read_fd), writer) {
+                writeln!(writer, "\tskipping dump: io copy failed: {e:?}")
+                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            }
+            if let Err(e) = handle.join() {
+                writeln!(writer, "\tskipping dump: dump request failed: {e:?}")
+                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            }
+            writeln!(writer, "\n\tVM dump end").or(Err(StatusCode::UNKNOWN_ERROR))?;
         }
         Ok(())
     }

@@ -38,7 +38,7 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
     ENCRYPTEDSTORE_MOUNTPOINT,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::{
-    BnGuestAgent, IGuestAgent, DUMP_SERVICE_PORT,
+    BnGuestAgent, IGuestAgent,
 };
 
 use crate::cgroup_monitor::start_cgroup_monitor;
@@ -49,11 +49,11 @@ use crate::verify::verify_payload;
 use crate::vm_internal_service::VmInternalService;
 use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binder::{self, BinderFeatures, Interface, SpIBinder, Strong};
+use binder::{self, BinderFeatures, Interface, IntoBinderResult, SpIBinder, Strong};
 use dice_driver::DiceDriver;
 use glob::glob;
 use keystore2_crypto::ZVec;
-use libc::VMADDR_CID_HOST;
+use libc::{VMADDR_CID_HOST, VMADDR_PORT_ANY};
 use log::{error, info, warn};
 use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
@@ -71,7 +71,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::net::Shutdown;
 use std::os::fd::AsRawFd;
 use std::os::raw::c_char;
@@ -332,8 +332,6 @@ fn try_main() -> Result<()> {
     let guest_agent = GuestAgent::new_binder();
     service.registerGuestAgent(&guest_agent)?;
 
-    start_dump_service()?;
-
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
         service
@@ -475,7 +473,7 @@ fn try_run_payload(
     // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
     // appsearch's VM, which we detect indirectly via the rollback_index field.
     let cgroup_config = if instance_data.apk_data.rollback_index.is_some() {
-        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 80 })
+        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 30 })
     } else {
         None
     };
@@ -1056,7 +1054,12 @@ struct GuestAgent {}
 impl Interface for GuestAgent {}
 
 impl IGuestAgent for GuestAgent {
-    fn shutdown(&self) -> binder::Result<()> {
+    fn startDumpVsockServer(&self, args: &[String]) -> binder::Result<i32> {
+        info!("Default dump handler with args: {args:?}");
+        start_dump_service().or_service_specific_exception(-1)
+    }
+
+    fn shutdownAsync(&self) -> binder::Result<()> {
         info!("Shutdown requested.");
         if let Err(e) = system_properties::write("sys.powerctl", "shutdown") {
             error!("failed to shutdown {:?}", e);
@@ -1064,7 +1067,7 @@ impl IGuestAgent for GuestAgent {
         Ok(())
     }
 
-    fn trim(&self) -> binder::Result<()> {
+    fn trimAsync(&self) -> binder::Result<()> {
         if let Err(e) = system_properties::write("pageout_bomb.go", "1") {
             error!("failed to set pageout_bomb.go: {:?}", e);
         }
@@ -1141,27 +1144,26 @@ fn get_encrypted_store_key(
     Ok(())
 }
 
-fn start_dump_service() -> Result<()> {
-    let addr = VsockAddr::new(VMADDR_CID_ANY, DUMP_SERVICE_PORT as u32);
-    let listener = VsockListener::bind(&addr).context("Can't bind vsock")?;
+fn start_dump_service() -> Result<i32> {
+    let bind_addr = VsockAddr::new(VMADDR_CID_ANY, VMADDR_PORT_ANY);
+    let listener = VsockListener::bind(&bind_addr).context("Can't bind vsock")?;
+    let local_addr = listener.local_addr().context("Can't get local addr")?;
 
     std::thread::spawn(move || {
-        for incoming_stream in listener.incoming() {
-            let stream = match incoming_stream {
-                Err(e) => {
-                    error!("failed to accept on dump service: {e:?}");
-                    continue;
-                }
-                Ok(s) => s,
-            };
-
-            if let Err(e) = handle_dump_to_client(stream) {
-                error!("failed to dump: {e:?}");
+        let stream = match listener.accept() {
+            Ok((stream, _)) => stream,
+            Err(e) => {
+                error!("failed to accept on dump service: {e:?}");
+                return;
             }
+        };
+
+        if let Err(e) = handle_dump_to_client(stream) {
+            error!("failed to dump: {e:?}");
         }
     });
 
-    Ok(())
+    Ok(local_addr.port() as i32)
 }
 
 fn read_and_write_file(stream: &mut VsockStream, file_path: &Path) -> Result<()> {
@@ -1206,12 +1208,7 @@ fn read_and_write_glob_files(stream: &mut VsockStream, pattern: &str) -> Result<
 
 fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     // 5 seconds must be much longer than required.
-    stream.set_read_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
     stream.set_write_timeout(Some(Duration::from_secs(5))).context("Failed to set read timeout")?;
-
-    let args = BufReader::new(&stream).lines().map_while(Result::ok).collect::<Vec<_>>();
-
-    info!("Default dump handler with args: {:?}", args);
 
     read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
     read_and_write_glob_files(&mut stream, "/proc/pressure/*")?;

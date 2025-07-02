@@ -18,8 +18,8 @@ use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::composite::make_composite_image;
 use crate::crosvm::{
-    AudioConfig, CrosvmConfig, DiskFile, DisplayConfig, GpuConfig, InputDeviceOption, PayloadState,
-    SharedPathConfig, UsbConfig, VmInstance, VmState,
+    AudioConfig, CrosvmCommand, CrosvmConfig, DiskFile, DisplayConfig, InputDeviceOption,
+    PayloadState, SharedPathConfig, UsbConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -68,6 +68,7 @@ use std::ops::{Deref, Range};
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
+use std::time::Duration;
 use vbmeta::VbMetaImage;
 use virt_dropbox::build_dropbox_report;
 use vmconfig::{get_debug_level, VmConfig};
@@ -807,16 +808,6 @@ impl VirtualizationService {
         } else {
             None
         };
-        let gpu_config = if cfg!(paravirtualized_devices) {
-            config
-                .gpuConfig
-                .as_ref()
-                .map(GpuConfig::new)
-                .transpose()
-                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?
-        } else {
-            None
-        };
 
         let input_device_options = if cfg!(paravirtualized_devices) {
             config
@@ -903,6 +894,8 @@ impl VirtualizationService {
         let trim_under_pressure =
             balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
+        let command = CrosvmCommand::build_from(config).or_service_specific_exception(-1)?;
+
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
@@ -940,7 +933,6 @@ impl VirtualizationService {
             tap,
             console_input_device: config.consoleInputDevice.clone(),
             boost_uclamp: config.boostUclamp,
-            gpu_config,
             audio_config,
             balloon,
             usb_config,
@@ -950,7 +942,9 @@ impl VirtualizationService {
             custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
+            command,
         };
+
         let instance = Arc::new(
             VmInstance::new(
                 crosvm_config,
@@ -1731,7 +1725,53 @@ impl Deref for VirtualMachineBinder {
     }
 }
 
-impl Interface for VirtualMachine {}
+impl Interface for VirtualMachine {
+    fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), binder::StatusCode> {
+        if !self.instance.is_vm_running() {
+            writeln!(writer, "skipping dump: VM is not running")
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            return Ok(());
+        }
+
+        let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
+
+        let port = {
+            let Some(guest_agent) = &*self.instance.guest_agent.lock().unwrap() else {
+                writeln!(writer, "skipping dump: guest agent isn't registered")
+                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                return Ok(());
+            };
+
+            match guest_agent.startDumpVsockServer(&args) {
+                Ok(port) => port,
+                Err(e) => {
+                    writeln!(writer, "skipping dump: failed to start dump vsock server: {e:?}")
+                        .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                    return Ok(());
+                }
+            }
+        };
+
+        let mut stream = match VsockStream::connect_with_cid_port(self.instance.cid, port as u32) {
+            Ok(stream) => stream,
+            Err(e) => {
+                writeln!(writer, "skipping dump: failed to connect to dump vsock server: {e:?}")
+                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                return Ok(());
+            }
+        };
+
+        // 5 seconds must be much longer than required.
+        stream.set_read_timeout(Some(Duration::from_secs(5))).or(Err(StatusCode::UNKNOWN_ERROR))?;
+
+        if let Err(e) = std::io::copy(&mut stream, writer) {
+            writeln!(writer, "skipping dump: failed to copy dump stream: {e:?}")
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+        }
+
+        Ok(())
+    }
+}
 
 impl aidl::IVirtualMachine for VirtualMachine {
     fn getCid(&self) -> binder::Result<i32> {

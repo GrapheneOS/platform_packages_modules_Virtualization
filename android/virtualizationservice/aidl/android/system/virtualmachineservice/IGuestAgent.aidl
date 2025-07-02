@@ -18,17 +18,20 @@ package android.system.virtualmachineservice;
 /** {@hide} */
 interface IGuestAgent {
     /**
-     * Port for VM dump service.
-     * TODO(b/423899247): add dump() method instead of raw vsock, once the global virtualization
-     * service can connect to the binder service of virtmgr / VMs.
+     * Starts a vsock server to dump the VM's state, and return a port number for the listening
+     * vsock. The guest agent must open a vsock server which accepts one client, and then sends VM's
+     * dump to the client. Writing to the client vsock must be done within 5 seconds. Otherwise, the
+     * requester may regard it as a timeout.
+     *
+     * TODO(b/395205629): Use IBinder::Interface::dump().
      */
-    const int DUMP_SERVICE_PORT = 100000;
+    int startDumpVsockServer(in String[] args);
 
     /**
      * Shuts the VM down gracefully.
      */
-    oneway void shutdown();
+    @SuppressWarnings(value={"mixed-oneway"}) oneway void shutdownAsync();
 
     /** Requests the VM to trim its memory usage. */
-    oneway void trim();
+    @SuppressWarnings(value={"mixed-oneway"}) oneway void trimAsync();
 }
