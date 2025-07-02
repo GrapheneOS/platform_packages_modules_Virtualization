@@ -88,7 +88,8 @@ Result<unique_fd> get_service_fd() {
         return ErrnoError() << "Failed to create pipe";
     }
 
-    if (fork() == 0) {
+    pid_t pid = fork();
+    if (pid == 0) {
         client_fd.reset();
         wait_fd.reset();
 
@@ -99,6 +100,13 @@ Result<unique_fd> get_service_fd() {
                   "--ready-fd", ready_fd_str.c_str(), nullptr) == -1) {
             return ErrnoError() << "Failed to execute virtmgr";
         }
+    }
+
+    // If this is executed on a terminal, let virtmgr be the foreground process group so that
+    // it is not stopped.
+    bool is_tty = isatty(0);
+    if (is_tty) {
+        tcsetpgrp(0, pid);
     }
 
     server_fd.reset();
@@ -231,7 +239,7 @@ Result<std::shared_ptr<IVirtualMachine>> create_virtual_machine(
     ScopedAStatus ret =
             service.createVm(config, console_out_fd, console_in_fd, log_fd, dump_dt_fd, &vm);
     if (!ret.isOk()) {
-        return Error() << "Failed to create VM";
+        return Error() << "Failed to create VM: " << ret.getMessage();
     }
     return vm;
 }
