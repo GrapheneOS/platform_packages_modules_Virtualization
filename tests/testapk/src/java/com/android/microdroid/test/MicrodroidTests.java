@@ -119,6 +119,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -3438,6 +3439,38 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 }
             }
         }
+    }
+
+    @Test
+    public void stopAndRestart() throws Exception {
+        String vmName = "stop_and_restart";
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        VirtualMachineConfig.Builder builder =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setCpuTopology(CPU_TOPOLOGY_ONE_CPU);
+        VirtualMachineConfig config = builder.build();
+        VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config);
+
+        // Start a VM and kill it abrubtly.
+        SimpleVirtualMachineCallback cb1 = new SimpleVirtualMachineCallback();
+        vm.setCallback(executor, cb1);
+        vm.run();
+        cb1.started.await();
+        kill(TAG, "crosvm_" + vmName);
+        vm.close();
+
+        // Re-start the same VM, but with a different callback.
+        SimpleVirtualMachineCallback cb2 = new SimpleVirtualMachineCallback();
+        vm.setCallback(executor, cb2);
+        vm.run();
+        cb2.started.await();
+
+        // Stopping of the first VM shouldn't be notified to the new callback.
+        assertThat(cb2.stopped.getCount()).isEqualTo(1);
+        vm.close();
+        cb2.stopped.await();
     }
 
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {

@@ -1660,7 +1660,8 @@ public class VirtualMachine implements AutoCloseable {
                 mVirtualMachine =
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
-                mVirtualMachine.registerCallback(new CallbackTranslator(this, service));
+                int cid = mVirtualMachine.getCid();
+                mVirtualMachine.registerCallback(new CallbackTranslator(this, service, cid));
                 mVirtualMachine.asBinder().linkToDeath(mVMDeathRecipient, /* flags= */ 0);
                 service.asBinder().linkToDeath(mVSDeathRecipient, /* flags= */ 0);
                 if (mMemoryManagementCallbacks != null) {
@@ -2427,17 +2428,20 @@ public class VirtualMachine implements AutoCloseable {
     private static class CallbackTranslator extends IVirtualMachineCallback.Stub {
         private final WeakReference<VirtualMachine> mVirtualMachine;
         private final WeakReference<IVirtualizationService> mService;
+        private final int mCid;
 
-        public CallbackTranslator(VirtualMachine virtualMachine, IVirtualizationService service)
+        public CallbackTranslator(
+                VirtualMachine virtualMachine, IVirtualizationService service, int cid)
                 throws RemoteException {
             this.mVirtualMachine = new WeakReference<>(virtualMachine);
             this.mService = new WeakReference<>(service);
+            this.mCid = cid;
         }
 
         @Override
         public void onPayloadStarted(int cid) {
             VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null) {
+            if (vm != null && mCid == cid) {
                 vm.executeCallback((cb) -> cb.onPayloadStarted(vm));
             }
         }
@@ -2445,7 +2449,7 @@ public class VirtualMachine implements AutoCloseable {
         @Override
         public void onPayloadReady(int cid) {
             VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null) {
+            if (vm != null && mCid == cid) {
                 vm.executeCallback((cb) -> cb.onPayloadReady(vm));
             }
         }
@@ -2453,7 +2457,7 @@ public class VirtualMachine implements AutoCloseable {
         @Override
         public void onPayloadFinished(int cid, int exitCode) {
             VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null) {
+            if (vm != null && mCid == cid) {
                 vm.executeCallback((cb) -> cb.onPayloadFinished(vm, exitCode));
             }
         }
@@ -2462,7 +2466,7 @@ public class VirtualMachine implements AutoCloseable {
         public void onError(int cid, int errorCode, String message) {
             int translatedError = getTranslatedError(errorCode);
             VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null) {
+            if (vm != null && mCid == cid) {
                 vm.executeCallback((cb) -> cb.onError(vm, translatedError, message));
             }
         }
@@ -2471,7 +2475,7 @@ public class VirtualMachine implements AutoCloseable {
         public void onDied(int cid, int reason) {
             int translatedReason = getTranslatedReason(reason);
             VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null) {
+            if (vm != null && mCid == cid) {
                 vm.handleStopped(translatedReason);
             }
         }
