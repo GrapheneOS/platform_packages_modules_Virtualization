@@ -610,7 +610,7 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     /** Execute a command. Returns stdout. */
-    protected String runInShell(String tag, UiAutomation uiAutomation, String command) {
+    protected static String runInShell(String tag, UiAutomation uiAutomation, String command) {
         try (InputStream is =
                         new ParcelFileDescriptor.AutoCloseInputStream(
                                 uiAutomation.executeShellCommand(command));
@@ -626,7 +626,8 @@ public abstract class MicrodroidDeviceTestBase {
     }
 
     /** Execute a command. Returns the concatenation of stdout and stderr. */
-    protected String runInShellWithStderr(String tag, UiAutomation uiAutomation, String command) {
+    protected static String runInShellWithStderr(
+            String tag, UiAutomation uiAutomation, String command) {
         ParcelFileDescriptor[] files = uiAutomation.executeShellCommandRwe(command);
         try (InputStream stdout = new ParcelFileDescriptor.AutoCloseInputStream(files[0]);
                 InputStream stderr = new ParcelFileDescriptor.AutoCloseInputStream(files[2]);
@@ -643,15 +644,17 @@ public abstract class MicrodroidDeviceTestBase {
         }
     }
 
-    protected void kill(String tag, String processName) {
+    // The function returns the list of pids that were killed
+    protected static String kill(String tag, String processName) {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         UiAutomation uiAutomation = instrumentation.getUiAutomation();
         uiAutomation.adoptShellPermissionIdentity();
+        String pid = "";
         try {
-            String pid = runInShell(TAG, uiAutomation, "pidof " + processName).trim();
+            pid = runInShell(TAG, uiAutomation, "pidof " + processName).trim();
             if (TextUtils.isEmpty(pid)) {
                 Log.i(tag, "Process " + processName + " isn't running. Skipping kill()");
-                return;
+                return pid;
             }
 
             String res = runInShellWithStderr(TAG, uiAutomation, "su 0 kill -9 " + pid).trim();
@@ -663,6 +666,7 @@ public abstract class MicrodroidDeviceTestBase {
         } finally {
             uiAutomation.dropShellPermissionIdentity();
         }
+        return pid;
     }
 
     protected static class TestResults {
