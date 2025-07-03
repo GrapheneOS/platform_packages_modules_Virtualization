@@ -15,7 +15,7 @@
 //! Command to run a VM.
 
 use crate::create_partition::command_create_partition;
-use crate::{get_service, RunAppConfig, RunCustomVmConfig, RunMicrodroidConfig};
+use crate::{RunAppConfig, RunCustomVmConfig, RunMicrodroidConfig};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     CpuOptions::CpuOptions,
     IVirtualizationService::IVirtualizationService,
@@ -45,8 +45,10 @@ use vmconfig::{get_debug_level, open_parcel_file, VmConfig};
 use zip::ZipArchive;
 
 /// Run a VM from the given APK, idsig, and config.
-pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
-    let service = get_service()?;
+pub fn command_run_app(
+    service: &dyn IVirtualizationService,
+    config: RunAppConfig,
+) -> Result<(), Error> {
     let apk = File::open(&config.apk).context("Failed to open APK file")?;
 
     let extra_apks = match config.config_path.as_deref() {
@@ -80,7 +82,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
     if !config.instance.exists() {
         const INSTANCE_FILE_SIZE: u64 = 10 * 1024 * 1024;
         command_create_partition(
-            service.as_ref(),
+            service,
             &config.instance,
             INSTANCE_FILE_SIZE,
             PartitionType::ANDROID_VM_INSTANCE,
@@ -105,13 +107,13 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
     let storage = if let Some(ref path) = config.microdroid.storage {
         if !path.exists() {
             command_create_partition(
-                service.as_ref(),
+                service,
                 path,
                 config.microdroid.storage_size.unwrap_or(10 * 1024 * 1024),
                 PartitionType::ENCRYPTEDSTORE,
             )?;
         } else if let Some(storage_size) = config.microdroid.storage_size {
-            set_encrypted_storage(service.as_ref(), path, storage_size)?;
+            set_encrypted_storage(service, path, storage_size)?;
         }
         Some(open_parcel_file(path, true)?)
     } else {
@@ -209,7 +211,7 @@ pub fn command_run_app(config: RunAppConfig) -> Result<(), Error> {
         encryptedStoreKEK: None,
     });
     run(
-        service.as_ref(),
+        service,
         &vm_config,
         &payload_config_str,
         config.debug.console.as_ref().map(|p| p.as_ref()),
@@ -242,7 +244,10 @@ fn create_work_dir() -> Result<PathBuf, Error> {
 }
 
 /// Run a VM with Microdroid
-pub fn command_run_microdroid(config: RunMicrodroidConfig) -> Result<(), Error> {
+pub fn command_run_microdroid(
+    service: &dyn IVirtualizationService,
+    config: RunMicrodroidConfig,
+) -> Result<(), Error> {
     let apk = find_empty_payload_apk_path()?;
     println!("found path {}", apk.display());
 
@@ -266,11 +271,14 @@ pub fn command_run_microdroid(config: RunMicrodroidConfig) -> Result<(), Error> 
     app_config.set_instance_id(work_dir.join("instance_id"));
     println!("instance_id file path: {}", app_config.instance_id.display());
 
-    command_run_app(app_config)
+    command_run_app(service, app_config)
 }
 
 /// Run a VM from the given configuration file.
-pub fn command_run(config: RunCustomVmConfig) -> Result<(), Error> {
+pub fn command_run(
+    service: &dyn IVirtualizationService,
+    config: RunCustomVmConfig,
+) -> Result<(), Error> {
     let config_file = File::open(&config.config).context("Failed to open config file")?;
     let mut vm_config =
         VmConfig::load(&config_file).context("Failed to parse config file")?.to_parcelable()?;
@@ -292,7 +300,7 @@ pub fn command_run(config: RunCustomVmConfig) -> Result<(), Error> {
     vm_config.boostUclamp = config.common.boost_uclamp;
     vm_config.teeServices = config.common.tee_services().to_vec();
     run(
-        get_service()?.as_ref(),
+        service,
         &VirtualMachineConfig::RawConfig(vm_config),
         &format!("{:?}", &config.config),
         config.debug.console.as_ref().map(|p| p.as_ref()),

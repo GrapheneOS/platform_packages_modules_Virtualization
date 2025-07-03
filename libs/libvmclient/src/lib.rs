@@ -126,12 +126,16 @@ pub struct VirtualizationService {
 impl VirtualizationService {
     /// Spawns a new instance of virtmgr, a child process that will host
     /// the VirtualizationService AIDL service.
+    /// Prefer not calling this method multiple times to prevent spawning virtmgr
+    /// multiple times, and race for setting foreground process group.
     pub fn new() -> Result<VirtualizationService, io::Error> {
         Self::new_with_path(VIRTMGR_PATH)
     }
 
     /// Spawns a new instance of early_virtmgr, a child process that will host
     /// the VirtualizationService AIDL service for early VMs.
+    /// Prefer not calling this method multiple times to prevent spawning virtmgr
+    /// multiple times, and race for setting foreground process group.
     pub fn new_early() -> Result<VirtualizationService, io::Error> {
         Self::new_with_path(EARLY_VIRTMGR_PATH)
     }
