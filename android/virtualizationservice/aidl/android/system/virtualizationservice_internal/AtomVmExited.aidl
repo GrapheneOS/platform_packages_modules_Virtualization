@@ -25,6 +25,5 @@ parcelable AtomVmExited {
     int exitSignal;
     long elapsedTimeMillis;
     long guestTimeMillis;
-    long rssVmKb;
-    long rssCrosvmKb;
+    long rssKb;
 }
