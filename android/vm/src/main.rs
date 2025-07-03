@@ -23,7 +23,7 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     PartitionType::PartitionType, VirtualMachineAppConfig::DebugLevel::DebugLevel,
 };
 use anyhow::{bail, Context, Error};
-use binder::{ProcessState, Strong};
+use binder::ProcessState;
 use clap::{Args, Parser};
 use create_idsig::command_create_idsig;
 use create_partition::command_create_partition;
@@ -31,9 +31,8 @@ use run::{command_run, command_run_app, command_run_microdroid};
 use serde::Serialize;
 use std::io::{self, IsTerminal};
 use std::num::NonZeroU16;
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use vmclient::VirtualizationService;
 
 #[derive(Args, Default)]
 /// Collection of flags that are at VM level and therefore applicable to all subcommands
@@ -381,12 +380,6 @@ fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
     }
 }
 
-fn get_service() -> Result<Strong<dyn IVirtualizationService>, Error> {
-    let virtmgr =
-        vmclient::VirtualizationService::new().context("Failed to spawn VirtualizationService")?;
-    virtmgr.connect().context("Failed to connect to VirtualizationService")
-}
-
 fn command_check_feature_enabled(feature: &str) {
     println!(
         "Feature {feature} is {}",
@@ -401,23 +394,25 @@ fn main() -> Result<(), Error> {
     // We need to start the thread pool for Binder to work properly, especially link_to_death.
     ProcessState::start_thread_pool();
 
+    let virtmgr = VirtualizationService::new().context("Failed to spawn VirtualizationService")?;
+    let binding = virtmgr.connect().context("Failed to connect to VirtualizationService")?;
+    let service = binding.as_ref();
+
     match opt {
         Opt::CheckFeatureEnabled { feature } => {
             command_check_feature_enabled(&feature);
             Ok(())
         }
-        Opt::RunApp { config } => command_run_app(config),
-        Opt::RunMicrodroid { config } => command_run_microdroid(config),
-        Opt::Run { config } => command_run(config),
-        Opt::List => command_list(get_service()?.as_ref()),
-        Opt::Info => command_info(),
+        Opt::RunApp { config } => command_run_app(service, config),
+        Opt::RunMicrodroid { config } => command_run_microdroid(service, config),
+        Opt::Run { config } => command_run(service, config),
+        Opt::List => command_list(service),
+        Opt::Info => command_info(service),
         Opt::CreatePartition { path, size, partition_type } => {
-            command_create_partition(get_service()?.as_ref(), &path, size, partition_type)
+            command_create_partition(service, &path, size, partition_type)
         }
-        Opt::CreateIdsig { apk, path } => {
-            command_create_idsig(get_service()?.as_ref(), &apk, &path)
-        }
-        Opt::Console { cid } => command_console(cid),
+        Opt::CreateIdsig { apk, path } => command_create_idsig(service, &apk, &path),
+        Opt::Console { cid } => command_console(service, cid),
     }
 }
 
@@ -429,7 +424,7 @@ fn command_list(service: &dyn IVirtualizationService) -> Result<(), Error> {
 }
 
 /// Print information about supported VM types.
-fn command_info() -> Result<(), Error> {
+fn command_info(service: &dyn IVirtualizationService) -> Result<(), Error> {
     let non_protected_vm_supported = hypervisor_props::is_vm_supported()?;
     let protected_vm_supported = hypervisor_props::is_protected_vm_supported()?;
     match (non_protected_vm_supported, protected_vm_supported) {
@@ -469,27 +464,27 @@ fn command_info() -> Result<(), Error> {
         dtbo_label: String,
     }
 
-    let devices = get_service()?.getAssignableDevices()?;
+    let devices = service.getAssignableDevices()?;
     let devices: Vec<_> = devices
         .into_iter()
         .map(|device| AssignableDevice { node: device.node, dtbo_label: device.dtbo_label })
         .collect();
     println!("Assignable devices: {}", serde_json::to_string(&devices)?);
 
-    let os_list = get_service()?.getSupportedOSList()?;
+    let os_list = service.getSupportedOSList()?;
     println!("Available OS list: {}", serde_json::to_string(&os_list)?);
 
-    let debug_policy = get_service()?.getDebugPolicy()?;
+    let debug_policy = service.getDebugPolicy()?;
     println!("Debug policy: {}", debug_policy);
 
     Ok(())
 }
 
-fn command_console(cid: Option<i32>) -> Result<(), Error> {
+fn command_console(service: &dyn IVirtualizationService, cid: Option<i32>) -> Result<(), Error> {
     if !io::stdin().is_terminal() {
         bail!("Stdin must be a terminal (tty). Use 'adb shell -t' to force allocate tty.");
     }
-    let mut vms = get_service()?.debugListVms().context("Failed to get list of VMs")?;
+    let mut vms = service.debugListVms().context("Failed to get list of VMs")?;
     if let Some(cid) = cid {
         vms.retain(|vm_info| vm_info.cid == cid);
     }
@@ -497,7 +492,11 @@ fn command_console(cid: Option<i32>) -> Result<(), Error> {
         .into_iter()
         .find_map(|vm_info| vm_info.hostConsoleName)
         .context("Failed to get VM with console")?;
-    Err(Command::new("microcom").arg(host_console_name).exec().into())
+
+    // TODO(b/429049948): Uncomment below after resetting foreground process.
+    // Err(Command::new("microcom").arg(host_console_name).exec().into())
+    println!("Use `microcom {host_console_name}` to connect to console");
+    Ok(())
 }
 
 #[cfg(test)]

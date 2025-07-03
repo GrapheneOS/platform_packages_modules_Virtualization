@@ -1238,9 +1238,13 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                             TAG,
                             "Thread sleeping for "
                                     + sleep_ms
-                                    + " and will then proceed to kill the VM");
+                                    + " ms and will then proceed to kill the VM");
                     Thread.sleep(sleep_ms);
-                    vm.stop();
+                    String process_name = "crosvm_" + vm.getName();
+                    String pid = kill(TAG, process_name);
+                    assertWithMessage(process_name + " was not killed, process likely not found")
+                            .that(pid)
+                            .isNotEmpty();
                 } catch (Exception e) {
                     Log.e(TAG, "Error in vm.stop():" + e);
                     throw new RuntimeException(e);

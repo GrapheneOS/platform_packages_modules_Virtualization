@@ -174,7 +174,7 @@ Alternatively you can use `vm_shell` utility to connect to a running VM, i.e.: `
 3. Start Perfetto daemons and capture trace
 ```shell
 adb -s localhost:9876 shell setprop persist.traced.enable 1
-${ANDROID_BULD_TOP}/external/perfetto/tools/record_android_trace \
+${ANDROID_BUILD_TOP}/external/perfetto/tools/record_android_trace \
   -s localhost:9876 \
   -o /tmp/microdroid-trace-file.pftrace \
   -t 10s \
