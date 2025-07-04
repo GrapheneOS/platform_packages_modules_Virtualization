@@ -197,7 +197,7 @@ pub fn write_vm_exited_stats_sync(
     let vm_identifier = vm_identifier.to_owned();
     let elapsed_time_millis = get_duration(vm_metric.start_timestamp).as_millis() as i64;
     let guest_time_millis = vm_metric.cpu_guest_time.unwrap_or_default();
-    let rss = vm_metric.rss.unwrap_or_default();
+    let rss_kb = vm_metric.rss.unwrap_or_default();
 
     let atom = aidl::AtomVmExited {
         uid,
@@ -205,8 +205,7 @@ pub fn write_vm_exited_stats_sync(
         elapsedTimeMillis: elapsed_time_millis,
         deathReason: reason,
         guestTimeMillis: guest_time_millis,
-        rssVmKb: rss.vm,
-        rssCrosvmKb: rss.crosvm,
+        rssKb: rss_kb,
         exitSignal: exit_signal.unwrap_or_default(),
     };
 

@@ -28,7 +28,8 @@ use nix::{
     fcntl::OFlag,
     sys::epoll::{Epoll, EpollCreateFlags, EpollEvent, EpollFlags, EpollTimeout},
     sys::eventfd::EventFd,
-    unistd::{pipe2, Uid, User},
+    sys::wait::{waitid, Id, WaitPidFlag, WaitStatus},
+    unistd::{pipe2, Pid, Uid, User},
 };
 use psi_rs::{init_psi_monitor, parse_psi_line, register_psi_monitor, PsiResource, PsiStallType};
 use regex::{Captures, Regex};
@@ -37,7 +38,7 @@ use rustutils::system_properties;
 use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
-use std::cmp::{max, min};
+use std::cmp::min;
 use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
 use std::fs::{read_to_string, File};
@@ -418,23 +419,15 @@ pub enum VmState {
     Failed,
 }
 
-/// RSS values of VM and CrosVM process itself.
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Rss {
-    pub vm: i64,
-    pub crosvm: i64,
-}
-
 /// Metrics regarding the VM.
 #[derive(Debug, Default)]
 pub struct VmMetric {
     /// Recorded timestamp when the VM is started.
     pub start_timestamp: Option<SystemTime>,
-    /// Update most recent guest_time periodically from /proc/[crosvm pid]/stat while VM is
-    /// running.
+    /// Cumulative guest CPU time measured before the VM is killed
     pub cpu_guest_time: Option<i64>,
-    /// Update maximum RSS values periodically from /proc/[crosvm pid]/smaps while VM is running.
-    pub rss: Option<Rss>,
+    /// RSS high watermark measured before the VM is killed
+    pub rss: Option<i64>,
 }
 
 impl VmState {
@@ -456,12 +449,6 @@ impl VmState {
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child =
                 Arc::new(run_vm(config, &instance.crosvm_control_socket_path, failure_pipe_write)?);
-
-            let instance_monitor_status = instance.clone();
-            let child_monitor_status = child.clone();
-            thread::spawn(move || {
-                instance_monitor_status.clone().monitor_vm_status(child_monitor_status);
-            });
 
             let psi_thread_and_evt_fd = if instance.trim_under_pressure {
                 let psi_monitor_kill_event = Arc::new(EventFd::new()?);
@@ -787,12 +774,31 @@ impl VmInstance {
             const MAX_SIZE: u64 = 50_000;
             match failure_pipe_read.take(MAX_SIZE).read_to_string(&mut failure_reason) {
                 Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
-                Ok(len) if len > 0 => error!("VM returned failure reason '{}'", &failure_reason),
+                Ok(len) if len > 0 => {
+                    error!("VM returned failure reason '{}'", failure_reason.trim())
+                }
                 _ => (),
             };
-            failure_reason
+            failure_reason.trim().to_owned()
         });
 
+        // Wait for the EXIT of the crosvm process, but thanks to WNOWAIT it remains in the
+        // waitable state so that we can inspect /proc/<pid>/stat or status. Note however that we
+        // can only measure guest runtime, but not maximum RSS because VmHWM is not available for
+        // zombie process.
+        let pid = Pid::from_raw(child.id() as i32);
+        let result = waitid(Id::Pid(pid), WaitPidFlag::WEXITED | WaitPidFlag::WNOWAIT);
+        match &result {
+            Err(e) => error!("Error waiting for crosvm({}) instance to die: {}", child.id(), e),
+            Ok(WaitStatus::Exited(..)) | Ok(WaitStatus::Signaled(..)) => {
+                self.measure_vm_status(child.id());
+            }
+            Ok(wait_status) => {
+                error!("Unexpected wait status from crosvm({}): {:?}", child.id(), wait_status);
+            }
+        }
+
+        // Then we really reap the process.
         let result = child.wait();
         match &result {
             Err(e) => error!("Error waiting for crosvm({}) instance to die: {}", child.id(), e),
@@ -925,54 +931,15 @@ impl VmInstance {
         }
     }
 
-    fn monitor_vm_status(&self, child: Arc<SharedChild>) {
-        let pid = child.id();
+    fn measure_vm_status(&self, pid: u32) {
+        match get_guest_time(pid) {
+            Ok(guest_time) => self.vm_metric.lock().unwrap().cpu_guest_time = Some(guest_time),
+            Err(e) => warn!("Failed to get guest CPU time: {}", e),
+        }
 
-        const QUIET_PERIOD: Duration = Duration::from_secs(60);
-        let start = Instant::now();
-
-        loop {
-            let mut wait_duration = Duration::from_secs(30);
-            {
-                let mut vm_metric = self.vm_metric.lock().unwrap();
-
-                // Get CPU Information
-                match get_guest_time(pid) {
-                    Ok(guest_time) => vm_metric.cpu_guest_time = Some(guest_time),
-                    Err(e) => {
-                        wait_duration = Duration::from_secs(1);
-                        if start.elapsed() >= QUIET_PERIOD {
-                            warn!("Failed to get guest CPU time: {}", e);
-                        }
-                    }
-                }
-
-                // Get Memory Information
-                match get_rss(pid) {
-                    Ok(rss) => {
-                        vm_metric.rss = match &vm_metric.rss {
-                            Some(x) => Some(Rss::extract_max(x, &rss)),
-                            None => Some(rss),
-                        }
-                    }
-                    Err(e) => {
-                        wait_duration = Duration::from_secs(1);
-                        if start.elapsed() >= QUIET_PERIOD {
-                            warn!("Failed to get guest RSS: {}", e);
-                        }
-                    }
-                }
-            }
-
-            // Wait a bit before updating metrics again. Exit immediately if the VM dies.
-            let vm_state = self.vm_state.lock().unwrap();
-            if let VmState::Dead = &*vm_state {
-                break;
-            }
-            let (vm_state, _) = self.vm_dead_convar.wait_timeout(vm_state, wait_duration).unwrap();
-            if let VmState::Dead = &*vm_state {
-                break;
-            }
+        match get_rss(pid) {
+            Ok(rss) => self.vm_metric.lock().unwrap().rss = Some(rss),
+            Err(e) => warn!("Failed to get guest RSS: {}", e),
         }
     }
 
@@ -988,6 +955,12 @@ impl VmInstance {
 
     /// Updates the payload state to the given value, if it is a valid state transition.
     pub fn update_payload_state(&self, new_state: PayloadState) -> Result<(), Error> {
+        if new_state == PayloadState::Finished {
+            if let VmState::Running { child, .. } = &*self.vm_state.lock().unwrap() {
+                self.measure_vm_status(child.id());
+            }
+        }
+
         let mut state_locked = self.payload_state.lock().unwrap();
         // Only allow forward transitions, e.g. from starting to started or finished, not back in
         // the other direction.
@@ -1041,6 +1014,8 @@ impl VmInstance {
                 let VmState::Running { child, monitor_vm_exit_thread } = vm_state else {
                     unreachable!();
                 };
+
+                self.measure_vm_status(child.id());
 
                 if !self.try_shutdown() {
                     let id = child.id();
@@ -1234,12 +1209,6 @@ impl VmInstance {
     }
 }
 
-impl Rss {
-    fn extract_max(x: &Rss, y: &Rss) -> Rss {
-        Rss { vm: max(x.vm, y.vm), crosvm: max(x.crosvm, y.crosvm) }
-    }
-}
-
 // Get Cpus_allowed mask
 fn check_if_all_cpus_allowed() -> Result<bool> {
     let file = read_to_string("/proc/self/status")?;
@@ -1291,38 +1260,26 @@ fn get_guest_time(pid: u32) -> Result<i64> {
     Ok(guest_time_ticks * MILLIS_PER_SEC / ticks_per_sec)
 }
 
-// Get rss from /proc/[crosvm pid]/smaps
-fn get_rss(pid: u32) -> Result<Rss> {
-    let file = read_to_string(format!("/proc/{}/smaps", pid))?;
+// Get rss from VmHWM of /proc/[crosvm pid]/status
+fn get_rss(pid: u32) -> Result<i64> {
+    let file = read_to_string(format!("/proc/{}/status", pid))?;
     let lines: Vec<_> = file.split('\n').collect();
 
-    let mut rss_vm_total = 0i64;
-    let mut rss_crosvm_total = 0i64;
-    let mut is_vm = false;
     for line in lines {
-        if line.contains("crosvm_guest") {
-            is_vm = true;
-        } else if line.contains("Rss:") {
-            let data_list: Vec<_> = line.split_whitespace().collect();
-            if data_list.len() < 2 {
-                bail!("Failed to parse command result for getting rss :\n{}", line);
+        // VmHWM:  12345 kB
+        if line.starts_with("VmHWM:") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() != 3 {
+                bail!("Failed to parse line: {}", line);
             }
-            let rss = data_list[1].parse::<i64>()?;
-
-            if is_vm {
-                rss_vm_total += rss;
-                is_vm = false;
-            }
-            rss_crosvm_total += rss;
+            let rss = parts[1].parse::<i64>()?;
+            // We no longer distinguish memory used by the VM itself and the containint crosvm
+            // process. The former is not available as /proc/<pid>/smaps is not available when
+            // the process is in zombie state.
+            return Ok(rss);
         }
     }
-    if rss_crosvm_total == 0 {
-        bail!("zero value is measured on RSS of crosvm");
-    }
-    if rss_vm_total == 0 {
-        bail!("zero value is measured on RSS of VM");
-    }
-    Ok(Rss { vm: rss_vm_total, crosvm: rss_crosvm_total })
+    bail!("can't find VmHWM in the status file");
 }
 
 fn death_reason(

@@ -111,8 +111,8 @@ pub fn forward_vm_exited_atom(atom: &AtomVmExited) {
         elapsed_time_millis: atom.elapsedTimeMillis,
         death_reason,
         guest_time_millis: atom.guestTimeMillis,
-        rss_vm_kb: atom.rssVmKb,
-        rss_crosvm_kb: atom.rssCrosvmKb,
+        rss_vm_kb: atom.rssKb,
+        rss_crosvm_kb: atom.rssKb,
         exit_signal: atom.exitSignal,
     };
 
