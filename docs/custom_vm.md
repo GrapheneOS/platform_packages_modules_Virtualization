@@ -33,3 +33,31 @@ And then, go back to the terminal, and run GUI apps.
 ## Hardware acceleration
 If the file `/sdcard/linux/virglrenderer` exists on the device, it enables VirGL for VM.
 This requires enabling ANGLE for the Terminal app. (https://chromium.googlesource.com/angle/angle.git/+/HEAD/doc/DevSetupAndroid.md)
+
+## Connect to host Android device with ADB
+To establish ADB connection from the VM at terminal app to the host Android
+device, check if `adbd` of the host Android device is listening to any vsock
+ports in advance.
+
+There are some properties to make `adbd` listening to the vsock port. To check
+whether those properties exist or not, connect your Android device with USB by
+following instruction at https://developer.android.com/tools/adb#Enabling, and
+execute `adb shell getprop | grep adb` on your computer. If execution result
+contains one or more lines below, continue to the later steps with the first
+`PORT_NUMBER` ordered below.
+1. `[service.adb.listen_addrs]: [vsock:<PORT_NUMBER>]`
+1. `[service.adb.tcp.port]: [<PORT_NUMBER>]`
+1. `[persist.adb.tcp.port]: [<PORT_NUMBER>]`
+
+If none of the properties above is set, execute `adb tcpip <PORT_NUMBER>` on
+your computer with picking any new `PORT_NUMBER`, to set the property with that
+`PORT_NUMBER` and restart `adbd` with that property.
+
+Then, execute commands below at terminal app to install `adb` and establish ADB
+connection.
+
+```bash
+sudo apt update
+sudo apt install adb
+adb connect vsock:2:<PORT_NUMBER> # 2 is CID of the host Android device
+```
