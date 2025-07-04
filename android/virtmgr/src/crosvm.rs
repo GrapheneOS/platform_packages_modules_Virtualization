@@ -107,12 +107,8 @@ static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
 pub struct CrosvmConfig {
     pub cid: Cid,
     pub name: String,
-    pub bootloader: Option<File>,
-    pub kernel: Option<File>,
-    pub initrd: Option<File>,
     pub disks: Vec<DiskFile>,
     pub shared_paths: Vec<SharedPathConfig>,
-    pub params: Option<String>,
     pub protected: bool,
     pub debug_config: DebugConfig,
     pub memory_mib: NonZeroU32,
@@ -194,6 +190,7 @@ impl CrosvmCommand {
             .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
 
         command.add_name_arg(config);
+        command.add_kernel_arg(config)?;
         command.add_gpu_arg(config);
         command.add_display_arg(config)?;
         command.add_input_devices_arg(config)?;
@@ -226,6 +223,35 @@ impl CrosvmCommand {
         let name = "crosvm_".to_owned() + &config.name;
         self.arg0 = OsString::from(name.clone());
         self.args(["--name", &name]);
+    }
+
+    fn add_kernel_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+        if config.bootloader.is_none() && config.kernel.is_none() {
+            bail!("VM must have either a bootloader or a kernel image.");
+        }
+        if config.bootloader.is_some() && (config.kernel.is_some() || config.initrd.is_some()) {
+            bail!("Can't have both bootloader and kernel/initrd image.");
+        }
+
+        if let Some(bootloader) = &config.bootloader {
+            let file = self.add_preserved_fd(bootloader.as_ref().try_clone()?);
+            self.args(["--bios", &file]);
+        }
+
+        if let Some(kernel) = &config.kernel {
+            let file = self.add_preserved_fd(kernel.as_ref().try_clone()?);
+            self.arg(file);
+        }
+
+        if let Some(params) = &config.params {
+            self.args(["--params", params]);
+        }
+
+        if let Some(initrd) = &config.initrd {
+            let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
+            self.args(["--initrd", &file]);
+        }
+        Ok(())
     }
 
     fn add_gpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
@@ -1653,18 +1679,6 @@ fn run_vm(
     command
         .arg(format!("--serial={},hardware=virtio-console,num=3,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]", &log_arg));
 
-    if let Some(bootloader) = config.bootloader {
-        command.arg("--bios").arg(add_preserved_fd(&mut preserved_fds, bootloader));
-    }
-
-    if let Some(initrd) = config.initrd {
-        command.arg("--initrd").arg(add_preserved_fd(&mut preserved_fds, initrd));
-    }
-
-    if let Some(params) = &config.params {
-        command.arg("--params").arg(params);
-    }
-
     for disk in config.disks {
         // Disk file locking is disabled because of missing SELinux policies.
         command.arg("--block").arg(format!(
@@ -1672,10 +1686,6 @@ fn run_vm(
             add_preserved_fd(&mut preserved_fds, disk.image),
             !disk.writable,
         ));
-    }
-
-    if let Some(kernel) = config.kernel {
-        command.arg(add_preserved_fd(&mut preserved_fds, kernel));
     }
 
     #[cfg(target_arch = "aarch64")]
@@ -1778,12 +1788,6 @@ fn wait_for_file(path: &str, timeout_secs: u64) -> Result<(), std::io::Error> {
 
 /// Ensure that the configuration has a valid combination of fields set, or return an error if not.
 fn validate_config(config: &CrosvmConfig) -> Result<(), Error> {
-    if config.bootloader.is_none() && config.kernel.is_none() {
-        bail!("VM must have either a bootloader or a kernel image.");
-    }
-    if config.bootloader.is_some() && (config.kernel.is_some() || config.initrd.is_some()) {
-        bail!("Can't have both bootloader and kernel/initrd image.");
-    }
     let version = Version::parse(CROSVM_PLATFORM_VERSION).unwrap();
     if !config.platform_version.matches(&version) {
         bail!(
