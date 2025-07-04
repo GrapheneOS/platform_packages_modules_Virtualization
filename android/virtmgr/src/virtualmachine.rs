@@ -865,12 +865,8 @@ impl VirtualizationService {
         let crosvm_config = CrosvmConfig {
             cid,
             name: config.name.clone(),
-            bootloader: maybe_clone_file(&config.bootloader)?,
-            kernel,
-            initrd,
             disks,
             shared_paths,
-            params: config.params.to_owned(),
             protected: *is_protected,
             debug_config,
             memory_mib: config
