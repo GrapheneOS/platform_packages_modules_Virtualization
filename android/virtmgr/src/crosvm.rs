@@ -113,12 +113,9 @@ pub struct CrosvmConfig {
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
     pub debug_config: DebugConfig,
-    pub memory_mib: NonZeroU32,
-    pub swiotlb_mib: Option<NonZeroU32>,
     pub console_out_fd: Option<File>,
     pub console_in_fd: Option<File>,
     pub log_fd: Option<File>,
-    pub ramdump: Option<File>,
     pub platform_version: VersionReq,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
@@ -137,7 +134,6 @@ pub struct CrosvmConfig {
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
-    pub num_disks: usize, // TODO(jiyong): remove when swiotlb is moved to CrosvmCommand
     pub command: CrosvmCommand,
 }
 
@@ -174,7 +170,11 @@ pub struct CrosvmCommand {
 }
 
 impl CrosvmCommand {
-    pub fn build_from(config: &aidl::VirtualMachineRawConfig, temp_dir: &Path) -> Result<Self> {
+    pub fn build_from(
+        config: &aidl::VirtualMachineRawConfig,
+        debug_config: &DebugConfig,
+        temp_dir: &Path,
+    ) -> Result<Self> {
         let mut command =
             Self { arg0: OsString::new(), args: Vec::new(), preserved_fds: Vec::new() };
         command
@@ -186,6 +186,8 @@ impl CrosvmCommand {
         command.add_name_arg(config);
         command.add_kernel_arg(config)?;
         command.add_cpu_arg(config)?;
+        command.add_memory_arg(config);
+        command.add_ramdump_arg(config, debug_config, temp_dir)?;
         command.add_disk_arg(config, temp_dir)?;
         command.add_gpu_arg(config);
         command.add_display_arg(config)?;
@@ -282,6 +284,73 @@ impl CrosvmCommand {
 
         if !cpu_args.is_empty() {
             self.args(["--cpus", &cpu_args.join(",")]);
+        }
+        Ok(())
+    }
+
+    fn add_memory_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+        let mut memory_mib = config
+            .memoryMib
+            .try_into()
+            .ok()
+            .and_then(NonZeroU32::new)
+            .unwrap_or(NonZeroU32::new(256).unwrap());
+
+        let swiotlb_size_mib = Self::get_swiotlb_mib(config);
+
+        // b/346770542 for consistent "usable" memory across protected and non-protected VMs.
+        memory_mib = memory_mib.saturating_add(swiotlb_size_mib);
+        self.args(["--mem", &memory_mib.get().to_string()]);
+
+        if swiotlb_size_mib > 0 {
+            self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
+        }
+    }
+
+    fn get_swiotlb_mib(config: &aidl::VirtualMachineRawConfig) -> u32 {
+        if !config.protectedVm {
+            0
+        } else if config.swiotlbMib > 0 {
+            config.swiotlbMib.try_into().unwrap()
+        } else {
+            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
+                guest_page_size: 4096, // TODO: Use real page size.
+                block_count: config.disks.len().try_into().unwrap(),
+                console_count: 3,
+                balloon: config.balloon,
+            })
+        }
+    }
+
+    fn add_ramdump_arg(
+        &mut self,
+        config: &aidl::VirtualMachineRawConfig,
+        debug_config: &DebugConfig,
+        temp_dir: &Path,
+    ) -> Result<()> {
+        let using_gki =
+            if !cfg!(vendor_module) { false } else { config.osName.starts_with("microdroid_gki-") };
+
+        if debug_config.is_ramdump_needed() && !using_gki {
+            // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1
+            // where VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e.
+            // the VM owner) for readout.
+            let file = File::create(temp_dir.join("ramdump"))?;
+            let path = self.add_preserved_fd(file);
+
+            // This becoms /dev/hvc1 (see num=2 below)
+            self.arg(format!(
+                "--serial=type=file,path={path},hardware=virtio-console,num=2,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
+            ));
+
+            let reserve = RAMDUMP_RESERVED_MIB + Self::get_swiotlb_mib(config);
+            self.args(["--params", &format!("crashkernel={reserve}M")]);
+        } else {
+            self.arg(format!(
+                "--serial=type=sink,hardware=virtio-console,num=2,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
+            ));
         }
         Ok(())
     }
@@ -1536,8 +1605,6 @@ fn run_vm(
         command.arg("--no-balloon");
     }
 
-    let mut memory_mib = config.memory_mib;
-
     if config.enable_hypervisor_specific_auth_method && !config.protected {
         bail!("hypervisor specific auth method only supported for protected VMs");
     }
@@ -1572,19 +1639,6 @@ fn run_vm(
             _ => command.arg("--protected-vm"),
         };
 
-        let swiotlb_size_mib = config.swiotlb_mib.map(u32::from).unwrap_or_else(|| {
-            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
-                guest_page_size: 4096, // TODO: Use real page size.
-                block_count: config.num_disks.try_into().unwrap(),
-                console_count: 3,
-                balloon: config.balloon,
-            })
-        });
-        command.arg("--swiotlb").arg(swiotlb_size_mib.to_string());
-
-        // b/346770542 for consistent "usable" memory across protected and non-protected VMs.
-        memory_mib = memory_mib.saturating_add(swiotlb_size_mib);
-
         // Workaround to keep crash_dump from trying to read protected guest memory.
         // Context in b/238324526.
         command.arg("--unmap-guest-memory-on-fork");
@@ -1603,15 +1657,6 @@ fn run_vm(
         } else {
             warn!("kernel is too old enable --lock-guest-memory-dontneed");
         }
-
-        if config.ramdump.is_some() {
-            // Protected VM needs to reserve memory for ramdump here. Note that we reserve more
-            // memory for the restricted dma pool.
-            let ramdump_reserve = RAMDUMP_RESERVED_MIB + swiotlb_size_mib;
-            command.arg("--params").arg(format!("crashkernel={ramdump_reserve}M"));
-        }
-    } else if config.ramdump.is_some() {
-        command.arg("--params").arg(format!("crashkernel={RAMDUMP_RESERVED_MIB}M"));
     }
     if config.debug_config.debug_level == aidl::DebugLevel::NONE
         && config.debug_config.should_prepare_console_output()
@@ -1627,8 +1672,6 @@ fn run_vm(
     command
         .arg("--pci")
         .arg("mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]");
-
-    command.arg("--mem").arg(memory_mib.to_string());
 
     if let Some(gdb_port) = config.gdb_port {
         command.arg("--gdb").arg(gdb_port.to_string());
@@ -1660,7 +1703,6 @@ fn run_vm(
         .unwrap_or_default();
     let log_arg = format_serial_out_arg(&mut preserved_fds, config.log_fd);
     let failure_serial_path = add_preserved_fd(&mut preserved_fds, failure_pipe_write);
-    let ramdump_arg = format_serial_out_arg(&mut preserved_fds, config.ramdump);
     let console_input_device = config.console_input_device.as_deref().unwrap_or(CONSOLE_HVC0);
     match console_input_device {
         CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
@@ -1684,11 +1726,6 @@ fn run_vm(
         "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
         &console_out_arg,
         if console_input_device == CONSOLE_HVC0 { &console_in_arg } else { "" }
-    ));
-    // /dev/hvc1
-    command.arg(format!(
-        "--serial={},hardware=virtio-console,num=2,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
-        &ramdump_arg
     ));
     // /dev/hvc2
     command
