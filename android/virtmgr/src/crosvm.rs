@@ -14,10 +14,7 @@
 
 //! Functions for running instances of `crosvm`.
 
-use crate::aidl::{
-    self, AudioConfig as AudioConfigParcelable, DisplayConfig as DisplayConfigParcelable,
-    UsbConfig as UsbConfigParcelable,
-};
+use crate::aidl;
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
 use crate::debug_config::DebugConfig;
 use crate::virtualmachine::{self, Cid, VirtualMachineCallbacks};
@@ -132,15 +129,11 @@ pub struct CrosvmConfig {
     pub vfio_devices: Vec<VfioDevice>,
     pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
-    pub display_config: Option<DisplayConfig>,
-    pub input_device_options: Vec<InputDeviceOption>,
     pub hugepages: bool,
     pub tap: Option<File>,
     pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
-    pub audio_config: Option<AudioConfig>,
     pub balloon: bool,
-    pub usb_config: UsbConfig,
     pub dump_dt_fd: Option<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
@@ -149,49 +142,6 @@ pub struct CrosvmConfig {
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
     pub command: CrosvmCommand,
-}
-
-#[derive(Debug)]
-pub struct AudioConfig {
-    pub use_microphone: bool,
-    pub use_speaker: bool,
-}
-
-impl AudioConfig {
-    pub fn new(raw_config: &AudioConfigParcelable) -> Self {
-        AudioConfig { use_microphone: raw_config.useMicrophone, use_speaker: raw_config.useSpeaker }
-    }
-}
-
-#[derive(Debug)]
-pub struct UsbConfig {
-    pub controller: bool,
-}
-
-impl UsbConfig {
-    pub fn new(raw_config: &UsbConfigParcelable) -> Result<UsbConfig> {
-        Ok(UsbConfig { controller: raw_config.controller })
-    }
-}
-
-#[derive(Debug)]
-pub struct DisplayConfig {
-    pub width: NonZeroU32,
-    pub height: NonZeroU32,
-    pub horizontal_dpi: NonZeroU32,
-    pub vertical_dpi: NonZeroU32,
-    pub refresh_rate: NonZeroU32,
-}
-
-impl DisplayConfig {
-    pub fn new(raw_config: &DisplayConfigParcelable) -> Result<DisplayConfig> {
-        let width = try_into_non_zero_u32(raw_config.width)?;
-        let height = try_into_non_zero_u32(raw_config.height)?;
-        let horizontal_dpi = try_into_non_zero_u32(raw_config.horizontalDpi)?;
-        let vertical_dpi = try_into_non_zero_u32(raw_config.verticalDpi)?;
-        let refresh_rate = try_into_non_zero_u32(raw_config.refreshRate)?;
-        Ok(DisplayConfig { width, height, horizontal_dpi, vertical_dpi, refresh_rate })
-    }
 }
 
 fn try_into_non_zero_u32(value: i32) -> Result<NonZeroU32> {
@@ -221,19 +171,6 @@ pub struct SharedPathConfig {
     pub app_domain: bool,
 }
 
-/// virtio-input device configuration from `external/crosvm/src/crosvm/config.rs`
-#[derive(Debug)]
-#[allow(dead_code)]
-pub enum InputDeviceOption {
-    EvDev(File),
-    SingleTouch { file: File, width: u32, height: u32, name: Option<String> },
-    Keyboard(File),
-    Mouse(File),
-    Switches(File),
-    MultiTouchTrackpad { file: File, width: u32, height: u32, name: Option<String> },
-    MultiTouch { file: File, width: u32, height: u32, name: Option<String> },
-}
-
 type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 
 /// Parses VirtualMachineRawConfig parcelable into raw arguments which will be used to construct a
@@ -258,6 +195,10 @@ impl CrosvmCommand {
 
         command.add_name_arg(config);
         command.add_gpu_arg(config);
+        command.add_display_arg(config)?;
+        command.add_input_devices_arg(config)?;
+        command.add_audio_arg(config);
+        command.add_usb_arg(config);
         Ok(command)
     }
 
@@ -325,6 +266,115 @@ impl CrosvmCommand {
                 gpu_args.push("vulkan=true".to_string());
             }
             self.arg(format!("--gpu={}", gpu_args.join(",")));
+        }
+    }
+
+    fn add_display_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+        if let Some(config) = &config.displayConfig {
+            if !cfg!(paravirtualized_devices) {
+                warn!("Display configuration not supported. Ignoring");
+                return Ok(());
+            }
+            self.arg(format!(
+                "--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}",
+                try_into_non_zero_u32(config.width)?,
+                try_into_non_zero_u32(config.height)?,
+                try_into_non_zero_u32(config.horizontalDpi)?,
+                try_into_non_zero_u32(config.verticalDpi)?,
+                try_into_non_zero_u32(config.refreshRate)?,
+            ));
+        }
+        Ok(())
+    }
+
+    fn add_input_devices_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+        if !cfg!(paravirtualized_devices) && !config.inputDevices.is_empty() {
+            warn!("Input device configuration not supported. Ignoring");
+            return Ok(());
+        }
+        for dev in &config.inputDevices {
+            self.arg("--input");
+            match dev {
+                aidl::InputDevice::SingleTouch(dev) => {
+                    let mut params = Vec::new();
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    params.push(format!("path={}", file));
+                    params.push(format!("width={}", u32::try_from(dev.width)?));
+                    params.push(format!("height={}", u32::try_from(dev.height)?));
+                    if !dev.name.is_empty() {
+                        params.push(format!("name={}", dev.name));
+                    }
+                    self.arg(format!("single-touch[{}]", params.join(",")));
+                }
+                aidl::InputDevice::MultiTouch(dev) => {
+                    let mut params = Vec::new();
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    params.push(format!("path={}", file));
+                    params.push(format!("width={}", u32::try_from(dev.width)?));
+                    params.push(format!("height={}", u32::try_from(dev.height)?));
+                    if !dev.name.is_empty() {
+                        params.push(format!("name={}", dev.name));
+                    }
+                    self.arg(format!("multi-touch[{}]", params.join(",")));
+                }
+                aidl::InputDevice::Trackpad(dev) => {
+                    let mut params = Vec::new();
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    params.push(format!("path={}", file));
+                    params.push(format!("width={}", u32::try_from(dev.width)?));
+                    params.push(format!("height={}", u32::try_from(dev.height)?));
+                    if !dev.name.is_empty() {
+                        params.push(format!("name={}", dev.name));
+                    }
+                    self.arg(format!("multi-touch-trackpad[{}]", params.join(",")));
+                }
+                aidl::InputDevice::EvDev(dev) => {
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    self.arg(format!("evdev[path={}]", file));
+                }
+                aidl::InputDevice::Keyboard(dev) => {
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    self.arg(format!("keyboard[path={}]", file));
+                }
+                aidl::InputDevice::Mouse(dev) => {
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    self.arg(format!("mouse[path={}]", file));
+                }
+                aidl::InputDevice::Switches(dev) => {
+                    let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
+                    let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
+                    self.arg(format!("switches[path={}]", file));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn add_audio_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+        if let Some(config) = &config.audioConfig {
+            if !cfg!(paravirtualized_devices) {
+                warn!("Audio configuration not supported. Ignoring");
+                return;
+            }
+            self.arg("--virtio-snd");
+            self.arg(format!(
+                "backend=aaudio,num_input_device={},num_output_devices={}",
+                if config.useMicrophone { 1 } else { 0 },
+                if config.useSpeaker { 1 } else { 0 },
+            ));
+        }
+    }
+
+    fn add_usb_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+        let use_usb = if let Some(config) = &config.usbConfig { config.controller } else { false };
+        if !use_usb {
+            self.arg("--no-usb");
         }
     }
 }
@@ -1413,10 +1463,6 @@ fn run_vm(
         command.arg("--no-balloon");
     }
 
-    if !config.usb_config.controller {
-        command.arg("--no-usb");
-    }
-
     let mut memory_mib = config.memory_mib;
 
     if config.enable_hypervisor_specific_auth_method && !config.protected {
@@ -1644,21 +1690,6 @@ fn run_vm(
         command.arg("--device-tree-overlay").arg(arg);
     });
 
-    if cfg!(paravirtualized_devices) {
-        if let Some(display_config) = &config.display_config {
-            command
-                .arg(format!(
-                    "--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}",
-                    display_config.width,
-                    display_config.height,
-                    display_config.horizontal_dpi,
-                    display_config.vertical_dpi,
-                    display_config.refresh_rate
-                ))
-                .arg(format!("--android-display-service={}", config.name));
-        }
-    }
-
     if cfg!(network) {
         if let Some(tap) = config.tap {
             add_preserved_fd(&mut preserved_fds, tap);
@@ -1666,48 +1697,6 @@ fn run_vm(
             command.arg("--net").arg(format!("tap-fd={tap_fd}"));
         }
     }
-
-    if cfg!(paravirtualized_devices) {
-        for input_device_option in config.input_device_options.into_iter() {
-            command.arg("--input");
-            command.arg(match input_device_option {
-                InputDeviceOption::EvDev(file) => {
-                    format!("evdev[path={}]", add_preserved_fd(&mut preserved_fds, file))
-                }
-                InputDeviceOption::Keyboard(file) => {
-                    format!("keyboard[path={}]", add_preserved_fd(&mut preserved_fds, file))
-                }
-                InputDeviceOption::Mouse(file) => {
-                    format!("mouse[path={}]", add_preserved_fd(&mut preserved_fds, file))
-                }
-                InputDeviceOption::SingleTouch { file, width, height, name } => format!(
-                    "single-touch[path={},width={},height={}{}]",
-                    add_preserved_fd(&mut preserved_fds, file),
-                    width,
-                    height,
-                    name.as_ref().map_or("".into(), |n| format!(",name={}", n))
-                ),
-                InputDeviceOption::Switches(file) => {
-                    format!("switches[path={}]", add_preserved_fd(&mut preserved_fds, file))
-                }
-                InputDeviceOption::MultiTouchTrackpad { file, width, height, name } => format!(
-                    "multi-touch-trackpad[path={},width={},height={}{}]",
-                    add_preserved_fd(&mut preserved_fds, file),
-                    width,
-                    height,
-                    name.as_ref().map_or("".into(), |n| format!(",name={}", n))
-                ),
-                InputDeviceOption::MultiTouch { file, width, height, name } => format!(
-                    "multi-touch[path={},width={},height={}{}]",
-                    add_preserved_fd(&mut preserved_fds, file),
-                    width,
-                    height,
-                    name.as_ref().map_or("".into(), |n| format!(",name={}", n))
-                ),
-            });
-        }
-    }
-
     if config.hugepages {
         command.arg("--hugepages");
     }
@@ -1754,16 +1743,6 @@ fn run_vm(
 
     debug!("Preserving FDs {:?}", preserved_fds);
     command.preserved_fds(preserved_fds);
-
-    if cfg!(paravirtualized_devices) {
-        if let Some(audio_config) = &config.audio_config {
-            command.arg("--virtio-snd").arg(format!(
-                "backend=aaudio,num_input_devices={},num_output_devices={}",
-                if audio_config.use_microphone { 1 } else { 0 },
-                if audio_config.use_speaker { 1 } else { 0 }
-            ));
-        }
-    }
 
     if config.start_suspended {
         command.arg("--suspended");
