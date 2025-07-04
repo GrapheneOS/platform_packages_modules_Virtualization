@@ -152,13 +152,7 @@ impl DebugConfig {
 #[derive(Args, Default)]
 /// Collection of flags that are Microdroid specific
 pub struct MicrodroidConfig {
-    /// Path to the file backing the storage.
-    /// Created if the option is used but the path does not exist in the device.
-    #[arg(long)]
-    storage: Option<PathBuf>,
-
-    /// Size of the storage. Used only if --storage is supplied but path does not exist
-    /// Default size is 10*1024*1024
+    /// Size of the storage. If not specified 10MB storage is allocated to the VM.
     #[arg(long)]
     storage_size: Option<u64>,
 
@@ -242,6 +236,11 @@ pub struct RunAppConfig {
     /// Path to file containing instance_id. Required iff llpvm feature is enabled.
     #[arg(long = "instance-id-file")]
     instance_id: PathBuf,
+
+    /// Path to the file backing the storage.
+    /// Created if the option is used but the path does not exist in the device.
+    #[arg(long)]
+    storage: Option<PathBuf>,
 
     /// Path to VM config JSON within APK (e.g. assets/vm_config.json)
     #[arg(long)]
