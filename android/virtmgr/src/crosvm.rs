@@ -364,7 +364,7 @@ impl CrosvmCommand {
             }
             self.arg("--virtio-snd");
             self.arg(format!(
-                "backend=aaudio,num_input_device={},num_output_devices={}",
+                "backend=aaudio,num_input_devices={},num_output_devices={}",
                 if config.useMicrophone { 1 } else { 0 },
                 if config.useSpeaker { 1 } else { 0 },
             ));
