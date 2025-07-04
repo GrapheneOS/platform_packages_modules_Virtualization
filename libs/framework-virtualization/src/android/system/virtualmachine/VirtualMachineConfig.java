@@ -1430,7 +1430,7 @@ public final class VirtualMachineConfig {
          */
         @NonNull
         public Builder setConnectVmConsole(boolean supported) {
-            mConnectVmConsole = supported;
+            mConnectVmConsole = false;
             return this;
         }
 
