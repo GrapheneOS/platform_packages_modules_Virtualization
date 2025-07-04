@@ -16,9 +16,8 @@
 
 use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
-use crate::composite::make_composite_image;
 use crate::crosvm::{
-    CrosvmCommand, CrosvmConfig, DiskFile, PayloadState, SharedPathConfig, VmInstance, VmState,
+    CrosvmCommand, CrosvmConfig, PayloadState, SharedPathConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -57,9 +56,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fs;
-use std::fs::{
-    canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions,
-};
+use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::{NonZeroU16, NonZeroU32};
@@ -81,10 +78,6 @@ pub const BINDER_SERVICE_IDENTIFIER: &str = "android.system.virtualizationservic
 
 /// Vsock privileged ports are below this number.
 const VSOCK_PRIV_PORT_MAX: u32 = 1024;
-
-/// The size of zero.img.
-/// Gaps in composite disk images are filled with a shared zero.img.
-const ZERO_FILLER_SIZE: u64 = 4096;
 
 /// Magic string for the instance image
 const ANDROID_VM_INSTANCE_MAGIC: &str = "Android-VM-instance";
@@ -642,12 +635,6 @@ impl VirtualizationService {
             None
         };
 
-        // Counter to generate unique IDs for temporary image files.
-        let mut next_temporary_image_id = 0;
-        // Files which are referred to from composite images. These must be mapped to the crosvm
-        // child process, and not closed before it is started.
-        let mut indirect_files = vec![];
-
         let (is_app_config, config) = match config {
             aidl::VirtualMachineConfig::RawConfig(config) => {
                 (false, BorrowedOrOwned::Borrowed(config))
@@ -749,27 +736,6 @@ impl VirtualizationService {
         // calling process, as they may have unstable interfaces.
         check_partitions_for_files(config, calling_partition).or_service_specific_exception(-1)?;
 
-        let zero_filler_path = temporary_directory.join("zero.img");
-        write_zero_filler(&zero_filler_path)
-            .context("Failed to make composite image")
-            .with_log()
-            .or_service_specific_exception(-1)?;
-
-        // Assemble disk images if needed.
-        let disks = config
-            .disks
-            .iter()
-            .map(|disk| {
-                assemble_disk_image(
-                    disk,
-                    &zero_filler_path,
-                    &temporary_directory,
-                    &mut next_temporary_image_id,
-                    &mut indirect_files,
-                )
-            })
-            .collect::<Result<Vec<DiskFile>, _>>()?;
-
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
 
         let (vfio_devices, dtbo) = match &config.devices {
@@ -859,13 +825,13 @@ impl VirtualizationService {
         let trim_under_pressure =
             balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
-        let command = CrosvmCommand::build_from(config).or_service_specific_exception(-1)?;
+        let command = CrosvmCommand::build_from(config, &temporary_directory)
+            .or_service_specific_exception(-1)?;
 
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
             cid,
             name: config.name.clone(),
-            disks,
             shared_paths,
             protected: *is_protected,
             debug_config,
@@ -881,7 +847,6 @@ impl VirtualizationService {
             console_in_fd,
             log_fd,
             ramdump,
-            indirect_files,
             platform_version: parse_platform_version_req(&config.platformVersion)?,
             detect_hangup,
             gdb_port,
@@ -899,6 +864,7 @@ impl VirtualizationService {
             custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
+            num_disks: config.disks.len(),
             command,
         };
 
@@ -1107,17 +1073,6 @@ fn get_dtbo(config: &aidl::VirtualMachineConfig) -> Option<&ParcelFileDescriptor
     }
 }
 
-fn write_zero_filler(zero_filler_path: &Path) -> Result<()> {
-    let file = OpenOptions::new()
-        .create_new(true)
-        .read(true)
-        .write(true)
-        .open(zero_filler_path)
-        .with_context(|| "Failed to create zero.img")?;
-    file.set_len(ZERO_FILLER_SIZE)?;
-    Ok(())
-}
-
 fn format_as_android_vm_instance(part: &mut dyn Write) -> std::io::Result<()> {
     part.write_all(ANDROID_VM_INSTANCE_MAGIC.as_bytes())?;
     part.write_all(&ANDROID_VM_INSTANCE_VERSION.to_le_bytes())?;
@@ -1166,52 +1121,6 @@ fn assemble_shared_paths(
             })
         })
         .collect()
-}
-
-/// Given the configuration for a disk image, assembles the `DiskFile` to pass to crosvm.
-///
-/// This may involve assembling a composite disk from a set of partition images.
-fn assemble_disk_image(
-    disk: &aidl::DiskImage,
-    zero_filler_path: &Path,
-    temporary_directory: &Path,
-    next_temporary_image_id: &mut u64,
-    indirect_files: &mut Vec<File>,
-) -> Result<DiskFile, Status> {
-    let image = if !disk.partitions.is_empty() {
-        if disk.image.is_some() {
-            warn!("DiskImage {:?} contains both image and partitions.", disk);
-            return Err(anyhow!("DiskImage contains both image and partitions"))
-                .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
-        }
-
-        let composite_image_filenames =
-            make_composite_image_filenames(temporary_directory, next_temporary_image_id);
-        let (image, partition_files) = make_composite_image(
-            &disk.partitions,
-            zero_filler_path,
-            &composite_image_filenames.composite,
-            &composite_image_filenames.header,
-            &composite_image_filenames.footer,
-        )
-        .with_context(|| format!("Failed to make composite disk image with config {:?}", disk))
-        .with_log()
-        .or_service_specific_exception(-1)?;
-
-        // Pass the file descriptors for the various partition files to crosvm when it
-        // is run.
-        indirect_files.extend(partition_files);
-
-        image
-    } else if let Some(image) = &disk.image {
-        clone_file(image)?
-    } else {
-        warn!("DiskImage {:?} didn't contain image or partitions.", disk);
-        return Err(anyhow!("DiskImage didn't contain image or partitions."))
-            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
-    };
-
-    Ok(DiskFile { image, writable: disk.writable })
 }
 
 fn append_kernel_param(param: &str, vm_config: &mut aidl::VirtualMachineRawConfig) {
@@ -1465,31 +1374,6 @@ fn create_vm_payload_config(
     } else {
         Ok(VmPayloadConfig { task: Some(task), extra_apks, ..Default::default() })
     }
-}
-
-/// Generates a unique filename to use for a composite disk image.
-fn make_composite_image_filenames(
-    temporary_directory: &Path,
-    next_temporary_image_id: &mut u64,
-) -> CompositeImageFilenames {
-    let id = *next_temporary_image_id;
-    *next_temporary_image_id += 1;
-    CompositeImageFilenames {
-        composite: temporary_directory.join(format!("composite-{}.img", id)),
-        header: temporary_directory.join(format!("composite-{}-header.img", id)),
-        footer: temporary_directory.join(format!("composite-{}-footer.img", id)),
-    }
-}
-
-/// Filenames for a composite disk image, including header and footer partitions.
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct CompositeImageFilenames {
-    /// The composite disk image itself.
-    composite: PathBuf,
-    /// The header partition image.
-    header: PathBuf,
-    /// The footer partition image.
-    footer: PathBuf,
 }
 
 /// Checks whether the caller has a specific permission

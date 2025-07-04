@@ -16,9 +16,11 @@
 
 use crate::aidl;
 use crate::atom::{get_num_cpus, write_vm_exited_stats_sync};
+use crate::composite;
 use crate::debug_config::DebugConfig;
 use crate::virtualmachine::{self, Cid, VirtualMachineCallbacks};
 use anyhow::{anyhow, bail, Context, Error, Result};
+use avflog::LogResult;
 use binder::{DeathRecipient, ParcelFileDescriptor, Strong};
 use command_fds::CommandFdExt;
 use libc::{sysconf, _SC_CLK_TCK};
@@ -41,7 +43,7 @@ use std::borrow::Cow;
 use std::cmp::min;
 use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
-use std::fs::{read_to_string, File};
+use std::fs::{read_to_string, File, OpenOptions};
 use std::io::{self, Read, Seek};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
@@ -108,7 +110,6 @@ static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
 pub struct CrosvmConfig {
     pub cid: Cid,
     pub name: String,
-    pub disks: Vec<DiskFile>,
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
     pub debug_config: DebugConfig,
@@ -119,7 +120,6 @@ pub struct CrosvmConfig {
     pub console_in_fd: Option<File>,
     pub log_fd: Option<File>,
     pub ramdump: Option<File>,
-    pub indirect_files: Vec<File>,
     pub platform_version: VersionReq,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
@@ -138,19 +138,13 @@ pub struct CrosvmConfig {
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
+    pub num_disks: usize, // TODO(jiyong): remove when swiotlb is moved to CrosvmCommand
     pub command: CrosvmCommand,
 }
 
 fn try_into_non_zero_u32(value: i32) -> Result<NonZeroU32> {
     let u32_value = value.try_into()?;
     NonZeroU32::new(u32_value).ok_or(anyhow!("value should be greater than 0"))
-}
-
-/// A disk image to pass to crosvm for a VM.
-#[derive(Debug)]
-pub struct DiskFile {
-    pub image: File,
-    pub writable: bool,
 }
 
 /// Shared path between host and guest VM.
@@ -181,7 +175,7 @@ pub struct CrosvmCommand {
 }
 
 impl CrosvmCommand {
-    pub fn build_from(config: &aidl::VirtualMachineRawConfig) -> Result<Self> {
+    pub fn build_from(config: &aidl::VirtualMachineRawConfig, temp_dir: &Path) -> Result<Self> {
         let mut command =
             Self { arg0: OsString::new(), args: Vec::new(), preserved_fds: Vec::new() };
         command
@@ -192,6 +186,7 @@ impl CrosvmCommand {
 
         command.add_name_arg(config);
         command.add_kernel_arg(config)?;
+        command.add_disk_arg(config, temp_dir)?;
         command.add_gpu_arg(config);
         command.add_display_arg(config)?;
         command.add_input_devices_arg(config)?;
@@ -251,6 +246,65 @@ impl CrosvmCommand {
         if let Some(initrd) = &config.initrd {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
+        }
+        Ok(())
+    }
+
+    fn add_disk_arg(
+        &mut self,
+        config: &aidl::VirtualMachineRawConfig,
+        temp_dir: &Path,
+    ) -> Result<()> {
+        /// The size of zero.img.
+        /// Gaps in composite disk images are filled with a shared zero.img.
+        const ZERO_FILLER_SIZE: u64 = 4096;
+
+        let zero_filler = temp_dir.join("zero.img");
+        OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+            .open(&zero_filler)
+            .context(format!("Failed to create {:?}", zero_filler))?
+            .set_len(ZERO_FILLER_SIZE)?;
+
+        for (index, disk) in config.disks.iter().enumerate() {
+            let image = if !disk.partitions.is_empty() {
+                if disk.image.is_some() {
+                    bail!("DiskImage {:?} contains both image and partitions.", disk);
+                }
+
+                let composite = temp_dir.join(format!("composite-{}.img", index));
+                let header = temp_dir.join(format!("composite-{}-header.img", index));
+                let footer = temp_dir.join(format!("composite-{}-footer.img", index));
+
+                let (image, partition_files) = composite::make_composite_image(
+                    &disk.partitions,
+                    &zero_filler,
+                    &composite,
+                    &header,
+                    &footer,
+                )
+                .with_context(|| {
+                    format!("Failed to make composite disk image with config {:?}", disk)
+                })
+                .with_log()?;
+
+                // These partition files are not directly shown in the command line, but
+                // indirectly via the composite disk file. So we need to preserve their FDs.
+                partition_files.into_iter().for_each(|f| {
+                    self.add_preserved_fd(f);
+                });
+
+                image
+            } else if let Some(image) = &disk.image {
+                image.as_ref().try_clone()?.into()
+            } else {
+                bail!("DiskImage {:?} didn't contain image or partitions.", disk);
+            };
+
+            let path = self.add_preserved_fd(image);
+            self.args(["--block", &format!("path={},ro={},lock=false", path, !disk.writable)]);
         }
         Ok(())
     }
@@ -1485,7 +1539,7 @@ fn run_vm(
         let swiotlb_size_mib = config.swiotlb_mib.map(u32::from).unwrap_or_else(|| {
             estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
                 guest_page_size: 4096, // TODO: Use real page size.
-                block_count: config.disks.len().try_into().unwrap(),
+                block_count: config.num_disks.try_into().unwrap(),
                 console_count: 3,
                 balloon: config.balloon,
             })
@@ -1578,7 +1632,7 @@ fn run_vm(
     }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
-    let mut preserved_fds: Vec<_> = config.indirect_files.into_iter().map(|f| f.into()).collect();
+    let mut preserved_fds = Vec::new();
     preserved_fds.extend(config.command.preserved_fds);
 
     if let Some(dump_dt_fd) = config.dump_dt_fd {
@@ -1635,15 +1689,6 @@ fn run_vm(
     // /dev/hvc2
     command
         .arg(format!("--serial={},hardware=virtio-console,num=3,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]", &log_arg));
-
-    for disk in config.disks {
-        // Disk file locking is disabled because of missing SELinux policies.
-        command.arg("--block").arg(format!(
-            "path={},ro={},lock=false",
-            add_preserved_fd(&mut preserved_fds, disk.image),
-            !disk.writable,
-        ));
-    }
 
     #[cfg(target_arch = "aarch64")]
     command.arg("--no-pmu");
