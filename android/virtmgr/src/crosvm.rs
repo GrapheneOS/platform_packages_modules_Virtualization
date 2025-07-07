@@ -115,7 +115,6 @@ pub struct CrosvmConfig {
     pub debug_config: DebugConfig,
     pub memory_mib: NonZeroU32,
     pub swiotlb_mib: Option<NonZeroU32>,
-    pub cpus: aidl::CpuOptions,
     pub console_out_fd: Option<File>,
     pub console_in_fd: Option<File>,
     pub log_fd: Option<File>,
@@ -186,6 +185,7 @@ impl CrosvmCommand {
 
         command.add_name_arg(config);
         command.add_kernel_arg(config)?;
+        command.add_cpu_arg(config)?;
         command.add_disk_arg(config, temp_dir)?;
         command.add_gpu_arg(config);
         command.add_display_arg(config)?;
@@ -246,6 +246,42 @@ impl CrosvmCommand {
         if let Some(initrd) = &config.initrd {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
+        }
+        Ok(())
+    }
+
+    fn add_cpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+        let num_cores: Option<usize> = match &config.cpuOptions.cpuTopology {
+            aidl::CpuTopology::MatchHost(_) => {
+                if check_if_all_cpus_allowed()? {
+                    None
+                } else {
+                    Some(get_num_cpus().context("can't get number of CPUs")?)
+                }
+            }
+            aidl::CpuTopology::CpuCount(count) => Some((*count).try_into().unwrap()),
+        };
+
+        let mut cpu_args = Vec::new();
+        if let Some(num_cores) = num_cores {
+            cpu_args.push(format!("num-cores={num_cores}"));
+        } else {
+            self.arg("--host-cpu-topology");
+            #[cfg(target_arch = "aarch64")]
+            {
+                if cfg!(virt_cpufreq_upstream) {
+                    self.arg("--virt-cpufreq-upstream");
+                } else {
+                    self.arg("--virt-cpufreq");
+                }
+            }
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        cpu_args.push("sve=[auto=true]".to_string());
+
+        if !cpu_args.is_empty() {
+            self.args(["--cpus", &cpu_args.join(",")]);
         }
         Ok(())
     }
@@ -1593,38 +1629,6 @@ fn run_vm(
         .arg("mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]");
 
     command.arg("--mem").arg(memory_mib.to_string());
-
-    fn cpu_arg_command(command: &mut Command, count: usize) {
-        #[cfg(target_arch = "aarch64")]
-        command.arg("--cpus").arg(count.to_string() + ",sve=[auto=true]");
-        #[cfg(not(target_arch = "aarch64"))]
-        command.arg("--cpus").arg(count.to_string());
-    }
-    match config.cpus.cpuTopology {
-        aidl::CpuTopology::MatchHost(_) => {
-            if check_if_all_cpus_allowed()? {
-                command.arg("--host-cpu-topology");
-                #[cfg(target_arch = "aarch64")]
-                {
-                    if cfg!(virt_cpufreq_upstream) {
-                        command.arg("--virt-cpufreq-upstream");
-                    } else {
-                        command.arg("--virt-cpufreq");
-                    }
-                    command.arg("--cpus").arg("sve=[auto=true]");
-                }
-            } else {
-                cpu_arg_command(
-                    &mut command,
-                    get_num_cpus()
-                        .context("Could not determine the number of CPUs in the system")?,
-                )
-            }
-        }
-        aidl::CpuTopology::CpuCount(count) => {
-            cpu_arg_command(&mut command, count.try_into().context("invalid cpu count")?)
-        }
-    }
 
     if let Some(gdb_port) = config.gdb_port {
         command.arg("--gdb").arg(gdb_port.to_string());

@@ -842,7 +842,6 @@ impl VirtualizationService {
                 .and_then(NonZeroU32::new)
                 .unwrap_or(NonZeroU32::new(256).unwrap()),
             swiotlb_mib: config.swiotlbMib.try_into().ok().and_then(NonZeroU32::new),
-            cpus: config.cpuOptions.clone(),
             console_out_fd,
             console_in_fd,
             log_fd,
