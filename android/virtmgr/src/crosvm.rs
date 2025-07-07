@@ -106,7 +106,6 @@ static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
 });
 
 /// Configuration for a VM to run with crosvm.
-#[derive(Debug)]
 pub struct CrosvmConfig {
     pub cid: Cid,
     pub name: String,
@@ -162,7 +161,6 @@ type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 /// Parses VirtualMachineRawConfig parcelable into raw arguments which will be used to construct a
 /// crosvm command. The parsing is done when the virtual machine is created, and the construction
 /// of the crosvm command is done when the virtual machine is started.
-#[derive(Debug)]
 pub struct CrosvmCommand {
     arg0: OsString,
     args: Vec<OsString>,
@@ -579,7 +577,6 @@ pub enum PayloadState {
 }
 
 /// The current state of the VM itself.
-#[derive(Debug)]
 pub enum VmState {
     /// The VM has not yet tried to start.
     NotStarted {
@@ -602,6 +599,18 @@ pub enum VmState {
     Dead,
     /// The VM failed to start.
     Failed,
+}
+
+impl std::fmt::Debug for VmState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotStarted { .. } => f.write_str("not started"),
+            Self::Running { .. } => f.write_str("running"),
+            Self::ShuttingDown { .. } => f.write_str("shutting down"),
+            Self::Dead => f.write_str("dead"),
+            Self::Failed => f.write_str("failed"),
+        }
+    }
 }
 
 /// Metrics regarding the VM.
