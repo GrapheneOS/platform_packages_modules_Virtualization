@@ -63,7 +63,6 @@
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="32dp"
         android:layout_marginHorizontal="40dp"
-        android:backgroundTint="?attr/colorPrimaryDark"
         android:text="@string/settings_recovery_title" />
 
 </RelativeLayout>
