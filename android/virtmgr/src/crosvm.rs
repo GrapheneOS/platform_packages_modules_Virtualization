@@ -173,7 +173,9 @@ pub struct CrosvmCommand {
 
 type Cleaner = dyn FnOnce(&CleanerContext) -> Result<()> + Send;
 
-struct CleanerContext {} // TODO: add some fields
+struct CleanerContext {
+    failure_reason: Mutex<String>,
+}
 
 impl CrosvmCommand {
     pub fn build_from(
@@ -197,6 +199,7 @@ impl CrosvmCommand {
         command.add_kernel_arg(config)?;
         command.add_cpu_arg(config)?;
         command.add_memory_arg(config);
+        command.add_failure_pipe()?;
         command.add_ramdump_arg(config, debug_config, temp_dir)?;
         command.add_disk_arg(config, temp_dir)?;
         command.add_gpu_arg(config);
@@ -324,6 +327,37 @@ impl CrosvmCommand {
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
         }
+    }
+
+    fn add_failure_pipe(&mut self) -> Result<()> {
+        let (reader, writer) = create_pipe()?;
+        let writer = self.add_preserved_fd(writer);
+        // This becomes /dev/ttyS1
+        self.arg(format!("--serial=type=file,path={writer},hardware=serial,num=2"));
+
+        let read_thread = std::thread::spawn(move || {
+            // Read the pipe to see if any failure reason is written
+            let mut failure_reason = String::new();
+            // Arbitrary max size in case of misbehaving guest.
+            const MAX_SIZE: u64 = 50_000;
+            match reader.take(MAX_SIZE).read_to_string(&mut failure_reason) {
+                Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
+                Ok(len) if len > 0 => {
+                    error!("VM returned failure reason '{}'", failure_reason.trim())
+                }
+                _ => (),
+            };
+            failure_reason.trim().to_owned()
+        });
+
+        let cleaner = move |context: &CleanerContext| {
+            let failure_reason = read_thread.join().expect("Failed to wait for fail reason");
+
+            *context.failure_reason.lock().unwrap() = failure_reason;
+            Ok(())
+        };
+        self.add_cleaner("failure_pipe", Box::new(cleaner))?;
+        Ok(())
     }
 
     fn get_swiotlb_mib(config: &aidl::VirtualMachineRawConfig) -> u32 {
@@ -691,14 +725,12 @@ impl VmState {
             let mut config = *config;
             let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
-            let (failure_pipe_read, failure_pipe_write) = create_pipe()?;
             let vfio_devices = config.vfio_devices.clone();
 
             let vhost_fs_devices = run_virtiofs(&config)?;
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
-            let child =
-                Arc::new(run_vm(config, &instance.crosvm_control_socket_path, failure_pipe_write)?);
+            let child = Arc::new(run_vm(config, &instance.crosvm_control_socket_path)?);
 
             let psi_thread_and_evt_fd = if instance.trim_under_pressure {
                 let psi_monitor_kill_event = Arc::new(EventFd::new()?);
@@ -730,7 +762,6 @@ impl VmState {
             let monitor_vm_exit_thread = thread::spawn(move || {
                 instance_clone.monitor_vm_exit(
                     child_clone,
-                    failure_pipe_read,
                     vfio_devices,
                     vhost_fs_devices,
                     psi_thread_and_evt_fd,
@@ -1011,27 +1042,11 @@ impl VmInstance {
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
-        failure_pipe_read: File,
         vfio_devices: Vec<VfioDevice>,
         vhost_user_devices: Vec<SharedChild>,
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
         cleaners: HashMap<String, Box<Cleaner>>,
     ) {
-        let failure_reason_thread = std::thread::spawn(move || {
-            // Read the pipe to see if any failure reason is written
-            let mut failure_reason = String::new();
-            // Arbitrary max size in case of misbehaving guest.
-            const MAX_SIZE: u64 = 50_000;
-            match failure_pipe_read.take(MAX_SIZE).read_to_string(&mut failure_reason) {
-                Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
-                Ok(len) if len > 0 => {
-                    error!("VM returned failure reason '{}'", failure_reason.trim())
-                }
-                _ => (),
-            };
-            failure_reason.trim().to_owned()
-        });
-
         // Wait for the EXIT of the crosvm process, but thanks to WNOWAIT it remains in the
         // waitable state so that we can inspect /proc/<pid>/stat or status. Note however that we
         // can only measure guest runtime, but not maximum RSS because VmHWM is not available for
@@ -1062,7 +1077,7 @@ impl VmInstance {
             }
         }
 
-        let cleaner_context = CleanerContext {};
+        let cleaner_context = CleanerContext { failure_reason: Mutex::new(String::new()) };
         cleaners.into_iter().for_each(|(name, cleaner)| {
             // Failure in a cleaner shouldn't stop running other cleaners.
             cleaner(&cleaner_context)
@@ -1097,7 +1112,7 @@ impl VmInstance {
             }
         }
 
-        let failure_reason = failure_reason_thread.join().expect("failure_reason_thread panic'd");
+        let failure_reason = cleaner_context.failure_reason.lock().unwrap();
 
         *self.vm_state.lock().unwrap() = VmState::Dead;
         self.vm_dead_convar.notify_all();
@@ -1111,7 +1126,7 @@ impl VmInstance {
             if failure_reason.is_empty() && self.payload_state() == PayloadState::Hangup {
                 Cow::from("HANGUP")
             } else {
-                Cow::from(failure_reason)
+                Cow::from(failure_reason.clone())
             };
 
         self.handle_ramdump().unwrap_or_else(|e| error!("Error handling ramdump: {}", e));
@@ -1650,11 +1665,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
 }
 
 /// Starts an instance of `crosvm` to manage a new VM.
-fn run_vm(
-    config: CrosvmConfig,
-    crosvm_control_socket_path: &Path,
-    failure_pipe_write: File,
-) -> Result<SharedChild, Error> {
+fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<SharedChild, Error> {
     validate_config(&config)?;
 
     let mut command = Command::new(CROSVM_PATH);
@@ -1766,7 +1777,6 @@ fn run_vm(
         .map(|fd| format!(",input={}", add_preserved_fd(&mut preserved_fds, fd)))
         .unwrap_or_default();
     let log_arg = format_serial_out_arg(&mut preserved_fds, config.log_fd);
-    let failure_serial_path = add_preserved_fd(&mut preserved_fds, failure_pipe_write);
     let console_input_device = config.console_input_device.as_deref().unwrap_or(CONSOLE_HVC0);
     match console_input_device {
         CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
@@ -1783,8 +1793,6 @@ fn run_vm(
         &console_out_arg,
         if console_input_device == CONSOLE_TTYS0 { &console_in_arg } else { "" }
     ));
-    // /dev/ttyS1
-    command.arg(format!("--serial=type=file,path={},hardware=serial,num=2", &failure_serial_path));
     // /dev/hvc0
     command.arg(format!(
         "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
