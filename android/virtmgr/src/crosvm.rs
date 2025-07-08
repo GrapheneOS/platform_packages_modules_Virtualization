@@ -41,6 +41,7 @@ use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::min;
+use std::collections::HashMap;
 use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
 use std::fs::{read_to_string, File, OpenOptions};
@@ -106,19 +107,15 @@ static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
 });
 
 /// Configuration for a VM to run with crosvm.
-#[derive(Debug)]
 pub struct CrosvmConfig {
     pub cid: Cid,
     pub name: String,
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
     pub debug_config: DebugConfig,
-    pub memory_mib: NonZeroU32,
-    pub swiotlb_mib: Option<NonZeroU32>,
     pub console_out_fd: Option<File>,
     pub console_in_fd: Option<File>,
     pub log_fd: Option<File>,
-    pub ramdump: Option<File>,
     pub platform_version: VersionReq,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
@@ -126,7 +123,6 @@ pub struct CrosvmConfig {
     pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
-    pub tap: Option<File>,
     pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
     pub balloon: bool,
@@ -137,7 +133,6 @@ pub struct CrosvmConfig {
     pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
-    pub num_disks: usize, // TODO(jiyong): remove when swiotlb is moved to CrosvmCommand
     pub command: CrosvmCommand,
 }
 
@@ -166,17 +161,34 @@ type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 /// Parses VirtualMachineRawConfig parcelable into raw arguments which will be used to construct a
 /// crosvm command. The parsing is done when the virtual machine is created, and the construction
 /// of the crosvm command is done when the virtual machine is started.
-#[derive(Debug)]
 pub struct CrosvmCommand {
     arg0: OsString,
     args: Vec<OsString>,
     preserved_fds: Vec<OwnedFd>,
+    // List of lambdas which need to run after crosvm exits. Option is added since this will be
+    // moved out of this struct when the VM gets run. Box is needed to satisfy the fixed-size
+    // requirement of Vec.
+    cleaners: Option<HashMap<String, Box<Cleaner>>>,
+}
+
+type Cleaner = dyn FnOnce(&CleanerContext) -> Result<()> + Send;
+
+struct CleanerContext {
+    failure_reason: Mutex<String>,
 }
 
 impl CrosvmCommand {
-    pub fn build_from(config: &aidl::VirtualMachineRawConfig, temp_dir: &Path) -> Result<Self> {
-        let mut command =
-            Self { arg0: OsString::new(), args: Vec::new(), preserved_fds: Vec::new() };
+    pub fn build_from(
+        config: &aidl::VirtualMachineRawConfig,
+        debug_config: &DebugConfig,
+        temp_dir: &Path,
+    ) -> Result<Self> {
+        let mut command = Self {
+            arg0: OsString::new(),
+            args: Vec::new(),
+            preserved_fds: Vec::new(),
+            cleaners: Some(HashMap::new()),
+        };
         command
             .arg("--extended-status")
             .args(["--log-level", "info,disk=warn"])
@@ -186,12 +198,16 @@ impl CrosvmCommand {
         command.add_name_arg(config);
         command.add_kernel_arg(config)?;
         command.add_cpu_arg(config)?;
+        command.add_memory_arg(config);
+        command.add_failure_pipe()?;
+        command.add_ramdump_arg(config, debug_config, temp_dir)?;
         command.add_disk_arg(config, temp_dir)?;
         command.add_gpu_arg(config);
         command.add_display_arg(config)?;
         command.add_input_devices_arg(config)?;
         command.add_audio_arg(config);
         command.add_usb_arg(config);
+        command.add_network_arg(config)?;
         Ok(command)
     }
 
@@ -213,6 +229,14 @@ impl CrosvmCommand {
         let raw_fd = fd.as_raw_fd();
         self.preserved_fds.push(fd);
         format!("/proc/self/fd/{}", raw_fd)
+    }
+
+    fn add_cleaner(&mut self, name: &str, cleaner: Box<Cleaner>) -> Result<()> {
+        if self.cleaners.as_mut().unwrap().insert(name.to_owned(), cleaner).is_some() {
+            Err(anyhow!("cleaner with name {name} already exists."))
+        } else {
+            Ok(())
+        }
     }
 
     fn add_name_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
@@ -282,6 +306,104 @@ impl CrosvmCommand {
 
         if !cpu_args.is_empty() {
             self.args(["--cpus", &cpu_args.join(",")]);
+        }
+        Ok(())
+    }
+
+    fn add_memory_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+        let mut memory_mib = config
+            .memoryMib
+            .try_into()
+            .ok()
+            .and_then(NonZeroU32::new)
+            .unwrap_or(NonZeroU32::new(256).unwrap());
+
+        let swiotlb_size_mib = Self::get_swiotlb_mib(config);
+
+        // b/346770542 for consistent "usable" memory across protected and non-protected VMs.
+        memory_mib = memory_mib.saturating_add(swiotlb_size_mib);
+        self.args(["--mem", &memory_mib.get().to_string()]);
+
+        if swiotlb_size_mib > 0 {
+            self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
+        }
+    }
+
+    fn add_failure_pipe(&mut self) -> Result<()> {
+        let (reader, writer) = create_pipe()?;
+        let writer = self.add_preserved_fd(writer);
+        // This becomes /dev/ttyS1
+        self.arg(format!("--serial=type=file,path={writer},hardware=serial,num=2"));
+
+        let read_thread = std::thread::spawn(move || {
+            // Read the pipe to see if any failure reason is written
+            let mut failure_reason = String::new();
+            // Arbitrary max size in case of misbehaving guest.
+            const MAX_SIZE: u64 = 50_000;
+            match reader.take(MAX_SIZE).read_to_string(&mut failure_reason) {
+                Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
+                Ok(len) if len > 0 => {
+                    error!("VM returned failure reason '{}'", failure_reason.trim())
+                }
+                _ => (),
+            };
+            failure_reason.trim().to_owned()
+        });
+
+        let cleaner = move |context: &CleanerContext| {
+            let failure_reason = read_thread.join().expect("Failed to wait for fail reason");
+
+            *context.failure_reason.lock().unwrap() = failure_reason;
+            Ok(())
+        };
+        self.add_cleaner("failure_pipe", Box::new(cleaner))?;
+        Ok(())
+    }
+
+    fn get_swiotlb_mib(config: &aidl::VirtualMachineRawConfig) -> u32 {
+        if !config.protectedVm {
+            0
+        } else if config.swiotlbMib > 0 {
+            config.swiotlbMib.try_into().unwrap()
+        } else {
+            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
+                guest_page_size: 4096, // TODO: Use real page size.
+                block_count: config.disks.len().try_into().unwrap(),
+                console_count: 3,
+                balloon: config.balloon,
+            })
+        }
+    }
+
+    fn add_ramdump_arg(
+        &mut self,
+        config: &aidl::VirtualMachineRawConfig,
+        debug_config: &DebugConfig,
+        temp_dir: &Path,
+    ) -> Result<()> {
+        let using_gki =
+            if !cfg!(vendor_module) { false } else { config.osName.starts_with("microdroid_gki-") };
+
+        if debug_config.is_ramdump_needed() && !using_gki {
+            // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1
+            // where VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e.
+            // the VM owner) for readout.
+            let file = File::create(temp_dir.join("ramdump"))?;
+            let path = self.add_preserved_fd(file);
+
+            // This becoms /dev/hvc1 (see num=2 below)
+            self.arg(format!(
+                "--serial=type=file,path={path},hardware=virtio-console,num=2,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
+            ));
+
+            let reserve = RAMDUMP_RESERVED_MIB + Self::get_swiotlb_mib(config);
+            self.args(["--params", &format!("crashkernel={reserve}M")]);
+        } else {
+            self.arg(format!(
+                "--serial=type=sink,hardware=virtio-console,num=2,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
+            ));
         }
         Ok(())
     }
@@ -494,6 +616,42 @@ impl CrosvmCommand {
             self.arg("--no-usb");
         }
     }
+
+    fn add_network_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+        if config.networkSupported {
+            if !cfg!(network) {
+                warn!("Networking not supported. Ignoring");
+                return Ok(());
+            }
+
+            if config.protectedVm {
+                bail!("Network feature is not supported for pVM yet");
+            }
+
+            let tap_fd = {
+                let iface_suffix = std::process::id().to_string();
+                let pfd =
+                    virtualmachine::global_service().createTapInterface(&iface_suffix).context(
+                        format!("Failed to create a TAP interface with suffix {iface_suffix}"),
+                    )?;
+                pfd.as_ref().try_clone()?
+            };
+            let tap_fd_cloned = tap_fd.try_clone()?;
+
+            let path = self.add_preserved_fd(tap_fd);
+            self.args(["--net", &format!("tap-fd={path}")]);
+
+            let cleaner = move |_: &CleanerContext| {
+                let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
+                virtualmachine::global_service()
+                    .deleteTapInterface(&pfd)
+                    .context("Error deleting TAP interface")?;
+                Ok(())
+            };
+            self.add_cleaner("network", Box::new(cleaner))?;
+        }
+        Ok(())
+    }
 }
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
@@ -510,7 +668,6 @@ pub enum PayloadState {
 }
 
 /// The current state of the VM itself.
-#[derive(Debug)]
 pub enum VmState {
     /// The VM has not yet tried to start.
     NotStarted {
@@ -535,6 +692,18 @@ pub enum VmState {
     Failed,
 }
 
+impl std::fmt::Debug for VmState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotStarted { .. } => f.write_str("not started"),
+            Self::Running { .. } => f.write_str("running"),
+            Self::ShuttingDown { .. } => f.write_str("shutting down"),
+            Self::Dead => f.write_str("dead"),
+            Self::Failed => f.write_str("failed"),
+        }
+    }
+}
+
 /// Metrics regarding the VM.
 #[derive(Debug, Default)]
 pub struct VmMetric {
@@ -553,18 +722,15 @@ impl VmState {
     fn start(&mut self, instance: Arc<VmInstance>) -> Result<(), Error> {
         let state = mem::replace(self, VmState::Failed);
         if let VmState::NotStarted { config } = state {
-            let config = *config;
+            let mut config = *config;
+            let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
-            let (failure_pipe_read, failure_pipe_write) = create_pipe()?;
             let vfio_devices = config.vfio_devices.clone();
-            let tap =
-                if let Some(tap_file) = &config.tap { Some(tap_file.try_clone()?) } else { None };
 
             let vhost_fs_devices = run_virtiofs(&config)?;
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
-            let child =
-                Arc::new(run_vm(config, &instance.crosvm_control_socket_path, failure_pipe_write)?);
+            let child = Arc::new(run_vm(config, &instance.crosvm_control_socket_path)?);
 
             let psi_thread_and_evt_fd = if instance.trim_under_pressure {
                 let psi_monitor_kill_event = Arc::new(EventFd::new()?);
@@ -596,11 +762,10 @@ impl VmState {
             let monitor_vm_exit_thread = thread::spawn(move || {
                 instance_clone.monitor_vm_exit(
                     child_clone,
-                    failure_pipe_read,
                     vfio_devices,
-                    tap,
                     vhost_fs_devices,
                     psi_thread_and_evt_fd,
+                    cleaners,
                 );
             });
 
@@ -877,27 +1042,11 @@ impl VmInstance {
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
-        failure_pipe_read: File,
         vfio_devices: Vec<VfioDevice>,
-        tap: Option<File>,
         vhost_user_devices: Vec<SharedChild>,
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
+        cleaners: HashMap<String, Box<Cleaner>>,
     ) {
-        let failure_reason_thread = std::thread::spawn(move || {
-            // Read the pipe to see if any failure reason is written
-            let mut failure_reason = String::new();
-            // Arbitrary max size in case of misbehaving guest.
-            const MAX_SIZE: u64 = 50_000;
-            match failure_pipe_read.take(MAX_SIZE).read_to_string(&mut failure_reason) {
-                Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
-                Ok(len) if len > 0 => {
-                    error!("VM returned failure reason '{}'", failure_reason.trim())
-                }
-                _ => (),
-            };
-            failure_reason.trim().to_owned()
-        });
-
         // Wait for the EXIT of the crosvm process, but thanks to WNOWAIT it remains in the
         // waitable state so that we can inspect /proc/<pid>/stat or status. Note however that we
         // can only measure guest runtime, but not maximum RSS because VmHWM is not available for
@@ -928,6 +1077,13 @@ impl VmInstance {
             }
         }
 
+        let cleaner_context = CleanerContext { failure_reason: Mutex::new(String::new()) };
+        cleaners.into_iter().for_each(|(name, cleaner)| {
+            // Failure in a cleaner shouldn't stop running other cleaners.
+            cleaner(&cleaner_context)
+                .unwrap_or_else(|e| error!("Failed to run cleaner {name}: {e:?}"));
+        });
+
         // In crosvm, when vhost_user frontend is dead, vhost_user backend device will detect and
         // exit. We can safely wait() for vhost user device after waiting crosvm main
         // process.
@@ -956,7 +1112,7 @@ impl VmInstance {
             }
         }
 
-        let failure_reason = failure_reason_thread.join().expect("failure_reason_thread panic'd");
+        let failure_reason = cleaner_context.failure_reason.lock().unwrap();
 
         *self.vm_state.lock().unwrap() = VmState::Dead;
         self.vm_dead_convar.notify_all();
@@ -970,7 +1126,7 @@ impl VmInstance {
             if failure_reason.is_empty() && self.payload_state() == PayloadState::Hangup {
                 Cow::from("HANGUP")
             } else {
-                Cow::from(failure_reason)
+                Cow::from(failure_reason.clone())
             };
 
         self.handle_ramdump().unwrap_or_else(|e| error!("Error handling ramdump: {}", e));
@@ -1001,14 +1157,6 @@ impl VmInstance {
         virtualmachine::remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
             error!("Error removing temporary files from {:?}: {}", self.temporary_directory, e);
         });
-
-        if let Some(tap_file) = tap {
-            virtualmachine::global_service()
-                .deleteTapInterface(&ParcelFileDescriptor::new(OwnedFd::from(tap_file)))
-                .unwrap_or_else(|e| {
-                    error!("Error deleting TAP interface: {e:?}");
-                });
-        }
 
         drop(vfio_devices); // Cleanup devices.
 
@@ -1517,11 +1665,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
 }
 
 /// Starts an instance of `crosvm` to manage a new VM.
-fn run_vm(
-    config: CrosvmConfig,
-    crosvm_control_socket_path: &Path,
-    failure_pipe_write: File,
-) -> Result<SharedChild, Error> {
+fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<SharedChild, Error> {
     validate_config(&config)?;
 
     let mut command = Command::new(CROSVM_PATH);
@@ -1535,8 +1679,6 @@ fn run_vm(
     } else {
         command.arg("--no-balloon");
     }
-
-    let mut memory_mib = config.memory_mib;
 
     if config.enable_hypervisor_specific_auth_method && !config.protected {
         bail!("hypervisor specific auth method only supported for protected VMs");
@@ -1572,19 +1714,6 @@ fn run_vm(
             _ => command.arg("--protected-vm"),
         };
 
-        let swiotlb_size_mib = config.swiotlb_mib.map(u32::from).unwrap_or_else(|| {
-            estimate_swiotlb_usage_mib(SwiotlbEstimateInputs {
-                guest_page_size: 4096, // TODO: Use real page size.
-                block_count: config.num_disks.try_into().unwrap(),
-                console_count: 3,
-                balloon: config.balloon,
-            })
-        });
-        command.arg("--swiotlb").arg(swiotlb_size_mib.to_string());
-
-        // b/346770542 for consistent "usable" memory across protected and non-protected VMs.
-        memory_mib = memory_mib.saturating_add(swiotlb_size_mib);
-
         // Workaround to keep crash_dump from trying to read protected guest memory.
         // Context in b/238324526.
         command.arg("--unmap-guest-memory-on-fork");
@@ -1603,15 +1732,6 @@ fn run_vm(
         } else {
             warn!("kernel is too old enable --lock-guest-memory-dontneed");
         }
-
-        if config.ramdump.is_some() {
-            // Protected VM needs to reserve memory for ramdump here. Note that we reserve more
-            // memory for the restricted dma pool.
-            let ramdump_reserve = RAMDUMP_RESERVED_MIB + swiotlb_size_mib;
-            command.arg("--params").arg(format!("crashkernel={ramdump_reserve}M"));
-        }
-    } else if config.ramdump.is_some() {
-        command.arg("--params").arg(format!("crashkernel={RAMDUMP_RESERVED_MIB}M"));
     }
     if config.debug_config.debug_level == aidl::DebugLevel::NONE
         && config.debug_config.should_prepare_console_output()
@@ -1627,8 +1747,6 @@ fn run_vm(
     command
         .arg("--pci")
         .arg("mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]");
-
-    command.arg("--mem").arg(memory_mib.to_string());
 
     if let Some(gdb_port) = config.gdb_port {
         command.arg("--gdb").arg(gdb_port.to_string());
@@ -1659,8 +1777,6 @@ fn run_vm(
         .map(|fd| format!(",input={}", add_preserved_fd(&mut preserved_fds, fd)))
         .unwrap_or_default();
     let log_arg = format_serial_out_arg(&mut preserved_fds, config.log_fd);
-    let failure_serial_path = add_preserved_fd(&mut preserved_fds, failure_pipe_write);
-    let ramdump_arg = format_serial_out_arg(&mut preserved_fds, config.ramdump);
     let console_input_device = config.console_input_device.as_deref().unwrap_or(CONSOLE_HVC0);
     match console_input_device {
         CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
@@ -1677,18 +1793,11 @@ fn run_vm(
         &console_out_arg,
         if console_input_device == CONSOLE_TTYS0 { &console_in_arg } else { "" }
     ));
-    // /dev/ttyS1
-    command.arg(format!("--serial=type=file,path={},hardware=serial,num=2", &failure_serial_path));
     // /dev/hvc0
     command.arg(format!(
         "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
         &console_out_arg,
         if console_input_device == CONSOLE_HVC0 { &console_in_arg } else { "" }
-    ));
-    // /dev/hvc1
-    command.arg(format!(
-        "--serial={},hardware=virtio-console,num=2,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
-        &ramdump_arg
     ));
     // /dev/hvc2
     command
@@ -1706,13 +1815,6 @@ fn run_vm(
         command.arg("--device-tree-overlay").arg(arg);
     });
 
-    if cfg!(network) {
-        if let Some(tap) = config.tap {
-            add_preserved_fd(&mut preserved_fds, tap);
-            let tap_fd = preserved_fds.last().unwrap().as_raw_fd();
-            command.arg("--net").arg(format!("tap-fd={tap_fd}"));
-        }
-    }
     if config.hugepages {
         command.arg("--hugepages");
     }

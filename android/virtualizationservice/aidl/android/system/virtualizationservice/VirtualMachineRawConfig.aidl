@@ -38,6 +38,9 @@ parcelable VirtualMachineRawConfig {
      */
     byte[64] instanceId;
 
+    /** Name of the OS */
+    String osName;
+
     /** The kernel image, if any. */
     @nullable ParcelFileDescriptor kernel;
 
