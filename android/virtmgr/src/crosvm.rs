@@ -41,6 +41,7 @@ use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::min;
+use std::collections::HashMap;
 use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
 use std::fs::{read_to_string, File, OpenOptions};
@@ -165,7 +166,13 @@ pub struct CrosvmCommand {
     arg0: OsString,
     args: Vec<OsString>,
     preserved_fds: Vec<OwnedFd>,
+    // List of lambdas which need to run after crosvm exits. Option is added since this will be
+    // moved out of this struct when the VM gets run. Box is needed to satisfy the fixed-size
+    // requirement of Vec.
+    cleaners: Option<HashMap<String, Box<Cleaner>>>,
 }
+
+type Cleaner = dyn FnOnce() -> Result<()> + Send;
 
 impl CrosvmCommand {
     pub fn build_from(
@@ -173,8 +180,12 @@ impl CrosvmCommand {
         debug_config: &DebugConfig,
         temp_dir: &Path,
     ) -> Result<Self> {
-        let mut command =
-            Self { arg0: OsString::new(), args: Vec::new(), preserved_fds: Vec::new() };
+        let mut command = Self {
+            arg0: OsString::new(),
+            args: Vec::new(),
+            preserved_fds: Vec::new(),
+            cleaners: Some(HashMap::new()),
+        };
         command
             .arg("--extended-status")
             .args(["--log-level", "info,disk=warn"])
@@ -213,6 +224,15 @@ impl CrosvmCommand {
         let raw_fd = fd.as_raw_fd();
         self.preserved_fds.push(fd);
         format!("/proc/self/fd/{}", raw_fd)
+    }
+
+    #[allow(unused)] // TODO: use this
+    fn add_cleaner(&mut self, name: &str, cleaner: Box<Cleaner>) -> Result<()> {
+        if self.cleaners.as_mut().unwrap().insert(name.to_owned(), cleaner).is_some() {
+            Err(anyhow!("cleaner with name {name} already exists."))
+        } else {
+            Ok(())
+        }
     }
 
     fn add_name_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
@@ -631,7 +651,8 @@ impl VmState {
     fn start(&mut self, instance: Arc<VmInstance>) -> Result<(), Error> {
         let state = mem::replace(self, VmState::Failed);
         if let VmState::NotStarted { config } = state {
-            let config = *config;
+            let mut config = *config;
+            let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
             let (failure_pipe_read, failure_pipe_write) = create_pipe()?;
             let vfio_devices = config.vfio_devices.clone();
@@ -679,6 +700,7 @@ impl VmState {
                     tap,
                     vhost_fs_devices,
                     psi_thread_and_evt_fd,
+                    cleaners,
                 );
             });
 
@@ -952,6 +974,7 @@ impl VmInstance {
     /// Monitors the exit of the VM (i.e. termination of the `child` process). When that happens,
     /// handles the event by updating the state, noityfing the event to clients by calling
     /// callbacks, and removing temporary files for the VM.
+    #[allow(clippy::too_many_arguments)] // will be dropped when `tap` is removed.
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
@@ -960,6 +983,7 @@ impl VmInstance {
         tap: Option<File>,
         vhost_user_devices: Vec<SharedChild>,
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
+        cleaners: HashMap<String, Box<Cleaner>>,
     ) {
         let failure_reason_thread = std::thread::spawn(move || {
             // Read the pipe to see if any failure reason is written
@@ -1005,6 +1029,11 @@ impl VmInstance {
                 }
             }
         }
+
+        cleaners.into_iter().for_each(|(name, cleaner)| {
+            // Failure in a cleaner shouldn't stop running other cleaners.
+            cleaner().unwrap_or_else(|e| error!("Failed to run cleaner {name}: {e:?}"));
+        });
 
         // In crosvm, when vhost_user frontend is dead, vhost_user backend device will detect and
         // exit. We can safely wait() for vhost user device after waiting crosvm main
