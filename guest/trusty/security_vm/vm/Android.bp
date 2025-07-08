@@ -57,6 +57,11 @@ cc_binary {
         // loading. This flag prevents the creation of that section.
         "-Wl,--pack-dyn-relocs=none",
     ],
+    sanitize: {
+        memtag_heap: false,
+        memtag_stack: false,
+        memtag_globals: false,
+    },
     nocrt: true,
     no_libcrt: true,
     static_executable: true,
