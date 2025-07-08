@@ -59,7 +59,7 @@ use std::fs;
 use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
-use std::num::{NonZeroU16, NonZeroU32};
+use std::num::NonZeroU16;
 use std::ops::{Deref, Range};
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::path::{Path, PathBuf};
@@ -616,11 +616,6 @@ impl VirtualizationService {
         }
 
         let debug_config = DebugConfig::new(config);
-        let ramdump = if !uses_gki_kernel(config) && debug_config.is_ramdump_needed() {
-            Some(prepare_ramdump_file(&temporary_directory)?)
-        } else {
-            None
-        };
 
         let (console_out_fd, console_join_handle) =
             clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
@@ -825,7 +820,7 @@ impl VirtualizationService {
         let trim_under_pressure =
             balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
-        let command = CrosvmCommand::build_from(config, &temporary_directory)
+        let command = CrosvmCommand::build_from(config, &debug_config, &temporary_directory)
             .or_service_specific_exception(-1)?;
 
         // Actually start the VM.
@@ -835,17 +830,9 @@ impl VirtualizationService {
             shared_paths,
             protected: *is_protected,
             debug_config,
-            memory_mib: config
-                .memoryMib
-                .try_into()
-                .ok()
-                .and_then(NonZeroU32::new)
-                .unwrap_or(NonZeroU32::new(256).unwrap()),
-            swiotlb_mib: config.swiotlbMib.try_into().ok().and_then(NonZeroU32::new),
             console_out_fd,
             console_in_fd,
             log_fd,
-            ramdump,
             platform_version: parse_platform_version_req(&config.platformVersion)?,
             detect_hangup,
             gdb_port,
@@ -863,7 +850,6 @@ impl VirtualizationService {
             custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
-            num_disks: config.disks.len(),
             command,
         };
 
@@ -1159,18 +1145,6 @@ fn is_valid_os(os_name: &str) -> bool {
     SUPPORTED_OS_NAMES.contains(os_name)
 }
 
-fn uses_gki_kernel(config: &aidl::VirtualMachineConfig) -> bool {
-    if !cfg!(vendor_modules) {
-        return false;
-    }
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(_) => false,
-        aidl::VirtualMachineConfig::AppConfig(config) => {
-            config.osName.starts_with("microdroid_gki-")
-        }
-    }
-}
-
 fn load_app_config(
     config: &aidl::VirtualMachineAppConfig,
     debug_config: &DebugConfig,
@@ -1258,6 +1232,7 @@ fn load_app_config(
     vm_config.hugePages = config.hugePages || vm_payload_config.hugepages;
     vm_config.boostUclamp = config.boostUclamp;
     vm_config.hostServices = config.hostServices.clone();
+    vm_config.osName = config.osName.clone();
 
     // Microdroid takes additional init ramdisk & (optionally) storage image
     add_microdroid_system_images(config, instance_file, storage_image, os_name, &mut vm_config)?;
@@ -1870,19 +1845,6 @@ fn parse_platform_version_req(s: &str) -> binder::Result<VersionReq> {
     VersionReq::parse(s)
         .with_context(|| format!("Invalid platform version requirement {}", s))
         .or_binder_exception(ExceptionCode::BAD_PARCELABLE)
-}
-
-/// Create the empty ramdump file
-fn prepare_ramdump_file(temporary_directory: &Path) -> binder::Result<File> {
-    // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1 where
-    // VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e. the VM
-    // owner) for readout.
-    let ramdump_path = temporary_directory.join("ramdump");
-    let ramdump = File::create(ramdump_path)
-        .context("Failed to prepare ramdump file")
-        .with_log()
-        .or_service_specific_exception(-1)?;
-    Ok(ramdump)
 }
 
 /// Create the empty device tree dump file
