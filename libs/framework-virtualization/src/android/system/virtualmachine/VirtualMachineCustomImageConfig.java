@@ -26,6 +26,7 @@ import java.util.Optional;
 /** @hide */
 public class VirtualMachineCustomImageConfig {
     private static final String KEY_NAME = "name";
+    private static final String KEY_OS_NAME = "os_name";
     private static final String KEY_KERNEL = "kernel";
     private static final String KEY_INITRD = "initrd";
     private static final String KEY_BOOTLOADER = "bootloader";
@@ -49,6 +50,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_USB_CONFIG = "usb_config";
 
     @Nullable private final String name;
+    @Nullable private final String osName;
     @Nullable private final String kernelPath;
     @Nullable private final String initrdPath;
     @Nullable private final String bootloaderPath;
@@ -93,6 +95,11 @@ public class VirtualMachineCustomImageConfig {
     }
 
     @Nullable
+    public String getOsName() {
+        return osName;
+    }
+
+    @Nullable
     public String[] getParams() {
         return params;
     }
@@ -133,6 +140,7 @@ public class VirtualMachineCustomImageConfig {
     /** @hide */
     public VirtualMachineCustomImageConfig(
             String name,
+            String osName,
             String kernelPath,
             String initrdPath,
             String bootloaderPath,
@@ -151,6 +159,7 @@ public class VirtualMachineCustomImageConfig {
             boolean autoMemoryBalloon,
             UsbConfig usbConfig) {
         this.name = name;
+        this.osName = osName;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
         this.bootloaderPath = bootloaderPath;
@@ -173,6 +182,7 @@ public class VirtualMachineCustomImageConfig {
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
         Builder builder = new Builder();
         builder.setName(customImageConfigBundle.getString(KEY_NAME));
+        builder.setOsName(customImageConfigBundle.getString(KEY_OS_NAME));
         builder.setKernelPath(customImageConfigBundle.getString(KEY_KERNEL));
         builder.setInitrdPath(customImageConfigBundle.getString(KEY_INITRD));
         builder.setBootloaderPath(customImageConfigBundle.getString(KEY_BOOTLOADER));
@@ -229,6 +239,7 @@ public class VirtualMachineCustomImageConfig {
     PersistableBundle toPersistableBundle() {
         PersistableBundle pb = new PersistableBundle();
         pb.putString(KEY_NAME, this.name);
+        pb.putString(KEY_OS_NAME, this.osName);
         pb.putString(KEY_KERNEL, this.kernelPath);
         pb.putString(KEY_BOOTLOADER, this.bootloaderPath);
         pb.putString(KEY_INITRD, this.initrdPath);
@@ -471,6 +482,7 @@ public class VirtualMachineCustomImageConfig {
     /** @hide */
     public static final class Builder {
         private String name;
+        private String osName;
         private String kernelPath;
         private String initrdPath;
         private String bootloaderPath;
@@ -495,6 +507,12 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public Builder setName(String name) {
             this.name = name;
+            return this;
+        }
+
+        /** @hide */
+        public Builder setOsName(String osName) {
+            this.osName = osName;
             return this;
         }
 
@@ -604,6 +622,7 @@ public class VirtualMachineCustomImageConfig {
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
+                    this.osName,
                     this.kernelPath,
                     this.initrdPath,
                     this.bootloaderPath,

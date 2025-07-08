@@ -95,6 +95,7 @@ internal data class ConfigJson(
 
         builder
             .setName(name)
+            .setOsName("debian")
             .setBootloaderPath(bootloader)
             .setKernelPath(kernel)
             .setInitrdPath(initrd)

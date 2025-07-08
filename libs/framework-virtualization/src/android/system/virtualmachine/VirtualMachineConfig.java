@@ -748,6 +748,7 @@ public final class VirtualMachineConfig {
         requireNonNull(customImageConfig);
         config.name = Optional.ofNullable(customImageConfig.getName()).orElse("");
         config.instanceId = new byte[64];
+        config.osName = Optional.ofNullable(customImageConfig.getOsName()).orElse("");
         config.kernel =
                 Optional.ofNullable(customImageConfig.getKernelPath())
                         .map(
