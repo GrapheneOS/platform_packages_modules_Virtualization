@@ -154,7 +154,7 @@ pub struct Entries<'a> {
     pub reserved_mem: Option<&'a mut [u8]>,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Clone, Copy, Debug, FromBytes, Immutable, KnownLayout)]
 struct HeaderEntry {
     offset: u32,
