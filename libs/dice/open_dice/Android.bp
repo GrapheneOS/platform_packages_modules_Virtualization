@@ -40,6 +40,7 @@ rust_library {
         "libopen_dice_android_bindgen",
         "libopen_dice_cbor_bindgen",
         "libserde",
+        "libserde_bytes",
         "libzeroize",
     ],
     features: [

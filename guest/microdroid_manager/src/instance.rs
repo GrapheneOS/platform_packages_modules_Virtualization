@@ -309,7 +309,9 @@ impl From<u8> for EncryptedStoreMode {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApkData {
+    #[serde(with = "serde_bytes")]
     pub root_hash: Vec<u8>,
+    #[serde(with = "serde_bytes")]
     pub cert_hash: Vec<u8>,
     pub package_name: String,
     pub version_code: u64,
@@ -330,7 +332,9 @@ pub struct ApexData {
     pub name: String,
     pub manifest_name: Option<String>,
     pub manifest_version: Option<i64>,
+    #[serde(with = "serde_bytes")]
     pub public_key: Vec<u8>,
+    #[serde(with = "serde_bytes")]
     pub root_digest: Vec<u8>,
     pub last_update_seconds: u64,
     pub is_factory: bool,
