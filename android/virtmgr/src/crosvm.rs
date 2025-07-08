@@ -112,10 +112,6 @@ pub struct CrosvmConfig {
     pub name: String,
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
-    pub debug_config: DebugConfig,
-    pub console_out_fd: Option<File>,
-    pub console_in_fd: Option<File>,
-    pub log_fd: Option<File>,
     pub platform_version: VersionReq,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
@@ -123,7 +119,6 @@ pub struct CrosvmConfig {
     pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
-    pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
     pub balloon: bool,
     pub dump_dt_fd: Option<File>,
@@ -182,6 +177,10 @@ impl CrosvmCommand {
         config: &aidl::VirtualMachineRawConfig,
         debug_config: &DebugConfig,
         temp_dir: &Path,
+        cid: Cid,
+        console_out: Option<&ParcelFileDescriptor>,
+        console_in: Option<&ParcelFileDescriptor>,
+        log_out: Option<&ParcelFileDescriptor>,
     ) -> Result<Self> {
         let mut command = Self {
             arg0: OsString::new(),
@@ -199,6 +198,8 @@ impl CrosvmCommand {
         command.add_kernel_arg(config)?;
         command.add_cpu_arg(config)?;
         command.add_memory_arg(config);
+        command.add_console_arg(config, debug_config, cid, console_out, console_in)?;
+        command.add_log_arg(cid, log_out)?;
         command.add_failure_pipe()?;
         command.add_ramdump_arg(config, debug_config, temp_dir)?;
         command.add_disk_arg(config, temp_dir)?;
@@ -327,6 +328,147 @@ impl CrosvmCommand {
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
         }
+    }
+
+    // A note on serial devices. We have five serial devices:
+    // 1. uart device: used as the output device by bootloaders and as early console by linux
+    // 2. uart device: used to report the reason for the VM failing.
+    // 3. virtio-console device: used as the console device where kmsg is redirected to
+    // 4. virtio-console device: used as the ramdump output
+    // 5. virtio-console device: used as the logcat output
+    //
+    // #1 and #3 are added via add_console_arg()
+    // #2 is added via add_failure_pipe()
+    // #4 is added via add_ramdump_arg()
+    // #5 is added via add_log_arg()
+    //
+    // When [console|log]_fd is not specified, the devices are attached to sink, which means what's
+    // written there is discarded.
+    //
+    // Warning: Adding more serial devices requires you to shift the PCI device ID of the boot
+    // disks in bootconfig.x86_64. This is because x86 crosvm puts serial devices and the block
+    // devices in the same PCI bus and serial devices comes before the block devices. Arm crosvm
+    // doesn't have the issue.
+    fn add_console_arg(
+        &mut self,
+        config: &aidl::VirtualMachineRawConfig,
+        debug_config: &DebugConfig,
+        cid: Cid,
+        console_out: Option<&ParcelFileDescriptor>,
+        console_in: Option<&ParcelFileDescriptor>,
+    ) -> Result<()> {
+        // If user has provided an FD for console_out, let them read from it. Otherwise, we read
+        // the console output from the VM and emit it over to logcat.
+        let (out_fd, read_file) = match console_out {
+            Some(pfd) => (Some(pfd.as_ref().try_clone()?), None),
+            None => {
+                let (read_fd, write_fd) = create_pipe()?;
+                (Some(write_fd.into()), Some(read_fd))
+            }
+        };
+
+        let in_fd = console_in.map(|pfd| pfd.as_ref().try_clone()).transpose()?;
+
+        let in_device = config.consoleInputDevice.as_deref().unwrap_or(CONSOLE_HVC0);
+        match in_device {
+            CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
+            _ => bail!("Unsupported serial device {in_device}"),
+        };
+
+        if debug_config.debug_level == aidl::DebugLevel::NONE
+            && debug_config.should_prepare_console_output()
+        {
+            // bootconfig.normal will be used, but we need log.
+            self.args(["--params", "printk.devkmsg=on"]);
+            self.args(["--params", "console=hvc0"]);
+        }
+
+        let out_args = out_fd.map_or("type=sink".to_string(), |fd| {
+            format!("type=file,path={}", self.add_preserved_fd(fd))
+        });
+
+        let in_args =
+            in_fd.map_or("".to_string(), |fd| format!(",input={}", self.add_preserved_fd(fd)));
+
+        // dev/ttyS0
+        self.arg(format!(
+            "--serial={out_args}{},hardware=serial,num=1",
+            if in_device == CONSOLE_TTYS0 { &in_args } else { "" }
+        ));
+        // dev/hvc0
+        self.arg(format!(
+            "--serial={out_args}{},hardware=virtio-console,num=1,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
+            if in_device == CONSOLE_HVC0 { &in_args } else { "" }
+        ));
+
+        let thread = read_file.map(|f| Self::logger_thread(f, format!("Console({})", cid)));
+        let cleaner = move |_: &CleanerContext| {
+            thread.map(JoinHandle::join);
+            Ok(())
+        };
+        self.add_cleaner("console", Box::new(cleaner))?;
+        Ok(())
+    }
+
+    fn add_log_arg(&mut self, cid: Cid, log_out: Option<&ParcelFileDescriptor>) -> Result<()> {
+        let (out_fd, read_file) = match log_out {
+            Some(pfd) => (Some(pfd.as_ref().try_clone()?), None),
+            None => {
+                let (read_fd, write_fd) = create_pipe()?;
+                (Some(write_fd.into()), Some(read_fd))
+            }
+        };
+
+        let out_args = out_fd.map_or("type=sink".to_string(), |fd| {
+            format!("type=file,path={}", self.add_preserved_fd(fd))
+        });
+
+        // dev/hvc2
+        self.arg(format!(
+            "--serial={out_args},hardware=virtio-console,num=3,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
+        ));
+
+        let thread = read_file.map(|f| Self::logger_thread(f, format!("Log({})", cid)));
+        let cleaner = move |_: &CleanerContext| {
+            thread.map(JoinHandle::join);
+            Ok(())
+        };
+        self.add_cleaner("log", Box::new(cleaner))?;
+        Ok(())
+    }
+
+    fn logger_thread(read_from: File, tag: String) -> JoinHandle<()> {
+        std::thread::spawn(move || {
+            use std::io::BufRead;
+            let mut reader = std::io::BufReader::new(read_from);
+            let mut buf = vec![];
+            loop {
+                buf.clear();
+                buf.shrink_to(1024);
+                match reader.read_until(b'\n', &mut buf) {
+                    Ok(0) => {
+                        info!("{}: EOF", &tag);
+                        return;
+                    }
+                    Ok(_size) => {
+                        if buf.last() == Some(&b'\n') {
+                            buf.pop();
+                            // Logs sent via TTY usually end lines with "\r\n".
+                            if buf.last() == Some(&b'\r') {
+                                buf.pop();
+                            }
+                        }
+                        info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
+                    }
+                    Err(e) => {
+                        error!("Could not read console pipe: {e:?}");
+                        return;
+                    }
+                };
+            }
+        })
     }
 
     fn add_failure_pipe(&mut self) -> Result<()> {
@@ -877,31 +1019,6 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
     }
 }
 
-// TODO: may want to check if these are ever dropped without joining,
-// as logs could be lost in these cases.
-#[derive(Debug)]
-pub struct VmJoinHandles {
-    /// Join handle for console
-    pub console_join_handle: Option<JoinHandle<()>>,
-    /// Join handle for log
-    pub log_join_handle: Option<JoinHandle<()>>,
-}
-
-impl VmJoinHandles {
-    pub fn join_all(&mut self) {
-        // logs in case they are stuck to aid debugging, as we are adding this
-        // feature. logs are also there so when we get more bugreports after
-        // b/404210068, we can see if this change actually results in us getting
-        // more logs
-
-        info!("Joining threads for VM console");
-        self.console_join_handle.take().map(JoinHandle::join);
-        info!("Joining threads for VM log");
-        self.log_join_handle.take().map(JoinHandle::join);
-        info!("Joining threads for VM done");
-    }
-}
-
 /// Information about a particular instance of a VM which may be running.
 pub struct VmInstance {
     /// The current state of the VM.
@@ -927,8 +1044,6 @@ pub struct VmInstance {
     /// The PID of the process which requested the VM. Note that this process may no longer exist
     /// and the PID may have been reused for a different process, so this should not be trusted.
     pub requester_debug_pid: i32,
-    /// handles to threads running VM tasks,
-    pub join_handles: Mutex<VmJoinHandles>,
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
     /// Guest agent running on the VM
@@ -977,8 +1092,6 @@ impl VmInstance {
         temporary_directory: PathBuf,
         requester_uid: u32,
         requester_debug_pid: i32,
-        console_join_handle: Option<JoinHandle<()>>,
-        log_join_handle: Option<JoinHandle<()>>,
         requires_vm_service: bool,
         trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
@@ -1006,7 +1119,6 @@ impl VmInstance {
             temporary_directory,
             requester_uid,
             requester_debug_pid,
-            join_handles: Mutex::new(VmJoinHandles { console_join_handle, log_join_handle }),
             callbacks: Default::default(),
             guest_agent: Mutex::new(None),
             vm_metric: Mutex::new(Default::default()),
@@ -1145,9 +1257,6 @@ impl VmInstance {
             exit_signal,
             &vm_metric,
         );
-
-        // clean up VM state
-        self.join_handles.lock().unwrap().join_all();
 
         if let Some((psi_thread, evt_fd)) = psi_thread_and_evt_fd {
             evt_fd.write(1).expect("failed to stop PSI thread");
@@ -1734,13 +1843,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
             warn!("kernel is too old enable --lock-guest-memory-dontneed");
         }
     }
-    if config.debug_config.debug_level == aidl::DebugLevel::NONE
-        && config.debug_config.should_prepare_console_output()
-    {
-        // bootconfig.normal will be used, but we need log.
-        command.arg("--params").arg("printk.devkmsg=on");
-        command.arg("--params").arg("console=hvc0");
-    }
 
     // Move the PCI MMIO regions to near the end of the low-MMIO space.
     // This is done to accommodate a limitation in a partner's hypervisor.
@@ -1762,47 +1864,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         let dump_dt_fd = add_preserved_fd(&mut preserved_fds, dump_dt_fd);
         command.arg("--dump-device-tree-blob").arg(dump_dt_fd);
     }
-
-    // Setup the serial devices.
-    // 1. uart device: used as the output device by bootloaders and as early console by linux
-    // 2. uart device: used to report the reason for the VM failing.
-    // 3. virtio-console device: used as the console device where kmsg is redirected to
-    // 4. virtio-console device: used as the ramdump output
-    // 5. virtio-console device: used as the logcat output
-    //
-    // When [console|log]_fd is not specified, the devices are attached to sink, which means what's
-    // written there is discarded.
-    let console_out_arg = format_serial_out_arg(&mut preserved_fds, config.console_out_fd);
-    let console_in_arg = config
-        .console_in_fd
-        .map(|fd| format!(",input={}", add_preserved_fd(&mut preserved_fds, fd)))
-        .unwrap_or_default();
-    let log_arg = format_serial_out_arg(&mut preserved_fds, config.log_fd);
-    let console_input_device = config.console_input_device.as_deref().unwrap_or(CONSOLE_HVC0);
-    match console_input_device {
-        CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
-        _ => bail!("Unsupported serial device {console_input_device}"),
-    };
-
-    // Warning: Adding more serial devices requires you to shift the PCI device ID of the boot
-    // disks in bootconfig.x86_64. This is because x86 crosvm puts serial devices and the block
-    // devices in the same PCI bus and serial devices comes before the block devices. Arm crosvm
-    // doesn't have the issue.
-    // /dev/ttyS0
-    command.arg(format!(
-        "--serial={}{},hardware=serial,num=1",
-        &console_out_arg,
-        if console_input_device == CONSOLE_TTYS0 { &console_in_arg } else { "" }
-    ));
-    // /dev/hvc0
-    command.arg(format!(
-        "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
-        &console_out_arg,
-        if console_input_device == CONSOLE_HVC0 { &console_in_arg } else { "" }
-    ));
-    // /dev/hvc2
-    command
-        .arg(format!("--serial={},hardware=virtio-console,num=3,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]", &log_arg));
 
     #[cfg(target_arch = "aarch64")]
     command.arg("--no-pmu");
@@ -1942,16 +2003,6 @@ fn add_preserved_fd<F: Into<OwnedFd>>(preserved_fds: &mut Vec<OwnedFd>, file: F)
     let raw_fd = fd.as_raw_fd();
     preserved_fds.push(fd);
     format!("/proc/self/fd/{}", raw_fd)
-}
-
-/// Adds the file descriptor for `file` (if any) to `preserved_fds`, and returns the appropriate
-/// string for a crosvm `--serial` flag. If `file` is none, creates a dummy sink device.
-fn format_serial_out_arg(preserved_fds: &mut Vec<OwnedFd>, file: Option<File>) -> String {
-    if let Some(file) = file {
-        format!("type=file,path={}", add_preserved_fd(preserved_fds, file))
-    } else {
-        "type=sink".to_string()
-    }
 }
 
 /// Creates a new pipe with the `O_CLOEXEC` flag set, and returns the read side and write side.
