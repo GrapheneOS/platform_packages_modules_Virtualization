@@ -43,14 +43,8 @@ const LOG_TAG: &str = "early_virtmgr";
 #[cfg(not(early))]
 const LOG_TAG: &str = "virtmgr";
 
-static PID_CURRENT: LazyLock<Pid> = LazyLock::new(Pid::this);
 static PID_PARENT: LazyLock<Pid> = LazyLock::new(Pid::parent);
 static UID_CURRENT: LazyLock<Uid> = LazyLock::new(Uid::current);
-
-fn get_this_pid() -> pid_t {
-    // Return the process ID of this process.
-    PID_CURRENT.as_raw()
-}
 
 fn get_calling_pid() -> pid_t {
     // The caller is the parent of this process.
@@ -116,7 +110,7 @@ fn main() {
 
     if cfg!(early) {
         // we can't access VirtualizationServiceInternal, so directly call rlimit
-        let pid = i32::from(*PID_CURRENT);
+        let pid = std::process::id() as i32;
         let lim = libc::rlimit { rlim_cur: libc::RLIM_INFINITY, rlim_max: libc::RLIM_INFINITY };
 
         // SAFETY: borrowing the new limit struct only. prlimit doesn't use lim outside its lifetime

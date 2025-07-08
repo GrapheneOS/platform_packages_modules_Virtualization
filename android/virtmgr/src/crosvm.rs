@@ -123,7 +123,6 @@ pub struct CrosvmConfig {
     pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
-    pub tap: Option<File>,
     pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
     pub balloon: bool,
@@ -203,6 +202,7 @@ impl CrosvmCommand {
         command.add_input_devices_arg(config)?;
         command.add_audio_arg(config);
         command.add_usb_arg(config);
+        command.add_network_arg(config)?;
         Ok(command)
     }
 
@@ -226,7 +226,6 @@ impl CrosvmCommand {
         format!("/proc/self/fd/{}", raw_fd)
     }
 
-    #[allow(unused)] // TODO: use this
     fn add_cleaner(&mut self, name: &str, cleaner: Box<Cleaner>) -> Result<()> {
         if self.cleaners.as_mut().unwrap().insert(name.to_owned(), cleaner).is_some() {
             Err(anyhow!("cleaner with name {name} already exists."))
@@ -581,6 +580,42 @@ impl CrosvmCommand {
             self.arg("--no-usb");
         }
     }
+
+    fn add_network_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+        if config.networkSupported {
+            if !cfg!(network) {
+                warn!("Networking not supported. Ignoring");
+                return Ok(());
+            }
+
+            if config.protectedVm {
+                bail!("Network feature is not supported for pVM yet");
+            }
+
+            let tap_fd = {
+                let iface_suffix = std::process::id().to_string();
+                let pfd =
+                    virtualmachine::global_service().createTapInterface(&iface_suffix).context(
+                        format!("Failed to create a TAP interface with suffix {iface_suffix}"),
+                    )?;
+                pfd.as_ref().try_clone()?
+            };
+            let tap_fd_cloned = tap_fd.try_clone()?;
+
+            let path = self.add_preserved_fd(tap_fd);
+            self.args(["--net", &format!("tap-fd={path}")]);
+
+            let cleaner = move || {
+                let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
+                virtualmachine::global_service()
+                    .deleteTapInterface(&pfd)
+                    .context("Error deleting TAP interface")?;
+                Ok(())
+            };
+            self.add_cleaner("network", Box::new(cleaner))?;
+        }
+        Ok(())
+    }
 }
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
@@ -656,8 +691,6 @@ impl VmState {
             let detect_hangup = config.detect_hangup;
             let (failure_pipe_read, failure_pipe_write) = create_pipe()?;
             let vfio_devices = config.vfio_devices.clone();
-            let tap =
-                if let Some(tap_file) = &config.tap { Some(tap_file.try_clone()?) } else { None };
 
             let vhost_fs_devices = run_virtiofs(&config)?;
 
@@ -697,7 +730,6 @@ impl VmState {
                     child_clone,
                     failure_pipe_read,
                     vfio_devices,
-                    tap,
                     vhost_fs_devices,
                     psi_thread_and_evt_fd,
                     cleaners,
@@ -974,13 +1006,11 @@ impl VmInstance {
     /// Monitors the exit of the VM (i.e. termination of the `child` process). When that happens,
     /// handles the event by updating the state, noityfing the event to clients by calling
     /// callbacks, and removing temporary files for the VM.
-    #[allow(clippy::too_many_arguments)] // will be dropped when `tap` is removed.
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
         failure_pipe_read: File,
         vfio_devices: Vec<VfioDevice>,
-        tap: Option<File>,
         vhost_user_devices: Vec<SharedChild>,
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
         cleaners: HashMap<String, Box<Cleaner>>,
@@ -1108,14 +1138,6 @@ impl VmInstance {
         virtualmachine::remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
             error!("Error removing temporary files from {:?}: {}", self.temporary_directory, e);
         });
-
-        if let Some(tap_file) = tap {
-            virtualmachine::global_service()
-                .deleteTapInterface(&ParcelFileDescriptor::new(OwnedFd::from(tap_file)))
-                .unwrap_or_else(|e| {
-                    error!("Error deleting TAP interface: {e:?}");
-                });
-        }
 
         drop(vfio_devices); // Cleanup devices.
 
@@ -1781,13 +1803,6 @@ fn run_vm(
         command.arg("--device-tree-overlay").arg(arg);
     });
 
-    if cfg!(network) {
-        if let Some(tap) = config.tap {
-            add_preserved_fd(&mut preserved_fds, tap);
-            let tap_fd = preserved_fds.last().unwrap().as_raw_fd();
-            command.arg("--net").arg(format!("tap-fd={tap_fd}"));
-        }
-    }
     if config.hugepages {
         command.arg("--hugepages");
     }

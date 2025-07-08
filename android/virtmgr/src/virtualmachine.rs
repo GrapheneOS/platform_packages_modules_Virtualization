@@ -30,7 +30,7 @@ use crate::secretkeeper::{self, SecretkeeperProxy, IDENTIFIER as SECRETKEEPER_ID
 use crate::selinux::{
     check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext,
 };
-use crate::{get_calling_pid, get_calling_uid, get_this_pid};
+use crate::{get_calling_pid, get_calling_uid};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkverify::{HashAlgorithm, V4Signature};
 use avflog::LogResult;
@@ -759,25 +759,6 @@ impl VirtualizationService {
             _ => (vec![], None),
         };
 
-        // Create TAP network interface if the VM supports network.
-        let tap = if cfg!(network) && config.networkSupported {
-            if *is_protected {
-                return Err(anyhow!("Network feature is not supported for pVM yet"))
-                    .with_log()
-                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)?;
-            }
-            Some(File::from(
-                global_service()
-                    .createTapInterface(&get_this_pid().to_string())?
-                    .as_ref()
-                    .try_clone()
-                    .context("Failed to get TAP interface from ParcelFileDescriptor")
-                    .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
-            ))
-        } else {
-            None
-        };
-
         let detect_hangup = is_app_config && gdb_port.is_none();
 
         let custom_memory_backing_files = config
@@ -840,7 +821,6 @@ impl VirtualizationService {
             dtbo,
             device_tree_overlays,
             hugepages: config.hugePages,
-            tap,
             console_input_device: config.consoleInputDevice.clone(),
             boost_uclamp: config.boostUclamp,
             balloon,
