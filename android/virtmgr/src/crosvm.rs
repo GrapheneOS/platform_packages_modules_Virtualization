@@ -171,7 +171,9 @@ pub struct CrosvmCommand {
     cleaners: Option<HashMap<String, Box<Cleaner>>>,
 }
 
-type Cleaner = dyn FnOnce() -> Result<()> + Send;
+type Cleaner = dyn FnOnce(&CleanerContext) -> Result<()> + Send;
+
+struct CleanerContext {} // TODO: add some fields
 
 impl CrosvmCommand {
     pub fn build_from(
@@ -605,7 +607,7 @@ impl CrosvmCommand {
             let path = self.add_preserved_fd(tap_fd);
             self.args(["--net", &format!("tap-fd={path}")]);
 
-            let cleaner = move || {
+            let cleaner = move |_: &CleanerContext| {
                 let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
                 virtualmachine::global_service()
                     .deleteTapInterface(&pfd)
@@ -1060,9 +1062,11 @@ impl VmInstance {
             }
         }
 
+        let cleaner_context = CleanerContext {};
         cleaners.into_iter().for_each(|(name, cleaner)| {
             // Failure in a cleaner shouldn't stop running other cleaners.
-            cleaner().unwrap_or_else(|e| error!("Failed to run cleaner {name}: {e:?}"));
+            cleaner(&cleaner_context)
+                .unwrap_or_else(|e| error!("Failed to run cleaner {name}: {e:?}"));
         });
 
         // In crosvm, when vhost_user frontend is dead, vhost_user backend device will detect and
