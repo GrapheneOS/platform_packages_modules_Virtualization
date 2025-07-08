@@ -147,7 +147,7 @@ impl InstanceDisk {
         let key = dice.get_sealing_key(INSTANCE_KEY_IDENTIFIER, cipher.key_len())?;
         let plaintext = decrypt_aead(cipher, &key, Some(&nonce), &header, &data, &tag)?;
 
-        let microdroid_data = serde_cbor::from_slice(plaintext.as_slice())?;
+        let microdroid_data = ciborium::from_reader(plaintext.as_slice())?;
         Ok(Some(microdroid_data))
     }
 
@@ -160,7 +160,9 @@ impl InstanceDisk {
     ) -> Result<()> {
         let (header, offset) = self.locate_microdroid_header()?;
 
-        let data = serde_cbor::to_vec(microdroid_data)?;
+        let mut data = Vec::new();
+        ciborium::into_writer(microdroid_data, &mut data)?;
+        let data = data;
 
         // By encrypting and signing the data, tag will be appended. The tag also becomes part of
         // the encrypted payload which will be written. In addition, a nonce will be prepended
