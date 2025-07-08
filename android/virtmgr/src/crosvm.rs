@@ -639,7 +639,8 @@ impl CrosvmCommand {
             let tap_fd_cloned = tap_fd.try_clone()?;
 
             let path = self.add_preserved_fd(tap_fd);
-            self.args(["--net", &format!("tap-fd={path}")]);
+            let fd_num = path.split('/').last().unwrap();
+            self.args(["--net", &format!("tap-fd={fd_num}")]);
 
             let cleaner = move |_: &CleanerContext| {
                 let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
