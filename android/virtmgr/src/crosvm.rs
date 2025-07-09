@@ -124,8 +124,6 @@ pub struct CrosvmConfig {
     pub dump_dt_fd: Option<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
-    // (memfd, guest address, size)
-    pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
     pub command: CrosvmCommand,
@@ -214,6 +212,7 @@ impl CrosvmCommand {
         command.add_audio_arg(context);
         command.add_usb_arg(context);
         command.add_network_arg(context)?;
+        command.add_file_backed_mapping_arg(context)?;
         Ok(command)
     }
 
@@ -792,6 +791,21 @@ impl CrosvmCommand {
                 Ok(())
             };
             self.add_cleaner("network", Box::new(cleaner))?;
+        }
+        Ok(())
+    }
+
+    fn add_file_backed_mapping_arg(&mut self, context: &RunContext) -> Result<()> {
+        for bf in &context.config.customMemoryBackingFiles {
+            let pfd = bf.file.as_ref().ok_or(anyhow!("missing CustomMemoryBackingFile FD"))?;
+            let mem_fd = pfd.as_ref().try_clone()?;
+            let path = self.add_preserved_fd(mem_fd);
+            let addr = bf.rangeStart as u64;
+            let size = bf.size as u64;
+            self.args([
+                "--file-backed-mapping",
+                &format!("{path},addr={addr:#0x},size={size:#0x},rw,ram"),
+            ]);
         }
         Ok(())
     }
@@ -1912,13 +1926,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
             }
             command.arg("--vhost-user").arg(format!("fs,socket={}", shared_path.socket_path));
         }
-    }
-
-    for (fd, addr, size) in config.custom_memory_backing_files {
-        command.arg("--file-backed-mapping").arg(format!(
-            "{},addr={addr:#0x},size={size:#0x},rw,ram",
-            add_preserved_fd(&mut preserved_fds, fd)
-        ));
     }
 
     debug!("Preserving FDs {:?}", preserved_fds);

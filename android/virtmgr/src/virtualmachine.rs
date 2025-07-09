@@ -755,25 +755,6 @@ impl VirtualizationService {
 
         let detect_hangup = is_app_config && gdb_port.is_none();
 
-        let custom_memory_backing_files = config
-            .customMemoryBackingFiles
-            .iter()
-            .map(|memory_backing_file| {
-                Ok((
-                    clone_file(
-                        memory_backing_file
-                            .file
-                            .as_ref()
-                            .context("missing CustomMemoryBackingFile FD")
-                            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?,
-                    )?
-                    .into(),
-                    memory_backing_file.rangeStart as u64,
-                    memory_backing_file.size as u64,
-                ))
-            })
-            .collect::<binder::Result<_>>()?;
-
         let memory_reclaim_supported =
             system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
                 .unwrap_or(false);
@@ -824,7 +805,6 @@ impl VirtualizationService {
             dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
-            custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
             command,
