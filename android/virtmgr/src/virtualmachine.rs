@@ -49,7 +49,6 @@ use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
 };
 use rpcbinder::RpcServer;
 use rustutils::system_properties;
-use semver::VersionReq;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
@@ -793,7 +792,6 @@ impl VirtualizationService {
             name: config.name.clone(),
             shared_paths,
             protected: *is_protected,
-            platform_version: parse_platform_version_req(&config.platformVersion)?,
             detect_hangup,
             gdb_port,
             vfio_devices,
@@ -1793,13 +1791,6 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     // SAFETY: ownership is transferred from stream to f
     let f = unsafe { File::from_raw_fd(stream.into_raw_fd()) };
     ParcelFileDescriptor::new(f)
-}
-
-/// Parses the platform version requirement string.
-fn parse_platform_version_req(s: &str) -> binder::Result<VersionReq> {
-    VersionReq::parse(s)
-        .with_context(|| format!("Invalid platform version requirement {}", s))
-        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)
 }
 
 /// Create the empty device tree dump file

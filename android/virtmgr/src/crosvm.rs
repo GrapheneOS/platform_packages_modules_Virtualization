@@ -112,7 +112,6 @@ pub struct CrosvmConfig {
     pub name: String,
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
-    pub platform_version: VersionReq,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
     pub vfio_devices: Vec<VfioDevice>,
@@ -183,6 +182,8 @@ struct CleanerContext {
 
 impl CrosvmCommand {
     pub fn build_from(context: &RunContext) -> Result<Self> {
+        Self::check_platform_version(context)?;
+
         let mut command = Self {
             arg0: OsString::new(),
             args: Vec::new(),
@@ -242,6 +243,23 @@ impl CrosvmCommand {
         } else {
             Ok(())
         }
+    }
+
+    fn check_platform_version(context: &RunContext) -> Result<()> {
+        let ver = &context.config.platformVersion;
+        let requested = VersionReq::parse(ver)
+            .context(format!("Invalid platform version requirement {ver}"))?;
+
+        let supported = Version::parse(CROSVM_PLATFORM_VERSION).unwrap();
+        if !requested.matches(&supported) {
+            bail!(
+                "Incompatible platform version. The config is compatible with platform version(s) \
+                  {}, but the actual platform version is {}",
+                requested,
+                supported
+            );
+        }
+        Ok(())
     }
 
     fn add_name_arg(&mut self, context: &RunContext) {
@@ -1112,7 +1130,6 @@ impl VmInstance {
         host_services: Vec<String>,
         encrypted_store_kek: Option<Strong<dyn aidl::IEncryptedStoreKEK>>,
     ) -> Result<VmInstance, Error> {
-        validate_config(&config)?;
         let cid = config.cid;
         let name = config.name.clone();
         let protected = config.protected;
@@ -1790,8 +1807,6 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
 
 /// Starts an instance of `crosvm` to manage a new VM.
 fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<SharedChild, Error> {
-    validate_config(&config)?;
-
     let mut command = Command::new(CROSVM_PATH);
 
     command.arg0(config.command.arg0);
@@ -1961,21 +1976,6 @@ fn wait_for_file(path: &str, timeout_secs: u64) -> Result<(), std::io::Error> {
         std::io::ErrorKind::NotFound,
         format!("File not found within {} seconds: {}", timeout_secs, path),
     ))
-}
-
-/// Ensure that the configuration has a valid combination of fields set, or return an error if not.
-fn validate_config(config: &CrosvmConfig) -> Result<(), Error> {
-    let version = Version::parse(CROSVM_PLATFORM_VERSION).unwrap();
-    if !config.platform_version.matches(&version) {
-        bail!(
-            "Incompatible platform version. The config is compatible with platform version(s) \
-              {}, but the actual platform version is {}",
-            config.platform_version,
-            version
-        );
-    }
-
-    Ok(())
 }
 
 /// Print arguments of the crosvm command. In doing so, /proc/self/fd/XX is annotated with the
