@@ -117,7 +117,6 @@ pub struct CrosvmConfig {
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
     pub boost_uclamp: bool,
-    pub dump_dt_fd: Option<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
     pub start_suspended: bool,
@@ -154,6 +153,7 @@ pub struct RunContext<'a> {
     pub console_out: Option<&'a ParcelFileDescriptor>,
     pub console_in: Option<&'a ParcelFileDescriptor>,
     pub log_out: Option<&'a ParcelFileDescriptor>,
+    pub devicetree_dump_out: Option<&'a ParcelFileDescriptor>,
 }
 
 /// Parses RunContext into raw arguments which will be used to construct a crosvm command. The
@@ -213,6 +213,7 @@ impl CrosvmCommand {
         command.add_network_arg(context)?;
         command.add_file_backed_mapping_arg(context)?;
         command.add_assigned_devices_arg(context)?;
+        command.add_dump_dtb_arg(context)?;
         Ok(command)
     }
 
@@ -908,6 +909,23 @@ impl CrosvmCommand {
             }
             _ => (),
         };
+        Ok(())
+    }
+
+    fn add_dump_dtb_arg(&mut self, context: &RunContext) -> Result<()> {
+        let dump_dt_fd = if let Some(pfd) = context.devicetree_dump_out {
+            pfd.as_ref().try_clone()?
+        } else if context.debug_config.dump_device_tree {
+            let path = context.temp_dir.join("device_tree.dtb");
+            let file =
+                File::create(path).context("Failed to prepare device tree dump file").with_log()?;
+            file.into()
+        } else {
+            return Ok(());
+        };
+
+        let path = self.add_preserved_fd(dump_dt_fd);
+        self.args(["--dump-device-tree-blob", &path]);
         Ok(())
     }
 }
@@ -1940,11 +1958,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
     // Keep track of what file descriptors should be mapped to the crosvm process.
     let mut preserved_fds = Vec::new();
     preserved_fds.extend(config.command.preserved_fds);
-
-    if let Some(dump_dt_fd) = config.dump_dt_fd {
-        let dump_dt_fd = add_preserved_fd(&mut preserved_fds, dump_dt_fd);
-        command.arg("--dump-device-tree-blob").arg(dump_dt_fd);
-    }
 
     #[cfg(target_arch = "aarch64")]
     command.arg("--no-pmu");

@@ -606,14 +606,6 @@ impl VirtualizationService {
 
         let debug_config = DebugConfig::new(config);
 
-        let dump_dt_fd = if let Some(fd) = dump_dt_fd {
-            Some(clone_file(fd)?)
-        } else if debug_config.dump_device_tree {
-            Some(prepare_dump_dt_file(&temporary_directory)?)
-        } else {
-            None
-        };
-
         let (is_app_config, config) = match config {
             aidl::VirtualMachineConfig::RawConfig(config) => {
                 (false, BorrowedOrOwned::Borrowed(config))
@@ -727,6 +719,7 @@ impl VirtualizationService {
             console_out: console_out_fd,
             console_in: console_in_fd,
             log_out: log_fd,
+            devicetree_dump_out: dump_dt_fd,
         };
         let command = CrosvmCommand::build_from(&context).or_service_specific_exception(-1)?;
 
@@ -741,7 +734,6 @@ impl VirtualizationService {
             device_tree_overlays,
             hugepages: config.hugePages,
             boost_uclamp: config.boostUclamp,
-            dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
             start_suspended: !vendor_tee_services.is_empty(),
@@ -1721,16 +1713,6 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     // SAFETY: ownership is transferred from stream to f
     let f = unsafe { File::from_raw_fd(stream.into_raw_fd()) };
     ParcelFileDescriptor::new(f)
-}
-
-/// Create the empty device tree dump file
-fn prepare_dump_dt_file(temporary_directory: &Path) -> binder::Result<File> {
-    let path = temporary_directory.join("device_tree.dtb");
-    let file = File::create(path)
-        .context("Failed to prepare device tree dump file")
-        .with_log()
-        .or_service_specific_exception(-1)?;
-    Ok(file)
 }
 
 fn is_protected(config: &aidl::VirtualMachineConfig) -> bool {
