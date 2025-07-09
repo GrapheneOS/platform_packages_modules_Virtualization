@@ -153,9 +153,20 @@ pub struct SharedPathConfig {
 
 type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 
-/// Parses VirtualMachineRawConfig parcelable into raw arguments which will be used to construct a
-/// crosvm command. The parsing is done when the virtual machine is created, and the construction
-/// of the crosvm command is done when the virtual machine is started.
+/// All information needed for running crosvm
+pub struct RunContext<'a> {
+    pub config: &'a aidl::VirtualMachineRawConfig,
+    pub debug_config: &'a DebugConfig,
+    pub cid: Cid,
+    pub temp_dir: &'a Path,
+    pub console_out: Option<&'a ParcelFileDescriptor>,
+    pub console_in: Option<&'a ParcelFileDescriptor>,
+    pub log_out: Option<&'a ParcelFileDescriptor>,
+}
+
+/// Parses RunContext into raw arguments which will be used to construct a crosvm command. The
+/// parsing is done when the virtual machine is created, and the construction of the crosvm command
+/// is done when the virtual machine is started.
 pub struct CrosvmCommand {
     arg0: OsString,
     args: Vec<OsString>,
@@ -173,15 +184,7 @@ struct CleanerContext {
 }
 
 impl CrosvmCommand {
-    pub fn build_from(
-        config: &aidl::VirtualMachineRawConfig,
-        debug_config: &DebugConfig,
-        temp_dir: &Path,
-        cid: Cid,
-        console_out: Option<&ParcelFileDescriptor>,
-        console_in: Option<&ParcelFileDescriptor>,
-        log_out: Option<&ParcelFileDescriptor>,
-    ) -> Result<Self> {
+    pub fn build_from(context: &RunContext) -> Result<Self> {
         let mut command = Self {
             arg0: OsString::new(),
             args: Vec::new(),
@@ -194,21 +197,21 @@ impl CrosvmCommand {
             .arg("run")
             .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
 
-        command.add_name_arg(config);
-        command.add_kernel_arg(config)?;
-        command.add_cpu_arg(config)?;
-        command.add_memory_arg(config);
-        command.add_console_arg(config, debug_config, cid, console_out, console_in)?;
-        command.add_log_arg(cid, log_out)?;
+        command.add_name_arg(context);
+        command.add_kernel_arg(context)?;
+        command.add_cpu_arg(context)?;
+        command.add_memory_arg(context);
+        command.add_console_arg(context)?;
+        command.add_log_arg(context)?;
         command.add_failure_pipe()?;
-        command.add_ramdump_arg(config, debug_config, temp_dir)?;
-        command.add_disk_arg(config, temp_dir)?;
-        command.add_gpu_arg(config);
-        command.add_display_arg(config)?;
-        command.add_input_devices_arg(config)?;
-        command.add_audio_arg(config);
-        command.add_usb_arg(config);
-        command.add_network_arg(config)?;
+        command.add_ramdump_arg(context)?;
+        command.add_disk_arg(context)?;
+        command.add_gpu_arg(context);
+        command.add_display_arg(context)?;
+        command.add_input_devices_arg(context)?;
+        command.add_audio_arg(context);
+        command.add_usb_arg(context);
+        command.add_network_arg(context)?;
         Ok(command)
     }
 
@@ -240,13 +243,14 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_name_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
-        let name = "crosvm_".to_owned() + &config.name;
+    fn add_name_arg(&mut self, context: &RunContext) {
+        let name = "crosvm_".to_owned() + &context.config.name;
         self.arg0 = OsString::from(name.clone());
         self.args(["--name", &name]);
     }
 
-    fn add_kernel_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_kernel_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if config.bootloader.is_none() && config.kernel.is_none() {
             bail!("VM must have either a bootloader or a kernel image.");
         }
@@ -275,7 +279,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_cpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_cpu_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         let num_cores: Option<usize> = match &config.cpuOptions.cpuTopology {
             aidl::CpuTopology::MatchHost(_) => {
                 if check_if_all_cpus_allowed()? {
@@ -311,7 +316,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_memory_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_memory_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         let mut memory_mib = config
             .memoryMib
             .try_into()
@@ -349,17 +355,10 @@ impl CrosvmCommand {
     // disks in bootconfig.x86_64. This is because x86 crosvm puts serial devices and the block
     // devices in the same PCI bus and serial devices comes before the block devices. Arm crosvm
     // doesn't have the issue.
-    fn add_console_arg(
-        &mut self,
-        config: &aidl::VirtualMachineRawConfig,
-        debug_config: &DebugConfig,
-        cid: Cid,
-        console_out: Option<&ParcelFileDescriptor>,
-        console_in: Option<&ParcelFileDescriptor>,
-    ) -> Result<()> {
+    fn add_console_arg(&mut self, context: &RunContext) -> Result<()> {
         // If user has provided an FD for console_out, let them read from it. Otherwise, we read
         // the console output from the VM and emit it over to logcat.
-        let (out_fd, read_file) = match console_out {
+        let (out_fd, read_file) = match context.console_out {
             Some(pfd) => (Some(pfd.as_ref().try_clone()?), None),
             None => {
                 let (read_fd, write_fd) = create_pipe()?;
@@ -367,16 +366,16 @@ impl CrosvmCommand {
             }
         };
 
-        let in_fd = console_in.map(|pfd| pfd.as_ref().try_clone()).transpose()?;
+        let in_fd = context.console_in.map(|pfd| pfd.as_ref().try_clone()).transpose()?;
 
-        let in_device = config.consoleInputDevice.as_deref().unwrap_or(CONSOLE_HVC0);
+        let in_device = context.config.consoleInputDevice.as_deref().unwrap_or(CONSOLE_HVC0);
         match in_device {
             CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
             _ => bail!("Unsupported serial device {in_device}"),
         };
 
-        if debug_config.debug_level == aidl::DebugLevel::NONE
-            && debug_config.should_prepare_console_output()
+        if context.debug_config.debug_level == aidl::DebugLevel::NONE
+            && context.debug_config.should_prepare_console_output()
         {
             // bootconfig.normal will be used, but we need log.
             self.args(["--params", "printk.devkmsg=on"]);
@@ -402,7 +401,7 @@ impl CrosvmCommand {
             if in_device == CONSOLE_HVC0 { &in_args } else { "" }
         ));
 
-        let thread = read_file.map(|f| Self::logger_thread(f, format!("Console({})", cid)));
+        let thread = read_file.map(|f| Self::logger_thread(f, format!("Console({})", context.cid)));
         let cleaner = move |_: &CleanerContext| {
             thread.map(JoinHandle::join);
             Ok(())
@@ -411,8 +410,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_log_arg(&mut self, cid: Cid, log_out: Option<&ParcelFileDescriptor>) -> Result<()> {
-        let (out_fd, read_file) = match log_out {
+    fn add_log_arg(&mut self, context: &RunContext) -> Result<()> {
+        let (out_fd, read_file) = match context.log_out {
             Some(pfd) => (Some(pfd.as_ref().try_clone()?), None),
             None => {
                 let (read_fd, write_fd) = create_pipe()?;
@@ -430,7 +429,7 @@ impl CrosvmCommand {
                     max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
         ));
 
-        let thread = read_file.map(|f| Self::logger_thread(f, format!("Log({})", cid)));
+        let thread = read_file.map(|f| Self::logger_thread(f, format!("Log({})", context.cid)));
         let cleaner = move |_: &CleanerContext| {
             thread.map(JoinHandle::join);
             Ok(())
@@ -517,20 +516,16 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_ramdump_arg(
-        &mut self,
-        config: &aidl::VirtualMachineRawConfig,
-        debug_config: &DebugConfig,
-        temp_dir: &Path,
-    ) -> Result<()> {
+    fn add_ramdump_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         let using_gki =
             if !cfg!(vendor_module) { false } else { config.osName.starts_with("microdroid_gki-") };
 
-        if debug_config.is_ramdump_needed() && !using_gki {
+        if context.debug_config.is_ramdump_needed() && !using_gki {
             // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1
             // where VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e.
             // the VM owner) for readout.
-            let file = File::create(temp_dir.join("ramdump"))?;
+            let file = File::create(context.temp_dir.join("ramdump"))?;
             let path = self.add_preserved_fd(file);
 
             // This becoms /dev/hvc1 (see num=2 below)
@@ -550,14 +545,11 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_disk_arg(
-        &mut self,
-        config: &aidl::VirtualMachineRawConfig,
-        temp_dir: &Path,
-    ) -> Result<()> {
+    fn add_disk_arg(&mut self, context: &RunContext) -> Result<()> {
         /// The size of zero.img.
         /// Gaps in composite disk images are filled with a shared zero.img.
         const ZERO_FILLER_SIZE: u64 = 4096;
+        let temp_dir = context.temp_dir;
 
         let zero_filler = temp_dir.join("zero.img");
         OpenOptions::new()
@@ -568,7 +560,7 @@ impl CrosvmCommand {
             .context(format!("Failed to create {:?}", zero_filler))?
             .set_len(ZERO_FILLER_SIZE)?;
 
-        for (index, disk) in config.disks.iter().enumerate() {
+        for (index, disk) in context.config.disks.iter().enumerate() {
             let image = if !disk.partitions.is_empty() {
                 if disk.image.is_some() {
                     bail!("DiskImage {:?} contains both image and partitions.", disk);
@@ -609,7 +601,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_gpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_gpu_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         if let Some(config) = &config.gpuConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("GPU configuration not supported. Ignoring");
@@ -650,7 +643,8 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_display_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_display_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if let Some(config) = &config.displayConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("Display configuration not supported. Ignoring");
@@ -668,7 +662,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_input_devices_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_input_devices_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if !cfg!(paravirtualized_devices) && !config.inputDevices.is_empty() {
             warn!("Input device configuration not supported. Ignoring");
             return Ok(());
@@ -737,7 +732,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_audio_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_audio_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         if let Some(config) = &config.audioConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("Audio configuration not supported. Ignoring");
@@ -752,14 +748,16 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_usb_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_usb_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         let use_usb = if let Some(config) = &config.usbConfig { config.controller } else { false };
         if !use_usb {
             self.arg("--no-usb");
         }
     }
 
-    fn add_network_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_network_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if config.networkSupported {
             if !cfg!(network) {
                 warn!("Networking not supported. Ignoring");

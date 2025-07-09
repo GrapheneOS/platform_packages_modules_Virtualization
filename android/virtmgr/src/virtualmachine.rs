@@ -17,7 +17,7 @@
 use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::crosvm::{
-    CrosvmCommand, CrosvmConfig, PayloadState, SharedPathConfig, VmInstance, VmState,
+    CrosvmCommand, CrosvmConfig, PayloadState, RunContext, SharedPathConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -795,16 +795,16 @@ impl VirtualizationService {
         let trim_under_pressure =
             balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
-        let command = CrosvmCommand::build_from(
+        let context = RunContext {
             config,
-            &debug_config,
-            &temporary_directory,
+            debug_config: &debug_config,
             cid,
-            console_out_fd,
-            console_in_fd,
-            log_fd,
-        )
-        .or_service_specific_exception(-1)?;
+            temp_dir: &temporary_directory,
+            console_out: console_out_fd,
+            console_in: console_in_fd,
+            log_out: log_fd,
+        };
+        let command = CrosvmCommand::build_from(&context).or_service_specific_exception(-1)?;
 
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
