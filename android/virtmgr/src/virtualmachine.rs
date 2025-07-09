@@ -17,7 +17,7 @@
 use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::crosvm::{
-    CrosvmCommand, CrosvmConfig, PayloadState, SharedPathConfig, VmInstance, VmState,
+    CrosvmCommand, CrosvmConfig, PayloadState, RunContext, SharedPathConfig, VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -44,20 +44,18 @@ use glob::glob;
 use libc::{sa_family_t, sockaddr_vm, AF_VSOCK};
 use log::{debug, error, info, warn};
 use microdroid_payload_config::{ApexConfig, ApkConfig, Task, TaskType, VmPayloadConfig};
-use nix::unistd::pipe;
 use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
     BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo, Vsock::Vsock,
 };
 use rpcbinder::RpcServer;
 use rustutils::system_properties;
-use semver::VersionReq;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fs;
 use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File};
-use std::io::{BufRead, BufReader, Error, ErrorKind, Seek, SeekFrom, Write};
+use std::io::{Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::NonZeroU16;
 use std::ops::{Deref, Range};
@@ -617,11 +615,6 @@ impl VirtualizationService {
 
         let debug_config = DebugConfig::new(config);
 
-        let (console_out_fd, console_join_handle) =
-            clone_or_prepare_logger_fd(console_out_fd, format!("Console({})", cid))?;
-        let console_in_fd = console_in_fd.map(clone_file).transpose()?;
-        let (log_fd, log_join_handle) =
-            clone_or_prepare_logger_fd(log_fd, format!("Log({})", cid))?;
         let dump_dt_fd = if let Some(fd) = dump_dt_fd {
             Some(clone_file(fd)?)
         } else if debug_config.dump_device_tree {
@@ -761,25 +754,6 @@ impl VirtualizationService {
 
         let detect_hangup = is_app_config && gdb_port.is_none();
 
-        let custom_memory_backing_files = config
-            .customMemoryBackingFiles
-            .iter()
-            .map(|memory_backing_file| {
-                Ok((
-                    clone_file(
-                        memory_backing_file
-                            .file
-                            .as_ref()
-                            .context("missing CustomMemoryBackingFile FD")
-                            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?,
-                    )?
-                    .into(),
-                    memory_backing_file.rangeStart as u64,
-                    memory_backing_file.size as u64,
-                ))
-            })
-            .collect::<binder::Result<_>>()?;
-
         let memory_reclaim_supported =
             system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
                 .unwrap_or(false);
@@ -801,8 +775,16 @@ impl VirtualizationService {
         let trim_under_pressure =
             balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
-        let command = CrosvmCommand::build_from(config, &debug_config, &temporary_directory)
-            .or_service_specific_exception(-1)?;
+        let context = RunContext {
+            config,
+            debug_config: &debug_config,
+            cid,
+            temp_dir: &temporary_directory,
+            console_out: console_out_fd,
+            console_in: console_in_fd,
+            log_out: log_fd,
+        };
+        let command = CrosvmCommand::build_from(&context).or_service_specific_exception(-1)?;
 
         // Actually start the VM.
         let crosvm_config = CrosvmConfig {
@@ -810,24 +792,17 @@ impl VirtualizationService {
             name: config.name.clone(),
             shared_paths,
             protected: *is_protected,
-            debug_config,
-            console_out_fd,
-            console_in_fd,
-            log_fd,
-            platform_version: parse_platform_version_req(&config.platformVersion)?,
             detect_hangup,
             gdb_port,
             vfio_devices,
             dtbo,
             device_tree_overlays,
             hugepages: config.hugePages,
-            console_input_device: config.consoleInputDevice.clone(),
             boost_uclamp: config.boostUclamp,
             balloon,
             dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
-            custom_memory_backing_files,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
             command,
@@ -839,8 +814,6 @@ impl VirtualizationService {
                 temporary_directory,
                 requester_uid,
                 requester_debug_pid,
-                console_join_handle,
-                log_join_handle,
                 requires_vm_service,
                 trim_under_pressure,
                 vendor_tee_services,
@@ -1820,13 +1793,6 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     ParcelFileDescriptor::new(f)
 }
 
-/// Parses the platform version requirement string.
-fn parse_platform_version_req(s: &str) -> binder::Result<VersionReq> {
-    VersionReq::parse(s)
-        .with_context(|| format!("Invalid platform version requirement {}", s))
-        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)
-}
-
 /// Create the empty device tree dump file
 fn prepare_dump_dt_file(temporary_directory: &Path) -> binder::Result<File> {
     let path = temporary_directory.join("device_tree.dtb");
@@ -1990,49 +1956,6 @@ fn check_config_allowed_for_early_vms(config: &aidl::VirtualMachineConfig) -> bi
     check_no_devices(config)?;
 
     Ok(())
-}
-
-fn clone_or_prepare_logger_fd(
-    fd: Option<&ParcelFileDescriptor>,
-    tag: String,
-) -> Result<(Option<File>, Option<std::thread::JoinHandle<()>>), Status> {
-    if let Some(fd) = fd {
-        return Ok((Some(clone_file(fd)?), None));
-    }
-
-    let (read_fd, write_fd) =
-        pipe().context("Failed to create pipe").or_service_specific_exception(-1)?;
-
-    let mut reader = BufReader::new(File::from(read_fd));
-    let write_fd = File::from(write_fd);
-
-    let mut buf = vec![];
-    let join_handle = std::thread::spawn(move || loop {
-        buf.clear();
-        buf.shrink_to(1024);
-        match reader.read_until(b'\n', &mut buf) {
-            Ok(0) => {
-                info!("{}: EOF", &tag);
-                return;
-            }
-            Ok(_size) => {
-                if buf.last() == Some(&b'\n') {
-                    buf.pop();
-                    // Logs sent via TTY usually end lines with "\r\n".
-                    if buf.last() == Some(&b'\r') {
-                        buf.pop();
-                    }
-                }
-                info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
-            }
-            Err(e) => {
-                error!("Could not read console pipe: {:?}", e);
-                return;
-            }
-        };
-    });
-
-    Ok((Some(write_fd), Some(join_handle)))
 }
 
 /// Simple utility for referencing Borrowed or Owned. Similar to std::borrow::Cow, but

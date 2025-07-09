@@ -104,7 +104,7 @@ pub fn command_run_app(
         }
     };
 
-    let storage = if let Some(ref path) = config.microdroid.storage {
+    let storage = if let Some(ref path) = config.storage {
         if !path.exists() {
             command_create_partition(
                 service,
@@ -256,6 +256,8 @@ pub fn command_run_microdroid(
     println!("apk.idsig path: {}", idsig.display());
     let instance_img = work_dir.join("instance.img");
     println!("instance.img path: {}", instance_img.display());
+    let storage_img = work_dir.join("storage.img");
+    println!("encryptedstore backing disk: {}", storage_img.display());
 
     let mut app_config = RunAppConfig {
         common: config.common,
@@ -264,6 +266,7 @@ pub fn command_run_microdroid(
         apk,
         idsig,
         instance: instance_img,
+        storage: Some(storage_img),
         payload_binary_name: Some("MicrodroidEmptyPayloadJniLib.so".to_owned()),
         ..Default::default()
     };

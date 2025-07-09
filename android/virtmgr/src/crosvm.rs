@@ -112,25 +112,17 @@ pub struct CrosvmConfig {
     pub name: String,
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
-    pub debug_config: DebugConfig,
-    pub console_out_fd: Option<File>,
-    pub console_in_fd: Option<File>,
-    pub log_fd: Option<File>,
-    pub platform_version: VersionReq,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
     pub vfio_devices: Vec<VfioDevice>,
     pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
-    pub console_input_device: Option<String>,
     pub boost_uclamp: bool,
     pub balloon: bool,
     pub dump_dt_fd: Option<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
-    // (memfd, guest address, size)
-    pub custom_memory_backing_files: Vec<(OwnedFd, u64, u64)>,
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
     pub command: CrosvmCommand,
@@ -158,9 +150,20 @@ pub struct SharedPathConfig {
 
 type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 
-/// Parses VirtualMachineRawConfig parcelable into raw arguments which will be used to construct a
-/// crosvm command. The parsing is done when the virtual machine is created, and the construction
-/// of the crosvm command is done when the virtual machine is started.
+/// All information needed for running crosvm
+pub struct RunContext<'a> {
+    pub config: &'a aidl::VirtualMachineRawConfig,
+    pub debug_config: &'a DebugConfig,
+    pub cid: Cid,
+    pub temp_dir: &'a Path,
+    pub console_out: Option<&'a ParcelFileDescriptor>,
+    pub console_in: Option<&'a ParcelFileDescriptor>,
+    pub log_out: Option<&'a ParcelFileDescriptor>,
+}
+
+/// Parses RunContext into raw arguments which will be used to construct a crosvm command. The
+/// parsing is done when the virtual machine is created, and the construction of the crosvm command
+/// is done when the virtual machine is started.
 pub struct CrosvmCommand {
     arg0: OsString,
     args: Vec<OsString>,
@@ -178,11 +181,9 @@ struct CleanerContext {
 }
 
 impl CrosvmCommand {
-    pub fn build_from(
-        config: &aidl::VirtualMachineRawConfig,
-        debug_config: &DebugConfig,
-        temp_dir: &Path,
-    ) -> Result<Self> {
+    pub fn build_from(context: &RunContext) -> Result<Self> {
+        Self::check_platform_version(context)?;
+
         let mut command = Self {
             arg0: OsString::new(),
             args: Vec::new(),
@@ -191,23 +192,28 @@ impl CrosvmCommand {
         };
         command
             .arg("--extended-status")
-            .args(["--log-level", "info,disk=warn"])
+            // Logs are further filtered in logcat per process, debug logs won't show unless
+            // crosvm is configured to show debug logs.
+            .args(["--log-level", "debug,disk=warn"])
             .arg("run")
             .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
 
-        command.add_name_arg(config);
-        command.add_kernel_arg(config)?;
-        command.add_cpu_arg(config)?;
-        command.add_memory_arg(config);
+        command.add_name_arg(context);
+        command.add_kernel_arg(context)?;
+        command.add_cpu_arg(context)?;
+        command.add_memory_arg(context);
+        command.add_console_arg(context)?;
+        command.add_log_arg(context)?;
         command.add_failure_pipe()?;
-        command.add_ramdump_arg(config, debug_config, temp_dir)?;
-        command.add_disk_arg(config, temp_dir)?;
-        command.add_gpu_arg(config);
-        command.add_display_arg(config)?;
-        command.add_input_devices_arg(config)?;
-        command.add_audio_arg(config);
-        command.add_usb_arg(config);
-        command.add_network_arg(config)?;
+        command.add_ramdump_arg(context)?;
+        command.add_disk_arg(context)?;
+        command.add_gpu_arg(context);
+        command.add_display_arg(context)?;
+        command.add_input_devices_arg(context)?;
+        command.add_audio_arg(context);
+        command.add_usb_arg(context);
+        command.add_network_arg(context)?;
+        command.add_file_backed_mapping_arg(context)?;
         Ok(command)
     }
 
@@ -239,13 +245,31 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_name_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
-        let name = "crosvm_".to_owned() + &config.name;
+    fn check_platform_version(context: &RunContext) -> Result<()> {
+        let ver = &context.config.platformVersion;
+        let requested = VersionReq::parse(ver)
+            .context(format!("Invalid platform version requirement {ver}"))?;
+
+        let supported = Version::parse(CROSVM_PLATFORM_VERSION).unwrap();
+        if !requested.matches(&supported) {
+            bail!(
+                "Incompatible platform version. The config is compatible with platform version(s) \
+                  {}, but the actual platform version is {}",
+                requested,
+                supported
+            );
+        }
+        Ok(())
+    }
+
+    fn add_name_arg(&mut self, context: &RunContext) {
+        let name = "crosvm_".to_owned() + &context.config.name;
         self.arg0 = OsString::from(name.clone());
         self.args(["--name", &name]);
     }
 
-    fn add_kernel_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_kernel_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if config.bootloader.is_none() && config.kernel.is_none() {
             bail!("VM must have either a bootloader or a kernel image.");
         }
@@ -274,7 +298,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_cpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_cpu_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         let num_cores: Option<usize> = match &config.cpuOptions.cpuTopology {
             aidl::CpuTopology::MatchHost(_) => {
                 if check_if_all_cpus_allowed()? {
@@ -310,7 +335,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_memory_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_memory_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         let mut memory_mib = config
             .memoryMib
             .try_into()
@@ -327,6 +353,140 @@ impl CrosvmCommand {
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
         }
+    }
+
+    // A note on serial devices. We have five serial devices:
+    // 1. uart device: used as the output device by bootloaders and as early console by linux
+    // 2. uart device: used to report the reason for the VM failing.
+    // 3. virtio-console device: used as the console device where kmsg is redirected to
+    // 4. virtio-console device: used as the ramdump output
+    // 5. virtio-console device: used as the logcat output
+    //
+    // #1 and #3 are added via add_console_arg()
+    // #2 is added via add_failure_pipe()
+    // #4 is added via add_ramdump_arg()
+    // #5 is added via add_log_arg()
+    //
+    // When [console|log]_fd is not specified, the devices are attached to sink, which means what's
+    // written there is discarded.
+    //
+    // Warning: Adding more serial devices requires you to shift the PCI device ID of the boot
+    // disks in bootconfig.x86_64. This is because x86 crosvm puts serial devices and the block
+    // devices in the same PCI bus and serial devices comes before the block devices. Arm crosvm
+    // doesn't have the issue.
+    fn add_console_arg(&mut self, context: &RunContext) -> Result<()> {
+        // If user has provided an FD for console_out, let them read from it. Otherwise, we read
+        // the console output from the VM and emit it over to logcat.
+        let (out_fd, read_file) = match context.console_out {
+            Some(pfd) => (Some(pfd.as_ref().try_clone()?), None),
+            None => {
+                let (read_fd, write_fd) = create_pipe()?;
+                (Some(write_fd.into()), Some(read_fd))
+            }
+        };
+
+        let in_fd = context.console_in.map(|pfd| pfd.as_ref().try_clone()).transpose()?;
+
+        let in_device = context.config.consoleInputDevice.as_deref().unwrap_or(CONSOLE_HVC0);
+        match in_device {
+            CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
+            _ => bail!("Unsupported serial device {in_device}"),
+        };
+
+        if context.debug_config.debug_level == aidl::DebugLevel::NONE
+            && context.debug_config.should_prepare_console_output()
+        {
+            // bootconfig.normal will be used, but we need log.
+            self.args(["--params", "printk.devkmsg=on"]);
+            self.args(["--params", "console=hvc0"]);
+        }
+
+        let out_args = out_fd.map_or("type=sink".to_string(), |fd| {
+            format!("type=file,path={}", self.add_preserved_fd(fd))
+        });
+
+        let in_args =
+            in_fd.map_or("".to_string(), |fd| format!(",input={}", self.add_preserved_fd(fd)));
+
+        // dev/ttyS0
+        self.arg(format!(
+            "--serial={out_args}{},hardware=serial,num=1",
+            if in_device == CONSOLE_TTYS0 { &in_args } else { "" }
+        ));
+        // dev/hvc0
+        self.arg(format!(
+            "--serial={out_args}{},hardware=virtio-console,num=1,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
+            if in_device == CONSOLE_HVC0 { &in_args } else { "" }
+        ));
+
+        let thread = read_file.map(|f| Self::logger_thread(f, format!("Console({})", context.cid)));
+        let cleaner = move |_: &CleanerContext| {
+            thread.map(JoinHandle::join);
+            Ok(())
+        };
+        self.add_cleaner("console", Box::new(cleaner))?;
+        Ok(())
+    }
+
+    fn add_log_arg(&mut self, context: &RunContext) -> Result<()> {
+        let (out_fd, read_file) = match context.log_out {
+            Some(pfd) => (Some(pfd.as_ref().try_clone()?), None),
+            None => {
+                let (read_fd, write_fd) = create_pipe()?;
+                (Some(write_fd.into()), Some(read_fd))
+            }
+        };
+
+        let out_args = out_fd.map_or("type=sink".to_string(), |fd| {
+            format!("type=file,path={}", self.add_preserved_fd(fd))
+        });
+
+        // dev/hvc2
+        self.arg(format!(
+            "--serial={out_args},hardware=virtio-console,num=3,\
+                    max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
+        ));
+
+        let thread = read_file.map(|f| Self::logger_thread(f, format!("Log({})", context.cid)));
+        let cleaner = move |_: &CleanerContext| {
+            thread.map(JoinHandle::join);
+            Ok(())
+        };
+        self.add_cleaner("log", Box::new(cleaner))?;
+        Ok(())
+    }
+
+    fn logger_thread(read_from: File, tag: String) -> JoinHandle<()> {
+        std::thread::spawn(move || {
+            use std::io::BufRead;
+            let mut reader = std::io::BufReader::new(read_from);
+            let mut buf = vec![];
+            loop {
+                buf.clear();
+                buf.shrink_to(1024);
+                match reader.read_until(b'\n', &mut buf) {
+                    Ok(0) => {
+                        info!("{}: EOF", &tag);
+                        return;
+                    }
+                    Ok(_size) => {
+                        if buf.last() == Some(&b'\n') {
+                            buf.pop();
+                            // Logs sent via TTY usually end lines with "\r\n".
+                            if buf.last() == Some(&b'\r') {
+                                buf.pop();
+                            }
+                        }
+                        info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
+                    }
+                    Err(e) => {
+                        error!("Could not read console pipe: {e:?}");
+                        return;
+                    }
+                };
+            }
+        })
     }
 
     fn add_failure_pipe(&mut self) -> Result<()> {
@@ -375,20 +535,16 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_ramdump_arg(
-        &mut self,
-        config: &aidl::VirtualMachineRawConfig,
-        debug_config: &DebugConfig,
-        temp_dir: &Path,
-    ) -> Result<()> {
+    fn add_ramdump_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         let using_gki =
             if !cfg!(vendor_module) { false } else { config.osName.starts_with("microdroid_gki-") };
 
-        if debug_config.is_ramdump_needed() && !using_gki {
+        if context.debug_config.is_ramdump_needed() && !using_gki {
             // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1
             // where VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e.
             // the VM owner) for readout.
-            let file = File::create(temp_dir.join("ramdump"))?;
+            let file = File::create(context.temp_dir.join("ramdump"))?;
             let path = self.add_preserved_fd(file);
 
             // This becoms /dev/hvc1 (see num=2 below)
@@ -408,14 +564,11 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_disk_arg(
-        &mut self,
-        config: &aidl::VirtualMachineRawConfig,
-        temp_dir: &Path,
-    ) -> Result<()> {
+    fn add_disk_arg(&mut self, context: &RunContext) -> Result<()> {
         /// The size of zero.img.
         /// Gaps in composite disk images are filled with a shared zero.img.
         const ZERO_FILLER_SIZE: u64 = 4096;
+        let temp_dir = context.temp_dir;
 
         let zero_filler = temp_dir.join("zero.img");
         OpenOptions::new()
@@ -426,7 +579,7 @@ impl CrosvmCommand {
             .context(format!("Failed to create {:?}", zero_filler))?
             .set_len(ZERO_FILLER_SIZE)?;
 
-        for (index, disk) in config.disks.iter().enumerate() {
+        for (index, disk) in context.config.disks.iter().enumerate() {
             let image = if !disk.partitions.is_empty() {
                 if disk.image.is_some() {
                     bail!("DiskImage {:?} contains both image and partitions.", disk);
@@ -467,7 +620,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_gpu_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_gpu_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         if let Some(config) = &config.gpuConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("GPU configuration not supported. Ignoring");
@@ -508,7 +662,8 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_display_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_display_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if let Some(config) = &config.displayConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("Display configuration not supported. Ignoring");
@@ -526,7 +681,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_input_devices_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_input_devices_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if !cfg!(paravirtualized_devices) && !config.inputDevices.is_empty() {
             warn!("Input device configuration not supported. Ignoring");
             return Ok(());
@@ -595,7 +751,8 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_audio_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_audio_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         if let Some(config) = &config.audioConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("Audio configuration not supported. Ignoring");
@@ -610,14 +767,16 @@ impl CrosvmCommand {
         }
     }
 
-    fn add_usb_arg(&mut self, config: &aidl::VirtualMachineRawConfig) {
+    fn add_usb_arg(&mut self, context: &RunContext) {
+        let config = context.config;
         let use_usb = if let Some(config) = &config.usbConfig { config.controller } else { false };
         if !use_usb {
             self.arg("--no-usb");
         }
     }
 
-    fn add_network_arg(&mut self, config: &aidl::VirtualMachineRawConfig) -> Result<()> {
+    fn add_network_arg(&mut self, context: &RunContext) -> Result<()> {
+        let config = context.config;
         if config.networkSupported {
             if !cfg!(network) {
                 warn!("Networking not supported. Ignoring");
@@ -639,7 +798,8 @@ impl CrosvmCommand {
             let tap_fd_cloned = tap_fd.try_clone()?;
 
             let path = self.add_preserved_fd(tap_fd);
-            self.args(["--net", &format!("tap-fd={path}")]);
+            let fd_num = path.split('/').last().unwrap();
+            self.args(["--net", &format!("tap-fd={fd_num}")]);
 
             let cleaner = move |_: &CleanerContext| {
                 let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
@@ -649,6 +809,21 @@ impl CrosvmCommand {
                 Ok(())
             };
             self.add_cleaner("network", Box::new(cleaner))?;
+        }
+        Ok(())
+    }
+
+    fn add_file_backed_mapping_arg(&mut self, context: &RunContext) -> Result<()> {
+        for bf in &context.config.customMemoryBackingFiles {
+            let pfd = bf.file.as_ref().ok_or(anyhow!("missing CustomMemoryBackingFile FD"))?;
+            let mem_fd = pfd.as_ref().try_clone()?;
+            let path = self.add_preserved_fd(mem_fd);
+            let addr = bf.rangeStart as u64;
+            let size = bf.size as u64;
+            self.args([
+                "--file-backed-mapping",
+                &format!("{path},addr={addr:#0x},size={size:#0x},rw,ram"),
+            ]);
         }
         Ok(())
     }
@@ -876,31 +1051,6 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
     }
 }
 
-// TODO: may want to check if these are ever dropped without joining,
-// as logs could be lost in these cases.
-#[derive(Debug)]
-pub struct VmJoinHandles {
-    /// Join handle for console
-    pub console_join_handle: Option<JoinHandle<()>>,
-    /// Join handle for log
-    pub log_join_handle: Option<JoinHandle<()>>,
-}
-
-impl VmJoinHandles {
-    pub fn join_all(&mut self) {
-        // logs in case they are stuck to aid debugging, as we are adding this
-        // feature. logs are also there so when we get more bugreports after
-        // b/404210068, we can see if this change actually results in us getting
-        // more logs
-
-        info!("Joining threads for VM console");
-        self.console_join_handle.take().map(JoinHandle::join);
-        info!("Joining threads for VM log");
-        self.log_join_handle.take().map(JoinHandle::join);
-        info!("Joining threads for VM done");
-    }
-}
-
 /// Information about a particular instance of a VM which may be running.
 pub struct VmInstance {
     /// The current state of the VM.
@@ -926,8 +1076,6 @@ pub struct VmInstance {
     /// The PID of the process which requested the VM. Note that this process may no longer exist
     /// and the PID may have been reused for a different process, so this should not be trusted.
     pub requester_debug_pid: i32,
-    /// handles to threads running VM tasks,
-    pub join_handles: Mutex<VmJoinHandles>,
     /// Callbacks to clients of the VM.
     pub callbacks: VirtualMachineCallbacks,
     /// Guest agent running on the VM
@@ -976,15 +1124,12 @@ impl VmInstance {
         temporary_directory: PathBuf,
         requester_uid: u32,
         requester_debug_pid: i32,
-        console_join_handle: Option<JoinHandle<()>>,
-        log_join_handle: Option<JoinHandle<()>>,
         requires_vm_service: bool,
         trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
         encrypted_store_kek: Option<Strong<dyn aidl::IEncryptedStoreKEK>>,
     ) -> Result<VmInstance, Error> {
-        validate_config(&config)?;
         let cid = config.cid;
         let name = config.name.clone();
         let protected = config.protected;
@@ -1005,7 +1150,6 @@ impl VmInstance {
             temporary_directory,
             requester_uid,
             requester_debug_pid,
-            join_handles: Mutex::new(VmJoinHandles { console_join_handle, log_join_handle }),
             callbacks: Default::default(),
             guest_agent: Mutex::new(None),
             vm_metric: Mutex::new(Default::default()),
@@ -1144,9 +1288,6 @@ impl VmInstance {
             exit_signal,
             &vm_metric,
         );
-
-        // clean up VM state
-        self.join_handles.lock().unwrap().join_all();
 
         if let Some((psi_thread, evt_fd)) = psi_thread_and_evt_fd {
             evt_fd.write(1).expect("failed to stop PSI thread");
@@ -1666,8 +1807,6 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
 
 /// Starts an instance of `crosvm` to manage a new VM.
 fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<SharedChild, Error> {
-    validate_config(&config)?;
-
     let mut command = Command::new(CROSVM_PATH);
 
     command.arg0(config.command.arg0);
@@ -1733,13 +1872,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
             warn!("kernel is too old enable --lock-guest-memory-dontneed");
         }
     }
-    if config.debug_config.debug_level == aidl::DebugLevel::NONE
-        && config.debug_config.should_prepare_console_output()
-    {
-        // bootconfig.normal will be used, but we need log.
-        command.arg("--params").arg("printk.devkmsg=on");
-        command.arg("--params").arg("console=hvc0");
-    }
 
     // Move the PCI MMIO regions to near the end of the low-MMIO space.
     // This is done to accommodate a limitation in a partner's hypervisor.
@@ -1761,47 +1893,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         let dump_dt_fd = add_preserved_fd(&mut preserved_fds, dump_dt_fd);
         command.arg("--dump-device-tree-blob").arg(dump_dt_fd);
     }
-
-    // Setup the serial devices.
-    // 1. uart device: used as the output device by bootloaders and as early console by linux
-    // 2. uart device: used to report the reason for the VM failing.
-    // 3. virtio-console device: used as the console device where kmsg is redirected to
-    // 4. virtio-console device: used as the ramdump output
-    // 5. virtio-console device: used as the logcat output
-    //
-    // When [console|log]_fd is not specified, the devices are attached to sink, which means what's
-    // written there is discarded.
-    let console_out_arg = format_serial_out_arg(&mut preserved_fds, config.console_out_fd);
-    let console_in_arg = config
-        .console_in_fd
-        .map(|fd| format!(",input={}", add_preserved_fd(&mut preserved_fds, fd)))
-        .unwrap_or_default();
-    let log_arg = format_serial_out_arg(&mut preserved_fds, config.log_fd);
-    let console_input_device = config.console_input_device.as_deref().unwrap_or(CONSOLE_HVC0);
-    match console_input_device {
-        CONSOLE_HVC0 | CONSOLE_TTYS0 => {}
-        _ => bail!("Unsupported serial device {console_input_device}"),
-    };
-
-    // Warning: Adding more serial devices requires you to shift the PCI device ID of the boot
-    // disks in bootconfig.x86_64. This is because x86 crosvm puts serial devices and the block
-    // devices in the same PCI bus and serial devices comes before the block devices. Arm crosvm
-    // doesn't have the issue.
-    // /dev/ttyS0
-    command.arg(format!(
-        "--serial={}{},hardware=serial,num=1",
-        &console_out_arg,
-        if console_input_device == CONSOLE_TTYS0 { &console_in_arg } else { "" }
-    ));
-    // /dev/hvc0
-    command.arg(format!(
-        "--serial={}{},hardware=virtio-console,num=1,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]",
-        &console_out_arg,
-        if console_input_device == CONSOLE_HVC0 { &console_in_arg } else { "" }
-    ));
-    // /dev/hvc2
-    command
-        .arg(format!("--serial={},hardware=virtio-console,num=3,max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]", &log_arg));
 
     #[cfg(target_arch = "aarch64")]
     command.arg("--no-pmu");
@@ -1852,13 +1943,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         }
     }
 
-    for (fd, addr, size) in config.custom_memory_backing_files {
-        command.arg("--file-backed-mapping").arg(format!(
-            "{},addr={addr:#0x},size={size:#0x},rw,ram",
-            add_preserved_fd(&mut preserved_fds, fd)
-        ));
-    }
-
     debug!("Preserving FDs {:?}", preserved_fds);
     command.preserved_fds(preserved_fds);
 
@@ -1894,21 +1978,6 @@ fn wait_for_file(path: &str, timeout_secs: u64) -> Result<(), std::io::Error> {
     ))
 }
 
-/// Ensure that the configuration has a valid combination of fields set, or return an error if not.
-fn validate_config(config: &CrosvmConfig) -> Result<(), Error> {
-    let version = Version::parse(CROSVM_PLATFORM_VERSION).unwrap();
-    if !config.platform_version.matches(&version) {
-        bail!(
-            "Incompatible platform version. The config is compatible with platform version(s) \
-              {}, but the actual platform version is {}",
-            config.platform_version,
-            version
-        );
-    }
-
-    Ok(())
-}
-
 /// Print arguments of the crosvm command. In doing so, /proc/self/fd/XX is annotated with the
 /// actual file path if the FD is backed by a regular file. If not, the /proc path is printed
 /// unmodified.
@@ -1941,16 +2010,6 @@ fn add_preserved_fd<F: Into<OwnedFd>>(preserved_fds: &mut Vec<OwnedFd>, file: F)
     let raw_fd = fd.as_raw_fd();
     preserved_fds.push(fd);
     format!("/proc/self/fd/{}", raw_fd)
-}
-
-/// Adds the file descriptor for `file` (if any) to `preserved_fds`, and returns the appropriate
-/// string for a crosvm `--serial` flag. If `file` is none, creates a dummy sink device.
-fn format_serial_out_arg(preserved_fds: &mut Vec<OwnedFd>, file: Option<File>) -> String {
-    if let Some(file) = file {
-        format!("type=file,path={}", add_preserved_fd(preserved_fds, file))
-    } else {
-        "type=sink".to_string()
-    }
 }
 
 /// Creates a new pipe with the `O_CLOEXEC` flag set, and returns the read side and write side.
