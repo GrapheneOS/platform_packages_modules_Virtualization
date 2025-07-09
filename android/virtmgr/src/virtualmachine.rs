@@ -719,27 +719,6 @@ impl VirtualizationService {
 
         let detect_hangup = is_app_config && gdb_port.is_none();
 
-        let memory_reclaim_supported =
-            system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
-                .unwrap_or(false);
-
-        let balloon = config.balloon && memory_reclaim_supported;
-
-        if !balloon {
-            warn!(
-                "Memory balloon not enabled:
-                config.balloon={},hypervisor.memory_reclaim.supported={}",
-                config.balloon, memory_reclaim_supported
-            );
-        }
-
-        // It is too late to add a system API to control the ballooning behavior, so we automically
-        // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
-        // permission as a temporarily solution.
-        // TODO(b/407079334): Replace with SystemApi.
-        let trim_under_pressure =
-            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
-
         let context = RunContext {
             config,
             debug_config: &debug_config,
@@ -762,7 +741,6 @@ impl VirtualizationService {
             device_tree_overlays,
             hugepages: config.hugePages,
             boost_uclamp: config.boostUclamp,
-            balloon,
             dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
@@ -778,7 +756,6 @@ impl VirtualizationService {
                 requester_uid,
                 requester_debug_pid,
                 requires_vm_service,
-                trim_under_pressure,
                 vendor_tee_services,
                 config.hostServices.clone(),
                 encrypted_store_kek,
@@ -1290,7 +1267,7 @@ fn check_use_custom_virtual_machine() -> binder::Result<()> {
 
 /// Check whether the caller of the current binder method is allowed to use relaxed microdroid
 /// rollback protection schema.
-fn check_use_relaxed_microdroid_rollback_protection() -> binder::Result<()> {
+pub fn check_use_relaxed_microdroid_rollback_protection() -> binder::Result<()> {
     check_permission("android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION")
 }
 

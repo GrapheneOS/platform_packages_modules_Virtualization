@@ -117,7 +117,6 @@ pub struct CrosvmConfig {
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
     pub boost_uclamp: bool,
-    pub balloon: bool,
     pub dump_dt_fd: Option<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
@@ -168,6 +167,7 @@ pub struct CrosvmCommand {
     // moved out of this struct when the VM gets run. Box is needed to satisfy the fixed-size
     // requirement of Vec.
     cleaners: Option<HashMap<String, Box<Cleaner>>>,
+    balloon_enabled: bool,
 }
 
 type Cleaner = dyn FnOnce(&CleanerContext) -> Result<()> + Send;
@@ -185,6 +185,7 @@ impl CrosvmCommand {
             args: Vec::new(),
             preserved_fds: Vec::new(),
             cleaners: Some(HashMap::new()),
+            balloon_enabled: false,
         };
         command
             .arg("--extended-status")
@@ -198,6 +199,7 @@ impl CrosvmCommand {
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
         command.add_memory_arg(context);
+        command.add_balloon_arg(context);
         command.add_console_arg(context)?;
         command.add_log_arg(context)?;
         command.add_failure_pipe()?;
@@ -349,6 +351,25 @@ impl CrosvmCommand {
 
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
+        }
+    }
+
+    fn add_balloon_arg(&mut self, context: &RunContext) {
+        let supported = system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
+            .unwrap_or(false);
+        let requested = context.config.balloon;
+        let enabled = requested && supported;
+
+        if enabled {
+            self.balloon_enabled = true;
+            self.arg("--balloon-page-reporting");
+        } else {
+            warn!(
+                "Memory balloon not enabled:
+                config.balloon={},hypervisor.memory_reclaim.supported={}",
+                requested, supported
+            );
+            self.arg("--no-balloon");
         }
     }
 
@@ -968,7 +989,14 @@ impl VmState {
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child = Arc::new(run_vm(config, &instance.crosvm_control_socket_path)?);
 
-            let psi_thread_and_evt_fd = if instance.trim_under_pressure {
+            // It is too late to add a system API to control the ballooning behavior, so we
+            // automically enable it only when the payload is granted
+            // USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission as a temporarily
+            // solution. TODO(b/407079334): Replace with SystemApi.
+            let trim_under_pressure = instance.balloon_enabled
+                && virtualmachine::check_use_relaxed_microdroid_rollback_protection().is_ok();
+
+            let psi_thread_and_evt_fd = if trim_under_pressure {
                 let psi_monitor_kill_event = Arc::new(EventFd::new()?);
                 let psi_monitor_kill_event_clone = psi_monitor_kill_event.clone();
                 let instance = instance.clone();
@@ -1144,8 +1172,6 @@ pub struct VmInstance {
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
     pub balloon_enabled: bool,
-    // Whether to send a trim request on app idle.
-    trim_under_pressure: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
     /// List of host services this VM might access.
@@ -1185,7 +1211,6 @@ impl VmInstance {
         requester_uid: u32,
         requester_debug_pid: i32,
         requires_vm_service: bool,
-        trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
         encrypted_store_kek: Option<Strong<dyn aidl::IEncryptedStoreKEK>>,
@@ -1193,7 +1218,7 @@ impl VmInstance {
         let cid = config.cid;
         let name = config.name.clone();
         let protected = config.protected;
-        let balloon_enabled = config.balloon;
+        let balloon_enabled = config.command.balloon_enabled;
         let requester_uid_name = User::from_uid(Uid::from_raw(requester_uid))
             .ok()
             .flatten()
@@ -1217,7 +1242,6 @@ impl VmInstance {
             payload_state_updated: Condvar::new(),
             requester_uid_name,
             balloon_enabled,
-            trim_under_pressure,
             vendor_tee_services,
             host_services,
             encrypted_store_kek,
@@ -1846,12 +1870,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
     command.arg0(config.command.arg0);
     command.args(config.command.args);
     command.arg("--cid").arg(config.cid.to_string());
-
-    if config.balloon {
-        command.arg("--balloon-page-reporting");
-    } else {
-        command.arg("--no-balloon");
-    }
 
     if config.enable_hypervisor_specific_auth_method && !config.protected {
         bail!("hypervisor specific auth method only supported for protected VMs");
