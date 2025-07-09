@@ -191,7 +191,9 @@ impl CrosvmCommand {
         };
         command
             .arg("--extended-status")
-            .args(["--log-level", "info,disk=warn"])
+            // Logs are further filtered in logcat per process, debug logs won't show unless
+            // crosvm is configured to show debug logs.
+            .args(["--log-level", "debug,disk=warn"])
             .arg("run")
             .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
 
