@@ -41,10 +41,10 @@ use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::min;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
-use std::fs::{read_to_string, File, OpenOptions};
+use std::fs::{canonicalize, read_to_string, File, OpenOptions};
 use std::io::{self, Read, Seek};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
@@ -114,8 +114,6 @@ pub struct CrosvmConfig {
     pub protected: bool,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
-    pub vfio_devices: Vec<VfioDevice>,
-    pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
     pub boost_uclamp: bool,
@@ -147,8 +145,6 @@ pub struct SharedPathConfig {
     pub socket_fd: Option<File>,
     pub app_domain: bool,
 }
-
-type VfioDevice = Strong<dyn aidl::IBoundDevice>;
 
 /// All information needed for running crosvm
 pub struct RunContext<'a> {
@@ -214,6 +210,7 @@ impl CrosvmCommand {
         command.add_usb_arg(context);
         command.add_network_arg(context)?;
         command.add_file_backed_mapping_arg(context)?;
+        command.add_assigned_devices_arg(context)?;
         Ok(command)
     }
 
@@ -827,6 +824,71 @@ impl CrosvmCommand {
         }
         Ok(())
     }
+
+    fn add_assigned_devices_arg(&mut self, context: &RunContext) -> Result<()> {
+        match &context.config.devices {
+            // Non-VFIO case.
+            aidl::AssignedDevices::Dtbo(Some(dtbo)) => {
+                let fd = dtbo.as_ref().try_clone()?;
+                let path = self.add_preserved_fd(fd);
+                self.args(["--device-tree-overlay", &path.to_string()]);
+            }
+            // VFIO case.
+            aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
+                // A simple sanity check
+                let mut set = HashSet::new();
+                for device in devices.iter() {
+                    let path =
+                        canonicalize(device).context(format!("can't canonicalize {device}"))?;
+                    if !set.insert(path) {
+                        return Err(anyhow!("duplicated device {device}"));
+                    }
+                }
+
+                // Then bind
+                let vfio_devices =
+                    virtualmachine::global_service().bindDevicesToVfioDriver(devices)?;
+
+                const SYSFS_PLATFORM_DEVICES_PATH: &str = "/sys/devices/platform/";
+                const VFIO_PLATFORM_DRIVER_PATH: &str = "/sys/bus/platform/drivers/vfio-platform";
+
+                for device in vfio_devices.iter() {
+                    // Check platform device exists
+                    let path = Path::new(&device.getSysfsPath()?).canonicalize()?;
+                    if !path.starts_with(SYSFS_PLATFORM_DEVICES_PATH) {
+                        bail!("{path:?} is not a platform device");
+                    }
+                    // Check platform device is bound to VFIO driver
+                    let dev_driver_path = path.join("driver").canonicalize()?;
+                    if dev_driver_path != Path::new(VFIO_PLATFORM_DRIVER_PATH) {
+                        bail!("{path:?} is not bound to VFIO-platform driver");
+                    }
+
+                    if let Some(p) = path.to_str() {
+                        self.arg(format!(
+                            "--vfio={p},iommu=pkvm-iommu,dt-symbol={0}",
+                            device.getDtboLabel()?
+                        ));
+                    } else {
+                        bail!("invalid path {path:?}");
+                    }
+                }
+
+                let dtbo_fd =
+                    virtualmachine::global_service().getDtboFile()?.as_ref().try_clone()?;
+                let path = self.add_preserved_fd(dtbo_fd);
+                self.arg(format!("--device-tree-overlay={path},filter"));
+
+                let cleaner = move |_: &CleanerContext| {
+                    drop(vfio_devices); // Cleanup devices.
+                    Ok(())
+                };
+                self.add_cleaner("vfio", Box::new(cleaner))?;
+            }
+            _ => (),
+        };
+        Ok(())
+    }
 }
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
@@ -900,7 +962,6 @@ impl VmState {
             let mut config = *config;
             let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
-            let vfio_devices = config.vfio_devices.clone();
 
             let vhost_fs_devices = run_virtiofs(&config)?;
 
@@ -937,7 +998,6 @@ impl VmState {
             let monitor_vm_exit_thread = thread::spawn(move || {
                 instance_clone.monitor_vm_exit(
                     child_clone,
-                    vfio_devices,
                     vhost_fs_devices,
                     psi_thread_and_evt_fd,
                     cleaners,
@@ -1186,7 +1246,6 @@ impl VmInstance {
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
-        vfio_devices: Vec<VfioDevice>,
         vhost_user_devices: Vec<SharedChild>,
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
         cleaners: HashMap<String, Box<Cleaner>>,
@@ -1298,8 +1357,6 @@ impl VmInstance {
         virtualmachine::remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
             error!("Error removing temporary files from {:?}: {}", self.temporary_directory, e);
         });
-
-        drop(vfio_devices); // Cleanup devices.
 
         // Now that the VM is gone, shut down the VirtualMachineService server to eagerly free up
         // the server threads.
@@ -1743,29 +1800,6 @@ fn exit_signal(result: &Result<ExitStatus, io::Error>) -> Option<i32> {
     }
 }
 
-const SYSFS_PLATFORM_DEVICES_PATH: &str = "/sys/devices/platform/";
-const VFIO_PLATFORM_DRIVER_PATH: &str = "/sys/bus/platform/drivers/vfio-platform";
-
-fn vfio_argument_for_platform_device(device: &VfioDevice) -> Result<String, Error> {
-    // Check platform device exists
-    let path = Path::new(&device.getSysfsPath()?).canonicalize()?;
-    if !path.starts_with(SYSFS_PLATFORM_DEVICES_PATH) {
-        bail!("{path:?} is not a platform device");
-    }
-
-    // Check platform device is bound to VFIO driver
-    let dev_driver_path = path.join("driver").canonicalize()?;
-    if dev_driver_path != Path::new(VFIO_PLATFORM_DRIVER_PATH) {
-        bail!("{path:?} is not bound to VFIO-platform driver");
-    }
-
-    if let Some(p) = path.to_str() {
-        Ok(format!("--vfio={p},iommu=pkvm-iommu,dt-symbol={0}", device.getDtboLabel()?))
-    } else {
-        bail!("invalid path {path:?}");
-    }
-}
-
 fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
     let mut devices: Vec<SharedChild> = Vec::new();
     for shared_path in &config.shared_paths {
@@ -1912,20 +1946,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     if config.boost_uclamp {
         command.arg("--boost-uclamp");
-    }
-
-    if !config.vfio_devices.is_empty() {
-        if let Some(dtbo) = config.dtbo {
-            command.arg(format!(
-                "--device-tree-overlay={},filter",
-                add_preserved_fd(&mut preserved_fds, dtbo)
-            ));
-        } else {
-            bail!("VFIO devices assigned but no DTBO available");
-        }
-    };
-    for device in config.vfio_devices {
-        command.arg(vfio_argument_for_platform_device(&device)?);
     }
 
     for shared_path in &config.shared_paths {

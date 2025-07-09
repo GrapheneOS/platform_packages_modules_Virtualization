@@ -54,7 +54,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fs;
-use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File};
+use std::fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File};
 use std::io::{Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::NonZeroU16;
@@ -603,15 +603,6 @@ impl VirtualizationService {
         {
             device_tree_overlays.push(dt_overlay);
         }
-        if let Some(dtbo) = get_dtbo(config) {
-            let dtbo = File::from(
-                dtbo.as_ref()
-                    .try_clone()
-                    .context("Failed to create VM DTBO from ParcelFileDescriptor")
-                    .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
-            );
-            device_tree_overlays.push(dtbo);
-        }
 
         let debug_config = DebugConfig::new(config);
 
@@ -726,32 +717,6 @@ impl VirtualizationService {
 
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
 
-        let (vfio_devices, dtbo) = match &config.devices {
-            aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
-                let mut set = HashSet::new();
-                for device in devices.iter() {
-                    let path = canonicalize(device)
-                        .with_context(|| format!("can't canonicalize {device}"))
-                        .or_service_specific_exception(-1)?;
-                    if !set.insert(path) {
-                        return Err(anyhow!("duplicated device {device}"))
-                            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
-                    }
-                }
-                let devices = global_service().bindDevicesToVfioDriver(devices)?;
-                let dtbo_file = File::from(
-                    global_service()
-                        .getDtboFile()?
-                        .as_ref()
-                        .try_clone()
-                        .context("Failed to create VM DTBO from ParcelFileDescriptor")
-                        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
-                );
-                (devices, Some(dtbo_file))
-            }
-            _ => (vec![], None),
-        };
-
         let detect_hangup = is_app_config && gdb_port.is_none();
 
         let memory_reclaim_supported =
@@ -794,8 +759,6 @@ impl VirtualizationService {
             protected: *is_protected,
             detect_hangup,
             gdb_port,
-            vfio_devices,
-            dtbo,
             device_tree_overlays,
             hugepages: config.hugePages,
             boost_uclamp: config.boostUclamp,
@@ -999,16 +962,6 @@ fn maybe_create_reference_dt_overlay(
         None
     };
     Ok(device_tree_overlay)
-}
-
-fn get_dtbo(config: &aidl::VirtualMachineConfig) -> Option<&ParcelFileDescriptor> {
-    let aidl::VirtualMachineConfig::RawConfig(config) = config else {
-        return None;
-    };
-    match &config.devices {
-        aidl::AssignedDevices::Dtbo(dtbo) => dtbo.as_ref(),
-        _ => None,
-    }
 }
 
 fn format_as_android_vm_instance(part: &mut dyn Write) -> std::io::Result<()> {

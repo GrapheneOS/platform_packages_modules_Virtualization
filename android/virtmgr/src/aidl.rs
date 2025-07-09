@@ -51,7 +51,6 @@ pub use android_system_virtualizationservice_internal::aidl::android::system::vi
     AtomVmBooted::AtomVmBooted,
     AtomVmCreationRequested::AtomVmCreationRequested,
     AtomVmExited::AtomVmExited,
-    IBoundDevice::IBoundDevice,
     IVirtualizationServiceInternal::IVirtualizationServiceInternal,
 };
 pub use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
