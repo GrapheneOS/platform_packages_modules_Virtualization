@@ -214,7 +214,7 @@ mod tests {
     }
 
     fn total_chunk_number(file_size: u64) -> u64 {
-        (file_size + 4095) / 4096
+        file_size.div_ceil(4096)
     }
 
     // Returns a reader with fs-verity verification and the file size.
