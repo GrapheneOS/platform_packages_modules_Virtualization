@@ -1242,7 +1242,7 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     read_and_write_file(&mut stream, &PathBuf::from("/proc/zoneinfo"))?;
 
     if is_debuggable() {
-        read_and_write_glob_files(&mut stream, "/proc/*/maps", &[])?;
+        read_and_write_glob_files(&mut stream, "/proc/*/smaps", &[])?;
     }
 
     stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;
