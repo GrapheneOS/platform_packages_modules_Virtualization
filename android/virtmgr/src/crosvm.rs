@@ -207,8 +207,7 @@ impl CrosvmCommand {
         command.add_failure_pipe()?;
         command.add_ramdump_arg(context)?;
         command.add_disk_arg(context)?;
-        command.add_gpu_arg(context);
-        command.add_display_arg(context)?;
+        command.add_gpu_arg(context)?;
         command.add_input_devices_arg(context)?;
         command.add_audio_arg(context);
         command.add_usb_arg(context);
@@ -620,15 +619,14 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_gpu_arg(&mut self, context: &RunContext) {
+    fn add_gpu_arg(&mut self, context: &RunContext) -> Result<()> {
         let config = context.config;
+        let mut gpu_args = Vec::new();
         if let Some(config) = &config.gpuConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("GPU configuration not supported. Ignoring");
-                return;
+                return Ok(());
             }
-
-            let mut gpu_args = Vec::new();
             if let Some(b) = &config.backend {
                 gpu_args.push(format!("backend={}", b));
             }
@@ -658,25 +656,25 @@ impl CrosvmCommand {
             if config.rendererUseVulkan {
                 gpu_args.push("vulkan=true".to_string());
             }
-            self.arg(format!("--gpu={}", gpu_args.join(",")));
         }
-    }
-
-    fn add_display_arg(&mut self, context: &RunContext) -> Result<()> {
-        let config = context.config;
+        let name = &config.name;
         if let Some(config) = &config.displayConfig {
             if !cfg!(paravirtualized_devices) {
                 warn!("Display configuration not supported. Ignoring");
                 return Ok(());
             }
-            self.arg(format!(
-                "--gpu-display=mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}",
+            gpu_args.push(format!(
+                "displays=[[mode=windowed[{},{}],dpi=[{},{}],refresh-rate={}]]",
                 try_into_non_zero_u32(config.width)?,
                 try_into_non_zero_u32(config.height)?,
                 try_into_non_zero_u32(config.horizontalDpi)?,
                 try_into_non_zero_u32(config.verticalDpi)?,
                 try_into_non_zero_u32(config.refreshRate)?,
             ));
+            self.arg(format!("--android-display-service={}", name));
+        }
+        if !gpu_args.is_empty() {
+            self.arg(format!("--gpu={}", gpu_args.join(",")));
         }
         Ok(())
     }

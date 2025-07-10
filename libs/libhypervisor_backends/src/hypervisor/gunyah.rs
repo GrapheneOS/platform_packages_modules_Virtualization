@@ -22,7 +22,7 @@ static ROOTVM_ADDRSPACE_CAP: OnceBox<Option<u64>> = OnceBox::new();
 // 15:0      id
 // 31:16     owner: 0x2 = rootvm
 const ADDRSPACE_INFO_AREA_ROOTVM_ADDRSPACE_ENTRY: u32 = 0x2 << 16;
-#[repr(packed)]
+#[repr(C, packed)]
 struct RootvmAddrspaceCap {
     addrspace_cap: u64,
     _addrspace_rights: u32,

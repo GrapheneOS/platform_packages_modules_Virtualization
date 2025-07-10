@@ -33,7 +33,7 @@ internal class InputForwarder(
     vm: VirtualMachine,
     touchReceiver: View,
     mouseReceiver: View,
-    keyReceiver: View,
+    keyReceiver: DisplaySurfaceView,
 ) {
     private val virtualMachine: VirtualMachine = vm
     private var inputDeviceListener: InputManager.InputDeviceListener? = null
@@ -68,11 +68,15 @@ internal class InputForwarder(
     }
 
     private fun setupTouchReceiver(receiver: View) {
-        receiver.setOnTouchListener(
-            View.OnTouchListener { v: View?, event: MotionEvent? ->
+        receiver.setOnTouchListener { v, event ->
+            virtualMachine.config.customImageConfig?.displayConfig?.let { displayConfig ->
+                val displayWidth = displayConfig.width.toFloat()
+                val scale = displayWidth / v.width
+                virtualMachine.setTouchScale(scale)
                 virtualMachine.sendMultiTouchEvent(event)
             }
-        )
+            true
+        }
     }
 
     private fun setupMouseReceiver(receiver: View) {
@@ -86,13 +90,17 @@ internal class InputForwarder(
         }
     }
 
-    private fun setupKeyReceiver(receiver: View) {
+    private fun setupKeyReceiver(receiver: DisplaySurfaceView) {
+        receiver.virtualMachine = virtualMachine
         receiver.setOnKeyListener { v: View?, code: Int, event: KeyEvent? ->
             // TODO: this is guest-os specific. It shouldn't be handled here.
             if (isVolumeKey(code)) {
                 return@setOnKeyListener false
             }
-            virtualMachine.sendKeyEvent(event)
+            if (event != null) {
+                virtualMachine.sendKeyEvent(event.scanCode.toShort(), event.action != MotionEvent.ACTION_UP)
+            }
+            false
         }
     }
 

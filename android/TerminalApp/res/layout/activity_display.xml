@@ -13,33 +13,86 @@
      See the License for the specific language governing permissions and
      limitations under the License.
  -->
-<merge xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/display_constraint_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     tools:context=".DisplayActivity">
-    <View
-        android:id="@+id/background_touch_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        />
-    <!-- the size should be match_parent -->
-    <SurfaceView
+
+    <com.android.virtualization.terminal.DisplaySurfaceView
         android:id="@+id/surface_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.0"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:focusedByDefault="true"
         android:defaultFocusHighlightEnabled="true">
         <requestFocus />
-    </SurfaceView>
-    <!-- A cursor size in virtio-gpu spec is always 64x64 -->
+    </com.android.virtualization.terminal.DisplaySurfaceView>
+
     <SurfaceView
         android:id="@+id/cursor_surface_view"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         android:layout_width="64px"
-        android:layout_height="64px">
-    </SurfaceView>
+        android:layout_height="64px"
+        tools:ignore="PxUsage"/> <!-- Cursor size is always 64px -->
 
-</merge>
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/display_flow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/surface_view"
+        app:constraint_referenced_ids="fullscreen_button,keyboard_button,modifier_keys_button,pip_button"
+        app:flow_horizontalStyle="spread"
+        app:flow_wrapMode="chain" />
+
+    <Button
+        android:id="@+id/fullscreen_button"
+        style="?attr/materialIconButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_fullscreen" >
+    </Button>
+
+    <Button
+        android:id="@+id/keyboard_button"
+        style="?attr/materialIconButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_keyboard" >
+    </Button>
+
+    <Button
+        android:id="@+id/modifier_keys_button"
+        style="?attr/materialIconButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_modifier_keys" >
+    </Button>
+
+    <Button
+        android:id="@+id/pip_button"
+        style="?attr/materialIconButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_picture_in_picture" >
+    </Button>
+
+    <LinearLayout
+        android:id="@+id/display_activity_modifier_keys_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/display_flow"
+        app:layout_constraintStart_toStartOf="parent"
+        android:orientation="vertical"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

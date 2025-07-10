@@ -16,6 +16,18 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="btn_f1_text" translatable="false">F1</string>
+    <string name="btn_f2_text" translatable="false">F2</string>
+    <string name="btn_f3_text" translatable="false">F3</string>
+    <string name="btn_f4_text" translatable="false">F4</string>
+    <string name="btn_f5_text" translatable="false">F5</string>
+    <string name="btn_f6_text" translatable="false">F6</string>
+    <string name="btn_f7_text" translatable="false">F7</string>
+    <string name="btn_f8_text" translatable="false">F8</string>
+    <string name="btn_f9_text" translatable="false">F9</string>
+    <string name="btn_f10_text" translatable="false">F10</string>
+    <string name="btn_f11_text" translatable="false">F11</string>
+    <string name="btn_f12_text" translatable="false">F12</string>
     <string name="btn_esc_text" translatable="false">Esc</string>
     <string name="btn_tab_text" translatable="false">Tab</string>
     <string name="btn_home_text" translatable="false">Home</string>
