@@ -41,10 +41,10 @@ use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
 use std::cmp::min;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{CString, OsStr, OsString};
 use std::fmt;
-use std::fs::{read_to_string, File, OpenOptions};
+use std::fs::{canonicalize, read_to_string, File, OpenOptions};
 use std::io::{self, Read, Seek};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
@@ -114,13 +114,9 @@ pub struct CrosvmConfig {
     pub protected: bool,
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
-    pub vfio_devices: Vec<VfioDevice>,
-    pub dtbo: Option<File>,
     pub device_tree_overlays: Vec<File>,
     pub hugepages: bool,
     pub boost_uclamp: bool,
-    pub balloon: bool,
-    pub dump_dt_fd: Option<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
     pub start_suspended: bool,
@@ -148,8 +144,6 @@ pub struct SharedPathConfig {
     pub app_domain: bool,
 }
 
-type VfioDevice = Strong<dyn aidl::IBoundDevice>;
-
 /// All information needed for running crosvm
 pub struct RunContext<'a> {
     pub config: &'a aidl::VirtualMachineRawConfig,
@@ -159,6 +153,7 @@ pub struct RunContext<'a> {
     pub console_out: Option<&'a ParcelFileDescriptor>,
     pub console_in: Option<&'a ParcelFileDescriptor>,
     pub log_out: Option<&'a ParcelFileDescriptor>,
+    pub devicetree_dump_out: Option<&'a ParcelFileDescriptor>,
 }
 
 /// Parses RunContext into raw arguments which will be used to construct a crosvm command. The
@@ -172,6 +167,7 @@ pub struct CrosvmCommand {
     // moved out of this struct when the VM gets run. Box is needed to satisfy the fixed-size
     // requirement of Vec.
     cleaners: Option<HashMap<String, Box<Cleaner>>>,
+    balloon_enabled: bool,
 }
 
 type Cleaner = dyn FnOnce(&CleanerContext) -> Result<()> + Send;
@@ -189,6 +185,7 @@ impl CrosvmCommand {
             args: Vec::new(),
             preserved_fds: Vec::new(),
             cleaners: Some(HashMap::new()),
+            balloon_enabled: false,
         };
         command
             .arg("--extended-status")
@@ -202,6 +199,7 @@ impl CrosvmCommand {
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
         command.add_memory_arg(context);
+        command.add_balloon_arg(context);
         command.add_console_arg(context)?;
         command.add_log_arg(context)?;
         command.add_failure_pipe()?;
@@ -213,6 +211,8 @@ impl CrosvmCommand {
         command.add_usb_arg(context);
         command.add_network_arg(context)?;
         command.add_file_backed_mapping_arg(context)?;
+        command.add_assigned_devices_arg(context)?;
+        command.add_dump_dtb_arg(context)?;
         Ok(command)
     }
 
@@ -351,6 +351,25 @@ impl CrosvmCommand {
 
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
+        }
+    }
+
+    fn add_balloon_arg(&mut self, context: &RunContext) {
+        let supported = system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
+            .unwrap_or(false);
+        let requested = context.config.balloon;
+        let enabled = requested && supported;
+
+        if enabled {
+            self.balloon_enabled = true;
+            self.arg("--balloon-page-reporting");
+        } else {
+            warn!(
+                "Memory balloon not enabled:
+                config.balloon={},hypervisor.memory_reclaim.supported={}",
+                requested, supported
+            );
+            self.arg("--no-balloon");
         }
     }
 
@@ -825,6 +844,88 @@ impl CrosvmCommand {
         }
         Ok(())
     }
+
+    fn add_assigned_devices_arg(&mut self, context: &RunContext) -> Result<()> {
+        match &context.config.devices {
+            // Non-VFIO case.
+            aidl::AssignedDevices::Dtbo(Some(dtbo)) => {
+                let fd = dtbo.as_ref().try_clone()?;
+                let path = self.add_preserved_fd(fd);
+                self.args(["--device-tree-overlay", &path.to_string()]);
+            }
+            // VFIO case.
+            aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
+                // A simple sanity check
+                let mut set = HashSet::new();
+                for device in devices.iter() {
+                    let path =
+                        canonicalize(device).context(format!("can't canonicalize {device}"))?;
+                    if !set.insert(path) {
+                        return Err(anyhow!("duplicated device {device}"));
+                    }
+                }
+
+                // Then bind
+                let vfio_devices =
+                    virtualmachine::global_service().bindDevicesToVfioDriver(devices)?;
+
+                const SYSFS_PLATFORM_DEVICES_PATH: &str = "/sys/devices/platform/";
+                const VFIO_PLATFORM_DRIVER_PATH: &str = "/sys/bus/platform/drivers/vfio-platform";
+
+                for device in vfio_devices.iter() {
+                    // Check platform device exists
+                    let path = Path::new(&device.getSysfsPath()?).canonicalize()?;
+                    if !path.starts_with(SYSFS_PLATFORM_DEVICES_PATH) {
+                        bail!("{path:?} is not a platform device");
+                    }
+                    // Check platform device is bound to VFIO driver
+                    let dev_driver_path = path.join("driver").canonicalize()?;
+                    if dev_driver_path != Path::new(VFIO_PLATFORM_DRIVER_PATH) {
+                        bail!("{path:?} is not bound to VFIO-platform driver");
+                    }
+
+                    if let Some(p) = path.to_str() {
+                        self.arg(format!(
+                            "--vfio={p},iommu=pkvm-iommu,dt-symbol={0}",
+                            device.getDtboLabel()?
+                        ));
+                    } else {
+                        bail!("invalid path {path:?}");
+                    }
+                }
+
+                let dtbo_fd =
+                    virtualmachine::global_service().getDtboFile()?.as_ref().try_clone()?;
+                let path = self.add_preserved_fd(dtbo_fd);
+                self.arg(format!("--device-tree-overlay={path},filter"));
+
+                let cleaner = move |_: &CleanerContext| {
+                    drop(vfio_devices); // Cleanup devices.
+                    Ok(())
+                };
+                self.add_cleaner("vfio", Box::new(cleaner))?;
+            }
+            _ => (),
+        };
+        Ok(())
+    }
+
+    fn add_dump_dtb_arg(&mut self, context: &RunContext) -> Result<()> {
+        let dump_dt_fd = if let Some(pfd) = context.devicetree_dump_out {
+            pfd.as_ref().try_clone()?
+        } else if context.debug_config.dump_device_tree {
+            let path = context.temp_dir.join("device_tree.dtb");
+            let file =
+                File::create(path).context("Failed to prepare device tree dump file").with_log()?;
+            file.into()
+        } else {
+            return Ok(());
+        };
+
+        let path = self.add_preserved_fd(dump_dt_fd);
+        self.args(["--dump-device-tree-blob", &path]);
+        Ok(())
+    }
 }
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
@@ -898,14 +999,20 @@ impl VmState {
             let mut config = *config;
             let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
-            let vfio_devices = config.vfio_devices.clone();
 
             let vhost_fs_devices = run_virtiofs(&config)?;
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child = Arc::new(run_vm(config, &instance.crosvm_control_socket_path)?);
 
-            let psi_thread_and_evt_fd = if instance.trim_under_pressure {
+            // It is too late to add a system API to control the ballooning behavior, so we
+            // automically enable it only when the payload is granted
+            // USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION permission as a temporarily
+            // solution. TODO(b/407079334): Replace with SystemApi.
+            let trim_under_pressure = instance.balloon_enabled
+                && virtualmachine::check_use_relaxed_microdroid_rollback_protection().is_ok();
+
+            let psi_thread_and_evt_fd = if trim_under_pressure {
                 let psi_monitor_kill_event = Arc::new(EventFd::new()?);
                 let psi_monitor_kill_event_clone = psi_monitor_kill_event.clone();
                 let instance = instance.clone();
@@ -935,7 +1042,6 @@ impl VmState {
             let monitor_vm_exit_thread = thread::spawn(move || {
                 instance_clone.monitor_vm_exit(
                     child_clone,
-                    vfio_devices,
                     vhost_fs_devices,
                     psi_thread_and_evt_fd,
                     cleaners,
@@ -1082,8 +1188,6 @@ pub struct VmInstance {
     pub vm_metric: Mutex<VmMetric>,
     // Whether virtio-balloon is enabled
     pub balloon_enabled: bool,
-    // Whether to send a trim request on app idle.
-    trim_under_pressure: bool,
     /// List of vendor tee services this VM might access.
     pub vendor_tee_services: Vec<String>,
     /// List of host services this VM might access.
@@ -1123,7 +1227,6 @@ impl VmInstance {
         requester_uid: u32,
         requester_debug_pid: i32,
         requires_vm_service: bool,
-        trim_under_pressure: bool,
         vendor_tee_services: Vec<String>,
         host_services: Vec<String>,
         encrypted_store_kek: Option<Strong<dyn aidl::IEncryptedStoreKEK>>,
@@ -1131,7 +1234,7 @@ impl VmInstance {
         let cid = config.cid;
         let name = config.name.clone();
         let protected = config.protected;
-        let balloon_enabled = config.balloon;
+        let balloon_enabled = config.command.balloon_enabled;
         let requester_uid_name = User::from_uid(Uid::from_raw(requester_uid))
             .ok()
             .flatten()
@@ -1155,7 +1258,6 @@ impl VmInstance {
             payload_state_updated: Condvar::new(),
             requester_uid_name,
             balloon_enabled,
-            trim_under_pressure,
             vendor_tee_services,
             host_services,
             encrypted_store_kek,
@@ -1184,7 +1286,6 @@ impl VmInstance {
     fn monitor_vm_exit(
         &self,
         child: Arc<SharedChild>,
-        vfio_devices: Vec<VfioDevice>,
         vhost_user_devices: Vec<SharedChild>,
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
         cleaners: HashMap<String, Box<Cleaner>>,
@@ -1296,8 +1397,6 @@ impl VmInstance {
         virtualmachine::remove_temporary_files(&self.temporary_directory).unwrap_or_else(|e| {
             error!("Error removing temporary files from {:?}: {}", self.temporary_directory, e);
         });
-
-        drop(vfio_devices); // Cleanup devices.
 
         // Now that the VM is gone, shut down the VirtualMachineService server to eagerly free up
         // the server threads.
@@ -1741,29 +1840,6 @@ fn exit_signal(result: &Result<ExitStatus, io::Error>) -> Option<i32> {
     }
 }
 
-const SYSFS_PLATFORM_DEVICES_PATH: &str = "/sys/devices/platform/";
-const VFIO_PLATFORM_DRIVER_PATH: &str = "/sys/bus/platform/drivers/vfio-platform";
-
-fn vfio_argument_for_platform_device(device: &VfioDevice) -> Result<String, Error> {
-    // Check platform device exists
-    let path = Path::new(&device.getSysfsPath()?).canonicalize()?;
-    if !path.starts_with(SYSFS_PLATFORM_DEVICES_PATH) {
-        bail!("{path:?} is not a platform device");
-    }
-
-    // Check platform device is bound to VFIO driver
-    let dev_driver_path = path.join("driver").canonicalize()?;
-    if dev_driver_path != Path::new(VFIO_PLATFORM_DRIVER_PATH) {
-        bail!("{path:?} is not bound to VFIO-platform driver");
-    }
-
-    if let Some(p) = path.to_str() {
-        Ok(format!("--vfio={p},iommu=pkvm-iommu,dt-symbol={0}", device.getDtboLabel()?))
-    } else {
-        bail!("invalid path {path:?}");
-    }
-}
-
 fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
     let mut devices: Vec<SharedChild> = Vec::new();
     for shared_path in &config.shared_paths {
@@ -1810,12 +1886,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
     command.arg0(config.command.arg0);
     command.args(config.command.args);
     command.arg("--cid").arg(config.cid.to_string());
-
-    if config.balloon {
-        command.arg("--balloon-page-reporting");
-    } else {
-        command.arg("--no-balloon");
-    }
 
     if config.enable_hypervisor_specific_auth_method && !config.protected {
         bail!("hypervisor specific auth method only supported for protected VMs");
@@ -1887,11 +1957,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
     let mut preserved_fds = Vec::new();
     preserved_fds.extend(config.command.preserved_fds);
 
-    if let Some(dump_dt_fd) = config.dump_dt_fd {
-        let dump_dt_fd = add_preserved_fd(&mut preserved_fds, dump_dt_fd);
-        command.arg("--dump-device-tree-blob").arg(dump_dt_fd);
-    }
-
     #[cfg(target_arch = "aarch64")]
     command.arg("--no-pmu");
 
@@ -1910,20 +1975,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     if config.boost_uclamp {
         command.arg("--boost-uclamp");
-    }
-
-    if !config.vfio_devices.is_empty() {
-        if let Some(dtbo) = config.dtbo {
-            command.arg(format!(
-                "--device-tree-overlay={},filter",
-                add_preserved_fd(&mut preserved_fds, dtbo)
-            ));
-        } else {
-            bail!("VFIO devices assigned but no DTBO available");
-        }
-    };
-    for device in config.vfio_devices {
-        command.arg(vfio_argument_for_platform_device(&device)?);
     }
 
     for shared_path in &config.shared_paths {
