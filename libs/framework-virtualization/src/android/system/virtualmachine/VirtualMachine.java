@@ -58,6 +58,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
@@ -468,7 +469,10 @@ public class VirtualMachine implements AutoCloseable {
 
         mVmOutputCaptured = config.isVmOutputCaptured();
         mVmConsoleInputSupported = config.isVmConsoleInputSupported();
-        mConnectVmConsole = config.isConnectVmConsole();
+        mConnectVmConsole = Build.isDebuggable() && config.isConnectVmConsole();
+        if (mConnectVmConsole != config.isConnectVmConsole()) {
+            Log.w(TAG, "Ignored 'connectVmConsole' option on non-debuggable build");
+        }
 
         VirtualMachineCustomImageConfig customImageConfig;
         customImageConfig = config.getCustomImageConfig();
