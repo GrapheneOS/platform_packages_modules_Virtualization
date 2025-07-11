@@ -1543,6 +1543,14 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         assumeKernelSupported(os);
         assumeVmTypeSupported(os, protectedVm);
 
+        // Enabling adb root sends SIGHUP to other terminals, and ultimately results in the
+        // virtualization service dying after the VM starts up. To avoid that, enable adb root
+        // first.
+        ITestDevice device = getDevice();
+        boolean disableRoot = !device.isAdbRoot();
+        device.enableAdbRoot();
+        assumeTrue("adb root is not enabled", device.isAdbRoot());
+
         MicrodroidBuilder microdroidBuilder =
                 MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME),
                 "assets/vm_config.json")
@@ -1558,11 +1566,6 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
         mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
         mMicrodroidDevice.enableAdbRoot();
-
-        ITestDevice device = getDevice();
-        boolean disableRoot = !device.isAdbRoot();
-        device.enableAdbRoot();
-        assumeTrue("adb root is not enabled", device.isAdbRoot());
 
         CommandRunner android = new CommandRunner(device);
         String dumpsysOutput = android.run("dumpsys", "android.system.virtualizationservice");
