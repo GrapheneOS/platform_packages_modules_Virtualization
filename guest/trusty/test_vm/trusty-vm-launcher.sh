@@ -17,5 +17,6 @@
 mkdir -p /data/local/tmp/trusty_test_vm/logs || true
 nohup sh -c 'exec -a "trusty_test_vm_run" /apex/com.android.virt/bin/vm run \
    --console /data/local/tmp/trusty_test_vm/logs/test_vm_console.log \
+   --tee-services guest_ffa_tee_service \
    /data/local/tmp/trusty_test_vm/trusty-test_vm-config.json' > /data/local/tmp/trusty_test_vm/nohup.out &
 sh /data/local/tmp/trusty_test_vm/trusty-wait-ready.sh
