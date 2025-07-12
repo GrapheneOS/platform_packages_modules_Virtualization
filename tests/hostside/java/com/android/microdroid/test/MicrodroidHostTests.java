@@ -1526,6 +1526,57 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         checkBacktraceGeneratedWithDebuggerd(protectedVm, os, "assets/vm_config.json");
     }
 
+    private void checkSmapsRollupEntries(String dumpsysOutput) throws Exception {
+        for (String s: dumpsysOutput.split("\n")) {
+            s = s.trim();
+            // Ensure that the process' address space range is not leaked.
+            assertThat(s.matches("^[0-9a-f]+-[0-9a-f]+.*\\[rollup\\]$")).isFalse();
+        }
+    }
+
+    @Test
+    @Parameters(method = "params")
+    @TestCaseName("{method}_protectedVm_{0}_os_{1}")
+    public void testDumpsysVirtualizationServiceOutput(boolean protectedVm,
+            String os) throws Exception {
+        // Preconditions
+        assumeKernelSupported(os);
+        assumeVmTypeSupported(os, protectedVm);
+
+        // Enabling adb root sends SIGHUP to other terminals, and ultimately results in the
+        // virtualization service dying after the VM starts up. To avoid that, enable adb root
+        // first.
+        ITestDevice device = getDevice();
+        boolean disableRoot = !device.isAdbRoot();
+        device.enableAdbRoot();
+        assumeTrue("adb root is not enabled", device.isAdbRoot());
+
+        MicrodroidBuilder microdroidBuilder =
+                MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME),
+                "assets/vm_config.json")
+                .debugLevel(DEBUG_LEVEL_FULL)
+                .memoryMib(minMemorySize())
+                .cpuTopology("match_host")
+                .protectedVm(protectedVm);
+
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
+        mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
+        mMicrodroidDevice.enableAdbRoot();
+
+        CommandRunner android = new CommandRunner(device);
+        String dumpsysOutput = android.run("dumpsys", "android.system.virtualizationservice");
+        assertThat(dumpsysOutput).isNotEmpty();
+        checkSmapsRollupEntries(dumpsysOutput);
+
+        if (disableRoot) {
+            device.disableAdbRoot();
+        }
+    }
+
     @Before
     public void setUp() throws Exception {
         assumeDeviceIsCapable(getDevice());

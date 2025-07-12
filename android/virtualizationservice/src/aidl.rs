@@ -37,6 +37,7 @@ use binder::{
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
 use nix::fcntl::OFlag;
+use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
 use nix::unistd::{chown, pipe2, Uid};
 use openssl::x509::X509;
 use rand::Fill;
@@ -196,20 +197,26 @@ impl VirtualizationServiceInternal {
         };
         let service_clone = service.clone();
 
-        service.shutdown_monitor.lock().unwrap().start(move |prop| {
-            info!("Prop {} triggered. Stopping VMs...", prop);
-            service_clone.state.lock().unwrap().virtual_machines.iter().for_each(|(key, value)| {
-                let cid = *key;
-                let vm = value.0.clone();
-                // Don't wait for the VM to be completely killed. Move on to the next VM as soon as
-                // possible.
-                std::thread::spawn(move || {
-                    let _ = vm.stop().inspect_err(|e| {
-                        error!("Failed to stop virtual machine ({}): {:?}", cid, e);
-                    });
-                });
+        // SAFETY: ShutdownMonitor::start is called only once as
+        // VirtualizationServiceInternal::init is called only once. This place is the only where
+        // ShutdownMonitor is created.
+        unsafe {
+            service.shutdown_monitor.lock().unwrap().start(move || {
+                service_clone.state.lock().unwrap().virtual_machines.iter().for_each(
+                    |(key, value)| {
+                        let cid = *key;
+                        let vm = value.0.clone();
+                        // Don't wait for the VM to be completely killed. Move on to the next VM as
+                        // soon as possible.
+                        std::thread::spawn(move || {
+                            let _ = vm.stop().inspect_err(|e| {
+                                error!("Failed to stop virtual machine ({}): {:?}", cid, e);
+                            });
+                        });
+                    },
+                );
             });
-        });
+        }
 
         std::thread::spawn(|| {
             if let Err(e) = handle_stream_connection_tombstoned() {
@@ -1055,32 +1062,62 @@ impl ShutdownMonitor {
         Default::default()
     }
 
-    fn start<F>(&mut self, handler: F)
+    /// # SAFETY: this function must be called only once in the program.
+    unsafe fn start<F>(&mut self, handler: F)
     where
-        F: FnOnce(&str) + std::marker::Send + std::clone::Clone + 'static,
+        F: FnOnce() + std::marker::Send + std::clone::Clone + 'static,
     {
         // When the system enters a reboot or shutdown, either attended or unattened, the sysprop
         // `sys.shutdown.requested` is set first by the ShutdownThread in the system server to give
-        // an early notice to everybody in the system. Once the system server is ready to really
-        // shutdown, it triggers `sys.powerctl` which is handled by init for the final step.
-        //
-        // We need to handle sys.powerctl as well, since in an emergency case (ex: thermal reboot),
-        // the system may enter the shutdown sequence without sending `sys.shutdown.requested` and
-        // waiting for everyone to react.
-        self.threads[0] = Some(Self::new_thread("sys.shutdown.requested", handler.clone()));
-        self.threads[1] = Some(Self::new_thread("sys.powerctl", handler));
-    }
-
-    fn new_thread<F>(prop_name: &str, handler: F) -> JoinHandle<()>
-    where
-        F: FnOnce(&str) + std::marker::Send + 'static,
-    {
-        let prop_name = prop_name.to_owned();
-        std::thread::spawn(move || {
-            let mut watcher = system_properties::PropertyWatcher::new(&prop_name).unwrap();
+        // an early notice to everybody in the system.
+        let handler_clone = handler.clone();
+        self.threads[0] = Some(std::thread::spawn(move || {
+            let mut watcher =
+                system_properties::PropertyWatcher::new("sys.shutdown.requested").unwrap();
             while watcher.wait(None).is_err() {}
-            handler(&prop_name);
-        })
+            info!("sys.shutdown.requested triggered. Stopping VMs...");
+            handler_clone();
+        }));
+
+        self.threads[1] = {
+            let (reader, writer) = pipe2(OFlag::O_CLOEXEC).expect("pipe failed");
+
+            // SAFETY: SIGNAL_PIPE_WRITE_FD is read only by the handle_sigterm function. The
+            // function gets executed far after this write is done; the function first needs to be
+            // registered as a signal handler (done just below), and then SIGTERM should be sent to
+            // this process, which is out of our control, but usually is during the shutdown of the
+            // device. Lastly, this part is executed only once by the safety requirement of the
+            // containing function `start`.
+            unsafe {
+                use std::os::fd::AsRawFd;
+                SIGNAL_PIPE_WRITE_FD = writer.as_raw_fd();
+            }
+
+            let sa_handler = SigHandler::Handler(handle_sigterm);
+            let sa_flags = SaFlags::SA_RESTART | SaFlags::SA_RESETHAND;
+            let sa_mask = SigSet::empty();
+            let sa = SigAction::new(sa_handler, sa_flags, sa_mask);
+
+            // SAFETY: we do `write` in the handler, which is signal safe.
+            unsafe { sigaction(Signal::SIGTERM, &sa) }
+                .expect("failed to set sigaction for SIGTERM");
+
+            Some(std::thread::spawn(move || {
+                let mut reader: File = reader.into();
+                let mut buffer = [0u8; 1];
+                loop {
+                    match reader.read_exact(&mut buffer) {
+                        Ok(()) => {
+                            info!("SIGTERM received. Stopping VMs...");
+                            handler();
+                            break;
+                        }
+                        Err(e) => error!("Error while waiting for the sigterm handler. {e:?}"),
+                    }
+                }
+                drop(writer);
+            }))
+        };
     }
 
     fn shutdown_thread(thread: JoinHandle<()>) {
@@ -1098,6 +1135,18 @@ impl Drop for ShutdownMonitor {
             }
         })
     }
+}
+
+static mut SIGNAL_PIPE_WRITE_FD: i32 = -1;
+
+extern "C" fn handle_sigterm(_signal: libc::c_int) {
+    // SAFETY: the FD is open because it is owned by the shutdown thread above and this variable
+    // was set "before" this function is registered as a signal handler and gets executed. Also
+    // note that this handler is registered with SA_RESETHAND, so it's called at most once, which
+    // means it's not called after the FD is closed by the thread.
+    let fd = unsafe { std::os::fd::BorrowedFd::borrow_raw(SIGNAL_PIPE_WRITE_FD) };
+    let one_byte: [u8; 1] = [1];
+    let _ = nix::unistd::write(fd, &one_byte);
 }
 
 #[cfg(test)]

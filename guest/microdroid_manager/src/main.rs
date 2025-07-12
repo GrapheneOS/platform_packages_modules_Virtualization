@@ -71,7 +71,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
 use std::os::fd::AsRawFd;
 use std::os::raw::c_char;
@@ -1169,11 +1169,25 @@ fn start_dump_service() -> Result<i32> {
 fn read_and_write_file(stream: &mut VsockStream, file_path: &Path) -> Result<()> {
     let path_str = file_path.display().to_string();
     let header = format!("---- {} begin ----\n", &path_str);
+    let footer = format!("\n---- {} end ----\n", &path_str);
     stream.write_all(header.as_bytes())?; // Write the file path header
 
     match File::open(file_path) {
-        Ok(mut f) => {
-            if let Err(e) = std::io::copy(&mut f, stream) {
+        Ok(f) => {
+            let mut reader = BufReader::new(f);
+
+            if file_path.ends_with("smaps_rollup") {
+                // Discard the first line since that has information about the address
+                // space of the process. Some files may be empty and will return ESRCH
+                // so just terminate early in that case.
+                let mut first_line = String::new();
+                if reader.read_line(&mut first_line).is_err() {
+                    stream.write_all(footer.as_bytes())?;
+                    return Ok(());
+                }
+            }
+
+            if let Err(e) = std::io::copy(&mut reader, stream) {
                 stream.write_all(format!("failed to read {}: {:?}", &path_str, e).as_bytes())?;
             }
         }
@@ -1182,7 +1196,6 @@ fn read_and_write_file(stream: &mut VsockStream, file_path: &Path) -> Result<()>
         }
     }
 
-    let footer = format!("\n---- {} end ----\n", &path_str);
     stream.write_all(footer.as_bytes())?;
 
     Ok(())
@@ -1220,9 +1233,16 @@ fn handle_dump_to_client(mut stream: VsockStream) -> Result<()> {
     read_and_write_file(&mut stream, &PathBuf::from("/proc/meminfo"))?;
     read_and_write_glob_files(&mut stream, "/proc/pressure/*", &[])?;
     read_and_write_glob_files(&mut stream, "/sys/fs/cgroup/*/memory.*", &["memory.reclaim"])?;
+    read_and_write_glob_files(&mut stream, "/proc/*/smaps_rollup", &[])?;
+    // Useful for understanding the amount of higher order pages in the system.
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/pagetypeinfo"))?;
+    // Useful for global memory management stats.
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/vmstat"))?;
+    // Useful for per-zone stats (e.g. watermarks).
+    read_and_write_file(&mut stream, &PathBuf::from("/proc/zoneinfo"))?;
 
     if is_debuggable() {
-        read_and_write_glob_files(&mut stream, "/proc/*/maps", &[])?;
+        read_and_write_glob_files(&mut stream, "/proc/*/smaps", &[])?;
     }
 
     stream.shutdown(Shutdown::Write).context("Failed to shutdown")?;

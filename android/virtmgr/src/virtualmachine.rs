@@ -54,7 +54,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::ffi::CStr;
 use std::fs;
-use std::fs::{canonicalize, create_dir_all, read_dir, remove_dir_all, remove_file, File};
+use std::fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File};
 use std::io::{Error, ErrorKind, Seek, SeekFrom, Write};
 use std::iter;
 use std::num::NonZeroU16;
@@ -603,25 +603,8 @@ impl VirtualizationService {
         {
             device_tree_overlays.push(dt_overlay);
         }
-        if let Some(dtbo) = get_dtbo(config) {
-            let dtbo = File::from(
-                dtbo.as_ref()
-                    .try_clone()
-                    .context("Failed to create VM DTBO from ParcelFileDescriptor")
-                    .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
-            );
-            device_tree_overlays.push(dtbo);
-        }
 
         let debug_config = DebugConfig::new(config);
-
-        let dump_dt_fd = if let Some(fd) = dump_dt_fd {
-            Some(clone_file(fd)?)
-        } else if debug_config.dump_device_tree {
-            Some(prepare_dump_dt_file(&temporary_directory)?)
-        } else {
-            None
-        };
 
         let (is_app_config, config) = match config {
             aidl::VirtualMachineConfig::RawConfig(config) => {
@@ -726,54 +709,7 @@ impl VirtualizationService {
 
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
 
-        let (vfio_devices, dtbo) = match &config.devices {
-            aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
-                let mut set = HashSet::new();
-                for device in devices.iter() {
-                    let path = canonicalize(device)
-                        .with_context(|| format!("can't canonicalize {device}"))
-                        .or_service_specific_exception(-1)?;
-                    if !set.insert(path) {
-                        return Err(anyhow!("duplicated device {device}"))
-                            .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
-                    }
-                }
-                let devices = global_service().bindDevicesToVfioDriver(devices)?;
-                let dtbo_file = File::from(
-                    global_service()
-                        .getDtboFile()?
-                        .as_ref()
-                        .try_clone()
-                        .context("Failed to create VM DTBO from ParcelFileDescriptor")
-                        .or_binder_exception(ExceptionCode::BAD_PARCELABLE)?,
-                );
-                (devices, Some(dtbo_file))
-            }
-            _ => (vec![], None),
-        };
-
         let detect_hangup = is_app_config && gdb_port.is_none();
-
-        let memory_reclaim_supported =
-            system_properties::read_bool("hypervisor.memory_reclaim.supported", false)
-                .unwrap_or(false);
-
-        let balloon = config.balloon && memory_reclaim_supported;
-
-        if !balloon {
-            warn!(
-                "Memory balloon not enabled:
-                config.balloon={},hypervisor.memory_reclaim.supported={}",
-                config.balloon, memory_reclaim_supported
-            );
-        }
-
-        // It is too late to add a system API to control the ballooning behavior, so we automically
-        // enable it only when the payload is granted USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION
-        // permission as a temporarily solution.
-        // TODO(b/407079334): Replace with SystemApi.
-        let trim_under_pressure =
-            balloon && check_use_relaxed_microdroid_rollback_protection().is_ok();
 
         let context = RunContext {
             config,
@@ -783,6 +719,7 @@ impl VirtualizationService {
             console_out: console_out_fd,
             console_in: console_in_fd,
             log_out: log_fd,
+            devicetree_dump_out: dump_dt_fd,
         };
         let command = CrosvmCommand::build_from(&context).or_service_specific_exception(-1)?;
 
@@ -794,13 +731,9 @@ impl VirtualizationService {
             protected: *is_protected,
             detect_hangup,
             gdb_port,
-            vfio_devices,
-            dtbo,
             device_tree_overlays,
             hugepages: config.hugePages,
             boost_uclamp: config.boostUclamp,
-            balloon,
-            dump_dt_fd,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
             start_suspended: !vendor_tee_services.is_empty(),
@@ -815,7 +748,6 @@ impl VirtualizationService {
                 requester_uid,
                 requester_debug_pid,
                 requires_vm_service,
-                trim_under_pressure,
                 vendor_tee_services,
                 config.hostServices.clone(),
                 encrypted_store_kek,
@@ -999,16 +931,6 @@ fn maybe_create_reference_dt_overlay(
         None
     };
     Ok(device_tree_overlay)
-}
-
-fn get_dtbo(config: &aidl::VirtualMachineConfig) -> Option<&ParcelFileDescriptor> {
-    let aidl::VirtualMachineConfig::RawConfig(config) = config else {
-        return None;
-    };
-    match &config.devices {
-        aidl::AssignedDevices::Dtbo(dtbo) => dtbo.as_ref(),
-        _ => None,
-    }
 }
 
 fn format_as_android_vm_instance(part: &mut dyn Write) -> std::io::Result<()> {
@@ -1337,7 +1259,7 @@ fn check_use_custom_virtual_machine() -> binder::Result<()> {
 
 /// Check whether the caller of the current binder method is allowed to use relaxed microdroid
 /// rollback protection schema.
-fn check_use_relaxed_microdroid_rollback_protection() -> binder::Result<()> {
+pub fn check_use_relaxed_microdroid_rollback_protection() -> binder::Result<()> {
     check_permission("android.permission.USE_RELAXED_MICRODROID_ROLLBACK_PROTECTION")
 }
 
@@ -1791,16 +1713,6 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     // SAFETY: ownership is transferred from stream to f
     let f = unsafe { File::from_raw_fd(stream.into_raw_fd()) };
     ParcelFileDescriptor::new(f)
-}
-
-/// Create the empty device tree dump file
-fn prepare_dump_dt_file(temporary_directory: &Path) -> binder::Result<File> {
-    let path = temporary_directory.join("device_tree.dtb");
-    let file = File::create(path)
-        .context("Failed to prepare device tree dump file")
-        .with_log()
-        .or_service_specific_exception(-1)?;
-    Ok(file)
 }
 
 fn is_protected(config: &aidl::VirtualMachineConfig) -> bool {
