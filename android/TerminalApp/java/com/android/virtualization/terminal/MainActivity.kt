@@ -442,9 +442,10 @@ public class MainActivity :
         val metrics = wm.currentWindowMetrics
         val dispBounds = metrics.bounds
 
-        // For now, display activity runs as landscape mode
-        val height = Math.min(dispBounds.right, dispBounds.bottom)
-        val width = Math.max(dispBounds.right, dispBounds.bottom)
+        // For now, display size is fixed.(1280x720)
+        // TODO(b/427895310): support various resolutions
+        val width = 1280
+        val height = 720
         var dpi = (DisplayMetrics.DENSITY_DEFAULT * metrics.density).toInt()
         var refreshRate = display.refreshRate.toInt()
 

@@ -67,7 +67,10 @@ class DisplayActivity : BaseActivity() {
 
     private fun setupDisplayAndInput(vm: VirtualMachine) {
         // Connect the views to the VM
-        displayProvider = DisplayProvider(mainView, cursorView)
+        val width = vm.config.customImageConfig?.displayConfig!!.width
+        val height = vm.config.customImageConfig?.displayConfig!!.height
+        val ratio = android.util.Rational(width, height)
+        displayProvider = DisplayProvider(mainView, cursorView, width, height)
         InputForwarder(
             this,
             vm,
@@ -76,11 +79,6 @@ class DisplayActivity : BaseActivity() {
             mainView,
         )
         // Calculate the screen ratio of the VM
-        val ratio =
-            android.util.Rational(
-                vm.config.customImageConfig?.displayConfig!!.width,
-                vm.config.customImageConfig?.displayConfig!!.height
-            )
         (mainView.layoutParams as ConstraintLayout.LayoutParams).dimensionRatio = ratio.toFloat().toString()
         mainView.post {
             val sourceRectHint = Rect()
