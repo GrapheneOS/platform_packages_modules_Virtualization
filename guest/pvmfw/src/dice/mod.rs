@@ -99,7 +99,8 @@ impl PartialInputs {
         let component_name = data.name.clone().unwrap_or(String::from("vm_entry"));
         // We use rollback_index from vbmeta as the security_version field in dice certificate.
         let security_version = data.rollback_index;
-        let rkp_vm_marker = data.has_capability(Capability::RemoteAttest)
+        // TODO(b/391620545): Replace this with a dedicated Capability.
+        let rkp_vm_marker = data.name.as_deref() == Some(VerifiedBootData::RKP_VM_NAME)
             || data.has_capability(Capability::TrustySecurityVm);
 
         Ok(Self {
@@ -247,8 +248,11 @@ mod tests {
 
     #[test]
     fn rkp_vm_conversion() {
-        let vb_data =
-            VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
+        let vb_data = VerifiedBootData {
+            capabilities: vec![Capability::RemoteAttest],
+            name: Some(String::from(VerifiedBootData::RKP_VM_NAME)),
+            ..BASE_VB_DATA
+        };
         let inputs = PartialInputs::new(&vb_data, None).unwrap();
 
         assert!(inputs.rkp_vm_marker);
@@ -270,12 +274,15 @@ mod tests {
 
     #[test]
     fn rkp_vm_config_descriptor_has_rkp_vm_marker_and_component_name() {
-        let vb_data =
-            VerifiedBootData { capabilities: vec![Capability::RemoteAttest], ..BASE_VB_DATA };
+        let vb_data = VerifiedBootData {
+            capabilities: vec![Capability::RemoteAttest],
+            name: Some(String::from(VerifiedBootData::RKP_VM_NAME)),
+            ..BASE_VB_DATA
+        };
         let inputs = PartialInputs::new(&vb_data, Some(HASH)).unwrap();
         let config_map = decode_config_descriptor(&inputs);
 
-        assert_eq!(config_map.get(&COMPONENT_NAME_KEY).unwrap().as_text().unwrap(), "vm_entry");
+        assert_eq!(config_map.get(&COMPONENT_NAME_KEY).unwrap().as_text().unwrap(), "rkp_vm");
         assert!(config_map.get(&RKP_VM_MARKER_KEY).unwrap().is_null());
     }
 

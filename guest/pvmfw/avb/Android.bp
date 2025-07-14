@@ -61,7 +61,7 @@ rust_test {
         ":test_image_with_4k_page_size",
         ":test_image_with_9k_page_size",
         ":test_image_with_16k_page_size",
-        ":test_image_with_service_vm_prop",
+        ":test_image_with_service_vm_name",
         ":test_image_with_unknown_vm_type_prop",
         ":test_image_with_duplicated_capability",
         ":test_image_with_rollback_index_5",
@@ -265,7 +265,7 @@ avb_add_hash_footer {
 }
 
 avb_add_hash_footer {
-    name: "test_image_with_service_vm_prop",
+    name: "test_image_with_service_vm_name",
     src: ":unsigned_test_image",
     partition_name: "boot",
     private_key: ":pvmfw_sign_key",
@@ -274,6 +274,10 @@ avb_add_hash_footer {
         {
             name: "com.android.virt.cap",
             value: "remote_attest",
+        },
+        {
+            name: "com.android.virt.name",
+            value: "rkp_vm",
         },
     ],
 }

@@ -52,6 +52,9 @@ pub struct VerifiedBootData<'a> {
 }
 
 impl VerifiedBootData<'_> {
+    /// Name of the Remote Key Provisioning VM.
+    pub const RKP_VM_NAME: &'static str = "rkp_vm";
+
     /// Returns whether the kernel have the given capability
     pub fn has_capability(&self, cap: Capability) -> bool {
         self.capabilities.contains(&cap)
