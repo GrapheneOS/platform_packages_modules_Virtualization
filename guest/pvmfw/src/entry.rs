@@ -181,9 +181,9 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
         config_entries.vm_ref_dt,
         config_entries.reserved_mem.as_deref(),
     )?;
-    if let Some(r) = preserved_memory {
-        flush(r);
-        slices.add_preserved_memory(r);
+    if !preserved_memory.is_empty() {
+        flush(preserved_memory);
+        slices.add_preserved_memory(preserved_memory);
     }
 
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.

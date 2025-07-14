@@ -67,7 +67,7 @@ fn main<'a>(
     vm_dtbo: Option<&mut [u8]>,
     vm_ref_dt: Option<&[u8]>,
     reserved_mem: Option<&[u8]>,
-) -> Result<(Option<&'a [u8]>, bool), RebootReason> {
+) -> Result<(&'a [u8], bool), RebootReason> {
     info!("pVM firmware");
     debug!("FDT: {:?}", untrusted_fdt.as_ptr());
     debug!("Signed kernel: {:?} ({:#x} bytes)", signed_kernel.as_ptr(), signed_kernel.len());
@@ -193,11 +193,7 @@ fn main<'a>(
 
     info!("Starting payload...");
 
-    if preserved_memory.is_empty() {
-        Ok((None, debuggable))
-    } else {
-        Ok((Some(preserved_memory), debuggable))
-    }
+    Ok((preserved_memory, debuggable))
 }
 
 fn parse_dice_handover(
