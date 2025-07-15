@@ -926,7 +926,10 @@ impl AssignedDeviceInfo {
         if let Some(interrupts) = &self.interrupts {
             dst.setprop(c"interrupts", interrupts)?;
         } else {
-            dst.nop_property(c"interrupts")?;
+            match dst.nop_property(c"interrupts") {
+                Err(FdtError::NotFound) => Ok(()),
+                r => r,
+            }?;
         }
 
         if let Some(iommus) = &self.iommus {

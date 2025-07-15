@@ -44,7 +44,7 @@ pub fn perform_rollback_protection(
     cdi_seal: &[u8],
 ) -> Result<(bool, Hidden, bool), RebootReason> {
     let instance_hash = dice_inputs.instance_hash;
-    if let Some(fixed) = get_fixed_rollback_protection(verified_boot_data) {
+    if let Some(fixed) = get_fixed_rollback_protection_index(verified_boot_data) {
         // Prevent attackers from impersonating well-known images.
         perform_fixed_index_rollback_protection(verified_boot_data, fixed)?;
         Ok((false, instance_hash.unwrap(), false))
@@ -73,11 +73,10 @@ fn perform_deferred_rollback_protection(
     }
 }
 
-fn get_fixed_rollback_protection(verified_boot_data: &VerifiedBootData) -> Option<u64> {
-    if verified_boot_data.has_capability(Capability::RemoteAttest) {
-        Some(service_vm_version::VERSION)
-    } else {
-        None
+fn get_fixed_rollback_protection_index(verified_boot_data: &VerifiedBootData) -> Option<u64> {
+    match verified_boot_data.name.as_deref()? {
+        VerifiedBootData::RKP_VM_NAME => Some(service_vm_version::VERSION),
+        _ => None,
     }
 }
 

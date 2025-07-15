@@ -644,10 +644,15 @@ def resign_rialto(args, key, rialto_path):
 
     # Verify the new AVB footer.
     updated_info, updated_descriptors = AvbInfo(args, rialto_path)
-    assert len(updated_descriptors) == 2, \
-        f"There should be two descriptors for rialto. Updated descriptors: {updated_descriptors}"
+    EXPECTED_DESC_COUNT = 3
+    assert len(updated_descriptors) == EXPECTED_DESC_COUNT, \
+        f"There should be {EXPECTED_DESC_COUNT} descriptor(s) for rialto. " \
+        f"Updated descriptors: {updated_descriptors}"
+
     updated_prop = find_all_values_by_key(updated_descriptors, "Prop")
-    assert len(updated_prop) == 1, "There should be only one Prop descriptor for rialto. " \
+    EXPECTED_PROP_COUNT = 2
+    assert len(updated_prop) == EXPECTED_PROP_COUNT, \
+        f"There should be {EXPECTED_PROP_COUNT} Prop descriptor(s) for rialto. " \
         f"Updated descriptors: {updated_descriptors}"
     assert updated_info["Rollback Index"] != "0", "Rollback index should not be zero for rialto."
 
