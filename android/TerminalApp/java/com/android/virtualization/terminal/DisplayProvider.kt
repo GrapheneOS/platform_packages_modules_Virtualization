@@ -38,6 +38,8 @@ import libcore.io.IoBridge
 internal class DisplayProvider(
     private val mainView: SurfaceView,
     private val cursorView: SurfaceView,
+    private val width: Int,
+    private val height: Int,
 ) {
     private val virtService: IVirtualizationServiceInternal by lazy {
         val b = ServiceManager.waitForService("android.system.virtualizationservice")
@@ -87,6 +89,9 @@ internal class DisplayProvider(
         }
 
         override fun surfaceCreated(holder: SurfaceHolder) {
+            if (surfaceKind == SurfaceKind.MAIN) {
+                holder.setFixedSize(width, height)
+            }
             try {
                 getDisplayService().setSurface(holder.getSurface(), isForCursor())
             } catch (e: Exception) {

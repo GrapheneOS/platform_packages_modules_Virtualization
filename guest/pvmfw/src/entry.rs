@@ -24,7 +24,7 @@ use log::LevelFilter;
 use vmbase::{
     bzimage, configure_heap, console_writeln, limit_stack_size, main,
     memory::{
-        map_image_footer, unshare_all_memory, unshare_all_mmio_except_uart, unshare_uart,
+        flush, map_image_footer, unshare_all_memory, unshare_all_mmio_except_uart, unshare_uart,
         MemoryTrackerError, SIZE_256KB, SIZE_4KB,
     },
     power::reboot,
@@ -182,6 +182,7 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
         config_entries.reserved_mem.as_deref(),
     )?;
     if let Some(r) = preserved_memory {
+        flush(r);
         slices.add_preserved_memory(r);
     }
 

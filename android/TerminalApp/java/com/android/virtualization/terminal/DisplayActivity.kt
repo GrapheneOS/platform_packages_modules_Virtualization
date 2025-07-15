@@ -53,10 +53,7 @@ class DisplayActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_display)
         initializeViews()
-        val vmm =
-            applicationContext.getSystemService(
-                VirtualMachineManager::class.java
-            )
+        val vmm = applicationContext.getSystemService(VirtualMachineManager::class.java)
         debianVm = vmm?.get("debian")
         // TODO: Add error handling if vmm is missing
         debianVm?.let { vm ->
@@ -67,29 +64,23 @@ class DisplayActivity : BaseActivity() {
 
     private fun setupDisplayAndInput(vm: VirtualMachine) {
         // Connect the views to the VM
-        displayProvider = DisplayProvider(mainView, cursorView)
-        InputForwarder(
-            this,
-            vm,
-            mainView,
-            mainView,
-            mainView,
-        )
+        val width = vm.config.customImageConfig?.displayConfig!!.width
+        val height = vm.config.customImageConfig?.displayConfig!!.height
+        val ratio = android.util.Rational(width, height)
+        displayProvider = DisplayProvider(mainView, cursorView, width, height)
+        InputForwarder(this, vm, mainView, mainView, mainView)
         // Calculate the screen ratio of the VM
-        val ratio =
-            android.util.Rational(
-                vm.config.customImageConfig?.displayConfig!!.width,
-                vm.config.customImageConfig?.displayConfig!!.height
-            )
-        (mainView.layoutParams as ConstraintLayout.LayoutParams).dimensionRatio = ratio.toFloat().toString()
+        (mainView.layoutParams as ConstraintLayout.LayoutParams).dimensionRatio =
+            ratio.toFloat().toString()
         mainView.post {
             val sourceRectHint = Rect()
             mainView.getGlobalVisibleRect(sourceRectHint)
-            pictureInPictureParams = PictureInPictureParams.Builder()
-                .setAspectRatio(ratio)
-                .setSourceRectHint(sourceRectHint)
-                .setAutoEnterEnabled(true)
-                .build()
+            pictureInPictureParams =
+                PictureInPictureParams.Builder()
+                    .setAspectRatio(ratio)
+                    .setSourceRectHint(sourceRectHint)
+                    .setAutoEnterEnabled(true)
+                    .build()
             setPictureInPictureParams(pictureInPictureParams)
         }
     }
@@ -111,41 +102,40 @@ class DisplayActivity : BaseActivity() {
     }
 
     private fun setupButtons() {
-        pipButton.setOnClickListener {
-            this.enterPictureInPictureMode(pictureInPictureParams)
-        }
+        pipButton.setOnClickListener { this.enterPictureInPictureMode(pictureInPictureParams) }
 
-        fullscreenButton.setOnClickListener {
-            toggleFullscreen()
-        }
+        fullscreenButton.setOnClickListener { toggleFullscreen() }
 
-        keyboardButton.setOnClickListener {
-            showSoftKeyboard()
-        }
+        keyboardButton.setOnClickListener { showSoftKeyboard() }
     }
 
     private fun setupModifierKeys() {
         val modifierKeysContainerView =
             findViewById<RelativeLayout>(R.id.display_activity_modifier_keys_container) as ViewGroup
-        val modifierKeysView = LayoutInflater.from(this).inflate(R.layout.modifier_keys_display, modifierKeysContainerView)
+        val modifierKeysView =
+            LayoutInflater.from(this)
+                .inflate(R.layout.modifier_keys_display, modifierKeysContainerView)
         modifierKeysView.isVisible = false
 
         findViewById<MaterialButton>(R.id.modifier_keys_button).setOnClickListener {
             modifierKeysView.isVisible = !modifierKeysView.isVisible
         }
 
-        // Use a onTouchListener to catch the press and release event for combination keys like Ctrl-T
-        val listener = View.OnTouchListener { view, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP -> {
-                    BTN_KEY_CODE_MAP[view.id]?.let { keyCode ->
-                        debianVm?.sendKeyEvent(keyCode, event.action == MotionEvent.ACTION_DOWN)
+        // Use a onTouchListener to catch the press and release event for combination keys like
+        // Ctrl-T
+        val listener =
+            View.OnTouchListener { view, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN,
+                    MotionEvent.ACTION_UP -> {
+                        BTN_KEY_CODE_MAP[view.id]?.let { keyCode ->
+                            debianVm?.sendKeyEvent(keyCode, event.action == MotionEvent.ACTION_DOWN)
+                        }
                     }
                 }
+                // Return false to let the next lister to handle the touch event for accessibility.
+                false
             }
-            // Return false to let the next lister to handle the touch event for accessibility.
-            false
-        }
 
         BTN_KEY_CODE_MAP.keys.forEach { buttonId ->
             modifierKeysView.findViewById<View>(buttonId).setOnTouchListener(listener)
@@ -196,8 +186,8 @@ class DisplayActivity : BaseActivity() {
 
     companion object {
         /**
-         * Map of button IDs to Linux key codes.
-         * The key codes are defined in linux/input-event-codes.h
+         * Map of button IDs to Linux key codes. The key codes are defined in
+         * linux/input-event-codes.h
          * https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/input-event-codes.h
          */
         val BTN_KEY_CODE_MAP =

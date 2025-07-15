@@ -53,7 +53,7 @@ use pvmfw_avb::DebugLevel;
 use pvmfw_avb::VerifiedBootData;
 use pvmfw_embedded_key::PUBLIC_KEY;
 use vmbase::heap;
-use vmbase::memory::{flush, SIZE_4KB};
+use vmbase::memory::SIZE_4KB;
 use vmbase::rand;
 use zeroize::Zeroize;
 
@@ -186,8 +186,6 @@ fn main<'a>(
         error!("Failed to configure device tree: {e}");
         RebootReason::InternalError
     })?;
-
-    flush(preserved_memory);
 
     info!("Starting payload...");
     Ok((Some(preserved_memory), debuggable))

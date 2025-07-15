@@ -104,13 +104,16 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(co
 
     inner class InputConnection : BaseInputConnection(this, false) {
         override fun sendKeyEvent(event: KeyEvent): Boolean {
-            return virtualMachine.sendKeyEvent(convertAndroidKeyCodeToEvdevScanCode(event.keyCode),
-                event.action != MotionEvent.ACTION_UP)
+            return virtualMachine.sendKeyEvent(
+                convertAndroidKeyCodeToEvdevScanCode(event.keyCode),
+                event.action != MotionEvent.ACTION_UP,
+            )
         }
     }
 
-    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection?  {
-        outAttrs.imeOptions = outAttrs.imeOptions or
+    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
+        outAttrs.imeOptions =
+            outAttrs.imeOptions or
                 EditorInfo.IME_FLAG_NO_EXTRACT_UI or
                 EditorInfo.IME_FLAG_NO_FULLSCREEN
         return InputConnection()

@@ -98,7 +98,10 @@ internal class InputForwarder(
                 return@setOnKeyListener false
             }
             if (event != null) {
-                virtualMachine.sendKeyEvent(event.scanCode.toShort(), event.action != MotionEvent.ACTION_UP)
+                virtualMachine.sendKeyEvent(
+                    event.scanCode.toShort(),
+                    event.action != MotionEvent.ACTION_UP,
+                )
             }
             false
         }
