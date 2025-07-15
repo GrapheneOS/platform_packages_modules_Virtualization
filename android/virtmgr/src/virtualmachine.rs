@@ -2039,6 +2039,25 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         }
     }
 
+    fn atomCgroupMemoryBreachReported(
+        &self,
+        high_breach_count: i64,
+        high_memory_peak_mb: i64,
+    ) -> binder::Result<()> {
+        let vm = &self.vm_instance;
+        global_service()
+            .atomCgroupMemoryBreachReported(
+                high_breach_count,
+                high_memory_peak_mb,
+                vm.requester_uid.try_into().unwrap(),
+                &vm.name,
+            )
+            .unwrap_or_else(|e| {
+                warn!("Failed to write CgroupMemoryBreachReported atom: {e}");
+            });
+        Ok(())
+    }
+
     fn atomFsckFailedReported(&self, exit_code: i32) -> binder::Result<()> {
         let vm = &self.vm_instance;
         global_service()

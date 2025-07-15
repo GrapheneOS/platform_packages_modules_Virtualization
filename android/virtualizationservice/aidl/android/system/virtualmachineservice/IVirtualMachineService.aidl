@@ -96,4 +96,7 @@ interface IVirtualMachineService {
 
     /** Forwards an FsckFailedReported atom to statsd. */
     void atomFsckFailedReported(in int exitCode);
+
+    /** Forwards a CGroupMemoryBreachReported atom to statsd. */
+    void atomCgroupMemoryBreachReported(in long highBreachCount, in long highMemoryPeakMb);
 }
