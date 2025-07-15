@@ -23,7 +23,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 use anyhow::Result;
 use log::{trace, warn};
 use rustutils::system_properties::PropertyWatcher;
-use statslog_virtualization_rust::{vm_booted, vm_creation_requested, vm_exited};
+use statslog_virtualization_rust::{fsck_failed_reported, vm_booted, vm_creation_requested, vm_exited};
 
 pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {
     let config_type = match atom.configType {
@@ -118,6 +118,21 @@ pub fn forward_vm_exited_atom(atom: &AtomVmExited) {
 
     wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
     match vm_exited.stats_write() {
+        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+    }
+}
+
+pub fn forward_fsck_failed_reported_atom(
+    exit_code: i32,
+    vm_requester_uid: i32,
+    vm_identifier: &str,
+) {
+    let fsck_failed_reported =
+        fsck_failed_reported::FsckFailedReported { exit_code, vm_requester_uid, vm_identifier };
+
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    match fsck_failed_reported.stats_write() {
         Err(e) => warn!("statslog_rust failed with error: {}", e),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }

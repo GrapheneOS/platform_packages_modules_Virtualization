@@ -94,11 +94,6 @@ interface IVirtualMachineService {
      */
     @nullable IEncryptedStoreKEK getEncryptedStoreKEK();
 
-    /**
-     * Writes a text report to Drobpox.
-     *
-     * @param tag The tag that will be used for the dropbox entry.
-     * @param message The message contents to send to Drobpox.
-     */
-    void writeToDropBox(String tag, String message);
+    /** Forwards an FsckFailedReported atom to statsd. */
+    void atomFsckFailedReported(in int exitCode);
 }

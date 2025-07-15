@@ -39,7 +39,6 @@ use binder::{
     ExceptionCode, IBinder, Interface, IntoBinderResult, ParcelFileDescriptor, SpIBinder, Status,
     StatusCode, Strong,
 };
-use dropbox_rs::DropBoxManager;
 use glob::glob;
 use libc::{sa_family_t, sockaddr_vm, AF_VSOCK};
 use log::{debug, error, info, warn};
@@ -64,7 +63,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 use std::time::Duration;
 use vbmeta::VbMetaImage;
-use virt_dropbox::build_dropbox_report;
 use vmconfig::{get_debug_level, VmConfig};
 use vsock::VsockStream;
 use zip::ZipArchive;
@@ -2041,16 +2039,13 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         }
     }
 
-    fn writeToDropBox(&self, tag: &str, message: &str) -> binder::Result<()> {
-        let drop_box_manager =
-            DropBoxManager::new().or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+    fn atomFsckFailedReported(&self, exit_code: i32) -> binder::Result<()> {
         let vm = &self.vm_instance;
-        let vm_info = format!("cid: {}, name: {}", vm.cid, vm.name);
-        let report = build_dropbox_report(&vm_info, message)
-            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
-        drop_box_manager
-            .add_text(tag, &report)
-            .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
+        global_service()
+            .atomFsckFailedReported(exit_code, vm.requester_uid.try_into().unwrap(), &vm.name)
+            .unwrap_or_else(|e| {
+                warn!("Failed to write FsckExitCodeReported atom: {e}");
+            });
         Ok(())
     }
 }

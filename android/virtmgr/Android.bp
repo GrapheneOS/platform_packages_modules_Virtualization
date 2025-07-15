@@ -70,7 +70,6 @@ rust_defaults {
         "liblibfdt",
         "libfsfdt",
         "libhypervisor_props",
-        "libvirt_dropbox",
         "libzerocopy",
         "libuuid",
         "libscopeguard",

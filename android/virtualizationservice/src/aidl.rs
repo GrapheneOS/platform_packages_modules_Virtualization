@@ -14,7 +14,10 @@
 
 //! Implementation of the AIDL interface of the VirtualizationService.
 
-use crate::atom::{forward_vm_booted_atom, forward_vm_creation_atom, forward_vm_exited_atom};
+use crate::atom::{
+    forward_fsck_failed_reported_atom, forward_vm_booted_atom, forward_vm_creation_atom,
+    forward_vm_exited_atom,
+};
 use crate::maintenance;
 use crate::remote_provisioning;
 use crate::rkpvm::{generate_ecdsa_p256_key_pair, request_attestation};
@@ -422,6 +425,16 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
 
     fn atomVmExited(&self, atom: &AtomVmExited) -> Result<(), Status> {
         forward_vm_exited_atom(atom);
+        Ok(())
+    }
+
+    fn atomFsckFailedReported(
+        &self,
+        exit_code: i32,
+        vm_requester_uid: i32,
+        vm_identifier: &str,
+    ) -> Result<(), Status> {
+        forward_fsck_failed_reported_atom(exit_code, vm_requester_uid, vm_identifier);
         Ok(())
     }
 
