@@ -52,6 +52,7 @@ parse_options() {
 			W)
 				workdir="${OPTARG%/}"
 				save_workdir=1
+				may_skip_build=1
 				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
@@ -131,24 +132,47 @@ install_prerequisites() {
 }
 
 download_debian_cloud_image() {
+	if [[ "$may_skip_build" == 1 && -f "${raw_disk_image}" ]]; then
+		echo "Skipping download_debian_cloud_image(). ${raw_disk_image} already exists"
+		return
+	fi
+
 	local ver=38da93fe
 	local prj=debian-cloud-images
 	local url="https://salsa.debian.org/cloud-team/${prj}/-/archive/${ver}/${prj}-${ver}.tar.gz"
 	local outdir="${debian_cloud_image}"
 
-	mkdir -p "${outdir}"
+	mkdir -p "${outdir}" || true
 	wget -O - "${url}" | tar xz -C "${outdir}" --strip-components=1
 }
 
 build_rust_as_deb() {
+	local dst="${debian_cloud_image}/localdebs"
+
+	# deb file format: ${name}_${version}_${arch}.deb)
+	local name="${1//_/-}"
+	local old=$(find ${dst} -maxdepth 1 -name "${name}_*.deb")
+	if [[ "$may_skip_build" == 1 && -n "${old}" ]]; then
+		echo "Skipping build_rust_as_deb(${1}). ${old} already exists"
+		return
+	fi
+
 	pushd "$SCRIPT_DIR/../../guest/$1" > /dev/null
 	cargo deb \
 		--target "${arch}-unknown-linux-gnu" \
-		--output "${debian_cloud_image}/localdebs"
+		--output "${dst}"
 	popd > /dev/null
 }
 
 build_ttyd() {
+	local dst="${config_space}"
+	local install_path="${dst}/files/usr/local/bin/ttyd"
+
+	if [[ "$may_skip_build" == 1 && -d "${install_path}" ]]; then
+		echo "Skipping build_ttyd(). ${install_path} already exists"
+		return
+	fi
+
 	local ttyd_version=1.7.7
 	local url="https://github.com/tsl0922/ttyd/archive/refs/tags/${ttyd_version}.tar.gz"
 	local build_env=(
@@ -159,7 +183,7 @@ build_ttyd() {
 	)
 	local out="${workdir}/tmp.ttyd/stage/${arch}-linux-musl"
 
-	cp -r "$SCRIPT_DIR/ttyd" "${workdir}/ttyd"
+	cp -r "$SCRIPT_DIR/ttyd/" "${workdir}"
 
 	pushd "${workdir}" > /dev/null
 	wget "${url}" -O - | tar xz
@@ -176,10 +200,8 @@ build_ttyd() {
 }
 
 copy_android_config() {
-	local src
-	local dst
-	src="$SCRIPT_DIR/fai_config"
-	dst="${config_space}"
+	local src="$SCRIPT_DIR/fai_config"
+	local dst="${config_space}"
 
 	cp -R "${src}"/* "${dst}"
 	cp "$SCRIPT_DIR/image.yaml" "${resources_dir}"
@@ -226,7 +248,7 @@ run_fai() {
 		    "${config_space}/files/etc/fstab/${debian_arch^^}"
 		sed -i "/shim-signed/d ; /grub.*${debian_arch}.*/d" \
 		    "${config_space}/package_config/${debian_arch^^}"
-		rm "${config_space}/scripts/SYSTEM_BOOT/20-grub"
+		rm "${config_space}/scripts/SYSTEM_BOOT/20-grub" || true
 	fi
 
 	local out="${raw_disk_image}"
@@ -302,6 +324,7 @@ build_id=$(echo eng-$(hostname)-$(date --utc))
 debian_version=bookworm
 arch="$(uname -m)"
 save_workdir=0
+may_skip_build=0
 use_generic_kernel=0
 uboot=0
 

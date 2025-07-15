@@ -39,6 +39,7 @@ parse_options() {
 			W)
 				workdir="${OPTARG%/}"
 				save_workdir=1
+				may_skip_build=1
 				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
@@ -62,6 +63,11 @@ parse_options() {
 }
 
 build_custom_kernel() {
+	if [[ "$may_skip_build" == 1 && -f "${dest_dir}/vmlinuz" ]]; then
+		echo "Skipping build_custom_kernel(). ${dest_dir}/vmlinuz already exists"
+		return
+	fi
+
 	local deb_base_url="https://deb.debian.org/debian"
 	local deb_security_base_url="https://security.debian.org/debian-security"
 
@@ -172,6 +178,11 @@ EOF
 }
 
 build_initrd() {
+	if [[ "$may_skip_build" == 1 && -f "${dest_dir}/initrd.img" ]]; then
+		echo "Skipping build_initrd(). ${workdir}/initrd.img already exists"
+		return
+	fi
+
 	mkdir -p "${workdir}/initrd"
 	pushd "${workdir}/initrd" > /dev/null
 
@@ -295,6 +306,7 @@ trap clean_up EXIT
 abi_flavour=
 kernel_extras_guid=
 save_workdir=0
+may_skip_build=0
 dest_dir=$SCRIPT_DIR
 workdir=
 
