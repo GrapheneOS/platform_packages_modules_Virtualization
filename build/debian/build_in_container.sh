@@ -19,6 +19,64 @@ show_help() {
   echo "-w             Save temp work directory in the container [for debugging]"
 }
 
+ensure_binfmt_misc() {
+  if [[ "$arch" != "$(uname -m)" ]]; then
+    binfmt_misc="/proc/sys/fs/binfmt_misc/qemu-${arch}"
+    if [[ ! -f "${binfmt_misc}" ]]; then
+      # Enable multi-arch container by QEMU.
+      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    fi
+  fi
+}
+
+parse_options() {
+  while getopts "a:b:ghi:st:uw" option; do
+    case ${option} in
+      a)
+        arch="$OPTARG"
+        ;;
+      b)
+        build_id="$OPTARG"
+        ;;
+      g)
+        kernel_flag="-g"
+        ;;
+      h)
+        show_help ; exit
+        ;;
+      i)
+        image_name="$OPTARG"
+        ;;
+      s)
+        shell="; bash"
+        ;;
+      t)
+        virt_repo_top="$OPTARG"
+        ;;
+      u)
+        uboot_flag="-u"
+        ;;
+      w)
+        save_workdir_flag="-w"
+        ;;
+      *)
+        echo "Invalid option: $OPTARG" ; exit 1
+        ;;
+    esac
+  done
+
+  if [[ "$arch" != "aarch64" && "$arch" != "x86_64" ]]; then
+    echo "Invalid architecture: $arch" ; exit 1
+  fi
+
+  if [[ -t 0 ]]; then
+    interactive="-it"
+  else
+    echo "Not an interactive shell. Can't leave a shell open."
+    shell=""
+  fi
+}
+
 arch="$(uname -m)"
 build_id=$(echo eng-$(hostname)-$(date --utc))
 image_name="ubuntu:22.04"
@@ -28,51 +86,8 @@ shell="|| bash"
 uboot_flag=
 virt_repo_top="${SCRIPT_DIR}/../../"
 
-while getopts "a:b:ghi:st:uw" option; do
-  case ${option} in
-    a)
-      arch="$OPTARG"
-      ;;
-    b)
-      build_id="$OPTARG"
-      ;;
-    g)
-      kernel_flag="-g"
-      ;;
-    h)
-      show_help ; exit
-      ;;
-    i)
-      image_name="$OPTARG"
-      ;;
-    s)
-      shell="; bash"
-      ;;
-    t)
-      virt_repo_top="$OPTARG"
-      ;;
-    u)
-      uboot_flag="-u"
-      ;;
-    w)
-      save_workdir_flag="-w"
-      ;;
-    *)
-      echo "Invalid option: $OPTARG" ; exit 1
-      ;;
-  esac
-done
-
-if [[ "$arch" != "aarch64" && "$arch" != "x86_64" ]]; then
-  echo "Invalid architecture: $arch" ; exit 1
-fi
-
-if [[ -t 0 ]]; then
-  interactive="-it"
-else
-  echo "Not an interactive shell. Can't leave a shell open."
-  shell=""
-fi
+parse_options "$@"
+ensure_binfmt_misc
 
 docker run --privileged $interactive \
   -v /dev:/dev \
