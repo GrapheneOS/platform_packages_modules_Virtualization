@@ -40,7 +40,6 @@ use rand::Rng;
 use std::time::Duration;
 use zeroize::Zeroizing;
 use std::sync::Mutex;
-use std::sync::Arc;
 use crate::VmInstanceState;
 
 const ENCRYPTEDSTORE_KEY_IDENTIFIER: &str = "encryptedstore_key";
@@ -310,7 +309,7 @@ fn sealing_policy(dice: &[u8]) -> Result<Vec<u8>, String> {
 
 // The secure session between VM & Secretkeeper
 pub(crate) struct SkVmSession {
-    session: Arc<Mutex<SkSession>>,
+    session: Mutex<SkSession>,
     sealing_policy: Vec<u8>,
 }
 
@@ -322,7 +321,7 @@ impl SkVmSession {
     ) -> Result<Self> {
         let secretkeeper_proxy = get_secretkeeper_service(vm_service)?;
         let session = SkSession::new(secretkeeper_proxy, dice, Some(get_secretkeeper_identity()?))?;
-        let session = Arc::new(Mutex::new(session));
+        let session = Mutex::new(session);
         Ok(Self { session, sealing_policy })
     }
 
