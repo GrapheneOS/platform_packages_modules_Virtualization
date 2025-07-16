@@ -156,8 +156,8 @@ build_ttyd() {
 	mkdir -p "${dst}/files/usr/local/bin/ttyd"
 	cp "/tmp/stage/${arch}-linux-musl/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
 	chmod 777 "${dst}/files/usr/local/bin/ttyd/AVF"
-	mkdir -p "${dst}/files/usr/share/doc/ttyd"
-	cp LICENSE "${dst}/files/usr/share/doc/ttyd/copyright"
+	mkdir -p "${dst}/files/usr/share/doc/ttyd/copyright"
+	cp LICENSE "${dst}/files/usr/share/doc/ttyd/copyright/AVF"
 	popd > /dev/null
 	popd > /dev/null
 }
