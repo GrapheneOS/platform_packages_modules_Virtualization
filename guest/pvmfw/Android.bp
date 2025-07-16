@@ -10,6 +10,7 @@ rust_ffi_static {
     features: [
         "compat-kernel-range-from-gprs",
         "compat-raw-dice-handover",
+        "instance-img",
     ],
     rustlibs: [
         "libbssl_avf_nostd",
