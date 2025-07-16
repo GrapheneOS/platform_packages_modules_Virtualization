@@ -115,8 +115,6 @@ pub struct CrosvmConfig {
     pub detect_hangup: bool,
     pub gdb_port: Option<NonZeroU16>,
     pub device_tree_overlays: Vec<File>,
-    pub hugepages: bool,
-    pub boost_uclamp: bool,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
     pub start_suspended: bool,
@@ -331,6 +329,11 @@ impl CrosvmCommand {
         if !cpu_args.is_empty() {
             self.args(["--cpus", &cpu_args.join(",")]);
         }
+
+        if context.config.boostUclamp {
+            self.arg("--boost-uclamp");
+        }
+
         Ok(())
     }
 
@@ -351,6 +354,10 @@ impl CrosvmCommand {
 
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
+        }
+
+        if context.config.hugePages {
+            self.arg("--hugepages");
         }
     }
 
@@ -1968,14 +1975,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         let arg = add_preserved_fd(&mut preserved_fds, dt_overlay);
         command.arg("--device-tree-overlay").arg(arg);
     });
-
-    if config.hugepages {
-        command.arg("--hugepages");
-    }
-
-    if config.boost_uclamp {
-        command.arg("--boost-uclamp");
-    }
 
     for shared_path in &config.shared_paths {
         if shared_path.app_domain {

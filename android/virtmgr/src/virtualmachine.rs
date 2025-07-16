@@ -732,8 +732,6 @@ impl VirtualizationService {
             detect_hangup,
             gdb_port,
             device_tree_overlays,
-            hugepages: config.hugePages,
-            boost_uclamp: config.boostUclamp,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
             start_suspended: !vendor_tee_services.is_empty(),
