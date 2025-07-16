@@ -22,6 +22,7 @@ use diced_open_dice::{
 };
 use dm::util::blkgetsize64;
 use std::fs::{read_link, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use vbmeta::VbMetaImage;
 
@@ -101,8 +102,10 @@ fn try_main() -> Result<()> {
     let path = read_link(args.microdroid_vendor_disk_image).context("failed to read symlink")?;
     let vbmeta = extract_vbmeta(&path).context("failed to extract vbmeta")?;
     let dice_artifacts = dice_derivation(dice, &vbmeta).context("failed to derive dice chain")?;
-    let file = File::create(&args.output).context("failed to create output")?;
-    serde_cbor::to_writer(file, &dice_artifacts).context("failed to write dice artifacts")?;
+    let mut file =
+        std::io::BufWriter::new(File::create(&args.output).context("failed to create output")?);
+    ciborium::into_writer(&dice_artifacts, &mut file).context("failed to write dice artifacts")?;
+    file.flush().context("failed to flush dice artifacts")?;
     Ok(())
 }
 

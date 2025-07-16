@@ -14,6 +14,7 @@ rust_defaults {
     rustlibs: [
         "libanyhow",
         "libbyteorder",
+        "libciborium",
         "libcoset",
         "libdice_policy_builder",
         "libdiced_open_dice",
@@ -24,7 +25,6 @@ rust_defaults {
         "libnix",
         "libopenssl",
         "libthiserror",
-        "libserde_cbor",
     ],
     multilib: {
         lib32: {

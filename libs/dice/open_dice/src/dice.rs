@@ -204,8 +204,10 @@ pub trait DiceArtifacts {
 #[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
 pub struct CdiValues {
     /// Attestation CDI.
+    #[cfg_attr(feature = "serde_derive", serde(with = "serde_bytes"))]
     pub cdi_attest: [u8; CDI_SIZE],
     /// Sealing CDI.
+    #[cfg_attr(feature = "serde_derive", serde(with = "serde_bytes"))]
     pub cdi_seal: [u8; CDI_SIZE],
 }
 

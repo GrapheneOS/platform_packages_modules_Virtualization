@@ -147,7 +147,7 @@ impl InstanceDisk {
         let key = dice.get_sealing_key(INSTANCE_KEY_IDENTIFIER, cipher.key_len())?;
         let plaintext = decrypt_aead(cipher, &key, Some(&nonce), &header, &data, &tag)?;
 
-        let microdroid_data = serde_cbor::from_slice(plaintext.as_slice())?;
+        let microdroid_data = ciborium::from_reader(plaintext.as_slice())?;
         Ok(Some(microdroid_data))
     }
 
@@ -160,7 +160,9 @@ impl InstanceDisk {
     ) -> Result<()> {
         let (header, offset) = self.locate_microdroid_header()?;
 
-        let data = serde_cbor::to_vec(microdroid_data)?;
+        let mut data = Vec::new();
+        ciborium::into_writer(microdroid_data, &mut data)?;
+        let data = data;
 
         // By encrypting and signing the data, tag will be appended. The tag also becomes part of
         // the encrypted payload which will be written. In addition, a nonce will be prepended
@@ -307,7 +309,9 @@ impl From<u8> for EncryptedStoreMode {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApkData {
+    #[serde(with = "serde_bytes")]
     pub root_hash: Vec<u8>,
+    #[serde(with = "serde_bytes")]
     pub cert_hash: Vec<u8>,
     pub package_name: String,
     pub version_code: u64,
@@ -328,7 +332,9 @@ pub struct ApexData {
     pub name: String,
     pub manifest_name: Option<String>,
     pub manifest_version: Option<i64>,
+    #[serde(with = "serde_bytes")]
     pub public_key: Vec<u8>,
+    #[serde(with = "serde_bytes")]
     pub root_digest: Vec<u8>,
     pub last_update_seconds: u64,
     pub is_factory: bool,
