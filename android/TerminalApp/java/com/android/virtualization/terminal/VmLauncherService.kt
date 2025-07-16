@@ -508,6 +508,7 @@ class VmLauncherService : Service() {
         handler = null
         mainWorkerThread.execute({
             if (runner?.vm?.getStatus() == VirtualMachine.STATUS_RUNNING) {
+                // TODO(b/431755357): Ensure VM is shutdown before being destroyed.
                 doShutdown(null)
             }
         })

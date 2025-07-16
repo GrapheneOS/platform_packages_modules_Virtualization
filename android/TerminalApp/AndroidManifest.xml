@@ -94,8 +94,7 @@
         <service
             android:name=".VmLauncherService"
             android:exported="false"
-            android:foregroundServiceType="specialUse"
-            android:stopWithTask="true" >
+            android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Run VM instances" />
