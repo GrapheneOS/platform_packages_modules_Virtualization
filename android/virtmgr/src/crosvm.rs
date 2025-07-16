@@ -1392,7 +1392,9 @@ impl VmInstance {
     /// shut down. In-flight data in the VM may be affected!
     pub fn kill(&self) -> Result<(), Error> {
         // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
-        // delete it. Otherwise there'll be a memory leak.
+        // delete it. Otherwise there'll be a memory leak. When cfg early is set, this is skipped
+        // because early_virtmgr does not interact with the global virtualizationservice.
+        #[cfg(not(early))]
         scopeguard::defer! {
             let cid = self.cid.try_into().unwrap();
             if let Err(e) = virtualmachine::global_service().unregisterVirtualMachine(cid) {
