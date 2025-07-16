@@ -4,6 +4,14 @@ package {
 
 rust_ffi_static {
     name: "libpvmfw",
+    defaults: ["libpvmfw.defaults"],
+    // This enables pvmfw_desktop to be built with a different set of features.
+    features: [
+    ],
+}
+
+rust_defaults {
+    name: "libpvmfw.defaults",
     crate_name: "pvmfw",
     defaults: ["vmbase_ffi_defaults"],
     srcs: ["src/main.rs"],
@@ -345,9 +353,14 @@ cc_genrule {
 
 cc_binary {
     name: "pvmfw",
+    defaults: ["pvmfw.defaults"],
+    static_libs: ["libpvmfw"],
+}
+
+cc_defaults {
+    name: "pvmfw.defaults",
     defaults: ["vmbase_elf_defaults"],
     static_libs: [
-        "libpvmfw",
         "libvmbase_dice_clear_memory",
     ],
     target: {
@@ -519,7 +532,8 @@ rust_library_rlib {
 bootimg {
     name: "pvmfw_img",
     stem: "pvmfw.img",
-    kernel_prebuilt: ":pvmfw_bin",
+    // TODO(b/432710356): select(":pvmfw_desktop_bin" OR ":pvmfw_bin")
+    kernel_prebuilt: ":pvmfw_img_kernel_prebuilt",
     header_version: "3",
     partition_name: "pvmfw",
     enabled: false,
@@ -530,4 +544,41 @@ bootimg {
     },
     use_avb: true,
     avb_private_key: ":pvmfw_sign_key",
+}
+
+// TODO(b/433248882): Unify pvmfw_desktop & pvmfw before release.
+rust_ffi_static {
+    name: "libpvmfw_desktop",
+    defaults: ["libpvmfw.defaults"],
+    // This enables pvmfw_desktop to be built with a different set of features.
+    features: [
+    ],
+}
+
+cc_binary {
+    // TODO(b/432710356): name: "pvmfw_desktop", static_libs: "libpvmfw_desktop"
+    name: "pvmfw_img_kernel_prebuilt_elf",
+    defaults: ["pvmfw.defaults"],
+    static_libs: select(soong_config_variable("ANDROID", "avf_use_pvmfw_desktop"), {
+        true: ["libpvmfw_desktop"],
+        default: ["libpvmfw"],
+    }),
+}
+
+// Note: this temporarily duplicates pvmfw_bin if !avf_use_pvmfw_desktop but
+// avoids affecting pvmfw_test.
+raw_binary {
+    // TODO(b/432710356): name: "pvmfw_desktop_bin", src: ":pvmfw_desktop".
+    name: "pvmfw_img_kernel_prebuilt",
+    stem: "pvmfw_desktop_or_not.bin",
+    src: ":pvmfw_img_kernel_prebuilt_elf",
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+        android_x86_64: {
+            enabled: true,
+        },
+    },
 }
