@@ -74,9 +74,6 @@ pub type Cid = u32;
 
 pub const BINDER_SERVICE_IDENTIFIER: &str = "android.system.virtualizationservice";
 
-/// Vsock privileged ports are below this number.
-const VSOCK_PRIV_PORT_MAX: u32 = 1024;
-
 /// Magic string for the instance image
 const ANDROID_VM_INSTANCE_MAGIC: &str = "Android-VM-instance";
 
@@ -1366,6 +1363,29 @@ fn to_local_object(
     Ok(VirtualMachineBinder(binder))
 }
 
+/// Validates that a vsock port is either unprivileged (>= 1024) or within the allowed exception
+/// range for Trusty VMs.
+fn validate_vsock_port(port: u32) -> binder::Result<()> {
+    /// Vsock privileged ports are below this number.
+    const VSOCK_PRIV_PORT_MAX: u32 = 1024;
+    /// Min vsock port number used by Trusty VMs. See b/427392420 for more context.
+    const TRUSTY_VSOCK_PORT_MIN: u32 = 2;
+    /// Max vsock port number used by Trusty VMs.
+    const TRUSTY_VSOCK_PORT_MAX: u32 = 20;
+
+    let is_unprivileged = port >= VSOCK_PRIV_PORT_MAX;
+    let is_allowed_trusty_port = (TRUSTY_VSOCK_PORT_MIN..=TRUSTY_VSOCK_PORT_MAX).contains(&port);
+
+    if is_unprivileged || is_allowed_trusty_port {
+        Ok(())
+    } else {
+        Err(Status::new_service_specific_error_str(
+            aidl::ERROR_UNEXPECTED,
+            Some("Can't connect to privileged port {port}"),
+        ))
+    }
+}
+
 struct VirtualMachineBinder(binder::binder_impl::Binder<aidl::BnVirtualMachine>);
 
 impl Deref for VirtualMachineBinder {
@@ -1518,12 +1538,7 @@ impl aidl::IVirtualMachine for VirtualMachine {
             ));
         }
         let port = port as u32;
-        if port < VSOCK_PRIV_PORT_MAX {
-            return Err(Status::new_service_specific_error_str(
-                aidl::ERROR_UNEXPECTED,
-                Some("Can't connect to privileged port {port}"),
-            ));
-        }
+        validate_vsock_port(port)?;
         let stream = VsockStream::connect_with_cid_port(self.instance.cid, port)
             .context("Failed to connect")
             .or_service_specific_exception(aidl::ERROR_UNEXPECTED)?;
@@ -1538,12 +1553,7 @@ impl aidl::IVirtualMachine for VirtualMachine {
             ));
         }
         let port = port as u32;
-        if port < VSOCK_PRIV_PORT_MAX {
-            return Err(Status::new_service_specific_error_str(
-                aidl::ERROR_UNEXPECTED,
-                Some("Can't connect to privileged port {port}"),
-            ));
-        }
+        validate_vsock_port(port)?;
         let cid = self.instance.cid;
         let addr = sockaddr_vm {
             svm_family: AF_VSOCK as sa_family_t,
