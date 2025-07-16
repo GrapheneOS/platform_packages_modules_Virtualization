@@ -43,6 +43,7 @@ pub struct OwnedDiceArtifacts {
     /// CDI Values.
     cdi_values: CdiValues,
     /// Boot Certificate Chain.
+    #[cfg_attr(feature = "serde_derive", serde(with = "serde_bytes"))]
     bcc: Vec<u8>,
 }
 
