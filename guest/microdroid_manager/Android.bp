@@ -56,7 +56,6 @@ rust_defaults {
         "libsecretkeeper_comm",
         "libscopeguard",
         "libserde",
-        "libserde_cbor",
         "libserde_json",
         "libthiserror",
         "libuuid",

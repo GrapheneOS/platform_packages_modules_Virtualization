@@ -111,7 +111,7 @@ impl DiceDriver<'_> {
         log::info!("Creating DiceDriver backed by {file_path:?} file");
         let file =
             fs::File::open(file_path).map_err(|error| Error::new(error).context("open file"))?;
-        let dice_artifacts = serde_cbor::from_reader(file)
+        let dice_artifacts = ciborium::from_reader(std::io::BufReader::new(file))
             .map_err(|error| Error::new(error).context("read file"))?;
         Ok(Self::FromFile { file_path: file_path.to_path_buf(), dice_artifacts })
     }
@@ -189,6 +189,7 @@ mod tests {
         hash, retry_bcc_format_config_descriptor, DiceConfigValues, HIDDEN_SIZE,
     };
     use std::fs::File;
+    use std::io::Write;
 
     fn assert_eq_bytes(expected: &[u8], actual: &[u8]) {
         assert_eq!(
@@ -204,9 +205,9 @@ mod tests {
     fn test_write_bcc_to_file_read_from_file() -> Result<()> {
         let dice_artifacts = diced_sample_inputs::make_sample_bcc_and_cdis()?;
 
-        let test_file = tempfile::NamedTempFile::new()?;
-        serde_cbor::to_writer(test_file.as_file(), &dice_artifacts)?;
-        test_file.as_file().sync_all()?;
+        let mut test_file = std::io::BufWriter::new(tempfile::NamedTempFile::new()?);
+        ciborium::into_writer(&dice_artifacts, &mut test_file)?;
+        let test_file = test_file.into_inner()?;
 
         let dice = DiceDriver::from_file(test_file.as_ref())?;
 
@@ -226,8 +227,9 @@ mod tests {
 
         {
             let dice_artifacts = diced_sample_inputs::make_sample_bcc_and_cdis()?;
-            let file = File::create(&file_path)?;
-            serde_cbor::to_writer(file, &dice_artifacts)?;
+            let mut file = std::io::BufWriter::new(File::create(&file_path)?);
+            ciborium::into_writer(&dice_artifacts, &mut file)?;
+            file.flush()?;
         }
 
         let dice = DiceDriver::from_file(&file_path)?;
