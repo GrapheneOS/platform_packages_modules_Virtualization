@@ -118,16 +118,20 @@ fn main<'a>(
         };
 
     let next_dice_handover_pages = if verified_boot_data.is_some() { 1 } else { 0 };
-    let preserved_memory_size =
-        guest_page_size * (reserved_mem_info.len() + next_dice_handover_pages);
-    let preserved_memory = heap::aligned_boxed_slice(preserved_memory_size, guest_page_size)
-        .ok_or_else(|| {
-            error!("Failed to allocate the next-stage reserved memory");
-            RebootReason::InternalError
-        })?;
+    let preserved_memory_pages = reserved_mem_info.len() + next_dice_handover_pages;
+    let preserved_memory = if preserved_memory_pages > 0 {
+        let preserved_memory_size = preserved_memory_pages * guest_page_size;
+        let slice =
+            heap::aligned_boxed_slice(preserved_memory_size, guest_page_size).ok_or_else(|| {
+                error!("Failed to allocate the next-stage reserved memory");
+                RebootReason::InternalError
+            })?;
 
-    // By leaking the slice, its content will be left behind for the next stage.
-    let preserved_memory = Box::leak(preserved_memory);
+        // By leaking the slice, its content will be left behind for the next stage.
+        Box::leak(slice)
+    } else {
+        &mut []
+    };
     let mut preserved_pages: ChunksMut<'_, u8> = preserved_memory.chunks_mut(guest_page_size);
 
     // Move reserved memory to preserved preserved_pages.
@@ -188,7 +192,12 @@ fn main<'a>(
     })?;
 
     info!("Starting payload...");
-    Ok((Some(preserved_memory), debuggable))
+
+    if preserved_memory.is_empty() {
+        Ok((None, debuggable))
+    } else {
+        Ok((Some(preserved_memory), debuggable))
+    }
 }
 
 fn parse_dice_handover(
