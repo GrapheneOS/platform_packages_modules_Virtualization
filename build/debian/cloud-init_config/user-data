@@ -1,0 +1,26 @@
+#cloud-config
+
+# cloud-init boots modules in predefined order as follows:
+#   - network
+#   - users
+#   - bootcmd
+#   - packages
+#   - runcmd
+
+users:
+  - default
+  - name: droid
+    gecos: Default user for Terminal App
+    lock_passwd: false
+    no_user_group: true
+    groups: sudo, video, renderer
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    shell: /usr/bin/bash
+    plain_text_passwd: droid
+    uid: 1000
+
+runcmd:
+  - mkdir /mnt/cidata
+  - mount /dev/vdb /mnt/cidata
+  - /mnt/cidata/init.sh
+  - umount /mnt/cidata

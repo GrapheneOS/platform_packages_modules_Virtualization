@@ -20,6 +20,7 @@ show_help() {
 	echo "-u           Set VM boot mode to u-boot [default is to load kernel directly]"
 	echo "-w           Save temp work directory [for debugging]"
 	echo "-W WORK_DIR  Specify work dir instead of temporarily creating. Imply -w [for debugging]"
+	echo "-c           Build with cloud-init"
 }
 
 check_sudo() {
@@ -29,7 +30,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:b:ghuwW:" option; do
+	while getopts "a:b:ghuwW:c" option; do
 		case ${option} in
 			a)
 				arch="$OPTARG"
@@ -54,6 +55,9 @@ parse_options() {
 				save_workdir=1
 				may_skip_build=1
 				;;
+			c)
+				cloud_init=1
+				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
 				;;
@@ -77,6 +81,7 @@ parse_options() {
 
 install_prerequisites() {
 	apt update
+
 	packages=(
 		apt-utils
 		automake
@@ -118,8 +123,14 @@ install_prerequisites() {
 		)
 	fi
 
+	if [[ "$cloud_init" == 1 ]]; then
+		packages+=(
+			genisoimage
+		)
+	fi
+
 	DEBIAN_FRONTEND=noninteractive \
-	apt install --no-install-recommends --assume-yes "${packages[@]}"
+		apt install --no-install-recommends --assume-yes "${packages[@]}"
 
 	if [ ! -f $"HOME"/.cargo/bin/cargo ]; then
 		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -137,17 +148,28 @@ download_debian_cloud_image() {
 		return
 	fi
 
-	local ver=38da93fe
-	local prj=debian-cloud-images
-	local url="https://salsa.debian.org/cloud-team/${prj}/-/archive/${ver}/${prj}-${ver}.tar.gz"
 	local outdir="${debian_cloud_image}"
-
 	mkdir -p "${outdir}" || true
-	wget -O - "${url}" | tar xz -C "${outdir}" --strip-components=1
+
+	if [[ "$cloud_init" == 1 ]]; then
+		local img=debian-12-genericcloud-${debian_arch}.tar.xz
+		local url="https://cloud.debian.org/images/cloud/${debian_version}/latest/${img}"
+		wget -O - "${url}" | tar xJ -C "${outdir}"
+	else
+		local ver=38da93fe
+		local prj=debian-cloud-images
+		local url="https://salsa.debian.org/cloud-team/${prj}/-/archive/${ver}/${prj}-${ver}.tar.gz"
+
+		wget -O - "${url}" | tar xz -C "${outdir}" --strip-components=1
+	fi
 }
 
 build_rust_as_deb() {
-	local dst="${debian_cloud_image}/localdebs"
+	if [[ "$cloud_init" == 1 ]]; then
+		local dst="${cidata}/localdebs"
+	else
+		local dst="${debian_cloud_image}/localdebs"
+	fi
 
 	# deb file format: ${name}_${version}_${arch}.deb)
 	local name="${1//_/-}"
@@ -165,12 +187,21 @@ build_rust_as_deb() {
 }
 
 build_ttyd() {
-	local dst="${config_space}"
-	local install_path="${dst}/files/usr/local/bin/ttyd"
+	if [[ "$cloud_init" == 1 ]]; then
+		local install_path="${cidata}/files/usr/local/bin/ttyd"
 
-	if [[ "$may_skip_build" == 1 && -d "${install_path}" ]]; then
-		echo "Skipping build_ttyd(). ${install_path} already exists"
-		return
+		if [[ "$may_skip_build" == 1 && -f "${install_path}" ]]; then
+			echo "Skipping build_ttyd(). ${install_path} already exists"
+			return
+		fi
+	else
+		local dst="${config_space}"
+		local install_path="${dst}/files/usr/local/bin/ttyd"
+
+		if [[ "$may_skip_build" == 1 && -d "${install_path}" ]]; then
+			echo "Skipping build_ttyd(). ${install_path} already exists"
+			return
+		fi
 	fi
 
 	local ttyd_version=1.7.7
@@ -190,23 +221,39 @@ build_ttyd() {
 	cp ttyd/* ttyd-${ttyd_version}/scripts
 	pushd "$workdir/ttyd-${ttyd_version}" > /dev/null
 	bash -c "env ${build_env[*]} ./scripts/cross-build.sh"
-	mkdir -p "${dst}/files/usr/local/bin/ttyd"
-	cp "${out}/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
-	chmod 777 "${dst}/files/usr/local/bin/ttyd/AVF"
-	mkdir -p "${dst}/files/usr/share/doc/ttyd/copyright"
-	cp LICENSE "${dst}/files/usr/share/doc/ttyd/copyright/AVF"
+
+	if [[ "$cloud_init" == 1 ]]; then
+		mkdir -p "${cidata}/files/usr/local/bin" || true
+		cp "${out}/bin/ttyd" "${cidata}/files/usr/local/bin/ttyd"
+		chmod 777 "${cidata}/files/usr/local/bin/ttyd"
+		mkdir -p "${cidata}/files/usr/share/doc/ttyd/copyright"
+		cp LICENSE "${cidata}/files/usr/share/doc/ttyd/copyright/"
+	else
+		mkdir -p "${dst}/files/usr/local/bin/ttyd"
+		cp "${out}/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
+		chmod 777 "${dst}/files/usr/local/bin/ttyd/AVF"
+		mkdir -p "${dst}/files/usr/share/doc/ttyd/copyright/LICENSE"
+		cp LICENSE "${dst}/files/usr/share/doc/ttyd/copyright/LICENSE/AVF"
+	fi
 	popd > /dev/null
 	popd > /dev/null
 }
 
 copy_android_config() {
-	local src="$SCRIPT_DIR/fai_config"
-	local dst="${config_space}"
+	if [[ "$cloud_init" == 1 ]]; then
+		mkdir -p "${cidata}/localdebs" || true
+		cp -vpR "$SCRIPT_DIR/cloud-init_config"/* "${cidata}"
+		cp -vpR "$SCRIPT_DIR/localdebs/"* "${cidata}/localdebs" || true
+	else
+		local src="$SCRIPT_DIR/fai_config"
+		local dst="${config_space}"
 
-	cp -R "${src}"/* "${dst}"
-	cp "$SCRIPT_DIR/image.yaml" "${resources_dir}"
+		cp -R "${src}"/* "${dst}"
+		cp "$SCRIPT_DIR/image.yaml" "${resources_dir}"
 
-	cp -R "$SCRIPT_DIR/localdebs/" "${debian_cloud_image}/"
+		cp -R "$SCRIPT_DIR/localdebs/" "${debian_cloud_image}/"
+	fi
+
 	build_ttyd
 	build_rust_as_deb forwarder_guest
 	build_rust_as_deb forwarder_guest_launcher
@@ -215,19 +262,21 @@ copy_android_config() {
 }
 
 package_custom_kernel() {
-	if [[ "$use_generic_kernel" == 1 ]]; then
-		# NOTE: For bpfcc-tools, install generic headers for the generic kernel.
-		cat > "${config_space}/package_config/LAST" <<EOF
+	if [[ "$cloud_init" != 1 ]]; then
+		if [[ "$use_generic_kernel" == 1 ]]; then
+			# NOTE: For bpfcc-tools, install generic headers for the generic kernel.
+			cat > "${config_space}/package_config/LAST" <<EOF
 PACKAGES install
 linux-headers-generic
 EOF
-		return
-	fi
+return
+		fi
 
-	# NOTE: Prevent FAI from installing a default Debian kernel, by removing
-	#       linux-image meta package names from arch-specific class files.
-	sed -i "/linux-image.*-${debian_arch}/d" \
-	    "${config_space}/package_config/${debian_arch^^}"
+		# NOTE: Prevent FAI from installing a default Debian kernel, by removing
+		#       linux-image meta package names from arch-specific class files.
+		sed -i "/linux-image.*-${debian_arch}/d" \
+			"${config_space}/package_config/${debian_arch^^}"
+	fi
 
 	cmd_args=(
 		-a "$arch"
@@ -240,14 +289,28 @@ EOF
 	$SCRIPT_DIR/build_custom_kernel.sh "${cmd_args[@]}"
 }
 
+build_cidata() {
+	local dst="${workdir}/${cidata_image}"
+
+	# Build CIDATA with ISO9660.
+	# Need to clean first. otherwise try to append here.
+	rm -rf "${dst}"
+	genisoimage -output "${dst}" -V cidata -J -R "${cidata}"
+}
+
 run_fai() {
+	if [[ "$cloud_init" == 1 ]]; then
+		echo "FAI shouldn't be configured for cloud-init" >&2
+		exit 1
+	fi
+
 	# NOTE: Prevent FAI from installing grub packages and running related scripts,
 	#       if we are loading the kernel directly.
 	if [[ "$uboot" != 1 ]]; then
 		sed -i "/\/boot\/efi/d" \
-		    "${config_space}/files/etc/fstab/${debian_arch^^}"
+			"${config_space}/files/etc/fstab/${debian_arch^^}"
 		sed -i "/shim-signed/d ; /grub.*${debian_arch}.*/d" \
-		    "${config_space}/package_config/${debian_arch^^}"
+			"${config_space}/package_config/${debian_arch^^}"
 		rm "${config_space}/scripts/SYSTEM_BOOT/20-grub" || true
 	fi
 
@@ -256,9 +319,19 @@ run_fai() {
 	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
 }
 
+build_debian() {
+	if [[ "$cloud_init" == 1 ]]; then
+		build_cidata
+	else
+		run_fai
+	fi
+}
+
 generate_output_package() {
 	local vm_config="$SCRIPT_DIR/vm_config.json"
-	if [[ "$uboot" == 1 ]]; then
+	if [[ "$cloud_init" == 1 ]]; then
+		vm_config="$SCRIPT_DIR/vm_config.cloud-init.json"
+	elif [[ "$uboot" == 1 ]]; then
 		vm_config="$SCRIPT_DIR/vm_config.u-boot.json"
 	fi
 
@@ -284,23 +357,39 @@ generate_output_package() {
 		root_part
 		vm_config.json
 	)
-
-	if [[ "$uboot" != 1 ]]; then
+	if [[ "$uboot" == 0 ]]; then
 		contents+=(
 			vmlinuz
 			initrd.img
 			kernel_extras_part
 		)
-	else
+	fi
+	if [[ "$uboot" == 1 || "$cloud_init" == 1 ]]; then
 		local efi_partition_num=15
-		loop=$(losetup -f --show --partscan $raw_disk_image)
-		dd if="${loop}p$efi_partition_num" of=efi_part
-		losetup -d "${loop}"
+		local guid="$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)"
 
-		sed -i "s/{efi_part_guid}/$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)/g" vm_config.json
+		if [[ "$uboot" == 1 ]]; then
+			loop=$(losetup -f --show --partscan $raw_disk_image)
+			dd if="${loop}p$efi_partition_num" of=efi_part
+			losetup -d "${loop}"
+		else
+			# For cloud-init, EFI is only required by /etc/fstab.
+			# Placeholder partition is enough.
+			# TODO: Modify /etc/fstab when we preprocess rootfs here as well.
+			dd if=/dev/zero of=efi_part bs=1M count=1
+			mkfs.fat -F 32 -c efi_part
+		fi
+
+		sed -i "s/{efi_part_guid}/${guid}/g" vm_config.json
 
 		contents+=(
 			efi_part
+		)
+	fi
+
+	if [[ "$cloud_init" == 1 ]]; then
+		contents+=(
+			${cidata_image}
 		)
 	fi
 
@@ -327,6 +416,7 @@ save_workdir=0
 may_skip_build=0
 use_generic_kernel=0
 uboot=0
+cloud_init=0
 
 parse_options "$@"
 
@@ -336,14 +426,20 @@ else
 	workdir=$(mktemp -d)
 fi
 
-raw_disk_image=${workdir}/image.raw
 debian_cloud_image=${workdir}/debian_cloud_image
-config_space=${debian_cloud_image}/config_space/${debian_version}
-resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
+if [[ "$cloud_init" == 1 ]]; then
+	cidata=${debian_cloud_image}/cidata
+	raw_disk_image=${debian_cloud_image}/disk.raw
+	cidata_image="cidata.iso"
+else
+	raw_disk_image=${workdir}/image.raw
+	config_space=${debian_cloud_image}/config_space/${debian_version}
+	resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
+fi
 
 install_prerequisites
 download_debian_cloud_image
 copy_android_config
 package_custom_kernel
-run_fai
+build_debian
 generate_output_package
