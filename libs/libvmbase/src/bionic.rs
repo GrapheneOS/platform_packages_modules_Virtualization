@@ -186,7 +186,7 @@ unsafe extern "C" fn fputs(c_str: *const c_char, stream: usize) -> c_int {
         f.write_lines(s);
         0
     } else {
-        set_errno(EOF);
+        set_errno(EIO);
         EOF
     }
 }
