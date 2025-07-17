@@ -1566,6 +1566,7 @@ fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Resu
         ("panic", Box::new(|v| if let Some(v) = v { v == "=-1" } else { false })),
         ("crashkernel", Box::new(|_| has_crashkernel)),
         ("console", Box::new(|_| has_console)),
+        ("coherent_pool", Box::new(|_| true)),
     ];
 
     // parse and filter out unwanted
