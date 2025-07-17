@@ -58,10 +58,10 @@ function list_cids() {
         echo "Exiting.">&2
         exit 1
       else
-        adb disconnect localhost:8000 2>/dev/null
+        adb disconnect localhost:8000 >/dev/null 2>&1
       fi
     fi
-    adb shell /apex/com.android.virt/bin/vm list | awk 'BEGIN { FS="[:,]" } /cid/ { print $2; }'
+    adb shell /apex/com.android.virt/bin/vm list | awk 'BEGIN { FS="[:,]" } /cid/ { printf "%d\n", $2; }'
 }
 
 function handle_connect_cmd() {
@@ -108,7 +108,7 @@ function handle_start_microdroid_cmd() {
     if [[ "${auto_connect}" == true ]]; then
         adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args[@]}" &
         # shellcheck disable=SC2064 # expands `$!` now intentionally
-        trap "kill $!" EXIT
+        trap "kill $! && adb disconnect localhost:8000" EXIT
         sleep 2
         handle_connect_cmd
     else
