@@ -1163,7 +1163,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void extraApkInVmConfig() throws Exception {
         assumeSupportedDevice();
-
+        isFeatureMultiTenantSupported();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
@@ -1925,6 +1925,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @GmsTest(requirements = {"GMS-3-7.1-005"})
     public void payloadIsNotRoot() throws Exception {
         assumeSupportedDevice();
+        isFeatureMultiTenantSupported();
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setMemoryBytes(minMemoryRequired())
