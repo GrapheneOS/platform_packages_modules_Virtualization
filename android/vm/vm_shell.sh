@@ -39,9 +39,9 @@ function print_help() {
 
 function connect_vm() {
     cid=$1
-    echo Connecting to CID ${cid}
+    echo Connecting to CID "${cid}"
     adb disconnect localhost:8000 2>/dev/null
-    adb forward tcp:8000 vsock:${cid}:5555
+    adb forward tcp:8000 "vsock:${cid}:5555"
     adb connect localhost:8000
     adb -s localhost:8000 root
     adb -s localhost:8000 wait-for-device
@@ -53,7 +53,7 @@ function list_cids() {
     if adb devices | grep -q "^localhost:8000"; then
       echo "WARNING: localhost:8000 is already listed in adb devices.">&2
       echo "There could be an open terminal connected to the adb console.">&2
-      read -p "Do you want to continue? (y/N): " choice
+      read -r -p "Do you want to continue? (y/N): " choice
       if [[ "$choice" != "y" ]]; then
         echo "Exiting.">&2
         exit 1
@@ -67,19 +67,19 @@ function list_cids() {
 function handle_connect_cmd() {
     selected_cid=$1
 
-    available_cids=($(list_cids))
+    readarray -t available_cids < <(list_cids)
 
-    if [ -z "${available_cids}" ]; then
+    if [ "${#available_cids[@]}" -eq 0 ]; then
         echo No VM is available
         exit 1
     fi
 
-    if [ ! -n "${selected_cid}" ]; then
+    if [ -z "${selected_cid}" ]; then
         if [ ${#available_cids[@]} -eq 1 ]; then
             selected_cid=${available_cids[0]}
         else
             PS3="Select CID of VM to adb-shell into: "
-            select cid in ${available_cids[@]}
+            select cid in "${available_cids[@]}"
             do
                 selected_cid=${cid}
                 break
@@ -87,30 +87,32 @@ function handle_connect_cmd() {
         fi
     fi
 
+    # shellcheck disable=SC2076 # match literally instead of as a regex.
     if [[ ! " ${available_cids[*]} " =~ " ${selected_cid} " ]]; then
-        echo VM of CID $selected_cid does not exist. Available CIDs: ${available_cids}
+        echo "VM of CID ${selected_cid} does not exist. Available CIDs: ${available_cids[*]}"
         exit 1
     fi
 
-    connect_vm ${selected_cid}
+    connect_vm "${selected_cid}"
 }
 
 function handle_start_microdroid_cmd() {
     while [[ "$#" -gt 0 ]]; do
         case $1 in
           --auto-connect) auto_connect=true; ;;
-          --) shift; passthrough_args="$@"; break ;;
+          --) shift; passthrough_args=("$@"); break ;;
           *) echo "Unknown argument: $1"; exit 1 ;;
         esac
         shift
     done
     if [[ "${auto_connect}" == true ]]; then
-        adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args}" &
+        adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args[@]}" &
+        # shellcheck disable=SC2064 # expands `$!` now intentionally
         trap "kill $!" EXIT
         sleep 2
         handle_connect_cmd
     else
-        adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args}"
+        adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args[@]}"
     fi
 }
 
