@@ -14,6 +14,7 @@
 
 //! Implementation of the AIDL interface `IVmPayloadService`.
 
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::Atom;
 use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::IVmInternalService;
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use binder::{Interface, Strong};
@@ -23,8 +24,9 @@ pub(crate) struct VmInternalService {
 }
 
 impl IVmInternalService for VmInternalService {
-    fn reportAtomFsckFailedToHost(&self, exit_code: i32) -> binder::Result<()> {
-        self.virtual_machine_service.atomFsckFailedReported(exit_code)
+    fn forwardAtom(&self, atom: &Atom) -> binder::Result<()> {
+        self.virtual_machine_service.forwardAtom(atom)?;
+        Ok(())
     }
 }
 impl Interface for VmInternalService {}

@@ -2033,59 +2033,13 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         }
     }
 
-    fn atomCgroupMemoryBreachReported(
-        &self,
-        high_breach_count: i64,
-        high_memory_peak_mb: i64,
-    ) -> binder::Result<()> {
+    fn forwardAtom(&self, atom: &aidl::Atom) -> binder::Result<()> {
         let vm = &self.vm_instance;
         let Some(service) = global_service() else {
-            return Err(anyhow!("early VMs doesn't support atomCgroupMemoryBreachReported"))
+            return Err(anyhow!("early VMs don't support forwardAtom"))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         };
-        service
-            .atomCgroupMemoryBreachReported(
-                high_breach_count,
-                high_memory_peak_mb,
-                vm.requester_uid.try_into().unwrap(),
-                &vm.name,
-            )
-            .unwrap_or_else(|e| {
-                warn!("Failed to write CgroupMemoryBreachReported atom: {e}");
-            });
-        Ok(())
-    }
-
-    fn atomFsckFailedReported(&self, exit_code: i32) -> binder::Result<()> {
-        let vm = &self.vm_instance;
-        let Some(service) = global_service() else {
-            return Err(anyhow!("early VMs doesn't support atomFsckFailedReported"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        };
-        service
-            .atomFsckFailedReported(exit_code, vm.requester_uid.try_into().unwrap(), &vm.name)
-            .unwrap_or_else(|e| {
-                warn!("Failed to write FsckExitCodeReported atom: {e}");
-            });
-        Ok(())
-    }
-
-    fn atomGetOrCreateSkSecretFailedReported(&self, retry_count: i32) -> binder::Result<()> {
-        let vm = &self.vm_instance;
-        let Some(service) = global_service() else {
-            return Err(anyhow!("early VMs doesn't support atomGetOrCreateSkSecretFailedReported"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        };
-        service
-            .atomGetOrCreateSkSecretFailedReported(
-                retry_count,
-                vm.requester_uid.try_into().unwrap(),
-                &vm.name,
-            )
-            .unwrap_or_else(|e| {
-                warn!("Failed to write GetOrCreateSkSecretFailedReported atom: {e}");
-            });
-        Ok(())
+        service.forwardAtom(atom, vm.requester_uid.try_into().unwrap(), &vm.name)
     }
 }
 

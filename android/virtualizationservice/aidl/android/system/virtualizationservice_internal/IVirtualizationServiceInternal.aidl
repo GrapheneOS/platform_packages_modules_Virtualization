@@ -15,6 +15,7 @@
  */
 package android.system.virtualizationservice_internal;
 
+import android.system.virtualizationcommon.Atom;
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationservice.AssignableDevice;
 import android.system.virtualizationservice.IVirtualMachine;
@@ -64,16 +65,8 @@ interface IVirtualizationServiceInternal {
     /** Forwards a VmExited atom to statsd. */
     void atomVmExited(in AtomVmExited atom);
 
-    /** Forwards a CgroupMemoryBreachEventReported atom to statsd. */
-    void atomCgroupMemoryBreachReported(in long highBreachCount, in long highMemoryPeakMb,
-            in int vmRequesterUid, in String vmIdentifier);
-
-    /** Forwards a FsckExitCodeReported atom to statsd. */
-    void atomFsckFailedReported(in int exitCode, in int vmRequesterUid, in String vmIdentifier);
-
-    /** Forwards a GetOrCreateSkSecretFailedReported atom to statsd. */
-    void atomGetOrCreateSkSecretFailedReported(
-            in int retryCount, in int vmRequesterUid, in String vmIdentifier);
+    /** Forwards an atom to statsd. */
+    void forwardAtom(in Atom atom, in int requesterUid, in String vmIdentifier);
 
     /** Get a list of all currently running VMs. */
     VirtualMachineDebugInfo[] debugListVms();
