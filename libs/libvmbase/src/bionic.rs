@@ -182,7 +182,8 @@ unsafe extern "C" fn fputs(c_str: *const c_char, stream: usize) -> c_int {
     // SAFETY: The caller promised that `c_str` is a valid NUL-terminated string.
     let c_str = unsafe { CStr::from_ptr(c_str) };
 
-    if let (Ok(s), Ok(f)) = (c_str.to_str(), CFilePtr::try_from(stream)) {
+    if let Ok(s) = c_str.to_str() {
+        let f = CFilePtr::try_from(stream).expect("fputs: invalid stream");
         f.write_lines(s);
         0
     } else {
@@ -203,7 +204,8 @@ unsafe extern "C" fn fwrite(ptr: *const c_void, size: usize, nmemb: usize, strea
     // initialised bytes, and `length` is no more than that.
     let bytes = unsafe { slice::from_raw_parts(ptr as *const u8, length) };
 
-    if let (Ok(s), Ok(f)) = (str::from_utf8(bytes), CFilePtr::try_from(stream)) {
+    if let Ok(s) = str::from_utf8(bytes) {
+        let f = CFilePtr::try_from(stream).expect("fwrite: invalid stream");
         f.write_lines(s);
         length
     } else {
