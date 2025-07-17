@@ -27,7 +27,7 @@ gdb vmlinux
 ```
 
 The [kernel documentation](
-https://www.kernel.org/doc/html/latest/dev-tools/gdb-kernel-debugging.html) has
+https://www.kernel.org/doc/html/latest/process/debugging/gdb-kernel-debugging.html) has
 some general techniques on how to debug kernel with gdb.
 
 ## Obtaining vmlinux for Microdroid kernels
