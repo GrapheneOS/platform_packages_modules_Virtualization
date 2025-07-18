@@ -208,21 +208,27 @@ impl VirtualizationServiceInternal {
                         let vm = value.0.clone();
                         // Don't wait for the VM to be completely killed. Move on to the next VM as
                         // soon as possible.
-                        std::thread::spawn(move || {
-                            let _ = vm.stop().inspect_err(|e| {
-                                error!("Failed to stop virtual machine ({}): {:?}", cid, e);
-                            });
-                        });
+                        std::thread::Builder::new()
+                            .name(format!("shutdown_monitor_{}", cid))
+                            .spawn(move || {
+                                let _ = vm.stop().inspect_err(|e| {
+                                    error!("Failed to stop virtual machine ({}): {:?}", cid, e);
+                                });
+                            })
+                            .expect("Failed to create shutdown_monitor thread");
                     },
                 );
             });
         }
 
-        std::thread::spawn(|| {
-            if let Err(e) = handle_stream_connection_tombstoned() {
-                warn!("Error receiving tombstone from guest or writing them. Error: {:?}", e);
-            }
-        });
+        std::thread::Builder::new()
+            .name("tombstone_handler".to_string())
+            .spawn(|| {
+                if let Err(e) = handle_stream_connection_tombstoned() {
+                    warn!("Error receiving tombstone from guest or writing them. Error: {:?}", e);
+                }
+            })
+            .expect("Failed to create tombstone_handler thread");
 
         service
     }
@@ -311,10 +317,13 @@ impl Interface for VirtualizationServiceInternal {
             // Spawn a thread for vm_binder.dump() call, so std::io::copy(...) can be done
             // simultaneously. If read_fd isn't consumed by std::io::copy, writing to write_fd may
             // be blocked.
-            let handle = std::thread::spawn(move || {
-                let args = args.iter().map(|x| x.as_str()).collect::<Vec<_>>();
-                vm_binder.dump(&ParcelFileDescriptor::new(write_fd), &args)
-            });
+            let handle = std::thread::Builder::new()
+                .name(format!("dumper_{}", vm.1.cid))
+                .spawn(move || {
+                    let args = args.iter().map(|x| x.as_str()).collect::<Vec<_>>();
+                    vm_binder.dump(&ParcelFileDescriptor::new(write_fd), &args)
+                })
+                .expect("Failed to create dumper thread");
             if let Err(e) = std::io::copy(&mut File::from(read_fd), writer) {
                 writeln!(writer, "\tskipping dump: io copy failed: {e:?}")
                     .or(Err(StatusCode::UNKNOWN_ERROR))?;
@@ -965,13 +974,16 @@ fn handle_stream_connection_tombstoned() -> Result<()> {
                     continue;
                 }
                 _ => info!("Vsock Stream connected to cid={cid} for tombstones"),
-            }
+            };
         }
-        std::thread::spawn(move || {
-            if let Err(e) = handle_tombstone(&mut incoming_stream) {
-                error!("Failed to write tombstone- {:?}", e);
-            }
-        });
+        std::thread::Builder::new()
+            .name("tombstone_handler".to_string())
+            .spawn(move || {
+                if let Err(e) = handle_tombstone(&mut incoming_stream) {
+                    error!("Failed to write tombstone- {:?}", e);
+                }
+            })
+            .expect("Failed to create tombstone_handler thread");
     }
     Ok(())
 }
@@ -1071,13 +1083,18 @@ impl ShutdownMonitor {
         // `sys.shutdown.requested` is set first by the ShutdownThread in the system server to give
         // an early notice to everybody in the system.
         let handler_clone = handler.clone();
-        self.threads[0] = Some(std::thread::spawn(move || {
-            let mut watcher =
-                system_properties::PropertyWatcher::new("sys.shutdown.requested").unwrap();
-            while watcher.wait(None).is_err() {}
-            info!("sys.shutdown.requested triggered. Stopping VMs...");
-            handler_clone();
-        }));
+        self.threads[0] = Some(
+            std::thread::Builder::new()
+                .name("shutdown_monitor0".to_string())
+                .spawn(move || {
+                    let mut watcher =
+                        system_properties::PropertyWatcher::new("sys.shutdown.requested").unwrap();
+                    while watcher.wait(None).is_err() {}
+                    info!("sys.shutdown.requested triggered. Stopping VMs...");
+                    handler_clone();
+                })
+                .expect("Failed to create shutdown_monitor thread"),
+        );
 
         self.threads[1] = {
             let (reader, writer) = pipe2(OFlag::O_CLOEXEC).expect("pipe failed");
@@ -1102,21 +1119,28 @@ impl ShutdownMonitor {
             unsafe { sigaction(Signal::SIGTERM, &sa) }
                 .expect("failed to set sigaction for SIGTERM");
 
-            Some(std::thread::spawn(move || {
-                let mut reader: File = reader.into();
-                let mut buffer = [0u8; 1];
-                loop {
-                    match reader.read_exact(&mut buffer) {
-                        Ok(()) => {
-                            info!("SIGTERM received. Stopping VMs...");
-                            handler();
-                            break;
+            Some(
+                std::thread::Builder::new()
+                    .name("shutdown_monitor1".to_string())
+                    .spawn(move || {
+                        let mut reader: File = reader.into();
+                        let mut buffer = [0u8; 1];
+                        loop {
+                            match reader.read_exact(&mut buffer) {
+                                Ok(()) => {
+                                    info!("SIGTERM received. Stopping VMs...");
+                                    handler();
+                                    break;
+                                }
+                                Err(e) => {
+                                    error!("Error while waiting for the sigterm handler. {e:?}")
+                                }
+                            }
                         }
-                        Err(e) => error!("Error while waiting for the sigterm handler. {e:?}"),
-                    }
-                }
-                drop(writer);
-            }))
+                        drop(writer);
+                    })
+                    .expect("Failed to create shutdown_monitor thread"),
+            )
         };
     }
 
