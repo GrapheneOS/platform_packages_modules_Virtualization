@@ -7,6 +7,7 @@ rust_ffi_static {
     defaults: ["libpvmfw.defaults"],
     // This enables pvmfw_desktop to be built with a different set of features.
     features: [
+        "instance-img",
     ],
 }
 
@@ -18,7 +19,6 @@ rust_defaults {
     features: [
         "compat-kernel-range-from-gprs",
         "compat-raw-dice-handover",
-        "instance-img",
     ],
     rustlibs: [
         "libbssl_avf_nostd",
