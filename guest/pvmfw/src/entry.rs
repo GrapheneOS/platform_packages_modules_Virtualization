@@ -259,7 +259,7 @@ impl<'a> AppendedPayload<'a> {
             // ... so this branch has a mutable reference to data, from the Ok(Config<'a>). But ...
             Ok(valid) => Some(Self::Config(valid)),
             // ... if Config::new(data).is_err(), the Err holds no ref to data. However ...
-            Err(config::Error::InvalidMagic) if cfg!(feature = "legacy") => {
+            Err(config::Error::InvalidMagic) if cfg!(feature = "compat-raw-dice-handover") => {
                 // ... the borrow checker still complains about a second mutable ref without this.
                 // SAFETY: Pointer to a valid mut (not accessed elsewhere), 'a lifetime re-used.
                 let data: &'a mut _ = unsafe { &mut *data_ptr };

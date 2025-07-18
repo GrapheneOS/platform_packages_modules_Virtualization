@@ -90,7 +90,7 @@ impl<'a> MemorySlices<'a> {
         })?;
         let (kernel_start, kernel_size) = if let Some(r) = kernel_range {
             (r.start, r.len())
-        } else if cfg!(feature = "legacy") {
+        } else if cfg!(feature = "compat-kernel-range-from-gprs") {
             warn!("Failed to find the kernel range in the DT; falling back to legacy ABI");
             (
                 boot_args.payload_start.expect("Missing payload start in boot args"),
