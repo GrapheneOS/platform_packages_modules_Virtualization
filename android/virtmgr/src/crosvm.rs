@@ -833,12 +833,18 @@ impl CrosvmCommand {
                 bail!("Network feature is not supported for pVM yet");
             }
 
+            if cfg!(early) {
+                bail!("Network feature is not supported for early VMs yet");
+            }
+
             let tap_fd = {
                 let iface_suffix = std::process::id().to_string();
-                let pfd =
-                    virtualmachine::global_service().createTapInterface(&iface_suffix).context(
-                        format!("Failed to create a TAP interface with suffix {iface_suffix}"),
-                    )?;
+                let pfd = virtualmachine::global_service()
+                    .unwrap()
+                    .createTapInterface(&iface_suffix)
+                    .context(format!(
+                        "Failed to create a TAP interface with suffix {iface_suffix}"
+                    ))?;
                 pfd.as_ref().try_clone()?
             };
             let tap_fd_cloned = tap_fd.try_clone()?;
@@ -850,6 +856,7 @@ impl CrosvmCommand {
             let cleaner = move |_: &CleanerContext| {
                 let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
                 virtualmachine::global_service()
+                    .unwrap()
                     .deleteTapInterface(&pfd)
                     .context("Error deleting TAP interface")?;
                 Ok(())
@@ -884,6 +891,10 @@ impl CrosvmCommand {
             }
             // VFIO case.
             aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
+                if cfg!(early) {
+                    bail!("VFIO devices not supported for early VMs yet");
+                }
+
                 // A simple sanity check
                 let mut set = HashSet::new();
                 for device in devices.iter() {
@@ -896,7 +907,7 @@ impl CrosvmCommand {
 
                 // Then bind
                 let vfio_devices =
-                    virtualmachine::global_service().bindDevicesToVfioDriver(devices)?;
+                    virtualmachine::global_service().unwrap().bindDevicesToVfioDriver(devices)?;
 
                 const SYSFS_PLATFORM_DEVICES_PATH: &str = "/sys/devices/platform/";
                 const VFIO_PLATFORM_DRIVER_PATH: &str = "/sys/bus/platform/drivers/vfio-platform";
@@ -923,8 +934,11 @@ impl CrosvmCommand {
                     }
                 }
 
-                let dtbo_fd =
-                    virtualmachine::global_service().getDtboFile()?.as_ref().try_clone()?;
+                let dtbo_fd = virtualmachine::global_service()
+                    .unwrap()
+                    .getDtboFile()?
+                    .as_ref()
+                    .try_clone()?;
                 let path = self.add_preserved_fd(dtbo_fd);
                 self.arg(format!("--device-tree-overlay={path},filter"));
 
@@ -1531,7 +1545,7 @@ impl VmInstance {
         #[cfg(not(early))]
         scopeguard::defer! {
             let cid = self.cid.try_into().unwrap();
-            if let Err(e) = virtualmachine::global_service().unregisterVirtualMachine(cid) {
+            if let Err(e) = virtualmachine::global_service().unwrap().unregisterVirtualMachine(cid) {
                 error!("Failed to unregister virtual machine ({cid}): {e:?}");
             }
         }
