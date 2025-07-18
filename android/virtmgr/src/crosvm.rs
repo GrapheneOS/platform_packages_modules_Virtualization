@@ -359,6 +359,22 @@ impl CrosvmCommand {
         if context.config.hugePages {
             self.arg("--hugepages");
         }
+
+        // b/432329937#comment3; At the moment, microdroid kernels do not interface with other
+        // peripherals/DMA engines, so there should not be a need for coherent DMA pools.
+        // We can't completely eliminate them, so reduce them to be as small as possible.
+        //
+        // Without this, the kernel will default to allocating 128 KB of memory for each GB
+        // provisioned to a VM, which could result in several pools being created depending
+        // on the IPA space layout of the VM.
+        //
+        // For instance, on a VM that has memory in both ZONE_DMA and ZONE_NORMAL, two pools
+        // will be allocated to service allocations that target each zone. On a small VM (less than
+        // 1 GB in size), that results in 256 KB being used. The same thing can also happen on a VM
+        // that has all of memory in ZONE_DMA and is under investigation as well in b/432329937.
+        //
+        // TODO: This should really be the guest's page size.
+        self.args(["--params", "coherent_pool=4096"]);
     }
 
     fn add_balloon_arg(&mut self, context: &RunContext) {
