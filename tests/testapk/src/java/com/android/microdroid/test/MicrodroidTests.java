@@ -3473,6 +3473,46 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         cb2.stopped.await();
     }
 
+    @Test
+    public void vmListDoesNotShowDeadVirtualMachines() throws Exception {
+        UiAutomation uia = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        assertThat(runInShell(TAG, uia, "vm list").trim()).isEqualTo("Running VMs: []");
+
+        final int numVMs = 5;
+
+        List<VirtualMachine> vms = new ArrayList<>();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        for (int i = 0; i < numVMs; i++) {
+            String vmName = "vmList_" + i;
+            VirtualMachineConfig.Builder builder =
+                    newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                            .setMemoryBytes(minMemoryRequired())
+                            .setDebugLevel(DEBUG_LEVEL_FULL)
+                            .setCpuTopology(CPU_TOPOLOGY_ONE_CPU);
+            VirtualMachineConfig config = builder.build();
+            VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config);
+            SimpleVirtualMachineCallback cb = new SimpleVirtualMachineCallback();
+            vm.setCallback(executor, cb);
+            vm.run();
+            cb.started.await();
+            vms.add(vm);
+
+            assertThat(runInShell(TAG, uia, "vm list")).contains("name: \"" + vmName + "\"");
+        }
+
+        for (VirtualMachine vm : vms) {
+            kill(TAG, "crosvm_" + vm.getName());
+        }
+        // It may take some time for the crosvm processes to get the SIGKILL signal
+        Thread.sleep(5000);
+
+        assertThat(runInShell(TAG, uia, "vm list").trim()).isEqualTo("Running VMs: []");
+
+        for (VirtualMachine vm : vms) {
+            vm.close();
+        }
+    }
+
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {
         Parcel parcel = Parcel.obtain();
         descriptor.writeToParcel(parcel, 0);
