@@ -54,8 +54,10 @@ pub fn perform_rollback_protection(
     {
         perform_deferred_rollback_protection(verified_boot_data)?;
         Ok((false, instance_hash.unwrap(), true))
-    } else {
+    } else if cfg!(feature = "instance-img") {
         perform_legacy_rollback_protection(fdt, dice_inputs, cdi_seal, instance_hash)
+    } else {
+        force_new_instance()
     }
 }
 
@@ -127,6 +129,16 @@ fn perform_legacy_rollback_protection(
         (true, salt)
     };
     Ok((new_instance, salt, false))
+}
+
+fn force_new_instance() -> Result<(bool, Hidden, bool), RebootReason> {
+    info!("No rollback protection mechanism available: generating a new instance");
+    let salt = rand::random_array().map_err(|e| {
+        error!("Failed to generate salt: {e}");
+        RebootReason::InternalError
+    })?;
+
+    Ok((true, salt, false))
 }
 
 fn check_dice_measurements_match_entry(
