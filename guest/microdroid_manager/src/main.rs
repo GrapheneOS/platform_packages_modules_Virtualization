@@ -492,7 +492,7 @@ fn try_run_payload(
         // Spawn thread to monitor the cgroup's behavior.
         // TODO: (khei@)
         // Send cgroup kill signal and join cgroup thread for graceful shutdown
-        let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(cgroup_config.name)?;
+        let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(cgroup_config.name, service)?;
     }
 
     let payload_metadata = metadata.payload.ok_or_else(|| {

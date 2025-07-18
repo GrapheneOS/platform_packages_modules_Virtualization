@@ -14,9 +14,13 @@
 
 //! Monitors cgroup of Microdroid
 
+use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+
+use binder::Strong;
 
 use inotify::Inotify;
 use inotify::WatchMask;
@@ -135,6 +139,7 @@ fn monitor_events(
     current_usage_file_path: &Path,
     peak_usage_file_path: &Path,
     kill_switch: &Arc<EventFd>,
+    service: &Strong<dyn IVirtualMachineService>,
 ) -> Result<()> {
     let mut inotify =
         init_events_monitor(events_file_path).context("failed to spawn inotify events monitor")?;
@@ -185,6 +190,12 @@ fn monitor_events(
                 }
 
                 error!("memory.high breach event detected");
+                let high_memory_peak_mb = read_cgroup_value(peak_usage_file_path).unwrap_or(-1);
+                if let Err(e) =
+                    service.atomCgroupMemoryBreachReported(high_event_count, high_memory_peak_mb)
+                {
+                    error!("Failed to report memory.high breach event: {}", e);
+                }
                 old_high_event_count = high_event_count;
                 // If a high breach event is detected, we will increase the limit by 25%
                 if let Err(e) = handle_high_breach_event(
@@ -204,9 +215,11 @@ fn monitor_events(
 
 pub fn start_cgroup_monitor(
     cgroup_name: &'static str,
+    service: &Strong<dyn IVirtualMachineService>,
 ) -> Result<(thread::JoinHandle<()>, Arc<EventFd>)> {
     let cgroup_evt_fd = Arc::new(EventFd::new()?);
     let cgroup_evt_fd_clone = cgroup_evt_fd.clone();
+    let service_clone = service.clone();
     let cgroup_thread = thread::Builder::new()
         .name("microdroid_cgroup_monitor".to_string())
         .spawn(move || {
@@ -232,6 +245,7 @@ pub fn start_cgroup_monitor(
                 &current_usage_file_path,
                 &peak_usage_file_path,
                 &cgroup_evt_fd_clone,
+                &service_clone,
             ) {
                 error!("cgroup monitor failed: {:#}", e);
                 thread::sleep(Duration::from_secs(1));

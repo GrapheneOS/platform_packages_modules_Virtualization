@@ -23,9 +23,6 @@ package android.system.virtualization.internal;
 interface IVmInternalService {
     /** Socket name of the service IVmInternalService. */
     const String VM_INTERNAL_SERVICE_SOCKET_NAME = "vm_internal_service";
-
-    /**
-     * Write some text content to the host side dropbox component.
-     */
-    void writeToHostDropBox(String tag, String text);
+    /** Report the failure fsck process to the host statsd service. */
+    void reportAtomFsckFailedToHost(in int exitCode);
 }
