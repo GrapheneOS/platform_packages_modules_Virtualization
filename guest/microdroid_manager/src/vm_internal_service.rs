@@ -23,11 +23,10 @@ pub(crate) struct VmInternalService {
 }
 
 impl IVmInternalService for VmInternalService {
-    fn writeToHostDropBox(&self, tag: &str, text: &str) -> binder::Result<()> {
-        self.virtual_machine_service.writeToDropBox(tag, text)
+    fn reportAtomFsckFailedToHost(&self, exit_code: i32) -> binder::Result<()> {
+        self.virtual_machine_service.atomFsckFailedReported(exit_code)
     }
 }
-
 impl Interface for VmInternalService {}
 
 impl VmInternalService {

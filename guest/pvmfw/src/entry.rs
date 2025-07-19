@@ -181,9 +181,9 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
         config_entries.vm_ref_dt,
         config_entries.reserved_mem.as_deref(),
     )?;
-    if let Some(r) = preserved_memory {
-        flush(r);
-        slices.add_preserved_memory(r);
+    if !preserved_memory.is_empty() {
+        flush(preserved_memory);
+        slices.add_preserved_memory(preserved_memory);
     }
 
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
@@ -259,7 +259,7 @@ impl<'a> AppendedPayload<'a> {
             // ... so this branch has a mutable reference to data, from the Ok(Config<'a>). But ...
             Ok(valid) => Some(Self::Config(valid)),
             // ... if Config::new(data).is_err(), the Err holds no ref to data. However ...
-            Err(config::Error::InvalidMagic) if cfg!(feature = "legacy") => {
+            Err(config::Error::InvalidMagic) if cfg!(feature = "compat-raw-dice-handover") => {
                 // ... the borrow checker still complains about a second mutable ref without this.
                 // SAFETY: Pointer to a valid mut (not accessed elsewhere), 'a lifetime re-used.
                 let data: &'a mut _ = unsafe { &mut *data_ptr };

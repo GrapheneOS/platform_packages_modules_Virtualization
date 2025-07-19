@@ -249,10 +249,10 @@ fn e2fsck(device: &Path) -> Result<()> {
     }
 
     info!("e2fsck wasn't successful");
-    let mut exit_code = "None".to_string();
+    let mut exit_code = i32::MAX;
     let result = match status.code() {
         Some(code) => {
-            exit_code = code.to_string();
+            exit_code = code;
             if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
                 Err(anyhow!("File system errors left uncorrected: {code}"))
             } else {
@@ -263,11 +263,9 @@ fn e2fsck(device: &Path) -> Result<()> {
         None => Err(anyhow!("Process terminated by signal")),
     };
 
-    match INTERNAL_CONNECTION
-        .writeToHostDropBox("encryptedstore", &format!("e2fsck exited with code: {exit_code}"))
-    {
-        Ok(()) => warn!("Wrote e2fsck exit code {exit_code} to dropbox"),
-        Err(e) => error!("Failed to write e2fsck exit code {exit_code} to dropbox: {e}"),
+    match INTERNAL_CONNECTION.reportAtomFsckFailedToHost(exit_code) {
+        Ok(()) => warn!("Wrote e2fsck exit code {exit_code} to statsd"),
+        Err(e) => error!("Failed to write e2fsck exit code {exit_code} to statsd: {e}"),
     };
 
     result

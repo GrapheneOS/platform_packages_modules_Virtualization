@@ -64,6 +64,13 @@ interface IVirtualizationServiceInternal {
     /** Forwards a VmExited atom to statsd. */
     void atomVmExited(in AtomVmExited atom);
 
+    /** Forwards a CgroupMemoryBreachEventReported atom to statsd. */
+    void atomCgroupMemoryBreachReported(in long highBreachCount, in long highMemoryPeakMb,
+            in int vmRequesterUid, in String vmIdentifier);
+
+    /** Forwards a FsckExitCodeReported atom to statsd. */
+    void atomFsckFailedReported(in int exitCode, in int vmRequesterUid, in String vmIdentifier);
+
     /** Get a list of all currently running VMs. */
     VirtualMachineDebugInfo[] debugListVms();
 
