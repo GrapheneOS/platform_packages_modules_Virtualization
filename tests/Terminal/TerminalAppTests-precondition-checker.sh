@@ -18,8 +18,8 @@
 ## Precondition checks for running terminal app
 ## Used by CI for skipping tests.
 
-COMPRESSED_IMAGE_SIZE=716800    # 700MB
-INSTALLED_IMAGE_SIZE=8388608    # 8GB
+COMPRESSED_IMAGE_SIZE=563200    # 550MB
+INSTALLED_IMAGE_SIZE=3145728    # 3GB
 
 free_space=$(adb shell df /data | tail -1 | awk '{print $4}')
 if [[ ${free_space} -lt ${INSTALLED_IMAGE_SIZE} ]]; then
@@ -34,4 +34,3 @@ if [[ ${free_space} -lt ${COMPRESSED_IMAGE_SIZE} ]]; then
   df /tmp
   exit 1
 fi
-
