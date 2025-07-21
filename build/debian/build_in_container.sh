@@ -17,6 +17,8 @@ show_help() {
   echo "-t VIRT_TOP    Specify the virtualization repo top [default is deduced from script location]"
   echo "-u             Set VM boot mode to u-boot [default is to load kernel directly]"
   echo "-w             Save temp work directory in the container [for debugging]"
+  echo "-W WORK_DIR    Specify work dir instead of temporarily creating one. Imply -w [for debugging]"
+  echo "-c             Build with cloud-init"
 }
 
 ensure_binfmt_misc() {
@@ -30,7 +32,7 @@ ensure_binfmt_misc() {
 }
 
 parse_options() {
-  while getopts "a:b:ghi:st:uw" option; do
+  while getopts "a:b:ghi:st:uwW:c" option; do
     case ${option} in
       a)
         arch="$OPTARG"
@@ -59,6 +61,13 @@ parse_options() {
       w)
         save_workdir_flag="-w"
         ;;
+      W)
+        mount_work_dir="-v ${OPTARG}:${OPTARG}"
+        work_dir_flag="-W ${OPTARG}"
+        ;;
+      c)
+        cloud_init_flag="-c"
+        ;;
       *)
         echo "Invalid option: $OPTARG" ; exit 1
         ;;
@@ -85,14 +94,18 @@ save_workdir_flag=
 shell="|| bash"
 uboot_flag=
 virt_repo_top="${SCRIPT_DIR}/../../"
+cloud_init_flag=
+mount_work_dir=
+work_dir_flag=
 
 parse_options "$@"
 ensure_binfmt_misc
 
 docker run --privileged $interactive \
+  $mount_work_dir \
   -v /dev:/dev \
   -v "$virt_repo_top:/root/Virtualization" \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag -b \"$build_id\" $shell"
+  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag $work_dir_flag $cloud_init_flag -b \"$build_id\" $shell"

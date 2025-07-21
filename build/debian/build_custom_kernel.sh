@@ -12,6 +12,7 @@ show_help() {
 	echo "-d DEST_DIR  Destination directory for packages [default: $SCRIPT_DIR]"
 	echo "-h           Print usage and this help message and exit."
 	echo "-w           Save temp work directory [for debugging]"
+	echo "-W WORK_DIR  Specify work dir instead of temporarily creating. Imply -w [for debugging]"
 }
 
 check_sudo() {
@@ -21,7 +22,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:d:hw" option; do
+	while getopts "a:d:hwW:" option; do
 		case ${option} in
 			a)
 				arch="$OPTARG"
@@ -34,6 +35,11 @@ parse_options() {
 				;;
 			w)
 				save_workdir=1
+				;;
+			W)
+				workdir="${OPTARG%/}"
+				save_workdir=1
+				may_skip_build=1
 				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
@@ -57,6 +63,11 @@ parse_options() {
 }
 
 build_custom_kernel() {
+	if [[ "$may_skip_build" == 1 && -f "${dest_dir}/vmlinuz" ]]; then
+		echo "Skipping build_custom_kernel(). ${dest_dir}/vmlinuz already exists"
+		return
+	fi
+
 	local deb_base_url="https://deb.debian.org/debian"
 	local deb_security_base_url="https://security.debian.org/debian-security"
 
@@ -167,6 +178,11 @@ EOF
 }
 
 build_initrd() {
+	if [[ "$may_skip_build" == 1 && -f "${dest_dir}/initrd.img" ]]; then
+		echo "Skipping build_initrd(). ${workdir}/initrd.img already exists"
+		return
+	fi
+
 	mkdir -p "${workdir}/initrd"
 	pushd "${workdir}/initrd" > /dev/null
 
@@ -290,12 +306,20 @@ trap clean_up EXIT
 abi_flavour=
 kernel_extras_guid=
 save_workdir=0
+may_skip_build=0
 dest_dir=$SCRIPT_DIR
-workdir=$(mktemp -d)
+workdir=
+
+check_sudo
+parse_options "$@"
+
+if [[ -n "${workdir}" ]]; then
+	mkdir -p "${workdir}" || true
+else
+	workdir=$(mktemp -d)
+fi
 echo $workdir
 
-parse_options "$@"
-check_sudo
 install_prerequisites
 build_custom_kernel
 build_initrd

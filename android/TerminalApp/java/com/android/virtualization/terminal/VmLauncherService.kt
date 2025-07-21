@@ -205,6 +205,7 @@ class VmLauncherService : Service() {
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
+        val timeout_secs = json.getBootTimeoutSecs() * (if (IS_EMULATOR) 5 else 1)
 
         if (Flags.terminalStorageBalloon()) {
             // When storage ballooning flag is enabled, convert rootfs disk into a sparse file.
@@ -250,7 +251,7 @@ class VmLauncherService : Service() {
 
         portNotifier = PortNotifier(this)
 
-        getTerminalServiceInfo()
+        getTerminalServiceInfo(timeout_secs)
             .thenAcceptAsync(
                 { info ->
                     val ipAddress = info.hostAddresses[0].hostAddress
@@ -274,7 +275,7 @@ class VmLauncherService : Service() {
             )
     }
 
-    private fun getTerminalServiceInfo(): CompletableFuture<NsdServiceInfo> {
+    private fun getTerminalServiceInfo(timeout_secs: Int): CompletableFuture<NsdServiceInfo> {
         val executor = Executors.newSingleThreadExecutor(TerminalThreadFactory(applicationContext))
         val nsdManager = getSystemService<NsdManager?>(NsdManager::class.java)
         val queryInfo = NsdServiceInfo()
@@ -307,7 +308,7 @@ class VmLauncherService : Service() {
             },
         )
 
-        resolvedInfo.orTimeout(VM_BOOT_TIMEOUT_SECONDS.toLong(), TimeUnit.SECONDS)
+        resolvedInfo.orTimeout(timeout_secs.toLong(), TimeUnit.SECONDS)
         return resolvedInfo
     }
 
@@ -542,17 +543,13 @@ class VmLauncherService : Service() {
         private const val GUEST_SPARSE_DISK_SIZE_PERCENTAGE = 95
         private const val EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE = 90
 
-        private val VM_BOOT_TIMEOUT_SECONDS: Int =
+        private val IS_EMULATOR: Boolean =
             {
                 val deviceName = SystemProperties.get("ro.product.vendor.device", "")
                 val cuttlefish = deviceName.startsWith("vsoc_")
                 val goldfish = deviceName.startsWith("emu64")
 
-                if (cuttlefish || goldfish) {
-                    3 * 60
-                } else {
-                    30
-                }
+                cuttlefish || goldfish
             }()
 
         private fun prepareIntent(context: Context, callback: VmLauncherServiceCallback): Intent {
