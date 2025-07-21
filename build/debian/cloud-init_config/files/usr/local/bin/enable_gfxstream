@@ -1,0 +1,15 @@
+#!/bin/bash
+export VK_ICD_FILENAMES=/home/droid/mesa/guest-build/src/gfxstream/guest/vulkan/gfxstream_vk_devenv_icd.$(uname -m).json
+
+# Check if the ICD file exists. If not, build gfxstream.
+if [ ! -f "$VK_ICD_FILENAMES" ]; then
+  echo "gfxstream doesn't exist"
+  echo "Attempting to build gfxstream..."
+  /usr/local/bin/build_gfxstream
+fi
+
+. enable_display
+unset LIBGL_ALWAYS_SOFTWARE
+
+# remove this after TILING_OPTIMAL-based swap chain is used.
+export MESA_VK_WSI_DEBUG=sw,linear

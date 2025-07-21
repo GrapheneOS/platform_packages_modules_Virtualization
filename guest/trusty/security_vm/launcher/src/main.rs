@@ -25,7 +25,9 @@ use android_system_virtualizationservice::binder::{
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use hypervisor_props::is_protected_vm_supported;
+use nix::fcntl::OFlag;
 use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use vmclient::VmInstance;
 
@@ -113,13 +115,16 @@ fn main() -> Result<()> {
     });
 
     println!("creating VM");
+    let console_out = create_log_writer(&args.name)?;
+    // Creates only one pipe and one thread for efficiency.
+    let log_out = console_out.try_clone().context("Failed to clone console_out fd for log_out")?;
     let vm = VmInstance::create(
         service.as_ref(),
         &vm_config,
         // console_in, console_out, and log will be redirected to the kernel log by virtmgr
+        Some(console_out),
         None, // console_in
-        None, // console_out
-        None, // log
+        Some(log_out),
         None, // dump_dt
     )
     .context("Failed to create VM")?;
@@ -147,5 +152,27 @@ fn main() -> Result<()> {
         eprintln!("{} ended: {:?}", args.name.to_owned(), death_reason);
         Ok(())
     }
-    // TODO(b/331320802): we may want to use android logger instead of stdio_to_kmsg?
+}
+
+/// Creates a pipe and spawns a thread to forward the VM's output to stdout.
+fn create_log_writer(prefix: &str) -> Result<File> {
+    let (reader_fd, writer_fd) =
+        nix::unistd::pipe2(OFlag::O_CLOEXEC).context("Failed to create pipe for VM output")?;
+    let reader = File::from(reader_fd);
+    let writer = File::from(writer_fd);
+
+    let prefix = prefix.to_owned();
+    std::thread::Builder::new()
+        .name(format!("vm-log-{}", prefix))
+        .spawn(move || {
+            let reader = BufReader::new(reader);
+            for line in reader.lines() {
+                let Ok(line) = line else {
+                    break;
+                };
+                println!("{}: {}", prefix, line);
+            }
+        })
+        .context("Failed to spawn VM logging thread")?;
+    Ok(writer)
 }

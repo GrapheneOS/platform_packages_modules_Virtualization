@@ -1,0 +1,13 @@
+[Unit]
+Description=Mount virtiofs emulated file path
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/bin/bash -c 'mkdir -p /mnt/shared; chown 1000:100 /mnt/shared; mount -t virtiofs android /mnt/shared'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -14,6 +14,7 @@ show_help() {
   echo "-s             Leave a shell open if able [default: only if the build fails]"
   echo "-t VIRT_TOP    Specify the virtualization repo top [default is deduced from script location]"
   echo "-w             Save temp work directory in the container [for debugging]"
+  echo "-W WORK_DIR    Specify work dir instead of temporarily creating one. Imply -w [for debugging]"
 }
 
 arch="$(uname -m)"
@@ -21,8 +22,10 @@ image_name="ubuntu:22.04"
 save_workdir_flag=
 shell="|| bash"
 virt_repo_top="${SCRIPT_DIR}/../../"
+mount_work_dir=
+work_dir_flag=
 
-while getopts "a:hi:st:w" option; do
+while getopts "a:hi:st:wW:" option; do
   case ${option} in
     a)
       arch="$OPTARG"
@@ -42,6 +45,10 @@ while getopts "a:hi:st:w" option; do
     w)
       save_workdir_flag="-w"
       ;;
+    W)
+      mount_work_dir="-v ${OPTARG}:${OPTARG}"
+      work_dir_flag="-W ${OPTARG}"
+      ;;
     *)
       echo "Invalid option: $OPTARG" ; exit 1
       ;;
@@ -60,8 +67,9 @@ else
 fi
 
 docker run --privileged $interactive \
+  $mount_work_dir \
   -v /dev:/dev \
   -v "$virt_repo_top:/root/Virtualization" \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build_custom_kernel.sh -a $arch $save_workdir_flag $shell"
+  bash -c "./build_custom_kernel.sh -a $arch $save_workdir_flag $work_dir_flag $shell"

@@ -122,6 +122,7 @@ fn main() {
         }
     } else {
         virtualmachine::global_service()
+            .unwrap()
             .removeMemlockRlimit()
             .expect("Failed to remove memlock rlimit");
     }

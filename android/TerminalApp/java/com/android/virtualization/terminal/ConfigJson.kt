@@ -63,6 +63,7 @@ internal data class ConfigJson(
     private val display: DisplayJson?,
     private val gpu: GpuJson?,
     private val auto_memory_balloon: Boolean,
+    private val boot_timeout_secs: Int?,
 ) {
     private fun getCpuTopology(): Int {
         return when (cpu_topology) {
@@ -75,6 +76,10 @@ internal data class ConfigJson(
     private fun getDebugLevel(): Int {
         return if (debuggable) VirtualMachineConfig.DEBUG_LEVEL_FULL
         else VirtualMachineConfig.DEBUG_LEVEL_NONE
+    }
+
+    internal fun getBootTimeoutSecs(): Int {
+        return boot_timeout_secs ?: DEFAULT_BOOT_TIMEOUT
     }
 
     /** Converts this parsed JSON into VirtualMachineConfig Builder */
@@ -296,6 +301,7 @@ internal data class ConfigJson(
 
     companion object {
         private const val DEBUG = true
+        const val DEFAULT_BOOT_TIMEOUT: Int = 30
 
         /** Parses JSON file at jsonPath */
         fun from(context: Context, jsonPath: Path): ConfigJson {

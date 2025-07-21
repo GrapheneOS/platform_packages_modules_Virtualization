@@ -26,6 +26,7 @@ rust_binary {
         "libclap",
         "libhypervisor_props",
         "libvmclient",
+        "libnix",
     ],
     bootstrap: true,
     system_ext_specific: true,

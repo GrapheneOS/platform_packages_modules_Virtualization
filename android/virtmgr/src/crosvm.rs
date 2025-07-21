@@ -499,35 +499,38 @@ impl CrosvmCommand {
     }
 
     fn logger_thread(read_from: File, tag: String) -> JoinHandle<()> {
-        std::thread::spawn(move || {
-            use std::io::BufRead;
-            let mut reader = std::io::BufReader::new(read_from);
-            let mut buf = vec![];
-            loop {
-                buf.clear();
-                buf.shrink_to(1024);
-                match reader.read_until(b'\n', &mut buf) {
-                    Ok(0) => {
-                        info!("{}: EOF", &tag);
-                        return;
-                    }
-                    Ok(_size) => {
-                        if buf.last() == Some(&b'\n') {
-                            buf.pop();
-                            // Logs sent via TTY usually end lines with "\r\n".
-                            if buf.last() == Some(&b'\r') {
-                                buf.pop();
-                            }
+        std::thread::Builder::new()
+            .name("logger".to_string())
+            .spawn(move || {
+                use std::io::BufRead;
+                let mut reader = std::io::BufReader::new(read_from);
+                let mut buf = vec![];
+                loop {
+                    buf.clear();
+                    buf.shrink_to(1024);
+                    match reader.read_until(b'\n', &mut buf) {
+                        Ok(0) => {
+                            info!("{}: EOF", &tag);
+                            return;
                         }
-                        info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
-                    }
-                    Err(e) => {
-                        error!("Could not read console pipe: {e:?}");
-                        return;
-                    }
-                };
-            }
-        })
+                        Ok(_size) => {
+                            if buf.last() == Some(&b'\n') {
+                                buf.pop();
+                                // Logs sent via TTY usually end lines with "\r\n".
+                                if buf.last() == Some(&b'\r') {
+                                    buf.pop();
+                                }
+                            }
+                            info!("{}: {}", &tag, &String::from_utf8_lossy(&buf));
+                        }
+                        Err(e) => {
+                            error!("Could not read console pipe: {e:?}");
+                            return;
+                        }
+                    };
+                }
+            })
+            .expect("Failed to create logger thread")
     }
 
     fn add_failure_pipe(&mut self) -> Result<()> {
@@ -536,20 +539,23 @@ impl CrosvmCommand {
         // This becomes /dev/ttyS1
         self.arg(format!("--serial=type=file,path={writer},hardware=serial,num=2"));
 
-        let read_thread = std::thread::spawn(move || {
-            // Read the pipe to see if any failure reason is written
-            let mut failure_reason = String::new();
-            // Arbitrary max size in case of misbehaving guest.
-            const MAX_SIZE: u64 = 50_000;
-            match reader.take(MAX_SIZE).read_to_string(&mut failure_reason) {
-                Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
-                Ok(len) if len > 0 => {
-                    error!("VM returned failure reason '{}'", failure_reason.trim())
-                }
-                _ => (),
-            };
-            failure_reason.trim().to_owned()
-        });
+        let read_thread = std::thread::Builder::new()
+            .name("failure_reader".to_string())
+            .spawn(move || {
+                // Read the pipe to see if any failure reason is written
+                let mut failure_reason = String::new();
+                // Arbitrary max size in case of misbehaving guest.
+                const MAX_SIZE: u64 = 50_000;
+                match reader.take(MAX_SIZE).read_to_string(&mut failure_reason) {
+                    Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
+                    Ok(len) if len > 0 => {
+                        error!("VM returned failure reason '{}'", failure_reason.trim())
+                    }
+                    _ => (),
+                };
+                failure_reason.trim().to_owned()
+            })
+            .expect("Failed to create failure_reader thread");
 
         let cleaner = move |context: &CleanerContext| {
             let failure_reason = read_thread.join().expect("Failed to wait for fail reason");
@@ -827,12 +833,18 @@ impl CrosvmCommand {
                 bail!("Network feature is not supported for pVM yet");
             }
 
+            if cfg!(early) {
+                bail!("Network feature is not supported for early VMs yet");
+            }
+
             let tap_fd = {
                 let iface_suffix = std::process::id().to_string();
-                let pfd =
-                    virtualmachine::global_service().createTapInterface(&iface_suffix).context(
-                        format!("Failed to create a TAP interface with suffix {iface_suffix}"),
-                    )?;
+                let pfd = virtualmachine::global_service()
+                    .unwrap()
+                    .createTapInterface(&iface_suffix)
+                    .context(format!(
+                        "Failed to create a TAP interface with suffix {iface_suffix}"
+                    ))?;
                 pfd.as_ref().try_clone()?
             };
             let tap_fd_cloned = tap_fd.try_clone()?;
@@ -844,6 +856,7 @@ impl CrosvmCommand {
             let cleaner = move |_: &CleanerContext| {
                 let pfd = ParcelFileDescriptor::new(tap_fd_cloned);
                 virtualmachine::global_service()
+                    .unwrap()
                     .deleteTapInterface(&pfd)
                     .context("Error deleting TAP interface")?;
                 Ok(())
@@ -878,6 +891,10 @@ impl CrosvmCommand {
             }
             // VFIO case.
             aidl::AssignedDevices::Devices(devices) if !devices.is_empty() => {
+                if cfg!(early) {
+                    bail!("VFIO devices not supported for early VMs yet");
+                }
+
                 // A simple sanity check
                 let mut set = HashSet::new();
                 for device in devices.iter() {
@@ -890,7 +907,7 @@ impl CrosvmCommand {
 
                 // Then bind
                 let vfio_devices =
-                    virtualmachine::global_service().bindDevicesToVfioDriver(devices)?;
+                    virtualmachine::global_service().unwrap().bindDevicesToVfioDriver(devices)?;
 
                 const SYSFS_PLATFORM_DEVICES_PATH: &str = "/sys/devices/platform/";
                 const VFIO_PLATFORM_DRIVER_PATH: &str = "/sys/bus/platform/drivers/vfio-platform";
@@ -917,8 +934,11 @@ impl CrosvmCommand {
                     }
                 }
 
-                let dtbo_fd =
-                    virtualmachine::global_service().getDtboFile()?.as_ref().try_clone()?;
+                let dtbo_fd = virtualmachine::global_service()
+                    .unwrap()
+                    .getDtboFile()?
+                    .as_ref()
+                    .try_clone()?;
                 let path = self.add_preserved_fd(dtbo_fd);
                 self.arg(format!("--device-tree-overlay={path},filter"));
 
@@ -1062,20 +1082,26 @@ impl VmState {
 
             let child_clone = child.clone();
             let instance_clone = instance.clone();
-            let monitor_vm_exit_thread = thread::spawn(move || {
-                instance_clone.monitor_vm_exit(
-                    child_clone,
-                    vhost_fs_devices,
-                    psi_thread_and_evt_fd,
-                    cleaners,
-                );
-            });
+            let monitor_vm_exit_thread = thread::Builder::new()
+                .name("vm_exit_monitor".to_string())
+                .spawn(move || {
+                    instance_clone.monitor_vm_exit(
+                        child_clone,
+                        vhost_fs_devices,
+                        psi_thread_and_evt_fd,
+                        cleaners,
+                    );
+                })
+                .expect("Failed to create vm_exit_monitor thread");
 
             if detect_hangup {
                 let child_clone = child.clone();
-                thread::spawn(move || {
-                    instance.monitor_payload_hangup(child_clone);
-                });
+                thread::Builder::new()
+                    .name("hangup_monitor".to_string())
+                    .spawn(move || {
+                        instance.monitor_payload_hangup(child_clone);
+                    })
+                    .expect("Failed to create hangup_monitor thread");
             }
 
             // If it started correctly, update the state.
@@ -1519,7 +1545,7 @@ impl VmInstance {
         #[cfg(not(early))]
         scopeguard::defer! {
             let cid = self.cid.try_into().unwrap();
-            if let Err(e) = virtualmachine::global_service().unregisterVirtualMachine(cid) {
+            if let Err(e) = virtualmachine::global_service().unwrap().unregisterVirtualMachine(cid) {
                 error!("Failed to unregister virtual machine ({cid}): {e:?}");
             }
         }
