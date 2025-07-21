@@ -99,4 +99,7 @@ interface IVirtualMachineService {
 
     /** Forwards a CGroupMemoryBreachReported atom to statsd. */
     void atomCgroupMemoryBreachReported(in long highBreachCount, in long highMemoryPeakMb);
+
+    /** Forwards a GetOrCreateSkSecretFailedReported atom to statsd. */
+    void atomGetOrCreateSkSecretFailedReported(in int retryCount);
 }
