@@ -113,7 +113,6 @@ pub struct CrosvmConfig {
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
     pub detect_hangup: bool,
-    pub gdb_port: Option<NonZeroU16>,
     pub device_tree_overlays: Vec<File>,
     pub enable_hypervisor_specific_auth_method: bool,
     pub instance_id: [u8; 64],
@@ -214,6 +213,7 @@ impl CrosvmCommand {
         command.add_file_backed_mapping_arg(context)?;
         command.add_assigned_devices_arg(context)?;
         command.add_dump_dtb_arg(context)?;
+        command.add_gdb_arg(context)?;
         Ok(command)
     }
 
@@ -967,6 +967,21 @@ impl CrosvmCommand {
 
         let path = self.add_preserved_fd(dump_dt_fd);
         self.args(["--dump-device-tree-blob", &path]);
+        Ok(())
+    }
+
+    fn add_gdb_arg(&mut self, context: &RunContext) -> Result<()> {
+        if let Some(gdb_port) = NonZeroU16::new(context.config.gdbPort as u16) {
+            if context.config.protectedVm {
+                bail!("Can't use gdb with protected VMs");
+            }
+            if context.debug_config.debug_level == aidl::DebugLevel::NONE {
+                bail!("Can't use gdb with non-deguggable VMs");
+            }
+
+            self.args(["--gdb", &gdb_port.to_string()]);
+            self.args(["-p", "nokaslr"]);
+        }
         Ok(())
     }
 }
@@ -1989,11 +2004,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         } else {
             warn!("kernel is too old enable --lock-guest-memory-dontneed");
         }
-    }
-
-    if let Some(gdb_port) = config.gdb_port {
-        command.arg("--gdb").arg(gdb_port.to_string());
-        command.arg("-p").arg("nokaslr");
     }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
