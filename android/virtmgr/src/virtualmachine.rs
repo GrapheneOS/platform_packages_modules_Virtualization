@@ -93,11 +93,11 @@ const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
     Mutex::new(None);
 
-pub fn global_service() -> Strong<dyn aidl::IVirtualizationServiceInternal> {
+pub fn global_service() -> Option<Strong<dyn aidl::IVirtualizationServiceInternal>> {
     use binder::IBinder; // for ping_binder
 
     if cfg!(early) {
-        panic!("Early virtmgr must not connect to {BINDER_SERVICE_IDENTIFIER}")
+        return None;
     }
 
     let mut service = GLOBAL_SERVICE.lock().unwrap();
@@ -107,7 +107,7 @@ pub fn global_service() -> Strong<dyn aidl::IVirtualizationServiceInternal> {
                 .expect("Could not connect to {BINDER_SERVICE_IDENTIFIER}"),
         );
     }
-    service.as_ref().unwrap().clone()
+    Some(service.as_ref().unwrap().clone())
 }
 
 static SUPPORTED_OS_NAMES: LazyLock<HashSet<String>> =
@@ -249,7 +249,12 @@ impl aidl::IVirtualizationService for VirtualizationService {
     /// Allocate a new instance_id to the VM
     fn allocateInstanceId(&self) -> binder::Result<[u8; 64]> {
         check_manage_access()?;
-        global_service().allocateInstanceId()
+        if let Some(service) = global_service() {
+            service.allocateInstanceId()
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support allocateInstanceId"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     /// Initialise an empty partition image of the given size to be used as a writable partition.
@@ -339,13 +344,23 @@ impl aidl::IVirtualizationService for VirtualizationService {
     /// and as such is only permitted from the shell user.
     fn debugListVms(&self) -> binder::Result<Vec<aidl::VirtualMachineDebugInfo>> {
         // Delegate to the global service, including checking the debug permission.
-        global_service().debugListVms()
+        if let Some(service) = global_service() {
+            service.debugListVms()
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support debugListVms"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     /// Get a list of assignable device types.
     fn getAssignableDevices(&self) -> binder::Result<Vec<aidl::AssignableDevice>> {
         // Delegate to the global service, including checking the permission.
-        global_service().getAssignableDevices()
+        if let Some(service) = global_service() {
+            service.getAssignableDevices()
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support getAssignableDevices"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     /// Get a list of supported OSes.
@@ -366,12 +381,22 @@ impl aidl::IVirtualizationService for VirtualizationService {
     }
 
     fn enableTestAttestation(&self) -> binder::Result<()> {
-        global_service().enableTestAttestation()
+        if let Some(service) = global_service() {
+            service.enableTestAttestation()
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support enableTestAttestation"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     fn isRemoteAttestationSupported(&self) -> binder::Result<bool> {
         check_manage_access()?;
-        global_service().isRemoteAttestationSupported()
+        if let Some(service) = global_service() {
+            service.isRemoteAttestationSupported()
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support isRemoteAttestationSupported"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     fn isUpdatableVmSupported(&self) -> binder::Result<bool> {
@@ -384,12 +409,22 @@ impl aidl::IVirtualizationService for VirtualizationService {
 
     fn removeVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
         check_manage_access()?;
-        global_service().removeVmInstance(instance_id)
+        if let Some(service) = global_service() {
+            service.removeVmInstance(instance_id)
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support removeVmInstance"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     fn claimVmInstance(&self, instance_id: &[u8; 64]) -> binder::Result<()> {
         check_manage_access()?;
-        global_service().claimVmInstance(instance_id)
+        if let Some(service) = global_service() {
+            service.claimVmInstance(instance_id)
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support claimVmInstance"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 }
 
@@ -516,7 +551,7 @@ impl VirtualizationService {
     }
 
     fn create_vm_context(&self) -> binder::Result<(Cid, PathBuf)> {
-        let vm_context = global_service().allocateVmContext()?;
+        let vm_context = global_service().unwrap().allocateVmContext()?;
         let cid = vm_context.cid as Cid;
         let temp_dir: PathBuf = vm_context.tempDir.clone().into();
         Ok((cid, temp_dir))
@@ -781,7 +816,7 @@ fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder:
 
     let instance = &to_local_object(vm).expect("not a local object").instance;
     let cid = instance.cid;
-    global_service().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+    global_service().unwrap().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
 
     let weak_vm = Strong::downgrade(vm);
     let mut dr = DeathRecipient::new(move || {
@@ -792,7 +827,7 @@ fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder:
             });
         }
     });
-    global_service().as_binder().link_to_death(&mut dr)?;
+    global_service().unwrap().as_binder().link_to_death(&mut dr)?;
 
     // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
     // automatically unlinked.
@@ -1998,11 +2033,21 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         csr: &[u8],
         test_mode: bool,
     ) -> binder::Result<Vec<aidl::Certificate>> {
-        global_service().requestAttestation(csr, get_calling_uid() as i32, test_mode)
+        if let Some(service) = global_service() {
+            service.requestAttestation(csr, get_calling_uid() as i32, test_mode)
+        } else {
+            Err(anyhow!("early VMs doesn't support requestAttestation"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     fn claimSecretkeeperEntry(&self, id: &[u8; 64]) -> binder::Result<()> {
-        global_service().claimSecretkeeperEntry(id)
+        if let Some(service) = global_service() {
+            service.claimSecretkeeperEntry(id)
+        } else {
+            Err(anyhow!("early VMs doesn't support claimSecretkeeperEntry"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
     }
 
     fn getHostRpcProvider(&self) -> binder::Result<Strong<dyn IRpcProvider>> {
@@ -2045,7 +2090,11 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         high_memory_peak_mb: i64,
     ) -> binder::Result<()> {
         let vm = &self.vm_instance;
-        global_service()
+        let Some(service) = global_service() else {
+            return Err(anyhow!("early VMs doesn't support atomCgroupMemoryBreachReported"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        };
+        service
             .atomCgroupMemoryBreachReported(
                 high_breach_count,
                 high_memory_peak_mb,
@@ -2060,7 +2109,11 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
 
     fn atomFsckFailedReported(&self, exit_code: i32) -> binder::Result<()> {
         let vm = &self.vm_instance;
-        global_service()
+        let Some(service) = global_service() else {
+            return Err(anyhow!("early VMs doesn't support atomFsckFailedReported"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        };
+        service
             .atomFsckFailedReported(exit_code, vm.requester_uid.try_into().unwrap(), &vm.name)
             .unwrap_or_else(|e| {
                 warn!("Failed to write FsckExitCodeReported atom: {e}");

@@ -149,9 +149,12 @@ pub fn write_vm_creation_stats(
     thread::Builder::new()
         .name("vm_create_atom_forwarder".to_string())
         .spawn(move || {
-            virtualmachine::global_service().atomVmCreationRequested(&atom).unwrap_or_else(|e| {
-                warn!("Failed to write VmCreationRequested atom: {e}");
-            });
+            virtualmachine::global_service()
+                .unwrap()
+                .atomVmCreationRequested(&atom)
+                .unwrap_or_else(|e| {
+                    warn!("Failed to write VmCreationRequested atom: {e}");
+                });
         })
         .expect("Failed to create vm_create_atom_forwarder thread");
 }
@@ -181,7 +184,7 @@ pub fn write_vm_booted_stats(
     thread::Builder::new()
         .name("vm_booted_atom_forwarder".to_string())
         .spawn(move || {
-            virtualmachine::global_service().atomVmBooted(&atom).unwrap_or_else(|e| {
+            virtualmachine::global_service().unwrap().atomVmBooted(&atom).unwrap_or_else(|e| {
                 warn!("Failed to write VmBooted atom: {e}");
             });
         })
@@ -216,7 +219,7 @@ pub fn write_vm_exited_stats_sync(
     };
 
     info!("Writing VmExited atom into statsd.");
-    virtualmachine::global_service().atomVmExited(&atom).unwrap_or_else(|e| {
+    virtualmachine::global_service().unwrap().atomVmExited(&atom).unwrap_or_else(|e| {
         warn!("Failed to write VmExited atom: {e}");
     });
 }
