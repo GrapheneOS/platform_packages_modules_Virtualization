@@ -15,7 +15,7 @@
 -->
 <early_vms>
     <early_vm>
-        <name>trusty_security_vm_launcher</name>
+        <name>security_vm</name>
         <cid>200</cid>
         <path>/system_ext/bin/trusty_security_vm_launcher</path>
     </early_vm>

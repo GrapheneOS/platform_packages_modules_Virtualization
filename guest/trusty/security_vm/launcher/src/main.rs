@@ -50,7 +50,7 @@ pub struct Args {
     protected: bool,
 
     /// Name of the VM. Used to pull correct config from early_vms.xml
-    #[arg(long, default_value = "trusty_security_vm_launcher")]
+    #[arg(long, default_value = "security_vm")]
     name: String,
 
     /// Memory size of the VM in MiB
