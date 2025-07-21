@@ -71,6 +71,10 @@ interface IVirtualizationServiceInternal {
     /** Forwards a FsckExitCodeReported atom to statsd. */
     void atomFsckFailedReported(in int exitCode, in int vmRequesterUid, in String vmIdentifier);
 
+    /** Forwards a GetOrCreateSkSecretFailedReported atom to statsd. */
+    void atomGetOrCreateSkSecretFailedReported(
+            in int retryCount, in int vmRequesterUid, in String vmIdentifier);
+
     /** Get a list of all currently running VMs. */
     VirtualMachineDebugInfo[] debugListVms();
 
