@@ -2120,20 +2120,6 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
             });
         Ok(())
     }
-
-    fn atomGetOrCreateSkSecretFailedReported(&self, retry_count: i32) -> binder::Result<()> {
-        let vm = &self.vm_instance;
-        global_service()
-            .atomGetOrCreateSkSecretFailedReported(
-                retry_count,
-                vm.requester_uid.try_into().unwrap(),
-                &vm.name,
-            )
-            .unwrap_or_else(|e| {
-                warn!("Failed to write GetOrCreateSkSecretFailedReported atom: {e}");
-            });
-        Ok(())
-    }
 }
 
 // Unfortunately it looks like we can't pass the IEncryptedStoreKEK object we got from the app all
