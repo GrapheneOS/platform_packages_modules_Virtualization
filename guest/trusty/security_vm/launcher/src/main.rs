@@ -34,7 +34,8 @@ use std::path::PathBuf;
 use vmclient::VmInstance;
 
 const ACCESSOR_SERVICE_NAME: &str = "android.os.IAccessor/ICommService/security_vm_keymint";
-const INTERNAL_RPC_SERVICE_NAME: &str = "android.keymint.trusty.commservice.ICommService/default";
+const INTERNAL_RPC_SERVICE_NAME: &str =
+    "android.trusty.commservice.ICommService/security_vm_keymint";
 
 #[derive(Parser)]
 /// Collection of CLI for trusty_security_vm_launcher
