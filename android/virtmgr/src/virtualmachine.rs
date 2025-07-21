@@ -128,17 +128,6 @@ static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
     }
 });
 
-const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
-const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
-
-fn check_known_tee_service(tee_service: &str) -> binder::Result<()> {
-    if !KNOWN_TEE_SERVICES.contains(&tee_service) {
-        return Err(anyhow!("unknown tee_service {tee_service}"))
-            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-    }
-    Ok(())
-}
-
 fn create_or_update_idsig_file(
     input_fd: &ParcelFileDescriptor,
     idsig_fd: &ParcelFileDescriptor,
@@ -622,13 +611,9 @@ impl VirtualizationService {
                 .or_binder_exception(ExceptionCode::SECURITY)?;
         }
 
-        let mut system_tee_services = Vec::new();
         let mut vendor_tee_services = Vec::new();
         for tee_service in config.teeServices.clone() {
-            if !tee_service.starts_with("vendor.") {
-                check_known_tee_service(&tee_service)?;
-                system_tee_services.push(tee_service);
-            } else {
+            if tee_service.starts_with("vendor.") {
                 vendor_tee_services.push(tee_service);
             }
         }
@@ -721,7 +706,6 @@ impl VirtualizationService {
             detect_hangup,
             device_tree_overlays,
             start_suspended: !vendor_tee_services.is_empty(),
-            enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
             command,
         };
 
