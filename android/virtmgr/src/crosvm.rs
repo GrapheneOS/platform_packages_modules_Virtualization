@@ -1396,6 +1396,17 @@ impl VmInstance {
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
         cleaners: HashMap<String, Box<Cleaner>>,
     ) {
+        // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
+        // delete it. Otherwise there'll be a memory leak. When cfg early is set, this is skipped
+        // because early_virtmgr does not interact with the global virtualizationservice.
+        #[cfg(not(early))]
+        scopeguard::defer! {
+            let cid = self.cid.try_into().unwrap();
+            if let Err(e) = virtualmachine::global_service().unwrap().unregisterVirtualMachine(cid) {
+                error!("Failed to unregister virtual machine ({cid}): {e:?}");
+            }
+        }
+
         // Wait for the EXIT of the crosvm process, but thanks to WNOWAIT it remains in the
         // waitable state so that we can inspect /proc/<pid>/stat or status. Note however that we
         // can only measure guest runtime, but not maximum RSS because VmHWM is not available for
@@ -1596,16 +1607,6 @@ impl VmInstance {
     /// agent is installed there. If not, or the shutdown didn't finish on time, the VM is forcibly
     /// shut down. In-flight data in the VM may be affected!
     pub fn kill(&self) -> Result<(), Error> {
-        // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
-        // delete it. Otherwise there'll be a memory leak. When cfg early is set, this is skipped
-        // because early_virtmgr does not interact with the global virtualizationservice.
-        #[cfg(not(early))]
-        scopeguard::defer! {
-            let cid = self.cid.try_into().unwrap();
-            if let Err(e) = virtualmachine::global_service().unwrap().unregisterVirtualMachine(cid) {
-                error!("Failed to unregister virtual machine ({cid}): {e:?}");
-            }
-        }
         let mut vm_state_mg = self.vm_state.lock().unwrap();
         match &*vm_state_mg {
             VmState::Running { .. } => {
