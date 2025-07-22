@@ -63,16 +63,28 @@ fn calculate_clusters_count(guest_available_bytes: u64) -> Result<u64> {
         stat.blocks_available()
     ))?;
 
-    let used = total
-        .checked_sub(free)
-        .context(format!("underflow in used size calculation (free > total), which should not happen, total: {}, free: {}", total, free))?;
+    let current_reserved_clusters_count = get_reserved_clusters()?;
+    let current_reserved_clusters_size =
+        current_reserved_clusters_count.checked_mul(fr_size).context(format!(
+            "overflow in calculate_reserved_clusters_size calculation,
+            current_reserved_clusters_count: {}, fr_size: {}",
+            current_reserved_clusters_count, fr_size
+        ))?;
 
-    let avail = std::cmp::min(free, guest_available_bytes);
-    let balloon_size_bytes = free - avail;
+    let used = total.checked_sub(free + current_reserved_clusters_size).context(format!(
+        "underflow in used size calculation (free + current_reserved_clusters_size > total), which
+        should not happen, total: {}, free: {}, current_reserved_clusters_size: {}",
+        total, free, current_reserved_clusters_size
+    ))?;
+
+    let mut balloon_size_bytes = 0;
+    if total > guest_available_bytes + used {
+        balloon_size_bytes = total - guest_available_bytes - used;
+    }
 
     let reserved_clusters_count = balloon_size_bytes.div_ceil(fr_size);
 
-    debug!("total: {total}, free: {free}, used: {used}, avail: {avail}, balloon: {balloon_size_bytes}, clusters_count: {reserved_clusters_count}");
+    debug!("total: {total}, free: {free}, used: {used}, guest_avail: {guest_available_bytes}, balloon: {balloon_size_bytes}, clusters_count: {reserved_clusters_count}");
 
     Ok(reserved_clusters_count)
 }
@@ -85,6 +97,18 @@ fn set_reserved_clusters(clusters_count: u64) -> anyhow::Result<()> {
     )
     .context("failed to write reserved_clusters")?;
     Ok(())
+}
+
+fn get_reserved_clusters() -> anyhow::Result<u64> {
+    const ROOTFS_DEVICE_NAME: &str = "vda1";
+    let path = format!("/sys/fs/ext4/{ROOTFS_DEVICE_NAME}/reserved_clusters");
+    let content =
+        std::fs::read_to_string(&path).with_context(|| format!("failed to read from {path}"))?;
+    let clusters_count = content
+        .trim()
+        .parse::<u64>()
+        .with_context(|| format!("failed to parse content of {path}: '{content}'"))?;
+    Ok(clusters_count)
 }
 
 #[tokio::main]
