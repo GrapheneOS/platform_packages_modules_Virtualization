@@ -63,7 +63,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 use std::time::Duration;
 use vbmeta::VbMetaImage;
-use vmconfig::{get_debug_level, VmConfig};
+use vmconfig::VmConfig;
 use vsock::VsockStream;
 use zip::ZipArchive;
 
@@ -620,13 +620,6 @@ impl VirtualizationService {
             check_use_custom_virtual_machine()?;
         }
 
-        let gdb_port = extract_gdb_port(config);
-
-        // Additional permission checks if caller request gdb.
-        if gdb_port.is_some() {
-            check_gdb_allowed(config)?;
-        }
-
         let mut device_tree_overlays = vec![];
         if let Some(dt_overlay) =
             maybe_create_reference_dt_overlay(config, &instance_id, &temporary_directory)?
@@ -739,6 +732,7 @@ impl VirtualizationService {
 
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
 
+        let gdb_port = NonZeroU16::new(config.gdbPort as u16);
         let detect_hangup = is_app_config && gdb_port.is_none();
 
         let context = RunContext {
@@ -760,7 +754,6 @@ impl VirtualizationService {
             shared_paths,
             protected: *is_protected,
             detect_hangup,
-            gdb_port,
             device_tree_overlays,
             enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
             instance_id,
@@ -1123,6 +1116,8 @@ fn load_app_config(
         }
 
         vm_config.teeServices.clone_from(&custom_config.teeServices);
+
+        vm_config.gdbPort = custom_config.gdbPort;
     }
 
     if config.memoryMib > 0 {
@@ -1756,27 +1751,6 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     ParcelFileDescriptor::new(f)
 }
 
-fn is_protected(config: &aidl::VirtualMachineConfig) -> bool {
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(config) => config.protectedVm,
-        aidl::VirtualMachineConfig::AppConfig(config) => config.protectedVm,
-    }
-}
-
-fn check_gdb_allowed(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
-    if is_protected(config) {
-        return Err(anyhow!("Can't use gdb with protected VMs"))
-            .or_binder_exception(ExceptionCode::SECURITY);
-    }
-
-    if get_debug_level(config) == Some(aidl::DebugLevel::NONE) {
-        return Err(anyhow!("Can't use gdb with non-debuggable VMs"))
-            .or_binder_exception(ExceptionCode::SECURITY);
-    }
-
-    Ok(())
-}
-
 fn extract_instance_id(config: &aidl::VirtualMachineConfig) -> [u8; 64] {
     match config {
         aidl::VirtualMachineConfig::RawConfig(config) => config.instanceId,
@@ -1790,15 +1764,6 @@ fn extract_want_updatable(config: &aidl::VirtualMachineConfig) -> bool {
         aidl::VirtualMachineConfig::AppConfig(config) => {
             let Some(custom) = &config.customConfig else { return true };
             custom.wantUpdatable
-        }
-    }
-}
-
-fn extract_gdb_port(config: &aidl::VirtualMachineConfig) -> Option<NonZeroU16> {
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(config) => NonZeroU16::new(config.gdbPort as u16),
-        aidl::VirtualMachineConfig::AppConfig(config) => {
-            NonZeroU16::new(config.customConfig.as_ref().map(|c| c.gdbPort).unwrap_or(0) as u16)
         }
     }
 }
