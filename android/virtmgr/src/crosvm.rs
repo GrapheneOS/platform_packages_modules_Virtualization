@@ -197,6 +197,8 @@ impl CrosvmCommand {
         command.add_name_arg(context);
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
+        #[cfg(target_arch = "aarch64")]
+        command.add_aarch64_specific_args();
         command.add_memory_arg(context);
         command.add_balloon_arg(context);
         command.add_console_arg(context)?;
@@ -336,6 +338,17 @@ impl CrosvmCommand {
         }
 
         Ok(())
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    fn add_aarch64_specific_args(&mut self) {
+        // Move the PCI MMIO regions to near the end of the low-MMIO space.
+        // This is done to accommodate a limitation in a partner's hypervisor.
+        self.args([
+            "--pci",
+            "mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]",
+        ]);
+        self.arg("--no-pmu");
     }
 
     fn add_memory_arg(&mut self, context: &RunContext) {
@@ -1992,13 +2005,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         }
     }
 
-    // Move the PCI MMIO regions to near the end of the low-MMIO space.
-    // This is done to accommodate a limitation in a partner's hypervisor.
-    #[cfg(target_arch = "aarch64")]
-    command
-        .arg("--pci")
-        .arg("mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]");
-
     if let Some(gdb_port) = config.gdb_port {
         command.arg("--gdb").arg(gdb_port.to_string());
         command.arg("-p").arg("nokaslr");
@@ -2007,9 +2013,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
     // Keep track of what file descriptors should be mapped to the crosvm process.
     let mut preserved_fds = Vec::new();
     preserved_fds.extend(config.command.preserved_fds);
-
-    #[cfg(target_arch = "aarch64")]
-    command.arg("--no-pmu");
 
     let control_sock = create_crosvm_control_listener(crosvm_control_socket_path)
         .context("failed to create control listener")?;
