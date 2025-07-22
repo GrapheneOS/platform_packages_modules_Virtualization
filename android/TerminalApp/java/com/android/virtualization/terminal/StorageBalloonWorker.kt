@@ -46,7 +46,7 @@ class StorageBalloonWorker(appContext: Context, workerParams: WorkerParameters) 
     }
 
     private fun calculateGuestAvailableStorageSize(hostAllocatableBytes: Long): Long {
-        return hostAllocatableBytes - HOST_RESERVED_BYTES
+        return (hostAllocatableBytes - HOST_RESERVED_BYTES).coerceAtLeast(0L)
     }
 
     private fun calculateDelaySeconds(hostAvailableBytes: Long): Long {
