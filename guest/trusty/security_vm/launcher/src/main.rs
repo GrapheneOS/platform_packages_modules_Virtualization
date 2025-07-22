@@ -33,7 +33,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use vmclient::VmInstance;
 
-const ACCESSOR_SERVICE_NAME: &str = "android.os.IAccessor/ICommService/default";
+const ACCESSOR_SERVICE_NAME: &str = "android.os.IAccessor/ICommService/security_vm_keymint";
 const INTERNAL_RPC_SERVICE_NAME: &str = "android.keymint.trusty.commservice.ICommService/default";
 
 #[derive(Parser)]
