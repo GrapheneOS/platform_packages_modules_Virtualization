@@ -85,14 +85,14 @@ class StorageBalloonWorker(appContext: Context, workerParams: WorkerParameters) 
         // Critical: (host storage < 1GB) => report every 5 seconds
         private const val CRITICAL_STORAGE_THRESHOLD_BYTES = 1L * 1024 * 1024 * 1024
         private const val CRITICAL_DELAY_SECONDS = 5L
-        // Low: (1GB <= storage < 5GB) => report every 60 seconds
+        // Low: (1GB <= storage < 5GB) => report every 10 seconds
         private const val LOW_STORAGE_THRESHOLD_BYTES = 5L * 1024 * 1024 * 1024
-        private const val LOW_STORAGE_DELAY_SECONDS = 60L
-        // Moderate: (5GB <= storage < 10GB) => report every 15 minutes
+        private const val LOW_STORAGE_DELAY_SECONDS = 10L
+        // Moderate: (5GB <= storage < 10GB) => report every 60 seconds
         private const val MODERATE_STORAGE_THRESHOLD_BYTES = 10L * 1024 * 1024 * 1024
-        private const val MODERATE_STORAGE_DELAY_SECONDS = 15L * 60
-        // Normal: report every 60 minutes
-        private const val NORMAL_DELAY_SECONDS = 60L * 60
+        private const val MODERATE_STORAGE_DELAY_SECONDS = 60L
+        // Normal: (10GB <= storage) report every 15 minutes
+        private const val NORMAL_DELAY_SECONDS = 60L * 15
 
         internal fun start(ctx: Context, ds: DebianServiceImpl) {
             debianService = ds
