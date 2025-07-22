@@ -191,7 +191,8 @@ impl CrosvmCommand {
             // crosvm is configured to show debug logs.
             .args(["--log-level", "debug,disk=warn"])
             .arg("run")
-            .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
+            .arg("--disable-sandbox") // TODO(qwandor): Remove --disable-sandbox.
+            .args(["--cid", &context.cid.to_string()]);
 
         command.add_name_arg(context);
         command.add_kernel_arg(context)?;
@@ -1936,7 +1937,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     command.arg0(config.command.arg0);
     command.args(config.command.args);
-    command.arg("--cid").arg(config.cid.to_string());
 
     if config.enable_hypervisor_specific_auth_method && !config.protected {
         bail!("hypervisor specific auth method only supported for protected VMs");
