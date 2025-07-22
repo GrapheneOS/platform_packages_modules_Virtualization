@@ -755,8 +755,6 @@ impl VirtualizationService {
             protected: *is_protected,
             detect_hangup,
             device_tree_overlays,
-            enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
-            instance_id,
             start_suspended: !vendor_tee_services.is_empty(),
             enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
             command,
@@ -1131,6 +1129,7 @@ fn load_app_config(
     vm_config.boostUclamp = config.boostUclamp;
     vm_config.hostServices = config.hostServices.clone();
     vm_config.osName = config.osName.clone();
+    vm_config.instanceId = config.instanceId;
 
     // Microdroid takes additional init ramdisk & (optionally) storage image
     add_microdroid_system_images(config, instance_file, storage_image, os_name, &mut vm_config)?;
@@ -1751,6 +1750,7 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     ParcelFileDescriptor::new(f)
 }
 
+// TODO(jiyong): remove this function
 fn extract_instance_id(config: &aidl::VirtualMachineConfig) -> [u8; 64] {
     match config {
         aidl::VirtualMachineConfig::RawConfig(config) => config.instanceId,

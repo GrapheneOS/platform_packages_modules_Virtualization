@@ -114,8 +114,6 @@ pub struct CrosvmConfig {
     pub protected: bool,
     pub detect_hangup: bool,
     pub device_tree_overlays: Vec<File>,
-    pub enable_hypervisor_specific_auth_method: bool,
-    pub instance_id: [u8; 64],
     pub start_suspended: bool,
     pub enable_guest_ffa: bool,
     pub command: CrosvmCommand,
@@ -214,6 +212,7 @@ impl CrosvmCommand {
         command.add_assigned_devices_arg(context)?;
         command.add_dump_dtb_arg(context)?;
         command.add_gdb_arg(context)?;
+        command.add_gunyah_specific_arg(context)?;
         Ok(command)
     }
 
@@ -337,6 +336,35 @@ impl CrosvmCommand {
             self.arg("--boost-uclamp");
         }
 
+        Ok(())
+    }
+
+    fn add_gunyah_specific_arg(&mut self, context: &RunContext) -> Result<()> {
+        if !hypervisor_props::is_gunyah()? {
+            if context.config.enableHypervisorSpecificAuthMethod {
+                bail!("hypervisor specific auth method not supported for current hypervisor");
+            }
+            return Ok(());
+        }
+
+        if context.config.enableHypervisorSpecificAuthMethod {
+            if !context.config.protectedVm {
+                bail!("hypervisor specific auth method only supported for protected VMs");
+            }
+
+            // "QCOM Trusted VM" compatibility mode.
+            //
+            // When this mode is enabled, two hypervisor specific IDs are expected to be packed
+            // into the instance ID. We extract them here and pass along to crosvm so they can be
+            // given to the hypervisor driver via an ioctl.
+            let pas_id = u32::from_le_bytes(context.config.instanceId[60..64].try_into().unwrap());
+            let vm_id = u16::from_le_bytes(context.config.instanceId[58..60].try_into().unwrap());
+            self.args(["--hypervisor",
+                &format!("gunyah[device=/dev/gunyah,qcom_trusted_vm_id={vm_id},qcom_trusted_vm_pas_id={pas_id}]")]);
+            // Put the FDT close to the payload (default is end of RAM) to so that CMA can be used
+            // without bloating memory usage.
+            self.args(["--fdt-position", "after-payload"]);
+        }
         Ok(())
     }
 
@@ -1966,29 +1994,7 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
     command.arg0(config.command.arg0);
     command.args(config.command.args);
 
-    if config.enable_hypervisor_specific_auth_method && !config.protected {
-        bail!("hypervisor specific auth method only supported for protected VMs");
-    }
     if config.protected {
-        if config.enable_hypervisor_specific_auth_method {
-            if !hypervisor_props::is_gunyah()? {
-                bail!("hypervisor specific auth method not supported for current hypervisor");
-            }
-            // "QCOM Trusted VM" compatibility mode.
-            //
-            // When this mode is enabled, two hypervisor specific IDs are expected to be packed
-            // into the instance ID. We extract them here and pass along to crosvm so they can be
-            // given to the hypervisor driver via an ioctl.
-            let pas_id = u32::from_le_bytes(config.instance_id[60..64].try_into().unwrap());
-            let vm_id = u16::from_le_bytes(config.instance_id[58..60].try_into().unwrap());
-            command.arg("--hypervisor").arg(
-                format!("gunyah[device=/dev/gunyah,qcom_trusted_vm_id={vm_id},qcom_trusted_vm_pas_id={pas_id}]"),
-            );
-            // Put the FDT close to the payload (default is end of RAM) to so that CMA can be used
-            // without bloating memory usage.
-            command.arg("--fdt-position").arg("after-payload");
-        }
-
         match system_properties::read(SYSPROP_CUSTOM_PVMFW_PATH)? {
             Some(pvmfw_path) if !pvmfw_path.is_empty() => {
                 if pvmfw_path == "none" {
