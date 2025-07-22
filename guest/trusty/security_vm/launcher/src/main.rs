@@ -24,10 +24,12 @@ use android_system_virtualizationservice::binder::{
 };
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use env_logger::Builder;
 use hypervisor_props::is_protected_vm_supported;
+use log::{error, info, warn, LevelFilter};
 use nix::fcntl::OFlag;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use vmclient::VmInstance;
 
@@ -83,6 +85,24 @@ fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
 fn main() -> Result<()> {
     let args = Args::parse();
 
+    const BINARY_NAME: &str = "trusty_security_vm_launcher";
+    let vm_name = args.name.to_owned();
+    Builder::new()
+        // Set the default log level if not configured via RUST_LOG
+        .filter_level(LevelFilter::Info)
+        .format(move |buf, record| {
+            writeln!(
+                buf,
+                // Format: "[LEVEL] binary_name:vm_name: log_message"
+                "[{}] {}:{}: {}",
+                record.level(),
+                BINARY_NAME,
+                vm_name,
+                record.args()
+            )
+        })
+        .init();
+
     let service = get_service()?;
 
     let kernel =
@@ -97,7 +117,7 @@ fn main() -> Result<()> {
         args.protected
     } else {
         if args.protected {
-            println!("protected VM is not supported; launch non-protected VM");
+            warn!("protected VM is not supported; launch non-protected VM");
         }
         false
     };
@@ -114,7 +134,7 @@ fn main() -> Result<()> {
         ..Default::default()
     });
 
-    println!("creating VM");
+    info!("creating VM");
     let console_out = create_log_writer(&args.name)?;
     // Creates only one pipe and one thread for efficiency.
     let log_out = console_out.try_clone().context("Failed to clone console_out fd for log_out")?;
@@ -129,8 +149,7 @@ fn main() -> Result<()> {
     )
     .context("Failed to create VM")?;
     vm.start(None /* callback */).context("Failed to start VM")?;
-
-    println!("started {} VM", args.name.to_owned());
+    info!("started VM");
 
     if args.port > 0 {
         ProcessState::start_thread_pool();
@@ -143,13 +162,13 @@ fn main() -> Result<()> {
         // TODO(b/429217397): Use a proper way to register an accessor.
         binder::add_service(ACCESSOR_SERVICE_NAME, accessor_delegator)
             .context("failed to add accessor service")?;
-        println!("registered accessor service {ACCESSOR_SERVICE_NAME}");
+        info!("registered accessor service {ACCESSOR_SERVICE_NAME}");
         ProcessState::join_thread_pool();
 
         bail!("Thread pool unexpectedly ended");
     } else {
         let death_reason = vm.wait_for_death();
-        eprintln!("{} ended: {:?}", args.name.to_owned(), death_reason);
+        error!("VM ended: {:?}", death_reason);
         Ok(())
     }
 }
@@ -161,7 +180,6 @@ fn create_log_writer(prefix: &str) -> Result<File> {
     let reader = File::from(reader_fd);
     let writer = File::from(writer_fd);
 
-    let prefix = prefix.to_owned();
     std::thread::Builder::new()
         .name(format!("vm-log-{}", prefix))
         .spawn(move || {
@@ -170,7 +188,8 @@ fn create_log_writer(prefix: &str) -> Result<File> {
                 let Ok(line) = line else {
                     break;
                 };
-                println!("{}: {}", prefix, line);
+                // Prefix guest logs to distinguish them from launcher logs
+                info!("vm: {}", line);
             }
         })
         .context("Failed to spawn VM logging thread")?;
