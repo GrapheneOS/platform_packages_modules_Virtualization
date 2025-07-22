@@ -115,7 +115,6 @@ pub struct CrosvmConfig {
     pub detect_hangup: bool,
     pub device_tree_overlays: Vec<File>,
     pub start_suspended: bool,
-    pub enable_guest_ffa: bool,
     pub command: CrosvmCommand,
 }
 
@@ -213,6 +212,7 @@ impl CrosvmCommand {
         command.add_dump_dtb_arg(context)?;
         command.add_gdb_arg(context)?;
         command.add_gunyah_specific_arg(context)?;
+        command.add_teeservices_arg(context)?;
         Ok(command)
     }
 
@@ -1023,6 +1023,26 @@ impl CrosvmCommand {
 
             self.args(["--gdb", &gdb_port.to_string()]);
             self.args(["-p", "nokaslr"]);
+        }
+        Ok(())
+    }
+
+    fn add_teeservices_arg(&mut self, context: &RunContext) -> Result<()> {
+        const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+        const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
+
+        for svc in &context.config.teeServices {
+            let svc = svc.as_str();
+            if svc.starts_with("vendor.") {
+                continue;
+            }
+            if !KNOWN_TEE_SERVICES.contains(&svc) {
+                bail!("Unknown tee_service {svc}");
+            }
+
+            if svc == GUEST_FFA_TEE_SERVICE {
+                self.arg("--ffa=auto");
+            }
         }
         Ok(())
     }
@@ -2060,10 +2080,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     if config.start_suspended {
         command.arg("--suspended");
-    }
-
-    if config.enable_guest_ffa {
-        command.arg("--ffa=auto");
     }
 
     print_crosvm_args(&command);
