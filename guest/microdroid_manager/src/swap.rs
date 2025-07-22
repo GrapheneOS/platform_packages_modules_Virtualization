@@ -20,6 +20,7 @@ use std::io::{Error, Seek, SeekFrom, Write};
 use uuid::Uuid;
 
 const SWAP_DEV: &str = "block/zram0";
+const COMPRESSION_ALGORITHM: &str = "lzo-rle";
 
 /// Parse "MemTotal: N kB" from /proc/meminfo
 fn get_total_memory_kb() -> Result<u32> {
@@ -83,9 +84,22 @@ fn swapon(dev: &str) -> Result<()> {
     Ok(())
 }
 
+/// Selects a compression algorithm for ZRAM. Can fail if the compression algorithm is not
+/// supported by the kernel, which can be checked by reading /sys/$dev/comp_algorithm.
+fn select_compression_algorithm(dev: &str) -> Result<()> {
+    OpenOptions::new()
+        .read(false)
+        .write(true)
+        .open(format!("/sys/{}/comp_algorithm", dev))?
+        .write_all(COMPRESSION_ALGORITHM.as_bytes())?;
+    Ok(())
+}
+
 /// Turn on ZRAM-backed swap
 pub fn init_swap() -> Result<()> {
     let dev = SWAP_DEV;
+
+    select_compression_algorithm(dev)?;
 
     // Create a ZRAM block device the same size as total VM memory.
     let mem_kb = get_total_memory_kb()?;
