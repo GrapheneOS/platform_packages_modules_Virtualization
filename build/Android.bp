@@ -57,6 +57,9 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_SUPPORT_LONG_RUNNING_VMS"), {
         true: ["long_running_vms"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY"), {
+        true: ["advance_multitenancy"],
+        default: [],
     }),
 }
 
