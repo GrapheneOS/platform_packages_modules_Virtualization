@@ -14,6 +14,10 @@
 
 //! Monitors cgroup of Microdroid
 
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
+    Atom::Atom,
+    Atom::CgroupMemoryBreachReported::CgroupMemoryBreachReported,
+};
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 
 use anyhow::anyhow;
@@ -191,9 +195,12 @@ fn monitor_events(
 
                 error!("memory.high breach event detected");
                 let high_memory_peak_mb = read_cgroup_value(peak_usage_file_path).unwrap_or(-1);
-                if let Err(e) =
-                    service.atomCgroupMemoryBreachReported(high_event_count, high_memory_peak_mb)
-                {
+                if let Err(e) = service.forwardAtom(&Atom::CgroupMemoryBreachReported(
+                    CgroupMemoryBreachReported {
+                        highBreachCount: high_event_count,
+                        highMemoryPeakMb: high_memory_peak_mb,
+                    },
+                )) {
                     error!("Failed to report memory.high breach event: {}", e);
                 }
                 old_high_event_count = high_event_count;

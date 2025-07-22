@@ -18,6 +18,10 @@
 //! solution in a VM. This is based on dm-crypt & requires the (64 bytes') key & the backing device.
 //! It uses dm_rust lib.
 
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::{
+    Atom,
+    FsckFailedReported::FsckFailedReported
+};
 use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{IVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME};
 use anyhow::{anyhow, ensure, Context, Result};
 use binder::Strong;
@@ -263,7 +267,9 @@ fn e2fsck(device: &Path) -> Result<()> {
         None => Err(anyhow!("Process terminated by signal")),
     };
 
-    match INTERNAL_CONNECTION.reportAtomFsckFailedToHost(exit_code) {
+    match INTERNAL_CONNECTION
+        .forwardAtom(&Atom::FsckFailedReported(FsckFailedReported { exitCode: exit_code }))
+    {
         Ok(()) => warn!("Wrote e2fsck exit code {exit_code} to statsd"),
         Err(e) => error!("Failed to write e2fsck exit code {exit_code} to statsd: {e}"),
     };
