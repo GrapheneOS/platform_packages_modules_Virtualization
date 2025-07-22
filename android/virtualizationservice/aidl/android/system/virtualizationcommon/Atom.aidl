@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package android.system.virtualizationcommon;
 
-package android.system.virtualization.internal;
+/** {@hide} */
+union Atom {
+    CgroupMemoryBreachReported cgroupMemoryBreachReported;
+    FsckFailedReported fsckFailedReported;
+    GetOrCreateSkSecretFailedReported getOrCreateSkSecretFailedReported;
 
-import android.system.virtualizationcommon.Atom;
+    parcelable CgroupMemoryBreachReported {
+        long highBreachCount;
+        long highMemoryPeakMb;
+    }
 
-/**
- * This interface supports communication from system
- * components (e.g. encryptedstore) back to microdroid manager.
- */
-interface IVmInternalService {
-    /** Socket name of the service IVmInternalService. */
-    const String VM_INTERNAL_SERVICE_SOCKET_NAME = "vm_internal_service";
-    /** Forward an atom the host statsd service. */
-    void forwardAtom(in Atom atom);
+    parcelable FsckFailedReported {
+        int exitCode;
+    }
+
+    parcelable GetOrCreateSkSecretFailedReported {
+        int retryCount;
+    }
 }

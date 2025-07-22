@@ -113,12 +113,8 @@ pub struct CrosvmConfig {
     pub shared_paths: Vec<SharedPathConfig>,
     pub protected: bool,
     pub detect_hangup: bool,
-    pub gdb_port: Option<NonZeroU16>,
     pub device_tree_overlays: Vec<File>,
-    pub enable_hypervisor_specific_auth_method: bool,
-    pub instance_id: [u8; 64],
     pub start_suspended: bool,
-    pub enable_guest_ffa: bool,
     pub command: CrosvmCommand,
 }
 
@@ -191,11 +187,14 @@ impl CrosvmCommand {
             // crosvm is configured to show debug logs.
             .args(["--log-level", "debug,disk=warn"])
             .arg("run")
-            .arg("--disable-sandbox"); // TODO(qwandor): Remove --disable-sandbox.
+            .arg("--disable-sandbox") // TODO(qwandor): Remove --disable-sandbox.
+            .args(["--cid", &context.cid.to_string()]);
 
         command.add_name_arg(context);
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
+        #[cfg(target_arch = "aarch64")]
+        command.add_aarch64_specific_args();
         command.add_memory_arg(context);
         command.add_balloon_arg(context);
         command.add_console_arg(context)?;
@@ -211,6 +210,9 @@ impl CrosvmCommand {
         command.add_file_backed_mapping_arg(context)?;
         command.add_assigned_devices_arg(context)?;
         command.add_dump_dtb_arg(context)?;
+        command.add_gdb_arg(context)?;
+        command.add_gunyah_specific_arg(context)?;
+        command.add_teeservices_arg(context)?;
         Ok(command)
     }
 
@@ -335,6 +337,46 @@ impl CrosvmCommand {
         }
 
         Ok(())
+    }
+
+    fn add_gunyah_specific_arg(&mut self, context: &RunContext) -> Result<()> {
+        if !hypervisor_props::is_gunyah()? {
+            if context.config.enableHypervisorSpecificAuthMethod {
+                bail!("hypervisor specific auth method not supported for current hypervisor");
+            }
+            return Ok(());
+        }
+
+        if context.config.enableHypervisorSpecificAuthMethod {
+            if !context.config.protectedVm {
+                bail!("hypervisor specific auth method only supported for protected VMs");
+            }
+
+            // "QCOM Trusted VM" compatibility mode.
+            //
+            // When this mode is enabled, two hypervisor specific IDs are expected to be packed
+            // into the instance ID. We extract them here and pass along to crosvm so they can be
+            // given to the hypervisor driver via an ioctl.
+            let pas_id = u32::from_le_bytes(context.config.instanceId[60..64].try_into().unwrap());
+            let vm_id = u16::from_le_bytes(context.config.instanceId[58..60].try_into().unwrap());
+            self.args(["--hypervisor",
+                &format!("gunyah[device=/dev/gunyah,qcom_trusted_vm_id={vm_id},qcom_trusted_vm_pas_id={pas_id}]")]);
+            // Put the FDT close to the payload (default is end of RAM) to so that CMA can be used
+            // without bloating memory usage.
+            self.args(["--fdt-position", "after-payload"]);
+        }
+        Ok(())
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    fn add_aarch64_specific_args(&mut self) {
+        // Move the PCI MMIO regions to near the end of the low-MMIO space.
+        // This is done to accommodate a limitation in a partner's hypervisor.
+        self.args([
+            "--pci",
+            "mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]",
+        ]);
+        self.arg("--no-pmu");
     }
 
     fn add_memory_arg(&mut self, context: &RunContext) {
@@ -969,6 +1011,41 @@ impl CrosvmCommand {
         self.args(["--dump-device-tree-blob", &path]);
         Ok(())
     }
+
+    fn add_gdb_arg(&mut self, context: &RunContext) -> Result<()> {
+        if let Some(gdb_port) = NonZeroU16::new(context.config.gdbPort as u16) {
+            if context.config.protectedVm {
+                bail!("Can't use gdb with protected VMs");
+            }
+            if context.debug_config.debug_level == aidl::DebugLevel::NONE {
+                bail!("Can't use gdb with non-deguggable VMs");
+            }
+
+            self.args(["--gdb", &gdb_port.to_string()]);
+            self.args(["-p", "nokaslr"]);
+        }
+        Ok(())
+    }
+
+    fn add_teeservices_arg(&mut self, context: &RunContext) -> Result<()> {
+        const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+        const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
+
+        for svc in &context.config.teeServices {
+            let svc = svc.as_str();
+            if svc.starts_with("vendor.") {
+                continue;
+            }
+            if !KNOWN_TEE_SERVICES.contains(&svc) {
+                bail!("Unknown tee_service {svc}");
+            }
+
+            if svc == GUEST_FFA_TEE_SERVICE {
+                self.arg("--ffa=auto");
+            }
+        }
+        Ok(())
+    }
 }
 
 /// The lifecycle state which the payload in the VM has reported itself to be in.
@@ -1339,6 +1416,17 @@ impl VmInstance {
         psi_thread_and_evt_fd: Option<(JoinHandle<()>, Arc<EventFd>)>,
         cleaners: HashMap<String, Box<Cleaner>>,
     ) {
+        // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
+        // delete it. Otherwise there'll be a memory leak. When cfg early is set, this is skipped
+        // because early_virtmgr does not interact with the global virtualizationservice.
+        #[cfg(not(early))]
+        scopeguard::defer! {
+            let cid = self.cid.try_into().unwrap();
+            if let Err(e) = virtualmachine::global_service().unwrap().unregisterVirtualMachine(cid) {
+                error!("Failed to unregister virtual machine ({cid}): {e:?}");
+            }
+        }
+
         // Wait for the EXIT of the crosvm process, but thanks to WNOWAIT it remains in the
         // waitable state so that we can inspect /proc/<pid>/stat or status. Note however that we
         // can only measure guest runtime, but not maximum RSS because VmHWM is not available for
@@ -1539,16 +1627,6 @@ impl VmInstance {
     /// agent is installed there. If not, or the shutdown didn't finish on time, the VM is forcibly
     /// shut down. In-flight data in the VM may be affected!
     pub fn kill(&self) -> Result<(), Error> {
-        // VirtualizationServiceInternal has a strong reference to IVirtualMachine. Don't forget to
-        // delete it. Otherwise there'll be a memory leak. When cfg early is set, this is skipped
-        // because early_virtmgr does not interact with the global virtualizationservice.
-        #[cfg(not(early))]
-        scopeguard::defer! {
-            let cid = self.cid.try_into().unwrap();
-            if let Err(e) = virtualmachine::global_service().unwrap().unregisterVirtualMachine(cid) {
-                error!("Failed to unregister virtual machine ({cid}): {e:?}");
-            }
-        }
         let mut vm_state_mg = self.vm_state.lock().unwrap();
         match &*vm_state_mg {
             VmState::Running { .. } => {
@@ -1936,31 +2014,8 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     command.arg0(config.command.arg0);
     command.args(config.command.args);
-    command.arg("--cid").arg(config.cid.to_string());
 
-    if config.enable_hypervisor_specific_auth_method && !config.protected {
-        bail!("hypervisor specific auth method only supported for protected VMs");
-    }
     if config.protected {
-        if config.enable_hypervisor_specific_auth_method {
-            if !hypervisor_props::is_gunyah()? {
-                bail!("hypervisor specific auth method not supported for current hypervisor");
-            }
-            // "QCOM Trusted VM" compatibility mode.
-            //
-            // When this mode is enabled, two hypervisor specific IDs are expected to be packed
-            // into the instance ID. We extract them here and pass along to crosvm so they can be
-            // given to the hypervisor driver via an ioctl.
-            let pas_id = u32::from_le_bytes(config.instance_id[60..64].try_into().unwrap());
-            let vm_id = u16::from_le_bytes(config.instance_id[58..60].try_into().unwrap());
-            command.arg("--hypervisor").arg(
-                format!("gunyah[device=/dev/gunyah,qcom_trusted_vm_id={vm_id},qcom_trusted_vm_pas_id={pas_id}]"),
-            );
-            // Put the FDT close to the payload (default is end of RAM) to so that CMA can be used
-            // without bloating memory usage.
-            command.arg("--fdt-position").arg("after-payload");
-        }
-
         match system_properties::read(SYSPROP_CUSTOM_PVMFW_PATH)? {
             Some(pvmfw_path) if !pvmfw_path.is_empty() => {
                 if pvmfw_path == "none" {
@@ -1992,24 +2047,9 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         }
     }
 
-    // Move the PCI MMIO regions to near the end of the low-MMIO space.
-    // This is done to accommodate a limitation in a partner's hypervisor.
-    #[cfg(target_arch = "aarch64")]
-    command
-        .arg("--pci")
-        .arg("mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]");
-
-    if let Some(gdb_port) = config.gdb_port {
-        command.arg("--gdb").arg(gdb_port.to_string());
-        command.arg("-p").arg("nokaslr");
-    }
-
     // Keep track of what file descriptors should be mapped to the crosvm process.
     let mut preserved_fds = Vec::new();
     preserved_fds.extend(config.command.preserved_fds);
-
-    #[cfg(target_arch = "aarch64")]
-    command.arg("--no-pmu");
 
     let control_sock = create_crosvm_control_listener(crosvm_control_socket_path)
         .context("failed to create control listener")?;
@@ -2040,10 +2080,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     if config.start_suspended {
         command.arg("--suspended");
-    }
-
-    if config.enable_guest_ffa {
-        command.arg("--ffa=auto");
     }
 
     print_crosvm_args(&command);

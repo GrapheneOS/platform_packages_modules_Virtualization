@@ -17,6 +17,7 @@ package android.system.virtualmachineservice;
 
 import android.hardware.security.secretkeeper.ISecretkeeper;
 import android.os.IRpcProvider;
+import android.system.virtualizationcommon.Atom;
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationcommon.IEncryptedStoreKEK;
@@ -94,9 +95,6 @@ interface IVirtualMachineService {
      */
     @nullable IEncryptedStoreKEK getEncryptedStoreKEK();
 
-    /** Forwards an FsckFailedReported atom to statsd. */
-    void atomFsckFailedReported(in int exitCode);
-
-    /** Forwards a CGroupMemoryBreachReported atom to statsd. */
-    void atomCgroupMemoryBreachReported(in long highBreachCount, in long highMemoryPeakMb);
+    /** Forwards an atom to statsd. */
+    void forwardAtom(in Atom atom);
 }

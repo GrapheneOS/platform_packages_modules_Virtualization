@@ -16,7 +16,8 @@
 
 use crate::atom::{
     forward_cgroup_memory_breach_reported_atom, forward_fsck_failed_reported_atom,
-    forward_vm_booted_atom, forward_vm_creation_atom, forward_vm_exited_atom,
+    forward_get_or_create_sk_secret_failed_reported_atom, forward_vm_booted_atom,
+    forward_vm_creation_atom, forward_vm_exited_atom,
 };
 use crate::maintenance;
 use crate::remote_provisioning;
@@ -61,7 +62,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, LazyLock, Mutex};
 use std::thread::JoinHandle;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
-use virtualizationcommon::Certificate::Certificate;
+use virtualizationcommon::{Atom::Atom, Certificate::Certificate};
 use virtualizationmaintenance::{
     IVirtualizationMaintenance::IVirtualizationMaintenance,
     IVirtualizationReconciliationCallback::IVirtualizationReconciliationCallback,
@@ -437,29 +438,32 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         Ok(())
     }
 
-    fn atomCgroupMemoryBreachReported(
+    fn forwardAtom(
         &self,
-        high_breach_count: i64,
-        high_memory_peak_mb: i64,
+        atom: &Atom,
         vm_requester_uid: i32,
         vm_identifier: &str,
     ) -> Result<(), Status> {
-        forward_cgroup_memory_breach_reported_atom(
-            high_breach_count,
-            high_memory_peak_mb,
-            vm_requester_uid,
-            vm_identifier,
-        );
-        Ok(())
-    }
-
-    fn atomFsckFailedReported(
-        &self,
-        exit_code: i32,
-        vm_requester_uid: i32,
-        vm_identifier: &str,
-    ) -> Result<(), Status> {
-        forward_fsck_failed_reported_atom(exit_code, vm_requester_uid, vm_identifier);
+        match atom {
+            Atom::CgroupMemoryBreachReported(atom) => {
+                forward_cgroup_memory_breach_reported_atom(
+                    atom.highBreachCount,
+                    atom.highMemoryPeakMb,
+                    vm_requester_uid,
+                    vm_identifier,
+                );
+            }
+            Atom::FsckFailedReported(atom) => {
+                forward_fsck_failed_reported_atom(atom.exitCode, vm_requester_uid, vm_identifier);
+            }
+            Atom::GetOrCreateSkSecretFailedReported(atom) => {
+                forward_get_or_create_sk_secret_failed_reported_atom(
+                    atom.retryCount,
+                    vm_requester_uid,
+                    vm_identifier,
+                );
+            }
+        }
         Ok(())
     }
 

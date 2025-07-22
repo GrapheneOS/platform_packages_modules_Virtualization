@@ -1,6 +1,6 @@
 # TODO(b/393848753): determine whether task_profiles shall be defined
 service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher \
---name trusty_security_vm_launcher \
+--name security_vm \
 --kernel /system_ext/etc/vm/trusty_vm/trusty_security_vm.elf \
 --port 11 \
 --memory-size-mib 32 \
@@ -12,7 +12,7 @@ service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher 
     stdio_to_kmsg
     oneshot
     # task_profiles MaxPerformance
-    interface aidl android.os.IAccessor/ICommService/default
+    interface aidl android.os.IAccessor/ICommService/security_vm_keymint
 
 # Starts the non-secure Trusty VM in /system_ext when the feature is enabled through
 # the system property set in vendor init.

@@ -15,6 +15,10 @@
 //! Class for encapsulating & managing represent VM secrets.
 
 use anyhow::{anyhow, ensure, Context, Result};
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::{
+    Atom,
+    GetOrCreateSkSecretFailedReported::GetOrCreateSkSecretFailedReported,
+};
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::ISecretkeeper;
 use secretkeeper_comm::data_types::request::Request;
@@ -135,11 +139,26 @@ impl VmSecret {
             log::info!(
                 "get_or_create_sk_secret failed with {e:?}. Refreshing connection & retrying!"
             );
+
+            if let Err(statsd_e) = vm_service.forwardAtom(&Atom::GetOrCreateSkSecretFailedReported(
+                GetOrCreateSkSecretFailedReported { retryCount: 0 },
+            )) {
+                log::error!("Failed to report GetOrCreateSkSecretFailedReported: {}", statsd_e);
+            }
+
             let mut rng = rand::thread_rng();
             let backoff = rng.gen_range(BACKOFF_SK_ACCESS_MS..2 * BACKOFF_SK_ACCESS_MS);
             thread::sleep(Duration::from_millis(backoff));
             session.refresh()?;
-            get_or_create_sk_secret(&session, id, &mut skp_secret, state)
+            get_or_create_sk_secret(&session, id, &mut skp_secret, state).inspect_err(|_| {
+                if let Err(statsd_e) =
+                    vm_service.forwardAtom(&Atom::GetOrCreateSkSecretFailedReported(
+                        GetOrCreateSkSecretFailedReported { retryCount: 1 },
+                    ))
+                {
+                    log::error!("Failed to report GetOrCreateSkSecretFailedReported: {}", statsd_e);
+                }
+            })
         })?;
         Ok(Self::V2 {
             instance_id: id,

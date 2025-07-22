@@ -9,6 +9,7 @@ rust_defaults {
     edition: "2021",
     prefer_rlib: true,
     rustlibs: [
+        "android.system.virtualizationcommon-rust",
         "android.system.virtualization.internal-rust",
         "libandroid_logger",
         "libanyhow",

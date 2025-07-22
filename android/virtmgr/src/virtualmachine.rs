@@ -63,7 +63,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 use std::time::Duration;
 use vbmeta::VbMetaImage;
-use vmconfig::{get_debug_level, VmConfig};
+use vmconfig::VmConfig;
 use vsock::VsockStream;
 use zip::ZipArchive;
 
@@ -127,17 +127,6 @@ static CALLING_EXE_PATH: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
         }
     }
 });
-
-const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
-const KNOWN_TEE_SERVICES: [&str; 1] = [GUEST_FFA_TEE_SERVICE];
-
-fn check_known_tee_service(tee_service: &str) -> binder::Result<()> {
-    if !KNOWN_TEE_SERVICES.contains(&tee_service) {
-        return Err(anyhow!("unknown tee_service {tee_service}"))
-            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-    }
-    Ok(())
-}
 
 fn create_or_update_idsig_file(
     input_fd: &ParcelFileDescriptor,
@@ -620,13 +609,6 @@ impl VirtualizationService {
             check_use_custom_virtual_machine()?;
         }
 
-        let gdb_port = extract_gdb_port(config);
-
-        // Additional permission checks if caller request gdb.
-        if gdb_port.is_some() {
-            check_gdb_allowed(config)?;
-        }
-
         let mut device_tree_overlays = vec![];
         if let Some(dt_overlay) =
             maybe_create_reference_dt_overlay(config, &instance_id, &temporary_directory)?
@@ -664,13 +646,9 @@ impl VirtualizationService {
                 .or_binder_exception(ExceptionCode::SECURITY)?;
         }
 
-        let mut system_tee_services = Vec::new();
         let mut vendor_tee_services = Vec::new();
         for tee_service in config.teeServices.clone() {
-            if !tee_service.starts_with("vendor.") {
-                check_known_tee_service(&tee_service)?;
-                system_tee_services.push(tee_service);
-            } else {
+            if tee_service.starts_with("vendor.") {
                 vendor_tee_services.push(tee_service);
             }
         }
@@ -739,6 +717,7 @@ impl VirtualizationService {
 
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
 
+        let gdb_port = NonZeroU16::new(config.gdbPort as u16);
         let detect_hangup = is_app_config && gdb_port.is_none();
 
         let context = RunContext {
@@ -760,12 +739,8 @@ impl VirtualizationService {
             shared_paths,
             protected: *is_protected,
             detect_hangup,
-            gdb_port,
             device_tree_overlays,
-            enable_hypervisor_specific_auth_method: config.enableHypervisorSpecificAuthMethod,
-            instance_id,
             start_suspended: !vendor_tee_services.is_empty(),
-            enable_guest_ffa: system_tee_services.contains(&GUEST_FFA_TEE_SERVICE.to_string()),
             command,
         };
 
@@ -1123,6 +1098,8 @@ fn load_app_config(
         }
 
         vm_config.teeServices.clone_from(&custom_config.teeServices);
+
+        vm_config.gdbPort = custom_config.gdbPort;
     }
 
     if config.memoryMib > 0 {
@@ -1136,6 +1113,7 @@ fn load_app_config(
     vm_config.boostUclamp = config.boostUclamp;
     vm_config.hostServices = config.hostServices.clone();
     vm_config.osName = config.osName.clone();
+    vm_config.instanceId = config.instanceId;
 
     // Microdroid takes additional init ramdisk & (optionally) storage image
     add_microdroid_system_images(config, instance_file, storage_image, os_name, &mut vm_config)?;
@@ -1756,27 +1734,7 @@ fn vsock_stream_to_pfd(stream: VsockStream) -> ParcelFileDescriptor {
     ParcelFileDescriptor::new(f)
 }
 
-fn is_protected(config: &aidl::VirtualMachineConfig) -> bool {
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(config) => config.protectedVm,
-        aidl::VirtualMachineConfig::AppConfig(config) => config.protectedVm,
-    }
-}
-
-fn check_gdb_allowed(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
-    if is_protected(config) {
-        return Err(anyhow!("Can't use gdb with protected VMs"))
-            .or_binder_exception(ExceptionCode::SECURITY);
-    }
-
-    if get_debug_level(config) == Some(aidl::DebugLevel::NONE) {
-        return Err(anyhow!("Can't use gdb with non-debuggable VMs"))
-            .or_binder_exception(ExceptionCode::SECURITY);
-    }
-
-    Ok(())
-}
-
+// TODO(jiyong): remove this function
 fn extract_instance_id(config: &aidl::VirtualMachineConfig) -> [u8; 64] {
     match config {
         aidl::VirtualMachineConfig::RawConfig(config) => config.instanceId,
@@ -1790,15 +1748,6 @@ fn extract_want_updatable(config: &aidl::VirtualMachineConfig) -> bool {
         aidl::VirtualMachineConfig::AppConfig(config) => {
             let Some(custom) = &config.customConfig else { return true };
             custom.wantUpdatable
-        }
-    }
-}
-
-fn extract_gdb_port(config: &aidl::VirtualMachineConfig) -> Option<NonZeroU16> {
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(config) => NonZeroU16::new(config.gdbPort as u16),
-        aidl::VirtualMachineConfig::AppConfig(config) => {
-            NonZeroU16::new(config.customConfig.as_ref().map(|c| c.gdbPort).unwrap_or(0) as u16)
         }
     }
 }
@@ -2084,41 +2033,13 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         }
     }
 
-    fn atomCgroupMemoryBreachReported(
-        &self,
-        high_breach_count: i64,
-        high_memory_peak_mb: i64,
-    ) -> binder::Result<()> {
+    fn forwardAtom(&self, atom: &aidl::Atom) -> binder::Result<()> {
         let vm = &self.vm_instance;
         let Some(service) = global_service() else {
-            return Err(anyhow!("early VMs doesn't support atomCgroupMemoryBreachReported"))
+            return Err(anyhow!("early VMs don't support forwardAtom"))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         };
-        service
-            .atomCgroupMemoryBreachReported(
-                high_breach_count,
-                high_memory_peak_mb,
-                vm.requester_uid.try_into().unwrap(),
-                &vm.name,
-            )
-            .unwrap_or_else(|e| {
-                warn!("Failed to write CgroupMemoryBreachReported atom: {e}");
-            });
-        Ok(())
-    }
-
-    fn atomFsckFailedReported(&self, exit_code: i32) -> binder::Result<()> {
-        let vm = &self.vm_instance;
-        let Some(service) = global_service() else {
-            return Err(anyhow!("early VMs doesn't support atomFsckFailedReported"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        };
-        service
-            .atomFsckFailedReported(exit_code, vm.requester_uid.try_into().unwrap(), &vm.name)
-            .unwrap_or_else(|e| {
-                warn!("Failed to write FsckExitCodeReported atom: {e}");
-            });
-        Ok(())
+        service.forwardAtom(atom, vm.requester_uid.try_into().unwrap(), &vm.name)
     }
 }
 
