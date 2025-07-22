@@ -20,9 +20,10 @@ function print_help() {
     echo "vm_shell.sh provides utilities to interact with Microdroid VMs"
     echo ""
     echo "Available commands:"
-    echo "    connect [cid] - establishes adb connection with the VM"
-    echo "      cid - cid of the VM to connect to. If not specified user will "
-    echo "            be promted to select one from the list of available cids"
+    echo "    connect [cid|name] - establishes adb connection with the VM"
+    echo "      cid|name - either CID or name of the VM to connect to. If not "
+    echo "            specified, user will be prompted to select one from the "
+    echo "            list of available VMs."
     echo ""
     echo "    start-microdroid [--auto-connect] [-- extra_args]"
     echo "        Starts a Microdroid VM. Args after the -- will be"
@@ -49,7 +50,7 @@ function connect_vm() {
     exit 0
 }
 
-function list_cids() {
+function list_vms() {
     if adb devices | grep -q "^localhost:8000"; then
       echo "WARNING: localhost:8000 is already listed in adb devices.">&2
       echo "There could be an open terminal connected to the adb console.">&2
@@ -61,38 +62,83 @@ function list_cids() {
         adb disconnect localhost:8000 >/dev/null 2>&1
       fi
     fi
-    adb shell /apex/com.android.virt/bin/vm list | awk 'BEGIN { FS="[:,]" } /cid/ { printf "%d\n", $2; }'
+    declare -n vms="$1"
+    while IFS= read -r line; do
+      eval "$line"
+      if [[ -n "$cid" && -n "$name" ]]; then
+        vms["$cid"]="$name"
+        unset cid name
+      fi
+    done < <(adb shell vm list | awk '
+      /name:/ {
+          name = $0; sub(/.*name: "/, "", name); sub(/".*/, "", name);
+      }
+      /cid:/ {
+          cid = $0; sub(/.*cid: /, "", cid); sub(/,.*/, "", cid);
+          printf "cid=%s name=%s\n", cid, name;
+          name = "";
+      }
+   ')
+}
+
+function select_vm() {
+    declare -n vms="$1"
+    if [ ${#vms[@]} -eq 1 ]; then
+        selected_cid=${!vms[@]}
+    else
+        PS3="Select VM to adb-shell into: "
+        menu_items=()
+        for cid in "${!vms[@]}"; do
+            menu_items+=("${vms["$cid"]} (cid: $cid)")
+        done
+        select selection in "${menu_items[@]}" "Quit"; do
+            if [ "$selection" == "Quit" ]; then
+                exit 1
+            elif [[ "$selection" =~ ^(.*)\ \(cid:\ ([0-9]+)\)$ ]]; then
+                selected_cid="${BASH_REMATCH[2]}"
+                break
+            fi
+        done
+    fi
+    echo "$selected_cid"
 }
 
 function handle_connect_cmd() {
-    selected_cid=$1
+    local cid_or_name=$1
+    declare -A vm_list
 
-    readarray -t available_cids < <(list_cids)
+    list_vms "vm_list"
 
-    if [ "${#available_cids[@]}" -eq 0 ]; then
-        echo No VM is available
-        exit 1
+    if [ "${#vm_list[@]}" -eq 0 ]; then
+        echo "No VM is available."
     fi
 
-    if [ -z "${selected_cid}" ]; then
-        if [ ${#available_cids[@]} -eq 1 ]; then
-            selected_cid=${available_cids[0]}
+    if [ -z "${cid_or_name}" ]; then
+        # If neither cid or name is given, let user select from the available VMs list
+        selected_cid=$(select_vm "vm_list")
+    else
+        # If cid or name is given, match against cid first, and then fall back to match
+        # name. When multiple VMs match the same name, let user select.
+        if [ -v vm_list["$cid_or_name"] ]; then
+            selected_cid="$cid_or_name"
         else
-            PS3="Select CID of VM to adb-shell into: "
-            select cid in "${available_cids[@]}"
-            do
-                selected_cid=${cid}
-                break
+            declare -A matched_vm_list
+            for cid in "${!vm_list[@]}"; do
+                if [ "${vm_list["$cid"]}" == "$cid_or_name" ]; then
+                    matched_vm_list["$cid"]="$cid_or_name"
+                fi
             done
+            if [ "${#matched_vm_list[@]}" -eq 0 ]; then
+                echo "No VM matches "${cid_or_name}"."
+            else
+                selected_cid=$(select_vm "matched_vm_list")
+            fi
         fi
     fi
 
-    # shellcheck disable=SC2076 # match literally instead of as a regex.
-    if [[ ! " ${available_cids[*]} " =~ " ${selected_cid} " ]]; then
-        echo "VM of CID ${selected_cid} does not exist. Available CIDs: ${available_cids[*]}"
+    if [ -z "${selected_cid}" ]; then
         exit 1
     fi
-
     connect_vm "${selected_cid}"
 }
 
