@@ -20,7 +20,7 @@ use std::io::{Error, Seek, SeekFrom, Write};
 use uuid::Uuid;
 
 const SWAP_DEV: &str = "block/zram0";
-const COMPRESSION_ALGORITHM: &str = "lzo-rle";
+const COMPRESSION_ALGORITHM: &str = "lz4";
 
 /// Parse "MemTotal: N kB" from /proc/meminfo
 fn get_total_memory_kb() -> Result<u32> {
