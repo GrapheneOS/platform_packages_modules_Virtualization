@@ -51,11 +51,13 @@ use log::{debug, error, info, trace, warn};
 use pvmfw_avb::verify_payload;
 use pvmfw_avb::DebugLevel;
 use pvmfw_avb::VerifiedBootData;
-use pvmfw_embedded_key::PUBLIC_KEY;
 use vmbase::heap;
 use vmbase::memory::SIZE_4KB;
 use vmbase::rand;
 use zeroize::Zeroize;
+
+/// Trusted public key, used during verification of the signed kernel & ramdisk.
+const PUBLIC_KEY: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/pvmfw_embedded_key_pub.bin"));
 
 #[allow(clippy::too_many_arguments)]
 fn main<'a>(
