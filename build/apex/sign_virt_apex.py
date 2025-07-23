@@ -644,18 +644,16 @@ def resign_rialto(args, key, rialto_path):
 
     # Verify the new AVB footer.
     updated_info, updated_descriptors = AvbInfo(args, rialto_path)
-    EXPECTED_DESC_COUNT = 3
-    # TODO: Resolve ABI stability (b/432403626) & bring back exact-value assert.
-    assert len(updated_descriptors) in [EXPECTED_DESC_COUNT - 1, EXPECTED_DESC_COUNT], \
-        f"There should be {EXPECTED_DESC_COUNT} descriptor(s) for rialto. " \
-        f"Updated descriptors: {updated_descriptors}"
+    assert len(updated_descriptors) == len(original_descriptors), \
+        (f"The number of descriptors must remain the same after resigning. "
+         f"Got {len(updated_descriptors)} but expected {len(original_descriptors)}. "
+         f"Updated descriptors: {updated_descriptors}")
 
     updated_prop = find_all_values_by_key(updated_descriptors, "Prop")
-    EXPECTED_PROP_COUNT = 2
-    # TODO: Resolve ABI stability (b/432403626) & bring back exact-value assert.
-    assert len(updated_prop) in [EXPECTED_PROP_COUNT - 1, EXPECTED_PROP_COUNT], \
-        f"There should be {EXPECTED_PROP_COUNT} Prop descriptor(s) for rialto. " \
-        f"Updated descriptors: {updated_descriptors}"
+    original_prop = find_all_values_by_key(original_descriptors, "Prop")
+    assert original_prop == updated_prop, \
+        (f"Prop descriptors unexpectly changed after resigning rialto. "
+         f"Original: {original_prop}, Updated: {updated_prop}")
     assert updated_info["Rollback Index"] != "0", "Rollback index should not be zero for rialto."
 
     # Verify the only hash descriptor of rialto.
