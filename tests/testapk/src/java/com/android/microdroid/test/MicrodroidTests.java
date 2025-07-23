@@ -1164,6 +1164,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void extraApkInVmConfig() throws Exception {
         assumeSupportedDevice();
 
+        assumeTrue("MultiTenancy feature not supported", isFeatureMultiTenantSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
@@ -1925,6 +1926,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @GmsTest(requirements = {"GMS-3-7.1-005"})
     public void payloadIsNotRoot() throws Exception {
         assumeSupportedDevice();
+        assumeTrue("MultiTenancy feature not supported", isFeatureMultiTenantSupported());
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setMemoryBytes(minMemoryRequired())
@@ -2736,11 +2738,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         | OsConstants.S_IROTH
                         | OsConstants.S_IWOTH
                         | OsConstants.S_IXOTH;
-        int expectedPermissions =
-                OsConstants.S_IRUSR
-                        | OsConstants.S_IXUSR
-                        | OsConstants.S_IRGRP
-                        | OsConstants.S_IXGRP;
+        int expectedPermissions = OsConstants.S_IRUSR | OsConstants.S_IXUSR;
+        if (isFeatureMultiTenantSupported()) {
+            expectedPermissions = expectedPermissions | OsConstants.S_IRGRP | OsConstants.S_IXGRP;
+        }
         assertThat(testResults.mFileMode & allPermissionsMask).isEqualTo(expectedPermissions);
     }
 
