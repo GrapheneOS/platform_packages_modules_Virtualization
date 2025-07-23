@@ -182,6 +182,10 @@ fn enable_crypt(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
         .opt_param("sector_size:4096")
         .opt_param("iv_large_sectors")
         .opt_param("allow_discards") // This allows re-compaction of underlying disk img in host
+        .opt_param("no_read_workqueue")
+        .opt_param("no_write_workqueue")
+        .opt_param("same_cpu_crypt")
+        .opt_param("submit_from_crypt_cpus")
         .build()
         .context("Couldn't build the DMCrypt target")?;
     let dm = dm::DeviceMapper::new()?;
