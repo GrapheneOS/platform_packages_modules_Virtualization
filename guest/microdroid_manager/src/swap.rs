@@ -15,8 +15,9 @@
 //! Logic for configuring and enabling a ZRAM-backed swap device.
 
 use anyhow::{anyhow, Context, Result};
+use log::warn;
 use std::fs::{read_to_string, OpenOptions};
-use std::io::{Error, Seek, SeekFrom, Write};
+use std::io::{Error, Read, Seek, SeekFrom, Write};
 use uuid::Uuid;
 
 const SWAP_DEV: &str = "block/zram0";
@@ -84,14 +85,36 @@ fn swapon(dev: &str) -> Result<()> {
     Ok(())
 }
 
-/// Selects a compression algorithm for ZRAM. Can fail if the compression algorithm is not
-/// supported by the kernel, which can be checked by reading /sys/$dev/comp_algorithm.
+/// Selects a compression algorithm for ZRAM. Logs an error if the desired compression algorithm is
+/// not supported by the kernel, which can be checked by reading /sys/$dev/comp_algorithm.
 fn select_compression_algorithm(dev: &str) -> Result<()> {
-    OpenOptions::new()
-        .read(false)
-        .write(true)
-        .open(format!("/sys/{}/comp_algorithm", dev))?
-        .write_all(COMPRESSION_ALGORITHM.as_bytes())?;
+    let path = format!("/sys/{}/comp_algorithm", dev);
+    let mut f = OpenOptions::new().read(true).write(true).open(path)?;
+
+    // Read the list of available algorithms first.
+    let mut algorithms = String::new();
+    f.read_to_string(&mut algorithms)?;
+
+    // The format of the output of /sys/$dev/comp_algorithm is:
+    // algo_0 algo_1 [algo_2] ... algo_N-1
+    // where the algorithm enclosed by square brackets is the current algorithm.
+    let mut iter = algorithms.split_whitespace();
+    let brackets: &[_] = &['[', ']'];
+
+    for x in &mut iter {
+        let algorithm = x.trim_matches(brackets);
+        if algorithm == COMPRESSION_ALGORITHM {
+            // Only write to the file if the algorithm we want isn't the current algorithm.
+            if !x.starts_with('[') {
+                f.write_all(COMPRESSION_ALGORITHM.as_bytes())?;
+            }
+            return Ok(());
+        }
+    }
+
+    // If we make it to here, then the algorithm we wanted is not available, so log an error, and
+    // move on, since this is a non-fatal condition.
+    warn!("Requested compression algorithm not available; saw: {algorithms}");
     Ok(())
 }
 
