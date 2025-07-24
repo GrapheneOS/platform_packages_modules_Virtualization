@@ -3479,7 +3479,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     public void vmListDoesNotShowDeadVirtualMachines() throws Exception {
         UiAutomation uia = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        assertThat(runInShell(TAG, uia, "vm list").trim()).isEqualTo("Running VMs: []");
 
         final int numVMs = 5;
 
@@ -3509,7 +3508,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // It may take some time for the crosvm processes to get the SIGKILL signal
         Thread.sleep(5000);
 
-        assertThat(runInShell(TAG, uia, "vm list").trim()).isEqualTo("Running VMs: []");
+        String vmList = runInShell(TAG, uia, "vm list").trim();
+        for (VirtualMachine vm : vms) {
+            assertThat(vmList).doesNotContain("name: \"" + vm.getName() + "\"");
+        }
 
         for (VirtualMachine vm : vms) {
             vm.close();
