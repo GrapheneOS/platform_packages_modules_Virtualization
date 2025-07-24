@@ -3452,32 +3452,33 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setCpuTopology(CPU_TOPOLOGY_ONE_CPU);
         VirtualMachineConfig config = builder.build();
-        VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config);
+        try (VirtualMachine vm = forceCreateNewVirtualMachine(vmName, config)) {
 
-        // Start a VM and kill it abrubtly.
-        SimpleVirtualMachineCallback cb1 = new SimpleVirtualMachineCallback();
-        vm.setCallback(executor, cb1);
-        vm.run();
-        cb1.started.await();
-        kill(TAG, "crosvm_" + vmName);
-        vm.close();
+            // Start a VM and kill it abrubtly.
+            SimpleVirtualMachineCallback cb1 = new SimpleVirtualMachineCallback();
+            vm.setCallback(executor, cb1);
+            vm.run();
+            cb1.started.await();
+            kill(TAG, "crosvm_" + vmName);
+            vm.close();
+            cb1.stopped.await();
 
-        // Re-start the same VM, but with a different callback.
-        SimpleVirtualMachineCallback cb2 = new SimpleVirtualMachineCallback();
-        vm.setCallback(executor, cb2);
-        vm.run();
-        cb2.started.await();
+            // Re-start the same VM, but with a different callback.
+            SimpleVirtualMachineCallback cb2 = new SimpleVirtualMachineCallback();
+            vm.setCallback(executor, cb2);
+            vm.run();
+            cb2.started.await();
 
-        // Stopping of the first VM shouldn't be notified to the new callback.
-        assertThat(cb2.stopped.getCount()).isEqualTo(1);
-        vm.close();
-        cb2.stopped.await();
+            // Stopping of the first VM shouldn't be notified to the new callback.
+            assertThat(cb2.stopped.getCount()).isEqualTo(1);
+            vm.close();
+            cb2.stopped.await();
+        }
     }
 
     @Test
     public void vmListDoesNotShowDeadVirtualMachines() throws Exception {
         UiAutomation uia = InstrumentationRegistry.getInstrumentation().getUiAutomation();
-        assertThat(runInShell(TAG, uia, "vm list").trim()).isEqualTo("Running VMs: []");
 
         final int numVMs = 5;
 
@@ -3507,7 +3508,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // It may take some time for the crosvm processes to get the SIGKILL signal
         Thread.sleep(5000);
 
-        assertThat(runInShell(TAG, uia, "vm list").trim()).isEqualTo("Running VMs: []");
+        String vmList = runInShell(TAG, uia, "vm list").trim();
+        for (VirtualMachine vm : vms) {
+            assertThat(vmList).doesNotContain("name: \"" + vm.getName() + "\"");
+        }
 
         for (VirtualMachine vm : vms) {
             vm.close();

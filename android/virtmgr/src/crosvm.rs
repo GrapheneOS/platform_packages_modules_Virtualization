@@ -191,6 +191,7 @@ impl CrosvmCommand {
             .args(["--cid", &context.cid.to_string()]);
 
         command.add_name_arg(context);
+        command.add_pvm_arg(context)?;
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
         #[cfg(target_arch = "aarch64")]
@@ -265,6 +266,43 @@ impl CrosvmCommand {
         let name = "crosvm_".to_owned() + &context.config.name;
         self.arg0 = OsString::from(name.clone());
         self.args(["--name", &name]);
+    }
+
+    fn add_pvm_arg(&mut self, context: &RunContext) -> Result<()> {
+        if !context.config.protectedVm {
+            return Ok(());
+        }
+
+        match system_properties::read(SYSPROP_CUSTOM_PVMFW_PATH)? {
+            Some(pvmfw_path) if !pvmfw_path.is_empty() => {
+                if pvmfw_path == "none" {
+                    self.arg("--protected-vm-without-firmware")
+                } else {
+                    self.args(["--protected-vm-with-firmware", &pvmfw_path])
+                }
+            }
+            _ => self.arg("--protected-vm"),
+        };
+
+        // Workaround to keep crash_dump from trying to read protected guest memory.
+        // Context in b/238324526.
+        self.arg("--unmap-guest-memory-on-fork");
+
+        // Lock the guest memory to improve memory accounting. More context in b/407786138
+        //
+        // Note that this uses MLOCK_ONFAULT underneath, so we still only pay for memory as it is
+        // used. Also depends on MADV_DONTNEED_LOCKED, which requires Linux v5.18+.
+        fn kernel_version() -> Option<(u32, u32)> {
+            let release = nix::sys::utsname::uname().ok()?.release().to_string_lossy().into_owned();
+            let mut release_iter = release.splitn(3, ".");
+            Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
+        }
+        if kernel_version().context("bad uname")? >= (5, 18) {
+            self.arg("--lock-guest-memory-dontneed");
+        } else {
+            warn!("kernel is too old enable --lock-guest-memory-dontneed");
+        }
+        Ok(())
     }
 
     fn add_kernel_arg(&mut self, context: &RunContext) -> Result<()> {
@@ -892,7 +930,7 @@ impl CrosvmCommand {
             let tap_fd_cloned = tap_fd.try_clone()?;
 
             let path = self.add_preserved_fd(tap_fd);
-            let fd_num = path.split('/').last().unwrap();
+            let fd_num = path.split('/').next_back().unwrap();
             self.args(["--net", &format!("tap-fd={fd_num}")]);
 
             let cleaner = move |_: &CleanerContext| {
@@ -2014,38 +2052,6 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
 
     command.arg0(config.command.arg0);
     command.args(config.command.args);
-
-    if config.protected {
-        match system_properties::read(SYSPROP_CUSTOM_PVMFW_PATH)? {
-            Some(pvmfw_path) if !pvmfw_path.is_empty() => {
-                if pvmfw_path == "none" {
-                    command.arg("--protected-vm-without-firmware")
-                } else {
-                    command.arg("--protected-vm-with-firmware").arg(pvmfw_path)
-                }
-            }
-            _ => command.arg("--protected-vm"),
-        };
-
-        // Workaround to keep crash_dump from trying to read protected guest memory.
-        // Context in b/238324526.
-        command.arg("--unmap-guest-memory-on-fork");
-
-        // Lock the guest memory to improve memory accounting. More context in b/407786138
-        //
-        // Note that this uses MLOCK_ONFAULT underneath, so we still only pay for memory as it is
-        // used. Also depends on MADV_DONTNEED_LOCKED, which requires Linux v5.18+.
-        fn kernel_version() -> Option<(u32, u32)> {
-            let release = nix::sys::utsname::uname().ok()?.release().to_string_lossy().into_owned();
-            let mut release_iter = release.splitn(3, ".");
-            Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
-        }
-        if kernel_version().context("bad uname")? >= (5, 18) {
-            command.arg("--lock-guest-memory-dontneed");
-        } else {
-            warn!("kernel is too old enable --lock-guest-memory-dontneed");
-        }
-    }
 
     // Keep track of what file descriptors should be mapped to the crosvm process.
     let mut preserved_fds = Vec::new();

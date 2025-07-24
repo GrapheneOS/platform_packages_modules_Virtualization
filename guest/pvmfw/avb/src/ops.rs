@@ -90,8 +90,15 @@ impl<'a> avb::Ops<'a> for Ops<'a> {
         Ok(buffer.len())
     }
 
-    fn get_preloaded_partition(&mut self, partition: &CStr) -> IoResult<&'a [u8]> {
-        self.payload.get_partition(partition)
+    fn get_preloaded_partition(
+        &mut self,
+        partition: &CStr,
+        num_bytes: usize,
+    ) -> IoResult<&'a [u8]> {
+        self.payload
+            .get_partition(partition)?
+            .get(..num_bytes)
+            .ok_or(IoError::RangeOutsidePartition)
     }
 
     fn validate_vbmeta_public_key(
