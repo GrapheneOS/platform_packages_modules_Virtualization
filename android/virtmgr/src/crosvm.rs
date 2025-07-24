@@ -930,7 +930,7 @@ impl CrosvmCommand {
             let tap_fd_cloned = tap_fd.try_clone()?;
 
             let path = self.add_preserved_fd(tap_fd);
-            let fd_num = path.split('/').last().unwrap();
+            let fd_num = path.split('/').next_back().unwrap();
             self.args(["--net", &format!("tap-fd={fd_num}")]);
 
             let cleaner = move |_: &CleanerContext| {
