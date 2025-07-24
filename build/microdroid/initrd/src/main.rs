@@ -53,6 +53,7 @@ enum Opt {
 }
 
 fn get_checksum(file_path: &PathBuf) -> Result<u32> {
+    #[allow(clippy::unbuffered_bytes)]
     File::open(file_path)?.bytes().map(|x| Ok(x? as u32)).sum()
 }
 

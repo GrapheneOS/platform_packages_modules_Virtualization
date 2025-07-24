@@ -89,7 +89,7 @@ impl<F: ReadByChunk + RandomWrite> VerifiedFileEditor<F> {
     /// Calculates the fs-verity digest of the current file.
     pub fn calculate_fsverity_digest(&self) -> io::Result<Sha256Hash> {
         let merkle_tree = self.merkle_tree.read().unwrap();
-        merkle_tree.calculate_fsverity_digest().map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        merkle_tree.calculate_fsverity_digest().map_err(io::Error::other)
     }
 
     fn read_backing_chunk_unverified(
@@ -312,8 +312,7 @@ mod tests {
 
     impl RandomWrite for InMemoryEditor {
         fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
-            let begin: usize =
-                offset.try_into().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let begin: usize = offset.try_into().map_err(io::Error::other)?;
             let end = begin + buf.len();
             if end > self.data.borrow().len() {
                 self.data.borrow_mut().resize(end, 0);
@@ -323,8 +322,7 @@ mod tests {
         }
 
         fn resize(&self, size: u64) -> io::Result<()> {
-            let size: usize =
-                size.try_into().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let size: usize = size.try_into().map_err(io::Error::other)?;
             self.data.borrow_mut().resize(size, 0);
             Ok(())
         }
