@@ -232,8 +232,8 @@ Result<void> get_or_allocate_instance_id(IVirtualizationService& service,
 // shared library named `paylaod_binary_name` in the apk `main_apk_path`.
 Result<VirtualMachineAppConfig> create_vm_config(
         IVirtualizationService& service, const std::string& work_dir, const std::string& vm_name,
-        const std::string& main_apk_path, const std::string& payload_binary_name, bool debuggable,
-        bool protected_vm, int32_t memory_mib) {
+        const std::string& main_apk_path, const std::string& payload_config_or_binary,
+        bool debuggable, bool protected_vm, int32_t memory_mib) {
     ScopedFileDescriptor main_apk = OR_RETURN(open_file(main_apk_path, O_RDONLY));
     ScopedFileDescriptor idsig =
             OR_RETURN(create_or_update_idsig_file(service, work_dir, main_apk));
@@ -241,13 +241,6 @@ Result<VirtualMachineAppConfig> create_vm_config(
             OR_RETURN(create_instance_image_file_if_needed(service, work_dir));
     std::array<uint8_t, 64> instance_id;
     OR_RETURN(get_or_allocate_instance_id(service, work_dir, &instance_id));
-    // There are two ways to specify the payload. The simpler way is by specifying the name of the
-    // payload binary as shown below. The other way (which is allowed only to system-level VMs) is
-    // by passing the path to the JSON file in the main APK which has detailed specification about
-    // what to load in Microdroid. See packages/modules/Virtualization/compos/apk/assets/*.json as
-    // examples.
-    VirtualMachinePayloadConfig payload;
-    payload.payloadBinaryName = payload_binary_name;
 
     VirtualMachineAppConfig app_config;
     app_config.name = vm_name;
@@ -255,12 +248,28 @@ Result<VirtualMachineAppConfig> create_vm_config(
     app_config.idsig = std::move(idsig);
     app_config.instanceImage = std::move(instance);
     app_config.instanceId = instance_id;
-    app_config.payload = std::move(payload);
     if (debuggable) {
         app_config.debugLevel = VirtualMachineAppConfig::DebugLevel::FULL;
     }
     app_config.protectedVm = protected_vm;
     app_config.memoryMib = memory_mib;
+
+    // There are two ways to specify the payload. The simpler way is by specifying the name of the
+    // payload binary as shown below. The other way (which is allowed only to system-level VMs) is
+    // by passing the path to the JSON file in the main APK which has detailed specification about
+    // what to load in Microdroid. See packages/modules/Virtualization/compos/apk/assets/*.json as
+    // examples.
+    //
+    // For multi tenancy case, multiple tenants are only supported through
+    // config JSON file
+#if AVF_ENABLE_ADVANCE_MULTITENANCY
+    app_config.payload = payload_config_or_binary;
+#else
+    VirtualMachinePayloadConfig payload;
+    payload.payloadBinaryName = payload_config_or_binary;
+
+    app_config.payload = std::move(payload);
+#endif
 
     return app_config;
 }
@@ -430,7 +439,11 @@ Result<void> inner_main() {
     VirtualMachineAppConfig app_config = OR_RETURN(
             create_vm_config(*service, work_dir_path, "my_vm",
                              "/data/local/tmp/MicrodroidTestHelperApp.apk",
+#if AVF_ENABLE_ADVANCE_MULTITENANCY
+                             "assets/vm_config_multi_tenants.json",
+#else
                              "MicrodroidTestNativeLib.so",
+#endif
                              /* debuggable = */ true, // should be false for production VMs
                              /* protected_vm = */ true, 150));
 

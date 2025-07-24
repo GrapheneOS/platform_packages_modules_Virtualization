@@ -71,6 +71,9 @@ cc_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
         true: ["-DAVF_ENABLE_VENDOR_MODULES=1"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY"), {
+        true: ["-DAVF_ENABLE_ADVANCE_MULTITENANCY=1"],
+        default: [],
     }),
 }
 
