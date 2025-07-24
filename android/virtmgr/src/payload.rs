@@ -20,7 +20,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use binder::{wait_for_interface, ParcelFileDescriptor};
 use log::{info, warn};
 use microdroid_metadata::{ApexPayload, ApkPayload, Metadata, PayloadConfig, PayloadMetadata};
-use microdroid_payload_config::{ApexConfig, VmPayloadConfig};
+use microdroid_payload_config::{ApexConfig, TenantConfig, VmPayloadConfig};
 use once_cell::sync::OnceCell;
 use packagemanager_aidl::aidl::android::content::pm::{
     IPackageManagerNative::IPackageManagerNative, StagedApexInfo::StagedApexInfo,
@@ -182,7 +182,7 @@ impl PackageManager {
         // When prefer_staged, we override ApexInfo by consulting "package_native"
         if prefer_staged {
             if cfg!(early) {
-                return Err(anyhow!("Can't turn on prefer_staged on early boot VMs"));
+                bail!("Can't turn on prefer_staged on early boot VMs");
             }
             let pm =
                 wait_for_interface::<dyn IPackageManagerNative>(PACKAGE_MANAGER_NATIVE_SERVICE)
@@ -199,6 +199,7 @@ impl PackageManager {
 fn make_metadata_file(
     app_config: &aidl::VirtualMachineAppConfig,
     apex_infos: &[&ApexInfo],
+    tenant_apex_infos: &[&ApexInfo],
     temporary_directory: &Path,
 ) -> Result<ParcelFileDescriptor> {
     let payload_metadata = match &app_config.payload {
@@ -222,6 +223,19 @@ fn make_metadata_file(
                 Ok(ApexPayload {
                     name: apex_info.name.clone(),
                     partition_name: format!("microdroid-apex-{}", i),
+                    last_update_seconds: apex_info.last_update_seconds,
+                    is_factory: apex_info.is_factory,
+                    ..Default::default()
+                })
+            })
+            .collect::<Result<_>>()?,
+        tenant_apexes: tenant_apex_infos
+            .iter()
+            .enumerate()
+            .map(|(i, apex_info)| {
+                Ok(ApexPayload {
+                    name: apex_info.name.clone(),
+                    partition_name: format!("microdroid-tenant-apex-{}", i),
                     last_update_seconds: apex_info.last_update_seconds,
                     is_factory: apex_info.is_factory,
                     ..Default::default()
@@ -253,10 +267,38 @@ fn make_metadata_file(
     open_parcel_file(&metadata_path, false)
 }
 
+fn add_apex_partitions_to_disk(
+    partitions: &mut Vec<aidl::Partition>,
+    apex_infos: &[&ApexInfo],
+    label_prefix: &str,
+) -> Result<()> {
+    for (i, apex_info) in apex_infos.iter().enumerate() {
+        let path = if cfg!(early) {
+            let path = &apex_info.preinstalled_path;
+            if path.extension().and_then(OsStr::to_str).unwrap_or("") != "apex" {
+                bail!("compressed APEX {} not supported", path.display());
+            }
+            path
+        } else {
+            &apex_info.path
+        };
+        let apex_file = open_parcel_file(path, false)?;
+        partitions.push(aidl::Partition {
+            label: format!("{label_prefix}-{i}"),
+            image: Some(apex_file),
+            writable: false,
+            guid: None,
+        });
+    }
+    Ok(())
+}
+
 /// Creates a DiskImage with partitions:
 ///   payload-metadata: metadata
 ///   microdroid-apex-0: apex 0
 ///   microdroid-apex-1: apex 1
+///   ..
+///   tenant-apex-0: Tenant apex 0
 ///   ..
 ///   microdroid-apk: apk
 ///   microdroid-apk-idsig: idsig
@@ -264,6 +306,9 @@ fn make_metadata_file(
 ///   extra-idsig-0: additional idsig 0
 ///   extra-apk-1:   additional apk 1
 ///   extra-idsig-1: additional idsig 1
+///   ..
+///   tenant-apk-0: Tenant apx 0
+///   tenant-idsig-0: Tenant idsig 0
 ///   ..
 fn make_payload_disk(
     app_config: &aidl::VirtualMachineAppConfig,
@@ -286,8 +331,14 @@ fn make_payload_disk(
     let apex_list = pm.get_apex_list(vm_payload_config.prefer_staged)?;
 
     // collect APEXes from config
-    let mut apex_infos = collect_apex_infos(&apex_list, &vm_payload_config.apexes, debug_config)?;
+    let (mut apex_infos, mut tenant_apex_infos) = collect_apex_infos(
+        &apex_list,
+        &vm_payload_config.apexes,
+        &vm_payload_config.tenants,
+        debug_config,
+    )?;
     check_apexes_are_aligned(&apex_infos)?;
+    check_apexes_are_aligned(&tenant_apex_infos)?;
 
     // Pass sorted list of apexes. Sorting key shouldn't use `path` because it will change after
     // reboot with prefer_staged. `last_update_seconds` is added to distinguish "samegrade"
@@ -295,7 +346,12 @@ fn make_payload_disk(
     apex_infos.sort_by_key(|info| (&info.name, &info.version, &info.last_update_seconds));
     info!("Microdroid payload APEXes: {:?}", apex_infos.iter().map(|ai| &ai.name));
 
-    let metadata_file = make_metadata_file(app_config, &apex_infos, temporary_directory)?;
+    // TODO(b/433698158): Sorting of tenants is not required if they are not part of the DICE chain
+    tenant_apex_infos.sort_by_key(|info| (&info.name, &info.version, &info.last_update_seconds));
+    info!("Microdroid Tenants payload APEXes: {:?}", tenant_apex_infos.iter().map(|ai| &ai.name));
+
+    let metadata_file =
+        make_metadata_file(app_config, &apex_infos, &tenant_apex_infos, temporary_directory)?;
     // put metadata at the first partition
     let mut partitions = vec![aidl::Partition {
         label: "payload-metadata".to_owned(),
@@ -304,24 +360,9 @@ fn make_payload_disk(
         guid: None,
     }];
 
-    for (i, apex_info) in apex_infos.iter().enumerate() {
-        let path = if cfg!(early) {
-            let path = &apex_info.preinstalled_path;
-            if path.extension().and_then(OsStr::to_str).unwrap_or("") != "apex" {
-                bail!("compressed APEX {} not supported", path.display());
-            }
-            path
-        } else {
-            &apex_info.path
-        };
-        let apex_file = open_parcel_file(path, false)?;
-        partitions.push(aidl::Partition {
-            label: format!("microdroid-apex-{}", i),
-            image: Some(apex_file),
-            writable: false,
-            guid: None,
-        });
-    }
+    add_apex_partitions_to_disk(&mut partitions, &apex_infos, "microdroid-apex")?;
+    add_apex_partitions_to_disk(&mut partitions, &tenant_apex_infos, "microdroid-tenant-apex")?;
+
     partitions.push(aidl::Partition {
         label: "microdroid-apk".to_owned(),
         image: Some(ParcelFileDescriptor::new(apk_file)),
@@ -424,25 +465,54 @@ fn check_apexes_are_aligned(requested_apexes: &Vec<&ApexInfo>) -> Result<()> {
 fn collect_apex_infos<'a>(
     apex_list: &'a ApexInfoList,
     apex_configs: &[ApexConfig],
+    tenants_config: &[TenantConfig],
     debug_config: &DebugConfig,
-) -> Result<Vec<&'a ApexInfo>> {
+) -> Result<(Vec<&'a ApexInfo>, Vec<&'a ApexInfo>)> {
     // APEXes which any Microdroid VM needs.
     // TODO(b/192200378) move this to microdroid.json?
     let required_apexes: &[_] =
         if debug_config.should_include_debug_apexes() { &["com.android.adbd"] } else { &[] };
 
-    let apex_infos = apex_list
-        .list
-        .iter()
-        .filter(|ai| {
-            apex_configs.iter().any(|cfg| ai.matches(cfg) && ai.is_active)
-                || required_apexes.iter().any(|name| name == &ai.name && ai.is_active)
-                || ai.provide_shared_apex_libs
-        })
-        .collect();
+    let tenant_apex_configs: Vec<ApexConfig> = if cfg!(advance_multitenancy) {
+        tenants_config
+            .iter()
+            .filter_map(|tenant| match tenant {
+                TenantConfig::Apex(apex_conf) => Some(ApexConfig { name: apex_conf.name.clone() }),
+                TenantConfig::Apk(apk_conf) => {
+                    warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
+                    None
+                }
+            })
+            .collect()
+    } else {
+        if !tenants_config.is_empty() {
+            bail!("tenants specified even though multi-tenancy is disabled");
+        }
+        vec![]
+    };
+
+    let mut apex_infos = Vec::new();
+    let mut tenant_apex_infos = Vec::new();
+
+    // TODO(b/433705643): Handle duplicates in apexes and tenants
+    apex_list.list.iter().for_each(|ai| {
+        let is_requested_and_active =
+            apex_configs.iter().any(|cfg| ai.matches(cfg)) && ai.is_active;
+        let is_required_and_active =
+            required_apexes.iter().any(|name| name == &ai.name) && ai.is_active;
+        let is_shared_library = ai.provide_shared_apex_libs;
+
+        if is_requested_and_active || is_required_and_active || is_shared_library {
+            apex_infos.push(ai);
+        }
+        if tenant_apex_configs.iter().any(|cfg| ai.matches(cfg) && ai.is_active) {
+            tenant_apex_infos.push(ai);
+        }
+    });
 
     check_apexes_are_from_allowed_partitions(&apex_infos)?;
-    Ok(apex_infos)
+    check_apexes_are_from_allowed_partitions(&tenant_apex_infos)?;
+    Ok((apex_infos, tenant_apex_infos))
 }
 
 pub fn add_microdroid_vendor_image(
@@ -674,19 +744,104 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
             collect_apex_infos(
                 &apex_info_list,
                 &apex_configs,
+                &[],
                 &DebugConfig::new_with_debug_level(aidl::DebugLevel::FULL)
             )?,
-            vec![
-                // Pass active/required APEXes
-                &apex_info_map["adbd_updated"],
-                // Pass active APEXes specified in the config
-                &apex_info_map["has_classpath_updated"],
-                &apex_info_map["apex-foo-updated"],
-                // Pass both preinstalled(inactive) and updated(active) for "sharedlibs" APEXes
-                &apex_info_map["sharedlibs"],
-                &apex_info_map["sharedlibs-updated"],
-            ]
+            (
+                vec![
+                    // Pass active/required APEXes
+                    &apex_info_map["adbd_updated"],
+                    // Pass active APEXes specified in the config
+                    &apex_info_map["has_classpath_updated"],
+                    &apex_info_map["apex-foo-updated"],
+                    // Pass both preinstalled(inactive) and updated(active) for "sharedlibs" APEXes
+                    &apex_info_map["sharedlibs"],
+                    &apex_info_map["sharedlibs-updated"],
+                ],
+                vec![]
+            )
         );
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(advance_multitenancy)]
+    fn test_collect_tenant_apexes() -> Result<()> {
+        let apex_infos_for_test = [
+            (
+                "apex-foo-updated",
+                ApexInfo {
+                    name: "apex-foo".to_string(),
+                    path: PathBuf::from("apex-foo/updated"),
+                    preinstalled_path: PathBuf::from("/system/apex-foo"),
+                    is_active: true,
+                    provide_shared_apex_libs: true, // This will be in both lists
+                    ..Default::default()
+                },
+            ),
+            (
+                "apex-bar-updated",
+                ApexInfo {
+                    name: "apex-bar".to_string(),
+                    path: PathBuf::from("apex-bar/updated"),
+                    preinstalled_path: PathBuf::from("/system/apex-bar"),
+                    is_active: true,
+                    ..Default::default()
+                },
+            ),
+            (
+                "sharedlibs-updated",
+                ApexInfo {
+                    name: "sharedlibs".to_string(),
+                    path: PathBuf::from("sharedlibs/updated"),
+                    preinstalled_path: PathBuf::from("/system/sharedlibs"),
+                    is_active: true,
+                    provide_shared_apex_libs: true,
+                    ..Default::default()
+                },
+            ),
+        ];
+        let apex_info_list = ApexInfoList {
+            list: apex_infos_for_test.iter().map(|(_, info)| info).cloned().collect(),
+        };
+        let apex_info_map = HashMap::from(apex_infos_for_test);
+        let apex_configs = vec![];
+        let tenants_config = vec![
+            TenantConfig::Apex(microdroid_payload_config::TenantApexConfig {
+                name: "apex-foo".to_string(),
+                task: microdroid_payload_config::Task {
+                    type_: microdroid_payload_config::TaskType::MicrodroidLauncher,
+                    command: "_dont_care.so".to_string(),
+                },
+            }),
+            TenantConfig::Apex(microdroid_payload_config::TenantApexConfig {
+                name: "apex-bar".to_string(),
+                task: microdroid_payload_config::Task {
+                    type_: microdroid_payload_config::TaskType::MicrodroidLauncher,
+                    command: "_dont_care.so".to_string(),
+                },
+            }),
+            TenantConfig::Apk(microdroid_payload_config::TenantApkConfig {
+                path: "some.apk".to_string(),
+                task: microdroid_payload_config::Task {
+                    type_: microdroid_payload_config::TaskType::MicrodroidLauncher,
+                    command: "_dont_care.so".to_string(),
+                },
+            }),
+        ];
+        assert_eq!(
+            collect_apex_infos(
+                &apex_info_list,
+                &apex_configs,
+                &tenants_config,
+                &DebugConfig::new_with_debug_level(aidl::DebugLevel::NONE)
+            )?,
+            (
+                vec![&apex_info_map["apex-foo-updated"], &apex_info_map["sharedlibs-updated"],],
+                vec![&apex_info_map["apex-foo-updated"], &apex_info_map["apex-bar-updated"],]
+            )
+        );
+
         Ok(())
     }
 
@@ -706,6 +861,7 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
         let ret = collect_apex_infos(
             &apex_info_list,
             &apex_configs,
+            &[],
             &DebugConfig::new_with_debug_level(aidl::DebugLevel::NONE),
         );
         assert!(ret
@@ -733,9 +889,10 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
             collect_apex_infos(
                 &apex_info_list,
                 &apex_configs,
+                &[],
                 &DebugConfig::new_with_debug_level(aidl::DebugLevel::NONE)
             )?,
-            vec![&apex_info_list.list[0]]
+            (vec![&apex_info_list.list[0]], vec![])
         );
 
         Ok(())

@@ -56,9 +56,13 @@ use keystore2_crypto::ZVec;
 use libc::{VMADDR_CID_HOST, VMADDR_PORT_ANY};
 use log::{error, info, warn};
 use microdroid_metadata::{Metadata, PayloadMetadata};
-use microdroid_payload_config::{ApkConfig, OsConfig, Task, TaskType, VmPayloadConfig};
+use microdroid_payload_config::{
+    ApkConfig, OsConfig, Task, TaskType, TenantConfig, VmPayloadConfig,
+};
 use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
+use nix::sys::wait::{wait, WaitStatus};
+use nix::unistd::Pid;
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
@@ -68,6 +72,7 @@ use rustutils::system_properties;
 use rustutils::system_properties::PropertyWatcher;
 use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
+use std::collections::HashSet;
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
@@ -81,7 +86,7 @@ use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::ptr;
 use std::str;
 use std::sync::Arc;
@@ -676,26 +681,120 @@ fn try_run_payload(
     }
 
     info!("boot completed, time to run payload");
-    let mut payload_process = exec_task(task, cgroup_config.as_ref(), service, &std_redirect)
-        .context("Failed to run payload")?;
+    let main_command = get_task_command(VM_APK_CONTENTS_PATH, task, /* is_apex */ false)
+        .context("Failed to find payload")?;
+    let payload_process = exec_task(
+        main_command,
+        cgroup_config.as_ref(),
+        service,
+        &std_redirect,
+        /* notify_payload_started */ true,
+    )
+    .context("Failed to run payload")?;
+
+    let mut tenant_processes: Vec<Child> = Vec::new();
+    if cfg!(advance_multitenancy) {
+        for tenant in config.tenants.iter() {
+            match tenant {
+                // For now, we only support APEX
+                TenantConfig::Apex(apex_conf) => {
+                    let tenant_command =
+                        get_task_command(&apex_conf.name, &apex_conf.task, /* is_apex */ true)
+                            .context("Failed to find tenant")?;
+                    let tenant_process = exec_task(
+                        tenant_command,
+                        cgroup_config.as_ref(),
+                        service,
+                        &std_redirect,
+                        /* notify_payload_started */ false,
+                    )
+                    .context("Failed to run tenant")?;
+                    tenant_processes.push(tenant_process);
+                }
+                TenantConfig::Apk(apk_conf) => {
+                    warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
+                }
+            }
+        }
+    }
+
     setup_ignore_sigterm()?;
 
-    let exit_status = payload_process.wait()?;
-    match exit_status.code() {
-        Some(exit_code) => Ok(exit_code),
-        None => match exit_status.signal() {
-            Some(val) if val == Signal::SIGTERM as i32 => {
-                info!("payload exited with SIGTERM");
-                Ok(0)
+    // We need to wait for processes to finish asynchronously, to avoid zombies.
+    let mut pids_to_reap: HashSet<Pid> =
+        tenant_processes.iter().map(|p| Pid::from_raw(p.id() as i32)).collect();
+    let payload_pid = Pid::from_raw(payload_process.id() as i32);
+    pids_to_reap.insert(payload_pid);
+
+    let exit_status = wait_for_all_processes(&mut pids_to_reap, payload_pid)?;
+    get_payload_exit_code(exit_status)
+}
+
+// TODO(b/434925716): Report exit status of all the tenants back to the host
+/// Wait for all child processes to exit and print their exit statuses.
+/// Return the ExitStatus of just the main payload process, this is to maintain the
+/// non multi-tenancy behavior.
+fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<ExitStatus> {
+    let mut payload_exit_status: Option<ExitStatus> = None;
+
+    // Asynchronously wait for all child processes to exit.
+    while !pids_to_reap.is_empty() {
+        let wait_status = match wait() {
+            Ok(status) => status,
+            Err(nix::errno::Errno::ECHILD) => {
+                // No more children to wait for.
+                if !pids_to_reap.is_empty() {
+                    warn!("No more child processes to wait for, but expected {:?}.", pids_to_reap);
+                }
+                break;
             }
-            Some(signal) => Err(anyhow!(
-                "Payload exited due to signal: {} ({})",
-                signal,
-                Signal::try_from(signal).map_or("unknown", |s| s.as_str())
-            )),
-            None => Err(anyhow!("Payload has neither exit code nor signal")),
-        },
+            Err(e) => {
+                bail!("Failed to wait for child process: {:?}", e);
+            }
+        };
+
+        let (pid, exit_status) = match wait_status {
+            // WaitStatus::Exited extracts the exit code from the raw status,
+            // As we want to convert this to ExitStatus, we need to shift it back to
+            // its place in the raw status
+            WaitStatus::Exited(pid, exit_code) => (pid, ExitStatusExt::from_raw(exit_code << 8)),
+            WaitStatus::Signaled(pid, signal, _) => (pid, ExitStatusExt::from_raw(signal as i32)),
+            // Other statuses like Stopped or Continued are not termination events, so we
+            // ignore them and continue waiting.
+            _ => continue,
+        };
+
+        if pids_to_reap.remove(&pid) {
+            info!("Process {} exited with {}", pid, exit_status);
+            if pid == payload_pid {
+                payload_exit_status = Some(exit_status);
+            }
+        } else {
+            warn!("Unknown child process with PID {} exited with {}", pid, exit_status);
+        }
     }
+
+    payload_exit_status.ok_or_else(|| anyhow!("Payload process hasn't exited or status not saved"))
+}
+
+fn get_payload_exit_code(exit_status: ExitStatus) -> Result<i32> {
+    if let Some(exit_code) = exit_status.code() {
+        return Ok(exit_code);
+    }
+
+    if let Some(signal) = exit_status.signal() {
+        if signal == Signal::SIGTERM as i32 {
+            info!("payload exited with SIGTERM");
+            return Ok(0);
+        }
+        return Err(anyhow!(
+            "Payload exited due to signal: {} ({})",
+            signal,
+            Signal::try_from(signal).map_or("unknown", |s| s.as_str())
+        ));
+    }
+
+    Err(anyhow!("Payload has neither exit code nor signal"))
 }
 
 fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result<()> {
@@ -881,6 +980,8 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
                 task: Some(task),
                 apexes: vec![],
                 extra_apks,
+                // Tenants are only supported through config.json files
+                tenants: vec![],
                 prefer_staged: false,
                 export_tombstones: None,
                 enable_authfs: false,
@@ -917,22 +1018,20 @@ fn load_crashkernel_if_supported() -> Result<()> {
     Ok(())
 }
 
-/// Executes the given task.
-fn exec_task(
-    task: &Task,
-    cgroup_config: Option<&CgroupConfig>,
-    service: &Strong<dyn IVirtualMachineService>,
-    std_redirect: &Option<OwnedFd>,
-) -> Result<Child> {
-    info!("executing main task {:?}...", task);
-    let (mut command, uid_gid) = match task.type_ {
+struct PayloadCommand {
+    command: Command,
+    uid_gid: Option<(u32, u32)>,
+}
+
+fn get_task_command(package_name: &str, task: &Task, is_apex: bool) -> Result<PayloadCommand> {
+    let (command, uid_gid) = match task.type_ {
         TaskType::Executable => {
             // TODO(b/297501338): Figure out how to handle non-root for system payloads.
             (Command::new(&task.command), None)
         }
         TaskType::MicrodroidLauncher => {
             let mut command = Command::new("/system/bin/microdroid_launcher");
-            command.arg(find_library_path(&task.command)?);
+            command.arg(find_library_path(package_name, &task.command, is_apex)?);
             (
                 command,
                 Some((
@@ -943,6 +1042,19 @@ fn exec_task(
         }
     };
 
+    Ok(PayloadCommand { command, uid_gid })
+}
+
+/// Executes the given task.
+fn exec_task(
+    payload_cmd: PayloadCommand,
+    cgroup_config: Option<&CgroupConfig>,
+    service: &Strong<dyn IVirtualMachineService>,
+    std_redirect: &Option<OwnedFd>,
+    notify_payload_started: bool,
+) -> Result<Child> {
+    info!("executing main task {:?}...", payload_cmd.command);
+    let mut command = payload_cmd.command;
     let cgroup_path = cgroup_config.map(|c| format!("/sys/fs/cgroup/{}/cgroup.procs", c.name));
 
     // SAFETY: We are not accessing any resource of the parent process. This means we can't make any
@@ -961,7 +1073,7 @@ fn exec_task(
             }
             // Set UID and GID. Has to happen after changing the cgroup. Can't use rust's
             // `Command::uid/gid` because they are applied before the `pre_exec` hook.
-            if let Some((uid, gid)) = uid_gid {
+            if let Some((uid, gid)) = payload_cmd.uid_gid {
                 nix::unistd::setgid(nix::unistd::Gid::from_raw(gid))
                     .unwrap_or_else(|_| std::process::abort());
                 nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))
@@ -987,8 +1099,10 @@ fn exec_task(
     command.stdout(stdout);
     command.stderr(stderr);
 
-    info!("notifying payload started");
-    service.notifyPayloadStarted()?;
+    if notify_payload_started {
+        info!("notifying payload started");
+        service.notifyPayloadStarted()?;
+    }
 
     let payload_process = command.spawn().context("failed to spawn payload process")?;
     info!("payload pid = {:?}", payload_process.id());
@@ -1006,16 +1120,22 @@ fn exec_task(
     Ok(payload_process)
 }
 
-fn find_library_path(name: &str) -> Result<String> {
-    let mut watcher = PropertyWatcher::new("ro.product.cpu.abilist")?;
-    let value = watcher.read(|_name, value| Ok(value.trim().to_string()))?;
-    let abi = value.split(',').next().ok_or_else(|| anyhow!("no abilist"))?;
-
-    let paths = [
-        format!("{}/lib/{}/{}", VM_APK_CONTENTS_PATH, abi, name),
-        // TODO(b/372535544): standardize
-        "/apex/com.android.appsearch/lib64/libicing_anywhere.so".to_string(),
-    ];
+fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Result<String> {
+    let paths = if !is_apex {
+        let mut watcher = PropertyWatcher::new("ro.product.cpu.abilist")?;
+        let value = watcher.read(|_name, value| Ok(value.trim().to_string()))?;
+        let abi = value.split(',').next().ok_or_else(|| anyhow!("no abilist"))?;
+        [
+            format!("{package_name}/lib/{abi}/{lib_name}"),
+            // TODO(b/372535544): standardize
+            "/apex/com.android.appsearch/lib64/libicing_anywhere.so".to_string(),
+        ]
+    } else {
+        [
+            format!("/apex/{package_name}/lib64/{lib_name}"),
+            "/apex/com.android.appsearch/lib64/libicing_anywhere.so".to_string(),
+        ]
+    };
 
     for path_str in &paths {
         let path = PathBuf::from(path_str);

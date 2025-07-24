@@ -27,6 +27,8 @@ message Metadata {
 
   repeated ApexPayload apexes = 2;
 
+  repeated ApexPayload tenant_apexes = 6;
+
   ApkPayload apk = 3;
 
   oneof payload {
