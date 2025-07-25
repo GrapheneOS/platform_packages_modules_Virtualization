@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal
 
 import android.app.PictureInPictureParams
+import android.content.pm.ActivityInfo
 import android.graphics.Rect
 import android.os.Bundle
 import android.system.virtualmachine.VirtualMachine
@@ -30,6 +31,7 @@ import android.view.WindowInsetsController
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.RelativeLayout
+import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -99,12 +101,30 @@ class DisplayActivity : BaseActivity() {
     private fun setupUI() {
         setupButtons()
         setupModifierKeys()
+        setupBackCallback()
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
+    }
+
+    private fun setupBackCallback() {
+        val callback =
+            object : OnBackPressedCallback(true /* enabled by default */) {
+                override fun handleOnBackPressed() {
+                    // If it's in fullscreen mode, exit fullscreen instead of close the activity.
+                    if (isFullscreen()) {
+                        exitFullscreen()
+                    } else {
+                        onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+
+        onBackPressedDispatcher.addCallback(callback)
     }
 
     private fun setupButtons() {
         pipButton.setOnClickListener { this.enterPictureInPictureMode(pictureInPictureParams) }
 
-        fullscreenButton.setOnClickListener { toggleFullscreen() }
+        fullscreenButton.setOnClickListener { makeFullscreen() }
 
         keyboardButton.setOnClickListener { showSoftKeyboard() }
     }
@@ -159,6 +179,8 @@ class DisplayActivity : BaseActivity() {
             hide(WindowInsets.Type.systemBars())
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+        // TODO: Consider devices like laptops where landscape is the default mode.
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
     }
 
     private fun exitFullscreen() {
@@ -167,21 +189,12 @@ class DisplayActivity : BaseActivity() {
             show(WindowInsets.Type.systemBars())
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_DEFAULT
         }
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 
     private fun isFullscreen(): Boolean {
         val insets = ViewCompat.getRootWindowInsets(window.decorView)
         return insets?.isVisible(WindowInsetsCompat.Type.statusBars()) == false
-    }
-
-    private fun toggleFullscreen() {
-        if (!isFullscreen()) {
-            makeFullscreen()
-            fullscreenButton.setIconResource(R.drawable.ic_fullscreen_exit)
-        } else {
-            exitFullscreen()
-            fullscreenButton.setIconResource(R.drawable.ic_fullscreen)
-        }
     }
 
     companion object {
