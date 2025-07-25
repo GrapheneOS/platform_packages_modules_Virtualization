@@ -1,5 +1,4 @@
 PACKAGES install
-
 kmod
 udev
 avahi-daemon
@@ -15,7 +14,6 @@ pulseaudio
 systemd-zram-generator
 
 PACKAGES install release=bookworm-backports
-
 weston
 xwayland
 mesa-vulkan-drivers
