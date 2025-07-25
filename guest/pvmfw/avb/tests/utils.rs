@@ -97,10 +97,14 @@ pub fn extract_avb_footer(kernel: &[u8]) -> Result<AvbFooter> {
     Ok(footer)
 }
 
-pub fn extract_vbmeta_header(kernel: &[u8], footer: &AvbFooter) -> Result<AvbVBMetaImageHeader> {
+fn get_vbmeta_slice_from_footer<'a>(kernel: &'a [u8], footer: &AvbFooter) -> Result<&'a [u8]> {
     let vbmeta_offset: usize = footer.vbmeta_offset.try_into()?;
     let vbmeta_size: usize = footer.vbmeta_size.try_into()?;
-    let vbmeta_src = &kernel[vbmeta_offset..(vbmeta_offset + vbmeta_size)];
+    Ok(&kernel[vbmeta_offset..(vbmeta_offset + vbmeta_size)])
+}
+
+pub fn extract_vbmeta_header(kernel: &[u8], footer: &AvbFooter) -> Result<AvbVBMetaImageHeader> {
+    let vbmeta_src = get_vbmeta_slice_from_footer(kernel, footer)?;
     // SAFETY: The latest kernel has a valid VBMeta header at the position specified in footer.
     let vbmeta_header = unsafe {
         let mut header = MaybeUninit::uninit();
@@ -109,6 +113,14 @@ pub fn extract_vbmeta_header(kernel: &[u8], footer: &AvbFooter) -> Result<AvbVBM
         header.assume_init()
     };
     Ok(vbmeta_header)
+}
+
+/// Calculates the VBMeta digest of a partition with a footer.
+///
+/// Note: This function doesn't support chain partitions!
+pub fn calculate_vbmeta_digest(blob: &[u8]) -> Result<Digest> {
+    let footer = extract_avb_footer(blob)?;
+    Ok(hash(&[get_vbmeta_slice_from_footer(blob, &footer)?]))
 }
 
 pub fn assert_latest_payload_verification_passes(
@@ -125,6 +137,7 @@ pub fn assert_latest_payload_verification_passes(
     let footer = extract_avb_footer(&kernel)?;
     let kernel_digest =
         hash(&[&hash(&[b"bootloader"]), &kernel[..usize::try_from(footer.original_image_size)?]]);
+    let vbmeta_digest = calculate_vbmeta_digest(&kernel)?;
     let capabilities = vec![Capability::SecretkeeperProtection];
     let initrd_digest = Some(hash(&[&hash(&[initrd_salt]), initrd]));
     let expected_boot_data = VerifiedBootData {
@@ -132,6 +145,7 @@ pub fn assert_latest_payload_verification_passes(
         kernel_digest,
         initrd_digest,
         public_key: &public_key,
+        vbmeta_digest,
         capabilities,
         // TODO(b/392081737): Capture expected rollback_index from build variables as we
         // intend on auto-syncing rollback_index with security patch timestamps
@@ -163,11 +177,13 @@ pub fn assert_payload_without_initrd_passes_verification(
     let footer = extract_avb_footer(kernel)?;
     let kernel_digest =
         hash(&[&hash(&[salt]), &kernel[..usize::try_from(footer.original_image_size)?]]);
+    let vbmeta_digest = calculate_vbmeta_digest(kernel)?;
     let expected_boot_data = VerifiedBootData {
         debug_level: DebugLevel::None,
         kernel_digest,
         initrd_digest: None,
         public_key: &public_key,
+        vbmeta_digest,
         capabilities,
         rollback_index: expected_rollback_index,
         page_size,

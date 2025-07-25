@@ -88,19 +88,18 @@ fn latest_debug_payload_passes_verification() -> Result<()> {
 #[test]
 fn payload_expecting_no_initrd_passes_verification_with_no_initrd() -> Result<()> {
     let public_key = load_trusted_public_key()?;
-    let verified_boot_data = verify_payload(
-        &fs::read(TEST_IMG_WITH_ONE_HASHDESC_PATH)?,
-        /* initrd= */ None,
-        &public_key,
-    )
-    .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
+    let payload = fs::read(TEST_IMG_WITH_ONE_HASHDESC_PATH)?;
+    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &public_key)
+        .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let kernel_digest = hash(&[&hex::decode("1111")?, &fs::read(UNSIGNED_TEST_IMG_PATH)?]);
+    let vbmeta_digest = calculate_vbmeta_digest(&payload)?;
     let expected_boot_data = VerifiedBootData {
         debug_level: DebugLevel::None,
         kernel_digest,
         initrd_digest: None,
         public_key: &public_key,
+        vbmeta_digest,
         capabilities: vec![],
         rollback_index: 0,
         page_size: None,
@@ -134,19 +133,18 @@ fn payload_with_non_initrd_descriptor_fails_verification_with_initrd() -> Result
 #[test]
 fn payload_expecting_no_initrd_passes_verification_with_service_vm_name() -> Result<()> {
     let public_key = load_trusted_public_key()?;
-    let verified_boot_data = verify_payload(
-        &fs::read(TEST_IMG_WITH_SERVICE_VM_NAME_PATH)?,
-        /* initrd= */ None,
-        &public_key,
-    )
-    .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
+    let payload = fs::read(TEST_IMG_WITH_SERVICE_VM_NAME_PATH)?;
+    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &public_key)
+        .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let kernel_digest = hash(&[&hex::decode("2131")?, &fs::read(UNSIGNED_TEST_IMG_PATH)?]);
+    let vbmeta_digest = calculate_vbmeta_digest(&payload)?;
     let expected_boot_data = VerifiedBootData {
         debug_level: DebugLevel::None,
         kernel_digest,
         initrd_digest: None,
         public_key: &public_key,
+        vbmeta_digest,
         capabilities: vec![Capability::RemoteAttest],
         rollback_index: 0,
         page_size: None,
@@ -489,19 +487,18 @@ fn vbmeta_with_verification_flag_disabled_fails_verification() -> Result<()> {
 #[test]
 fn payload_with_rollback_index() -> Result<()> {
     let public_key = load_trusted_public_key()?;
-    let verified_boot_data = verify_payload(
-        &fs::read(TEST_IMG_WITH_ROLLBACK_INDEX_5)?,
-        /* initrd= */ None,
-        &public_key,
-    )
-    .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
+    let payload = fs::read(TEST_IMG_WITH_ROLLBACK_INDEX_5)?;
+    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &public_key)
+        .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let kernel_digest = hash(&[&hex::decode("1211")?, &fs::read(UNSIGNED_TEST_IMG_PATH)?]);
+    let vbmeta_digest = calculate_vbmeta_digest(&payload)?;
     let expected_boot_data = VerifiedBootData {
         debug_level: DebugLevel::None,
         kernel_digest,
         initrd_digest: None,
         public_key: &public_key,
+        vbmeta_digest,
         capabilities: vec![],
         rollback_index: 5,
         page_size: None,
