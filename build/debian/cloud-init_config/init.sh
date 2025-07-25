@@ -32,17 +32,21 @@ install_deps() {
 		bpfcc-tools
 		libnss-mdns
 		procps
+		pulseaudio
+		systemd-zram-generator
+	)
+
+	INSTALL_PACKAGES_BOOKWORM_BACKPORTS=(
 		weston
 		xwayland
 		mesa-vulkan-drivers
 		libvulkan1
 		vulkan-tools
-		pulseaudio
-		systemd-zram-generator
 	)
 	apt update
 	apt upgrade -y
 	apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
+	apt install --no-install-recommends -t bookworm-backports -y "${INSTALL_PACKAGES_BOOKWORM_BACKPORTS[@]}"
 }
 
 _copy_files() {
