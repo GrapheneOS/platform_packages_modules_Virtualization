@@ -552,6 +552,10 @@ rust_ffi_static {
     defaults: ["libpvmfw.defaults"],
     // This enables pvmfw_desktop to be built with a different set of features.
     features: [
+        "platform_has_desktop_trusty",
+    ],
+    srcs: [
+        ":desktop_trusty_vbmeta_digest",
     ],
 }
 
