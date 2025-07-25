@@ -24,6 +24,8 @@ import android.view.SurfaceView
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 
+val HARDWARE_KEYCODE_SHIFT: Short = 42
+
 class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(context, attrs) {
     lateinit var virtualMachine: VirtualMachine
 
@@ -104,10 +106,18 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(co
 
     inner class InputConnection : BaseInputConnection(this, false) {
         override fun sendKeyEvent(event: KeyEvent): Boolean {
-            return virtualMachine.sendKeyEvent(
-                convertAndroidKeyCodeToEvdevScanCode(event.keyCode),
-                event.action != MotionEvent.ACTION_UP,
-            )
+            if (event.isShiftPressed) {
+                virtualMachine.sendKeyEvent(HARDWARE_KEYCODE_SHIFT, true)
+            }
+            val result =
+                virtualMachine.sendKeyEvent(
+                    convertAndroidKeyCodeToEvdevScanCode(event.keyCode),
+                    event.action != MotionEvent.ACTION_UP,
+                )
+            if (event.isShiftPressed) {
+                virtualMachine.sendKeyEvent(HARDWARE_KEYCODE_SHIFT, false)
+            }
+            return result
         }
     }
 
