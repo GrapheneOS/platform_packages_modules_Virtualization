@@ -3,7 +3,7 @@ kmod
 udev
 avahi-daemon
 avahi-utils
-bpfcc-tools
+libbpf-tools
 libnss-mdns
 procps
 forwarder-guest

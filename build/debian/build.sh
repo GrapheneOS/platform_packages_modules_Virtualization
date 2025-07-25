@@ -263,15 +263,6 @@ copy_android_config() {
 
 package_custom_kernel() {
 	if [[ "$cloud_init" != 1 ]]; then
-		if [[ "$use_generic_kernel" == 1 ]]; then
-			# NOTE: For bpfcc-tools, install generic headers for the generic kernel.
-			cat > "${config_space}/package_config/LAST" <<EOF
-PACKAGES install
-linux-headers-generic
-EOF
-return
-		fi
-
 		# NOTE: Prevent FAI from installing a default Debian kernel, by removing
 		#       linux-image meta package names from arch-specific class files.
 		sed -i "/linux-image.*-${debian_arch}/d" \
