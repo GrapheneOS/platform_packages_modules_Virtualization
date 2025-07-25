@@ -132,7 +132,6 @@ pub fn assert_latest_payload_verification_passes(
         kernel_digest,
         initrd_digest,
         public_key: &public_key,
-        vbmeta_digest: [0; 32],
         capabilities,
         // TODO(b/392081737): Capture expected rollback_index from build variables as we
         // intend on auto-syncing rollback_index with security patch timestamps
@@ -169,7 +168,6 @@ pub fn assert_payload_without_initrd_passes_verification(
         kernel_digest,
         initrd_digest: None,
         public_key: &public_key,
-        vbmeta_digest: [0; 32],
         capabilities,
         rollback_index: expected_rollback_index,
         page_size,
