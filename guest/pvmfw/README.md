@@ -510,6 +510,7 @@ that is compatible with their guest kernel. These are:
   [`component_name`][dice-comp-name] (defaults to `"vm_entry"`) in the guest
   DICE certificate and to identify special VMs such as
   - `"rkp_vm"` is reserved for the [RKP VM][rkp-vm] for Remote Key Provisioning
+  - `"desktop-trusty"` is reserved for the Trusty-based desktop TEE VM
 
 [dice-comp-name]: https://cs.android.com/android/platform/superproject/main/+/main:external/open-dice/docs/android.md;l=81;drc=6d511e9533eac05d64d47fcd78ac5d881e72c3de
 [rkp-vm]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/service_vm.md;l=45;drc=1afff42ab507ea58579d4b3801fad5157e6663bb
