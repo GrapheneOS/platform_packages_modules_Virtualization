@@ -138,8 +138,8 @@ install_prerequisites() {
 
 	source "$HOME"/.cargo/env
 	rustup target add "${arch}"-unknown-linux-gnu
-	cargo install cargo-license
-	cargo install cargo-deb
+  cargo install cargo-license --version 0.6.1
+  cargo install cargo-deb --version 3.3.0
 }
 
 download_debian_cloud_image() {
