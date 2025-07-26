@@ -1,5 +1,4 @@
 PACKAGES install
-
 kmod
 udev
 avahi-daemon
@@ -11,10 +10,12 @@ forwarder-guest
 forwarder-guest-launcher
 shutdown-runner
 storage-balloon-agent
+pulseaudio
+systemd-zram-generator
+
+PACKAGES install release=bookworm-backports
 weston
 xwayland
 mesa-vulkan-drivers
 libvulkan1
 vulkan-tools
-pulseaudio
-systemd-zram-generator

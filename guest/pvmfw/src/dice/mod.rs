@@ -219,6 +219,7 @@ mod tests {
         kernel_digest: [1u8; size_of::<Digest>()],
         initrd_digest: Some([2u8; size_of::<Digest>()]),
         public_key: b"public key",
+        vbmeta_digest: [0u8; 32],
         name: None,
         capabilities: vec![],
         rollback_index: 42,

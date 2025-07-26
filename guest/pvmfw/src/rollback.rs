@@ -24,6 +24,7 @@ use diced_open_dice::Hidden;
 use libfdt::Fdt;
 use log::{error, info};
 use pvmfw_avb::Capability;
+use pvmfw_avb::Digest;
 use pvmfw_avb::VerifiedBootData;
 use virtio_drivers::transport::pci::bus::{ConfigurationAccess, PciRoot};
 use vmbase::fdt::{pci::PciInfo, SwiotlbInfo};
@@ -33,8 +34,14 @@ use vmbase::virtio::pci;
 
 /// Criteria hard-coded into pvmfw, to perform fixed image verification.
 enum FixedRollbackCriterion {
+    #[allow(dead_code)] // TODO(b/402505709): Use this.
+    /// Image must match the exact AVB digest (incl. image hash, rollback index, or public key).
+    AvbDigest { digest: Digest },
     /// Image must match the exact rollback index and have been signed with the given public key.
     RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
+    #[allow(dead_code)] // TODO(b/402505709): Use this.
+    /// Image identifier is reserved but not supported on this platform so must be rejected.
+    Reserved { name: &'static str },
 }
 
 /// Performs RBP based on the input payload, current DICE chain, and host-controlled platform.
@@ -114,6 +121,19 @@ fn perform_fixed_rollback_protection(
             } else {
                 Ok(())
             }
+        }
+        FixedRollbackCriterion::AvbDigest { digest: expected_digest } => {
+            let digest = verified_boot_data.vbmeta_digest;
+            if digest != expected_digest {
+                error!("Digest mismatch: expected {expected_digest:x?}, found {digest:x?}");
+                Err(RebootReason::InvalidPayload)
+            } else {
+                Ok(())
+            }
+        }
+        FixedRollbackCriterion::Reserved { name } => {
+            error!("Reserved payload name \"{name}\" not supported.");
+            Err(RebootReason::InvalidPayload)
         }
     }
 }
