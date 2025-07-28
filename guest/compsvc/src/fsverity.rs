@@ -23,16 +23,34 @@ use std::os::unix::io::{AsRawFd, BorrowedFd};
 const SHA256_HASH_SIZE: usize = 32;
 
 /// Bytes of SHA256 digest
-pub type Sha256Digest = [u8; SHA256_HASH_SIZE];
+type Sha256Digest = [u8; SHA256_HASH_SIZE];
 
-/// Returns the fs-verity measurement/digest. Currently only SHA256 is supported.
-pub fn measure(fd: BorrowedFd) -> Result<Sha256Digest> {
-    // TODO(b/196635431): Unfortunately, the FUSE API doesn't allow authfs to implement the standard
-    // fs-verity ioctls. Until the kernel allows, use the alternative xattr that authfs provides.
+#[cfg_attr(test, mockall::automock, allow(dead_code))]
+pub mod wrapper {
+    use super::Sha256Digest;
+    use anyhow::Result;
+    use std::os::unix::io::BorrowedFd;
+    /// Returns the fs-verity measurement/digest. Currently only SHA256 is supported.
+    #[cfg(test)]
+    #[allow(clippy::needless_lifetimes)]
+    pub fn measure<'a>(fd: BorrowedFd<'a>) -> Result<Sha256Digest> {
+        super::measure(fd)
+    }
+
+    #[cfg(not(test))]
+    pub fn measure(fd: BorrowedFd) -> Result<Sha256Digest> {
+        super::measure(fd)
+    }
+}
+
+fn measure(fd: BorrowedFd) -> Result<Sha256Digest> {
+    // TODO(b/196635431): Unfortunately, the FUSE API doesn't allow authfs to implement the
+    // standard fs-verity ioctls. Until the kernel allows, use the alternative xattr
+    // that authfs provides.
     let path = CString::new(format!("/proc/self/fd/{}", fd.as_raw_fd()).as_str()).unwrap();
     let name = CString::new("authfs.fsverity.digest").unwrap();
     let mut buf = [0u8; SHA256_HASH_SIZE];
-    // SAFETY: getxattr should not write beyond the given buffer size.
+    // SAFETY: should not write past end of buffer.
     let size = unsafe {
         getxattr(path.as_ptr(), name.as_ptr(), buf.as_mut_ptr() as *mut libc::c_void, buf.len())
     };

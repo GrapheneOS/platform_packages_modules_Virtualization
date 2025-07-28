@@ -17,14 +17,17 @@
 //! Support for generating and signing an info file listing names and digests of generated
 //! artifacts.
 
-use crate::compos_key;
-use crate::fsverity;
+#[cfg(test)]
+use crate::{compos_key::mock_wrapper as compos_key, fsverity::mock_wrapper as fsverity};
+#[cfg(not(test))]
+use crate::{compos_key::wrapper as compos_key, fsverity::wrapper as fsverity};
+
 use anyhow::{anyhow, Context, Result};
 use odsign_proto::odsign_info::OdsignInfo;
 use protobuf::Message;
 use std::fs::File;
 use std::io::Write;
-use std::os::unix::io::AsFd;
+use std::os::fd::AsFd;
 use std::path::Path;
 
 const TARGET_DIRECTORY: &str = "/data/misc/apexdata/com.android.art/dalvik-cache";

@@ -9,6 +9,10 @@ aidl_interface {
     backend: {
         rust: {
             enabled: true,
+            gen_mockall: true,
+            additional_rustlibs: [
+                "libmockall",
+            ],
             apex_available: [
                 "com.android.compos",
                 "com.android.virt",

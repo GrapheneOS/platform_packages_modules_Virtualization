@@ -41,3 +41,14 @@ rust_binary {
         "com.android.compos",
     ],
 }
+
+rust_test {
+    name: "compsvc_test",
+    defaults: ["compsvc_defaults"],
+    test_suites: ["general-tests"],
+    auto_gen_config: true,
+    rustlibs: [
+        "libmockall",
+        "libtempfile",
+    ],
+}
