@@ -10,4 +10,4 @@ export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/gfxstream_vk_icd.json
 # remove this after TILING_OPTIMAL-based swap chain is used.
 export MESA_VK_WSI_DEBUG=sw,linear
 export XWAYLAND_NO_GLAMOR=1
-export LIBGL_KOPPER_DRI=1
+export LIBGL_KOPPER_DRI2=1
