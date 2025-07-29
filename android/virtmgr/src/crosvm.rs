@@ -1177,11 +1177,27 @@ impl VmState {
                 Some((
                     thread::Builder::new().name("virt_psi_monitor".to_string()).spawn(
                         move || {
-                            let mut expo_bo = 1;
+                            let mut expo_bo: u64 = 1;
                             // TODO: add metrics to see how often we restart the thread
                             while let Err(e) = psi_monitor(&instance, &psi_monitor_kill_event_clone)
                             {
                                 error!("psi monitor failed: {:#}", e);
+                                virtualmachine::global_service()
+                                    .unwrap()
+                                    .forwardAtom(
+                                        &aidl::Atom::PsiMonitorFailedReported(
+                                            aidl::PsiMonitorFailedReported {
+                                                exponentialBackoffSeconds: expo_bo
+                                                    .try_into()
+                                                    .unwrap(),
+                                            },
+                                        ),
+                                        instance.requester_uid.try_into().unwrap(),
+                                        &instance.name,
+                                    )
+                                    .unwrap_or_else(|e| {
+                                        warn!("Failed to write PsiMonitorFailedReported atom: {e}");
+                                    });
                                 thread::sleep(Duration::from_secs(expo_bo));
                                 // Exponential backoff, capped at 60 seconds. This number is
                                 // arbitrary
@@ -1238,6 +1254,7 @@ fn trigger_trim(instance: &Arc<VmInstance>) {
         }
     }
 }
+
 fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>) -> Result<()> {
     // monitor memory, inflate balloon if some contention exists
     // This will initialize a PSI monitor that monitors memory contention in
