@@ -21,6 +21,7 @@ mod compilation;
 mod compos_key;
 mod compsvc;
 mod fsverity;
+mod wrappers;
 
 use anyhow::Result;
 use compos_common::COMPOS_VSOCK_PORT;

@@ -14,16 +14,24 @@
  * limitations under the License.
  */
 
+#[cfg(not(test))]
+use crate::wrappers::{
+    command_line_helper::run_derive_classpath,
+    minijail::{CommandFactory as minijail_command_factory, Minijail},
+    system_properties,
+};
+#[cfg(test)]
+use crate::wrappers::{
+    minijail::{MockCommandFactory as minijail_command_factory, MockMinijail as Minijail},
+    mock_command_line_helper::run_derive_classpath,
+    system_properties,
+};
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
-use minijail::{self, Minijail};
 use regex::Regex;
-use rustutils::system_properties;
 use std::collections::HashMap;
 use std::env;
-use std::ffi::OsString;
 use std::path::{self, Path, PathBuf};
-use std::process::Command;
 
 use authfs_aidl_interface::aidl::com::android::virt::fs::{
     AuthFsConfig::{
@@ -185,31 +193,6 @@ fn set_classpaths(odrefresh_vars: &mut EnvMap, android_root: &Path) -> Result<()
     load_classpath_vars(odrefresh_vars, &export_lines)
 }
 
-fn run_derive_classpath(android_root: &Path) -> Result<String> {
-    let classpaths_root = android_root.join("etc/classpaths");
-
-    let mut bootclasspath_arg = OsString::new();
-    bootclasspath_arg.push("--bootclasspath-fragment=");
-    bootclasspath_arg.push(classpaths_root.join("bootclasspath.pb"));
-
-    let mut systemserverclasspath_arg = OsString::new();
-    systemserverclasspath_arg.push("--systemserverclasspath-fragment=");
-    systemserverclasspath_arg.push(classpaths_root.join("systemserverclasspath.pb"));
-
-    let result = Command::new("/apex/com.android.sdkext/bin/derive_classpath")
-        .arg(bootclasspath_arg)
-        .arg(systemserverclasspath_arg)
-        .arg("/proc/self/fd/1")
-        .output()
-        .context("Failed to run derive_classpath")?;
-
-    if !result.status.success() {
-        bail!("derive_classpath returned {}", result.status);
-    }
-
-    String::from_utf8(result.stdout).context("Converting derive_classpath output")
-}
-
 fn load_classpath_vars(odrefresh_vars: &mut EnvMap, export_lines: &str) -> Result<()> {
     // Each line should be in the format "export <var name> <value>"
     let pattern = Regex::new(r"^export ([^ ]+) ([^ ]+)$").context("Failed to construct Regex")?;
@@ -226,11 +209,15 @@ fn load_classpath_vars(odrefresh_vars: &mut EnvMap, export_lines: &str) -> Resul
     Ok(())
 }
 
-fn spawn_jailed_task(executable: &Path, args: &[String], env_vars: &[String]) -> Result<Minijail> {
+fn spawn_jailed_task(
+    executable: &Path,
+    args: &Vec<String>,
+    env_vars: &Vec<String>,
+) -> Result<Minijail> {
     // TODO(b/185175567): Run in a more restricted sandbox.
     let jail = Minijail::new()?;
-    let keep_fds = [];
-    let command = minijail::Command::new_for_path(executable, &keep_fds, args, Some(env_vars))?;
+    let keep_fds = vec![];
+    let command = minijail_command_factory::new_for_path(executable, &keep_fds, args, env_vars)?;
     let _pid = jail.run_command(command)?;
     Ok(jail)
 }
