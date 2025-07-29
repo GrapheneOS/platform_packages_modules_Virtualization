@@ -1,0 +1,3 @@
+#!/bin/bash
+
+$ROOTCMD apt-get -y --no-install-recommends install -t bookworm-backports weston xwayland mesa-vulkan-drivers libvulkan1 vulkan-tools
