@@ -45,44 +45,31 @@ use binder::{
     BinderFeatures, ExceptionCode, Interface, IntoBinderResult, Result as BinderResult, Strong,
 };
 use compos_aidl_interface::aidl::com::android::compos::{
-    ICompOsService::{
-        BnCompOsService, Dex2OatArg::Dex2OatArg, ICompOsService, OdrefreshArgs::OdrefreshArgs,
+    ICompOsService::{BnCompOsService, ICompOsService, OdrefreshArgs::OdrefreshArgs},
+    IVerifiedDex2OatService::{
+        BnVerifiedDex2OatService, Dex2OatArg::Dex2OatArg, IVerifiedDex2OatService,
     },
     IVerifiedDex2OatTaskCallback::IVerifiedDex2OatTaskCallback,
 };
 use compos_common::binder::to_binder_result;
 use compos_common::odrefresh::{is_system_property_interesting, ODREFRESH_PATH};
 
-/// Constructs a binder object that implements ICompOsService.
-pub fn new_binder() -> Result<Strong<dyn ICompOsService>> {
-    let service = CompOsService {
-        odrefresh_path: PathBuf::from(ODREFRESH_PATH),
-        initialized: RwLock::new(None),
-    };
-    Ok(BnCompOsService::new_binder(service, BinderFeatures::default()))
-}
+trait ProvidesVmManagement {
+    fn set_initialized(&self, initialized: bool);
 
-struct CompOsService {
-    odrefresh_path: PathBuf,
+    fn get_initialized(&self) -> Option<bool>;
 
-    /// A locked protected tri-state.
-    ///  * None: uninitialized
-    ///  * Some(true): initialized successfully
-    ///  * Some(false): failed to initialize
-    initialized: RwLock<Option<bool>>,
-}
-
-impl Interface for CompOsService {}
-
-impl ICompOsService for CompOsService {
-    fn initializeSystemProperties(&self, names: &[String], values: &[String]) -> BinderResult<()> {
-        let mut initialized = self.initialized.write().unwrap();
+    fn do_initialize_system_properties(
+        &self,
+        names: &[String],
+        values: &[String],
+    ) -> BinderResult<()> {
+        let initialized = self.get_initialized();
         if initialized.is_some() {
             return Err(format!("Already initialized: {initialized:?}"))
                 .or_binder_exception(ExceptionCode::ILLEGAL_STATE);
         }
-        *initialized = Some(false);
-
+        self.set_initialized(false);
         if names.len() != values.len() {
             return Err(format!(
                 "Received inconsistent number of keys ({}) and values ({})",
@@ -102,55 +89,87 @@ impl ICompOsService for CompOsService {
                 return to_binder_result(result);
             }
         }
-        *initialized = Some(true);
+        self.set_initialized(true);
         Ok(())
     }
 
-    fn odrefresh(&self, args: &OdrefreshArgs) -> BinderResult<i8> {
-        self.check_initialized()?;
-        to_binder_result(self.do_odrefresh(args))
-    }
-
-    #[allow(unused_variables)]
-    fn verifiedDex2Oat(
-        &self,
-        args: &[Dex2OatArg],
-        manifest_fd: i32,
-        cb: &Strong<dyn IVerifiedDex2OatTaskCallback>,
-    ) -> BinderResult<()> {
-        if !aconfig_compos_flags_rust::verified_dex2oat() {
-            return Err("verifiedDex2Oat feature is not enabled.")
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
-        self.check_initialized()?;
-        todo!("Finish implementing app compilation");
-    }
-
-    fn getPublicKey(&self) -> BinderResult<Vec<u8>> {
-        to_binder_result(compos_key::get_public_key())
-    }
-
-    fn getAttestationChain(&self) -> BinderResult<Vec<u8>> {
-        to_binder_result(compos_key::get_attestation_chain())
-    }
-
-    fn quit(&self) -> BinderResult<()> {
-        // When our process exits, Microdroid will shut down the VM.
-        info!("Received quit request, exiting");
-        std::process::exit(0);
-    }
-}
-
-impl CompOsService {
-    fn check_initialized(&self) -> BinderResult<()> {
-        let initialized = *self.initialized.read().unwrap();
-        if !initialized.unwrap_or(false) {
+    fn do_check_initialized(&self) -> BinderResult<()> {
+        if !self.get_initialized().unwrap_or(false) {
             return Err("Service has not been initialized")
                 .or_binder_exception(ExceptionCode::ILLEGAL_STATE);
         }
         Ok(())
     }
 
+    fn do_get_public_key(&self) -> BinderResult<Vec<u8>> {
+        to_binder_result(compos_key::get_public_key())
+    }
+
+    fn do_get_attestation_chain(&self) -> BinderResult<Vec<u8>> {
+        to_binder_result(compos_key::get_attestation_chain())
+    }
+
+    fn do_quit(&self) -> BinderResult<()> {
+        // When our process exits, Microdroid will shut down the VM.
+        info!("Received quit request, exiting");
+        std::process::exit(0);
+    }
+}
+
+/// Constructs a binder object that implements ICompOsService.
+pub fn new_odrefresh_binder() -> Result<Strong<dyn ICompOsService>> {
+    let service = CompOsService {
+        odrefresh_path: PathBuf::from(ODREFRESH_PATH),
+        initialized: RwLock::new(None),
+    };
+    Ok(BnCompOsService::new_binder(service, BinderFeatures::default()))
+}
+
+struct CompOsService {
+    odrefresh_path: PathBuf,
+
+    /// A locked protected tri-state.
+    ///  * None: uninitialized
+    ///  * Some(true): initialized successfully
+    ///  * Some(false): failed to initialize
+    initialized: RwLock<Option<bool>>,
+}
+
+impl Interface for CompOsService {}
+
+impl ProvidesVmManagement for CompOsService {
+    fn get_initialized(&self) -> Option<bool> {
+        *self.initialized.read().unwrap()
+    }
+    fn set_initialized(&self, initialized: bool) {
+        *self.initialized.write().unwrap() = Some(initialized);
+    }
+}
+
+impl ICompOsService for CompOsService {
+    fn initializeSystemProperties(&self, names: &[String], values: &[String]) -> BinderResult<()> {
+        self.do_initialize_system_properties(names, values)
+    }
+
+    fn odrefresh(&self, args: &OdrefreshArgs) -> BinderResult<i8> {
+        self.do_check_initialized()?;
+        to_binder_result(self.do_odrefresh(args))
+    }
+
+    fn getPublicKey(&self) -> BinderResult<Vec<u8>> {
+        self.do_get_public_key()
+    }
+
+    fn getAttestationChain(&self) -> BinderResult<Vec<u8>> {
+        self.do_get_attestation_chain()
+    }
+
+    fn quit(&self) -> BinderResult<()> {
+        self.do_quit()
+    }
+}
+
+impl CompOsService {
     fn do_odrefresh(&self, args: &OdrefreshArgs) -> Result<i8> {
         let authfs_service: Strong<dyn IAuthFsService> = AuthFsFactory::new_authfs_service()?;
         let exit_code = odrefresh(&self.odrefresh_path, args, authfs_service, |output_dir| {
@@ -182,6 +201,57 @@ fn add_artifacts(target_dir: &Path, artifact_signer: &mut ArtifactSigner) -> Res
         }
     }
     Ok(())
+}
+
+/// Constructs a binderobject that implements IVerifiedDex2OatService
+pub fn new_dex2oat_binder() -> Result<Strong<dyn IVerifiedDex2OatService>> {
+    let service = VerifiedDex2OatService { initialized: RwLock::new(None) };
+    Ok(BnVerifiedDex2OatService::new_binder(service, BinderFeatures::default()))
+}
+
+struct VerifiedDex2OatService {
+    /// A locked protected tri-state.
+    ///  * None: uninitialized
+    ///  * Some(true): initialized successfully
+    ///  * Some(false): failed to initialize
+    initialized: RwLock<Option<bool>>,
+}
+
+impl Interface for VerifiedDex2OatService {}
+
+impl ProvidesVmManagement for VerifiedDex2OatService {
+    fn get_initialized(&self) -> Option<bool> {
+        *self.initialized.read().unwrap()
+    }
+    fn set_initialized(&self, initialized: bool) {
+        *self.initialized.write().unwrap() = Some(initialized);
+    }
+}
+
+impl IVerifiedDex2OatService for VerifiedDex2OatService {
+    fn initializeSystemProperties(&self, names: &[String], values: &[String]) -> BinderResult<()> {
+        self.do_initialize_system_properties(names, values)
+    }
+
+    #[allow(unused_variables)]
+    fn verifiedDex2Oat(
+        &self,
+        args: &[Dex2OatArg],
+        system_dir_fd: i32,
+        manifest_fd: i32,
+        cb: &Strong<dyn IVerifiedDex2OatTaskCallback>,
+    ) -> BinderResult<()> {
+        self.do_check_initialized()?;
+        todo!("Finish implementing app compilation");
+    }
+
+    fn getPublicKey(&self) -> BinderResult<Vec<u8>> {
+        self.do_get_public_key()
+    }
+
+    fn quit(&self) -> BinderResult<()> {
+        self.do_quit()
+    }
 }
 
 #[cfg(test)]
