@@ -19,6 +19,8 @@
 #include <android-base/result.h>
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
+#include <android/hardware_buffer.h>
+#include <android/surface_control.h>
 #include <system/graphics.h> // for HAL_PIXEL_FORMAT_*
 
 #include <condition_variable>
@@ -80,19 +82,34 @@ class AndroidDisplaySurface {
 public:
     AndroidDisplaySurface(const std::string& name) : mName(name) {}
 
-    void setNativeSurface(Surface* surface) {
+    Result<void> setNativeSurface(Surface* surface) {
         {
             std::lock_guard lk(mSurfaceMutex);
             mNativeSurface = std::make_unique<Surface>(surface->release());
             mNativeSurfaceNeedsConfiguring = true;
+            Surface* surface = mNativeSurface.get();
+            if (!surface) {
+                return Error() << "Failed to get Surface";
+            }
+
+            ANativeWindow* anw = surface->get();
+            mSurfaceControl = ASurfaceControl_createFromWindow(anw, mName.c_str());
+            if (!mSurfaceControl) {
+                return Error() << "Failed to create ASurfaceControl";
+            }
         }
 
         mNativeSurfaceReady.notify_one();
+        return {};
     }
 
     void removeSurface() {
         {
             std::lock_guard lk(mSurfaceMutex);
+            if (mSurfaceControl) {
+                ASurfaceControl_release(mSurfaceControl);
+                mSurfaceControl = nullptr;
+            }
             mNativeSurface = nullptr;
         }
         mNativeSurfaceReady.notify_one();
@@ -183,6 +200,17 @@ public:
         return {};
     }
 
+    Result<void> setBuffer(AHardwareBuffer* ahb) {
+        auto transaction = ASurfaceTransaction_create();
+        if (!transaction) {
+            return Error() << "Failed to create ASurfaceTransaction";
+        }
+        ASurfaceTransaction_setBuffer(transaction, mSurfaceControl, ahb, -1 /* acquire_fence_fd */);
+        ASurfaceTransaction_apply(transaction);
+        ASurfaceTransaction_delete(transaction);
+        return {};
+    }
+
     // Saves the last frame drawn
     Result<void> saveFrame() {
         std::unique_lock lk(mSurfaceMutex);
@@ -247,6 +275,7 @@ private:
 
     std::mutex mSurfaceMutex;
     std::unique_ptr<Surface> mNativeSurface;
+    ASurfaceControl* mSurfaceControl = nullptr;
     std::condition_variable mNativeSurfaceReady;
     bool mNativeSurfaceNeedsConfiguring = true;
 
@@ -462,6 +491,17 @@ extern "C" void post_android_surface_buffer(struct AndroidDisplayContext* ctx,
     auto ret = surface->unlockAndPost();
     if (!ret.ok()) {
         ctx->errorf("Failed to unlock and post for surface %s: %s", surface->name().c_str(),
+                    ret.error().message().c_str());
+    }
+    return;
+}
+
+extern "C" void android_display_flip_to(struct AndroidDisplayContext* ctx,
+                                        AndroidDisplaySurface* surface, int64_t rawHandle) {
+    AHardwareBuffer* ahb = static_cast<AHardwareBuffer*>(reinterpret_cast<void*>(rawHandle));
+    auto ret = surface->setBuffer(ahb);
+    if (!ret.ok()) {
+        ctx->errorf("Failed to set buffer %s: %s", surface->name().c_str(),
                     ret.error().message().c_str());
     }
     return;
