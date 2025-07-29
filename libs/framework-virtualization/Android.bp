@@ -5,7 +5,7 @@ package {
 java_sdk_library {
     name: "framework-virtualization",
 
-    defaults: ["non-updatable-framework-module-defaults"],
+    defaults: ["framework-non-updatable-unbundled-defaults"],
 
     jarjar_rules: "jarjar-rules.txt",
 
@@ -37,13 +37,6 @@ java_sdk_library {
         ],
     },
 
-    sdk_version: "core_platform",
-    stub_only_libs: [
-        "android_module_lib_stubs_current",
-    ],
-    impl_only_libs: [
-        "framework",
-    ],
     impl_library_visibility: [
         "//packages/modules/Virtualization:__subpackages__",
     ],
