@@ -90,25 +90,14 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
         self._checkAdbCommandOutput(["pull", "/sys/fs/selinux/policy",
                                      policy_path])
 
-    def _getFirstApiLevel(self):
-        # Copied from Java's PropertyUtil.getFirstApiLevel
-        first_api_level = self._getProp("ro.product.first_api_level")
-        if first_api_level:
-            try:
-                return int(first_api_level)
-            except ValueError:
-                logging.warning("can't parse ro.product.first_api_level: %s",
-                                first_api_level)
-
-        sdk_version = self._getProp("ro.build.version.sdk")
-        if sdk_version:
-            try:
-                return int(sdk_version)
-            except ValueError:
-                logging.warning("can't parse ro.build.version.sdk: %s",
-                                sdk_version)
-
-        return -1
+    def _getVendorApiLevel(self):
+        vendor_api_level = self._getProp("ro.vendor.api_level")
+        try:
+            return int(vendor_api_level)
+        except ValueError:
+            logging.error("can't parse ro.vendor.api_level: %s",
+                          vendor_api_level)
+            raise
 
     def _testNeverallowRule(self, policy_path, rule, path):
         # We use `--warn` to ensure that rule is valid, e.g. the context must
@@ -147,10 +136,8 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
         # Hypervisors supported by AVF.
         hypervisors = ["/dev/kvm", "/dev/gunyah", "/dev/gzvm"]
 
-        # There are devices that launched with Android <= 15 that use alternate
-        # paths, like /dev/qgunyah, from outside crosvm and AVF in their vendor
-        # policies. Forbid it on newer devices.
-        if self._getFirstApiLevel() >= 36:
+        # /dev/qgunyah is exempt on devices with old vendor partitions.
+        if self._getVendorApiLevel() >= 202504:
             hypervisors.append("/dev/*gunyah")
 
         # Get the security context for the devices.

@@ -268,6 +268,6 @@ fn into_io_error(e: VirtFdServiceStatus) -> io::Error {
     if maybe_errno > 0 {
         io::Error::from_raw_os_error(maybe_errno)
     } else {
-        io::Error::new(io::ErrorKind::Other, e.get_description())
+        io::Error::other(e.get_description())
     }
 }

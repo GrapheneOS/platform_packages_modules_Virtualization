@@ -77,6 +77,7 @@ const SALT_ENCRYPTED_STORE_ENCRYPTION_KEY: &[u8] = &[
 
 const BACKOFF_SK_ACCESS_MS: u64 = 100;
 
+#[allow(clippy::large_enum_variant)]
 pub enum VmSecret {
     // V2 secrets are derived from 2 independently secured secrets:
     //      1. Secretkeeper protected secrets (skp secret).

@@ -101,10 +101,10 @@ pub fn parse_fsverity_metadata(mut metadata_file: File) -> io::Result<Box<FSVeri
                     [DESCRIPTOR_OFFSET..DESCRIPTOR_OFFSET + size_of::<fsverity_descriptor>()],
             )
             .to_vec()),
-            alg => Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("Unsupported hash algorithm {}, continue (likely failing soon)", alg),
-            )),
+            alg => Err(io::Error::other(format!(
+                "Unsupported hash algorithm {}, continue (likely failing soon)",
+                alg
+            ))),
         }?;
 
         // TODO(inseob): This doesn't seem ideal. Maybe we can consider nom?
@@ -116,7 +116,7 @@ pub fn parse_fsverity_metadata(mut metadata_file: File) -> io::Result<Box<FSVeri
     };
 
     if header.version != 1 {
-        return Err(io::Error::new(io::ErrorKind::Other, "unsupported metadata version"));
+        return Err(io::Error::other("unsupported metadata version"));
     }
 
     let signature = match header.signature_type {
@@ -127,7 +127,7 @@ pub fn parse_fsverity_metadata(mut metadata_file: File) -> io::Result<Box<FSVeri
             metadata_file.read_exact(&mut buf)?;
             Some(buf)
         }
-        _ => return Err(io::Error::new(io::ErrorKind::Other, "unknown signature type")),
+        _ => return Err(io::Error::other("unknown signature type")),
     };
 
     // merkle tree is at the next 4K boundary

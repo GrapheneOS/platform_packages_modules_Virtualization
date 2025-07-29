@@ -141,7 +141,6 @@ public class MainActivity :
                     val intent = Intent(this, DisplayActivity::class.java)
                     intent.flags =
                         intent.flags or
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
                             Intent.FLAG_ACTIVITY_CLEAR_TASK
                     this.startActivity(intent)
                 }

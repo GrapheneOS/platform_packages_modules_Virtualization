@@ -33,7 +33,7 @@ fn remote_read_chunk(
 
     let chunk = service
         .readFile(remote_fd, offset, buf.len() as i32)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.get_description()))?;
+        .map_err(|e| io::Error::other(e.get_description()))?;
     let size = min(buf.len(), chunk.len());
     buf[..size].copy_from_slice(&chunk[..size]);
     Ok(size)
@@ -56,14 +56,11 @@ impl RemoteFileReader {
     ) -> io::Result<Self> {
         let file_fd =
             service.openFileInDirectory(dir_fd, related_path.to_str().unwrap()).map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::Other,
-                    format!(
-                        "Failed to create a remote file reader by path {}: {}",
-                        related_path.display(),
-                        e.get_description()
-                    ),
-                )
+                io::Error::other(format!(
+                    "Failed to create a remote file reader by path {}: {}",
+                    related_path.display(),
+                    e.get_description()
+                ))
             })?;
         Ok(RemoteFileReader { service, file_fd })
     }
@@ -98,7 +95,7 @@ impl ReadByChunk for RemoteMerkleTreeReader {
         let chunk = self
             .service
             .readFsverityMerkleTree(self.file_fd, offset, buf.len() as i32)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.get_description()))?;
+            .map_err(|e| io::Error::other(e.get_description()))?;
         let size = min(buf.len(), chunk.len());
         buf[..size].copy_from_slice(&chunk[..size]);
         Ok(size)
@@ -123,7 +120,7 @@ impl RandomWrite for RemoteFileEditor {
         let size = self
             .service
             .writeFile(self.file_fd, buf, offset)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.get_description()))?;
+            .map_err(|e| io::Error::other(e.get_description()))?;
         Ok(size as usize) // within range because size is supposed to <= buf.len(), which is a usize
     }
 
@@ -132,7 +129,7 @@ impl RandomWrite for RemoteFileEditor {
             i64::try_from(size).map_err(|_| io::Error::from_raw_os_error(libc::EOVERFLOW))?;
         self.service
             .resize(self.file_fd, size)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.get_description()))?;
+            .map_err(|e| io::Error::other(e.get_description()))?;
         Ok(())
     }
 }
