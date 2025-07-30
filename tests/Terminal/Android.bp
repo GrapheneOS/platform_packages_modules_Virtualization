@@ -22,7 +22,6 @@ android_test {
     instrumentation_for: "VmTerminalApp",
     data: [
         "TerminalAppTests-helper.sh",
-        "TerminalAppTests-downloader.sh",
         "TerminalAppTests-precondition-checker.sh",
     ],
 }
