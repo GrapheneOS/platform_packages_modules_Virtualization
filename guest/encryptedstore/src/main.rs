@@ -31,7 +31,7 @@ use log::{error, info, warn};
 use rpcbinder::RpcSession;
 use rustutils::system_properties;
 use std::ffi::CString;
-use std::fs::{create_dir_all, OpenOptions};
+use std::fs::{self, create_dir_all, OpenOptions};
 use std::io::{Error, Read, Write};
 use std::os::android::fs::MetadataExt;
 use std::os::unix::ffi::OsStrExt;
@@ -105,6 +105,57 @@ fn clap_command() -> clap::Command {
     ])
 }
 
+/// Gets the parent block device name from a partition name.
+/// e.g., "vdb2" -> "vdb", but "dm-6" -> "dm-6".
+fn get_parent_device_name(device_name: &str) -> &str {
+    // Device-mapper names (dm-*) are not partitions, so return them directly.
+    if device_name.starts_with("dm-") {
+        return device_name;
+    }
+
+    // For other devices, check for a partition-like suffix (e.g., "vdb2").
+    if let Some(last_char) = device_name.chars().last() {
+        if last_char.is_ascii_digit() {
+            if let Some(index) = device_name.rfind(|c: char| !c.is_ascii_digit()) {
+                return &device_name[..=index];
+            }
+        }
+    }
+    // If no partition suffix is found, return the original name.
+    device_name
+}
+
+/// Sets a specific tunable for a block device's queue, handling symlinks and partitions.
+fn set_queue_tunable(device_path: &Path, tunable: &str, value: &str) -> Result<()> {
+    // 1. Resolve the path if it's a symlink.
+    let resolved_path = if fs::symlink_metadata(device_path)?.is_symlink() {
+        fs::read_link(device_path)
+            .with_context(|| format!("Failed to read symlink at {:?}", device_path))?
+    } else {
+        device_path.to_path_buf()
+    };
+
+    // 2. Get the file name (e.g., "vdb2" or "dm-6") from the resolved path.
+    let resolved_device_name_str = resolved_path
+        .file_name()
+        .context("Could not get device name from resolved path")?
+        .to_str()
+        .context("Device name is not valid UTF-8")?;
+
+    // 3. Get the parent device name (e.g., "vdb" from "vdb2").
+    let parent_device_name = get_parent_device_name(resolved_device_name_str);
+
+    // 4. Construct the final sysfs path and write the value.
+    let tunable_path = format!("/sys/block/{}/queue/{}", parent_device_name, tunable);
+    info!("Setting {} for {}: {}", parent_device_name, tunable, value);
+
+    if let Err(e) = fs::write(&tunable_path, value) {
+        warn!("Could not write to {}: {}.", tunable_path, e);
+    }
+
+    Ok(())
+}
+
 fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result<()> {
     ensure!(
         std::fs::metadata(blkdevice)
@@ -115,10 +166,18 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
         blkdevice
     );
 
+    // Set rq_affinity for the underlying virtio-blk device (e.g., vdb)
+    set_queue_tunable(blkdevice, "rq_affinity", "2")
+        .context("Failed to set rq_affinity for virtio-blk device")?;
+
     let needs_formatting =
         needs_formatting(blkdevice).context("Unable to check if formatting is required")?;
     let crypt_device =
         enable_crypt(blkdevice, key, "cryptdev").context("Unable to map crypt device")?;
+
+    // Set read_ahead_kb for the newly created dm-crypt device (e.g., dm-6)
+    set_queue_tunable(&crypt_device, "read_ahead_kb", "512")
+        .context("Failed to set read_ahead_kb for dm-crypt device")?;
 
     // We might need to format it with filesystem if this is a "seen-for-the-first-time" device.
     if needs_formatting {
