@@ -31,12 +31,6 @@
         <option name="script-file" value="TerminalAppTests-precondition-checker.sh" />
     </target_preparer>
 
-    <!-- Download the VM image and push it to the device -->
-    <target_preparer class="com.android.tradefed.targetprep.RunHostScriptTargetPreparer">
-        <option name="script-file" value="TerminalAppTests-downloader.sh" />
-        <option name="script-timeout" value="10m" />
-    </target_preparer>
-
     <!-- Push the helper script to the device -->
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="push" value="TerminalAppTests-helper.sh->/data/local/tmp/helper.sh"/>
@@ -53,5 +47,9 @@
     <test class="com.android.tradefed.testtype.AndroidJUnitTest">
         <option name="package" value="com.android.virtualization.terminal.test"/>
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner"/>
+
+        <!-- Set timeout to 20min for downloading, installing, and booting -->
+        <option name="test-timeout" value="1200000" />
+        <option name="shell-timeout" value="1200000" />
     </test>
 </configuration>

@@ -52,10 +52,13 @@ public class InstallerActivity : BaseActivity() {
     private lateinit var installProgressListener: InstallProgressListener
     private var installRequested = false
     private val installCompleted = ConditionVariable()
+    private var autoInstall = false
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setResult(RESULT_CANCELED)
+
+        autoInstall = getIntent()!!.getBooleanExtra(AUTO_INSTALL_EXTRA, false)
 
         installProgressListener = InstallProgressListener(this)
 
@@ -98,10 +101,15 @@ public class InstallerActivity : BaseActivity() {
             .start()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
 
-        if (Build.isDebuggable() && fromSdCard().exists()) {
+        if (autoInstall || (Build.isDebuggable() && fromSdCard().exists())) {
             showSnackBar("Auto installing", Snackbar.LENGTH_LONG)
             requestInstall()
         }
@@ -283,6 +291,7 @@ public class InstallerActivity : BaseActivity() {
     }
 
     companion object {
+        private val AUTO_INSTALL_EXTRA = "AUTO_INSTALL"
         private val ESTIMATED_IMG_SIZE_BYTES = FileUtils.parseSize("550MB")
     }
 }
