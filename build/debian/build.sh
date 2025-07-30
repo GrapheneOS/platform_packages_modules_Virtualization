@@ -81,7 +81,9 @@ parse_options() {
 
 install_prerequisites() {
 	apt update
-
+	apt install software-properties-common -y
+	add-apt-repository -y ppa:fai/ppa
+	apt update
 	packages=(
 		apt-utils
 		automake
