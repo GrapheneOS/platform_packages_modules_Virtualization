@@ -22,16 +22,19 @@ use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::ICompilationTask,
     ICompilationTaskCallback::{FailureReason::FailureReason, ICompilationTaskCallback},
 };
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use binder::{Interface, Result as BinderResult, Strong};
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
     CompilationMode::CompilationMode, ICompOsService, OdrefreshArgs::OdrefreshArgs,
 };
-use compos_common::odrefresh::{
-    is_system_property_interesting, ExitCode, CURRENT_ARTIFACTS_SUBDIR, ODREFRESH_OUTPUT_ROOT_DIR,
-    PENDING_ARTIFACTS_SUBDIR,
-};
 use compos_common::BUILD_MANIFEST_SYSTEM_EXT_APK_PATH;
+use compos_common::{
+    compos_client::CompOsService,
+    odrefresh::{
+        is_system_property_interesting, ExitCode, CURRENT_ARTIFACTS_SUBDIR,
+        ODREFRESH_OUTPUT_ROOT_DIR, PENDING_ARTIFACTS_SUBDIR,
+    },
+};
 use log::{error, info, warn};
 use odsign_proto::odsign_info::OdsignInfo;
 use protobuf::Message;
@@ -82,7 +85,10 @@ impl OdrefreshTask {
         target_dir_name: String,
         callback: &Strong<dyn ICompilationTaskCallback>,
     ) -> Result<OdrefreshTask> {
-        let service = comp_os.get_service();
+        let service = match comp_os.get_service() {
+            CompOsService::OdRefresh(s) => s,
+            _ => bail!("Tried starting when underlying VM does not provide an OdRefresh service."),
+        };
         let task = RunningTask { comp_os, callback: callback.clone() };
         let task = OdrefreshTask { running_task: Arc::new(Mutex::new(Some(task))) };
 
