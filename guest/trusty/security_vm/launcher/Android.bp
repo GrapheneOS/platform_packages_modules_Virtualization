@@ -14,6 +14,14 @@ prebuilt_etc {
     system_ext_specific: true,
 }
 
+prebuilt_etc {
+    name: "trusty_security_vm_rpc_services.json",
+    src: "security_vm_rpc_services.json",
+    system_ext_specific: true,
+    relative_install_path: "vm/trusty_vm",
+    filename: "security_vm_rpc_services.json",
+}
+
 rust_binary {
     name: "trusty_security_vm_launcher",
     crate_name: "trusty_security_vm_launcher",
@@ -27,6 +35,8 @@ rust_binary {
         "libenv_logger",
         "libhypervisor_props",
         "liblog_rust",
+        "libserde",
+        "libserde_json",
         "libvmclient",
         "libnix",
     ],

@@ -1,0 +1,7 @@
+[
+  {
+    "port": 11,
+    "accessor_name": "android.os.IAccessor/ICommService/security_vm_keymint",
+    "internal_rpc_service_name": "android.trusty.commservice.ICommService/security_vm_keymint"
+  }
+]

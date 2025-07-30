@@ -18,7 +18,7 @@ pub use android_os_permissions_aidl::aidl::android::os::{
     IPermissionController::IPermissionController,
 };
 pub use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
-    Atom::Atom,
+    Atom::{Atom, PsiMonitorFailedReported::PsiMonitorFailedReported},
     Certificate::Certificate,
     DeathReason::DeathReason,
     ErrorCode::ErrorCode,

@@ -77,7 +77,12 @@ internal class Runner private constructor(val vm: VirtualMachine, callback: Call
             // If there's a VM with the same name, delete it. And before deleting it, ensure that
             // it's stopped. This can happen especially when the user started the terminal app right
             // after they dismissed it.
-            var oldVm = vmm.get(name)
+            var oldVm = try {
+                vmm.get(name)
+            } catch (e: VirtualMachineException) {
+                Log.e(TAG, "Failed to get old VM. $e")
+                null
+            }
             if (oldVm != null) {
                 if (oldVm.getStatus() != VirtualMachine.STATUS_STOPPED) {
                     val cb = Callback()

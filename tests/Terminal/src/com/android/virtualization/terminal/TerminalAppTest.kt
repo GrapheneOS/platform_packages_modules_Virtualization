@@ -54,6 +54,7 @@ class TerminalAppTest {
 
         val intent = Intent(targetContext, InstallerActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.putExtra(AUTO_INSTALL_EXTRA, true)
         val activity = instr.startActivitySync(intent)
         if (activity is InstallerActivity) {
             Assert.assertTrue(
@@ -99,5 +100,9 @@ class TerminalAppTest {
     fun tearDown() {
         PortsStateManager.getInstance(targetContext).clearEnabledPorts()
         InstalledImage.getDefault(targetContext).uninstallFully()
+    }
+
+    companion object {
+        private val AUTO_INSTALL_EXTRA = "AUTO_INSTALL"
     }
 }

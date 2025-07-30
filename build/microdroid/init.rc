@@ -164,6 +164,12 @@ on boot
 # Ensure that selinux labels are properly applied to encryptedstore.
 on property:microdroid_manager.encrypted_store.status=mounted
     restorecon /mnt/encryptedstore
+
+    write /proc/sys/vm/compaction_proactiveness 0
+    write /sys/module/dm_verity/parameters/prefetch_cluster 0
+    write /proc/sys/vm/swappiness 100
+    write /proc/sys/vm/watermark_scale_factor 600
+
     setprop microdroid_manager.encrypted_store.status ready
 
 service apexd-vm /system/bin/apexd --vm

@@ -127,7 +127,14 @@ pub fn wait_until_service_vm_shuts_down() -> Result<()> {
 
 /// Service VM.
 pub struct ServiceVm {
-    vsock_stream: VsockStream,
+    /// This raw vsock stream is wrapped in `BufReader` for two reasons:
+    ///
+    /// 1. Performance: To coalesce many small reads from the CBOR deserializer into fewer, more
+    ///    efficient system calls.
+    /// 2. Correctness: To prevent data loss. `BufReader` may read ahead on the stream. Storing it
+    ///    here ensures any unconsumed bytes are preserved for the next read operation, which would
+    ///    be lost if a temporary buffer were used.
+    vsock_stream: BufReader<VsockStream>,
     /// VmInstance will be dropped when ServiceVm goes out of scope, which will kill the VM.
     vm: VmInstance,
 }
@@ -168,7 +175,7 @@ impl ServiceVm {
         vsock_stream.set_read_timeout(Some(READ_TIMEOUT))?;
         vsock_stream.set_write_timeout(Some(WRITE_TIMEOUT))?;
 
-        Ok(Self { vsock_stream, vm })
+        Ok(Self { vsock_stream: BufReader::new(vsock_stream), vm })
     }
 
     /// Processes the request in the service VM.
@@ -179,7 +186,8 @@ impl ServiceVm {
 
     /// Sends the request to the service VM.
     fn write_request(&mut self, request: &ServiceVmRequest) -> Result<()> {
-        let mut buffer = BufWriter::with_capacity(WRITE_BUFFER_CAPACITY, &mut self.vsock_stream);
+        let mut buffer =
+            BufWriter::with_capacity(WRITE_BUFFER_CAPACITY, self.vsock_stream.get_mut());
         ciborium::into_writer(request, &mut buffer)?;
         buffer.flush().context("Failed to flush the buffer")?;
         info!("Sent request to the service VM.");

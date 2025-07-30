@@ -20,6 +20,7 @@ union Atom {
     CgroupMemoryBreachReported cgroupMemoryBreachReported;
     FsckFailedReported fsckFailedReported;
     GetOrCreateSkSecretFailedReported getOrCreateSkSecretFailedReported;
+    PsiMonitorFailedReported psiMonitorFailedReported;
 
     parcelable CgroupMemoryBreachReported {
         long highBreachCount;
@@ -32,5 +33,9 @@ union Atom {
 
     parcelable GetOrCreateSkSecretFailedReported {
         int retryCount;
+    }
+
+    parcelable PsiMonitorFailedReported {
+        long exponentialBackoffSeconds;
     }
 }

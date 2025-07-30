@@ -22,20 +22,17 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 use android_system_virtualizationservice::binder::{
     self, ParcelFileDescriptor, ProcessState, Strong,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use clap::Parser;
 use env_logger::Builder;
 use hypervisor_props::is_protected_vm_supported;
-use log::{error, info, warn, LevelFilter};
+use log::{error, info, trace, warn, LevelFilter};
 use nix::fcntl::OFlag;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use vmclient::VmInstance;
-
-const ACCESSOR_SERVICE_NAME: &str = "android.os.IAccessor/ICommService/security_vm_keymint";
-const INTERNAL_RPC_SERVICE_NAME: &str =
-    "android.trusty.commservice.ICommService/security_vm_keymint";
 
 #[derive(Parser)]
 /// Collection of CLI for trusty_security_vm_launcher
@@ -60,9 +57,9 @@ pub struct Args {
     #[arg(long, default_value_t = 128)]
     memory_size_mib: i32,
 
-    /// Port number of the RPC service exposed in VM
-    #[arg(long, default_value_t = -1)]
-    port: i32,
+    /// Path to a JSON file defining the RPC services to register.
+    #[arg(long, value_name = "FILE")]
+    rpc_services_config: Option<PathBuf>,
 
     /// CPU Topology exposed to the VM <one-cpu|match-host>
     #[arg(long, default_value = "one-cpu", value_parser = parse_cpu_topology)]
@@ -152,26 +149,55 @@ fn main() -> Result<()> {
     vm.start(None /* callback */).context("Failed to start VM")?;
     info!("started VM");
 
-    if args.port > 0 {
+    if let Some(config_path) = args.rpc_services_config {
+        let configs = parse_rpc_service_configs(&config_path)?;
+        ensure!(!configs.is_empty(), "RPC services config file at '{:?}' is empty", config_path);
+
         ProcessState::start_thread_pool();
-        let accessor = vm
-            .vm
-            .createAccessorBinder(INTERNAL_RPC_SERVICE_NAME, args.port)
-            .context("failed to create accessor binder")?;
-        let accessor_delegator = binder::delegate_accessor(INTERNAL_RPC_SERVICE_NAME, accessor)
-            .context("failed to delegate accessor")?;
-        // TODO(b/429217397): Use a proper way to register an accessor.
-        binder::add_service(ACCESSOR_SERVICE_NAME, accessor_delegator)
-            .context("failed to add accessor service")?;
-        info!("registered accessor service {ACCESSOR_SERVICE_NAME}");
+        info!("Registering {} RPC service(s)...", configs.len());
+        for config in &configs {
+            register_accessor_service(&vm, config)?;
+        }
         ProcessState::join_thread_pool();
 
         bail!("Thread pool unexpectedly ended");
     } else {
+        info!("No --rpc-services-config provided. Not registering any accessor services.");
         let death_reason = vm.wait_for_death();
         error!("VM ended: {:?}", death_reason);
         Ok(())
     }
+}
+
+/// Defines the structure of a single RPC service configuration in the JSON file.
+#[derive(Deserialize, Debug)]
+struct RpcServiceConfig {
+    port: i32,
+    accessor_name: String,
+    internal_rpc_service_name: String,
+}
+
+/// Parses a JSON file containing an array of RPC service configurations.
+fn parse_rpc_service_configs(path: &Path) -> Result<Vec<RpcServiceConfig>> {
+    let file =
+        File::open(path).with_context(|| format!("open RPC services config at '{:?}'", path))?;
+    serde_json::from_reader(file).with_context(|| format!("parse JSON from '{:?}'", path))
+}
+
+fn register_accessor_service(vm: &VmInstance, config: &RpcServiceConfig) -> Result<()> {
+    trace!("Registering service '{}' on port {}", &config.accessor_name, config.port);
+    let accessor = vm
+        .vm
+        .createAccessorBinder(&config.internal_rpc_service_name, config.port)
+        .with_context(|| format!("create accessor binder for '{config:?}'"))?;
+    let accessor_delegator = binder::delegate_accessor(&config.internal_rpc_service_name, accessor)
+        .with_context(|| format!("delegate accessor for '{}'", config.accessor_name))?;
+
+    // TODO(b/429217397): Use a proper way to register an accessor.
+    binder::add_service(&config.accessor_name, accessor_delegator)
+        .with_context(|| format!("add accessor service: {}", config.accessor_name))?;
+    info!("Registered service '{}' on port {}", config.accessor_name, config.port);
+    Ok(())
 }
 
 /// Creates a pipe and spawns a thread to forward the VM's output to stdout.
