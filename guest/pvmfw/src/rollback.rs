@@ -20,6 +20,7 @@ use crate::fdt::read_defer_rollback_protection;
 use crate::instance::EntryBody;
 use crate::instance::Error as InstanceError;
 use crate::instance::{get_recorded_entry, record_instance_entry};
+use crate::PUBLIC_KEY;
 use diced_open_dice::Hidden;
 use libfdt::Fdt;
 use log::{error, info};
@@ -94,7 +95,7 @@ fn get_fixed_rollback_protection(
     match verified_boot_data.name.as_deref()? {
         VerifiedBootData::RKP_VM_NAME => Some(FixedRollbackCriterion::RollbackIndexPublicKey {
             index: service_vm_version::VERSION,
-            public_key: pvmfw_embedded_key::PUBLIC_KEY,
+            public_key: PUBLIC_KEY,
         }),
         _ => None,
     }

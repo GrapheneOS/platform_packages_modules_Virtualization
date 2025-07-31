@@ -15,7 +15,7 @@ rust_defaults {
     name: "libpvmfw.defaults",
     crate_name: "pvmfw",
     defaults: ["vmbase_ffi_defaults"],
-    srcs: ["src/main.rs"],
+    crate_root: "src/main.rs",
     features: [
         "compat-kernel-range-from-gprs",
         "compat-raw-dice-handover",
@@ -32,7 +32,6 @@ rust_defaults {
         "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libpvmfw_avb_nostd",
-        "libpvmfw_embedded_key",
         "libpvmfw_fdt_template",
         "libservice_vm_version",
         "libstatic_assertions",
@@ -42,6 +41,9 @@ rust_defaults {
         "libvmbase",
         "libzerocopy_nostd",
         "libzeroize_nostd",
+    ],
+    srcs: [
+        ":pvmfw_embedded_key_pub_bin",
     ],
     target: {
         android_arm64: {
@@ -441,26 +443,6 @@ genrule {
     cmd: "$(location avbtool) extract_public_key --key $(in) --output $(out)",
 }
 
-genrule {
-    name: "pvmfw_embedded_key_rs",
-    srcs: [":pvmfw_embedded_key_pub_bin"],
-    out: ["lib.rs"],
-    cmd: "(" +
-        "    echo '#![no_std]';" +
-        "    echo '#![allow(missing_docs)]';" +
-        "    echo 'pub const PUBLIC_KEY: &[u8] = &[';" +
-        "    xxd -i < $(in);" +
-        "    echo '];';" +
-        ") > $(out)",
-}
-
-rust_library_rlib {
-    name: "libpvmfw_embedded_key",
-    defaults: ["vmbase_rlib_defaults"],
-    srcs: [":pvmfw_embedded_key_rs"],
-    crate_name: "pvmfw_embedded_key",
-}
-
 prebuilt_etc {
     name: "pvmfw_sign_key",
     src: ":avb_testkey_rsa4096",
@@ -532,8 +514,10 @@ rust_library_rlib {
 bootimg {
     name: "pvmfw_img",
     stem: "pvmfw.img",
-    // TODO(b/432710356): select(":pvmfw_desktop_bin" OR ":pvmfw_bin")
-    kernel_prebuilt: ":pvmfw_img_kernel_prebuilt",
+    kernel_prebuilt: select(soong_config_variable("ANDROID", "avf_use_pvmfw_desktop"), {
+        true: ":pvmfw_desktop_bin",
+        default: ":pvmfw_bin",
+    }),
     header_version: "3",
     partition_name: "pvmfw",
     enabled: false,
@@ -556,22 +540,15 @@ rust_ffi_static {
 }
 
 cc_binary {
-    // TODO(b/432710356): name: "pvmfw_desktop", static_libs: "libpvmfw_desktop"
-    name: "pvmfw_img_kernel_prebuilt_elf",
+    name: "pvmfw_desktop",
     defaults: ["pvmfw.defaults"],
-    static_libs: select(soong_config_variable("ANDROID", "avf_use_pvmfw_desktop"), {
-        true: ["libpvmfw_desktop"],
-        default: ["libpvmfw"],
-    }),
+    static_libs: ["libpvmfw_desktop"],
 }
 
-// Note: this temporarily duplicates pvmfw_bin if !avf_use_pvmfw_desktop but
-// avoids affecting pvmfw_test.
 raw_binary {
-    // TODO(b/432710356): name: "pvmfw_desktop_bin", src: ":pvmfw_desktop".
-    name: "pvmfw_img_kernel_prebuilt",
-    stem: "pvmfw_desktop_or_not.bin",
-    src: ":pvmfw_img_kernel_prebuilt_elf",
+    name: "pvmfw_desktop_bin",
+    stem: "pvmfw_desktop.bin",
+    src: ":pvmfw_desktop",
     enabled: false,
     target: {
         android_arm64: {
