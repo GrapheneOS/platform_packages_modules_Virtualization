@@ -42,6 +42,15 @@ rust_binary {
     ],
 }
 
+rust_binary {
+    name: "dex2oatsvc",
+    cfgs: ["compos_verified_dex2oat"],
+    defaults: ["compsvc_defaults"],
+    apex_available: [
+        "com.android.compos",
+    ],
+}
+
 rust_test {
     name: "compsvc_test",
     defaults: ["compsvc_defaults"],

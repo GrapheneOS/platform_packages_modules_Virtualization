@@ -23,7 +23,7 @@ mod compsvc;
 mod fsverity;
 mod wrappers;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use compos_common::COMPOS_VSOCK_PORT;
 use log::{debug, error};
 
@@ -41,6 +41,14 @@ fn try_main() -> Result<()> {
             .with_max_level(log::LevelFilter::Debug),
     );
 
-    debug!("compsvc is starting as a rpc service.");
-    vm_payload::run_single_vsock_service(compsvc::new_binder()?, COMPOS_VSOCK_PORT)
+    if cfg!(compos_verified_dex2oat) {
+        if !aconfig_compos_flags_rust::verified_dex2oat() {
+            bail!("aconfig_compos_flags_rust::verified_dex2oat is not enabled")
+        }
+        debug!("dex2oatsvc is starting as a rpc service.");
+        vm_payload::run_single_vsock_service(compsvc::new_dex2oat_binder()?, COMPOS_VSOCK_PORT)
+    } else {
+        debug!("compsvc is starting as a rpc service.");
+        vm_payload::run_single_vsock_service(compsvc::new_odrefresh_binder()?, COMPOS_VSOCK_PORT)
+    }
 }
