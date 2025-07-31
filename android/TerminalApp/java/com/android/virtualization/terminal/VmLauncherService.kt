@@ -346,25 +346,8 @@ class VmLauncherService : Service() {
         displayInfo: DisplayInfo?,
     ): Boolean {
         var changed = false
-        // TODO: check if ANGLE is enabled for the app.
-        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("virglrenderer"))) {
-            builder.setGpuConfig(
-                VirtualMachineCustomImageConfig.GpuConfig.Builder()
-                    .setBackend("virglrenderer")
-                    .setRendererUseEgl(true)
-                    .setRendererUseGles(true)
-                    .setRendererUseGlx(false)
-                    .setRendererUseSurfaceless(true)
-                    .setRendererUseVulkan(false)
-                    .setContextTypes(arrayOf<String>("virgl2"))
-                    .build()
-            )
-            runOnMainThread {
-                Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
-            }
-            changed = true
-        } else if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
-            // TODO: check if the configuration is right. current config comes from cuttlefish's one
+        // TODO: use resources to check if gfxstream is supported.
+        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
                     .setBackend("gfxstream")
