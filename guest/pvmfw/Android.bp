@@ -514,8 +514,10 @@ rust_library_rlib {
 bootimg {
     name: "pvmfw_img",
     stem: "pvmfw.img",
-    // TODO(b/432710356): select(":pvmfw_desktop_bin" OR ":pvmfw_bin")
-    kernel_prebuilt: ":pvmfw_img_kernel_prebuilt",
+    kernel_prebuilt: select(soong_config_variable("ANDROID", "avf_use_pvmfw_desktop"), {
+        true: ":pvmfw_desktop_bin",
+        default: ":pvmfw_bin",
+    }),
     header_version: "3",
     partition_name: "pvmfw",
     enabled: false,
@@ -538,22 +540,15 @@ rust_ffi_static {
 }
 
 cc_binary {
-    // TODO(b/432710356): name: "pvmfw_desktop", static_libs: "libpvmfw_desktop"
-    name: "pvmfw_img_kernel_prebuilt_elf",
+    name: "pvmfw_desktop",
     defaults: ["pvmfw.defaults"],
-    static_libs: select(soong_config_variable("ANDROID", "avf_use_pvmfw_desktop"), {
-        true: ["libpvmfw_desktop"],
-        default: ["libpvmfw"],
-    }),
+    static_libs: ["libpvmfw_desktop"],
 }
 
-// Note: this temporarily duplicates pvmfw_bin if !avf_use_pvmfw_desktop but
-// avoids affecting pvmfw_test.
 raw_binary {
-    // TODO(b/432710356): name: "pvmfw_desktop_bin", src: ":pvmfw_desktop".
-    name: "pvmfw_img_kernel_prebuilt",
-    stem: "pvmfw_desktop_or_not.bin",
-    src: ":pvmfw_img_kernel_prebuilt_elf",
+    name: "pvmfw_desktop_bin",
+    stem: "pvmfw_desktop.bin",
+    src: ":pvmfw_desktop",
     enabled: false,
     target: {
         android_arm64: {
