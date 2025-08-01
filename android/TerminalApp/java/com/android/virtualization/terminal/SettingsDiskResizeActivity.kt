@@ -179,6 +179,8 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
 
                     override fun onTerminalAvailable(info: TerminalInfo) {}
 
+                    override fun onVmShuttingDown() {}
+
                     override fun onVmStop() {
                         finish()
 
