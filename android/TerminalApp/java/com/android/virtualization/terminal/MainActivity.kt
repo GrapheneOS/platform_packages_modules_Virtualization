@@ -139,9 +139,7 @@ public class MainActivity :
             if (Flags.terminalGuiSupport()) {
                 it.setOnClickListener {
                     val intent = Intent(this, DisplayActivity::class.java)
-                    intent.flags =
-                        intent.flags or
-                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    intent.flags = intent.flags or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     this.startActivity(intent)
                 }
             }
@@ -294,6 +292,11 @@ public class MainActivity :
 
     override fun onTerminalAvailable(info: TerminalInfo) {
         terminalInfo.complete(info)
+    }
+
+    override fun onVmShuttingDown() {
+        Log.i(TAG, "onVmShuttingDown()")
+        isVmRunning = false
     }
 
     override fun onVmStop() {
