@@ -26,7 +26,7 @@
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi аркылуу гана жүктөп алуу"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Орнотуу"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Орнотулууда"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Тармак катасынан улам орнотулбай калды. Туташууңузду текшерип, кайталап көрүңүз."</string>
+    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Тармак катасынан улам орнотулбай калды. Байланышыңызды текшерип, кайталап көрүңүз."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux терминалы орнотулууда"</string>
     <string name="installer_notif_desc_text" msgid="2353770076549425837">"Linux терминалы орнотуу процесси аяктагандан кийин иштеп баштайт"</string>
     <string name="installer_error_network" msgid="5627330072955876676">"Тармактагы маселеден улам орнотулбай калды"</string>
