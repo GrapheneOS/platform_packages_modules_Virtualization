@@ -21,7 +21,7 @@ use crate::instance_starter::{CompOsInstance, InstanceStarter};
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice;
 use anyhow::{anyhow, bail, Context, Result};
 use binder::Strong;
-use compos_common::compos_client::{VmCpuTopology, VmParameters};
+use compos_common::compos_client::{CompOsType, VmCpuTopology, VmParameters};
 use compos_common::{CURRENT_INSTANCE_DIR, TEST_INSTANCE_DIR};
 use log::info;
 use rustutils::system_properties;
@@ -39,20 +39,32 @@ impl InstanceManager {
         Self { service, state: Default::default() }
     }
 
-    pub fn start_current_instance(&self, os: &str) -> Result<CompOsInstance> {
-        let mut vm_parameters = new_vm_parameters()?;
-        vm_parameters.name = String::from("Composd");
-        vm_parameters.prefer_staged = true;
-        vm_parameters.os = os.to_owned();
+    pub fn start_current_instance(
+        &self,
+        compos_type: CompOsType,
+        base_os: &str,
+    ) -> Result<CompOsInstance> {
+        let name = match compos_type {
+            CompOsType::OdRefresh => "VerifiedOdRefresh".to_owned(),
+            CompOsType::Dex2Oat => "VerifiedDex2Oat".to_owned(),
+        };
+        let vm_parameters = new_vm_parameters(name, compos_type, base_os)?;
         self.start_instance(CURRENT_INSTANCE_DIR, vm_parameters)
     }
 
-    pub fn start_test_instance(&self, prefer_staged: bool, os: &str) -> Result<CompOsInstance> {
-        let mut vm_parameters = new_vm_parameters()?;
-        vm_parameters.name = String::from("ComposdTest");
+    pub fn start_test_instance(
+        &self,
+        compos_type: CompOsType,
+        prefer_staged: bool,
+        base_os: &str,
+    ) -> Result<CompOsInstance> {
+        let name = match compos_type {
+            CompOsType::OdRefresh => "VerifiedOdRefreshTest".to_owned(),
+            CompOsType::Dex2Oat => "VerifiedDex2OatTest".to_owned(),
+        };
+        let mut vm_parameters = new_vm_parameters(name, compos_type, base_os)?;
         vm_parameters.debug_mode = true;
         vm_parameters.prefer_staged = prefer_staged;
-        vm_parameters.os = os.to_owned();
         self.start_instance(TEST_INSTANCE_DIR, vm_parameters)
     }
 
@@ -79,14 +91,26 @@ impl InstanceManager {
     }
 }
 
-fn new_vm_parameters() -> Result<VmParameters> {
+fn new_vm_parameters(name: String, compos_type: CompOsType, base_os: &str) -> Result<VmParameters> {
     // By default, dex2oat starts as many threads as there are CPUs. This can be overridden with
     // a system property. Start the VM with all CPUs and assume the guest will start a suitable
     // number of dex2oat threads.
     let cpu_topology = VmCpuTopology::MatchHost;
     let memory_mib = Some(compos_memory_mib()?);
-    let os = "microdroid".to_owned();
-    Ok(VmParameters { cpu_topology, memory_mib, os, ..Default::default() })
+    let base_os = base_os.to_owned();
+    let vm_param = VmParameters {
+        name,
+        base_os,
+        cpu_topology,
+        memory_mib,
+        prefer_staged: match compos_type {
+            CompOsType::Dex2Oat => false,
+            CompOsType::OdRefresh => true,
+        },
+        compos_type,
+        debug_mode: bool::default(),
+    };
+    Ok(vm_param)
 }
 
 fn compos_memory_mib() -> Result<i32> {

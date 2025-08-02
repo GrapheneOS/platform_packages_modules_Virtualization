@@ -23,6 +23,7 @@ mod instance_manager;
 mod instance_starter;
 mod odrefresh_task;
 mod service;
+mod wrapper;
 
 use crate::instance_manager::InstanceManager;
 use anyhow::{Context, Result};

@@ -21,6 +21,9 @@ pub mod compos_client;
 pub mod odrefresh;
 pub mod timeouts;
 
+use anyhow::{bail, Result};
+use compos_client::{CompOsType, VmParameters};
+
 /// VSock port that the CompOS server listens on for RPC binder connections. This should be out of
 /// future port range (if happens) that microdroid may reserve for system components.
 pub const COMPOS_VSOCK_PORT: u32 = 6432;
@@ -64,12 +67,24 @@ pub const BUILD_MANIFEST_SYSTEM_EXT_APK_PATH: &str =
     "/system_ext/etc/security/fsverity/BuildManifestSystemExt.apk";
 
 /// Returns the path of proper VM config for the current device.
-pub fn get_vm_config_path(has_system_ext: bool, prefer_staged: bool) -> String {
-    match (has_system_ext, prefer_staged) {
-        (false, false) => "assets/vm_config.json",
-        (false, true) => "assets/vm_config_staged.json",
-        (true, false) => "assets/vm_config_system_ext.json",
-        (true, true) => "assets/vm_config_system_ext_staged.json",
+pub fn get_vm_config_path(vm_parameters: &VmParameters, has_system_ext: bool) -> Result<String> {
+    match vm_parameters.compos_type {
+        CompOsType::Dex2Oat => {
+            if vm_parameters.prefer_staged {
+                bail!("Staged configurations for dex2oat are not supported.");
+            }
+            Ok(match has_system_ext {
+                false => "assets/dex2oat_vm_config.json",
+                true => "assets/dex2oat_vm_config_system_ext.json",
+            }
+            .to_owned())
+        }
+        CompOsType::OdRefresh => Ok(match (has_system_ext, vm_parameters.prefer_staged) {
+            (false, false) => "assets/vm_config.json",
+            (false, true) => "assets/vm_config_staged.json",
+            (true, false) => "assets/vm_config_system_ext.json",
+            (true, true) => "assets/vm_config_system_ext_staged.json",
+        }
+        .to_owned()),
     }
-    .to_owned()
 }

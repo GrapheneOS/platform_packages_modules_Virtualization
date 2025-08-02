@@ -2,12 +2,12 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-rust_binary {
-    name: "composd",
-    srcs: ["src/composd_main.rs"],
+rust_defaults {
+    name: "composd_defaults",
     edition: "2021",
     prefer_rlib: true,
     defaults: ["avf_build_flags_rust"],
+    srcs: ["src/composd_main.rs"],
     rustlibs: [
         "android.system.composd-rust",
         "android.system.virtualizationservice-rust",
@@ -28,7 +28,23 @@ rust_binary {
         "libshared_child",
         "libvmclient",
     ],
+}
+
+rust_binary {
+    name: "composd",
+    defaults: ["composd_defaults"],
     apex_available: [
         "com.android.compos",
+    ],
+}
+
+rust_test {
+    name: "composd_test",
+    defaults: ["composd_defaults"],
+    test_suites: ["general-tests"],
+    auto_gen_config: true,
+    rustlibs: [
+        "libmockall",
+        "libtempfile",
     ],
 }

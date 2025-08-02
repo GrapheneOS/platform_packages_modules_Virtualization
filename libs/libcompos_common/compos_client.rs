@@ -33,7 +33,9 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
 };
 use anyhow::{anyhow, bail, Context, Result};
 use binder::{ParcelFileDescriptor, Strong};
-use compos_aidl_interface::aidl::com::android::compos::ICompOsService::ICompOsService;
+use compos_aidl_interface::aidl::com::android::compos::{
+    ICompOsService::ICompOsService, IVerifiedDex2OatService::IVerifiedDex2OatService,
+};
 use glob::glob;
 use log::{info, warn};
 use platformproperties::hypervisorproperties;
@@ -43,6 +45,16 @@ use vmclient::{DeathReason, ErrorCode, VmInstance, VmWaitError};
 
 /// This owns an instance of the CompOS VM.
 pub struct ComposClient(VmInstance);
+
+/// The different types of services that are hosted
+/// in a CompOS VM.
+#[derive(Clone)]
+pub enum CompOsService {
+    /// A binder service offering odrefresh capabilities.
+    OdRefresh(Strong<dyn ICompOsService>),
+    /// A binder service offering dex2oat capabilities.
+    Dex2Oat(Strong<dyn IVerifiedDex2OatService>),
+}
 
 /// CPU topology configuration for a virtual machine.
 #[derive(Default, Debug, Clone)]
@@ -54,13 +66,22 @@ pub enum VmCpuTopology {
     MatchHost,
 }
 
+/// What the CompOS VM will be used for.
+#[derive(Debug, Clone)]
+pub enum CompOsType {
+    /// VM provides interfaces for verified dex2oat.
+    Dex2Oat,
+    /// VM provides interfaces for verified odrefresh.
+    OdRefresh,
+}
+
 /// Parameters to be used when creating a virtual machine instance.
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct VmParameters {
     /// The name of VM for identifying.
     pub name: String,
-    /// The OS of VM.
-    pub os: String,
+    /// The base OS of VM.
+    pub base_os: String,
     /// Whether the VM should be debuggable.
     pub debug_mode: bool,
     /// CPU topology of the VM. Defaults to 1 vCPU.
@@ -69,8 +90,11 @@ pub struct VmParameters {
     pub memory_mib: Option<i32>,
     /// Whether the VM prefers staged APEXes or activated ones (false; default)
     pub prefer_staged: bool,
+    /// What the VM ll be used for.
+    pub compos_type: CompOsType,
 }
 
+#[cfg_attr(test, mockall::automock)]
 impl ComposClient {
     /// Start a new CompOS VM instance using the specified instance image file and parameters.
     pub fn start(
@@ -116,7 +140,7 @@ impl ComposClient {
             } else {
                 (vec![idsig_manifest_apk_fd], false)
             };
-        let config_path = get_vm_config_path(has_system_ext, parameters.prefer_staged);
+        let config_path = get_vm_config_path(parameters, has_system_ext)?;
 
         let debug_level = if parameters.debug_mode { DebugLevel::FULL } else { DebugLevel::NONE };
 
@@ -133,7 +157,7 @@ impl ComposClient {
 
         let config = VirtualMachineConfig::AppConfig(VirtualMachineAppConfig {
             name: parameters.name.clone(),
-            osName: parameters.os.clone(),
+            osName: parameters.base_os.clone(),
             apk: Some(apk_fd),
             idsig: Some(idsig_fd),
             instanceId: instance_id,
@@ -175,16 +199,19 @@ impl ComposClient {
     }
 
     /// Create and return an RPC Binder connection to the Comp OS service in the VM.
-    pub fn connect_service(&self) -> Result<Strong<dyn ICompOsService>> {
+    pub fn connect_service<T: ?Sized + binder::FromIBinder>(&self) -> Result<Strong<T>> {
         self.0.connect_service(COMPOS_VSOCK_PORT).context("Connecting to CompOS service")
     }
 
     /// Shut down the VM cleanly, by sending a quit request to the service, giving time for any
     /// relevant logs to be written.
-    pub fn shutdown(self, service: Strong<dyn ICompOsService>) {
+    pub fn shutdown(self, service: &CompOsService) {
         info!("Requesting CompOS VM to shutdown");
-        let _ignored = service.quit(); // If this fails, the VM is probably dying anyway
-        self.wait_for_shutdown();
+        let _ignored = match service {
+            CompOsService::OdRefresh(ref s) => s.quit(),
+            CompOsService::Dex2Oat(ref s) => s.quit(),
+        };
+        self.wait_for_shutdown()
     }
 
     /// Wait for the instance to shut down. If it fails to shutdown within a reasonable time the

@@ -29,8 +29,11 @@ use android_system_composd::aidl::android::system::composd::{
 use anyhow::{Context, Result};
 use binder::{self, BinderFeatures, ExceptionCode, Interface, Status, Strong, ThreadState};
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::CompilationMode::CompilationMode;
-use compos_common::binder::to_binder_result;
-use compos_common::odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR};
+use compos_common::{
+    binder::to_binder_result,
+    compos_client::CompOsType,
+    odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR},
+};
 use rustutils::{users::AID_ROOT, users::AID_SYSTEM};
 use std::sync::Arc;
 
@@ -51,17 +54,17 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
     fn startStagedApexCompile(
         &self,
         callback: &Strong<dyn ICompilationTaskCallback>,
-        os: &str,
+        base_os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
         check_permissions()?;
-        to_binder_result(self.do_start_staged_apex_compile(callback, os))
+        to_binder_result(self.do_start_staged_apex_compile(callback, base_os))
     }
 
     fn startTestCompile(
         &self,
         apex_source: ApexSource,
         callback: &Strong<dyn ICompilationTaskCallback>,
-        os: &str,
+        base_os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
         check_permissions()?;
         let prefer_staged = match apex_source {
@@ -69,7 +72,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
             ApexSource::PreferStaged => true,
             _ => unreachable!("Invalid ApexSource {:?}", apex_source),
         };
-        to_binder_result(self.do_start_test_compile(prefer_staged, callback, os))
+        to_binder_result(self.do_start_test_compile(prefer_staged, callback, base_os))
     }
 }
 
@@ -77,10 +80,12 @@ impl IsolatedCompilationService {
     fn do_start_staged_apex_compile(
         &self,
         callback: &Strong<dyn ICompilationTaskCallback>,
-        os: &str,
+        base_os: &str,
     ) -> Result<Strong<dyn ICompilationTask>> {
-        let comp_os =
-            self.instance_manager.start_current_instance(os).context("Starting CompOS")?;
+        let comp_os = self
+            .instance_manager
+            .start_current_instance(CompOsType::OdRefresh, base_os)
+            .context("Starting CompOS")?;
 
         let target_dir_name = PENDING_ARTIFACTS_SUBDIR.to_owned();
         let task = OdrefreshTask::start(
@@ -97,11 +102,11 @@ impl IsolatedCompilationService {
         &self,
         prefer_staged: bool,
         callback: &Strong<dyn ICompilationTaskCallback>,
-        os: &str,
+        base_os: &str,
     ) -> Result<Strong<dyn ICompilationTask>> {
         let comp_os = self
             .instance_manager
-            .start_test_instance(prefer_staged, os)
+            .start_test_instance(CompOsType::OdRefresh, prefer_staged, base_os)
             .context("Starting CompOS")?;
 
         let target_dir_name = TEST_ARTIFACTS_SUBDIR.to_owned();

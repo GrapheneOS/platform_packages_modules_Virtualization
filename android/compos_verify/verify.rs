@@ -21,7 +21,10 @@ use android_logger::LogId;
 use anyhow::{anyhow, bail, Context, Result};
 use binder::ProcessState;
 use clap::{Parser, ValueEnum};
-use compos_common::compos_client::{ComposClient, VmCpuTopology, VmParameters};
+use compos_aidl_interface::aidl::com::android::compos::ICompOsService::ICompOsService;
+use compos_common::compos_client::{
+    CompOsService, CompOsType, ComposClient, VmCpuTopology, VmParameters,
+};
 use compos_common::odrefresh::{
     CURRENT_ARTIFACTS_SUBDIR, ODREFRESH_OUTPUT_ROOT_DIR, PENDING_ARTIFACTS_SUBDIR,
     TEST_ARTIFACTS_SUBDIR,
@@ -122,17 +125,19 @@ fn try_main() -> Result<()> {
         &idsig_manifest_ext_apk,
         &VmParameters {
             name: String::from("ComposVerify"),
-            os: args.os,
+            base_os: args.os,
             cpu_topology: VmCpuTopology::OneCpu, // This VM runs very little work at boot
             debug_mode: args.debug,
-            ..Default::default()
+            compos_type: CompOsType::OdRefresh,
+            memory_mib: Option::default(),
+            prefer_staged: bool::default(),
         },
     )?;
 
-    let service = vm_instance.connect_service()?;
+    let service: binder::Strong<dyn ICompOsService> = vm_instance.connect_service()?;
     let public_key = service.getPublicKey().context("Getting public key");
 
-    vm_instance.shutdown(service);
+    vm_instance.shutdown(&CompOsService::OdRefresh(service));
 
     if !compos_verify_native::verify(&public_key?, &signature, &info) {
         bail!("Signature verification failed");

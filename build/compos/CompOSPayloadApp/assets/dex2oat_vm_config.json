@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "os": {
+    "name": "microdroid"
+  },
+  "task": {
+    "type": "executable",
+    "command": "/apex/com.android.compos/bin/dex2oatsvc"
+  },
+  "extra_apks": [
+    {
+      "path": "/system/etc/security/fsverity/BuildManifest.apk"
+    }
+  ],
+  "apexes": [
+    {
+      "name": "com.android.art"
+    },
+    {
+      "name": "com.android.compos"
+    },
+    {
+      "name": "com.android.sdkext"
+    },
+    {
+      "name": "{CLASSPATH}"
+    }
+  ],
+  "export_tombstones": true,
+  "enable_authfs": true,
+  "hugepages": true
+}
