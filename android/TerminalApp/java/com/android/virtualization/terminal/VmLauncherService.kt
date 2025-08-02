@@ -84,6 +84,8 @@ class VmLauncherService : Service() {
 
         fun onTerminalAvailable(info: TerminalInfo)
 
+        fun onVmShuttingDown()
+
         fun onVmStop()
 
         fun onVmError()
@@ -239,6 +241,7 @@ class VmLauncherService : Service() {
         val mbc = MemBalloonController(this, virtualMachine)
         mbc.start()
 
+        runner!!.shutdownStarted.thenAcceptAsync { resultReceiver.send(RESULT_SHUTTING_DOWN, null) }
         runner!!.exitStatus.thenAcceptAsync { success: Boolean ->
             mbc.stop()
             resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
@@ -346,25 +349,8 @@ class VmLauncherService : Service() {
         displayInfo: DisplayInfo?,
     ): Boolean {
         var changed = false
-        // TODO: check if ANGLE is enabled for the app.
-        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("virglrenderer"))) {
-            builder.setGpuConfig(
-                VirtualMachineCustomImageConfig.GpuConfig.Builder()
-                    .setBackend("virglrenderer")
-                    .setRendererUseEgl(true)
-                    .setRendererUseGles(true)
-                    .setRendererUseGlx(false)
-                    .setRendererUseSurfaceless(true)
-                    .setRendererUseVulkan(false)
-                    .setContextTypes(arrayOf<String>("virgl2"))
-                    .build()
-            )
-            runOnMainThread {
-                Toast.makeText(this, R.string.virgl_enabled, Toast.LENGTH_SHORT).show()
-            }
-            changed = true
-        } else if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
-            // TODO: check if the configuration is right. current config comes from cuttlefish's one
+        // TODO: use resources to check if gfxstream is supported.
+        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
                     .setBackend("gfxstream")
@@ -466,6 +452,9 @@ class VmLauncherService : Service() {
 
     @WorkerThread
     private fun doShutdown(resultReceiver: ResultReceiver?) {
+        // This prevents MainActivity from re-starting VmLauncherService to shut the VM down.
+        runner?.shutdownStarted!!.complete(null)
+
         runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
             resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
         }
@@ -534,6 +523,7 @@ class VmLauncherService : Service() {
         private const val RESULT_STOP = 1
         private const val RESULT_ERROR = 2
         private const val RESULT_TERMINAL_AVAIL = 3
+        private const val RESULT_SHUTTING_DOWN = 4
 
         private const val KEY_TERMINAL_IPADDRESS = "address"
         private const val KEY_TERMINAL_PORT = "port"
@@ -564,6 +554,7 @@ class VmLauncherService : Service() {
                                 val port = resultData!!.getInt(KEY_TERMINAL_PORT)
                                 callback.onTerminalAvailable(TerminalInfo(ipAddress!!, port))
                             }
+                            RESULT_SHUTTING_DOWN -> callback.onVmShuttingDown()
                             RESULT_STOP -> callback.onVmStop()
                             RESULT_ERROR -> callback.onVmError()
                             else -> Log.e(TAG, "unknown result code: " + resultCode)

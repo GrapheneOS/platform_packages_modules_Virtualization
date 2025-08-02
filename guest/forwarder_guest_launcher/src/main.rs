@@ -16,15 +16,12 @@
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use csv_async::AsyncReader;
 use debian_service::debian_service_client::DebianServiceClient;
 use debian_service::{ActivePort, QueueOpeningRequest, ReportVmActivePortsRequest};
-use futures::stream::StreamExt;
 use log::{debug, error};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::process::Stdio;
-use tokio::io::BufReader;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::try_join;
 use tonic::transport::{Channel, Endpoint};
@@ -39,12 +36,9 @@ const TTYD_PORT: i32 = 7681;
 const TCPSTATES_STATE_CLOSE: &str = "CLOSE";
 const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
-struct TcpStateRow {
+struct TcpState {
     lport: i32,
     rport: i32,
-    #[serde(alias = "C-COMM")]
     c_comm: String,
     newstate: String,
 }
@@ -115,12 +109,28 @@ async fn report_active_ports(
     let mut cmd = Command::new("python3")
         .arg("-u")
         .arg("/usr/sbin/tcpstates-bpfcc")
-        .arg("-s")
         .stdout(Stdio::piped())
         .spawn()?;
     let stdout = cmd.stdout.take().context("Failed to get stdout of tcpstates")?;
-    let mut csv_reader = AsyncReader::from_reader(BufReader::new(stdout));
-    let header = csv_reader.headers().await?.clone();
+    let mut lines = BufReader::new(stdout).lines();
+    let header_line = lines.next_line().await?.ok_or(anyhow!("Failed to get header line"))?;
+    let header: Vec<_> = header_line.split_whitespace().collect();
+    let lport = header
+        .iter()
+        .position(|col| *col == "LPORT")
+        .ok_or(anyhow!("Failed to find LPORT from header"))?;
+    let rport = header
+        .iter()
+        .position(|col| *col == "RPORT")
+        .ok_or(anyhow!("Failed to find RPORT from header"))?;
+    let c_comm = header
+        .iter()
+        .position(|col| *col == "C-COMM")
+        .ok_or(anyhow!("Failed to find C-COMM from header"))?;
+    let newstate = header
+        .iter()
+        .position(|col| *col == "NEWSTATE")
+        .ok_or(anyhow!("Failed to find NEWSTATE from header"))?;
 
     // TODO(b/340126051): Consider using NETLINK_SOCK_DIAG for the optimization.
     let listeners = listeners::get_all()?;
@@ -136,21 +146,35 @@ async fn report_active_ports(
         .collect();
     send_active_ports_report(listening_ports.clone(), &mut client).await?;
 
-    let mut records = csv_reader.records();
-    while let Some(record) = records.next().await {
-        let row: TcpStateRow = record?.deserialize(Some(&header))?;
-        if !is_forwardable_port(row.lport) {
+    while let Some(line) = lines.next_line().await? {
+        let items: Vec<_> = line.split_whitespace().collect();
+        let state = TcpState {
+            lport: items
+                .get(lport)
+                .ok_or(anyhow!("Failed to find LPORT"))?
+                .parse()
+                .context("Invalid LPORT format")?,
+            rport: items
+                .get(rport)
+                .ok_or(anyhow!("Failed to find RPORT"))?
+                .parse()
+                .context("Invalid RPORT format")?,
+            c_comm: items.get(c_comm).ok_or(anyhow!("Failed to find C-COMM"))?.to_string(),
+            newstate: items.get(newstate).ok_or(anyhow!("Failed to find NEWSTATE"))?.to_string(),
+        };
+        if !is_forwardable_port(state.lport) {
             continue;
         }
-        if row.rport > 0 {
+        if state.rport > 0 {
             continue;
         }
-        match row.newstate.as_str() {
+        match state.newstate.as_str() {
             TCPSTATES_STATE_LISTEN => {
-                listening_ports.insert(row.lport, ActivePort { port: row.lport, comm: row.c_comm });
+                listening_ports
+                    .insert(state.lport, ActivePort { port: state.lport, comm: state.c_comm });
             }
             TCPSTATES_STATE_CLOSE => {
-                listening_ports.remove(&row.lport);
+                listening_ports.remove(&state.lport);
             }
             _ => continue,
         }

@@ -31,6 +31,9 @@ internal class Runner private constructor(val vm: VirtualMachine, callback: Call
     /** Get future about VM's exit status. */
     val exitStatus = callback.finishedSuccessfully
 
+    /** Future which is set to true when VM has started shutdown */
+    val shutdownStarted: CompletableFuture<Void> = CompletableFuture<Void>()
+
     private class Callback : VirtualMachineCallback {
         val finishedSuccessfully: CompletableFuture<Boolean> = CompletableFuture<Boolean>()
 
@@ -77,12 +80,13 @@ internal class Runner private constructor(val vm: VirtualMachine, callback: Call
             // If there's a VM with the same name, delete it. And before deleting it, ensure that
             // it's stopped. This can happen especially when the user started the terminal app right
             // after they dismissed it.
-            var oldVm = try {
-                vmm.get(name)
-            } catch (e: VirtualMachineException) {
-                Log.e(TAG, "Failed to get old VM. $e")
-                null
-            }
+            var oldVm =
+                try {
+                    vmm.get(name)
+                } catch (e: VirtualMachineException) {
+                    Log.e(TAG, "Failed to get old VM. $e")
+                    null
+                }
             if (oldVm != null) {
                 if (oldVm.getStatus() != VirtualMachine.STATUS_STOPPED) {
                     val cb = Callback()
