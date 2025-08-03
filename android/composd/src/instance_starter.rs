@@ -21,20 +21,19 @@ use android_system_virtualizationservice::aidl::android::system::virtualizations
     IVirtualizationService::IVirtualizationService, PartitionType::PartitionType,
 };
 use anyhow::{anyhow, Context, Result};
-use binder::{LazyServiceGuard, ParcelFileDescriptor, Strong};
-use compos_aidl_interface::aidl::com::android::compos::ICompOsService::ICompOsService;
-use compos_common::compos_client::{ComposClient, VmParameters};
+use binder::{LazyServiceGuard, ParcelFileDescriptor};
+use compos_common::compos_client::{CompOsService, CompOsType, ComposClient, VmParameters};
 use compos_common::{
     COMPOS_DATA_ROOT, IDSIG_FILE, IDSIG_MANIFEST_APK_FILE, IDSIG_MANIFEST_EXT_APK_FILE,
     INSTANCE_ID_FILE, INSTANCE_IMAGE_FILE,
 };
 use log::info;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub struct CompOsInstance {
-    service: Strong<dyn ICompOsService>,
+    service: CompOsService,
     #[allow(dead_code)] // Keeps VirtualizationService & the VM alive
     vm_instance: ComposClient,
     #[allow(dead_code)] // Keeps composd process alive
@@ -44,7 +43,7 @@ pub struct CompOsInstance {
 }
 
 impl CompOsInstance {
-    pub fn get_service(&self) -> Strong<dyn ICompOsService> {
+    pub fn get_service(&self) -> CompOsService {
         self.service.clone()
     }
 
@@ -56,7 +55,7 @@ impl CompOsInstance {
 
     /// Attempt to shut down the VM cleanly, giving time for any relevant logs to be written.
     pub fn shutdown(self) -> LazyServiceGuard {
-        self.vm_instance.shutdown(self.service);
+        self.vm_instance.shutdown(&self.service);
         // Return the guard to the caller, since we might be terminated at any point after it is
         // dropped, and there might still be things to do.
         self.lazy_service_guard
@@ -76,7 +75,8 @@ pub struct InstanceStarter {
 
 impl InstanceStarter {
     pub fn new(instance_name: &str, vm_parameters: VmParameters) -> Self {
-        let instance_root = Path::new(COMPOS_DATA_ROOT).join(instance_name);
+        let root = crate::wrapper::paths::get_root();
+        let instance_root = root.as_path().join(COMPOS_DATA_ROOT).join(instance_name);
         let instance_root_path = instance_root.as_path();
         let instance_id_file = instance_root_path.join(INSTANCE_ID_FILE);
         let instance_image = instance_root_path.join(INSTANCE_IMAGE_FILE);
@@ -117,10 +117,14 @@ impl InstanceStarter {
 
         let instance = self.start_vm(virtualization_service)?;
 
-        // Retrieve the VM's attestation chain as a BCC and save it in the instance directory.
-        let bcc = instance.service.getAttestationChain().context("Getting attestation chain")?;
-        fs::write(self.instance_root.join("bcc"), bcc).context("Writing BCC")?;
-
+        // For VM's with an OdRefresh service retrieve the attestation chain as
+        // a BCC and save it in the instance directory.
+        if let CompOsService::OdRefresh(ref s) = &instance.service {
+            let bcc = s
+                .getAttestationChain()
+                .context("Getting attestation chain from CompOS OdRefresh")?;
+            fs::write(self.instance_root.join("bcc"), bcc).context("Writing BCC")?;
+        }
         Ok(instance)
     }
 
@@ -151,7 +155,14 @@ impl InstanceStarter {
             &self.vm_parameters,
         )
         .context("Starting VM")?;
-        let service = vm_instance.connect_service().context("Connecting to CompOS")?;
+        let service = match &self.vm_parameters.compos_type {
+            CompOsType::OdRefresh => CompOsService::OdRefresh(
+                vm_instance.connect_service().context("Connecting to CompOS OdRefresh")?,
+            ),
+            CompOsType::Dex2Oat => CompOsService::Dex2Oat(
+                vm_instance.connect_service().context("Connecting to CompOS Dex2Oat")?,
+            ),
+        };
         Ok(CompOsInstance {
             vm_instance,
             service,
