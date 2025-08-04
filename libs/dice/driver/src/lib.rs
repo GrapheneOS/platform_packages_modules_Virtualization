@@ -96,8 +96,9 @@ impl DiceDriver<'_> {
         // successfully mapped into the process address space so it will be
         // accessible and not referenced from anywhere else.
             unsafe { slice::from_raw_parts((mmap_addr as *const u8).as_ref().unwrap(), mmap_size) };
-        let bcc_handover =
-            bcc_handover_parse(mmap_buf).map_err(|_| anyhow!("Failed to parse Bcc Handover"))?;
+        let bcc_handover = bcc_handover_parse(mmap_buf).map_err(|error| {
+            Error::new(error).context("Parsing Bcc Handover, size: {mmap_size:?}")
+        })?;
         Ok(Self::Real {
             driver_path: driver_path.to_path_buf(),
             mmap_addr,
