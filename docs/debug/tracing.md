@@ -159,32 +159,22 @@ are not enabled in Microdroid by default, so you need to manually start them by 
 Here is a quick example on how trace Microdroid VM:
 
 1. First start your VM. For this example we are going to use
-`adb shell /apex/com.android.virt/bin/vm run-microdroid`.
+`adb shell vm run-microdroid`.
 
 2. Set up an adb connection with the running VM:
 ```shell
-adb forward tcp:9876 vsock:${CID}:5555
-adb connect localhost:9876
-adb -s localhost:9876 root
+$ adb shell vm list    // to get the name of the VM you'd like to trace
+$ package/modules/Virtualization/android/vm/vm_shell.sh connect <NameOfVm>
+# setprop persist.traced.enable 1
 ```
-Where `${CID}` corresponds to the running Microdroid VM that you want to establish adb connection
-with. List of running VMs can be obtained by running `adb shell /apex/com.android.virt/bin/vm list`.
-Alternatively you can use `vm_shell` utility to connect to a running VM, i.e.: `vm_shell connect`.
 
 3. Start Perfetto daemons and capture trace
-```shell
-adb -s localhost:9876 shell setprop persist.traced.enable 1
-${ANDROID_BUILD_TOP}/external/perfetto/tools/record_android_trace \
-  -s localhost:9876 \
-  -o /tmp/microdroid-trace-file.pftrace \
-  -t 10s \
-  -b 32mb \
-  sched/sched_switch task/task_newtask sched/sched_process_exit
-```
 
-If you don't have Android repo checked out, then you can download the record_android_trace script by
-following the following [instructions](
-https://perfetto.dev/docs/quickstart/android-tracing#recording-a-trace-through-the-cmdline)
+Visit `perfetto.dev.ui` in your web browser. Select "Record new trace". Choose "Android" as the platform, and "ADB + WebDeviceProxy" as the transport.
+
+Expand the drop-down list titled "Select target device", and choose "? [localhost:8000]".
+
+Start the tracing by pressing the "Start tracing" button.
 
 More documentation on Perfetto's tracing on Android is available here:
 https://perfetto.dev/docs/quickstart/android-tracing

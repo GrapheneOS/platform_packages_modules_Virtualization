@@ -37,6 +37,10 @@ pub struct VmPayloadConfig {
     #[serde(default)]
     pub extra_apks: Vec<ApkConfig>,
 
+    /// Tenant config for multi tenancy case
+    #[serde(default)]
+    pub tenants: Vec<TenantConfig>,
+
     /// Tells VirtualizationService to use staged APEXes if possible
     #[serde(default)]
     pub prefer_staged: bool,
@@ -115,4 +119,34 @@ pub struct ApexConfig {
 pub struct ApkConfig {
     /// The path of APK
     pub path: String,
+}
+
+/// Tenant config
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "package")]
+pub enum TenantConfig {
+    /// APEX Tenant
+    #[serde(rename = "apex")]
+    Apex(TenantApexConfig),
+    /// APK Tenant
+    #[serde(rename = "apk")]
+    Apk(TenantApkConfig),
+}
+
+/// Tenant Apex config
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TenantApexConfig {
+    /// The path of Tenant APK
+    pub name: String,
+    /// Tenant task
+    pub task: Task,
+}
+
+/// Tenant Apk config
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TenantApkConfig {
+    /// The path of Tenant APK
+    pub path: String,
+    /// Tenant task
+    pub task: Task,
 }

@@ -37,6 +37,35 @@ adb push ${OUT}/testcases/MicrodroidTestHelperApp/arm64/MicrodroidTestHelperApp.
 adb push ${OUT}/system/bin/vm_demo_native /data/local/tmp/
 ```
 
+## Building and Installing for Multitenancy
+
+Multitenancy feature is enabled by setting `advance_multitenancy` in the build.
+
+### Building
+
+```sh
+source build/envsetup.sh
+choosecombo 1 aosp_arm64 userdebug
+m MicrodroidTestHelperApp
+m vm_demo_native
+m com.android.microdroid.test.tenant0
+```
+
+### Installing
+
+```sh
+# choosecombo would set this as well.
+OUT=out/target/product/generic_arm64
+
+adb push ${OUT}/testcases/MicrodroidTestHelperApp/arm64/MicrodroidTestHelperApp.apk \
+  /data/local/tmp/
+adb push ${OUT}/system/bin/vm_demo_native /data/local/tmp/
+adb push ${OUT}/system/apex/com.android.microdroid.test.tenant0.apex system/apex
+
+# Reboot to install the addition com.android.micrdroid.test.tenant0 apex
+adb reboot
+```
+
 ## Running
 
 ```sh

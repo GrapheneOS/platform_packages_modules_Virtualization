@@ -1,0 +1,51 @@
+// Copyright (C) 2025 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+apex_key {
+    name: "com.android.microdroid.test.tenant0.key",
+    public_key: "com.android.microdroid.test.tenant0.avbpubkey",
+    private_key: "com.android.microdroid.test.tenant0.pem",
+}
+
+android_app_certificate {
+    name: "com.android.microdroid.test.tenant0.certificate",
+    certificate: "com.android.microdroid.test.tenant0",
+}
+
+apex {
+    name: "com.android.microdroid.test.tenant0",
+    manifest: "manifest.json",
+    file_contexts: ":apex.test-file_contexts",
+    key: "com.android.microdroid.test.tenant0.key",
+    certificate: ":com.android.microdroid.test.tenant0.certificate",
+    jni_libs: [
+        "MicrodroidEmptyTenant",
+    ],
+    updatable: false,
+}
+
+cc_library {
+    name: "MicrodroidEmptyTenant",
+    defaults: ["avf_build_flags_cc"],
+    srcs: ["empty_binary.cpp"],
+    shared_libs: ["libvm_payload#current"],
+    installable: true,
+    apex_available: ["com.android.microdroid.test.tenant0"],
+    compile_multilib: "first",
+    stl: "none",
+}
