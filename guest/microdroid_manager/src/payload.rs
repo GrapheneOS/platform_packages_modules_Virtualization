@@ -31,31 +31,42 @@ pub fn load_metadata() -> Result<Metadata> {
     read_metadata(file)
 }
 
+/// Helper function for get_apex_data_from_payload
+fn verify_single_apex(apex: &ApexPayload) -> ApexData {
+    let apex_path = format!("/dev/block/by-name/{}", apex.partition_name);
+    let extracted =
+        apexutil::verify(&apex_path).context(format!("Failed to parse {}", &apex_path)).unwrap();
+
+    if let Some(manifest_name) = &extracted.name {
+        if &apex.name != manifest_name {
+            warn!("Apex named {} is named {} in its manifest", apex.name, manifest_name);
+        }
+    };
+
+    ApexData {
+        name: apex.name.clone(),
+        manifest_name: extracted.name,
+        manifest_version: extracted.version,
+        public_key: extracted.public_key,
+        root_digest: extracted.root_digest,
+        last_update_seconds: apex.last_update_seconds,
+        is_factory: apex.is_factory,
+    }
+}
+
 /// Loads (name, public_key, root_digest) from payload APEXes
 pub fn get_apex_data_from_payload(metadata: &Metadata) -> Result<Vec<ApexData>> {
-    metadata
-        .apexes
-        .iter()
-        .map(|apex| {
-            let apex_path = format!("/dev/block/by-name/{}", apex.partition_name);
-            let extracted =
-                apexutil::verify(&apex_path).context(format!("Failed to parse {}", &apex_path))?;
-            if let Some(manifest_name) = &extracted.name {
-                if &apex.name != manifest_name {
-                    warn!("Apex named {} is named {} in its manifest", apex.name, manifest_name);
-                }
-            };
-            Ok(ApexData {
-                name: apex.name.clone(),
-                manifest_name: extracted.name,
-                manifest_version: extracted.version,
-                public_key: extracted.public_key,
-                root_digest: extracted.root_digest,
-                last_update_seconds: apex.last_update_seconds,
-                is_factory: apex.is_factory,
-            })
-        })
-        .collect()
+    let mut apex_data: Vec<ApexData> = metadata.apexes.iter().map(verify_single_apex).collect();
+
+    if cfg!(advance_multitenancy) {
+        //TODO(b/433698158): Do not include tenant apex in DICE chain. For now, we are clubbing it
+        // with apex_data
+        let tenant_apex_data: Vec<ApexData> =
+            metadata.tenant_apexes.iter().map(verify_single_apex).collect();
+        apex_data.extend(tenant_apex_data);
+    }
+
+    Ok(apex_data)
 }
 
 /// Convert vector of ApexData into Metadata
