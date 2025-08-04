@@ -452,11 +452,12 @@ class VmLauncherService : Service() {
 
     @WorkerThread
     private fun doShutdown(resultReceiver: ResultReceiver?) {
-        // This prevents MainActivity from re-starting VmLauncherService to shut the VM down.
-        runner?.shutdownStarted!!.complete(null)
-
-        runner?.exitStatus?.thenAcceptAsync { success: Boolean ->
-            resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+        runner?.run {
+            // This prevents MainActivity from re-starting VmLauncherService to shut the VM down.
+            shutdownStarted.complete(null)
+            exitStatus.thenAcceptAsync { success: Boolean ->
+                resultReceiver?.send(if (success) RESULT_STOP else RESULT_ERROR, null)
+            }
         }
         if (debianService != null && debianService!!.shutdownDebian()) {
             // During shutdown, change the notification content to indicate that it's closing
