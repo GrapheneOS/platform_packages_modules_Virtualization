@@ -2031,12 +2031,17 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
             continue;
         }
         let ugid_map_value = format!(
-            "{} {} {} {} {} /",
+            "{} {} {} {} {} /; {} {} {} {} {} /Android",
             shared_path.guest_uid,
             shared_path.guest_gid,
             shared_path.host_uid,
             shared_path.host_gid,
             shared_path.mask,
+            0,
+            0,
+            0,
+            0,
+            0o777,
         );
 
         let cfg_arg = format!("ugid_map='{}'", ugid_map_value);

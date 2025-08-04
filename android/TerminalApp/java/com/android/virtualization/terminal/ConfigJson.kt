@@ -144,7 +144,7 @@ internal data class ConfigJson(
                 if (sharedPath?.contains("emulated") == true) {
                     if (Environment.isExternalStorageManager()) {
                         val currentUserId = context.userId
-                        val path = "$sharedPath/$currentUserId/Download"
+                        val path = "$sharedPath/$currentUserId"
                         return VirtualMachineCustomImageConfig.SharedPath(
                             path,
                             terminalUid,
