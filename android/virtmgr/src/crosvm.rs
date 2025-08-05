@@ -270,6 +270,10 @@ impl CrosvmCommand {
 
     fn add_pvm_arg(&mut self, context: &RunContext) -> Result<()> {
         if !context.config.protectedVm {
+            if let Some(custom_pvmfw) = &context.config.customPvmfw {
+                let custom_pvmfw_fd = self.add_preserved_fd(custom_pvmfw.as_ref().try_clone()?);
+                self.arg("--unprotected-vm-with-firmware").arg(&custom_pvmfw_fd);
+            }
             return Ok(());
         }
 
@@ -281,7 +285,14 @@ impl CrosvmCommand {
                     self.args(["--protected-vm-with-firmware", &pvmfw_path])
                 }
             }
-            _ => self.arg("--protected-vm"),
+            _ => {
+                if let Some(custom_pvmfw) = &context.config.customPvmfw {
+                    let custom_pvmfw_fd = self.add_preserved_fd(custom_pvmfw.as_ref().try_clone()?);
+                    self.arg("--protected-vm-with-firmware").arg(&custom_pvmfw_fd)
+                } else {
+                    self.arg("--protected-vm")
+                }
+            }
         };
 
         // Workaround to keep crash_dump from trying to read protected guest memory.
