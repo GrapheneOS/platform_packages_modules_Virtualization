@@ -39,7 +39,7 @@ const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 struct TcpState {
     lport: i32,
     rport: i32,
-    c_comm: String,
+    comm: String,
     newstate: String,
 }
 
@@ -105,10 +105,9 @@ fn is_forwardable_port(port: i32) -> bool {
 async fn report_active_ports(
     mut client: DebianServiceClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: we can remove python3 -u when https://github.com/iovisor/bcc/pull/5142 is deployed
-    let mut cmd = Command::new("python3")
-        .arg("-u")
-        .arg("/usr/sbin/tcpstates-bpfcc")
+    let mut cmd = Command::new("stdbuf")
+        .arg("-oL")
+        .arg("/usr/sbin/tcpstates")
         .stdout(Stdio::piped())
         .spawn()?;
     let stdout = cmd.stdout.take().context("Failed to get stdout of tcpstates")?;
@@ -123,10 +122,10 @@ async fn report_active_ports(
         .iter()
         .position(|col| *col == "RPORT")
         .ok_or(anyhow!("Failed to find RPORT from header"))?;
-    let c_comm = header
+    let comm = header
         .iter()
-        .position(|col| *col == "C-COMM")
-        .ok_or(anyhow!("Failed to find C-COMM from header"))?;
+        .position(|col| *col == "COMM")
+        .ok_or(anyhow!("Failed to find COMM from header"))?;
     let newstate = header
         .iter()
         .position(|col| *col == "NEWSTATE")
@@ -159,7 +158,7 @@ async fn report_active_ports(
                 .ok_or(anyhow!("Failed to find RPORT"))?
                 .parse()
                 .context("Invalid RPORT format")?,
-            c_comm: items.get(c_comm).ok_or(anyhow!("Failed to find C-COMM"))?.to_string(),
+            comm: items.get(comm).ok_or(anyhow!("Failed to find COMM"))?.to_string(),
             newstate: items.get(newstate).ok_or(anyhow!("Failed to find NEWSTATE"))?.to_string(),
         };
         if !is_forwardable_port(state.lport) {
@@ -171,7 +170,7 @@ async fn report_active_ports(
         match state.newstate.as_str() {
             TCPSTATES_STATE_LISTEN => {
                 listening_ports
-                    .insert(state.lport, ActivePort { port: state.lport, comm: state.c_comm });
+                    .insert(state.lport, ActivePort { port: state.lport, comm: state.comm });
             }
             TCPSTATES_STATE_CLOSE => {
                 listening_ports.remove(&state.lport);
