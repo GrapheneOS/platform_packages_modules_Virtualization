@@ -331,7 +331,7 @@ mod tests {
     impl ReadByChunk for InMemoryEditor {
         fn read_chunk(&self, chunk_index: u64, buf: &mut ChunkBuffer) -> io::Result<usize> {
             if self.fail_read {
-                return Err(io::Error::new(io::ErrorKind::Other, "test!"));
+                return Err(io::Error::other("test!"));
             }
 
             let borrowed = self.data.borrow();

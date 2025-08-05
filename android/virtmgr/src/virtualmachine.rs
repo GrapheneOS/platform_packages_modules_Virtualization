@@ -2350,6 +2350,7 @@ mod tests {
             "idsig files differ in size"
         );
         // Ensure the 2 idsig files have same content!
+        #[allow(clippy::unbuffered_bytes)]
         for (b1, b2) in idsig_empty.bytes().zip(idsig_invalid.bytes()) {
             assert!(b1.unwrap() == b2.unwrap(), "idsig files differ")
         }
