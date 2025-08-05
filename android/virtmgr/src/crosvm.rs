@@ -2147,8 +2147,8 @@ fn print_crosvm_args(command: &Command) {
             .map(|s| {
                 re.replace_all(&s, |caps: &Captures| {
                     let path = &caps[0];
-                    if let Ok(realpath) = std::fs::canonicalize(path) {
-                        format!("{} ({})", path, realpath.to_string_lossy())
+                    if let Ok(link_target) = std::fs::read_link(path) {
+                        format!("{} ({})", path, link_target.to_string_lossy())
                     } else {
                         path.to_owned()
                     }
