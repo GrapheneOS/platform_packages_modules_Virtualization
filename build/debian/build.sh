@@ -140,8 +140,8 @@ install_prerequisites() {
 
 	source "$HOME"/.cargo/env
 	rustup target add "${arch}"-unknown-linux-gnu
-  cargo install cargo-license --version 0.6.1
-  cargo install cargo-deb --version 3.3.0
+	cargo install cargo-license --version 0.6.1
+	cargo install cargo-deb --version 3.3.0
 }
 
 download_debian_cloud_image() {
@@ -190,7 +190,7 @@ build_rust_as_deb() {
 
 build_ttyd() {
 	if [[ "$cloud_init" == 1 ]]; then
-		local install_path="${cidata}/files/usr/local/bin/ttyd"
+		local install_path="${chroot_ttyd}/usr/local/bin/ttyd"
 
 		if [[ "$may_skip_build" == 1 && -f "${install_path}" ]]; then
 			echo "Skipping build_ttyd(). ${install_path} already exists"
@@ -225,11 +225,11 @@ build_ttyd() {
 	bash -c "env ${build_env[*]} ./scripts/cross-build.sh"
 
 	if [[ "$cloud_init" == 1 ]]; then
-		mkdir -p "${cidata}/files/usr/local/bin" || true
-		cp "${out}/bin/ttyd" "${cidata}/files/usr/local/bin/ttyd"
-		chmod 777 "${cidata}/files/usr/local/bin/ttyd"
-		mkdir -p "${cidata}/files/usr/share/doc/ttyd/copyright"
-		cp LICENSE "${cidata}/files/usr/share/doc/ttyd/copyright/"
+		mkdir -p "${chroot_ttyd}/usr/local/bin" || true
+		cp "${out}/bin/ttyd" "${chroot_ttyd}/usr/local/bin/ttyd"
+		chmod 755 "${chroot_ttyd}/usr/local/bin/ttyd"
+		mkdir -p "${chroot_ttyd}/usr/share/doc/ttyd/copyright"
+		cp LICENSE "${chroot_ttyd}/usr/share/doc/ttyd/copyright/"
 	else
 		mkdir -p "${dst}/files/usr/local/bin/ttyd"
 		cp "${out}/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
@@ -244,8 +244,8 @@ build_ttyd() {
 copy_android_config() {
 	if [[ "$cloud_init" == 1 ]]; then
 		mkdir -p "${cidata}/localdebs" || true
-		cp -vpR "$SCRIPT_DIR/cloud-init_config"/* "${cidata}"
-		cp -vpR "$SCRIPT_DIR/localdebs/"* "${cidata}/localdebs" || true
+		cp -avpR "$SCRIPT_DIR/cloud-init_config"/* "${cidata}"
+		cp -avpR "$SCRIPT_DIR/localdebs/"* "${cidata}/localdebs" || true
 	else
 		local src="$SCRIPT_DIR/fai_config"
 		local dst="${config_space}"
@@ -265,15 +265,6 @@ copy_android_config() {
 
 package_custom_kernel() {
 	if [[ "$cloud_init" != 1 ]]; then
-		if [[ "$use_generic_kernel" == 1 ]]; then
-			# NOTE: For bpfcc-tools, install generic headers for the generic kernel.
-			cat > "${config_space}/package_config/LAST" <<EOF
-PACKAGES install
-linux-headers-generic
-EOF
-return
-		fi
-
 		# NOTE: Prevent FAI from installing a default Debian kernel, by removing
 		#       linux-image meta package names from arch-specific class files.
 		sed -i "/linux-image.*-${debian_arch}/d" \
@@ -294,9 +285,13 @@ return
 build_cidata() {
 	local dst="${workdir}/${cidata_image}"
 
+	# repo doesn't fully keep ownership nor permission, so explicitly set here.
+	chmod -R o=g "${cidata}"
+	chown -R 0:0 "${cidata}"
+
 	# Build CIDATA with ISO9660.
 	# Need to clean first. otherwise try to append here.
-	rm -rf "${dst}"
+	rm -rf "${dst}" || true
 	genisoimage -output "${dst}" -V cidata -J -R "${cidata}"
 }
 
@@ -329,6 +324,37 @@ build_debian() {
 	fi
 }
 
+build_rootfs() {
+	local chroot_workspace=$(mktemp -d)
+
+	mkdir -p "${chroot_workspace}"
+
+	mount "${workdir}/root_part" "${chroot_workspace}"
+
+	mkdir -p "${chroot_workspace}/mnt/build"
+	mkdir -p "${chroot_workspace}/mnt/ttyd"
+	mount --bind "${SCRIPT_DIR}" "${chroot_workspace}/mnt/build"
+	mount --bind "${chroot_ttyd}" "${chroot_workspace}/mnt/ttyd"
+	mount --rbind /dev "${chroot_workspace}/dev"
+	mount --rbind /proc "${chroot_workspace}/proc"
+	mount --rbind /sys "${chroot_workspace}/sys"
+
+	mv -v "${chroot_workspace}/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf.bak" || true
+	cp -vP "/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf"
+
+	chroot "${chroot_workspace}" /bin/bash -c /mnt/build/build_rootfs_in_chroot.sh
+
+	rm ${chroot_workspace}/etc/resolv.conf
+	mv -v "${chroot_workspace}/etc/resolv.conf.bak" "${chroot_workspace}/etc/resolv.conf" || true
+	umount "${chroot_workspace}/mnt/ttyd"
+	umount "${chroot_workspace}/mnt/build"
+
+	rm -r "${chroot_workspace}/mnt/ttyd"
+	rm -r "${chroot_workspace}/mnt/build"
+	umount -R "${chroot_workspace}"
+	rm -r "${chroot_workspace}"
+}
+
 generate_output_package() {
 	local vm_config="$SCRIPT_DIR/vm_config.json"
 	if [[ "$cloud_init" == 1 ]]; then
@@ -359,37 +385,30 @@ generate_output_package() {
 		root_part
 		vm_config.json
 	)
-	if [[ "$uboot" == 0 ]]; then
-		contents+=(
-			vmlinuz
-			initrd.img
-			kernel_extras_part
-		)
-	fi
-	if [[ "$uboot" == 1 || "$cloud_init" == 1 ]]; then
+	if [[ "$uboot" == 1 ]]; then
 		local efi_partition_num=15
 		local guid="$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)"
 
-		if [[ "$uboot" == 1 ]]; then
-			loop=$(losetup -f --show --partscan $raw_disk_image)
-			dd if="${loop}p$efi_partition_num" of=efi_part
-			losetup -d "${loop}"
-		else
-			# For cloud-init, EFI is only required by /etc/fstab.
-			# Placeholder partition is enough.
-			# TODO: Modify /etc/fstab when we preprocess rootfs here as well.
-			dd if=/dev/zero of=efi_part bs=1M count=1
-			mkfs.fat -F 32 -c efi_part
-		fi
+		loop=$(losetup -f --show --partscan $raw_disk_image)
+		dd if="${loop}p$efi_partition_num" of=efi_part
+		losetup -d "${loop}"
 
 		sed -i "s/{efi_part_guid}/${guid}/g" vm_config.json
 
 		contents+=(
 			efi_part
 		)
+	else
+		contents+=(
+			vmlinuz
+			initrd.img
+			kernel_extras_part
+		)
 	fi
 
 	if [[ "$cloud_init" == 1 ]]; then
+		build_rootfs
+
 		contents+=(
 			${cidata_image}
 		)
@@ -431,8 +450,9 @@ fi
 debian_cloud_image=${workdir}/debian_cloud_image
 if [[ "$cloud_init" == 1 ]]; then
 	cidata=${debian_cloud_image}/cidata
-	raw_disk_image=${debian_cloud_image}/disk.raw
 	cidata_image="cidata.iso"
+	chroot_ttyd=${debian_cloud_image}/chroot_ttyd
+	raw_disk_image=${debian_cloud_image}/disk.raw
 else
 	raw_disk_image=${workdir}/image.raw
 	config_space=${debian_cloud_image}/config_space/${debian_version}
