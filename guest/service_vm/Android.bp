@@ -32,10 +32,6 @@ cc_binary {
         "libservice_vm",
         "libvmbase_dice_clear_memory",
     ],
-    linker_scripts: [
-        "image.ld",
-        ":vmbase_sections",
-    ],
 }
 
 raw_binary {

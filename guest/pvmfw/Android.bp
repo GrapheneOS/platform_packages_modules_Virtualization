@@ -365,20 +365,6 @@ cc_defaults {
     static_libs: [
         "libvmbase_dice_clear_memory",
     ],
-    target: {
-        android_arm64: {
-            linker_scripts: [
-                "asm/aarch64/image.ld",
-                ":vmbase_sections",
-            ],
-        },
-        android_x86_64: {
-            linker_scripts: [
-                "asm/x86_64/image.ld",
-                ":vmbase_sections",
-            ],
-        },
-    },
     // `installable: false` is inherited from vmbase_elf_defaults, and that
     // hides this module from Make, which makes it impossible for the Make world
     // to place the unstripped binary to the symbols directory. Marking back as

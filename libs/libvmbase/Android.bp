@@ -76,6 +76,7 @@ cc_defaults {
     name: "vmbase_elf_0x7fc00000_defaults",
     defaults: ["vmbase_elf_defaults"],
     asflags: ["-DVMBASE_IMAGE_LOAD_ADDR=0x7fc00000"],
+    ldflags: ["-Wl,--defsym,_VMBASE_IMAGE_LOAD_ADDR=0x7fc00000"],
 }
 
 //  ... with a load address at 0x80000000.
@@ -83,6 +84,7 @@ cc_defaults {
     name: "vmbase_elf_0x80000000_defaults",
     defaults: ["vmbase_elf_defaults"],
     asflags: ["-DVMBASE_IMAGE_LOAD_ADDR=0x80000000"],
+    ldflags: ["-Wl,--defsym,_VMBASE_IMAGE_LOAD_ADDR=0x80000000"],
 }
 
 //  ... with a load address at 0x80200000.
@@ -90,6 +92,7 @@ cc_defaults {
     name: "vmbase_elf_0x80200000_defaults",
     defaults: ["vmbase_elf_defaults"],
     asflags: ["-DVMBASE_IMAGE_LOAD_ADDR=0x80200000"],
+    ldflags: ["-Wl,--defsym,_VMBASE_IMAGE_LOAD_ADDR=0x80200000"],
 }
 
 cc_defaults {
@@ -100,6 +103,7 @@ cc_defaults {
         "libvmbase_entry",
     ],
     srcs: [":vmbase_idmap_S"],
+    linker_scripts: [":vmbase_sections"],
     visibility: ["//visibility:private"],
 }
 

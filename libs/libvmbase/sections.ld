@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
+/* _VMBASE_IMAGE_LOAD_ADDR to be defined with -Wl,--defsym. */
+
+MEMORY
+{
+	image		: ORIGIN = _VMBASE_IMAGE_LOAD_ADDR, LENGTH = 2M
+	writable_data	: ORIGIN = (_VMBASE_IMAGE_LOAD_ADDR + 2M), LENGTH = 2M
+}
+
 /*
  * Code will start running at this symbol which is placed at the start of the
  * image.
