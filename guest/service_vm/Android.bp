@@ -27,10 +27,7 @@ rust_ffi_static {
 cc_binary {
     name: "service_vm_elf",
     stem: "service_vm",
-    defaults: ["vmbase_elf_defaults"],
-    srcs: [
-        "idmap.S",
-    ],
+    defaults: ["vmbase_elf_0x80000000_defaults"],
     static_libs: [
         "libservice_vm",
         "libvmbase_dice_clear_memory",

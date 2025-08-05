@@ -69,9 +69,6 @@ cc_object {
 cc_defaults {
     name: "vmbase_example_elf_defaults",
     defaults: ["vmbase_elf_defaults"],
-    srcs: [
-        "idmap.S",
-    ],
     static_libs: [
         "libvmbase_example",
     ],
@@ -85,7 +82,10 @@ cc_defaults {
 
 cc_binary {
     name: "vmbase_example_bios",
-    defaults: ["vmbase_example_elf_defaults"],
+    defaults: [
+        "vmbase_elf_0x80200000_defaults",
+        "vmbase_example_elf_defaults",
+    ],
     asflags: ["-DVMBASE_EXAMPLE_IS_BIOS"],
     linker_scripts: [
         ":vmbase_example_bios.ld",
@@ -95,7 +95,10 @@ cc_binary {
 
 cc_binary {
     name: "vmbase_example_kernel",
-    defaults: ["vmbase_example_elf_defaults"],
+    defaults: [
+        "vmbase_elf_0x80000000_defaults",
+        "vmbase_example_elf_defaults",
+    ],
     asflags: ["-DVMBASE_EXAMPLE_IS_KERNEL"],
     linker_scripts: [
         ":vmbase_example_kernel.ld",
