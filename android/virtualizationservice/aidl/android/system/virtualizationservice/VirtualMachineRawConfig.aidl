@@ -68,6 +68,9 @@ parcelable VirtualMachineRawConfig {
     /** Whether the VM should be a protected VM. */
     boolean protectedVm;
 
+    /** The custom VM firmware, used by protected and non-protected VMs */
+    @nullable ParcelFileDescriptor customPvmfw;
+
     /** The amount of RAM to give the VM, in MiB. 0 or negative to use the default. */
     int memoryMib;
 
