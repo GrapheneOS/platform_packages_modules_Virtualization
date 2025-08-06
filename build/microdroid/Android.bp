@@ -208,6 +208,14 @@ prebuilt_root {
     no_full_install: true,
 }
 
+build_prop_cmd_common = "(echo '# build properties from system/build.prop' && " +
+    "grep ro\\.build\\.version\\.codename= $(location :system-build.prop) && " +
+    "grep ro\\.build\\.version\\.release= $(location :system-build.prop) && " +
+    "grep ro\\.build\\.version\\.sdk= $(location :system-build.prop) && " +
+    "grep ro\\.build\\.version\\.security_patch= $(location :system-build.prop) && " +
+    "grep ro\\.build\\.version\\.known_codenames= $(location :system-build.prop) && " +
+    "cat $(location build.prop) && "
+
 java_genrule {
     name: "microdroid_build_prop_gen_x86_64",
     srcs: [
@@ -215,13 +223,7 @@ java_genrule {
         ":system-build.prop",
     ],
     out: ["build.prop.out"],
-    cmd: "(echo '# build properties from system/build.prop' && " +
-        "grep ro\\.build\\.version\\.codename= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.release= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.sdk= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.security_patch= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.known_codenames= $(location :system-build.prop) && " +
-        "cat $(location build.prop) && " +
+    cmd: build_prop_cmd_common +
         "echo ro.product.cpu.abilist=x86_64 && " +
         "echo ro.product.cpu.abi=x86_64) > $(out)",
 }
@@ -233,13 +235,7 @@ java_genrule {
         ":system-build.prop",
     ],
     out: ["build.prop.out"],
-    cmd: "(echo '# build properties from system/build.prop' && " +
-        "grep ro\\.build\\.version\\.codename= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.release= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.sdk= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.security_patch= $(location :system-build.prop) && " +
-        "grep ro\\.build\\.version\\.known_codenames= $(location :system-build.prop) && " +
-        "cat $(location build.prop) && " +
+    cmd: build_prop_cmd_common +
         "echo ro.product.cpu.abilist=arm64-v8a && " +
         "echo ro.product.cpu.abi=arm64-v8a) > $(out)",
 }
