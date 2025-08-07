@@ -558,9 +558,9 @@ rust_ffi_static {
     // TODO(b/435130679): Unconditionally get digest from AOSP Trusty.
     srcs: select(soong_config_variable("avf", "avf_use_pvmfw_desktop"), {
         // Use seemingly unnecessary select, to avoid breaking the build of non-AOSP
-        // manifests, which don't include desktop_trusty_vbmeta_digest.
-        true: [":desktop_trusty_vbmeta_digest"],
-        default: [":desktop_trusty_placeholder_vbmeta_digest"],
+        // manifests, which don't include desktop_trusty_kernel_digest.
+        true: [":desktop_trusty_kernel_digest"],
+        default: [":desktop_trusty_placeholder_kernel_digest"],
     }),
     // This enables pvmfw_desktop to be built with a different set of features.
     features: [
@@ -608,9 +608,9 @@ avb_add_hash_footer {
 }
 
 cc_genrule {
-    name: "desktop_trusty_placeholder_vbmeta_digest",
+    name: "desktop_trusty_placeholder_kernel_digest",
     srcs: [":desktop_trusty_placeholder"],
-    out: ["desktop_trusty.vbmetadigest"],
+    out: ["desktop_trusty.kernelhash"],
     enabled: false,
     target: {
         android_arm64: {
