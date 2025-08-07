@@ -64,6 +64,10 @@ pub struct Args {
     /// CPU Topology exposed to the VM <one-cpu|match-host>
     #[arg(long, default_value = "one-cpu", value_parser = parse_cpu_topology)]
     cpu_topology: CpuTopology,
+
+    /// Custom VM firmware to use (test & development only).
+    #[arg(long)]
+    custom_pvmfw: Option<PathBuf>,
 }
 
 fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
@@ -120,11 +124,19 @@ fn main() -> Result<()> {
         false
     };
 
+    let custom_pvmfw = if let Some(path) = args.custom_pvmfw {
+        let file = File::open(&path).with_context(|| format!("Failed to open {path:?}"))?;
+        Some(ParcelFileDescriptor::new(file))
+    } else {
+        None
+    };
+
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: args.name.to_owned(),
         kernel,
         bootloader,
         protectedVm: protected_vm,
+        customPvmfw: custom_pvmfw,
         memoryMib: args.memory_size_mib,
         cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
         platformVersion: "~1.0".to_owned(),

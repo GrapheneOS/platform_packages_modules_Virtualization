@@ -51,7 +51,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/surface_view"
-        app:constraint_referenced_ids="fullscreen_button,keyboard_button,modifier_keys_button,pip_button"
+        app:constraint_referenced_ids="fullscreen_button,keyboard_button,modifier_keys_button,pip_button,mouse_lock_button"
         app:flow_horizontalStyle="spread"
         app:flow_wrapMode="chain" />
 
@@ -85,6 +85,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:icon="@drawable/ic_picture_in_picture" >
+    </Button>
+
+    <Button
+        android:id="@+id/mouse_lock_button"
+        style="?attr/materialIconButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_mouse_lock" >
     </Button>
 
     <LinearLayout

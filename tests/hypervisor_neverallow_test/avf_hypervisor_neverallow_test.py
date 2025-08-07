@@ -134,7 +134,7 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
         self._pullDevicePolicy(policy_path)
 
         # Hypervisors supported by AVF.
-        hypervisors = ["/dev/kvm", "/dev/gunyah", "/dev/gzvm"]
+        hypervisors = ["/dev/kvm", "/dev/gunyah", "/dev/gzvm", "/dev/hvm"]
 
         # /dev/qgunyah is exempt on devices with old vendor partitions.
         if self._getVendorApiLevel() >= 202504:

@@ -46,9 +46,11 @@ class DisplayActivity : BaseActivity() {
     private lateinit var keyboardButton: MaterialButton
     private lateinit var modifierKeysButton: MaterialButton
     private lateinit var modifierKeysContainer: ViewGroup
+    private lateinit var mouseLockButton: MaterialButton
     private lateinit var displayFlow: androidx.constraintlayout.helper.widget.Flow
     private lateinit var displayProvider: DisplayProvider
     private lateinit var pictureInPictureParams: PictureInPictureParams
+    private var hasPointerCapture = false
     private var debianVm: VirtualMachine? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,6 +97,7 @@ class DisplayActivity : BaseActivity() {
         keyboardButton = findViewById(R.id.keyboard_button)
         modifierKeysButton = findViewById(R.id.modifier_keys_button)
         modifierKeysContainer = findViewById(R.id.display_activity_modifier_keys_container)
+        mouseLockButton = findViewById(R.id.mouse_lock_button)
         displayFlow = findViewById(R.id.display_flow)
     }
 
@@ -127,6 +130,15 @@ class DisplayActivity : BaseActivity() {
         fullscreenButton.setOnClickListener { makeFullscreen() }
 
         keyboardButton.setOnClickListener { showSoftKeyboard() }
+
+        mouseLockButton.setOnClickListener {
+            hasPointerCapture = !hasPointerCapture
+            if (hasPointerCapture) {
+                mainView.requestPointerCapture()
+            } else {
+                mainView.releasePointerCapture()
+            }
+        }
     }
 
     private fun setupModifierKeys() {
@@ -195,6 +207,13 @@ class DisplayActivity : BaseActivity() {
     private fun isFullscreen(): Boolean {
         val insets = ViewCompat.getRootWindowInsets(window.decorView)
         return insets?.isVisible(WindowInsetsCompat.Type.statusBars()) == false
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasPointerCapture && hasFocus) {
+            mainView.requestPointerCapture()
+        }
     }
 
     companion object {

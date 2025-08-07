@@ -76,8 +76,6 @@ const CROSVM_REBOOT_STATUS: i32 = 32;
 const CROSVM_CRASH_STATUS: i32 = 33;
 /// The exit status which crosvm returns when vcpu is stalled.
 const CROSVM_WATCHDOG_REBOOT_STATUS: i32 = 36;
-/// The size of memory (in MiB) reserved for ramdump
-const RAMDUMP_RESERVED_MIB: u32 = 17;
 
 const MILLIS_PER_SEC: i64 = 1000;
 
@@ -270,6 +268,10 @@ impl CrosvmCommand {
 
     fn add_pvm_arg(&mut self, context: &RunContext) -> Result<()> {
         if !context.config.protectedVm {
+            if let Some(custom_pvmfw) = &context.config.customPvmfw {
+                let custom_pvmfw_fd = self.add_preserved_fd(custom_pvmfw.as_ref().try_clone()?);
+                self.arg("--unprotected-vm-with-firmware").arg(&custom_pvmfw_fd);
+            }
             return Ok(());
         }
 
@@ -281,7 +283,14 @@ impl CrosvmCommand {
                     self.args(["--protected-vm-with-firmware", &pvmfw_path])
                 }
             }
-            _ => self.arg("--protected-vm"),
+            _ => {
+                if let Some(custom_pvmfw) = &context.config.customPvmfw {
+                    let custom_pvmfw_fd = self.add_preserved_fd(custom_pvmfw.as_ref().try_clone()?);
+                    self.arg("--protected-vm-with-firmware").arg(&custom_pvmfw_fd)
+                } else {
+                    self.arg("--protected-vm")
+                }
+            }
         };
 
         // Workaround to keep crash_dump from trying to read protected guest memory.
@@ -430,6 +439,8 @@ impl CrosvmCommand {
 
         // b/346770542 for consistent "usable" memory across protected and non-protected VMs.
         memory_mib = memory_mib.saturating_add(swiotlb_size_mib);
+        // For consistent "usable" memory across debuggable and non-debuggable VMs.
+        memory_mib = memory_mib.saturating_add(Self::get_ramdump_mib(context));
         self.args(["--mem", &memory_mib.get().to_string()]);
 
         if swiotlb_size_mib > 0 {
@@ -647,6 +658,18 @@ impl CrosvmCommand {
         Ok(())
     }
 
+    /// The size of memory (in MiB) reserved for ramdump.
+    fn get_ramdump_mib(context: &RunContext) -> u32 {
+        let config = context.config;
+        let using_gki =
+            if !cfg!(vendor_module) { false } else { config.osName.starts_with("microdroid_gki-") };
+        if context.debug_config.is_ramdump_needed() && !using_gki {
+            17 + Self::get_swiotlb_mib(config)
+        } else {
+            0
+        }
+    }
+
     fn get_swiotlb_mib(config: &aidl::VirtualMachineRawConfig) -> u32 {
         if !config.protectedVm {
             0
@@ -663,11 +686,8 @@ impl CrosvmCommand {
     }
 
     fn add_ramdump_arg(&mut self, context: &RunContext) -> Result<()> {
-        let config = context.config;
-        let using_gki =
-            if !cfg!(vendor_module) { false } else { config.osName.starts_with("microdroid_gki-") };
-
-        if context.debug_config.is_ramdump_needed() && !using_gki {
+        let reserve = Self::get_ramdump_mib(context);
+        if reserve > 0 {
             // `ramdump_write` is sent to crosvm and will be the backing store for the /dev/hvc1
             // where VM will emit ramdump to. `ramdump_read` will be sent back to the client (i.e.
             // the VM owner) for readout.
@@ -680,7 +700,6 @@ impl CrosvmCommand {
                     max-queue-sizes=[{CONSOLE_RX_QUEUE_SIZE},{CONSOLE_TX_QUEUE_SIZE}]"
             ));
 
-            let reserve = RAMDUMP_RESERVED_MIB + Self::get_swiotlb_mib(config);
             self.args(["--params", &format!("crashkernel={reserve}M")]);
         } else {
             self.arg(format!(

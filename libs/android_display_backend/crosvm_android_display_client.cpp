@@ -201,11 +201,16 @@ public:
     }
 
     Result<void> setBuffer(AHardwareBuffer* ahb) {
+        std::lock_guard lk(mSurfaceMutex);
         auto transaction = ASurfaceTransaction_create();
         if (!transaction) {
             return Error() << "Failed to create ASurfaceTransaction";
         }
-        ASurfaceTransaction_setBuffer(transaction, mSurfaceControl, ahb, -1 /* acquire_fence_fd */);
+        if (!mSurfaceControl) {
+            return Error() << "mSurfaceControl is destroyed";
+        }
+        ASurfaceTransaction_setBuffer(transaction, mSurfaceControl, ahb,
+                                        -1 /* acquire_fence_fd */);
         ASurfaceTransaction_apply(transaction);
         ASurfaceTransaction_delete(transaction);
         return {};
