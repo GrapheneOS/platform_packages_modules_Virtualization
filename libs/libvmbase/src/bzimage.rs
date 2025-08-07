@@ -92,6 +92,19 @@ const_assert_eq!(mem::offset_of!(boot_params, hdr), 0x1f1);
 const_assert_eq!(mem::offset_of!(boot_params, e820_table), 0x2d0);
 const_assert_eq!(mem::size_of::<boot_params>(), 0x1000);
 
+impl boot_params {
+    /// Add new e820 entry
+    /// TODO(b/432207991): validation and sanitization
+    pub fn push_e820_entry(&mut self, addr: u64, size: u64, type_: u32) {
+        let next_entry = usize::from(self.e820_entries);
+        let entry = self.e820_table.get_mut(next_entry).expect("out of e820 entries");
+        entry.addr = addr;
+        entry.size = size;
+        entry.type_ = type_;
+        self.e820_entries += 1;
+    }
+}
+
 /// Linux x86 bzImage header
 #[derive(Debug, FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
 #[repr(C, packed)]
@@ -211,3 +224,16 @@ pub struct e820_entry {
 }
 
 const_assert_eq!(mem::size_of::<e820_entry>(), 20);
+
+impl e820_entry {
+    /// Normal usable memory
+    pub const TYPE_RAM: u32 = 1;
+    /// Reserved memory
+    pub const TYPE_RESERVED: u32 = 2;
+    /// ACPI reclaimable memory
+    pub const TYPE_ACPI: u32 = 3;
+    /// ACPI NVS memory
+    pub const TYPE_NVS: u32 = 4;
+    /// Bad unusable memory
+    pub const TYPE_UNUSABLE: u32 = 5;
+}

@@ -183,6 +183,14 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
     if !preserved_memory.is_empty() {
         flush(preserved_memory);
         slices.add_preserved_memory(preserved_memory);
+
+        if let Some(boot_params) = slices.boot_params.as_mut() {
+            boot_params.push_e820_entry(
+                preserved_memory.as_ptr() as usize as u64,
+                preserved_memory.len() as u64,
+                bzimage::e820_entry::TYPE_RESERVED,
+            );
+        }
     }
 
     // Keep UART MMIO_GUARD-ed for debuggable payloads, to enable earlycon.
