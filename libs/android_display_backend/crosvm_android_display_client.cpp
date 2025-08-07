@@ -19,13 +19,13 @@
 #include <android-base/result.h>
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
-#include <android/hardware_buffer.h>
-#include <android/surface_control.h>
 #include <system/graphics.h> // for HAL_PIXEL_FORMAT_*
 
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+
+#include "surface_control_dl.h"
 
 using aidl::android::crosvm::BnCrosvmAndroidDisplayService;
 using aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal;
@@ -93,7 +93,10 @@ public:
             }
 
             ANativeWindow* anw = surface->get();
-            mSurfaceControl = ASurfaceControl_createFromWindow(anw, mName.c_str());
+            auto& sc = SurfaceControl::GetInstance();
+            if (sc.IsSupported()) {
+                mSurfaceControl = sc.ASurfaceControl_createFromWindow(anw, mName.c_str());
+            }
             if (!mSurfaceControl) {
                 return Error() << "Failed to create ASurfaceControl";
             }
@@ -106,8 +109,9 @@ public:
     void removeSurface() {
         {
             std::lock_guard lk(mSurfaceMutex);
+            auto& sc = SurfaceControl::GetInstance();
             if (mSurfaceControl) {
-                ASurfaceControl_release(mSurfaceControl);
+                if (sc.IsSupported()) sc.ASurfaceControl_release(mSurfaceControl);
                 mSurfaceControl = nullptr;
             }
             mNativeSurface = nullptr;
@@ -202,17 +206,21 @@ public:
 
     Result<void> setBuffer(AHardwareBuffer* ahb) {
         std::lock_guard lk(mSurfaceMutex);
-        auto transaction = ASurfaceTransaction_create();
+        auto& sc = SurfaceControl::GetInstance();
+        if (!sc.IsSupported()) {
+            return Error() << "SurfaceControl is not supported";
+        }
+        auto transaction = sc.ASurfaceTransaction_create();
         if (!transaction) {
             return Error() << "Failed to create ASurfaceTransaction";
         }
         if (!mSurfaceControl) {
             return Error() << "mSurfaceControl is destroyed";
         }
-        ASurfaceTransaction_setBuffer(transaction, mSurfaceControl, ahb,
-                                        -1 /* acquire_fence_fd */);
-        ASurfaceTransaction_apply(transaction);
-        ASurfaceTransaction_delete(transaction);
+        sc.ASurfaceTransaction_setBuffer(transaction, mSurfaceControl, ahb,
+                                         -1 /* acquire_fence_fd */);
+        sc.ASurfaceTransaction_apply(transaction);
+        sc.ASurfaceTransaction_delete(transaction);
         return {};
     }
 

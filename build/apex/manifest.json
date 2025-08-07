@@ -4,6 +4,7 @@
   "requireNativeLibs": [
     "libEGL.so",
     "libGLESv2.so",
-    "libvulkan.so"
+    "libvulkan.so",
+    "libandroid.so"
   ]
 }

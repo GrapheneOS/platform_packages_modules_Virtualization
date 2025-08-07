@@ -95,7 +95,11 @@ android_system_image {
         "atrace",
         "traced",
         "traced_probes",
+        "traced_perf",
         "perfetto",
+        "heapprofd",
+        "heapprofd_client",
+
         "microdroid_etc_passwd",
         "microdroid_etc_group",
     ] + microdroid_shell_and_utilities,

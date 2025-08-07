@@ -26,7 +26,6 @@ aidl_interface {
             // To use Surface
             additional_shared_libraries: [
                 "libnativewindow",
-                "libandroid",
             ],
             apex_available: [
                 "//apex_available:platform",
@@ -40,6 +39,7 @@ cc_library_static {
     name: "libcrosvm_android_display_client",
     srcs: [
         "crosvm_android_display_client.cpp",
+        "surface_control_dl.cpp",
     ],
     whole_static_libs: [
         "libcrosvm_android_display_service-ndk",
@@ -53,7 +53,6 @@ cc_library_static {
     shared_libs: [
         "libbinder_ndk",
         "libnativewindow",
-        "libandroid",
     ],
     apex_available: [
         "//apex_available:platform",

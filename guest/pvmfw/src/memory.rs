@@ -74,10 +74,17 @@ impl<'a> MemorySlices<'a> {
             RebootReason::InvalidFdt
         })?;
 
-        let memory_range = untrusted_fdt.first_memory_range().map_err(|e| {
+        #[allow(unused_mut)]
+        let mut memory_range = untrusted_fdt.first_memory_range().map_err(|e| {
             error!("Failed to read memory range from DT: {e}");
             RebootReason::InvalidFdt
         })?;
+        // "/memory" may include the pvmfw region, which shouldn't be managed by MemoryTracker, so
+        // truncate it off if present.
+        #[cfg(target_arch = "aarch64")]
+        if memory_range.start == crosvm::PVMFW_START {
+            memory_range.start = crosvm::MEM_START;
+        }
         debug!("Resizing MemoryTracker to range {memory_range:#x?}");
         resize_available_memory(&memory_range).map_err(|e| {
             error!("Failed to use memory range value from DT: {memory_range:#x?}: {e}");
