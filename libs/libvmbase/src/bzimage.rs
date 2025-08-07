@@ -21,6 +21,50 @@ use core::mem;
 use static_assertions::const_assert_eq;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
+/// Linux setup data linked list entry
+#[derive(Debug, FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
+#[repr(C, packed)]
+pub struct setup_data_header {
+    /// Address of next node in linked list
+    pub next: u64,
+    /// Type of node
+    pub type_: u32,
+    /// Data length in this node [bytes]
+    pub len: u32,
+}
+
+const_assert_eq!(mem::size_of::<setup_data_header>(), 16);
+
+impl setup_data_header {
+    /// Device Tree Blob type
+    pub const SETUP_DTB: u32 = 2;
+}
+
+/// Returns the data of first setup_data entry matching the type: type_.
+///
+/// we expect the setup_data entries to be packed contiguously one after the other
+/// in the same order as they are in the linked list. crosvm packs it this way and
+/// verifying this order implicitly verifies that the data does not overlap.
+pub fn find_setup_data_entry(mut setup_data_slice: &mut [u8], type_: u32) -> Option<&mut [u8]> {
+    let mut hdr;
+
+    loop {
+        (hdr, setup_data_slice) = setup_data_header::mut_from_prefix(setup_data_slice).ok()?;
+
+        if hdr.type_ == type_ {
+            return if hdr.len > 0 { setup_data_slice.get_mut(..hdr.len as usize) } else { None };
+        }
+
+        if hdr.next == 0 {
+            return None;
+        }
+
+        let next = usize::try_from(hdr.next).unwrap();
+        let offset = next.checked_sub(setup_data_slice.as_ptr() as _).unwrap();
+        setup_data_slice = setup_data_slice.get_mut(offset..)?;
+    }
+}
+
 /// Structure of "zero page" memory
 #[derive(FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
 #[repr(C, packed)]
@@ -130,6 +174,11 @@ impl setup_header {
     /// Returns 64-bit entry point offset.
     pub fn entry_point_64_offset(&self) -> usize {
         self.entry_point_32_offset() + Self::ENTRY_POINT_64_OFFSET
+    }
+
+    /// Returns setup_data linked list head pointer.
+    pub fn setup_data(&self) -> usize {
+        self.setup_data.try_into().unwrap()
     }
 
     /// Attempts to parse a bzImage kernel and return its header, if valid.

@@ -87,7 +87,6 @@ pub struct BootArgs {
     pub payload_start: Option<usize>,
     /// Size of payload in bytes
     pub payload_size: Option<usize>,
-    #[cfg_attr(not(target_arch = "x86_64"), allow(dead_code))]
     /// Address of Linux x86 boot params structure
     pub boot_params: Option<usize>,
 }
