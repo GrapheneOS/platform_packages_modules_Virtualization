@@ -34,7 +34,7 @@ pub fn command_create_partition(
         .read(true)
         .write(true)
         .open(image_path)
-        .with_context(|| format!("Failed to create {:?}", image_path))?;
+        .with_context(|| format!("Failed to create {image_path:?}"))?;
     service
         .initializeWritablePartition(
             &ParcelFileDescriptor::new(image),
@@ -42,8 +42,7 @@ pub fn command_create_partition(
             partition_type,
         )
         .context(format!(
-            "Failed to initialize partition type: {:?}, size: {}",
-            partition_type, size
+            "Failed to initialize partition type: {partition_type:?}, size: {size}"
         ))?;
     Ok(())
 }

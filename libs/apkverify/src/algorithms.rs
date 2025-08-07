@@ -215,6 +215,6 @@ pub enum HashAlgorithm {
 impl HashAlgorithm {
     pub(crate) fn from_read<R: Read>(read: &mut R) -> Result<Self> {
         let val = read.read_u32::<LittleEndian>()?;
-        Self::from_u32(val).context(format!("Unsupported hash algorithm: {}", val))
+        Self::from_u32(val).context(format!("Unsupported hash algorithm: {val}"))
     }
 }

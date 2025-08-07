@@ -64,7 +64,7 @@ impl IAuthFsService for AuthFsService {
         authfs::AuthFs::mount_and_wait(mountpoint, config, self.debuggable).map_err(|e| {
             Status::new_service_specific_error_str(
                 -1,
-                Some(format!("mount_and_wait failed: {:?}", e)),
+                Some(format!("mount_and_wait failed: {e:?}")),
             )
         })
     }
@@ -88,7 +88,7 @@ impl AuthFsService {
 
     fn get_next_mount_point(&self) -> OsString {
         let previous = self.serial_number.fetch_add(1, Ordering::Relaxed);
-        OsString::from(format!("{}/{}", SERVICE_ROOT, previous))
+        OsString::from(format!("{SERVICE_ROOT}/{previous}"))
     }
 }
 
@@ -123,17 +123,17 @@ fn try_main() -> Result<()> {
 
     let socket_fd = android_get_control_socket(AUTHFS_SERVICE_SOCKET_NAME)?;
     let service = AuthFsService::new_binder(debuggable).as_binder();
-    debug!("{} is starting as a rpc service.", AUTHFS_SERVICE_SOCKET_NAME);
+    debug!("{AUTHFS_SERVICE_SOCKET_NAME} is starting as a rpc service.");
     let server = RpcServer::new_bound_socket(service, socket_fd)?;
-    info!("The RPC server '{}' is running.", AUTHFS_SERVICE_SOCKET_NAME);
+    info!("The RPC server '{AUTHFS_SERVICE_SOCKET_NAME}' is running.");
     server.join();
-    info!("The RPC server at '{}' has shut down gracefully.", AUTHFS_SERVICE_SOCKET_NAME);
+    info!("The RPC server at '{AUTHFS_SERVICE_SOCKET_NAME}' has shut down gracefully.");
     Ok(())
 }
 
 fn main() {
     if let Err(e) = try_main() {
-        error!("failed with {:?}", e);
+        error!("failed with {e:?}");
         std::process::exit(1);
     }
 }

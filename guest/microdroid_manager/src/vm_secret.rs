@@ -144,7 +144,7 @@ impl VmSecret {
             if let Err(statsd_e) = vm_service.forwardAtom(&Atom::GetOrCreateSkSecretFailedReported(
                 GetOrCreateSkSecretFailedReported { retryCount: 0 },
             )) {
-                log::error!("Failed to report GetOrCreateSkSecretFailedReported: {}", statsd_e);
+                log::error!("Failed to report GetOrCreateSkSecretFailedReported: {statsd_e}");
             }
 
             let mut rng = rand::thread_rng();
@@ -157,7 +157,7 @@ impl VmSecret {
                         GetOrCreateSkSecretFailedReported { retryCount: 1 },
                     ))
                 {
-                    log::error!("Failed to report GetOrCreateSkSecretFailedReported: {}", statsd_e);
+                    log::error!("Failed to report GetOrCreateSkSecretFailedReported: {statsd_e}");
                 }
             })
         })?;
@@ -356,7 +356,7 @@ impl SkVmSession {
             secret: Secret(*secret),
             sealing_policy: self.sealing_policy.clone(),
         };
-        log::info!("Secretkeeper operation: {:?}", store_request);
+        log::info!("Secretkeeper operation: {store_request:?}");
 
         let store_request = store_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
         let session = &mut *self.session.lock().unwrap();
@@ -376,7 +376,7 @@ impl SkVmSession {
             id: Id(id),
             updated_sealing_policy: Some(self.sealing_policy.clone()),
         };
-        log::info!("Secretkeeper operation: {:?}", get_request);
+        log::info!("Secretkeeper operation: {get_request:?}");
         let get_request = get_request.serialize_to_packet().to_vec().map_err(anyhow_err)?;
         let session = &mut *self.session.lock().unwrap();
         let get_response = session.secret_management_request(&get_request)?;

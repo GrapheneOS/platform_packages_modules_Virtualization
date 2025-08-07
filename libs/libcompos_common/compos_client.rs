@@ -222,7 +222,7 @@ impl ComposClient {
         let death_reason = self.0.wait_for_death_with_timeout(TIMEOUTS.vm_max_time_to_exit);
         match death_reason {
             Some(DeathReason::Shutdown) => info!("VM has exited normally"),
-            Some(reason) => warn!("VM died with reason {:?}", reason),
+            Some(reason) => warn!("VM died with reason {reason:?}"),
             None => warn!("VM failed to exit, dropping"),
         }
     }
@@ -270,22 +270,22 @@ fn prepare_idsig(
 struct Callback {}
 impl vmclient::VmCallback for Callback {
     fn on_payload_started(&self, cid: i32) {
-        log::info!("VM payload started, cid = {}", cid);
+        log::info!("VM payload started, cid = {cid}");
     }
 
     fn on_payload_ready(&self, cid: i32) {
-        log::info!("VM payload ready, cid = {}", cid);
+        log::info!("VM payload ready, cid = {cid}");
     }
 
     fn on_payload_finished(&self, cid: i32, exit_code: i32) {
-        log::warn!("VM payload finished, cid = {}, exit code = {}", cid, exit_code);
+        log::warn!("VM payload finished, cid = {cid}, exit code = {exit_code}");
     }
 
     fn on_error(&self, cid: i32, error_code: ErrorCode, message: &str) {
-        log::warn!("VM error, cid = {}, error code = {:?}, message = {}", cid, error_code, message);
+        log::warn!("VM error, cid = {cid}, error code = {error_code:?}, message = {message}");
     }
 
     fn on_died(&self, cid: i32, death_reason: DeathReason) {
-        log::warn!("VM died, cid = {}, reason = {:?}", cid, death_reason);
+        log::warn!("VM died, cid = {cid}, reason = {death_reason:?}");
     }
 }

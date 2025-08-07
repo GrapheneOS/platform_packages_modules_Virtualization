@@ -112,14 +112,13 @@ impl<T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'_, T, C>
             let (device_function, info) = self.bus.next()?;
             let (status, command) = self.pci_root.get_status_command(device_function);
             debug!(
-                "Found PCI device {} at {}, status {:?} command {:?}",
-                info, device_function, status, command
+                "Found PCI device {info} at {device_function}, status {status:?} command {command:?}"
             );
 
             let Some(virtio_type) = virtio_device_type(&info) else {
                 continue;
             };
-            debug!("  VirtIO {:?}", virtio_type);
+            debug!("  VirtIO {virtio_type:?}");
 
             return PciTransport::new::<T, C>(self.pci_root, device_function).ok();
         }

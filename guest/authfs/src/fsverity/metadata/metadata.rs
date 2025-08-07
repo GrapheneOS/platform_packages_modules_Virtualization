@@ -102,8 +102,7 @@ pub fn parse_fsverity_metadata(mut metadata_file: File) -> io::Result<Box<FSVeri
             )
             .to_vec()),
             alg => Err(io::Error::other(format!(
-                "Unsupported hash algorithm {}, continue (likely failing soon)",
-                alg
+                "Unsupported hash algorithm {alg}, continue (likely failing soon)"
             ))),
         }?;
 

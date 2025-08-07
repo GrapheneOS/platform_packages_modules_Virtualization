@@ -37,7 +37,7 @@ fn main() {
             .with_max_level(log::LevelFilter::Debug),
     );
     if let Err(e) = try_main() {
-        error!("failed with {:?}", e);
+        error!("failed with {e:?}");
         std::process::exit(1);
     }
 }

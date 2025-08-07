@@ -223,7 +223,7 @@ impl SignedData {
             .digests
             .iter()
             .find(|&dig| dig.signature_algorithm_id == Some(algorithm_id))
-            .context(format!("Digest not found for algorithm: {:?}", algorithm_id))?)
+            .context(format!("Digest not found for algorithm: {algorithm_id:?}"))?)
     }
 }
 

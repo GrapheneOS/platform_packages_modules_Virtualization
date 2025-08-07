@@ -334,17 +334,18 @@ fn run(
     log_path: Option<&Path>,
     dump_device_tree: Option<&Path>,
 ) -> Result<(), Error> {
-    let console_out = if let Some(console_out_path) = console_out_path {
-        Some(File::create(console_out_path).with_context(|| {
-            format!("Failed to open console output file {:?}", console_out_path)
-        })?)
-    } else {
-        Some(duplicate_fd(io::stdout())?)
-    };
+    let console_out =
+        if let Some(console_out_path) = console_out_path {
+            Some(File::create(console_out_path).with_context(|| {
+                format!("Failed to open console output file {console_out_path:?}")
+            })?)
+        } else {
+            Some(duplicate_fd(io::stdout())?)
+        };
     let console_in =
         if let Some(console_in_path) = console_in_path {
             Some(File::open(console_in_path).with_context(|| {
-                format!("Failed to open console input file {:?}", console_in_path)
+                format!("Failed to open console input file {console_in_path:?}")
             })?)
         } else {
             Some(duplicate_fd(io::stdin())?)
@@ -352,14 +353,14 @@ fn run(
     let log = if let Some(log_path) = log_path {
         Some(
             File::create(log_path)
-                .with_context(|| format!("Failed to open log file {:?}", log_path))?,
+                .with_context(|| format!("Failed to open log file {log_path:?}"))?,
         )
     } else {
         Some(duplicate_fd(io::stdout())?)
     };
     let dump_dt = if let Some(dump_device_tree) = dump_device_tree {
         Some(File::create(dump_device_tree).with_context(|| {
-            format!("Failed to open file to dump device tree: {:?}", dump_device_tree)
+            format!("Failed to open file to dump device tree: {dump_device_tree:?}")
         })?)
     } else {
         None
@@ -382,7 +383,7 @@ fn run(
     // Wait until the VM or VirtualizationService dies. If we just returned immediately then the
     // IVirtualMachine Binder object would be dropped and the VM would be killed.
     let death_reason = vm.wait_for_death();
-    println!("VM ended: {:?}", death_reason);
+    println!("VM ended: {death_reason:?}");
     Ok(())
 }
 
@@ -403,7 +404,7 @@ fn set_encrypted_storage(
         .read(true)
         .write(true)
         .open(image_path)
-        .with_context(|| format!("Failed to open {:?}", image_path))?;
+        .with_context(|| format!("Failed to open {image_path:?}"))?;
 
     service.setEncryptedStorageSize(&ParcelFileDescriptor::new(image), size.try_into()?)?;
     Ok(())
@@ -421,11 +422,11 @@ impl vmclient::VmCallback for Callback {
     }
 
     fn on_payload_finished(&self, _cid: i32, exit_code: i32) {
-        eprintln!("payload finished with exit code {}", exit_code);
+        eprintln!("payload finished with exit code {exit_code}");
     }
 
     fn on_error(&self, _cid: i32, error_code: ErrorCode, message: &str) {
-        eprintln!("VM encountered an error: code={:?}, message={}", error_code, message);
+        eprintln!("VM encountered an error: code={error_code:?}, message={message}");
     }
 }
 

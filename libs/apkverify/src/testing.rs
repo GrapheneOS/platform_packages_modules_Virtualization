@@ -18,5 +18,5 @@
 
 /// Asserts if `haystack.contains(needle)`
 pub fn assert_contains(haystack: &str, needle: &str) {
-    assert!(haystack.contains(needle), "{} is not found in {}", needle, haystack);
+    assert!(haystack.contains(needle), "{needle} is not found in {haystack}");
 }

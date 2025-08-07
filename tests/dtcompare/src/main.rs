@@ -115,7 +115,7 @@ fn compare_props(
             continue;
         }
         let Some(prop1_value) = prop_map.remove(&prop_path) else {
-            errors.push(format!("added prop_path: {}", prop_path));
+            errors.push(format!("added prop_path: {prop_path}"));
             continue;
         };
         let prop_compare = prop1_value == prop.value().context("Error getting value")?;
@@ -133,7 +133,7 @@ fn compare_props(
         }
     }
     if !prop_map.is_empty() {
-        errors.push(format!("missing properties: {:?}", prop_map));
+        errors.push(format!("missing properties: {prop_map:?}"));
     }
     Ok(())
 }
@@ -182,11 +182,11 @@ fn compare_subnodes(
                     errors,
                 )?;
             }
-            None => errors.push(format!("added node: {}", sn_path)),
+            None => errors.push(format!("added node: {sn_path}")),
         }
     }
     if !subnodes_map.is_empty() {
-        errors.push(format!("missing nodes: {:?}", subnodes_map));
+        errors.push(format!("missing nodes: {subnodes_map:?}"));
     }
     Ok(())
 }

@@ -169,7 +169,7 @@ fn write_death_reason_to_serial(err: &Error) -> Result<()> {
         // Send context information back after a separator, to ease diagnosis.
         // These errors occur before the payload runs, so this should not leak sensitive
         // information.
-        Owned(format!("MICRODROID_UNKNOWN_RUNTIME_ERROR|{:?}", err))
+        Owned(format!("MICRODROID_UNKNOWN_RUNTIME_ERROR|{err:?}"))
     };
 
     let mut serial_file = OpenOptions::new().read(false).write(true).open(FAILURE_SERIAL_DEVICE)?;
@@ -300,14 +300,14 @@ fn main() -> Result<()> {
     scopeguard::defer! {
         info!("Shutting down...");
         if let Err(e) = system_properties::write("sys.powerctl", "shutdown") {
-            error!("failed to shutdown {:?}", e);
+            error!("failed to shutdown {e:?}");
         }
     }
 
     try_main().map_err(|e| {
-        error!("Failed with {:?}.", e);
+        error!("Failed with {e:?}.");
         if let Err(e) = write_death_reason_to_serial(&e) {
-            error!("Failed to write death reason {:?}", e);
+            error!("Failed to write death reason {e:?}");
         }
         e
     })
@@ -351,13 +351,12 @@ fn try_main() -> Result<()> {
         Ok(code) => {
             match code {
                 0 => info!("task successfully finished"),
-                v => error!("task exited with exit code: {}", v),
+                v => error!("task exited with exit code: {v}"),
             };
             if let Err(e) = post_payload_work() {
                 error!(
                     "Failed to run post payload work. It is possible that certain tasks
-                    like syncing encrypted store might be incomplete. Error: {:?}",
-                    e
+                    like syncing encrypted store might be incomplete. Error: {e:?}"
                 );
             };
 
@@ -366,7 +365,7 @@ fn try_main() -> Result<()> {
             Ok(())
         }
         Err(err) => {
-            warn!("payload finished erroneously: {:?}", err);
+            warn!("payload finished erroneously: {err:?}");
             let (error_code, message) = translate_error(&err);
             service.notifyError(error_code, &message)?;
             Err(err)
@@ -402,7 +401,7 @@ fn verify_payload_with_instance_img(
     // Verify the payload before using it.
     let extracted_data = verify_payload(metadata, saved_data.as_ref())
         .context("Payload verification failed")
-        .map_err(|e| MicrodroidError::PayloadVerificationFailed(format!("{:?}", e)))?;
+        .map_err(|e| MicrodroidError::PayloadVerificationFailed(format!("{e:?}")))?;
 
     // In case identity is ignored (by debug policy), we should reuse existing payload data, even
     // when the payload is changed. This is to keep the derived secret same as before.
@@ -606,7 +605,7 @@ fn try_run_payload(
                     vm_secret_for_enc_store,
                     std_redirect_for_enc_store,
                 ) {
-                    error!("delayed prepare encrypted store failed: {:#?}", e);
+                    error!("delayed prepare encrypted store failed: {e:#?}");
                 }
             });
             None
@@ -744,7 +743,7 @@ fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> 
             Err(nix::errno::Errno::ECHILD) => {
                 // No more children to wait for.
                 if !pids_to_reap.is_empty() {
-                    warn!("No more child processes to wait for, but expected {:?}.", pids_to_reap);
+                    warn!("No more child processes to wait for, but expected {pids_to_reap:?}.");
                 }
                 break;
             }
@@ -765,12 +764,12 @@ fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> 
         };
 
         if pids_to_reap.remove(&pid) {
-            info!("Process {} exited with {}", pid, exit_status);
+            info!("Process {pid} exited with {exit_status}");
             if pid == payload_pid {
                 payload_exit_status = Some(exit_status);
             }
         } else {
-            warn!("Unknown child process with PID {} exited with {}", pid, exit_status);
+            warn!("Unknown child process with PID {pid} exited with {exit_status}");
         }
     }
 
@@ -961,9 +960,9 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
     match payload_metadata {
         PayloadMetadata::ConfigPath(path) => {
             let path = Path::new(&path);
-            info!("loading config from {:?}...", path);
+            info!("loading config from {path:?}...");
             let file = ioutil::wait_for_file(path, WAIT_TIMEOUT)
-                .with_context(|| format!("Failed to read {:?}", path))?;
+                .with_context(|| format!("Failed to read {path:?}"))?;
             Ok(serde_json::from_reader(file)?)
         }
         PayloadMetadata::Config(payload_config) => {
@@ -998,7 +997,7 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
 /// for crashkernel.
 fn load_crashkernel_if_supported() -> Result<()> {
     let supported = std::fs::read_to_string("/proc/cmdline")?.contains(" crashkernel=");
-    info!("ramdump supported: {}", supported);
+    info!("ramdump supported: {supported}");
 
     if !supported {
         return Ok(());
@@ -1182,14 +1181,14 @@ impl IGuestAgent for GuestAgent {
     fn shutdownAsync(&self) -> binder::Result<()> {
         info!("Shutdown requested.");
         if let Err(e) = system_properties::write("sys.powerctl", "shutdown") {
-            error!("failed to shutdown {:?}", e);
+            error!("failed to shutdown {e:?}");
         }
         Ok(())
     }
 
     fn trimAsync(&self) -> binder::Result<()> {
         if let Err(e) = system_properties::write("pageout_bomb.go", "1") {
-            error!("failed to set pageout_bomb.go: {:?}", e);
+            error!("failed to set pageout_bomb.go: {e:?}");
         }
         Ok(())
     }

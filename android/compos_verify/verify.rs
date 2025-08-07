@@ -72,7 +72,7 @@ fn main() {
     );
 
     if let Err(e) = try_main() {
-        error!("{:?}", e);
+        error!("{e:?}");
         std::process::exit(1)
     }
 }

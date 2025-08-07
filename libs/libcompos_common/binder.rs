@@ -25,7 +25,7 @@ use std::fmt::Debug;
 /// Also log the error if there is one.
 pub fn to_binder_result<T, E: Debug>(result: Result<T, E>) -> BinderResult<T> {
     result.or_service_specific_exception_with(-1, |e| {
-        let message = format!("{:?}", e);
+        let message = format!("{e:?}");
         warn!("Returning binder error: {message}");
         message
     })

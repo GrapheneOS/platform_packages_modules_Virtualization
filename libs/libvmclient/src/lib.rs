@@ -186,7 +186,7 @@ impl VirtualizationService {
             // Note: this can fail when virtmgr is the only process in the process group, which
             // can happen when virtmgr fails even before it forks crosvm.
             let _ = killpg(new_group_id, SIGKILL)
-                .inspect_err(|e| warn!("failed to kill process group {}: {:?}", new_group_id, e));
+                .inspect_err(|e| warn!("failed to kill process group {new_group_id}: {e:?}"));
         });
 
         // Wait for the child to signal that the RpcBinder server is read by closing its end of the
@@ -349,7 +349,7 @@ impl VmInstance {
                     Some(vsock.into_raw_fd())
                 }
                 Err(e) => {
-                    warn!("Vsock connection failed: {}", e);
+                    warn!("Vsock connection failed: {e}");
                     None
                 }
             }

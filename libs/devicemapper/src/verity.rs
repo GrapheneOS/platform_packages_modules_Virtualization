@@ -173,16 +173,16 @@ impl<'a> DmVerityTargetBuilder<'a> {
         // TODO(jiyong): support the optional parameters... if needed.
         let mut body = String::new();
         use std::fmt::Write;
-        write!(&mut body, "{} ", version)?;
-        write!(&mut body, "{} ", data_device_path)?;
-        write!(&mut body, "{} ", hash_device_path)?;
-        write!(&mut body, "{} ", data_block_size)?;
-        write!(&mut body, "{} ", hash_block_size)?;
-        write!(&mut body, "{} ", num_data_blocks)?;
+        write!(&mut body, "{version} ")?;
+        write!(&mut body, "{data_device_path} ")?;
+        write!(&mut body, "{hash_device_path} ")?;
+        write!(&mut body, "{data_block_size} ")?;
+        write!(&mut body, "{hash_block_size} ")?;
+        write!(&mut body, "{num_data_blocks} ")?;
         write!(&mut body, "{} ", 0)?; // hash_start_block
-        write!(&mut body, "{} ", hash_algorithm)?;
-        write!(&mut body, "{} ", root_digest)?;
-        write!(&mut body, "{}", salt)?;
+        write!(&mut body, "{hash_algorithm} ")?;
+        write!(&mut body, "{root_digest} ")?;
+        write!(&mut body, "{salt}")?;
         write!(&mut body, "\0")?; // null terminator
 
         let size = size_of::<DmTargetSpec>() + body.len();

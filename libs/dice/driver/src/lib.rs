@@ -177,7 +177,7 @@ impl Drop for DiceDriver<'_> {
             // safe to unmap.
             let ret = unsafe { munmap(mmap_addr, mmap_size) };
             if ret != 0 {
-                log::warn!("Failed to munmap ({})", ret);
+                log::warn!("Failed to munmap ({ret})");
             }
         }
     }

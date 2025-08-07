@@ -148,7 +148,7 @@ fn create_or_update_idsig_file(
     if output.metadata()?.len() > 0 {
         if let Ok(out_sig) = V4Signature::from_idsig(&mut output) {
             if out_sig.signing_info.apk_digest == sig.signing_info.apk_digest {
-                debug!("idsig {:?} is up-to-date with apk {:?}.", output, input);
+                debug!("idsig {output:?} is up-to-date with apk {input:?}.");
                 return Ok(());
             }
         }
@@ -256,7 +256,7 @@ impl aidl::IVirtualizationService for VirtualizationService {
         check_manage_access()?;
         let size_bytes = size_bytes
             .try_into()
-            .with_context(|| format!("Invalid size: {}", size_bytes))
+            .with_context(|| format!("Invalid size: {size_bytes}"))
             .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?;
         let size_bytes = round_up(size_bytes, PARTITION_GRANULARITY_BYTES);
         let mut image = clone_file(image_fd)?;
@@ -280,10 +280,10 @@ impl aidl::IVirtualizationService for VirtualizationService {
             PartitionType::ENCRYPTEDSTORE => format_as_encryptedstore(&mut image),
             _ => Err(Error::new(
                 ErrorKind::Unsupported,
-                format!("Unsupported partition type {:?}", partition_type),
+                format!("Unsupported partition type {partition_type:?}"),
             )),
         }
-        .with_context(|| format!("Failed to initialize partition as {:?}", partition_type))
+        .with_context(|| format!("Failed to initialize partition as {partition_type:?}"))
         .or_service_specific_exception(-1)?;
 
         Ok(())
@@ -298,7 +298,7 @@ impl aidl::IVirtualizationService for VirtualizationService {
 
         let size = size
             .try_into()
-            .with_context(|| format!("Invalid size: {}", size))
+            .with_context(|| format!("Invalid size: {size}"))
             .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT)?;
         let size = round_up(size, PARTITION_GRANULARITY_BYTES);
 
@@ -596,7 +596,7 @@ impl VirtualizationService {
         }
 
         let caller_secontext = getprevcon().or_service_specific_exception(-1)?;
-        info!("callers secontext: {}", caller_secontext);
+        info!("callers secontext: {caller_secontext}");
 
         // Allocating VM context checks the MANAGE_VIRTUAL_MACHINE permission.
         let (cid, temporary_directory) = if cfg!(early) {
@@ -626,8 +626,8 @@ impl VirtualizationService {
                 let config = load_app_config(config, &debug_config, &temporary_directory)
                     .or_service_specific_exception_with(-1, |e| {
                         *is_protected = config.protectedVm;
-                        let message = format!("Failed to load app config: {:?}", e);
-                        error!("{}", message);
+                        let message = format!("Failed to load app config: {e:?}");
+                        error!("{message}");
                         message
                     })?;
                 (true, BorrowedOrOwned::Owned(config))
@@ -755,7 +755,7 @@ impl VirtualizationService {
                 config.hostServices.clone(),
                 encrypted_store_kek,
             )
-            .with_context(|| format!("Failed to create VM with config {:?}", config))
+            .with_context(|| format!("Failed to create VM with config {config:?}"))
             .with_log()
             .or_service_specific_exception(-1)?,
         );
@@ -1044,7 +1044,7 @@ fn load_app_config(
         aidl::Payload::ConfigPath(config_path) => {
             vm_payload_config =
                 load_vm_payload_config_from_file(&apk_file, config_path.as_str())
-                    .with_context(|| format!("Couldn't read config from {}", config_path))?;
+                    .with_context(|| format!("Couldn't read config from {config_path}"))?;
             extra_apk_files = vm_payload_config
                 .extra_apks
                 .iter()
@@ -1075,7 +1075,7 @@ fn load_app_config(
 
     // It is safe to construct a filename based on the os_name because we've already checked that it
     // is one of the allowed values.
-    let vm_config_path = PathBuf::from(format!("/apex/com.android.virt/etc/{}.json", os_name));
+    let vm_config_path = PathBuf::from(format!("/apex/com.android.virt/etc/{os_name}.json"));
     let vm_config_file = File::open(vm_config_path)?;
     let mut vm_config = VmConfig::load(&vm_config_file)?.to_parcelable()?;
 
@@ -1338,7 +1338,7 @@ fn check_label_for_file(
     calling_partition: CallingPartition,
 ) -> Result<()> {
     check_label_is_allowed(&getfilecon(file)?, calling_partition)
-        .with_context(|| format!("{} file invalid", name))
+        .with_context(|| format!("{name} file invalid"))
 }
 
 /// Implementation of the AIDL `IVirtualMachine` interface. Used as a handle to a VM.
@@ -1639,7 +1639,7 @@ impl VirtualMachineCallbacks {
         let callbacks = &*self.0.lock().unwrap();
         for callback in callbacks {
             if let Err(e) = callback.onPayloadStarted(cid as i32) {
-                error!("Error notifying payload start event from VM CID {}: {:?}", cid, e);
+                error!("Error notifying payload start event from VM CID {cid}: {e:?}");
             }
         }
     }
@@ -1649,7 +1649,7 @@ impl VirtualMachineCallbacks {
         let callbacks = &*self.0.lock().unwrap();
         for callback in callbacks {
             if let Err(e) = callback.onPayloadReady(cid as i32) {
-                error!("Error notifying payload ready event from VM CID {}: {:?}", cid, e);
+                error!("Error notifying payload ready event from VM CID {cid}: {e:?}");
             }
         }
     }
@@ -1659,7 +1659,7 @@ impl VirtualMachineCallbacks {
         let callbacks = &*self.0.lock().unwrap();
         for callback in callbacks {
             if let Err(e) = callback.onPayloadFinished(cid as i32, exit_code) {
-                error!("Error notifying payload finish event from VM CID {}: {:?}", cid, e);
+                error!("Error notifying payload finish event from VM CID {cid}: {e:?}");
             }
         }
     }
@@ -1669,7 +1669,7 @@ impl VirtualMachineCallbacks {
         let callbacks = &*self.0.lock().unwrap();
         for callback in callbacks {
             if let Err(e) = callback.onError(cid as i32, error_code, message) {
-                error!("Error notifying error event from VM CID {}: {:?}", cid, e);
+                error!("Error notifying error event from VM CID {cid}: {e:?}");
             }
         }
     }
@@ -1679,7 +1679,7 @@ impl VirtualMachineCallbacks {
         let mut callbacks = self.0.lock().unwrap();
         for callback in &*callbacks {
             if let Err(e) = callback.onDied(cid as i32, reason) {
-                error!("Error notifying exit of VM CID {}: {:?}", cid, e);
+                error!("Error notifying exit of VM CID {cid}: {e:?}");
             }
         }
 
@@ -1929,7 +1929,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
     fn notifyPayloadStarted(&self) -> binder::Result<()> {
         let vm = &self.vm_instance;
         let cid = vm.cid;
-        info!("VM with CID {} started payload", cid);
+        info!("VM with CID {cid} started payload");
         vm.update_payload_state(PayloadState::Started)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         vm.callbacks.notify_payload_started(cid);
@@ -1942,7 +1942,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
     fn notifyPayloadReady(&self) -> binder::Result<()> {
         let vm = &self.vm_instance;
         let cid = vm.cid;
-        info!("VM with CID {} reported payload is ready", cid);
+        info!("VM with CID {cid} reported payload is ready");
         vm.update_payload_state(PayloadState::Ready)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         vm.callbacks.notify_payload_ready(cid);
@@ -1952,7 +1952,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
     fn notifyPayloadFinished(&self, exit_code: i32) -> binder::Result<()> {
         let vm = &self.vm_instance;
         let cid = vm.cid;
-        info!("VM with CID {} finished payload", cid);
+        info!("VM with CID {cid} finished payload");
         vm.update_payload_state(PayloadState::Finished)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         vm.callbacks.notify_payload_finished(cid, exit_code);
@@ -1962,7 +1962,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
     fn notifyError(&self, error_code: aidl::ErrorCode, message: &str) -> binder::Result<()> {
         let vm = &self.vm_instance;
         let cid = vm.cid;
-        info!("VM with CID {} encountered an error: {:?} message: {}", cid, error_code, message);
+        info!("VM with CID {cid} encountered an error: {error_code:?} message: {message}");
         vm.update_payload_state(PayloadState::Finished)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         vm.callbacks.notify_error(cid, error_code, message);
@@ -2016,7 +2016,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         let vm = &self.vm_instance;
         let cid = vm.cid;
         *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
-        info!("VM with CID {} has registered a guest agent", cid);
+        info!("VM with CID {cid} has registered a guest agent");
         Ok(())
     }
 

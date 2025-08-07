@@ -341,7 +341,7 @@ mod tests {
                 .ok_or_else(|| {
                     io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        format!("read_chunk out of bound: index {}", chunk_index),
+                        format!("read_chunk out of bound: index {chunk_index}"),
                     )
                 })?;
             buf[..chunk.len()].copy_from_slice(chunk);

@@ -29,7 +29,7 @@ use log::{debug, error};
 
 fn main() {
     if let Err(e) = try_main() {
-        error!("failed with {:?}", e);
+        error!("failed with {e:?}");
         std::process::exit(1);
     }
 }

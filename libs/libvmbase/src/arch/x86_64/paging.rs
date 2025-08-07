@@ -45,15 +45,15 @@ pub enum MapError {
 impl Display for MapError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            Self::AddressRange(va) => write!(f, "Virtual address {} out of range", va),
+            Self::AddressRange(va) => write!(f, "Virtual address {va} out of range"),
             Self::InvalidVirtualAddress(va) => {
-                write!(f, "Invalid virtual address {} for mapping", va)
+                write!(f, "Invalid virtual address {va} for mapping")
             }
             Self::RegionBackwards(region) => {
-                write!(f, "End of memory region {} is before start.", region)
+                write!(f, "End of memory region {region} is before start.")
             }
             Self::PteUpdateFault(desc) => {
-                write!(f, "Error updating page table entry {:?}", desc)
+                write!(f, "Error updating page table entry {desc:?}")
             }
             Self::InvalidFlags(flags) => {
                 write!(f, "Flags {flags:?} unsupported for mapping.")
@@ -121,7 +121,7 @@ impl Display for VirtualAddress {
 
 impl Debug for VirtualAddress {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "VirtualAddress({})", self)
+        write!(f, "VirtualAddress({self})")
     }
 }
 
@@ -166,7 +166,7 @@ impl Display for PhysicalAddress {
 
 impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "PhysicalAddress({})", self)
+        write!(f, "PhysicalAddress({self})")
     }
 }
 

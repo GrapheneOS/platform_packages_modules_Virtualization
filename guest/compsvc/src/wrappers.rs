@@ -30,10 +30,10 @@ pub struct AuthFsFactory;
 #[cfg_attr(test, automock, allow(dead_code))]
 impl AuthFsFactory {
     pub fn new_authfs_service() -> Result<Strong<dyn IAuthFsService>> {
-        log::debug!("Prepare to connect to {}", AUTHFS_SERVICE_SOCKET_NAME);
+        log::debug!("Prepare to connect to {AUTHFS_SERVICE_SOCKET_NAME}");
         RpcSession::new()
             .setup_unix_domain_client(AUTHFS_SERVICE_SOCKET_NAME)
-            .with_context(|| format!("Failed to connect to {}", AUTHFS_SERVICE_SOCKET_NAME))
+            .with_context(|| format!("Failed to connect to {AUTHFS_SERVICE_SOCKET_NAME}"))
     }
 }
 

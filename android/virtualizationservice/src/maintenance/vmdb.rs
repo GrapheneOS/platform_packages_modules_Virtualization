@@ -233,7 +233,7 @@ impl VmIdDb {
         assert!(vm_ids.len() < MAX_VARIABLES);
         let mut vars = "?,".repeat(vm_ids.len());
         vars.pop(); // remove trailing comma
-        let sql = format!("DELETE FROM main.vmids WHERE vm_id IN ({});", vars);
+        let sql = format!("DELETE FROM main.vmids WHERE vm_id IN ({vars});");
         let mut stmt = self.conn.prepare(&sql).context("failed to prepare DELETE stmt")?;
         let _rows = stmt.execute(params_from_iter(vm_ids)).context("failed to delete VM IDs")?;
         Ok(())

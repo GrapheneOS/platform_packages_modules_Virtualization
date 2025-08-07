@@ -125,7 +125,7 @@ impl RemoteDirEditor {
             basename.to_str().ok_or_else(|| io::Error::from_raw_os_error(libc::EINVAL))?;
         if let Err(e) = self.service.deleteFile(self.remote_dir_fd, basename_str) {
             // Ignore the error to honor the local state.
-            warn!("Deletion on the host is reportedly failed: {:?}", e);
+            warn!("Deletion on the host is reportedly failed: {e:?}");
         }
         Ok(inode)
     }
@@ -139,7 +139,7 @@ impl RemoteDirEditor {
             basename.to_str().ok_or_else(|| io::Error::from_raw_os_error(libc::EINVAL))?;
         if let Err(e) = self.service.deleteDirectory(self.remote_dir_fd, basename_str) {
             // Ignore the error to honor the local state.
-            warn!("Deletion on the host is reportedly failed: {:?}", e);
+            warn!("Deletion on the host is reportedly failed: {e:?}");
         }
         Ok(inode)
     }

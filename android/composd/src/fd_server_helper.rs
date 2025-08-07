@@ -82,7 +82,7 @@ impl FdServerConfig {
         args.push(ready_fd.to_string());
         inheritable_fds.push(ready_fd);
 
-        debug!("Spawn fd_server {:?} (inheriting FDs: {:?})", args, inheritable_fds);
+        debug!("Spawn fd_server {args:?} (inheriting FDs: {inheritable_fds:?})");
         let jail = Minijail::new()?;
         let _pid = jail.run(Path::new(FD_SERVER_BIN), &inheritable_fds, &args)?;
         Ok(jail)
@@ -99,7 +99,7 @@ impl Drop for FdServer {
     fn drop(&mut self) {
         if let Err(e) = self.jailed_process.kill() {
             if !matches!(e, minijail::Error::Killed(_)) {
-                warn!("Failed to kill fd_server: {}", e);
+                warn!("Failed to kill fd_server: {e}");
             }
         }
     }

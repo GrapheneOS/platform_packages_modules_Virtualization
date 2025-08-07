@@ -213,10 +213,10 @@ impl VirtualizationServiceInternal {
                         // Don't wait for the VM to be completely killed. Move on to the next VM as
                         // soon as possible.
                         std::thread::Builder::new()
-                            .name(format!("shutdown_monitor_{}", cid))
+                            .name(format!("shutdown_monitor_{cid}"))
                             .spawn(move || {
                                 let _ = vm.stop().inspect_err(|e| {
-                                    error!("Failed to stop virtual machine ({}): {:?}", cid, e);
+                                    error!("Failed to stop virtual machine ({cid}): {e:?}");
                                 });
                             })
                             .expect("Failed to create shutdown_monitor thread");
@@ -229,7 +229,7 @@ impl VirtualizationServiceInternal {
             .name("tombstone_handler".to_string())
             .spawn(|| {
                 if let Err(e) = handle_stream_connection_tombstoned() {
-                    warn!("Error receiving tombstone from guest or writing them. Error: {:?}", e);
+                    warn!("Error receiving tombstone from guest or writing them. Error: {e:?}");
                 }
             })
             .expect("Failed to create tombstone_handler thread");
@@ -855,12 +855,12 @@ impl GlobalState {
                     if is_valid_guest_cid(num) {
                         Some(num)
                     } else {
-                        error!("Invalid value '{}' of property '{}'", num, SYSPROP_LAST_CID);
+                        error!("Invalid value '{num}' of property '{SYSPROP_LAST_CID}'");
                         None
                     }
                 }
                 Err(_) => {
-                    error!("Invalid value '{}' of property '{}'", val, SYSPROP_LAST_CID);
+                    error!("Invalid value '{val}' of property '{SYSPROP_LAST_CID}'");
                     None
                 }
             });
@@ -880,7 +880,7 @@ impl GlobalState {
             .or_else(|| self.find_available_cid(GUEST_CID_MIN..first_cid))
             .ok_or_else(|| anyhow!("Could not find an available CID."))?;
 
-        system_properties::write(SYSPROP_LAST_CID, &format!("{}", cid))?;
+        system_properties::write(SYSPROP_LAST_CID, &format!("{cid}"))?;
         Ok(cid)
     }
 
@@ -911,7 +911,7 @@ impl GlobalState {
         let mut dr = DeathRecipient::new(move || {
             let temp_dir = format!("{TEMPORARY_DIRECTORY}/{cid}").into();
             remove_temporary_dir(&temp_dir).unwrap_or_else(|e| {
-                warn!("Could not delete temporary directory {:?}: {}", temp_dir, e);
+                warn!("Could not delete temporary directory {temp_dir:?}: {e}");
             });
         });
         vm.as_binder().link_to_death(&mut dr)?;
@@ -959,18 +959,17 @@ fn create_temporary_directory(path: &PathBuf, requester_uid: Option<uid_t>) -> R
     // Delete it before trying again.
     if path.as_path().exists() {
         remove_temporary_dir(path).unwrap_or_else(|e| {
-            warn!("Could not delete temporary directory {:?}: {}", path, e);
+            warn!("Could not delete temporary directory {path:?}: {e}");
         });
     }
     // Create directory.
-    create_dir(path).with_context(|| format!("Could not create temporary directory {:?}", path))?;
+    create_dir(path).with_context(|| format!("Could not create temporary directory {path:?}"))?;
     // If provided, change ownership to client's UID but system's GID, and permissions 0700.
     // If the chown() fails, this will leave behind an empty directory that will get removed
     // at the next attempt, or if virtualizationservice is restarted.
     if let Some(uid) = requester_uid {
-        chown(path, Some(Uid::from_raw(uid)), None).with_context(|| {
-            format!("Could not set ownership of temporary directory {:?}", path)
-        })?;
+        chown(path, Some(Uid::from_raw(uid)), None)
+            .with_context(|| format!("Could not set ownership of temporary directory {path:?}"))?;
     }
     Ok(())
 }
@@ -1020,7 +1019,7 @@ fn handle_stream_connection_tombstoned() -> Result<()> {
             .name("tombstone_handler".to_string())
             .spawn(move || {
                 if let Err(e) = handle_tombstone(&mut incoming_stream) {
-                    error!("Failed to write tombstone- {:?}", e);
+                    error!("Failed to write tombstone- {e:?}");
                 }
             })
             .expect("Failed to create tombstone_handler thread");
@@ -1048,7 +1047,7 @@ fn handle_tombstone(stream: &mut VsockStream) -> Result<()> {
         num_bytes_read += n;
         text_output.write_all(&chunk_recv[0..n]).context("Failed to write guests tombstones")?;
     }
-    info!("Received {} bytes from guest & wrote to tombstone file", num_bytes_read);
+    info!("Received {num_bytes_read} bytes from guest & wrote to tombstone file");
     tb_connection.notify_completion()?;
     Ok(())
 }

@@ -61,7 +61,7 @@ impl Display for KvmError {
         match self {
             Self::NotSupported => write!(f, "KVM call not supported"),
             Self::InvalidParameter => write!(f, "KVM call received non-supported value"),
-            Self::Unknown(e) => write!(f, "Unknown return value from KVM {} ({0:#x})", e),
+            Self::Unknown(e) => write!(f, "Unknown return value from KVM {e} ({e:#x})"),
         }
     }
 }

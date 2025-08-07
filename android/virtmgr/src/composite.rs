@@ -47,17 +47,21 @@ pub fn make_composite_image(
         .read(true)
         .write(true)
         .open(output_path)
-        .with_context(|| format!("Failed to create composite image {:?}", output_path))?;
-    let mut header_file =
-        OpenOptions::new().create_new(true).read(true).write(true).open(header_path).with_context(
-            || format!("Failed to create composite image header {:?}", header_path),
-        )?;
-    let mut footer_file =
-        OpenOptions::new().create_new(true).read(true).write(true).open(footer_path).with_context(
-            || format!("Failed to create composite image header {:?}", footer_path),
-        )?;
+        .with_context(|| format!("Failed to create composite image {output_path:?}"))?;
+    let mut header_file = OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(header_path)
+        .with_context(|| format!("Failed to create composite image header {header_path:?}"))?;
+    let mut footer_file = OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(footer_path)
+        .with_context(|| format!("Failed to create composite image header {footer_path:?}"))?;
     let zero_filler_file = File::open(zero_filler_path).with_context(|| {
-        format!("Failed to open composite image zero filler {:?}", zero_filler_path)
+        format!("Failed to open composite image zero filler {zero_filler_path:?}")
     })?;
 
     create_composite_disk(
@@ -72,7 +76,7 @@ pub fn make_composite_image(
 
     // Re-open the composite image as read-only.
     let composite_image = File::open(output_path)
-        .with_context(|| format!("Failed to open composite image {:?}", output_path))?;
+        .with_context(|| format!("Failed to open composite image {output_path:?}"))?;
 
     files.push(header_file);
     files.push(footer_file);
@@ -122,7 +126,7 @@ fn convert_partitions(
 
 fn fd_path_for_file(file: &File) -> PathBuf {
     let fd = file.as_raw_fd();
-    format!("/proc/self/fd/{}", fd).into()
+    format!("/proc/self/fd/{fd}").into()
 }
 
 /// Find the size of the partition image in the given file by parsing the header.

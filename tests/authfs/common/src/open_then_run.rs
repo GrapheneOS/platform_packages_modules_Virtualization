@@ -108,7 +108,7 @@ fn parse_args() -> Result<Args> {
             OpenOptions::new()
                 .read(true)
                 .open(path)
-                .with_context(|| format!("Open {} read-only", path))?,
+                .with_context(|| format!("Open {path} read-only"))?,
         ))
     })?;
 
@@ -120,7 +120,7 @@ fn parse_args() -> Result<Args> {
                 .create(true)
                 .truncate(true)
                 .open(path)
-                .with_context(|| format!("Open {} read-write", path))?,
+                .with_context(|| format!("Open {path} read-write"))?,
         ))
     })?;
 
@@ -130,7 +130,7 @@ fn parse_args() -> Result<Args> {
                 .custom_flags(libc::O_DIRECTORY)
                 .read(true) // O_DIRECTORY can only be opened with read
                 .open(path)
-                .with_context(|| format!("Open {} directory", path))?,
+                .with_context(|| format!("Open {path} directory"))?,
         ))
     })?;
 
@@ -153,7 +153,7 @@ fn try_main() -> Result<()> {
     fd_mappings.extend(args.dir_fds.into_iter().map(OwnedFdMapping::into_fd_mapping));
     command.fd_mappings(fd_mappings)?;
 
-    debug!("Spawning {:?}", command);
+    debug!("Spawning {command:?}");
     command.spawn()?;
     Ok(())
 }
@@ -166,7 +166,7 @@ fn main() {
     );
 
     if let Err(e) = try_main() {
-        error!("Failed with {:?}", e);
+        error!("Failed with {e:?}");
         std::process::exit(1);
     }
 }

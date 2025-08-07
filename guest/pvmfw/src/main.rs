@@ -216,7 +216,7 @@ fn parse_dice_handover(
     })?;
     let is_debug_mode = dice_chain_info.is_debug_mode();
     let cose_alg = dice_chain_info.leaf_subject_pubkey().cose_alg;
-    trace!("DICE chain leaf subject public key algorithm: {:?}", cose_alg);
+    trace!("DICE chain leaf subject public key algorithm: {cose_alg:?}");
 
     let dice_context = DiceContext {
         authority_algorithm: cose_alg.try_into().map_err(|e| {
