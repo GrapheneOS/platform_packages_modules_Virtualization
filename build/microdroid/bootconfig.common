@@ -7,3 +7,17 @@ kernel.page_reporting.page_reporting_order = 9
 
 # b/419364025 b/423127919
 kernel.vmw_vsock_virtio_transport_common.virtio_transport_max_vsock_pkt_buf_size=16384
+
+# b/434256355#comment35. Microdroid isn't meant to have a networking stack, and per
+# b/434256355#comment1, microdroid kernels only have networking support because SELinux
+# depends on it.
+#
+# When INET support is enabled, it causes the kernel to allocate a number of hash tables
+# whose total size is about 36 KB. The sizes of these hash tables can be controlled
+# via the command line parameters, so set them to be as low as possible since none of
+# those data structures will be used.
+#
+# Note: we don't use 0, as that causes the kernel to make the hash table sizes a function
+# of the amount of RAM, which might result in space for more than 1 entry to be allocated.
+kernel.thash_entries = 1
+kernel.uhash_entries = 1
