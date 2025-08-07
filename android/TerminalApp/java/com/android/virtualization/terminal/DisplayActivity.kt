@@ -116,7 +116,7 @@ class DisplayActivity : BaseActivity() {
                     if (isFullscreen()) {
                         exitFullscreen()
                     } else {
-                        onBackPressedDispatcher.onBackPressed()
+                        this@DisplayActivity.enterPictureInPictureMode(pictureInPictureParams)
                     }
                 }
             }
