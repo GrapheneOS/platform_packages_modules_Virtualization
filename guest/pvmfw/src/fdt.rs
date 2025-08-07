@@ -250,8 +250,13 @@ fn read_and_validate_memory_range(
         return Err(RebootReason::InvalidFdt);
     }
     // For simplicity, force a hardcoded memory base, for now.
-    if base != MEM_START {
-        error!("Memory base address {:#x} is not {:#x}", base, MEM_START);
+    let valid_bases = [
+        MEM_START,
+        #[cfg(target_arch = "aarch64")]
+        vmbase::layout::crosvm::PVMFW_START,
+    ];
+    if !valid_bases.contains(&base) {
+        error!("Memory base address {:#x} is not one of {:#x?}", base, valid_bases);
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -269,7 +274,8 @@ fn read_and_validate_memory_range(
 }
 
 fn patch_memory_range(fdt: &mut Fdt, memory_range: &Range<usize>) -> libfdt::Result<()> {
-    let addr = u64::try_from(MEM_START).unwrap();
+    // `read_and_validate_memory_range` ensures `start` is either `MEM_START` or `PVMFW_START`.
+    let addr = u64::try_from(memory_range.start).unwrap();
     let size = u64::try_from(memory_range.len()).unwrap();
     fdt.node_mut(c"/memory")?
         .ok_or(FdtError::NotFound)?
