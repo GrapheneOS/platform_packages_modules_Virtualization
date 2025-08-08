@@ -17,9 +17,9 @@
 use super::error::MemoryTrackerError;
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
 #[cfg(target_arch = "aarch64")]
-use crate::arch::aarch64::page_table::{PageTable, MMIO_LAZY_MAP_FLAG};
+use crate::arch::aarch64::page_table::PageTable;
 use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
-use crate::arch::paging::{Attributes, Descriptor, MemoryRegion as VaRange};
+use crate::arch::paging::MemoryRegion as VaRange;
 #[cfg(target_arch = "x86_64")]
 use crate::arch::x86_64::page_table::PageTable;
 use crate::arch::VirtualAddress;
@@ -364,7 +364,7 @@ impl MemoryTracker {
         }
 
         if get_mmio_guard().is_some() {
-            self.page_table.map_device_lazy(&get_va_range(&range)).map_err(|e| {
+            self.page_table.mark_as_lazy_device(&get_va_range(&range)).map_err(|e| {
                 error!("Error during lazy MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
@@ -479,35 +479,10 @@ impl MemoryTracker {
     /// table entry and MMIO guard mapping the block. Breaks apart a block entry if required.
     pub(crate) fn handle_mmio_fault(&mut self, addr: VirtualAddress) -> Result<()> {
         let shared_range = self.mmio_sharer.share(addr)?;
-        self.map_lazy_mmio_as_valid(&shared_range)?;
-
-        Ok(())
-    }
-
-    /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
-    ///
-    /// Returns an error if any PTE in the range is not an invalid lazy MMIO mapping.
-    #[cfg(target_arch = "aarch64")]
-    fn map_lazy_mmio_as_valid(&mut self, page_range: &VaRange) -> Result<()> {
-        // This must be safe and free from break-before-make (BBM) violations, given that the
-        // initial lazy mapping has the valid bit cleared, and each newly created valid descriptor
-        // created inside the mapping has the same size and alignment.
         self.page_table
-            .modify_range(page_range, &|_: &VaRange, desc: &mut Descriptor, _: usize| {
-                let flags = desc.flags().expect("Unsupported PTE flags set");
-                if flags.contains(MMIO_LAZY_MAP_FLAG) && !flags.contains(Attributes::VALID) {
-                    desc.modify_flags(Attributes::VALID, Attributes::empty());
-                    Ok(())
-                } else {
-                    Err(())
-                }
-            })
-            .map_err(|_| MemoryTrackerError::InvalidPte)
-    }
+            .map_device_expect_lazy(&shared_range)
+            .map_err(|_| MemoryTrackerError::InvalidPte)?;
 
-    #[cfg(target_arch = "x86_64")]
-    fn map_lazy_mmio_as_valid(&mut self, _page_range: &VaRange) -> Result<()> {
-        // TODO(b/362733888): Provide the implementation for x86_64
         Ok(())
     }
 

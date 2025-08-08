@@ -41,13 +41,21 @@ impl PageTable {
 
     /// Maps the given range of virtual addresses to the physical addresses as lazily mapped
     /// nGnRE device memory.
-    pub fn map_device_lazy(&mut self, _range: &MemoryRegion) -> Result<()> {
+    pub fn mark_as_lazy_device(&mut self, _range: &MemoryRegion) -> Result<()> {
         Ok(())
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as valid device
     /// nGnRE device memory.
     pub fn map_device(&mut self, _range: &MemoryRegion) -> Result<()> {
+        Ok(())
+    }
+
+    /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
+    ///
+    /// Returns an error if any PTE in the range is not an invalid lazy MMIO mapping.
+    pub fn map_device_expect_lazy(&mut self, _range: &MemoryRegion) -> Result<()> {
+        // TODO(b/362733888): Provide the implementation for x86_64
         Ok(())
     }
 
