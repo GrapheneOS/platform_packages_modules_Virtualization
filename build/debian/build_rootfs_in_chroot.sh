@@ -15,7 +15,7 @@ install_packages() {
 		udev
 		avahi-daemon
 		avahi-utils
-		bpfcc-tools
+		libbpf-tools
 		libnss-mdns
 		procps
 		pulseaudio
