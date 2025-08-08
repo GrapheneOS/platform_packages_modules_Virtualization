@@ -119,7 +119,7 @@ mod tests {
 
         for (name, value) in expected.unwrap() {
             let actual = actual.next();
-            assert!(actual.is_some(), "Expected ({}, {:?}) from {raw:?}", name, value);
+            assert!(actual.is_some(), "Expected ({name}, {value:?}) from {raw:?}");
             let actual = actual.unwrap();
             assert_eq!(name, &actual.name(), "Unexpected name from {raw:?}");
             assert_eq!(value, &actual.value(), "Unexpected value from {raw:?}");

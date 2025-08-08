@@ -90,8 +90,8 @@ impl AuthFs {
             debuggable,
         )?;
         wait_until_authfs_ready(&child, &mountpoint).inspect_err(|_| match child.wait() {
-            Ok(status) => debug!("Wait for authfs: {}", status),
-            Err(e) => warn!("Failed to wait for child: {}", e),
+            Ok(status) => debug!("Wait for authfs: {status}"),
+            Err(e) => warn!("Failed to wait for child: {e}"),
         })?;
 
         let authfs = AuthFs { mountpoint, process: child };
@@ -104,11 +104,11 @@ impl Drop for AuthFs {
     fn drop(&mut self) {
         debug!("Dropping AuthFs instance at mountpoint {:?}", &self.mountpoint);
         if let Err(e) = self.process.kill() {
-            error!("Failed to kill authfs: {}", e);
+            error!("Failed to kill authfs: {e}");
         }
         match self.process.wait() {
-            Ok(status) => debug!("authfs exit code: {}", status),
-            Err(e) => warn!("Failed to wait for authfs: {}", e),
+            Ok(status) => debug!("authfs exit code: {status}"),
+            Err(e) => warn!("Failed to wait for authfs: {e}"),
         }
         // The client may still hold the file descriptors that refer to this filesystem. Use
         // MNT_DETACH to detach the mountpoint, and automatically unmount when there is no more
@@ -158,7 +158,7 @@ fn run_authfs(
 
     let mut command = Command::new(AUTHFS_BIN);
     command.args(&args);
-    debug!("Spawn authfs: {:?}", command);
+    debug!("Spawn authfs: {command:?}");
     SharedChild::spawn(&mut command).context("Spawn authfs")
 }
 

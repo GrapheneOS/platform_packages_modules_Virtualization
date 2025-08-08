@@ -151,11 +151,11 @@ impl vmclient::VmCallback for Callback {
     }
 
     fn on_payload_finished(&self, _cid: i32, exit_code: i32) {
-        info!("payload finished with exit code {}", exit_code);
+        info!("payload finished with exit code {exit_code}");
     }
 
     fn on_error(&self, _cid: i32, error_code: ErrorCode, message: &str) {
-        error!("VM encountered an error: code={:?}, message={}", error_code, message);
+        error!("VM encountered an error: code={error_code:?}, message={message}");
     }
 }
 
@@ -170,7 +170,7 @@ fn android_log_fd() -> io::Result<File> {
     thread::spawn(|| {
         for line in BufReader::new(reader).lines() {
             match line {
-                Ok(l) => info!("{}", l),
+                Ok(l) => info!("{l}"),
                 Err(e) => {
                     error!("Failed to read line from VM: {e:?}");
                     break;

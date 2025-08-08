@@ -48,7 +48,7 @@ impl RemoteFsStatsReader {
 
     pub fn statfs(&self) -> io::Result<RemoteFsStats> {
         let st = self.service.statfs().map_err(|e| {
-            error!("Failed to call statfs on fd_server: {:?}", e);
+            error!("Failed to call statfs on fd_server: {e:?}");
             io::Error::from_raw_os_error(libc::EIO)
         })?;
         try_into_remote_fs_stats(st).map_err(|_| {

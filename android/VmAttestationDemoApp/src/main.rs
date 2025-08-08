@@ -28,7 +28,7 @@ fn main() {
             .with_max_level(log::LevelFilter::Debug),
     );
     if let Err(e) = try_main() {
-        error!("failed with {:?}", e);
+        error!("failed with {e:?}");
         std::process::exit(1);
     }
 }
@@ -52,15 +52,15 @@ fn try_main() -> Result<()> {
     let res = vm_payload::request_attestation(challenge).context("Unexpected attestation error")?;
 
     let cert_chain: Vec<_> = res.certificate_chain().collect();
-    info!("Attestation result certificateChain = {:?}", cert_chain);
+    info!("Attestation result certificateChain = {cert_chain:?}");
 
     let private_key = res.private_key();
-    info!("Attestation result privateKey = {:?}", private_key);
+    info!("Attestation result privateKey = {private_key:?}");
 
     let message = b"Hello from Service VM client";
-    info!("Signing message: {:?}", message);
+    info!("Signing message: {message:?}");
     let signature = res.sign_message(message);
-    info!("Signature: {:?}", signature);
+    info!("Signature: {signature:?}");
 
     Ok(())
 }

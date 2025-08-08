@@ -178,7 +178,7 @@ impl<R: Read + Seek> V4Signature<R> {
 
         apk.seek(SeekFrom::Start(start))?;
         let (signature_algorithm_id, apk_digest) =
-            get_apk_digest(apk, current_sdk, /*verify=*/ false)?;
+            get_apk_digest(apk, current_sdk, /* verify= */ false)?;
         ret.signing_info.signature_algorithm_id = signature_algorithm_id;
         ret.signing_info.apk_digest = apk_digest;
         // TODO(jiyong): add a signature to the signing_info struct
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn parse_idsig_file() {
-        let parsed = V4Signature::from_idsig_path(format!("{}.idsig", TEST_APK_PATH)).unwrap();
+        let parsed = V4Signature::from_idsig_path(format!("{TEST_APK_PATH}.idsig")).unwrap();
 
         assert_eq!(Version::V2, parsed.version);
 
@@ -351,7 +351,7 @@ mod tests {
     /// the input file.
     #[test]
     fn parse_and_compose() {
-        let idsig_path = format!("{}.idsig", TEST_APK_PATH);
+        let idsig_path = format!("{TEST_APK_PATH}.idsig");
         let mut v4_signature = V4Signature::from_idsig_path(&idsig_path).unwrap();
 
         let mut output = Cursor::new(Vec::new());
@@ -369,7 +369,7 @@ mod tests {
         let mut created =
             V4Signature::create(&mut input, current_sdk, 4096, &[], HashAlgorithm::SHA256).unwrap();
 
-        let mut golden = V4Signature::from_idsig_path(format!("{}.idsig", TEST_APK_PATH)).unwrap();
+        let mut golden = V4Signature::from_idsig_path(format!("{TEST_APK_PATH}.idsig")).unwrap();
 
         // Compare the root hash
         assert_eq!(

@@ -91,7 +91,7 @@ impl Digester {
             };
         check_int_result(ret, ApiName::EVP_Digest)?;
         let out_size = usize::try_from(out_size).map_err(|e| {
-            error!("Failed to convert digest size to usize: {:?}", e);
+            error!("Failed to convert digest size to usize: {e:?}");
             Error::InternalError
         })?;
         if self.size() != out_size {

@@ -106,10 +106,7 @@ impl FdService {
         } else {
             Err(Status::new_exception_str(
                 ExceptionCode::ILLEGAL_STATE,
-                Some(format!(
-                    "The newly created FD {} is already in the pool unexpectedly",
-                    new_fd
-                )),
+                Some(format!("The newly created FD {new_fd} is already in the pool unexpectedly")),
             ))
         }
     }
@@ -125,7 +122,7 @@ impl IVirtFdService for FdService {
         self.handle_fd(id, |config| match config {
             FdConfig::Readonly { file, .. } | FdConfig::ReadWrite(file) => {
                 read_into_buf(file, size, offset).map_err(|e| {
-                    error!("readFile: read error: {}", e);
+                    error!("readFile: read error: {e}");
                     new_errno_error(Errno::EIO)
                 })
             }
@@ -143,12 +140,12 @@ impl IVirtFdService for FdService {
 
                 let s = if let Some(metadata) = &alt_metadata {
                     metadata.read_merkle_tree(offset, &mut buf).map_err(|e| {
-                        error!("readFsverityMerkleTree: read error: {}", e);
+                        error!("readFsverityMerkleTree: read error: {e}");
                         new_errno_error(Errno::EIO)
                     })?
                 } else {
                     fsverity::read_merkle_tree(file.as_raw_fd(), offset, &mut buf).map_err(|e| {
-                        error!("readFsverityMerkleTree: failed to retrieve merkle tree: {}", e);
+                        error!("readFsverityMerkleTree: failed to retrieve merkle tree: {e}");
                         new_errno_error(Errno::EIO)
                     })?
                 };
@@ -181,7 +178,7 @@ impl IVirtFdService for FdService {
                 } else {
                     let mut buf = vec![0; MAX_REQUESTING_DATA as usize];
                     let s = fsverity::read_signature(file.as_raw_fd(), &mut buf).map_err(|e| {
-                        error!("readFsverityMerkleTree: failed to retrieve merkle tree: {}", e);
+                        error!("readFsverityMerkleTree: failed to retrieve merkle tree: {e}");
                         new_errno_error(Errno::EIO)
                     })?;
                     debug_assert!(s <= buf.len(), "Shouldn't return more bytes than asked");
@@ -207,7 +204,7 @@ impl IVirtFdService for FdService {
                     return Err(new_errno_error(Errno::EOVERFLOW));
                 }
                 Ok(file.write_at(buf, offset).map_err(|e| {
-                    error!("writeFile: write error: {}", e);
+                    error!("writeFile: write error: {e}");
                     new_errno_error(Errno::EIO)
                 })? as i32)
             }
@@ -223,7 +220,7 @@ impl IVirtFdService for FdService {
                     return Err(new_errno_error(Errno::EINVAL));
                 }
                 file.set_len(size as u64).map_err(|e| {
-                    error!("resize: set_len error: {}", e);
+                    error!("resize: set_len error: {e}");
                     new_errno_error(Errno::EIO)
                 })
             }
@@ -237,12 +234,12 @@ impl IVirtFdService for FdService {
                 let size = file
                     .metadata()
                     .map_err(|e| {
-                        error!("getFileSize error: {}", e);
+                        error!("getFileSize error: {e}");
                         new_errno_error(Errno::EIO)
                     })?
                     .len();
                 Ok(size.try_into().map_err(|e| {
-                    error!("getFileSize: File too large: {}", e);
+                    error!("getFileSize: File too large: {e}");
                     new_errno_error(Errno::EFBIG)
                 })?)
             }

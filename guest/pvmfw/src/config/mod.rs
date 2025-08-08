@@ -172,7 +172,7 @@ impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Copy the fields to local variables to prevent unaligned access.
         let (major, minor) = (self.major, self.minor);
-        write!(f, "{}.{}", major, minor)
+        write!(f, "{major}.{minor}")
     }
 }
 

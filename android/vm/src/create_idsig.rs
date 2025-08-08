@@ -26,19 +26,19 @@ pub fn command_create_idsig(
     apk: &Path,
     idsig: &Path,
 ) -> Result<(), Error> {
-    let apk_file = File::open(apk).with_context(|| format!("Failed to open {:?}", apk))?;
+    let apk_file = File::open(apk).with_context(|| format!("Failed to open {apk:?}"))?;
     let idsig_file = OpenOptions::new()
         .create(true)
         .truncate(true)
         .read(true)
         .write(true)
         .open(idsig)
-        .with_context(|| format!("Failed to create/open {:?}", idsig))?;
+        .with_context(|| format!("Failed to create/open {idsig:?}"))?;
     service
         .createOrUpdateIdsigFile(
             &ParcelFileDescriptor::new(apk_file),
             &ParcelFileDescriptor::new(idsig_file),
         )
-        .with_context(|| format!("Failed to create/update idsig for {:?}", apk))?;
+        .with_context(|| format!("Failed to create/update idsig for {apk:?}"))?;
     Ok(())
 }

@@ -81,24 +81,24 @@ impl fmt::Display for Error {
 
         #[remain::sorted]
         match self {
-            BindVsock(e) => write!(f, "failed to bind vsock: {}", e),
-            IncorrectCid(cid) => write!(f, "chunnel connection from unexpected cid {}", cid),
-            LaunchForwarderGuest(e) => write!(f, "failed to launch forwarder_guest {}", e),
-            NoListenerForPort(port) => write!(f, "could not find listener for port: {}", port),
-            NoSessionForTag(tag) => write!(f, "could not find session for tag: {:x}", tag),
-            PollContextAdd(e) => write!(f, "failed to add fd to poll context: {}", e),
-            PollContextDelete(e) => write!(f, "failed to delete fd from poll context: {}", e),
-            PollContextNew(e) => write!(f, "failed to create poll context: {}", e),
-            PollWait(e) => write!(f, "failed to wait for poll: {}", e),
-            SetVsockNonblocking(e) => write!(f, "failed to set vsock to nonblocking: {}", e),
-            TcpAccept(e) => write!(f, "failed to accept tcp: {}", e),
+            BindVsock(e) => write!(f, "failed to bind vsock: {e}"),
+            IncorrectCid(cid) => write!(f, "chunnel connection from unexpected cid {cid}"),
+            LaunchForwarderGuest(e) => write!(f, "failed to launch forwarder_guest {e}"),
+            NoListenerForPort(port) => write!(f, "could not find listener for port: {port}"),
+            NoSessionForTag(tag) => write!(f, "could not find session for tag: {tag:x}"),
+            PollContextAdd(e) => write!(f, "failed to add fd to poll context: {e}"),
+            PollContextDelete(e) => write!(f, "failed to delete fd from poll context: {e}"),
+            PollContextNew(e) => write!(f, "failed to create poll context: {e}"),
+            PollWait(e) => write!(f, "failed to wait for poll: {e}"),
+            SetVsockNonblocking(e) => write!(f, "failed to set vsock to nonblocking: {e}"),
+            TcpAccept(e) => write!(f, "failed to accept tcp: {e}"),
             TcpListenerPort(e) => {
-                write!(f, "failed to read local sockaddr for tcp listener: {}", e)
+                write!(f, "failed to read local sockaddr for tcp listener: {e}")
             }
-            UpdateEventRead(e) => write!(f, "failed to read update eventfd: {}", e),
-            VsockAccept(e) => write!(f, "failed to accept vsock: {}", e),
+            UpdateEventRead(e) => write!(f, "failed to read update eventfd: {e}"),
+            VsockAccept(e) => write!(f, "failed to accept vsock: {e}"),
             VsockAcceptTimeout => write!(f, "timed out waiting for vsock connection"),
-            VsockListenerPort(e) => write!(f, "failed to get vsock listener port: {}", e),
+            VsockListenerPort(e) => write!(f, "failed to get vsock listener port: {e}"),
         }
     }
 }
@@ -171,14 +171,14 @@ impl<'a> ForwarderSessions<'a> {
                 let tcp4_listener = match TcpListener::bind((Ipv4Addr::LOCALHOST, port)) {
                     Ok(listener) => listener,
                     Err(e) => {
-                        warn!("failed to bind TCPv4 port: {}", e);
+                        warn!("failed to bind TCPv4 port: {e}");
                         continue;
                     }
                 };
                 let tcp6_listener = match TcpListener::bind((Ipv6Addr::LOCALHOST, port)) {
                     Ok(listener) => listener,
                     Err(e) => {
-                        warn!("failed to bind TCPv6 port: {}", e);
+                        warn!("failed to bind TCPv6 port: {e}");
                         continue;
                     }
                 };
@@ -289,29 +289,29 @@ impl<'a> ForwarderSessions<'a> {
                     }
                     Token::UpdatePorts => {
                         if let Err(e) = self.process_update_queue(&poll_ctx) {
-                            error!("error updating listening ports: {}", e);
+                            error!("error updating listening ports: {e}");
                         }
                     }
                     Token::Ipv4Listener(port) => {
                         if let Err(e) = self.accept_connection(&poll_ctx, port, SocketFamily::Ipv4)
                         {
-                            error!("error accepting connection: {}", e);
+                            error!("error accepting connection: {e}");
                         }
                     }
                     Token::Ipv6Listener(port) => {
                         if let Err(e) = self.accept_connection(&poll_ctx, port, SocketFamily::Ipv6)
                         {
-                            error!("error accepting connection: {}", e);
+                            error!("error accepting connection: {e}");
                         }
                     }
                     Token::LocalSocket(tag) => {
                         if let Err(e) = self.forward_from_local(&poll_ctx, tag) {
-                            error!("error forwarding local traffic: {}", e);
+                            error!("error forwarding local traffic: {e}");
                         }
                     }
                     Token::RemoteSocket(tag) => {
                         if let Err(e) = self.forward_from_remote(&poll_ctx, tag) {
-                            error!("error forwarding remote traffic: {}", e);
+                            error!("error forwarding remote traffic: {e}");
                         }
                     }
                 }
@@ -393,7 +393,7 @@ pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_run
             info!("forwarder_host is terminated");
         }
         Err(e) => {
-            error!("Error on forwarder_host: {:?}", e);
+            error!("Error on forwarder_host: {e:?}");
         }
     }
 }

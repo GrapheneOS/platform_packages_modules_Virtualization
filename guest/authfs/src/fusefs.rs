@@ -584,8 +584,7 @@ impl FileSystem for AuthFs {
             Ok(false) => { /* Let the inode stay */ }
             Err(e) => {
                 warn!(
-                    "Unexpected failure when tries to forget an inode {} by refcount {}: {:?}",
-                    inode, count, e
+                    "Unexpected failure when tries to forget an inode {inode} by refcount {count}: {e:?}"
                 );
             }
         }

@@ -246,7 +246,7 @@ fn read_and_validate_memory_range(
     }
     let base = range.start;
     if base % alignment != 0 {
-        error!("Memory base address {:#x} is not aligned to {:#x}", base, alignment);
+        error!("Memory base address {base:#x} is not aligned to {alignment:#x}");
         return Err(RebootReason::InvalidFdt);
     }
     // For simplicity, force a hardcoded memory base, for now.
@@ -262,7 +262,7 @@ fn read_and_validate_memory_range(
 
     let size = range.len();
     if size % alignment != 0 {
-        error!("Memory size {:#x} is not aligned to {:#x}", size, alignment);
+        error!("Memory size {size:#x} is not aligned to {alignment:#x}");
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -589,8 +589,7 @@ fn validate_vm_ref_dt(
             if value != ref_value {
                 error!(
                     "Property mismatches while applying overlay VM reference DT. \
-                    Name:{:?}, Value from host as hex:{:x?}, Value from VM reference DT as hex:{:x?}",
-                    name, value, ref_value
+                    Name:{name:?}, Value from host as hex:{value:x?}, Value from VM reference DT as hex:{ref_value:x?}"
                 );
                 return Err(FdtError::BadValue);
             }
@@ -692,17 +691,17 @@ fn validate_pci_addr_range(
     let size = range.size;
 
     if !(range_type == PciRangeType::Memory64 || range_type == PciRangeType::Memory32) {
-        error!("Invalid range type {:?} for bus address {:#x} in PCI node", range_type, bus_addr);
+        error!("Invalid range type {range_type:?} for bus address {bus_addr:#x} in PCI node");
         return Err(RebootReason::InvalidFdt);
     }
     // Enforce ID bus-to-cpu mappings, as used by crosvm.
     if bus_addr != cpu_addr {
-        error!("PCI bus address: {:#x} is different from CPU address: {:#x}", bus_addr, cpu_addr);
+        error!("PCI bus address: {bus_addr:#x} is different from CPU address: {cpu_addr:#x}");
         return Err(RebootReason::InvalidFdt);
     }
 
     let Some(bus_end) = bus_addr.checked_add(size) else {
-        error!("PCI address range size {:#x} overflows", size);
+        error!("PCI address range size {size:#x} overflows");
         return Err(RebootReason::InvalidFdt);
     };
 
@@ -711,8 +710,7 @@ fn validate_pci_addr_range(
 
     if max(bus_addr, memory_start) < min(bus_end, memory_end) {
         error!(
-            "PCI address range {:#x}-{:#x} overlaps with main memory range {:#x}-{:#x}",
-            bus_addr, bus_end, memory_start, memory_end
+            "PCI address range {bus_addr:#x}-{bus_end:#x} overlaps with main memory range {memory_start:#x}-{memory_end:#x}"
         );
         return Err(RebootReason::InvalidFdt);
     }
@@ -728,7 +726,7 @@ fn validate_pci_irq_mask(irq_mask: &PciIrqMask) -> Result<(), RebootReason> {
     const EXPECTED: PciIrqMask =
         [IRQ_MASK_ADDR_HI, IRQ_MASK_ADDR_ME, IRQ_MASK_ADDR_LO, IRQ_MASK_ANY_IRQ];
     if *irq_mask != EXPECTED {
-        error!("Invalid PCI irq mask {:#?}", irq_mask);
+        error!("Invalid PCI irq mask {irq_mask:#?}");
         return Err(RebootReason::InvalidFdt);
     }
     Ok(())
@@ -764,8 +762,7 @@ fn validate_pci_irq_map(irq_map: &PciIrqMap, idx: usize) -> Result<(), RebootRea
 
     if pci_irq_number != PCI_IRQ_INTC {
         error!(
-            "PCI INT# {:#x} in interrupt-map is different from expected value {:#x}",
-            pci_irq_number, PCI_IRQ_INTC
+            "PCI INT# {pci_irq_number:#x} in interrupt-map is different from expected value {PCI_IRQ_INTC:#x}"
         );
         return Err(RebootReason::InvalidFdt);
     }
@@ -780,24 +777,22 @@ fn validate_pci_irq_map(irq_map: &PciIrqMap, idx: usize) -> Result<(), RebootRea
     }
 
     if gic_peripheral_interrupt_type != GIC_SPI {
-        error!("GIC peripheral interrupt type {:#x} in interrupt-map is different from expected value \
-               {:#x}", gic_peripheral_interrupt_type, GIC_SPI);
+        error!("GIC peripheral interrupt type {gic_peripheral_interrupt_type:#x} in interrupt-map is different from expected value \
+               {GIC_SPI:#x}");
         return Err(RebootReason::InvalidFdt);
     }
 
     let irq_nr: u32 = AARCH64_IRQ_BASE + (idx as u32);
     if gic_irq_number != irq_nr {
         error!(
-            "GIC irq number {:#x} in interrupt-map is unexpected. Expected {:#x}",
-            gic_irq_number, irq_nr
+            "GIC irq number {gic_irq_number:#x} in interrupt-map is unexpected. Expected {irq_nr:#x}"
         );
         return Err(RebootReason::InvalidFdt);
     }
 
     if gic_irq_type != IRQ_TYPE_LEVEL_HIGH {
         error!(
-            "IRQ type in {:#x} is invalid. Must be LEVEL_HIGH {:#x}",
-            gic_irq_type, IRQ_TYPE_LEVEL_HIGH
+            "IRQ type in {gic_irq_type:#x} is invalid. Must be LEVEL_HIGH {IRQ_TYPE_LEVEL_HIGH:#x}"
         );
         return Err(RebootReason::InvalidFdt);
     }
@@ -958,12 +953,12 @@ fn validate_swiotlb_info(
     let align = swiotlb_info.align;
 
     if size == 0 || (size % alignment) != 0 {
-        error!("Invalid swiotlb size {:#x}", size);
+        error!("Invalid swiotlb size {size:#x}");
         return Err(RebootReason::InvalidFdt);
     }
 
     if let Some(align) = align.filter(|&a| a % alignment != 0) {
-        error!("Swiotlb alignment {:#x} not aligned to {:#x}", align, alignment);
+        error!("Swiotlb alignment {align:#x} not aligned to {alignment:#x}");
         return Err(RebootReason::InvalidFdt);
     }
 
@@ -973,7 +968,7 @@ fn validate_swiotlb_info(
             return Err(RebootReason::InvalidFdt);
         }
         if (addr % alignment) != 0 {
-            error!("Swiotlb address {:#x} not aligned to {:#x}", addr, alignment);
+            error!("Swiotlb address {addr:#x} not aligned to {alignment:#x}");
             return Err(RebootReason::InvalidFdt);
         }
     }

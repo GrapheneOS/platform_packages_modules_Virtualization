@@ -89,12 +89,12 @@ impl LazyVerifiedReadonlyFile {
                 .service
                 .getFileSize(remote_fd)
                 .map_err(|e| {
-                    error!("Failed to get file size of remote fd {}: {}", remote_fd, e);
+                    error!("Failed to get file size of remote fd {remote_fd}: {e}");
                     io::Error::from_raw_os_error(libc::EIO)
                 })?
                 .try_into()
                 .map_err(|e| {
-                    error!("Failed convert file size: {}", e);
+                    error!("Failed convert file size: {e}");
                     io::Error::from_raw_os_error(libc::EIO)
                 })?;
             let instance = VerifiedFileReader::new(
@@ -107,7 +107,7 @@ impl LazyVerifiedReadonlyFile {
                 )?,
             )
             .map_err(|e| {
-                error!("Failed instantiate a verified file reader: {}", e);
+                error!("Failed instantiate a verified file reader: {e}");
                 io::Error::from_raw_os_error(libc::EIO)
             })?;
             *reader = Some(instance);

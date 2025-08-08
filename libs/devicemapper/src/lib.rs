@@ -148,7 +148,7 @@ impl DeviceMapper {
             .read(true)
             .write(true)
             .open(MAPPER_CONTROL)
-            .context(format!("failed to open {}", MAPPER_CONTROL))?;
+            .context(format!("failed to open {MAPPER_CONTROL}"))?;
         Ok(DeviceMapper(f))
     }
 

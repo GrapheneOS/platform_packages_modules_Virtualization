@@ -354,7 +354,7 @@ fn parse_debug_level(s: &str) -> Result<DebugLevel, String> {
     match s {
         "none" => Ok(DebugLevel::NONE),
         "full" => Ok(DebugLevel::FULL),
-        _ => Err(format!("Invalid debug level {}", s)),
+        _ => Err(format!("Invalid debug level {s}")),
     }
 }
 
@@ -362,7 +362,7 @@ fn parse_partition_type(s: &str) -> Result<PartitionType, String> {
     match s {
         "raw" => Ok(PartitionType::RAW),
         "instance" => Ok(PartitionType::ANDROID_VM_INSTANCE),
-        _ => Err(format!("Invalid partition type {}", s)),
+        _ => Err(format!("Invalid partition type {s}")),
     }
 }
 
@@ -373,9 +373,9 @@ fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
         _ if s.starts_with("cpu_count=") => {
             // Safe to unwrap as it's validated the string starts with cpu_count=
             let val = s.strip_prefix("cpu_count=").unwrap();
-            Ok(CpuTopology::CpuCount(val.parse().map_err(|e| format!("Invalid CPU Count: {}", e))?))
+            Ok(CpuTopology::CpuCount(val.parse().map_err(|e| format!("Invalid CPU Count: {e}"))?))
         }
-        _ => Err(format!("Invalid cpu topology {}", s)),
+        _ => Err(format!("Invalid cpu topology {s}")),
     }
 }
 
@@ -418,7 +418,7 @@ fn main() -> Result<(), Error> {
 /// List the VMs currently running.
 fn command_list(service: &dyn IVirtualizationService) -> Result<(), Error> {
     let vms = service.debugListVms().context("Failed to get list of VMs")?;
-    println!("Running VMs: {:#?}", vms);
+    println!("Running VMs: {vms:#?}");
     Ok(())
 }
 
@@ -434,7 +434,7 @@ fn command_info(service: &dyn IVirtualizationService) -> Result<(), Error> {
     }
 
     if let Some(version) = hypervisor_props::version()? {
-        println!("Hypervisor version: {}", version);
+        println!("Hypervisor version: {version}");
     } else {
         println!("Hypervisor version not set.");
     }
@@ -474,7 +474,7 @@ fn command_info(service: &dyn IVirtualizationService) -> Result<(), Error> {
     println!("Available OS list: {}", serde_json::to_string(&os_list)?);
 
     let debug_policy = service.getDebugPolicy()?;
-    println!("Debug policy: {}", debug_policy);
+    println!("Debug policy: {debug_policy}");
 
     Ok(())
 }

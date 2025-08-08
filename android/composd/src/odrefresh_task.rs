@@ -121,8 +121,8 @@ impl OdrefreshTask {
                             // compos.info is generated only during NORMAL_COMPILE
                             if let Err(e) = enable_fsverity_to_all() {
                                 let message =
-                                    format!("Unexpected failure when enabling fs-verity: {:?}", e);
-                                error!("{}", message);
+                                    format!("Unexpected failure when enabling fs-verity: {e:?}");
+                                error!("{message}");
                                 callback.onFailure(FailureReason::FailedToEnableFsverity, &message)
                             } else {
                                 info!("Compilation success, fs-verity enabled");
@@ -131,18 +131,18 @@ impl OdrefreshTask {
                         }
                     }
                     Ok(exit_code) => {
-                        let message = format!("Unexpected odrefresh result: {:?}", exit_code);
-                        error!("{}", message);
+                        let message = format!("Unexpected odrefresh result: {exit_code:?}");
+                        error!("{message}");
                         callback.onFailure(FailureReason::UnexpectedCompilationResult, &message)
                     }
                     Err(e) => {
-                        let message = format!("Running odrefresh failed: {:?}", e);
-                        error!("{}", message);
+                        let message = format!("Running odrefresh failed: {e:?}");
+                        error!("{message}");
                         callback.onFailure(FailureReason::CompilationFailed, &message)
                     }
                 };
                 if let Err(e) = result {
-                    warn!("Failed to deliver callback: {:?}", e);
+                    warn!("Failed to deliver callback: {e:?}");
                 }
                 drop(lazy_service_guard);
             }
@@ -241,13 +241,13 @@ fn enable_fsverity_to_all() -> Result<()> {
         // Need to rebase the directory on to compos-pending first
         if let Ok(relpath) = Path::new(path_str).strip_prefix(&odrefresh_current_dir) {
             let path = pending_dir.join(relpath);
-            let file = File::open(&path).with_context(|| format!("Failed to open {:?}", path))?;
+            let file = File::open(&path).with_context(|| format!("Failed to open {path:?}"))?;
             // We don't expect error. But when it happens, don't bother handle it here. For
             // simplicity, just let odsign do the regular check.
             fsverity::enable(file.as_fd())
-                .with_context(|| format!("Failed to enable fs-verity to {:?}", path))?;
+                .with_context(|| format!("Failed to enable fs-verity to {path:?}"))?;
         } else {
-            warn!("Skip due to unexpected path: {}", path_str);
+            warn!("Skip due to unexpected path: {path_str}");
         }
     }
     Ok(())
@@ -260,6 +260,6 @@ fn open_dir(path: &Path) -> Result<OwnedFd> {
             .custom_flags(libc::O_DIRECTORY)
             .read(true) // O_DIRECTORY can only be opened with read
             .open(path)
-            .with_context(|| format!("Failed to open {:?} directory as path fd", path))?,
+            .with_context(|| format!("Failed to open {path:?} directory as path fd"))?,
     ))
 }

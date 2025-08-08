@@ -33,7 +33,7 @@ const SLEEP_DURATION: Duration = Duration::from_millis(5);
 ///   writing a file and you're waiting for the file, reading the file should be
 ///   synchronized with other mechanism than just waiting for the creation.
 pub fn wait_for_file<P: AsRef<Path> + Debug>(path: P, timeout: Duration) -> Result<File> {
-    debug!("waiting for {:?}...", path);
+    debug!("waiting for {path:?}...");
     let begin = Instant::now();
     loop {
         match File::open(&path) {

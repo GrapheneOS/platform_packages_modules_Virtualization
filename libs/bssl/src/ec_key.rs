@@ -485,7 +485,7 @@ impl EcGroup<'_> {
             NID_X9_62_prime256v1 => Ok(P256_CURVE),
             NID_secp384r1 => Ok(P384_CURVE),
             name => {
-                error!("Unsupported curve NID: {}", name);
+                error!("Unsupported curve NID: {name}");
                 Err(Error::Unimplemented)
             }
         }
@@ -497,7 +497,7 @@ impl EcGroup<'_> {
             NID_X9_62_prime256v1 => Ok(P256_AFFINE_COORDINATE_SIZE),
             NID_secp384r1 => Ok(P384_AFFINE_COORDINATE_SIZE),
             name => {
-                error!("Unsupported curve NID: {}", name);
+                error!("Unsupported curve NID: {name}");
                 Err(Error::Unimplemented)
             }
         }

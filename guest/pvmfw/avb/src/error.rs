@@ -50,9 +50,9 @@ impl From<DescriptorError> for PvmfwVerifyError {
 impl fmt::Display for PvmfwVerifyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::AvbError(e) => write!(f, "{}", e),
+            Self::AvbError(e) => write!(f, "{e}"),
             Self::InvalidDescriptors(e) => {
-                write!(f, "VBMeta has invalid descriptors. Error: {:?}", e)
+                write!(f, "VBMeta has invalid descriptors. Error: {e:?}")
             }
             Self::UnknownVbmetaProperty => write!(f, "Unknown vbmeta property"),
             Self::InvalidPageSize => write!(f, "Invalid page_size property"),

@@ -192,13 +192,13 @@ impl fmt::Display for StreamSocketError {
         #[remain::sorted]
         match self {
             ConnectTcp(sockaddr, e) => {
-                write!(f, "failed to connect to TCP sockaddr {}: {}", sockaddr, e)
+                write!(f, "failed to connect to TCP sockaddr {sockaddr}: {e}")
             }
             ConnectUnix(sockaddr, e) => {
-                write!(f, "failed to connect to unix sockaddr {}: {}", sockaddr, e)
+                write!(f, "failed to connect to unix sockaddr {sockaddr}: {e}")
             }
             ConnectVsock(sockaddr, e) => {
-                write!(f, "failed to connect to vsock sockaddr {}: {}", sockaddr, e)
+                write!(f, "failed to connect to vsock sockaddr {sockaddr}: {e}")
             }
         }
     }

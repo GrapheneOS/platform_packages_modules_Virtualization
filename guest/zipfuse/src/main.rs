@@ -778,11 +778,11 @@ mod tests {
                 // create 1K files. Each file has a name of length 100. So total size is at least
                 // 100KB, which is bigger than the readdir buffer size of 4K.
                 for i in 0..NUM_FILES {
-                    zip.start_file(format!("dir/{:0100}", i), opt).unwrap();
+                    zip.start_file(format!("dir/{i:0100}"), opt).unwrap();
                 }
             },
             |root| {
-                let dirs_expected: Vec<_> = (0..NUM_FILES).map(|i| format!("{:0100}", i)).collect();
+                let dirs_expected: Vec<_> = (0..NUM_FILES).map(|i| format!("{i:0100}")).collect();
                 check_dir(
                     root,
                     "dir",

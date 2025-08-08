@@ -165,9 +165,9 @@ impl<'a> DmCryptTargetBuilder<'a> {
         let mut body = String::new();
         use std::fmt::Write;
         write!(&mut body, "{} ", self.cipher.get_kernel_crypto_name())?;
-        write!(&mut body, "{} ", key)?;
+        write!(&mut body, "{key} ")?;
         write!(&mut body, "{} ", self.iv_offset)?;
-        write!(&mut body, "{} ", device_path)?;
+        write!(&mut body, "{device_path} ")?;
         write!(&mut body, "{} ", self.offset)?;
         write!(&mut body, "{} {} ", self.opt_params.len(), self.opt_params.join(" "))?;
         write!(&mut body, "\0")?; // null terminator

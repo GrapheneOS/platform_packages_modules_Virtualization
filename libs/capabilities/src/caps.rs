@@ -69,6 +69,6 @@ mod tests {
     #[test]
     fn test_drop_inheritable_caps() {
         let result = drop_inheritable_caps();
-        assert!(result.is_ok(), "failed with: {:?}", result)
+        assert!(result.is_ok(), "failed with: {result:?}")
     }
 }

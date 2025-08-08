@@ -143,7 +143,7 @@ impl PKey {
                         PKeyType::X25519
                     }
                     crv => {
-                        error!("Unsupported curve type in OKP COSE key: {:?}", crv);
+                        error!("Unsupported curve type in OKP COSE key: {crv:?}");
                         return Err(Error::Unimplemented);
                     }
                 };
@@ -154,7 +154,7 @@ impl PKey {
                 Self::new_raw_public_key(x, curve_type)
             }
             kty => {
-                error!("Unsupported key type in COSE key: {:?}", kty);
+                error!("Unsupported key type in COSE key: {kty:?}");
                 Err(Error::Unimplemented)
             }
         }

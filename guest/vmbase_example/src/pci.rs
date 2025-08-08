@@ -129,7 +129,7 @@ unsafe impl Hal for HalImpl {
     /// block of memory using `alloc_zeroed`, which is guaranteed to allocate valid, unique and
     /// zeroed memory. We request an alignment of at least `PAGE_SIZE` from `alloc_zeroed`.
     fn dma_alloc(pages: usize, _direction: BufferDirection) -> (PhysAddr, NonNull<u8>) {
-        debug!("dma_alloc: pages={}", pages);
+        debug!("dma_alloc: pages={pages}");
         let layout =
             Layout::from_size_align(pages.checked_mul(PAGE_SIZE).unwrap(), PAGE_SIZE).unwrap();
         assert_ne!(layout.size(), 0);
@@ -142,7 +142,7 @@ unsafe impl Hal for HalImpl {
     }
 
     unsafe fn dma_dealloc(paddr: PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
-        debug!("dma_dealloc: paddr={:#x}, pages={}", paddr, pages);
+        debug!("dma_dealloc: paddr={paddr:#x}, pages={pages}");
         let layout = Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap();
         // SAFETY: The memory was allocated by `dma_alloc` above using the same allocator, and the
         // layout is the same as was used then.

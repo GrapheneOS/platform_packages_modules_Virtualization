@@ -97,7 +97,7 @@ impl ClientVmDiceChain {
                 previous_public_key,
             )
             .map_err(|e| {
-                error!("Failed to verify the DICE chain entry {}: {:?}", i, e);
+                error!("Failed to verify the DICE chain entry {i}: {e:?}");
                 e
             })?;
             payloads.push(payload);
@@ -193,8 +193,7 @@ fn vendor_partition_exists(
         _ => {
             error!(
                 "The client VM's DICE chain must contain two or three extra entries. \
-            Service VM DICE chain: {} entries, client VM DICE chain: {} entries",
-                service_vm_dice_chain_len, client_vm_dice_chain_len
+            Service VM DICE chain: {service_vm_dice_chain_len} entries, client VM DICE chain: {client_vm_dice_chain_len} entries"
             );
             Err(RequestProcessingError::InvalidDiceChain)
         }
@@ -244,7 +243,7 @@ impl PublicKey {
                     iana::Algorithm::ES256 => Digester::sha256(),
                     iana::Algorithm::ES384 => Digester::sha384(),
                     _ => {
-                        error!("Unsupported algorithm in EC2 key: {:?}", alg);
+                        error!("Unsupported algorithm in EC2 key: {alg:?}");
                         return Err(RequestProcessingError::InvalidDiceChain);
                     }
                 };
@@ -255,7 +254,7 @@ impl PublicKey {
                 let curve_type =
                     get_label_value(&self.0, Label::Int(iana::OkpKeyParameter::Crv.to_i64()))?;
                 if curve_type != &Value::from(iana::EllipticCurve::Ed25519.to_i64()) {
-                    error!("Unsupported curve type in OKP COSE key: {:?}", curve_type);
+                    error!("Unsupported curve type in OKP COSE key: {curve_type:?}");
                     return Err(RequestProcessingError::OperationUnimplemented);
                 }
                 let x = get_label_value_as_bytes(
@@ -273,7 +272,7 @@ impl PublicKey {
                 Ok(ed25519_verify(message, signature, public_key)?)
             }
             kty => {
-                error!("Unsupported key type in COSE key: {:?}", kty);
+                error!("Unsupported key type in COSE key: {kty:?}");
                 Err(RequestProcessingError::OperationUnimplemented)
             }
         }
@@ -450,7 +449,7 @@ impl TryFrom<Value> for SubComponent {
                     builder.authority_hash(value_to_bytes(value, "SubComponent authority_hash")?)?
                 }
                 k => {
-                    error!("Unknown key in SubComponent: {}", k);
+                    error!("Unknown key in SubComponent: {k}");
                     return Err(RequestProcessingError::InvalidDiceChain);
                 }
             }
@@ -592,8 +591,7 @@ fn validate_hash_size(len: usize, name: &str) -> Result<()> {
         Ok(())
     } else {
         error!(
-            "Invalid hash size for {}: {}. Acceptable hash sizes are: {:?}",
-            name, len, ACCEPTABLE_HASH_SIZES
+            "Invalid hash size for {name}: {len}. Acceptable hash sizes are: {ACCEPTABLE_HASH_SIZES:?}"
         );
         Err(RequestProcessingError::InvalidDiceChain)
     }

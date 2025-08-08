@@ -28,7 +28,7 @@ pub fn get_rpc_binder_service(cid: u32) -> io::Result<VirtFdService> {
         }
         _ => io::Error::new(
             io::ErrorKind::AddrNotAvailable,
-            format!("Cannot connect to RPC service: {}", e),
+            format!("Cannot connect to RPC service: {e}"),
         ),
     })
 }

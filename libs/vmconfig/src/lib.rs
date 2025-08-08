@@ -224,7 +224,7 @@ pub fn open_parcel_file(filename: &Path, writable: bool) -> Result<ParcelFileDes
             .read(true)
             .write(writable)
             .open(filename)
-            .with_context(|| format!("Failed to open {:?}", filename))?,
+            .with_context(|| format!("Failed to open {filename:?}"))?,
     ))
 }
 
