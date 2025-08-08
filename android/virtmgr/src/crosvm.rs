@@ -466,6 +466,35 @@ impl CrosvmCommand {
         //
         // TODO: This should really be the guest's page size.
         self.args(["--params", "coherent_pool=4096"]);
+
+        // b/437196556. The kernel maintains a linear mapping of all of RAM (i.e. virtually and
+        // physically contiguous mapping). Any pages that aren't kernel code are mapped as
+        // read/write.
+        //
+        // The kernel can be extended via loadable kernel modules or BPF programs, which have
+        // read-only sections that need to be resident in memory. When loading these sections,
+        // the kernel allocates virtually contiguous but not physically contiguous memory, and
+        // the virtual address range is mapped as read-only. However, the linear mapping to those
+        // physical pages still remains as writable, which is not ideal.
+        //
+        // The rodata feature--when set to "full"--allows the linear mapping to be updated to
+        // read-only to match the virtual mapping to eliminate the possibility of the data
+        // being overwritten. However, this comes at the cost of having to map RAM down to the base
+        // page size, instead of using block mappings, which results in additional memory usage for
+        // pagetables. Additionally, the number of pagetable entries can cause additional TLB
+        // pressure, and degrade performance.
+        //
+        // Using rodata=on makes it so that the kernel image's read-only sections cannot be written
+        // to, and does not require mapping RAM down to the base page size, so lets use that to
+        // save some memory.
+        //
+        // TODO: Remove this after the default conditions for enabling
+        // CONFIG_RODATA_FULL_DEFAULT_ENABLED have been modified in the kernel so that it is only
+        // set when it may be needed (i.e. if the kernel supports loadable kernel modules or BPF
+        // programs.).
+        if virtualmachine::check_use_relaxed_microdroid_rollback_protection().is_ok() {
+            self.args(["--params", "rodata=on"]);
+        }
     }
 
     fn add_balloon_arg(&mut self, context: &RunContext) {
