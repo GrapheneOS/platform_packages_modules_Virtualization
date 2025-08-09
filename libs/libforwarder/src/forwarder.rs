@@ -48,9 +48,9 @@ impl fmt::Display for ForwarderError {
 
         #[remain::sorted]
         match self {
-            ReadFromStream(e) => write!(f, "failed to read from stream: {}", e),
-            ShutDownStream(e) => write!(f, "failed to shut down stream: {}", e),
-            WriteToStream(e) => write!(f, "failed to write to stream: {}", e),
+            ReadFromStream(e) => write!(f, "failed to read from stream: {e}"),
+            ShutDownStream(e) => write!(f, "failed to shut down stream: {e}"),
+            WriteToStream(e) => write!(f, "failed to write to stream: {e}"),
         }
     }
 }

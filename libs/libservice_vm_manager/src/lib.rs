@@ -165,7 +165,7 @@ impl ServiceVm {
         // Accepts the connection from the service VM.
         // TODO(b/299427101): Introduce a timeout for the accept.
         let (vsock_stream, peer_addr) = vsock_listener.accept().context("Failed to accept")?;
-        info!("Accepted connection {:?}", vsock_stream);
+        info!("Accepted connection {vsock_stream:?}");
         ensure!(
             peer_addr.cid() == u32::try_from(vm.cid()).unwrap(),
             "The CID of the peer address {} doesn't match the service VM CID {}",
@@ -313,7 +313,7 @@ pub fn android_log_fd() -> io::Result<File> {
     thread::spawn(|| {
         for line in BufReader::new(reader).lines() {
             match line {
-                Ok(l) => info!("{}", l),
+                Ok(l) => info!("{l}"),
                 Err(e) => {
                     warn!("Failed to read line: {e:?}");
                     break;

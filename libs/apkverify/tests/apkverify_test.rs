@@ -86,7 +86,7 @@ fn apex_signed_with_v3_rsa_pkcs1_sha512_is_valid() {
 fn apks_signed_with_v3_dsa_sha256_are_not_supported() {
     setup();
     for key_name in KEY_NAMES_DSA.iter() {
-        let res = verify(format!("tests/data/v3-only-with-dsa-sha256-{}.apk", key_name), SDK_INT);
+        let res = verify(format!("tests/data/v3-only-with-dsa-sha256-{key_name}.apk"), SDK_INT);
         assert!(res.is_err(), "DSA algorithm is not supported for verification. See b/197052981.");
         assert_contains(&res.unwrap_err().to_string(), "No supported APK signatures found");
     }
@@ -97,7 +97,7 @@ fn apks_signed_with_v3_ecdsa_sha256_are_valid() {
     setup();
     for key_name in KEY_NAMES_ECDSA.iter() {
         validate_apk(
-            format!("tests/data/v3-only-with-ecdsa-sha256-{}.apk", key_name),
+            format!("tests/data/v3-only-with-ecdsa-sha256-{key_name}.apk"),
             SignatureAlgorithmID::EcdsaWithSha256,
         );
     }
@@ -108,7 +108,7 @@ fn apks_signed_with_v3_ecdsa_sha512_are_valid() {
     setup();
     for key_name in KEY_NAMES_ECDSA.iter() {
         validate_apk(
-            format!("tests/data/v3-only-with-ecdsa-sha512-{}.apk", key_name),
+            format!("tests/data/v3-only-with-ecdsa-sha512-{key_name}.apk"),
             SignatureAlgorithmID::EcdsaWithSha512,
         );
     }
@@ -119,7 +119,7 @@ fn apks_signed_with_v3_rsa_pkcs1_sha256_are_valid() {
     setup();
     for key_name in KEY_NAMES_RSA.iter() {
         validate_apk(
-            format!("tests/data/v3-only-with-rsa-pkcs1-sha256-{}.apk", key_name),
+            format!("tests/data/v3-only-with-rsa-pkcs1-sha256-{key_name}.apk"),
             SignatureAlgorithmID::RsaPkcs1V15WithSha256,
         );
     }
@@ -130,7 +130,7 @@ fn apks_signed_with_v3_rsa_pkcs1_sha512_are_valid() {
     setup();
     for key_name in KEY_NAMES_RSA.iter() {
         validate_apk(
-            format!("tests/data/v3-only-with-rsa-pkcs1-sha512-{}.apk", key_name),
+            format!("tests/data/v3-only-with-rsa-pkcs1-sha512-{key_name}.apk"),
             SignatureAlgorithmID::RsaPkcs1V15WithSha512,
         );
     }
@@ -342,7 +342,7 @@ fn assert_bytes_eq_to_data_in_file<P: AsRef<Path> + std::fmt::Display>(
         fs::metadata(&expected_data_path).is_ok(),
         "File does not exist. You can re-create it with:\n$ echo -en {} > {}\n",
         bytes_data.iter().fold(String::new(), |mut output, b| {
-            let _ = write!(output, "\\\\x{:02x}", b);
+            let _ = write!(output, "\\\\x{b:02x}");
             output
         }),
         expected_data_path
@@ -350,7 +350,6 @@ fn assert_bytes_eq_to_data_in_file<P: AsRef<Path> + std::fmt::Display>(
     let expected_data = fs::read(&expected_data_path).unwrap();
     assert_eq!(
         expected_data, bytes_data,
-        "Actual data does not match the data from: {}",
-        expected_data_path
+        "Actual data does not match the data from: {expected_data_path}"
     );
 }

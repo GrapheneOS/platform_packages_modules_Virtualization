@@ -174,7 +174,7 @@ where
     };
 
     let exit_code = ExitCode::from_i32(exit_code.into())?;
-    info!("odrefresh exited with {:?}", exit_code);
+    info!("odrefresh exited with {exit_code:?}");
 
     if exit_code == ExitCode::CompilationSuccess {
         let target_dir = art_apex_data.join(&args.targetDirName);
@@ -202,7 +202,7 @@ fn load_classpath_vars(odrefresh_vars: &mut EnvMap, export_lines: &str) -> Resul
             let value = &captures[2];
             odrefresh_vars.set(name, value);
         } else {
-            warn!("Malformed line from derive_classpath: {}", line);
+            warn!("Malformed line from derive_classpath: {line}");
         }
     }
 

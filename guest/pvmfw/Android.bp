@@ -534,8 +534,16 @@ bootimg {
 rust_ffi_static {
     name: "libpvmfw_desktop",
     defaults: ["libpvmfw.defaults"],
+    // TODO(b/435130679): Unconditionally get digest from AOSP Trusty.
+    srcs: select(soong_config_variable("ANDROID", "avf_use_pvmfw_desktop"), {
+        // Use seemingly unnecessary select, to avoid breaking the build of non-AOSP
+        // manifests, which don't include desktop_trusty_vbmeta_digest.
+        true: [":desktop_trusty_vbmeta_digest"],
+        default: [":desktop_trusty_placeholder_vbmeta_digest"],
+    }),
     // This enables pvmfw_desktop to be built with a different set of features.
     features: [
+        "platform_has_desktop_trusty",
     ],
 }
 
@@ -558,4 +566,42 @@ raw_binary {
             enabled: true,
         },
     },
+}
+
+// TODO(b/435130679): Remove this once desktop Trusty builds from source.
+genrule {
+    name: "desktop_trusty_placeholder_bin",
+    tools: ["avbtool"],
+    out: ["desktop_trusty_placeholder.bin"],
+    cmd: "$(location avbtool) generate_test_image" +
+        " --image_size 1024" +
+        " --output $(out)",
+}
+
+avb_add_hash_footer {
+    name: "desktop_trusty_placeholder",
+    src: ":desktop_trusty_placeholder_bin",
+    partition_name: "boot",
+    private_key: ":pvmfw_embedded_key",
+    salt: "beef",
+}
+
+cc_genrule {
+    name: "desktop_trusty_placeholder_vbmeta_digest",
+    srcs: [":desktop_trusty_placeholder"],
+    out: ["desktop_trusty.vbmetadigest"],
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+        android_x86_64: {
+            enabled: true,
+        },
+    },
+    tools: ["avbtool"],
+    cmd: "$(location avbtool) calculate_vbmeta_digest" +
+        " --hash_algorithm sha256" +
+        " --image $(in)" +
+        " --output $(out)",
 }

@@ -104,8 +104,7 @@ pub fn verify_payload(
     } else {
         vec![false; extra_root_hashes_from_idsig.len()]
     };
-    let extra_apk_names: Vec<_> =
-        (0..extra_apks.len()).map(|i| format!("extra-apk-{}", i)).collect();
+    let extra_apk_names: Vec<_> = (0..extra_apks.len()).map(|i| format!("extra-apk-{i}")).collect();
 
     for (i, extra_apk) in extra_apks.iter().enumerate() {
         apkdmverity_arguments.push({
@@ -240,10 +239,8 @@ fn get_cert_hash_from_apk(apk: &str, root_hash_trustful: bool) -> Result<[u8; 64
     let current_sdk = get_current_sdk()?;
 
     let signed_data = if !root_hash_trustful {
-        verify(apk, current_sdk).context(MicrodroidError::PayloadVerificationFailed(format!(
-            "failed to verify {}",
-            apk
-        )))
+        verify(apk, current_sdk)
+            .context(MicrodroidError::PayloadVerificationFailed(format!("failed to verify {apk}")))
     } else {
         extract_signed_data(apk, current_sdk)
     }?;

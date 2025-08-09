@@ -58,7 +58,7 @@ fn panic(info: &PanicInfo) -> ! {
     // original UART driver to be used after this.
     if let Some(mut console) = unsafe { emergency_uart(DEFAULT_EMERGENCY_CONSOLE_INDEX) } {
         // Ignore errors, to avoid a panic loop.
-        let _ = writeln!(console, "{}", info);
+        let _ = writeln!(console, "{info}");
     }
     reboot()
 }

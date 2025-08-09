@@ -80,7 +80,7 @@ fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
     match s {
         "one-cpu" => Ok(CpuTopology::CpuCount(1)),
         "match-host" => Ok(CpuTopology::MatchHost(true)),
-        _ => Err(format!("Invalid cpu topology {}", s)),
+        _ => Err(format!("Invalid cpu topology {s}")),
     }
 }
 
@@ -176,7 +176,7 @@ fn main() -> Result<()> {
     } else {
         info!("No --rpc-services-config provided. Not registering any accessor services.");
         let death_reason = vm.wait_for_death();
-        error!("VM ended: {:?}", death_reason);
+        error!("VM ended: {death_reason:?}");
         Ok(())
     }
 }
@@ -192,8 +192,8 @@ struct RpcServiceConfig {
 /// Parses a JSON file containing an array of RPC service configurations.
 fn parse_rpc_service_configs(path: &Path) -> Result<Vec<RpcServiceConfig>> {
     let file =
-        File::open(path).with_context(|| format!("open RPC services config at '{:?}'", path))?;
-    serde_json::from_reader(file).with_context(|| format!("parse JSON from '{:?}'", path))
+        File::open(path).with_context(|| format!("open RPC services config at '{path:?}'"))?;
+    serde_json::from_reader(file).with_context(|| format!("parse JSON from '{path:?}'"))
 }
 
 fn register_accessor_service(vm: &VmInstance, config: &RpcServiceConfig) -> Result<()> {
@@ -220,7 +220,7 @@ fn create_log_writer(prefix: &str) -> Result<File> {
     let writer = File::from(writer_fd);
 
     std::thread::Builder::new()
-        .name(format!("vm-log-{}", prefix))
+        .name(format!("vm-log-{prefix}"))
         .spawn(move || {
             let reader = BufReader::new(reader);
             for line in reader.lines() {
@@ -228,7 +228,7 @@ fn create_log_writer(prefix: &str) -> Result<File> {
                     break;
                 };
                 // Prefix guest logs to distinguish them from launcher logs
-                info!("vm: {}", line);
+                info!("vm: {line}");
             }
         })
         .context("Failed to spawn VM logging thread")?;

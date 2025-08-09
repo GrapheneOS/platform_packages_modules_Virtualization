@@ -232,7 +232,7 @@ impl CrosvmCommand {
         let fd = file.into();
         let raw_fd = fd.as_raw_fd();
         self.preserved_fds.push(fd);
-        format!("/proc/self/fd/{}", raw_fd)
+        format!("/proc/self/fd/{raw_fd}")
     }
 
     fn add_cleaner(&mut self, name: &str, cleaner: Box<Cleaner>) -> Result<()> {
@@ -480,8 +480,7 @@ impl CrosvmCommand {
         } else {
             warn!(
                 "Memory balloon not enabled:
-                config.balloon={},hypervisor.memory_reclaim.supported={}",
-                requested, supported
+                config.balloon={requested},hypervisor.memory_reclaim.supported={supported}"
             );
             self.arg("--no-balloon");
         }
@@ -638,7 +637,7 @@ impl CrosvmCommand {
                 // Arbitrary max size in case of misbehaving guest.
                 const MAX_SIZE: u64 = 50_000;
                 match reader.take(MAX_SIZE).read_to_string(&mut failure_reason) {
-                    Err(e) => error!("Error reading VM failure reason from pipe: {}", e),
+                    Err(e) => error!("Error reading VM failure reason from pipe: {e}"),
                     Ok(len) if len > 0 => {
                         error!("VM returned failure reason '{}'", failure_reason.trim())
                     }
@@ -722,7 +721,7 @@ impl CrosvmCommand {
             .read(true)
             .write(true)
             .open(&zero_filler)
-            .context(format!("Failed to create {:?}", zero_filler))?
+            .context(format!("Failed to create {zero_filler:?}"))?
             .set_len(ZERO_FILLER_SIZE)?;
 
         for (index, disk) in context.config.disks.iter().enumerate() {
@@ -731,9 +730,9 @@ impl CrosvmCommand {
                     bail!("DiskImage {:?} contains both image and partitions.", disk);
                 }
 
-                let composite = temp_dir.join(format!("composite-{}.img", index));
-                let header = temp_dir.join(format!("composite-{}-header.img", index));
-                let footer = temp_dir.join(format!("composite-{}-footer.img", index));
+                let composite = temp_dir.join(format!("composite-{index}.img"));
+                let header = temp_dir.join(format!("composite-{index}-header.img"));
+                let footer = temp_dir.join(format!("composite-{index}-footer.img"));
 
                 let (image, partition_files) = composite::make_composite_image(
                     &disk.partitions,
@@ -743,7 +742,7 @@ impl CrosvmCommand {
                     &footer,
                 )
                 .with_context(|| {
-                    format!("Failed to make composite disk image with config {:?}", disk)
+                    format!("Failed to make composite disk image with config {disk:?}")
                 })
                 .with_log()?;
 
@@ -775,7 +774,7 @@ impl CrosvmCommand {
                 return Ok(());
             }
             if let Some(b) = &config.backend {
-                gpu_args.push(format!("backend={}", b));
+                gpu_args.push(format!("backend={b}"));
             }
             if let Some(t) = &config.contextTypes {
                 // flatten is to convert Vec<Option<String>> into Vec<String>
@@ -783,10 +782,10 @@ impl CrosvmCommand {
                 gpu_args.push(format!("context-types={}", t.join(":")));
             }
             if let Some(a) = &config.pciAddress {
-                gpu_args.push(format!("pci-address={}", a));
+                gpu_args.push(format!("pci-address={a}"));
             }
             if let Some(f) = &config.rendererFeatures {
-                gpu_args.push(format!("renderer-features={}", f));
+                gpu_args.push(format!("renderer-features={f}"));
             }
             if config.rendererUseEgl {
                 gpu_args.push("egl=true".to_string());
@@ -818,7 +817,7 @@ impl CrosvmCommand {
                 try_into_non_zero_u32(config.verticalDpi)?,
                 try_into_non_zero_u32(config.refreshRate)?,
             ));
-            self.arg(format!("--android-display-service={}", name));
+            self.arg(format!("--android-display-service={name}"));
         }
         if !gpu_args.is_empty() {
             self.arg(format!("--gpu={}", gpu_args.join(",")));
@@ -839,7 +838,7 @@ impl CrosvmCommand {
                     let mut params = Vec::new();
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    params.push(format!("path={}", file));
+                    params.push(format!("path={file}"));
                     params.push(format!("width={}", u32::try_from(dev.width)?));
                     params.push(format!("height={}", u32::try_from(dev.height)?));
                     if !dev.name.is_empty() {
@@ -851,7 +850,7 @@ impl CrosvmCommand {
                     let mut params = Vec::new();
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    params.push(format!("path={}", file));
+                    params.push(format!("path={file}"));
                     params.push(format!("width={}", u32::try_from(dev.width)?));
                     params.push(format!("height={}", u32::try_from(dev.height)?));
                     if !dev.name.is_empty() {
@@ -863,7 +862,7 @@ impl CrosvmCommand {
                     let mut params = Vec::new();
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    params.push(format!("path={}", file));
+                    params.push(format!("path={file}"));
                     params.push(format!("width={}", u32::try_from(dev.width)?));
                     params.push(format!("height={}", u32::try_from(dev.height)?));
                     if !dev.name.is_empty() {
@@ -874,22 +873,22 @@ impl CrosvmCommand {
                 aidl::InputDevice::EvDev(dev) => {
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    self.arg(format!("evdev[path={}]", file));
+                    self.arg(format!("evdev[path={file}]"));
                 }
                 aidl::InputDevice::Keyboard(dev) => {
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    self.arg(format!("keyboard[path={}]", file));
+                    self.arg(format!("keyboard[path={file}]"));
                 }
                 aidl::InputDevice::Mouse(dev) => {
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    self.arg(format!("mouse[path={}]", file));
+                    self.arg(format!("mouse[path={file}]"));
                 }
                 aidl::InputDevice::Switches(dev) => {
                     let pfd = dev.pfd.as_ref().ok_or(anyhow!("pfd should have value"))?;
                     let file = self.add_preserved_fd(pfd.as_ref().try_clone()?);
-                    self.arg(format!("switches[path={}]", file));
+                    self.arg(format!("switches[path={file}]"));
                 }
             }
         }
@@ -1200,7 +1199,7 @@ impl VmState {
                             // TODO: add metrics to see how often we restart the thread
                             while let Err(e) = psi_monitor(&instance, &psi_monitor_kill_event_clone)
                             {
-                                error!("psi monitor failed: {:#}", e);
+                                error!("psi monitor failed: {e:#}");
                                 virtualmachine::global_service()
                                     .unwrap()
                                     .forwardAtom(
@@ -1438,7 +1437,7 @@ impl VmInstance {
         let requester_uid_name = User::from_uid(Uid::from_raw(requester_uid))
             .ok()
             .flatten()
-            .map_or_else(|| format!("{}", requester_uid), |u| u.name);
+            .map_or_else(|| format!("{requester_uid}"), |u| u.name);
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
             vm_dead_convar: Condvar::new(),
@@ -1583,7 +1582,7 @@ impl VmInstance {
                 Cow::from(failure_reason.clone())
             };
 
-        self.handle_ramdump().unwrap_or_else(|e| error!("Error handling ramdump: {}", e));
+        self.handle_ramdump().unwrap_or_else(|e| error!("Error handling ramdump: {e}"));
 
         let death_reason = death_reason(&result, &failure_reason);
         let exit_signal = exit_signal(&result);
@@ -1647,12 +1646,12 @@ impl VmInstance {
     fn measure_vm_status(&self, pid: u32) {
         match get_guest_time(pid) {
             Ok(guest_time) => self.vm_metric.lock().unwrap().cpu_guest_time = Some(guest_time),
-            Err(e) => warn!("Failed to get guest CPU time: {}", e),
+            Err(e) => warn!("Failed to get guest CPU time: {e}"),
         }
 
         match get_rss(pid) {
             Ok(rss) => self.vm_metric.lock().unwrap().rss = Some(rss),
-            Err(e) => warn!("Failed to get guest RSS: {}", e),
+            Err(e) => warn!("Failed to get guest RSS: {e}"),
         }
     }
 
@@ -1742,8 +1741,7 @@ impl VmInstance {
                     .unwrap();
                 if result.1.timed_out() {
                     warn!(
-                        "Failed to shut down the VM in {:?}. Killing. Data might be corrupted!.",
-                        shutdown_timeout
+                        "Failed to shut down the VM in {shutdown_timeout:?}. Killing. Data might be corrupted!."
                     );
                     child.kill().unwrap();
                 }
@@ -1860,7 +1858,7 @@ impl VmInstance {
 
     fn send_ramdump_to_tombstoned(ramdump_path: &Path) -> Result<(), Error> {
         let mut input = File::open(ramdump_path)
-            .context(format!("Failed to open ramdump {:?} for reading", ramdump_path))?;
+            .context(format!("Failed to open ramdump {ramdump_path:?} for reading"))?;
 
         let pid = std::process::id() as i32;
         let conn = TombstonedConnection::connect(pid, DebuggerdDumpType::Tombstone)
@@ -1871,7 +1869,7 @@ impl VmInstance {
             .ok_or_else(|| anyhow!("Could not get file to write the tombstones on"))?;
 
         std::io::copy(&mut input, &mut output).context("Failed to send ramdump to tombstoned")?;
-        info!("Ramdump {:?} sent to tombstoned", ramdump_path);
+        info!("Ramdump {ramdump_path:?} sent to tombstoned");
 
         conn.notify_completion()?;
         Ok(())
@@ -1945,7 +1943,7 @@ fn check_if_all_cpus_allowed() -> Result<bool> {
 
 // Get guest time from /proc/[crosvm pid]/stat
 fn get_guest_time(pid: u32) -> Result<i64> {
-    let file = read_to_string(format!("/proc/{}/stat", pid))?;
+    let file = read_to_string(format!("/proc/{pid}/stat"))?;
     let data_list: Vec<_> = file.split_whitespace().collect();
 
     // Information about guest_time is at 43th place of the file split with the whitespace.
@@ -1967,7 +1965,7 @@ fn get_guest_time(pid: u32) -> Result<i64> {
 
 // Get rss from VmHWM of /proc/[crosvm pid]/status
 fn get_rss(pid: u32) -> Result<i64> {
-    let file = read_to_string(format!("/proc/{}/status", pid))?;
+    let file = read_to_string(format!("/proc/{pid}/status"))?;
     let lines: Vec<_> = file.split('\n').collect();
 
     for line in lines {
@@ -2063,7 +2061,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
             0o777,
         );
 
-        let cfg_arg = format!("ugid_map='{}'", ugid_map_value);
+        let cfg_arg = format!("ugid_map='{ugid_map_value}'");
 
         let mut command = Command::new(CROSVM_PATH);
         command
@@ -2112,7 +2110,7 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
             if let Some(socket_fd) = &shared_path.socket_fd {
                 let socket_path =
                     add_preserved_fd(&mut preserved_fds, socket_fd.try_clone().unwrap());
-                command.arg("--vhost-user").arg(format!("fs,socket={}", socket_path));
+                command.arg("--vhost-user").arg(format!("fs,socket={socket_path}"));
             }
         } else {
             if let Err(e) = wait_for_file(&shared_path.socket_path, 5) {
@@ -2122,7 +2120,7 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
         }
     }
 
-    debug!("Preserving FDs {:?}", preserved_fds);
+    debug!("Preserving FDs {preserved_fds:?}");
     command.preserved_fds(preserved_fds);
 
     if config.start_suspended {
@@ -2149,7 +2147,7 @@ fn wait_for_file(path: &str, timeout_secs: u64) -> Result<(), std::io::Error> {
 
     Err(std::io::Error::new(
         std::io::ErrorKind::NotFound,
-        format!("File not found within {} seconds: {}", timeout_secs, path),
+        format!("File not found within {timeout_secs} seconds: {path}"),
     ))
 }
 
@@ -2184,7 +2182,7 @@ fn add_preserved_fd<F: Into<OwnedFd>>(preserved_fds: &mut Vec<OwnedFd>, file: F)
     let fd = file.into();
     let raw_fd = fd.as_raw_fd();
     preserved_fds.push(fd);
-    format!("/proc/self/fd/{}", raw_fd)
+    format!("/proc/self/fd/{raw_fd}")
 }
 
 /// Creates a new pipe with the `O_CLOEXEC` flag set, and returns the read side and write side.

@@ -50,9 +50,9 @@ pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {
         // TODO(seungjaeyoo) Fill information about disk_image for raw config
     };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match vm_creation_requested.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
@@ -64,9 +64,9 @@ pub fn forward_vm_booted_atom(atom: &AtomVmBooted) {
         elapsed_time_millis: atom.elapsedTimeMillis,
     };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match vm_booted.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
@@ -116,9 +116,9 @@ pub fn forward_vm_exited_atom(atom: &AtomVmExited) {
         exit_signal: atom.exitSignal,
     };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match vm_exited.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
@@ -136,9 +136,9 @@ pub fn forward_cgroup_memory_breach_reported_atom(
         vm_identifier,
     };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match cgroup_memory_breach_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
@@ -151,9 +151,9 @@ pub fn forward_fsck_failed_reported_atom(
     let fsck_failed_reported =
         fsck_failed_reported::FsckFailedReported { exit_code, vm_requester_uid, vm_identifier };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match fsck_failed_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
@@ -170,9 +170,9 @@ pub fn forward_get_or_create_sk_secret_failed_reported_atom(
             vm_identifier,
         };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match get_or_create_sk_secret_failed_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
@@ -188,9 +188,9 @@ pub fn forward_psi_monitor_failed_reported_atom(
         vm_identifier,
     };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {}", e));
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match psi_monitor_failed_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {}", e),
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }

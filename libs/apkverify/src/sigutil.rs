@@ -224,8 +224,7 @@ fn find_signature_scheme_block(buf: Bytes, block_id: u32) -> Result<Bytes> {
             return Ok(pair);
         }
     }
-    let context =
-        format!("No APK Signature Scheme block in APK Signing Block with ID: {}", block_id);
+    let context = format!("No APK Signature Scheme block in APK Signing Block with ID: {block_id}");
     Err(Error::new(io::Error::from(ErrorKind::NotFound)).context(context))
 }
 
@@ -293,8 +292,7 @@ mod tests {
         assert_eq!(error.downcast_ref::<io::Error>().unwrap().kind(), ErrorKind::NotFound);
         assert!(
             error.to_string().contains(&APK_SIGNATURE_SCHEME_V3_BLOCK_ID.to_string()),
-            "Error should contain the block ID: {}",
-            error
+            "Error should contain the block ID: {error}"
         );
     }
 

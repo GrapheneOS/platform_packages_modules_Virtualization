@@ -176,6 +176,10 @@ internal class DisplayProvider(
                     }
                     val x = (byteBuffer.getInt() and -0x1).toFloat()
                     val y = (byteBuffer.getInt() and -0x1).toFloat()
+                    if (!cursor.isValid) {
+                        Log.d(TAG, "SurfaceControl for cursor is released.")
+                        return
+                    }
                     transaction.setPosition(cursor, x, y).apply()
                 }
             } catch (e: IOException) {

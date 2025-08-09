@@ -55,7 +55,7 @@ const HIGH_LIMIT_MULTIPLIER: i64 = 125;
 
 // function to construct cgroup file paths
 fn get_cgroup_file_path(cgroup_name: &str, filename: &str) -> PathBuf {
-    PathBuf::from(format!("{}{}/{}", CGROUP_BASE_PATH, cgroup_name, filename))
+    PathBuf::from(format!("{CGROUP_BASE_PATH}{cgroup_name}/{filename}"))
 }
 
 // Function to read a i64 value from a cgroup file
@@ -124,7 +124,7 @@ fn handle_high_breach_event(
         .checked_mul(HIGH_LIMIT_MULTIPLIER)
         .context("overflow increasing high limit bytes")?
         / 100;
-    info!("cgroup: Calculating new memory.high limit (x 1.25): {} bytes", new_high_limit_bytes);
+    info!("cgroup: Calculating new memory.high limit (x 1.25): {new_high_limit_bytes} bytes");
 
     if let Err(e) = write_cgroup_value(high_limit_file_path, new_high_limit_bytes) {
         Err(anyhow!(
@@ -132,7 +132,7 @@ fn handle_high_breach_event(
             e
         ))
     } else {
-        info!("Successfully updated memory.high to {} bytes.", new_high_limit_bytes);
+        info!("Successfully updated memory.high to {new_high_limit_bytes} bytes.");
         Ok(())
     }
 }
@@ -201,7 +201,7 @@ fn monitor_events(
                         highMemoryPeakMb: high_memory_peak_mb,
                     },
                 )) {
-                    error!("Failed to report memory.high breach event: {}", e);
+                    error!("Failed to report memory.high breach event: {e}");
                 }
                 old_high_event_count = high_event_count;
                 // If a high breach event is detected, we will increase the limit by 25%
@@ -210,7 +210,7 @@ fn monitor_events(
                     peak_usage_file_path,
                     high_limit_file_path,
                 ) {
-                    error!("Error handling high breach event: {}", e);
+                    error!("Error handling high breach event: {e}");
                 };
             }
             _ => {
@@ -239,7 +239,7 @@ pub fn start_cgroup_monitor(
 
             let high_val = read_cgroup_value(&high_limit_file_path);
             match high_val {
-                Ok(val) => info!("cgroup: Current memory.high at {}", val),
+                Ok(val) => info!("cgroup: Current memory.high at {val}"),
                 Err(e) => {
                     error!("Failed to read high value: {e}");
                     return;
@@ -254,7 +254,7 @@ pub fn start_cgroup_monitor(
                 &cgroup_evt_fd_clone,
                 &service_clone,
             ) {
-                error!("cgroup monitor failed: {:#}", e);
+                error!("cgroup monitor failed: {e:#}");
                 thread::sleep(Duration::from_secs(1));
             }
         })

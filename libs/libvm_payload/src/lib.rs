@@ -62,7 +62,7 @@ fn get_vm_payload_service() -> Result<Strong<dyn IVmPayloadService>> {
     } else {
         let new_connection: Strong<dyn IVmPayloadService> = RpcSession::new()
             .setup_unix_domain_client(VM_PAYLOAD_SERVICE_SOCKET_NAME)
-            .context(format!("Failed to connect to service: {}", VM_PAYLOAD_SERVICE_SOCKET_NAME))?;
+            .context(format!("Failed to connect to service: {VM_PAYLOAD_SERVICE_SOCKET_NAME}"))?;
         *connection = Some(new_connection.clone());
         Ok(new_connection)
     }
@@ -81,7 +81,7 @@ fn initialize_logging() {
 /// the process.
 fn unwrap_or_abort<T, E: Debug>(result: Result<T, E>) -> T {
     result.unwrap_or_else(|e| {
-        let msg = format!("{:?}", e);
+        let msg = format!("{e:?}");
         error!("{msg}");
         panic!("{msg}")
     })
@@ -583,8 +583,7 @@ pub unsafe extern "C" fn AVmPayload_writeRollbackProtectedSecret(buf: *const u8,
     initialize_logging();
     if n < RP_DATA_SIZE {
         error!(
-            "Requested writing {} bytes, while Secretkeeper supports only {} bytes",
-            n, RP_DATA_SIZE
+            "Requested writing {n} bytes, while Secretkeeper supports only {RP_DATA_SIZE} bytes"
         );
         return AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_BAD_SIZE as i32;
     }

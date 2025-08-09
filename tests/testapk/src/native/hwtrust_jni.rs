@@ -46,7 +46,7 @@ pub extern "system" fn Java_com_android_microdroid_test_HwTrustJni_validateDiceC
             true
         }
         Err(e) => {
-            error!("Failed to validate DICE chain: {:?}", e);
+            error!("Failed to validate DICE chain: {e:?}");
             false
         }
     }

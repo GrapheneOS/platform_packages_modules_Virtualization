@@ -52,7 +52,7 @@ pub fn main(argv: &[usize]) {
 
     info!("Hello world");
     for (index, arg) in argv.iter().enumerate() {
-        info!("x{}={:#018x}", index, arg);
+        info!("x{index}={arg:#018x}");
     }
     print_addresses();
     check_data();

@@ -24,8 +24,7 @@ pub(crate) fn check_int_result(ret: i32, api_name: ApiName) -> Result<()> {
         0 => Err(Error::CallFailed(api_name, process_error_queue())),
         _ => {
             error!(
-                "Received a return value ({}) other than 0 or 1 from the BoringSSL API: {:?}",
-                ret, api_name
+                "Received a return value ({ret}) other than 0 or 1 from the BoringSSL API: {api_name:?}"
             );
             Err(Error::InternalError)
         }

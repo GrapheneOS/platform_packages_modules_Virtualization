@@ -71,8 +71,8 @@ pub mod wrapper {
         let _ignored = child.kill();
 
         let result = result.with_context(|| match child.wait() {
-            Ok(exit_status) => format!("Child exited: {}", exit_status),
-            Err(wait_err) => format!("Wait for child failed: {:?}", wait_err),
+            Ok(exit_status) => format!("Child exited: {exit_status}"),
+            Err(wait_err) => format!("Wait for child failed: {wait_err:?}"),
         });
         Err(result.unwrap_err())
     }

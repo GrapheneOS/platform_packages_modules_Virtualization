@@ -101,7 +101,7 @@ impl SeContext {
     pub fn new(con: &str) -> Result<Self> {
         Ok(Self::CString(
             CString::new(con)
-                .with_context(|| format!("Failed to create SeContext with \"{}\"", con))?,
+                .with_context(|| format!("Failed to create SeContext with \"{con}\""))?,
         ))
     }
 
@@ -222,8 +222,7 @@ fn check_access(source: &CStr, target: &CStr, tclass: &str, perm: &str) -> Resul
         0 => Ok(()),
         _ => Err(anyhow!(io::Error::last_os_error())).with_context(|| {
             format!(
-                "check_access: Failed with sctx: {:?} tctx: {:?} tclass: {:?} perm {:?}",
-                source, target, tclass, perm
+                "check_access: Failed with sctx: {source:?} tctx: {target:?} tclass: {tclass:?} perm {perm:?}"
             )
         }),
     }
@@ -237,7 +236,7 @@ pub fn check_tee_service_permission(caller_ctx: &SeContext, tee_services: &[Stri
     for tee_service in tee_services {
         let tee_service_ctx = backend.lookup(tee_service)?;
         check_access(caller_ctx, &tee_service_ctx, "tee_service", "use")
-            .with_context(|| format!("permission denied for {:?}", tee_service))?;
+            .with_context(|| format!("permission denied for {tee_service:?}"))?;
     }
     Ok(())
 }
@@ -257,7 +256,7 @@ pub fn check_host_service_permission(
             caller_debug_pid,
             caller_uid,
         )
-        .with_context(|| format!("permission denied for {:?}", service))?
+        .with_context(|| format!("permission denied for {service:?}"))?
     }
     Ok(())
 }

@@ -91,7 +91,7 @@ impl InstanceDisk {
             .read(true)
             .write(true)
             .open(INSTANCE_IMAGE_PATH)
-            .with_context(|| format!("Failed to open {}", INSTANCE_IMAGE_PATH))?;
+            .with_context(|| format!("Failed to open {INSTANCE_IMAGE_PATH}"))?;
 
         // Check if this file is a valid instance disk by examining the header (the first block)
         let mut magic = [0; DISK_HEADER_MAGIC.len()];
@@ -208,8 +208,7 @@ impl InstanceDisk {
     fn read_header_at(&mut self, header_offset: u64) -> Result<PartitionHeader> {
         assert!(
             header_offset % PARTITION_HEADER_SIZE == 0,
-            "header offset {} is not aligned to 512 bytes",
-            header_offset
+            "header offset {header_offset} is not aligned to 512 bytes"
         );
 
         let mut uuid = [0; 16];
@@ -266,7 +265,7 @@ impl InstanceDisk {
 
 /// Round `n` up to the nearest multiple of `unit`
 fn round_to_multiple(n: u64, unit: u64) -> Result<u64> {
-    assert!((unit & (unit - 1)) == 0, "{} is not power of two", unit);
+    assert!((unit & (unit - 1)) == 0, "{unit} is not power of two");
     let ret = (n + unit - 1) & !(unit - 1);
     if ret < n {
         bail!("overflow")

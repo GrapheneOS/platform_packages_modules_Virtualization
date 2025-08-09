@@ -171,7 +171,7 @@ where
         }
         Err(e) => {
             if let Err(e) = task.cancel() {
-                eprintln!("Failed to cancel compilation: {:?}", e);
+                eprintln!("Failed to cancel compilation: {e:?}");
             }
             Err(e)
         }

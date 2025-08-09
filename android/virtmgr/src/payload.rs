@@ -90,10 +90,10 @@ impl ApexInfoList {
         static INSTANCE: OnceCell<ApexInfoList> = OnceCell::new();
         INSTANCE.get_or_try_init(|| {
             let apex_info_list = File::open(APEX_INFO_LIST_PATH)
-                .context(format!("Failed to open {}", APEX_INFO_LIST_PATH))?;
+                .context(format!("Failed to open {APEX_INFO_LIST_PATH}"))?;
             let mut apex_info_list: ApexInfoList =
                 from_reader(std::io::BufReader::new(apex_info_list))
-                    .context(format!("Failed to parse {}", APEX_INFO_LIST_PATH))?;
+                    .context(format!("Failed to parse {APEX_INFO_LIST_PATH}"))?;
 
             // For active APEXes, we run derive_classpath and parse its output to see if it
             // contributes to the classpath(s). (This allows us to handle any new classpath env
@@ -210,7 +210,7 @@ fn make_metadata_file(
             special_fields: Default::default(),
         }),
         aidl::Payload::ConfigPath(config_path) => {
-            PayloadMetadata::ConfigPath(format!("/mnt/apk/{}", config_path))
+            PayloadMetadata::ConfigPath(format!("/mnt/apk/{config_path}"))
         }
     };
 
@@ -222,7 +222,7 @@ fn make_metadata_file(
             .map(|(i, apex_info)| {
                 Ok(ApexPayload {
                     name: apex_info.name.clone(),
-                    partition_name: format!("microdroid-apex-{}", i),
+                    partition_name: format!("microdroid-apex-{i}"),
                     last_update_seconds: apex_info.last_update_seconds,
                     is_factory: apex_info.is_factory,
                     ..Default::default()
@@ -235,7 +235,7 @@ fn make_metadata_file(
             .map(|(i, apex_info)| {
                 Ok(ApexPayload {
                     name: apex_info.name.clone(),
-                    partition_name: format!("microdroid-tenant-apex-{}", i),
+                    partition_name: format!("microdroid-tenant-apex-{i}"),
                     last_update_seconds: apex_info.last_update_seconds,
                     is_factory: apex_info.is_factory,
                     ..Default::default()
@@ -260,7 +260,7 @@ fn make_metadata_file(
         .read(true)
         .write(true)
         .open(&metadata_path)
-        .with_context(|| format!("Failed to open metadata file {:?}", metadata_path))?;
+        .with_context(|| format!("Failed to open metadata file {metadata_path:?}"))?;
     microdroid_metadata::write_metadata(&metadata, &mut metadata_file)?;
 
     // Re-open the metadata file as read-only.
@@ -435,7 +435,7 @@ fn find_apex_names_in_classpath(classpath_vars: &str) -> Result<HashSet<String>>
                 continue;
             }
         }
-        warn!("Malformed line from derive_classpath: {}", line);
+        warn!("Malformed line from derive_classpath: {line}");
     }
 
     Ok(apexes)

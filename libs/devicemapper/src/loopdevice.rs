@@ -156,7 +156,7 @@ fn try_attach<P: AsRef<Path>>(
     }
 
     // Configure the loop device to attach the backing file
-    let device_path = format!("{}{}", LOOP_DEV_PREFIX, num);
+    let device_path = format!("{LOOP_DEV_PREFIX}{num}");
     wait_for_path(&device_path)?;
     let device_file = OpenOptions::new()
         .read(true)

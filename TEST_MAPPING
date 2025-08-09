@@ -15,6 +15,9 @@
     },
     {
       "name": "MicrodroidTestApp"
+    },
+    {
+      "name": "avf_backcompat_tests"
     }
   ],
   // Tests runs after CLs are submitted. All AVF tests and benchmarks are here.
@@ -63,9 +66,6 @@
     },
     {
       "name": "libdice_driver_test"
-    },
-    {
-      "name": "avf_backcompat_tests"
     },
     {
       "name": "old_images_avf_test"

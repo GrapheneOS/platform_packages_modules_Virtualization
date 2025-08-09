@@ -48,7 +48,7 @@ const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
 static INTERNAL_CONNECTION: LazyLock<Strong<dyn IVmInternalService>> = LazyLock::new(|| {
     warn!("acquiring new connection to IVmInternalService");
     RpcSession::new().setup_unix_domain_client(VM_INTERNAL_SERVICE_SOCKET_NAME).unwrap_or_else(
-        |_| panic!("Failed to connect to service: {}", VM_INTERNAL_SERVICE_SOCKET_NAME),
+        |_| panic!("Failed to connect to service: {VM_INTERNAL_SERVICE_SOCKET_NAME}"),
     )
 });
 
@@ -74,7 +74,7 @@ fn main() {
     );
 
     if let Err(e) = try_main() {
-        error!("{:?}", e);
+        error!("{e:?}");
         std::process::exit(1)
     }
 }
@@ -89,10 +89,7 @@ fn try_main() -> Result<()> {
     let mountpoint = Path::new(matches.get_one::<String>("mountpoint").unwrap());
     // Note this error context is used in MicrodroidTests.
     encryptedstore_init(blkdevice, key, mountpoint).with_context(|| {
-        format!(
-            "Unable to initialize encryptedstore on {:?} & mount at {:?}",
-            blkdevice, mountpoint
-        )
+        format!("Unable to initialize encryptedstore on {blkdevice:?} & mount at {mountpoint:?}")
     })?;
     Ok(())
 }
@@ -130,7 +127,7 @@ fn set_queue_tunable(device_path: &Path, tunable: &str, value: &str) -> Result<(
     // 1. Resolve the path if it's a symlink.
     let resolved_path = if fs::symlink_metadata(device_path)?.is_symlink() {
         fs::read_link(device_path)
-            .with_context(|| format!("Failed to read symlink at {:?}", device_path))?
+            .with_context(|| format!("Failed to read symlink at {device_path:?}"))?
     } else {
         device_path.to_path_buf()
     };
@@ -146,11 +143,11 @@ fn set_queue_tunable(device_path: &Path, tunable: &str, value: &str) -> Result<(
     let parent_device_name = get_parent_device_name(resolved_device_name_str);
 
     // 4. Construct the final sysfs path and write the value.
-    let tunable_path = format!("/sys/block/{}/queue/{}", parent_device_name, tunable);
-    info!("Setting {} for {}: {}", parent_device_name, tunable, value);
+    let tunable_path = format!("/sys/block/{parent_device_name}/queue/{tunable}");
+    info!("Setting {parent_device_name} for {tunable}: {value}");
 
     if let Err(e) = fs::write(&tunable_path, value) {
-        warn!("Could not write to {}: {}.", tunable_path, e);
+        warn!("Could not write to {tunable_path}: {e}.");
     }
 
     Ok(())
@@ -159,7 +156,7 @@ fn set_queue_tunable(device_path: &Path, tunable: &str, value: &str) -> Result<(
 fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result<()> {
     ensure!(
         std::fs::metadata(blkdevice)
-            .with_context(|| format!("Failed to get metadata of {:?}", blkdevice))?
+            .with_context(|| format!("Failed to get metadata of {blkdevice:?}"))?
             .file_type()
             .is_block_device(),
         "The path:{:?} is not of a block device",
@@ -199,7 +196,7 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     }
 
     mount(&crypt_device, mountpoint)
-        .with_context(|| format!("Unable to mount {:?}", crypt_device))?;
+        .with_context(|| format!("Unable to mount {crypt_device:?}"))?;
     ensure_root_dir_status(mountpoint)?;
     if cfg!(long_running_vms) {
         system_properties::write("microdroid_manager.encrypted_store.status", "mounted")
@@ -262,7 +259,7 @@ fn needs_formatting(data_device: &Path) -> Result<bool> {
         .read(true)
         .write(true)
         .open(data_device)
-        .with_context(|| format!("Failed to open {:?}", data_device))?;
+        .with_context(|| format!("Failed to open {data_device:?}"))?;
 
     let mut buf = [0; UNFORMATTED_STORAGE_MAGIC.len()];
     file.read_exact(&mut buf)?;
@@ -297,7 +294,7 @@ fn format_ext4(device: &Path) -> Result<()> {
         .args(mkfs_options)
         .arg(device)
         .status()
-        .with_context(|| format!("failed to execute {}", MK2FS_BIN))?;
+        .with_context(|| format!("failed to execute {MK2FS_BIN}"))?;
     ensure!(status.success(), "mkfs failed with {:?}", status);
     Ok(())
 }
@@ -353,14 +350,14 @@ fn resize_fs(device: &Path) -> Result<bool> {
         .unwrap();
 
     let stderr_str = String::from_utf8_lossy(&output.stderr);
-    info!("stderr_str: {}", stderr_str);
+    info!("stderr_str: {stderr_str}");
     if output.status.success() {
         info!("resize2fs command succeeded");
         let resized = !stderr_str.contains("Nothing to do!");
-        info!("resized: {}", resized);
+        info!("resized: {resized}");
         Ok(resized)
     } else {
-        warn!("resize failed exited with exitCode: {}", stderr_str);
+        warn!("resize failed exited with exitCode: {stderr_str}");
         Ok(false)
     }
 }
