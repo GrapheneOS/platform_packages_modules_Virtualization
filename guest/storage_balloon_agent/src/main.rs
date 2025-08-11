@@ -116,7 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::builder().filter_level(log::LevelFilter::Debug).init();
 
     let args = Args::parse();
-    let gateway_ip_addr = netdev::get_default_gateway()?.ipv4[0];
+    let gateway_ip_addr = linux::net::get_default_gateway()?;
     let addr = args.addr.unwrap_or_else(|| gateway_ip_addr.to_string());
 
     // Wait for `grpc_port_file` becomes available.
