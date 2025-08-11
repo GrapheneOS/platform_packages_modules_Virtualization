@@ -28,10 +28,17 @@ ConfigDescriptor = {
     -70002 : tstr,                        ; Component name
     (? -71000: tstr //                    ; Path to the payload config file
     ? -71001: PayloadConfig),
-    ? -71002: [+ SubcomponentDescriptor], ; The order of these should be kept constant on each boot
-                                          ; of the VM instance
-    ? -71003: bstr .size 64               ; Instance hash: Unique identifier of the VM instance
+    ? -71002: PayloadDescriptors,           ; The order of these should be kept constant on each boot
+                                            ; of the VM instance
+    ? -71003: bstr .size 64                 ; Instance hash: Unique identifier of the VM instance
+    ? -71004: TenantDescriptors,            ; These are additional configurations (not part of PayloadDescriptors)
+                                            ; which are required to be included VM attestation certificate.
+                                            ; Unlike PayloadDescriptors, these do not take part
+                                            ; in DICE based secret management.
 }
+
+PayloadDescriptors = [+ SubcomponentDescriptor]
+TenantDescriptors = [* SubcomponentDescriptor]
 
 PayloadConfig = {
     1: tstr                             ; Path to the binary file where payload execution starts
