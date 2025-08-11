@@ -274,12 +274,13 @@ fn read_and_validate_memory_range(
 }
 
 fn patch_memory_range(fdt: &mut Fdt, memory_range: &Range<usize>) -> libfdt::Result<()> {
-    // `read_and_validate_memory_range` ensures `start` is either `MEM_START` or `PVMFW_START`.
-    let addr = u64::try_from(memory_range.start).unwrap();
-    let size = u64::try_from(memory_range.len()).unwrap();
-    fdt.node_mut(c"/memory")?
-        .ok_or(FdtError::NotFound)?
-        .setprop_inplace(c"reg", [addr.to_be(), size.to_be()].as_bytes())
+    if let Some(mut memory_node) = fdt.node_mut(c"/memory")? {
+        // `read_and_validate_memory_range` ensures `start` is either `MEM_START` or `PVMFW_START`.
+        let addr = u64::try_from(memory_range.start).unwrap();
+        let size = u64::try_from(memory_range.len()).unwrap();
+        memory_node.setprop_inplace(c"reg", [addr.to_be(), size.to_be()].as_bytes())?;
+    }
+    Ok(())
 }
 
 #[derive(Debug, Default)]
@@ -397,10 +398,11 @@ fn read_cpu_info_from(
 }
 
 fn validate_cpu_info(cpus: &[CpuInfo]) -> Result<(), FdtValidationError> {
-    if cpus.is_empty() {
-        return Err(FdtValidationError::InvalidCpuCount(0));
+    if cfg!(target_arch = "aarch64") && cpus.is_empty() {
+        Err(FdtValidationError::InvalidCpuCount(0))
+    } else {
+        Ok(())
     }
-    Ok(())
 }
 
 fn read_vcpufreq_info(fdt: &Fdt) -> libfdt::Result<Option<VcpufreqInfo>> {
@@ -520,8 +522,8 @@ fn patch_cpus(
                 cluster_node.nop()?;
             }
         }
-    } else {
-        fdt.node_mut(c"/cpus/cpu-map")?.unwrap().nop()?;
+    } else if let Some(cpu_map) = fdt.node_mut(c"/cpus/cpu-map")? {
+        cpu_map.nop()?;
     }
 
     Ok(())
@@ -639,8 +641,10 @@ impl<const N: usize> Iterator for CellChunkIterator<'_, N> {
 }
 
 /// Read pci host controller ranges, irq maps, and irq map masks from DT
-fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<PciInfo> {
-    let node = fdt.compatible_nodes(c"pci-host-cam-generic")?.next().ok_or(FdtError::NotFound)?;
+fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<Option<PciInfo>> {
+    let Some(node) = fdt.compatible_nodes(c"pci-host-cam-generic")?.next() else {
+        return Ok(None);
+    };
 
     let mut ranges = node.ranges::<(u32, u64), u64, u64>()?.ok_or(FdtError::NotFound)?;
     let range0 = ranges.next().ok_or(FdtError::NotFound)?;
@@ -664,7 +668,7 @@ fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<PciInfo> {
         return Err(FdtError::NoSpace);
     }
 
-    Ok(PciInfo { ranges: [range0, range1], irq_masks, irq_maps })
+    Ok(Some(PciInfo { ranges: [range0, range1], irq_masks, irq_maps }))
 }
 
 fn validate_pci_info(pci_info: &PciInfo, memory_range: &Range<usize>) -> Result<(), RebootReason> {
@@ -912,10 +916,9 @@ fn patch_wdt_info(
     wdt_info: &Option<WdtInfo>,
     num_cpus: usize,
 ) -> libfdt::Result<()> {
-    let mut node = fdt
-        .root_mut()
-        .next_compatible(c"qemu,vcpu-stall-detector")?
-        .ok_or(libfdt::FdtError::NotFound)?;
+    let Some(mut node) = fdt.root_mut().next_compatible(c"qemu,vcpu-stall-detector")? else {
+        return Ok(());
+    };
 
     if wdt_info.is_some() {
         let mut interrupts = WdtInfo::get_expected(num_cpus).irq;
@@ -1075,12 +1078,14 @@ struct VcpufreqInfo {
 }
 
 fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt::Result<()> {
-    let mut node = fdt.node_mut(c"/cpufreq")?.unwrap();
-    if let Some(info) = vcpufreq_info {
-        node.setprop_addrrange_inplace(c"reg", info.addr, info.size)
-    } else {
-        node.nop()
+    if let Some(mut node) = fdt.node_mut(c"/cpufreq")? {
+        if let Some(info) = vcpufreq_info {
+            node.setprop_addrrange_inplace(c"reg", info.addr, info.size)?;
+        } else {
+            node.nop()?;
+        }
     }
+    Ok(())
 }
 
 /// Valid PSCI versions allowed for guests.
@@ -1107,7 +1112,7 @@ struct PsciInfo {
     version: PsciVersion,
 }
 
-fn read_psci(fdt: &Fdt) -> libfdt::Result<PsciInfo> {
+fn read_psci(fdt: &Fdt) -> libfdt::Result<Option<PsciInfo>> {
     let valid_versions = &[PsciVersion::V0_2, PsciVersion::V1_0];
     for version in valid_versions {
         let compat = version.get_compatible();
@@ -1116,12 +1121,11 @@ fn read_psci(fdt: &Fdt) -> libfdt::Result<PsciInfo> {
             if method != c"hvc" {
                 return Err(FdtError::BadValue);
             }
-            return Ok(PsciInfo { version: *version });
+            return Ok(Some(PsciInfo { version: *version }));
         }
     }
 
-    // PSCI is required for pVMs.
-    Err(FdtError::NotFound)
+    Ok(None)
 }
 
 fn patch_psci(fdt: &mut Fdt, psci: &PsciInfo) -> libfdt::Result<()> {
@@ -1144,15 +1148,15 @@ pub struct DeviceTreeInfo {
     bootargs: Option<CString>,
     cpus: ArrayVec<[CpuInfo; DeviceTreeInfo::MAX_CPUS]>,
     cpu_topology: Option<CpuTopology>,
-    pci_info: PciInfo,
+    pci_info: Option<PciInfo>,
     serial_info: SerialInfo,
-    pub swiotlb_info: SwiotlbInfo,
+    pub swiotlb_info: Option<SwiotlbInfo>,
     device_assignment: Option<DeviceAssignmentInfo>,
     untrusted_props: BTreeMap<CString, Vec<u8>>,
     vm_ref_dt_props_info: BTreeMap<CString, Vec<u8>>,
     vcpufreq_info: Option<VcpufreqInfo>,
     wdt_info: Option<WdtInfo>,
-    psci: PsciInfo,
+    psci: Option<PsciInfo>,
 }
 
 impl DeviceTreeInfo {
@@ -1165,13 +1169,13 @@ impl DeviceTreeInfo {
     }
 }
 
-pub fn sanitize_device_tree(
-    fdt: &mut Fdt,
+pub fn sanitize_device_tree<'a>(
+    fdt: &'a mut Fdt,
     vm_dtbo: Option<&mut [u8]>,
     vm_ref_dt: Option<&[u8]>,
     guest_page_size: usize,
     hyp_page_size: Option<usize>,
-) -> Result<DeviceTreeInfo, RebootReason> {
+) -> Result<&'a mut Fdt, RebootReason> {
     let vm_dtbo = match vm_dtbo {
         Some(vm_dtbo) => Some(VmDtbo::from_mut_slice(vm_dtbo).map_err(|e| {
             error!("Failed to load VM DTBO: {e}");
@@ -1230,7 +1234,7 @@ pub fn sanitize_device_tree(
         RebootReason::InvalidFdt
     })?;
 
-    Ok(info)
+    Ok(fdt)
 }
 
 fn parse_device_tree(
@@ -1277,7 +1281,9 @@ fn parse_device_tree(
         error!("Failed to read pci info from DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    validate_pci_info(&pci_info, &memory_range)?;
+    if let Some(pci_info) = &pci_info {
+        validate_pci_info(pci_info, &memory_range)?;
+    }
 
     let wdt_info = read_wdt_info_from(fdt).map_err(|e| {
         error!("Failed to read vCPU stall detector info from DT: {e}");
@@ -1296,19 +1302,25 @@ fn parse_device_tree(
         error!("Failed to read PSCI info from DT: {e}");
         RebootReason::InvalidFdt
     })?;
+    // PSCI is required for aarch64 pVMs.
+    if cfg!(target_arch = "aarch64") && psci.is_none() {
+        error!("PSCI info missing from DT");
+        return Err(RebootReason::InvalidFdt);
+    }
 
-    let swiotlb_info = SwiotlbInfo::new_from_fdt(fdt)
-        .map_err(|e| {
-            error!("Failed to read swiotlb info from DT: {e}");
-            RebootReason::InvalidFdt
-        })?
-        .ok_or_else(|| {
-            error!("Swiotlb info missing from DT");
-            RebootReason::InvalidFdt
-        })?;
+    let swiotlb_info = SwiotlbInfo::new_from_fdt(fdt).map_err(|e| {
+        error!("Failed to read swiotlb info from DT: {e}");
+        RebootReason::InvalidFdt
+    })?;
+    if cfg!(target_arch = "aarch64") && swiotlb_info.is_none() {
+        error!("Swiotlb info missing from DT");
+        return Err(RebootReason::InvalidFdt);
+    }
     // Ensure that MEM_SHARE won't inadvertently map beyond the shared region.
     let swiotlb_alignment = max(hyp_page_size, Some(guest_page_size)).unwrap();
-    validate_swiotlb_info(&swiotlb_info, &memory_range, swiotlb_alignment)?;
+    if let Some(swiotlb_info) = &swiotlb_info {
+        validate_swiotlb_info(swiotlb_info, &memory_range, swiotlb_alignment)?;
+    }
 
     let device_assignment = if let Some(vm_dtbo) = vm_dtbo {
         if let Some(hypervisor) = get_device_assigner() {
@@ -1386,10 +1398,12 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         error!("Failed to patch vcpufreq info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    patch_pci_info(fdt, &info.pci_info).map_err(|e| {
-        error!("Failed to patch pci info to DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
+    if let Some(pci_info) = &info.pci_info {
+        patch_pci_info(fdt, pci_info).map_err(|e| {
+            error!("Failed to patch pci info to DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
     patch_wdt_info(fdt, &info.wdt_info, info.cpus.len()).map_err(|e| {
         error!("Failed to patch wdt info to DT: {e}");
         RebootReason::InvalidFdt
@@ -1398,22 +1412,28 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         error!("Failed to patch serial info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    patch_swiotlb_info(fdt, &info.swiotlb_info).map_err(|e| {
-        error!("Failed to patch swiotlb info to DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
-    patch_gic(fdt, info.cpus.len()).map_err(|e| {
-        error!("Failed to patch gic info to DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
-    patch_timer(fdt, info.cpus.len()).map_err(|e| {
-        error!("Failed to patch timer info to DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
-    patch_psci(fdt, &info.psci).map_err(|e| {
-        error!("Failed to patch PSCI info to DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
+    if let Some(swiotlb_info) = &info.swiotlb_info {
+        patch_swiotlb_info(fdt, swiotlb_info).map_err(|e| {
+            error!("Failed to patch swiotlb info to DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
+    if cfg!(target_arch = "aarch64") {
+        patch_gic(fdt, info.cpus.len()).map_err(|e| {
+            error!("Failed to patch gic info to DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        patch_timer(fdt, info.cpus.len()).map_err(|e| {
+            error!("Failed to patch timer info to DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
+    if let Some(psci) = &info.psci {
+        patch_psci(fdt, psci).map_err(|e| {
+            error!("Failed to patch PSCI info to DT: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
     if let Some(device_assignment) = &info.device_assignment {
         // Note: We patch values after VM DTBO is overlaid because patch may require more space
         // then VM DTBO's underlying slice is allocated.
