@@ -603,5 +603,6 @@ cc_genrule {
     cmd: "$(location avbtool) calculate_vbmeta_digest" +
         " --hash_algorithm sha256" +
         " --image $(in)" +
+        " --format raw" +
         " --output $(out)",
 }
