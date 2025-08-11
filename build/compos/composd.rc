@@ -23,3 +23,4 @@ service composd /apex/com.android.compos/bin/composd
     # (b/322197421). composd itself never uses it (and isn't allowed to by
     # SELinux).
     capabilities SYS_NICE
+    task_profiles Dex2OatBackground

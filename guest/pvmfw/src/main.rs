@@ -16,8 +16,6 @@
 
 #![no_main]
 #![no_std]
-// TODO(b/354116267): Remove once all warnings are resolved
-#![cfg_attr(target_arch = "x86_64", allow(dead_code, unused_imports))]
 
 extern crate alloc;
 
@@ -101,9 +99,8 @@ fn main<'a>(
     };
 
     let hyp_page_size = hypervisor_backends::get_granule_size();
-    let _ =
+    let fdt =
         sanitize_device_tree(untrusted_fdt, vm_dtbo, vm_ref_dt, guest_page_size, hyp_page_size)?;
-    let fdt = untrusted_fdt; // DT has now been sanitized.
 
     let mut reserved_mem_info: Vec<ResMemEntryInfo> =
         if let (Some(vb_data), Some(reserved_mem)) = (&verified_boot_data, reserved_mem) {
