@@ -61,7 +61,7 @@ use microdroid_payload_config::{
 };
 use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
-use nix::sys::wait::{wait, WaitStatus};
+use nix::sys::wait::{waitid, waitpid, Id, WaitPidFlag, WaitStatus};
 use nix::unistd::Pid;
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
@@ -72,7 +72,7 @@ use rustutils::system_properties;
 use rustutils::system_properties::PropertyWatcher;
 use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
@@ -730,46 +730,63 @@ fn try_run_payload(
 }
 
 // TODO(b/434925716): Report exit status of all the tenants back to the host
-/// Wait for all child processes to exit and print their exit statuses.
-/// Return the ExitStatus of just the main payload process, this is to maintain the
-/// non multi-tenancy behavior.
+/// Wait for all processes in `pids_to_reap` to exit.
+/// It returns the `ExitStatus` of the main payload process.
 fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<ExitStatus> {
     let mut payload_exit_status: Option<ExitStatus> = None;
+    let mut ignored_pids_count = HashMap::new();
+    const IGNORE_THRESHOLD: u32 = 4;
 
-    // Asynchronously wait for all child processes to exit.
     while !pids_to_reap.is_empty() {
-        let wait_status = match wait() {
+        // Wait for any child process to change state, without reaping it. This avoids a race
+        // condition where we might reap a child that another thread is waiting for.
+        let wait_status = match waitid(Id::All, WaitPidFlag::WEXITED | WaitPidFlag::WNOWAIT) {
             Ok(status) => status,
             Err(nix::errno::Errno::ECHILD) => {
                 // No more children to wait for.
                 if !pids_to_reap.is_empty() {
-                    warn!("No more child processes to wait for, but expected {pids_to_reap:?}.");
+                    warn!("No more child processes to wait for, but expected {pids_to_reap:?}");
                 }
                 break;
             }
-            Err(e) => {
-                bail!("Failed to wait for child process: {:?}", e);
-            }
+            Err(e) => bail!("Failed to wait for child process with waitid: {:?}", e),
         };
 
-        let (pid, exit_status) = match wait_status {
-            // WaitStatus::Exited extracts the exit code from the raw status,
-            // As we want to convert this to ExitStatus, we need to shift it back to
-            // its place in the raw status
-            WaitStatus::Exited(pid, exit_code) => (pid, ExitStatusExt::from_raw(exit_code << 8)),
-            WaitStatus::Signaled(pid, signal, _) => (pid, ExitStatusExt::from_raw(signal as i32)),
-            // Other statuses like Stopped or Continued are not termination events, so we
-            // ignore them and continue waiting.
-            _ => continue,
-        };
+        let Some(pid) = wait_status.pid() else { bail!("Invalid wait status") };
 
-        if pids_to_reap.remove(&pid) {
+        if pids_to_reap.contains(&pid) {
+            // This is a process we are responsible for. We have its status, so now we reap it.
+            let exit_status = match wait_status {
+                WaitStatus::Exited(_, exit_code) => ExitStatusExt::from_raw(exit_code << 8),
+                WaitStatus::Signaled(_, signal, _) => ExitStatusExt::from_raw(signal as i32),
+                _ => {
+                    // Should be unreachable as we've filtered for Exited and Signaled above
+                    warn!("Process {pid} had unexpected status {wait_status:?}");
+                    continue;
+                }
+            };
+            waitpid(pid, None)?;
+            pids_to_reap.remove(&pid);
             info!("Process {pid} exited with {exit_status}");
             if pid == payload_pid {
                 payload_exit_status = Some(exit_status);
             }
         } else {
-            warn!("Unknown child process with PID {pid} exited with {exit_status}");
+            let count = ignored_pids_count.entry(pid).or_insert(0);
+            *count += 1;
+
+            if *count >= IGNORE_THRESHOLD {
+                info!("Reaping ignored pid {pid} that was not handled by its owner after {count} attempts");
+                waitpid(pid, None)?;
+                ignored_pids_count.remove(&pid);
+            } else {
+                // Not a process we are tracking. Yield to avoid a busy-loop,
+                // giving the other thread a chance to reap it.
+                info!(
+                    "Ignoring exit of pid {pid} (attempt {count}), another thread should reap it"
+                );
+                std::thread::yield_now();
+            }
         }
     }
 
