@@ -256,7 +256,7 @@ fn read_and_validate_memory_range(
         vmbase::layout::crosvm::PVMFW_START,
     ];
     if !valid_bases.contains(&base) {
-        error!("Memory base address {:#x} is not one of {:#x?}", base, valid_bases);
+        error!("Memory base address {base:#x} is not one of {valid_bases:#x?}");
         return Err(RebootReason::InvalidFdt);
     }
 
