@@ -233,6 +233,9 @@ public class VirtualMachine implements AutoCloseable {
     /** Name of the idsig files for extra APKs. */
     private static final String EXTRA_IDSIG_FILE_PREFIX = "extra_idsig_";
 
+    /** Name of the idsig files for tenants APKs. */
+    private static final String TENANT_IDSIG_FILE_PREFIX = "tenant_idsig_";
+
     /** Size of the instance image. 10 MB. */
     private static final long INSTANCE_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -284,7 +287,10 @@ public class VirtualMachine implements AutoCloseable {
      * Unmodifiable list of extra apks. Apks are specified by the vm config, and corresponding
      * idsigs are to be generated.
      */
-    @NonNull private final List<ExtraApkSpec> mExtraApks;
+    @NonNull private final List<ApkSpec> mExtraApks;
+
+    /** Unmodifiable list of tenant apks. */
+    @NonNull private final List<ApkSpec> mTenantApks;
 
     @NonNull private final Executor mMemoryCallbackExecutor = Executors.newSingleThreadExecutor();
 
@@ -419,11 +425,11 @@ public class VirtualMachine implements AutoCloseable {
     @Nullable
     private Executor mCallbackExecutor;
 
-    private static class ExtraApkSpec {
+    private static class ApkSpec {
         public final File apk;
         public final File idsig;
 
-        ExtraApkSpec(File apk, File idsig) {
+        ApkSpec(File apk, File idsig) {
             this.apk = apk;
             this.idsig = idsig;
         }
@@ -458,6 +464,8 @@ public class VirtualMachine implements AutoCloseable {
         mInstanceFilePath = new File(thisVmDir, INSTANCE_IMAGE_FILE);
         mIdsigFilePath = new File(thisVmDir, IDSIG_FILE);
         mExtraApks = setupExtraApks(context, config, thisVmDir);
+        mTenantApks = setupTenantApks(context, config, thisVmDir);
+
         mContext = context;
         mEncryptedStoreFilePath =
                 (config.isEncryptedStorageEnabled())
@@ -1524,7 +1532,7 @@ public class VirtualMachine implements AutoCloseable {
             // then
             // Virtualization Manager opens them itself.
             List<ParcelFileDescriptor> extraApkFiles = new ArrayList<>(mExtraApks.size());
-            for (ExtraApkSpec extraApk : mExtraApks) {
+            for (ApkSpec extraApk : mExtraApks) {
                 try {
                     extraApkFiles.add(ParcelFileDescriptor.open(extraApk.apk, MODE_READ_ONLY));
                 } catch (FileNotFoundException e) {
@@ -1568,8 +1576,11 @@ public class VirtualMachine implements AutoCloseable {
 
             try {
                 mIdsigFilePath.createNewFile();
-                for (ExtraApkSpec extraApk : mExtraApks) {
+                for (ApkSpec extraApk : mExtraApks) {
                     extraApk.idsig.createNewFile();
+                }
+                for (ApkSpec tenantApk : mTenantApks) {
+                    tenantApk.idsig.createNewFile();
                 }
             } catch (IOException e) {
                 // If the file already exists, exception is not thrown.
@@ -1696,7 +1707,7 @@ public class VirtualMachine implements AutoCloseable {
         service.createOrUpdateIdsigFile(
                 appConfig.apk, ParcelFileDescriptor.open(mIdsigFilePath, MODE_READ_WRITE));
 
-        for (ExtraApkSpec extraApk : mExtraApks) {
+        for (ApkSpec extraApk : mExtraApks) {
             service.createOrUpdateIdsigFile(
                     ParcelFileDescriptor.open(extraApk.apk, MODE_READ_ONLY),
                     ParcelFileDescriptor.open(extraApk.idsig, MODE_READ_WRITE));
@@ -1705,10 +1716,20 @@ public class VirtualMachine implements AutoCloseable {
         // Re-open idsig files in read-only mode
         appConfig.idsig = ParcelFileDescriptor.open(mIdsigFilePath, MODE_READ_ONLY);
         List<ParcelFileDescriptor> extraIdsigs = new ArrayList<>();
-        for (ExtraApkSpec extraApk : mExtraApks) {
+        for (ApkSpec extraApk : mExtraApks) {
             extraIdsigs.add(ParcelFileDescriptor.open(extraApk.idsig, MODE_READ_ONLY));
         }
         appConfig.extraIdsigs = extraIdsigs;
+
+        List<ParcelFileDescriptor> tenantIdsigs = new ArrayList<>();
+        for (ApkSpec apk : mTenantApks) {
+            service.createOrUpdateIdsigFile(
+                    ParcelFileDescriptor.open(apk.apk, MODE_READ_ONLY),
+                    ParcelFileDescriptor.open(apk.idsig, MODE_READ_WRITE));
+            // Re-open idsig files in read-only mode
+            tenantIdsigs.add(ParcelFileDescriptor.open(apk.idsig, MODE_READ_ONLY));
+        }
+        appConfig.tenantIdsigs = tenantIdsigs;
     }
 
     @GuardedBy("mLock")
@@ -2297,7 +2318,7 @@ public class VirtualMachine implements AutoCloseable {
      * Reads the payload config inside the application, parses extra APK information, and then
      * creates corresponding idsig file paths.
      */
-    private static List<ExtraApkSpec> setupExtraApks(
+    private static List<ApkSpec> setupExtraApks(
             @NonNull Context context, @NonNull VirtualMachineConfig config, @NonNull File vmDir)
             throws VirtualMachineException {
         String configPath = config.getPayloadConfigPath();
@@ -2311,25 +2332,34 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    private static List<ExtraApkSpec> setupExtraApksFromConfigFile(
+    private static List<ApkSpec> setupTenantApks(
+            @NonNull Context context, @NonNull VirtualMachineConfig config, @NonNull File vmDir)
+            throws VirtualMachineException {
+        String configPath = config.getPayloadConfigPath();
+        if (configPath != null) {
+            return setupTenantApksFromConfigFile(context, vmDir, configPath);
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private static List<ApkSpec> setupTenantApksFromConfigFile(
             Context context, File vmDir, String configPath) throws VirtualMachineException {
         try (ZipFile zipFile = new ZipFile(context.getPackageCodePath())) {
             InputStream inputStream = zipFile.getInputStream(zipFile.getEntry(configPath));
             List<String> apkList =
-                    parseExtraApkListFromPayloadConfig(
+                    parseTenantApkListFromPayloadConfig(
                             new JsonReader(new InputStreamReader(inputStream)));
-
-            List<ExtraApkSpec> extraApks = new ArrayList<>(apkList.size());
+            List<ApkSpec> apks = new ArrayList<>(apkList.size());
             for (int i = 0; i < apkList.size(); ++i) {
-                extraApks.add(
-                        new ExtraApkSpec(
+                apks.add(
+                        new ApkSpec(
                                 new File(apkList.get(i)),
-                                new File(vmDir, EXTRA_IDSIG_FILE_PREFIX + i)));
+                                new File(vmDir, TENANT_IDSIG_FILE_PREFIX + i)));
             }
-
-            return extraApks;
+            return apks;
         } catch (IOException e) {
-            throw new VirtualMachineException("Couldn't parse extra apks from the vm config", e);
+            throw new VirtualMachineException("Couldn't parse tenant apks from the vm config", e);
         }
     }
 
@@ -2369,10 +2399,72 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    private static List<ExtraApkSpec> setupExtraApksFromList(
+    private static List<String> parseTenantApkListFromPayloadConfig(JsonReader reader)
+            throws VirtualMachineException {
+        try {
+            List<String> apks = new ArrayList<>();
+            reader.beginObject(); // Start of the main JSON object
+            while (reader.hasNext()) {
+                if (reader.nextName().equals("tenants")) {
+                    reader.beginArray(); // Start of the tenants array
+                    while (reader.hasNext()) {
+                        reader.beginObject(); // Start of a tenant object
+                        String pkg = "";
+                        String path = "";
+                        while (reader.hasNext()) {
+                            String tenantName = reader.nextName();
+                            if (tenantName.equals("package")) {
+                                pkg = reader.nextString();
+                            } else if (tenantName.equals("path")) {
+                                path = reader.nextString();
+                            } else {
+                                reader.skipValue(); // Skip other fields
+                            }
+                        }
+                        reader.endObject(); // End of a tenant object
+
+                        if ("apk".equals(pkg)) {
+                            apks.add(path);
+                        }
+                    }
+                    reader.endArray(); // End of the tenants array
+                } else {
+                    reader.skipValue(); // Skip other top-level fields
+                }
+            }
+            reader.endObject(); // End of the main JSON object
+            return apks;
+        } catch (IOException e) {
+            throw new VirtualMachineException(e);
+        }
+    }
+
+    private static List<ApkSpec> setupExtraApksFromConfigFile(
+            Context context, File vmDir, String configPath) throws VirtualMachineException {
+        try (ZipFile zipFile = new ZipFile(context.getPackageCodePath())) {
+            InputStream inputStream = zipFile.getInputStream(zipFile.getEntry(configPath));
+            List<String> apkList =
+                    parseExtraApkListFromPayloadConfig(
+                            new JsonReader(new InputStreamReader(inputStream)));
+
+            List<ApkSpec> extraApks = new ArrayList<>(apkList.size());
+            for (int i = 0; i < apkList.size(); ++i) {
+                extraApks.add(
+                        new ApkSpec(
+                                new File(apkList.get(i)),
+                                new File(vmDir, EXTRA_IDSIG_FILE_PREFIX + i)));
+            }
+
+            return extraApks;
+        } catch (IOException e) {
+            throw new VirtualMachineException("Couldn't parse extra apks from the vm config", e);
+        }
+    }
+
+    private static List<ApkSpec> setupExtraApksFromList(
             Context context, File vmDir, List<String> extraApkInfo) throws VirtualMachineException {
         int count = extraApkInfo.size();
-        List<ExtraApkSpec> extraApks = new ArrayList<>(count);
+        List<ApkSpec> extraApks = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             String packageName = extraApkInfo.get(i);
             ApplicationInfo appInfo;
@@ -2386,7 +2478,7 @@ public class VirtualMachine implements AutoCloseable {
             }
 
             extraApks.add(
-                    new ExtraApkSpec(
+                    new ApkSpec(
                             new File(appInfo.sourceDir),
                             new File(vmDir, EXTRA_IDSIG_FILE_PREFIX + i)));
         }
