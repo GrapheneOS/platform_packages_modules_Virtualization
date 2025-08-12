@@ -1278,6 +1278,7 @@ fn is_safe_app_partition(label: &str) -> bool {
         || label == "microdroid-apk-idsig"
         || label == "payload-metadata"
         || label.starts_with("extra-idsig-")
+        || label.starts_with("tenant-idsig-")
 }
 
 /// Returns whether a partition with the given label is safe for a raw config VM.
@@ -1834,6 +1835,15 @@ fn check_protected_vm_is_supported() -> binder::Result<()> {
     }
 }
 
+fn check_no_additional_tenants_idsig(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
+    let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
+    if config.tenantIdsigs.is_empty() {
+        return Ok(());
+    }
+    Err(anyhow!("Multitenancy is not supported"))
+        .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+}
+
 fn check_config_features(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     if !cfg!(vendor_modules) {
         check_no_vendor_modules(config)?;
@@ -1849,6 +1859,9 @@ fn check_config_features(config: &aidl::VirtualMachineConfig) -> binder::Result<
     }
     if !cfg!(long_running_vms) {
         check_no_delay_enc_store(config)?;
+    }
+    if !cfg!(advance_multitenancy) {
+        check_no_additional_tenants_idsig(config)?;
     }
     Ok(())
 }

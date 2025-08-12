@@ -37,6 +37,8 @@ const MAIN_APK_IDSIG_PATH: &str = "/dev/block/by-name/microdroid-apk-idsig";
 const MAIN_APK_DEVICE_NAME: &str = "microdroid-apk";
 const EXTRA_APK_PATH_PATTERN: &str = "/dev/block/by-name/extra-apk-*";
 const EXTRA_IDSIG_PATH_PATTERN: &str = "/dev/block/by-name/extra-idsig-*";
+const TENANT_APK_PATH_PATTERN: &str = "/dev/block/by-name/tenant-apk-*";
+const TENANT_IDSIG_PATH_PATTERN: &str = "/dev/block/by-name/tenant-idsig-*";
 
 const APKDMVERITY_BIN: &str = "/system/bin/apkdmverity";
 
@@ -172,6 +174,40 @@ pub fn verify_payload(
         extra_apks_data,
         apex_data: apex_data_from_payload,
     })
+}
+
+pub fn integrity_protect_tenant_apks() -> Result<()> {
+    // sort globbed paths to match apks (tenant-{idx}) and idsigs (tenant-{idx})
+    // e.g. "tenant-0" corresponds to "tenant-idsig-0"
+    let tenant_apks =
+        sorted(glob(TENANT_APK_PATH_PATTERN)?.collect::<Result<Vec<_>, _>>()?).collect::<Vec<_>>();
+    let tenant_idsigs = sorted(glob(TENANT_IDSIG_PATH_PATTERN)?.collect::<Result<Vec<_>, _>>()?)
+        .collect::<Vec<_>>();
+    ensure!(
+        tenant_apks.len() == tenant_idsigs.len(),
+        "Tenant apks/idsigs mismatch: {} apks but {} idsigs",
+        tenant_apks.len(),
+        tenant_idsigs.len()
+    );
+
+    let tenant_apk_names: Vec<_> =
+        (0..tenant_apks.len()).map(|i| format!("tenant-apk-{}", i)).collect();
+    let mut apkdmverity_arguments: Vec<ApkDmverityArgument> = vec![];
+    for (i, tenant_apk) in tenant_apks.iter().enumerate() {
+        apkdmverity_arguments.push({
+            ApkDmverityArgument {
+                apk: tenant_apk.to_str().unwrap(),
+                idsig: tenant_idsigs[i].to_str().unwrap(),
+                name: &tenant_apk_names[i],
+                saved_root_hash: None,
+            }
+        });
+    }
+    // Start apkdmverity and wait for the dm-verify block
+    let mut apkdmverity_child = run_apkdmverity(&apkdmverity_arguments)?;
+
+    apkdmverity_child.wait()?;
+    Ok(())
 }
 
 fn validate_manifest_info(info: &ApkManifestInfo) -> Result<()> {
