@@ -17,6 +17,7 @@ package com.android.virtualization.terminal
 
 import android.crosvm.ICrosvmAndroidDisplayService
 import android.graphics.PixelFormat
+import android.os.DeadObjectException
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
 import android.os.ServiceManager
@@ -122,6 +123,8 @@ internal class DisplayProvider(
         override fun surfaceDestroyed(holder: SurfaceHolder) {
             try {
                 getDisplayService().removeSurface(isForCursor())
+            } catch (e: DeadObjectException) {
+                Log.w(TAG, "The display service is already dead", e)
             } catch (e: RemoteException) {
                 throw RuntimeException("Error while destroying surface for $surfaceKind", e)
             }
