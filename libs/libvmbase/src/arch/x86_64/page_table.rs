@@ -14,7 +14,7 @@
 
 //! Page table management.
 
-use crate::arch::x86_64::paging::{Descriptor, MapError, MemoryRegion};
+use crate::arch::x86_64::paging::{MapError, MemoryRegion};
 use core::result;
 
 type Result<T> = result::Result<T, MapError>;
@@ -67,7 +67,7 @@ impl PageTable {
 
     /// Maps the given range of virtual addresses to the physical addresses as non-executable,
     /// read-only and writable-clean normal memory.
-    pub fn map_data_dbm(&mut self, _range: &MemoryRegion) -> Result<()> {
+    pub fn map_data_track_dirty_state(&mut self, _range: &MemoryRegion) -> Result<()> {
         Ok(())
     }
 
@@ -83,21 +83,17 @@ impl PageTable {
         Ok(())
     }
 
-    /// Applies the provided updater function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn modify_range<F>(&mut self, _range: &MemoryRegion, _f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &mut Descriptor, usize) -> result::Result<(), ()>,
-    {
+    /// Marks a previously-registered R/W region as "dirty" i.e. it has been written to.
+    pub(crate) fn mark_data_dirty(&mut self, _range: &MemoryRegion) -> Result<()> {
         Ok(())
     }
 
-    /// Applies the provided callback function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn walk_range<F>(&self, _range: &MemoryRegion, _f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &Descriptor, usize) -> result::Result<(), ()>,
-    {
+    pub(crate) fn sync_dirty_state(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    pub(crate) fn flush_dirty_pages(&mut self, _range: &MemoryRegion) -> Result<()> {
+        // TODO(b/362733888): Provide the implementation for x86_64
         Ok(())
     }
 }

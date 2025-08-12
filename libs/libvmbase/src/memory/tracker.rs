@@ -18,13 +18,10 @@ use super::error::MemoryTrackerError;
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
 #[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::page_table::PageTable;
-use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
 use crate::arch::paging::MemoryRegion as VaRange;
 #[cfg(target_arch = "x86_64")]
 use crate::arch::x86_64::page_table::PageTable;
 use crate::arch::VirtualAddress;
-#[cfg(target_arch = "aarch64")]
-use crate::dsb;
 use crate::layout;
 use crate::memory::shared::{MemoryRange, MemorySharer, MmioSharer};
 use crate::util::RangeExt as _;
@@ -215,7 +212,7 @@ pub(crate) struct MemoryTracker {
     regions: ArrayVec<[MemoryRegion; MemoryTracker::CAPACITY]>,
     mmio_regions: ArrayVec<[MemoryRange; MemoryTracker::MMIO_CAPACITY]>,
     mmio_range: MemoryRange,
-    image_footer_mapped: bool,
+    image_footer: Option<MemoryRange>,
     mmio_sharer: MmioSharer,
 }
 
@@ -231,10 +228,6 @@ impl MemoryTracker {
         );
 
         let mut page_table = Self::initialize_dynamic_page_tables();
-        // Activate dirty state management first, otherwise we may get permission faults immediately
-        // after activating the new page table. This has no effect before the new page table is
-        // activated because none of the entries in the initial idmap have the DBM flag.
-        set_dbm_enabled(true);
 
         debug!("Activating dynamic page table...");
         // SAFETY: page_table duplicates the static mappings for everything that the Rust code is
@@ -248,7 +241,7 @@ impl MemoryTracker {
             regions: ArrayVec::new(),
             mmio_regions: ArrayVec::new(),
             mmio_range,
-            image_footer_mapped: false,
+            image_footer: None,
             mmio_sharer: MmioSharer::new().unwrap(),
         }
     }
@@ -305,7 +298,7 @@ impl MemoryTracker {
     fn alloc_range_mut(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
         let region = MemoryRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
-        self.page_table.map_data_dbm(&get_va_range(range)).map_err(|e| {
+        self.page_table.map_data_track_dirty_state(&get_va_range(range)).map_err(|e| {
             error!("Error during mutable range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -324,16 +317,17 @@ impl MemoryTracker {
 
     /// Maps the image footer, with read-write permissions.
     fn map_image_footer(&mut self) -> Result<MemoryRange> {
-        if self.image_footer_mapped {
+        if self.image_footer.is_some() {
             return Err(MemoryTrackerError::FooterAlreadyMapped);
         }
         let range = layout::image_footer_range();
-        self.page_table.map_data_dbm(&range.clone().into()).map_err(|e| {
+        self.page_table.map_data_track_dirty_state(&range.clone().into()).map_err(|e| {
             error!("Error during image footer map: {e}");
             MemoryTrackerError::FailedToMap
         })?;
-        self.image_footer_mapped = true;
-        Ok(range.start.0..range.end.0)
+        let range = range.start.0..range.end.0;
+        self.image_footer = Some(range.clone());
+        Ok(range)
     }
 
     /// Allocate the address range for a const slice; returns None if failed.
@@ -486,26 +480,19 @@ impl MemoryTracker {
         Ok(())
     }
 
-    /// Flush all memory regions marked as writable-dirty.
+    /// Flush all memory regions that may have been written to.
     fn flush_dirty_pages(&mut self) -> Result<()> {
-        // Collect memory ranges for which dirty state is tracked.
-        let writable_regions =
-            self.regions.iter().filter(|r| r.mem_type == MemoryType::ReadWrite).map(|r| &r.range);
-        // Execute a barrier instruction to ensure all hardware updates to the page table have been
-        // observed before reading PTE flags to determine dirty state.
-        // TODO(b/362733888): Provide the implementation for x86_64
-        #[cfg(target_arch = "aarch64")]
-        dsb!("ish");
-        // Now flush writable-dirty pages in those regions.
-        for range in writable_regions {
-            self.page_table
-                .walk_range(&get_va_range(range), &flush_dirty_range)
-                .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
+        self.page_table.sync_dirty_state().map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
+        for region in &self.regions {
+            if matches!(region.mem_type, MemoryType::ReadWrite) {
+                self.page_table
+                    .flush_dirty_pages(&get_va_range(&region.range))
+                    .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
+            }
         }
-        if self.image_footer_mapped {
-            let range = layout::image_footer_range();
+        if let Some(range) = &self.image_footer {
             self.page_table
-                .walk_range(&range.into(), &flush_dirty_range)
+                .flush_dirty_pages(&get_va_range(range))
                 .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
         }
         Ok(())
@@ -516,7 +503,7 @@ impl MemoryTracker {
     /// state management is disabled or unavailable.
     pub(crate) fn handle_permission_fault(&mut self, addr: VirtualAddress) -> Result<()> {
         self.page_table
-            .modify_range(&(addr..addr + 1).into(), &mark_dirty_block)
+            .mark_data_dirty(&(addr..addr + 1).into())
             .map_err(|_| MemoryTrackerError::SetPteDirtyFailed)
     }
 
@@ -547,7 +534,6 @@ impl MemoryTracker {
 
 impl Drop for MemoryTracker {
     fn drop(&mut self) {
-        set_dbm_enabled(false);
         self.flush_dirty_pages().unwrap();
         self.unshare_all_memory();
     }
