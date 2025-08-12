@@ -22,6 +22,7 @@ use crate::arch::aarch64::page_table::PageTable;
 use crate::arch::x86_64::page_table::PageTable;
 use crate::layout;
 use crate::memory::shared::{MemorySharer, MmioSharer};
+use crate::mmu::MmuOps;
 use crate::util::RangeExt as _;
 use alloc::boxed::Box;
 use buddy_system_allocator::LockedFrameAllocator;
@@ -34,13 +35,15 @@ use log::{debug, error, info};
 use spin::mutex::{SpinMutex, SpinMutexGuard};
 use tinyvec::ArrayVec;
 
+type GlobalMemoryTracker = MemoryTracker<PageTable>;
+
 /// A global static variable representing the system memory tracker, protected by a spin mutex.
-static MEMORY: SpinMutex<Option<MemoryTracker>> = SpinMutex::new(None);
+static MEMORY: SpinMutex<Option<GlobalMemoryTracker>> = SpinMutex::new(None);
 
 type Result<T> = result::Result<T, MemoryTrackerError>;
 
 /// Attempts to lock `MEMORY`, returns an error if already deactivated.
-fn try_lock_memory_tracker() -> Result<SpinMutexGuard<'static, Option<MemoryTracker>>> {
+fn try_lock_memory_tracker() -> Result<SpinMutexGuard<'static, Option<GlobalMemoryTracker>>> {
     // Being single-threaded, we only spin if `deactivate_dynamic_page_tables()` leaked the lock.
     MEMORY.try_lock().ok_or(MemoryTrackerError::Unavailable)
 }
@@ -222,20 +225,17 @@ impl TrackedRegion {
 }
 
 /// Tracks non-overlapping slices of main memory.
-struct MemoryTracker {
+struct MemoryTracker<T: MmuOps> {
     total: Range<usize>,
-    page_table: PageTable,
-    regions: ArrayVec<[TrackedRegion; MemoryTracker::CAPACITY]>,
-    mmio_regions: ArrayVec<[Range<usize>; MemoryTracker::MMIO_CAPACITY]>,
+    page_table: T,
+    regions: ArrayVec<[TrackedRegion; 5]>,
+    mmio_regions: ArrayVec<[Range<usize>; 5]>,
     mmio_range: Range<usize>,
     image_footer: Option<Range<usize>>,
     mmio_sharer: MmioSharer,
 }
 
-impl MemoryTracker {
-    const CAPACITY: usize = 5;
-    const MMIO_CAPACITY: usize = 5;
-
+impl<T: MmuOps> MemoryTracker<T> {
     /// Creates a new instance from an active page table, covering the maximum RAM size.
     fn new(total: Range<usize>, mmio_range: Range<usize>) -> Self {
         assert!(
@@ -243,7 +243,7 @@ impl MemoryTracker {
             "MMIO space should not overlap with the main memory region."
         );
 
-        let mut page_table = Self::initialize_dynamic_page_tables();
+        let mut page_table = T::clone_static_page_tables();
 
         debug!("Activating dynamic page table...");
         // SAFETY: page_table duplicates the static mappings for everything that the Rust code is
@@ -508,33 +508,9 @@ impl MemoryTracker {
             .mark_data_dirty(&(addr..addr + 1))
             .map_err(|_| MemoryTrackerError::SetPteDirtyFailed)
     }
-
-    // TODO(ptosi): Move this and `PageTable` references to crate::arch::aarch64
-    /// Produces a `PageTable` that can safely replace the static PTs.
-    fn initialize_dynamic_page_tables() -> PageTable {
-        let text = layout::text_range();
-        let rodata = layout::rodata_range();
-        let data_bss = layout::data_bss_range();
-        let eh_stack = layout::eh_stack_range();
-        let stack = layout::stack_range();
-        let console_uart_page = layout::console_uart_page();
-
-        let mut page_table = PageTable::default();
-
-        if let Some(console_uart_page) = console_uart_page {
-            page_table.map_device(&console_uart_page).unwrap();
-        }
-        page_table.map_code(&text).unwrap();
-        page_table.map_rodata(&rodata).unwrap();
-        page_table.map_data(&data_bss).unwrap();
-        page_table.map_data(&eh_stack).unwrap();
-        page_table.map_data(&stack).unwrap();
-
-        page_table
-    }
 }
 
-impl Drop for MemoryTracker {
+impl<T: MmuOps> Drop for MemoryTracker<T> {
     fn drop(&mut self) {
         self.flush_dirty_pages().unwrap();
         self.unshare_all_memory();
