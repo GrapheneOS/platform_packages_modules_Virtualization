@@ -16,9 +16,8 @@
 
 use super::error::MemoryTrackerError;
 use super::util::virt_to_phys;
-use crate::arch::paging::{MemoryRegion as VaRange, PAGE_SIZE};
-use crate::arch::VirtualAddress;
 use crate::layout;
+use crate::memory::PAGE_SIZE;
 use crate::util::unchecked_align_down;
 use alloc::alloc::{alloc_zeroed, dealloc, handle_alloc_error};
 use alloc::collections::BTreeSet;
@@ -36,9 +35,6 @@ use spin::mutex::SpinMutex;
 
 pub(crate) static SHARED_POOL: OnceBox<LockedFrameAllocator<32>> = OnceBox::new();
 pub(crate) static SHARED_MEMORY: SpinMutex<Option<MemorySharer>> = SpinMutex::new(None);
-
-/// Memory range.
-pub type MemoryRange = Range<usize>;
 
 type Result<T> = result::Result<T, MemoryTrackerError>;
 
@@ -69,9 +65,9 @@ impl MmioSharer {
     }
 
     /// Share the MMIO region aligned to the granule size containing addr (not validated as MMIO).
-    pub fn share(&mut self, addr: VirtualAddress) -> Result<VaRange> {
+    pub fn share(&mut self, addr: usize) -> Result<Range<usize>> {
         // This can't use virt_to_phys() since 0x0 is a valid MMIO address and we are ID-mapped.
-        let phys = addr.0;
+        let phys = addr;
         let base = unchecked_align_down(phys, self.granule);
 
         if self.frames.contains(&base) {
@@ -80,7 +76,7 @@ impl MmioSharer {
 
         // TODO(ptosi): Share the UART using this method and remove the hardcoded check.
         if let Some(console_uart_page) = layout::console_uart_page() {
-            if base == console_uart_page.start.0 {
+            if base == console_uart_page.start {
                 return Err(MemoryTrackerError::DuplicateMmioShare(base));
             }
         }
@@ -92,8 +88,8 @@ impl MmioSharer {
         let inserted = self.frames.insert(base);
         assert!(inserted);
 
-        let base_va = VirtualAddress(base);
-        Ok((base_va..base_va + self.granule).into())
+        let base_va = base;
+        Ok(base_va..base_va + self.granule)
     }
 
     pub fn unshare_all(&mut self) {

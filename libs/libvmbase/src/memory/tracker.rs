@@ -18,12 +18,10 @@ use super::error::MemoryTrackerError;
 use super::shared::{SHARED_MEMORY, SHARED_POOL};
 #[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::page_table::PageTable;
-use crate::arch::paging::MemoryRegion as VaRange;
 #[cfg(target_arch = "x86_64")]
 use crate::arch::x86_64::page_table::PageTable;
-use crate::arch::VirtualAddress;
 use crate::layout;
-use crate::memory::shared::{MemoryRange, MemorySharer, MmioSharer};
+use crate::memory::shared::{MemorySharer, MmioSharer};
 use crate::util::RangeExt as _;
 use alloc::boxed::Box;
 use buddy_system_allocator::LockedFrameAllocator;
@@ -38,10 +36,6 @@ use tinyvec::ArrayVec;
 
 /// A global static variable representing the system memory tracker, protected by a spin mutex.
 static MEMORY: SpinMutex<Option<MemoryTracker>> = SpinMutex::new(None);
-
-fn get_va_range(range: &MemoryRange) -> VaRange {
-    VaRange::new(range.start, range.end)
-}
 
 type Result<T> = result::Result<T, MemoryTrackerError>;
 
@@ -122,7 +116,7 @@ pub fn unshare_all_memory() {
 pub fn unshare_uart() -> Result<()> {
     let Some(mmio_guard) = get_mmio_guard() else { return Ok(()) };
     let Some(console_uart_page) = layout::console_uart_page() else { return Ok(()) };
-    Ok(mmio_guard.unmap(console_uart_page.start.0)?)
+    Ok(mmio_guard.unmap(console_uart_page.start)?)
 }
 
 /// Map the provided range as normal memory, with R/W permissions.
@@ -193,7 +187,7 @@ pub fn map_device(addr: usize, size: NonZeroUsize) -> Result<()> {
 }
 
 /// Handles a permission fault for a write to a data region, mapped as RO to track the dirty state.
-pub(crate) fn handle_read_only_fault(addr: VirtualAddress) -> Result<()> {
+pub(crate) fn handle_read_only_fault(addr: usize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
     tracker.handle_permission_fault(addr)?;
@@ -201,7 +195,7 @@ pub(crate) fn handle_read_only_fault(addr: VirtualAddress) -> Result<()> {
 }
 
 /// Handler for faults triggered by accesses to MMIO, previously marked as lazy MMIO.
-pub(crate) fn handle_lazy_mmio_fault(addr: VirtualAddress) -> Result<()> {
+pub(crate) fn handle_lazy_mmio_fault(addr: usize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
     tracker.handle_mmio_fault(addr)?;
@@ -217,24 +211,24 @@ enum MemoryType {
 
 #[derive(Clone, Debug, Default)]
 struct TrackedRegion {
-    range: MemoryRange,
+    range: Range<usize>,
     mem_type: MemoryType,
 }
 
 impl TrackedRegion {
-    pub fn range(&self) -> VaRange {
-        VaRange::new(self.range.start, self.range.end)
+    pub fn range(&self) -> Range<usize> {
+        self.range.clone()
     }
 }
 
 /// Tracks non-overlapping slices of main memory.
 struct MemoryTracker {
-    total: MemoryRange,
+    total: Range<usize>,
     page_table: PageTable,
     regions: ArrayVec<[TrackedRegion; MemoryTracker::CAPACITY]>,
-    mmio_regions: ArrayVec<[MemoryRange; MemoryTracker::MMIO_CAPACITY]>,
-    mmio_range: MemoryRange,
-    image_footer: Option<MemoryRange>,
+    mmio_regions: ArrayVec<[Range<usize>; MemoryTracker::MMIO_CAPACITY]>,
+    mmio_range: Range<usize>,
+    image_footer: Option<Range<usize>>,
     mmio_sharer: MmioSharer,
 }
 
@@ -243,7 +237,7 @@ impl MemoryTracker {
     const MMIO_CAPACITY: usize = 5;
 
     /// Creates a new instance from an active page table, covering the maximum RAM size.
-    fn new(total: MemoryRange, mmio_range: MemoryRange) -> Self {
+    fn new(total: Range<usize>, mmio_range: Range<usize>) -> Self {
         assert!(
             !total.overlaps(&mmio_range),
             "MMIO space should not overlap with the main memory region."
@@ -271,7 +265,7 @@ impl MemoryTracker {
     /// Resize the total RAM size.
     ///
     /// This function fails if it contains regions that are not included within the new size.
-    fn shrink(&mut self, range: &MemoryRange) -> Result<()> {
+    fn shrink(&mut self, range: &Range<usize>) -> Result<()> {
         if range.start != self.total.start {
             return Err(MemoryTrackerError::DifferentBaseAddress);
         }
@@ -286,7 +280,7 @@ impl MemoryTracker {
         Ok(())
     }
 
-    fn map_rodata(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
+    fn map_rodata(&mut self, base: usize, size: NonZeroUsize) -> Result<Range<usize>> {
         let region =
             TrackedRegion { range: base..(base + size.get()), mem_type: MemoryType::ReadOnly };
         self.check_allocatable(&region)?;
@@ -305,8 +299,8 @@ impl MemoryTracker {
     /// data.
     unsafe fn map_rodata_range_outside_main_memory(
         &mut self,
-        range: &MemoryRange,
-    ) -> Result<MemoryRange> {
+        range: &Range<usize>,
+    ) -> Result<Range<usize>> {
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
         self.check_no_overlap(&region)?;
         self.page_table.map_rodata(&region.range()).map_err(|e| {
@@ -316,7 +310,7 @@ impl MemoryTracker {
         self.add(region)
     }
 
-    fn map_data(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
+    fn map_data(&mut self, base: usize, size: NonZeroUsize) -> Result<Range<usize>> {
         let range = base..(base + size.get());
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
@@ -327,7 +321,7 @@ impl MemoryTracker {
         self.add(region)
     }
 
-    fn map_data_noflush(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
+    fn map_data_noflush(&mut self, base: usize, size: NonZeroUsize) -> Result<Range<usize>> {
         let range = base..(base + size.get());
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
@@ -339,23 +333,22 @@ impl MemoryTracker {
     }
 
     /// Maps the image footer, with read-write permissions.
-    fn map_image_footer(&mut self) -> Result<MemoryRange> {
+    fn map_image_footer(&mut self) -> Result<Range<usize>> {
         if self.image_footer.is_some() {
             return Err(MemoryTrackerError::FooterAlreadyMapped);
         }
         let range = layout::image_footer_range();
-        self.page_table.map_data_track_dirty_state(&range.clone().into()).map_err(|e| {
+        self.page_table.map_data_track_dirty_state(&range).map_err(|e| {
             error!("Error during image footer map: {e}");
             MemoryTrackerError::FailedToMap
         })?;
-        let range = range.start.0..range.end.0;
         self.image_footer = Some(range.clone());
         Ok(range)
     }
 
     /// Checks that the given range of addresses is within the MMIO region, and then maps it
     /// appropriately.
-    fn map_mmio_range(&mut self, range: &MemoryRange) -> Result<()> {
+    fn map_mmio_range(&mut self, range: &Range<usize>) -> Result<()> {
         if !range.is_within(&self.mmio_range) {
             return Err(MemoryTrackerError::OutOfRange);
         }
@@ -367,12 +360,12 @@ impl MemoryTracker {
         }
 
         if get_mmio_guard().is_some() {
-            self.page_table.mark_as_lazy_device(&get_va_range(range)).map_err(|e| {
+            self.page_table.mark_as_lazy_device(range).map_err(|e| {
                 error!("Error during lazy MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
         } else {
-            self.page_table.map_device(&get_va_range(range)).map_err(|e| {
+            self.page_table.map_device(range).map_err(|e| {
                 error!("Error during MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
@@ -408,7 +401,7 @@ impl MemoryTracker {
         Ok(())
     }
 
-    fn add(&mut self, region: TrackedRegion) -> Result<MemoryRange> {
+    fn add(&mut self, region: TrackedRegion) -> Result<Range<usize>> {
         if self.regions.try_push(region).is_some() {
             return Err(MemoryTrackerError::Full);
         }
@@ -480,7 +473,7 @@ impl MemoryTracker {
 
     /// Handles translation fault for blocks flagged for lazy MMIO mapping by enabling the page
     /// table entry and MMIO guard mapping the block. Breaks apart a block entry if required.
-    pub(crate) fn handle_mmio_fault(&mut self, addr: VirtualAddress) -> Result<()> {
+    pub(crate) fn handle_mmio_fault(&mut self, addr: usize) -> Result<()> {
         let shared_range = self.mmio_sharer.share(addr)?;
         self.page_table
             .map_device_expect_lazy(&shared_range)
@@ -501,7 +494,7 @@ impl MemoryTracker {
         }
         if let Some(range) = &self.image_footer {
             self.page_table
-                .flush_dirty_pages(&get_va_range(range))
+                .flush_dirty_pages(range)
                 .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
         }
         Ok(())
@@ -510,9 +503,9 @@ impl MemoryTracker {
     /// Handles permission fault for read-only blocks by setting writable-dirty state.
     /// In general, this should be called from the exception handler when hardware dirty
     /// state management is disabled or unavailable.
-    pub(crate) fn handle_permission_fault(&mut self, addr: VirtualAddress) -> Result<()> {
+    pub(crate) fn handle_permission_fault(&mut self, addr: usize) -> Result<()> {
         self.page_table
-            .mark_data_dirty(&(addr..addr + 1).into())
+            .mark_data_dirty(&(addr..addr + 1))
             .map_err(|_| MemoryTrackerError::SetPteDirtyFailed)
     }
 
@@ -529,13 +522,13 @@ impl MemoryTracker {
         let mut page_table = PageTable::default();
 
         if let Some(console_uart_page) = console_uart_page {
-            page_table.map_device(&console_uart_page.into()).unwrap();
+            page_table.map_device(&console_uart_page).unwrap();
         }
-        page_table.map_code(&text.into()).unwrap();
-        page_table.map_rodata(&rodata.into()).unwrap();
-        page_table.map_data(&data_bss.into()).unwrap();
-        page_table.map_data(&eh_stack.into()).unwrap();
-        page_table.map_data(&stack.into()).unwrap();
+        page_table.map_code(&text).unwrap();
+        page_table.map_rodata(&rodata).unwrap();
+        page_table.map_data(&data_bss).unwrap();
+        page_table.map_data(&eh_stack).unwrap();
+        page_table.map_data(&stack).unwrap();
 
         page_table
     }

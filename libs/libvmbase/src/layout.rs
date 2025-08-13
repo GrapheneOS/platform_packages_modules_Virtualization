@@ -16,7 +16,6 @@
 
 #![allow(unused_unsafe)]
 
-use crate::arch::VirtualAddress;
 use crate::linker::__stack_chk_guard;
 use crate::memory::{max_stack_size, PAGE_SIZE};
 use core::ops::Range;
@@ -36,8 +35,7 @@ pub const MAX_VIRT_ADDR: usize = crosvm::MAX_VIRT_ADDR;
 #[macro_export]
 macro_rules! linker_addr {
     ($symbol:ident) => {{
-        let addr = (&raw const $crate::linker::$symbol) as usize;
-        VirtualAddress(addr)
+        (&raw const $crate::linker::$symbol) as usize
     }};
 }
 
@@ -52,41 +50,41 @@ macro_rules! linker_region {
 }
 
 /// Executable code.
-pub fn text_range() -> Range<VirtualAddress> {
+pub fn text_range() -> Range<usize> {
     linker_region!(text_begin, text_end)
 }
 
 /// Read-only data.
-pub fn rodata_range() -> Range<VirtualAddress> {
+pub fn rodata_range() -> Range<usize> {
     linker_region!(rodata_begin, rodata_end)
 }
 
 /// Region which may contain a footer appended to the binary at load time.
-pub fn image_footer_range() -> Range<VirtualAddress> {
+pub fn image_footer_range() -> Range<usize> {
     linker_region!(image_footer_begin, image_footer_end)
 }
 
 /// Initialised writable data.
-pub fn data_range() -> Range<VirtualAddress> {
+pub fn data_range() -> Range<usize> {
     linker_region!(data_begin, data_end)
 }
 
 /// Zero-initialized writable data.
-pub fn bss_range() -> Range<VirtualAddress> {
+pub fn bss_range() -> Range<usize> {
     linker_region!(bss_begin, bss_end)
 }
 
 /// Writable data region for .data and .bss.
-pub fn data_bss_range() -> Range<VirtualAddress> {
+pub fn data_bss_range() -> Range<usize> {
     linker_region!(data_begin, bss_end)
 }
 
 /// Writable data region for the stack.
-pub fn stack_range() -> Range<VirtualAddress> {
+pub fn stack_range() -> Range<usize> {
     let end = linker_addr!(init_stack_pointer);
     let start = if let Some(stack_size) = max_stack_size() {
         assert_eq!(stack_size % PAGE_SIZE, 0);
-        let start = VirtualAddress(end.0.checked_sub(stack_size).unwrap());
+        let start = end.checked_sub(stack_size).unwrap();
         assert!(start >= linker_addr!(stack_limit));
         start
     } else {
@@ -97,17 +95,17 @@ pub fn stack_range() -> Range<VirtualAddress> {
 }
 
 /// Writable data region for the exception handler stack.
-pub fn eh_stack_range() -> Range<VirtualAddress> {
+pub fn eh_stack_range() -> Range<usize> {
     linker_region!(eh_stack_limit, init_eh_stack_pointer)
 }
 
 /// Read-write data (original).
-pub fn data_load_address() -> VirtualAddress {
+pub fn data_load_address() -> usize {
     linker_addr!(data_lma)
 }
 
 /// End of the binary image.
-pub fn binary_end() -> VirtualAddress {
+pub fn binary_end() -> usize {
     linker_addr!(bin_end)
 }
 

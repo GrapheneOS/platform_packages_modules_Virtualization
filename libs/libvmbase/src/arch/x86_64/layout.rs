@@ -18,8 +18,6 @@
 
 use core::ops::Range;
 
-use crate::arch::VirtualAddress;
-
 /// The start address of MMIO space.
 pub const MMIO_START: usize = 0xD000_0000;
 /// The end address of MMIO space.
@@ -46,7 +44,7 @@ pub const MAX_VIRT_ADDR: usize = 0xD000_0000;
 pub const UART_PORTS: [u16; 4] = [0x3f8, 0x2f8, 0x3e8, 0x2e8];
 
 /// Range of the page at UART - not present on x86.
-pub fn console_uart_page() -> Option<Range<VirtualAddress>> {
+pub fn console_uart_page() -> Option<Range<usize>> {
     None
 }
 

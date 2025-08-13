@@ -53,8 +53,8 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     // A sub-region of the scratch memory might contain data for the next stage so skip zeroing it.
     // Alternatively, an empty region at the start of the scratch region is compatible with the ASM
     // implementation and results in the whole scratch region being zeroed.
-    let skipped = preserved_memory.unwrap_or(scratch.start.0..scratch.start.0);
-    assert!(skipped.is_within(&(scratch.start.0..scratch.end.0)));
+    let skipped = preserved_memory.unwrap_or(scratch.start..scratch.start);
+    assert!(skipped.is_within(&scratch));
 
     // Zero all memory that could hold secrets and that can't be safely written to from Rust.
     // Reset all registers and then jump to the payload at the given address, passing it the given
@@ -149,14 +149,14 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             // and `XSETBV`), so prevent those registers from being allocated to other inputs.
             in("rax") 0, in("rcx") 0, in("rdx") 0, in("rdi") 0,
 
-            scratch = in(reg) u64::try_from(scratch.start.0).unwrap(),
-            scratch_before_skipped = in(reg) u64::try_from(skipped.start - scratch.start.0).unwrap(),
-            scratch_after_skipped = in(reg) u64::try_from(scratch.end.0 - skipped.end).unwrap(),
+            scratch = in(reg) u64::try_from(scratch.start).unwrap(),
+            scratch_before_skipped = in(reg) u64::try_from(skipped.start - scratch.start).unwrap(),
+            scratch_after_skipped = in(reg) u64::try_from(scratch.end - skipped.end).unwrap(),
             skipped_end = in(reg) u64::try_from(skipped.end).unwrap(),
-            stack = in(reg) u64::try_from(stack.start.0).unwrap(),
-            stack_size = in(reg) u64::try_from(stack.end.0 - stack.start.0).unwrap(),
-            eh_stack = in(reg) u64::try_from(eh_stack.start.0).unwrap(),
-            eh_stack_size = in(reg) u64::try_from(eh_stack.end.0 - eh_stack.start.0).unwrap(),
+            stack = in(reg) u64::try_from(stack.start).unwrap(),
+            stack_size = in(reg) u64::try_from(stack.end - stack.start).unwrap(),
+            eh_stack = in(reg) u64::try_from(eh_stack.start).unwrap(),
+            eh_stack_size = in(reg) u64::try_from(eh_stack.end - eh_stack.start).unwrap(),
             in("rsi") u64::try_from(boot_params).unwrap(),
             in("r15") u64::try_from(entrypoint).unwrap(),
 

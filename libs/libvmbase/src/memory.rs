@@ -21,7 +21,6 @@ mod tracker;
 mod util;
 
 pub use error::MemoryTrackerError;
-pub use shared::MemoryRange;
 pub use tracker::{
     deactivate_dynamic_page_tables, init_shared_pool, map_data, map_data_noflush, map_device,
     map_image_footer, map_rodata, map_rodata_outside_main_memory, resize_available_memory,
