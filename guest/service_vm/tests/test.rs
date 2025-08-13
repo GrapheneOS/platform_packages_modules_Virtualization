@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Integration test for Rialto.
+//! Integration test for Service VM kernel.
 
 use android_system_virtualizationservice::{
     aidl::android::system::virtualizationservice::{
@@ -50,8 +50,9 @@ use x509_cert::{
     spki::{AlgorithmIdentifier, ObjectIdentifier, SubjectPublicKeyInfo},
 };
 
-const UNSIGNED_RIALTO_PATH: &str = "/data/local/tmp/rialto_test/arm64/rialto_unsigned.bin";
-const INSTANCE_IMG_PATH: &str = "/data/local/tmp/rialto_test/arm64/instance.img";
+const UNSIGNED_SERVICE_VM_KERNEL_PATH: &str =
+    "/data/local/tmp/service_vm/arm64/service_vm_unsigned.bin";
+const INSTANCE_IMG_PATH: &str = "/data/local/tmp/service_vm_test/arm64/instance.img";
 const TEST_CERT_CHAIN_PATH: &str = "testdata/rkp_cert_chain.der";
 
 #[test]
@@ -296,7 +297,7 @@ fn check_csr(csr: Vec<u8>) -> Result<()> {
 fn start_service_vm(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<ServiceVm> {
     android_logger::init_once(
         android_logger::Config::default()
-            .with_tag("rialto")
+            .with_tag("service_vm")
             .with_max_level(log::LevelFilter::Debug),
     );
     // We need to start the thread pool for Binder to work properly, especially link_to_death.
@@ -315,15 +316,16 @@ fn vm_instance(vm_type: VmType, vm_memory_mb: Option<i32>) -> Result<VmInstance>
 }
 
 fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
-    let rialto = File::open(UNSIGNED_RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
+    let service_vm = File::open(UNSIGNED_SERVICE_VM_KERNEL_PATH)
+        .context("Failed to open Service VM kernel binary")?;
     // Do not use `#allocateInstanceId` to generate the instance ID because the method
     // also adds an instance ID to the database it manages.
     // This is not necessary for this test.
     let mut instance_id = [0u8; 64];
     rand_bytes(&mut instance_id).unwrap();
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: format!("Non protected rialto ({memory_mib}MiB)"),
-        kernel: Some(ParcelFileDescriptor::new(rialto)),
+        name: format!("Non protected Service VM kernel ({memory_mib}MiB)"),
+        kernel: Some(ParcelFileDescriptor::new(service_vm)),
         protectedVm: false,
         memoryMib: memory_mib,
         platformVersion: "~1.0".to_string(),

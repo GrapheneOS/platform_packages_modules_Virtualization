@@ -16,7 +16,7 @@ across all reboots.
 
 ## Architecture
 
-[Rialto][rialto] is used as the bare-metal kernel for the Service VM. It
+[service_vm][service_vm] is used as the bare-metal kernel for the Service VM. It
 shares some low-level setup, such as memory management and virtio device
 parsing, with pvmfw. The common setup code is grouped in [libvmbase/][libvmbase].
 
@@ -35,21 +35,20 @@ serialized in CBOR format and transmitted over a virtio-vsock device.
     [virtualizationservice][virtualizationservice] process owns and manages the
     Service VM instance.
 
-[rialto]: ../guest/rialto
+[service_vm]: ../guest/service_vm
 [libvmbase]: ../libs/libvmbase
 [libservice_vm_comm]: ../libs/libservice_vm_comm
 [libservice_vm_requests]: ../libs/libservice_vm_requests
 [libservice_vm_manager]: ../libs/libservice_vm_manager
 [virtualizationservice]: ../android/virtualizationservice
 
-### RKP VM (Remote Key Provisioning Virtual Machine)
+### RKP (Remote Key Provisioning)
 
-Currently, the Service VM only supports VM remote attestation, and in that
-context we refer to it as the RKP VM. The RKP VM undergoes validation by the
-[RKP][rkp] Server and functions as a remotely provisioned component responsible
-for verifying the integrity of other virtual machines. See
-[VM remote attestation][vm-attestation] for more details about the role of RKP
-VM in remote attestation.
+The Service VM's primary function is to facilitate VM remote attestation
+through [Remote Key Provisioning (RKP)][rkp]. To perform this task, the Service
+VM undergoes validation by the RKP Server. It then operates as a remotely
+provisioned component that verifies the integrity of other virtual machines.
+For details, see [VM remote attestation][vm-attestation].
 
 [rkp]: https://source.android.com/docs/core/ota/modular-system/remote-key-provisioning
 [vm-attestation]: https://android.googlesource.com/platform/packages/modules/Virtualization/+/main/docs/vm_remote_attestation.md

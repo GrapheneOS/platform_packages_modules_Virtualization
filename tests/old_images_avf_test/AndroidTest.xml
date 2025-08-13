@@ -16,8 +16,9 @@
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="cleanup" value="true" />
         <option name="push" value="old_images_avf_test->/data/local/tmp/old_images_avf_test" />
-        <option name="push" value="rialto.bin->/data/local/tmp/rialto.bin" />
-        <option name="push" value="android16_rialto.bin->/data/local/tmp/android16_rialto.bin" />
+        <option name="push" value="service_vm.bin->/data/local/tmp/service_vm.bin" />
+        <option name="push"
+                value="android16_service_vm.bin->/data/local/tmp/android16_service_vm.bin" />
     </target_preparer>
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.ArchModuleController">
         <option name="arch" value="arm64" />
@@ -25,7 +26,7 @@
     <test class="com.android.tradefed.testtype.rust.RustBinaryTest" >
         <option name="test-device-path" value="/data/local/tmp" />
         <option name="module-name" value="old_images_avf_test" />
-        <!-- rialto uses a fixed port number for the host, can't run two tests at the same time -->
+        <!-- service_vm uses a fixed port number for the host, can't run two tests at the same time -->
         <option name="native-test-flag" value="--test-threads=1" />
     </test>
 </configuration>

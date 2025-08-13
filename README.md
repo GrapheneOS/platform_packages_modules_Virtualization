@@ -20,6 +20,7 @@ AVF components:
 * [Microdroid kernel](guest/kernel/README.md)
 * [Microdroid payload](libs/libmicrodroid_payload_metadata/README.md)
 * [vmbase](libs/libvmbase/README.md)
+* [Service VM](docs/service_vm.md)
 * [Encrypted Storage](guest/encryptedstore/README.md)
 
 AVF APIs:
@@ -31,6 +32,8 @@ How-Tos:
 * [Building and running a demo app in C++](android/vm_demo_native/README.md)
 * [Debugging](docs/debug)
 * [Using custom VM](docs/custom_vm.md)
+* [pVM DICE chain](docs/pvm_dice_chain.md)
+* [pVM Remote Attestation](docs/vm_remote_attestation.md)
 * [Device assignment](docs/device_assignment.md)
 * [Microdroid vendor modules](docs/microdroid_vendor_modules.md)
 * [Huge Pages](docs/hugepages.md)

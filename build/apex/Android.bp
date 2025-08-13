@@ -98,7 +98,7 @@ apex_defaults {
             }),
             filesystems: microdroid_filesystem_images,
             prebuilts: [
-                "rialto_bin",
+                "service_vm_bin",
                 "android_bootloader_crosvm_aarch64",
             ],
         },

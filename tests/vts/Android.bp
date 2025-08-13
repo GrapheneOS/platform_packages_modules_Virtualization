@@ -1,10 +1,10 @@
 prebuilt_etc {
     name: "vts_libavf_test_kernel",
-    filename: "rialto.bin",
+    filename: "service_vm.bin",
     src: ":empty_file",
     target: {
         android_arm64: {
-            src: ":rialto_signed",
+            src: ":service_vm_signed",
         },
     },
     installable: false,

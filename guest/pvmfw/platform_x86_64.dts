@@ -1,0 +1,37 @@
+/*
+ * Copyright (C) 2025 Google LLC
+ */
+
+#define PLACEHOLDER	0xffffffff
+#define PLACEHOLDER2	PLACEHOLDER PLACEHOLDER
+#define PLACEHOLDER4	PLACEHOLDER2 PLACEHOLDER2
+
+/dts-v1/;
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	chosen {
+		kaslr-seed = <PLACEHOLDER2>;
+		avf,strict-boot;
+		avf,new-instance;
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x00 0x80000000 PLACEHOLDER2>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		dice {
+			compatible = "google,open-dice";
+			no-map;
+			reg = <PLACEHOLDER4>;
+		};
+	};
+};

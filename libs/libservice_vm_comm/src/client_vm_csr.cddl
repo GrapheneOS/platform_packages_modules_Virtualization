@@ -1,4 +1,4 @@
-; CDDL for the CSR sent from the client VM to the RKP VM for pVM remote attestation.
+; CDDL for the CSR sent from the client VM to the Service VM for pVM remote attestation.
 
 Csr = [
     DiceCertChain,      ; The DICE chain containing measurement of the client VM. See

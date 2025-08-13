@@ -3,8 +3,8 @@ package {
 }
 
 rust_ffi_static {
-    name: "librialto",
-    crate_name: "rialto",
+    name: "libservice_vm",
+    crate_name: "service_vm",
     srcs: ["src/main.rs"],
     defaults: ["vmbase_ffi_defaults"],
     rustlibs: [
@@ -25,14 +25,14 @@ rust_ffi_static {
 }
 
 cc_binary {
-    name: "rialto_elf",
-    stem: "rialto",
+    name: "service_vm_elf",
+    stem: "service_vm",
     defaults: ["vmbase_elf_defaults"],
     srcs: [
         "idmap.S",
     ],
     static_libs: [
-        "librialto",
+        "libservice_vm",
         "libvmbase_dice_clear_memory",
     ],
     linker_scripts: [
@@ -42,8 +42,8 @@ cc_binary {
 }
 
 raw_binary {
-    name: "rialto_unsigned",
-    src: ":rialto_elf",
+    name: "service_vm_unsigned",
+    src: ":service_vm_elf",
     enabled: false,
     target: {
         android_arm64: {
@@ -52,11 +52,11 @@ raw_binary {
     },
 }
 
-// python -c "import hashlib; print(hashlib.sha256(b'rialto_salt').hexdigest())"
-rialto_salt = "ea9d8c3ae1785396884d0c16c7652921874e2b8703f336ff23760f2049ee9e29"
+// python -c "import hashlib; print(hashlib.sha256(b'service_vm_salt').hexdigest())"
+service_vm_salt = "52af8246bb7dc5da9170255c8ab0c1ebaf5794ed50a493c4630baed3251ae7d2"
 
 filegroup {
-    name: "rialto_sign_key",
+    name: "service_vm_sign_key",
     srcs: [":avb_testkey_rsa4096"],
 }
 
@@ -85,12 +85,12 @@ rust_library_rlib {
 }
 
 avb_add_hash_footer {
-    name: "rialto_signed",
+    name: "service_vm_signed",
     src: ":empty_file",
-    filename: "rialto",
+    filename: "service_vm",
     partition_name: "boot",
-    private_key: ":rialto_sign_key",
-    salt: rialto_salt,
+    private_key: ":service_vm_sign_key",
+    salt: service_vm_salt,
     rollback_index: SERVICE_VM_VERSION,
     props: [
         {
@@ -105,19 +105,19 @@ avb_add_hash_footer {
     enabled: false,
     arch: {
         arm64: {
-            src: ":rialto_unsigned",
+            src: ":service_vm_unsigned",
             enabled: true,
         },
     },
 }
 
 prebuilt_etc {
-    // rialto_bin is a prebuilt target wrapping the signed bare-metal service VM.
-    name: "rialto_bin",
-    filename: "rialto.bin",
+    // service_vm_bin is a prebuilt target wrapping the signed bare-metal service VM.
+    name: "service_vm_bin",
+    filename: "service_vm.bin",
     target: {
         android_arm64: {
-            src: ":rialto_signed",
+            src: ":service_vm_signed",
         },
     },
     src: ":empty_file",
@@ -125,8 +125,8 @@ prebuilt_etc {
 }
 
 rust_test {
-    name: "rialto_test",
-    crate_name: "rialto_test",
+    name: "service_vm_test",
+    crate_name: "service_vm_test",
     defaults: ["avf_build_flags_rust"],
     srcs: ["tests/test.rs"],
     prefer_rlib: true,
@@ -149,7 +149,7 @@ rust_test {
         "libx509_cert_nostd",
     ],
     data: [
-        ":rialto_unsigned",
+        ":service_vm_unsigned",
         ":test_rkp_cert_chain",
     ],
     test_suites: ["general-tests"],

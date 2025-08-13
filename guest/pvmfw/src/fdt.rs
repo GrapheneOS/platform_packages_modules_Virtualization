@@ -52,7 +52,12 @@ use vmbase::util::RangeExt as _;
 use zerocopy::IntoBytes as _;
 
 // SAFETY: The template DT is automatically generated through DTC, which should produce valid DTBs.
+#[cfg(target_arch = "aarch64")]
 const FDT_TEMPLATE: &Fdt = unsafe { Fdt::unchecked_from_slice(pvmfw_fdt_template::RAW) };
+
+// SAFETY: The template DT is automatically generated through DTC, which should produce valid DTBs.
+#[cfg(target_arch = "x86_64")]
+const FDT_TEMPLATE: &Fdt = unsafe { Fdt::unchecked_from_slice(pvmfw_fdt_template::RAW_X86_64) };
 
 /// An enumeration of errors that can occur during the FDT validation.
 #[derive(Clone, Debug)]

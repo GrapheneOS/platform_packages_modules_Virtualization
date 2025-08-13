@@ -148,7 +148,7 @@
       "path": "packages/modules/Virtualization/guest/pvmfw"
     },
     {
-      "path": "packages/modules/Virtualization/guest/rialto"
+      "path": "packages/modules/Virtualization/guest/service_vm"
     },
     {
       "path": "packages/modules/Virtualization/libs/libclient_vm_csr"

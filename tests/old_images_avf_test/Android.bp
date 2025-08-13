@@ -1,10 +1,10 @@
 prebuilt_etc {
-    name: "backcompat_rialto_kernel",
-    filename: "rialto.bin",
+    name: "backcompat_service_vm",
+    filename: "service_vm.bin",
     src: ":empty_file",
     target: {
         android_arm64: {
-            src: ":rialto_signed",
+            src: ":service_vm_signed",
         },
     },
     installable: false,
@@ -12,12 +12,12 @@ prebuilt_etc {
 }
 
 prebuilt_etc {
-    name: "android16_rialto_kernel",
-    filename: "android16_rialto.bin",
+    name: "android16_service_vm",
+    filename: "android16_service_vm.bin",
     src: ":empty_file",
     target: {
         android_arm64: {
-            src: "images/android16_rialto.bin",
+            src: "images/android16_service_vm.bin",
         },
     },
     installable: false,
@@ -43,8 +43,8 @@ rust_test {
         "general-tests",
     ],
     data: [
-        ":android16_rialto_kernel",
-        ":backcompat_rialto_kernel",
+        ":android16_service_vm",
+        ":backcompat_service_vm",
     ],
     enabled: false,
     target: {

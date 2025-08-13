@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-//! Provides functions to build a test chain for non-protected rialto and tests.
+//! Provides functions to build a test chain for non-protected Service VM kernel
+//! and tests.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
 // `client_vm` builds DICE artifacts related to Microdroid, which is not relevant
-// to the nostd build used in rialto.
+// to the nostd build used in Service VM.
 #[cfg(feature = "std")]
 pub mod client_vm;
 pub mod service_vm;

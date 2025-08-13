@@ -330,6 +330,8 @@ public final class VirtualMachineConfig {
         try (FileInputStream input = new FileInputStream(file)) {
             return fromInputStream(input);
         } catch (IOException e) {
+            // Please don't change this error message unless b/437160991 is fixed. Clients depend on
+            // this error message as a temporary fix for b/433697078.
             throw new VirtualMachineException("Failed to read VM config from file", e);
         }
     }
