@@ -332,7 +332,7 @@ genrule {
 cc_genrule {
     name: "test_pvmfw_devices_expected_dt",
     srcs: [
-        ":pvmfw_platform.dts.preprocessed",
+        ":pvmfw_platform_arm64.dts.preprocessed",
         "testdata/expected_dt_with_dependency.dts",
         "testdata/expected_dt_with_multiple_dependencies.dts",
         "testdata/expected_dt_with_dependency_loop.dts",
@@ -452,21 +452,24 @@ prebuilt_etc {
 // We need to rename *.dts into *.cpp as cc_object doesn't accept *.dts as an
 // input
 genrule {
-    name: "pvmfw_platform.dts.renamed",
-    srcs: ["platform.dts"],
-    out: ["out.cpp"],
+    name: "pvmfw_platform_arm64.dts.renamed",
+    srcs: ["platform_arm64.dts"],
+    out: ["platform_arm64_dts.cpp"],
     cmd: "cp $(in) $(out)",
     visibility: ["//visibility:private"],
 }
 
-// Then run the macro processor to replace symbols like GIC_SPI into actual
-// numbers defined in the ARM DT binding headers
-cc_object {
-    name: "pvmfw_platform.dts.preprocessed",
+genrule {
+    name: "pvmfw_platform_x86_64.dts.renamed",
+    srcs: ["platform_x86_64.dts"],
+    out: ["platform_x86_64_dts.cpp"],
+    cmd: "cp $(in) $(out)",
+    visibility: ["//visibility:private"],
+}
+
+cc_defaults {
+    name: "pvmfw_dt_preprocess_flags",
     defaults: ["avf_build_flags_cc"],
-    header_libs: ["arm_dt_bindings_headers"],
-    host_supported: true,
-    srcs: [":pvmfw_platform.dts.renamed"],
     cflags: [
         "-E",
         "-P",
@@ -474,23 +477,58 @@ cc_object {
         // Suppress an error about the unused -c that precedes -S.
         "-Wno-unused-command-line-argument",
     ],
+}
+
+// Then run the macro processor to replace symbols like GIC_SPI into actual
+// numbers defined in the ARM DT binding headers
+cc_object {
+    name: "pvmfw_platform_arm64.dts.preprocessed",
+    defaults: ["pvmfw_dt_preprocess_flags"],
+    header_libs: ["arm_dt_bindings_headers"],
+    host_supported: true,
+    srcs: [":pvmfw_platform_arm64.dts.renamed"],
+    visibility: ["//visibility:private"],
+}
+
+cc_object {
+    name: "pvmfw_platform_x86_64.dts.preprocessed",
+    defaults: ["pvmfw_dt_preprocess_flags"],
+    host_supported: true,
+    srcs: [":pvmfw_platform_x86_64.dts.renamed"],
     visibility: ["//visibility:private"],
 }
 
 // Compile the preprocessed dts into binary and create a rust library source
 // having the binary.
+// We have 2 separate dts:
+// - arm64 dts which is used in arm64 pvmfw binary and tests built for all
+//   all architectures and host.
+// - x86_64 dts which is used only in the x86_64 pvmfw binary
+// This library is included in the pvmfw binary and the test binaries as well.
+// So, for x86_64, we include both these compiled dtb in the library source.
 cc_genrule {
     name: "pvmfw_fdt_template_rs",
-    srcs: [":pvmfw_platform.dts.preprocessed"],
+    srcs: [
+        ":pvmfw_platform_arm64.dts.preprocessed",
+        ":pvmfw_platform_x86_64.dts.preprocessed",
+    ],
     host_supported: true,
     out: ["lib.rs"],
     tools: ["dtc"],
-    cmd: "$(location dtc) -@ -I dts -O dtb -o $(genDir)/compiled.dtbo $(in) && " +
+    cmd: "FILES=($(in));" +
+        "DTS_ARM64=$${FILES[0]};" +
+        "DTS_X86_64=$${FILES[1]};" +
+        "$(location dtc) -@ -I dts -O dtb -o $(genDir)/compiled_arm64.dtbo $${DTS_ARM64} && " +
+        "$(location dtc) -@ -I dts -O dtb -o $(genDir)/compiled_x86_64.dtbo $${DTS_X86_64} && " +
         "(" +
         "    echo '#![no_std]';" +
         "    echo '#![allow(missing_docs)]';" +
         "    echo 'pub const RAW: &[u8] = &[';" +
-        "    xxd -i < $(genDir)/compiled.dtbo;" +
+        "    xxd -i < $(genDir)/compiled_arm64.dtbo;" +
+        "    echo '];';" +
+        "    echo '#[cfg(target_arch = \"x86_64\")]';" +
+        "    echo 'pub const RAW_X86_64: &[u8] = &[';" +
+        "    xxd -i < $(genDir)/compiled_x86_64.dtbo;" +
         "    echo '];';" +
         ") > $(out)",
     visibility: ["//visibility:private"],
