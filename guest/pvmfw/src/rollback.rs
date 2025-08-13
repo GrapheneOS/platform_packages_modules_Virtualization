@@ -254,7 +254,7 @@ fn initialize_instance_img_device(
         error!("Failed to initialize PCI: {e}");
         RebootReason::InternalError
     })?;
-    init_shared_pool(swiotlb_range).map_err(|e| {
+    init_shared_pool(swiotlb_range.as_ref()).map_err(|e| {
         error!("Failed to initialize shared pool: {e}");
         RebootReason::InternalError
     })?;

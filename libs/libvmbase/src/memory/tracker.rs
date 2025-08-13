@@ -87,7 +87,7 @@ pub fn resize_available_memory(memory_range: &Range<usize>) -> Result<()> {
 }
 
 /// Initialize the memory pool for page sharing with the host.
-pub fn init_shared_pool(static_range: Option<Range<usize>>) -> Result<()> {
+pub fn init_shared_pool(static_range: Option<&Range<usize>>) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
     if let Some(mem_sharer) = get_mem_sharer() {
@@ -131,7 +131,7 @@ pub fn unshare_uart() -> Result<()> {
 pub fn map_data(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
-    let _ = tracker.alloc_mut(addr, size)?;
+    let _ = tracker.map_data(addr, size)?;
     Ok(())
 }
 
@@ -143,7 +143,7 @@ pub fn map_data(addr: usize, size: NonZeroUsize) -> Result<()> {
 pub fn map_data_noflush(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
-    let _ = tracker.alloc_mut_noflush(addr, size)?;
+    let _ = tracker.map_data_noflush(addr, size)?;
     Ok(())
 }
 
@@ -163,7 +163,7 @@ pub fn map_image_footer() -> Result<Range<usize>> {
 pub fn map_rodata(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
-    let _ = tracker.alloc(addr, size)?;
+    let _ = tracker.map_rodata(addr, size)?;
     Ok(())
 }
 
@@ -178,7 +178,7 @@ pub unsafe fn map_rodata_outside_main_memory(addr: usize, size: NonZeroUsize) ->
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
     let end = addr + usize::from(size);
     // SAFETY: Caller has checked that it is valid to map the range.
-    let _ = unsafe { tracker.alloc_range_outside_main_memory(&(addr..end)) }?;
+    let _ = unsafe { tracker.map_rodata_range_outside_main_memory(&(addr..end)) }?;
     Ok(())
 }
 
@@ -189,7 +189,7 @@ pub fn map_device(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
     let range = addr..(addr + usize::from(size));
-    tracker.map_mmio_range(range.clone())
+    tracker.map_mmio_range(&range)
 }
 
 /// Handles a permission fault for a write to a data region, mapped as RO to track the dirty state.
@@ -219,6 +219,12 @@ enum MemoryType {
 struct TrackedRegion {
     range: MemoryRange,
     mem_type: MemoryType,
+}
+
+impl TrackedRegion {
+    pub fn range(&self) -> VaRange {
+        VaRange::new(self.range.start, self.range.end)
+    }
 }
 
 /// Tracks non-overlapping slices of main memory.
@@ -280,11 +286,11 @@ impl MemoryTracker {
         Ok(())
     }
 
-    /// Allocate the address range for a const slice; returns None if failed.
-    fn alloc_range(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
-        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
+    fn map_rodata(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
+        let region =
+            TrackedRegion { range: base..(base + size.get()), mem_type: MemoryType::ReadOnly };
         self.check_allocatable(&region)?;
-        self.page_table.map_rodata(&get_va_range(range)).map_err(|e| {
+        self.page_table.map_rodata(&region.range()).map_err(|e| {
             error!("Error during range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -297,34 +303,35 @@ impl MemoryTracker {
     ///
     /// Callers of this method need to ensure that the `range` is valid for mapping as read-only
     /// data.
-    unsafe fn alloc_range_outside_main_memory(
+    unsafe fn map_rodata_range_outside_main_memory(
         &mut self,
         range: &MemoryRange,
     ) -> Result<MemoryRange> {
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
         self.check_no_overlap(&region)?;
-        self.page_table.map_rodata(&get_va_range(range)).map_err(|e| {
+        self.page_table.map_rodata(&region.range()).map_err(|e| {
             error!("Error during range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
         self.add(region)
     }
 
-    /// Allocate the address range for a mutable slice; returns None if failed.
-    fn alloc_range_mut(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
+    fn map_data(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
+        let range = base..(base + size.get());
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
-        self.page_table.map_data_track_dirty_state(&get_va_range(range)).map_err(|e| {
+        self.page_table.map_data_track_dirty_state(&region.range()).map_err(|e| {
             error!("Error during mutable range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
         self.add(region)
     }
 
-    fn alloc_range_mut_noflush(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
+    fn map_data_noflush(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
+        let range = base..(base + size.get());
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
-        self.page_table.map_data(&get_va_range(range)).map_err(|e| {
+        self.page_table.map_data(&region.range()).map_err(|e| {
             error!("Error during non-flushed mutable range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -346,23 +353,9 @@ impl MemoryTracker {
         Ok(range)
     }
 
-    /// Allocate the address range for a const slice; returns None if failed.
-    fn alloc(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
-        self.alloc_range(&(base..(base + size.get())))
-    }
-
-    /// Allocate the address range for a mutable slice; returns None if failed.
-    fn alloc_mut(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
-        self.alloc_range_mut(&(base..(base + size.get())))
-    }
-
-    fn alloc_mut_noflush(&mut self, base: usize, size: NonZeroUsize) -> Result<MemoryRange> {
-        self.alloc_range_mut_noflush(&(base..(base + size.get())))
-    }
-
     /// Checks that the given range of addresses is within the MMIO region, and then maps it
     /// appropriately.
-    fn map_mmio_range(&mut self, range: MemoryRange) -> Result<()> {
+    fn map_mmio_range(&mut self, range: &MemoryRange) -> Result<()> {
         if !range.is_within(&self.mmio_range) {
             return Err(MemoryTrackerError::OutOfRange);
         }
@@ -374,18 +367,18 @@ impl MemoryTracker {
         }
 
         if get_mmio_guard().is_some() {
-            self.page_table.mark_as_lazy_device(&get_va_range(&range)).map_err(|e| {
+            self.page_table.mark_as_lazy_device(&get_va_range(range)).map_err(|e| {
                 error!("Error during lazy MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
         } else {
-            self.page_table.map_device(&get_va_range(&range)).map_err(|e| {
+            self.page_table.map_device(&get_va_range(range)).map_err(|e| {
                 error!("Error during MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
         }
 
-        if self.mmio_regions.try_push(range).is_some() {
+        if self.mmio_regions.try_push(range.clone()).is_some() {
             return Err(MemoryTrackerError::Full);
         }
 
@@ -453,9 +446,9 @@ impl MemoryTracker {
     /// of guest memory as "shared" ahead of guest starting its execution. The
     /// shared memory region is indicated in swiotlb node. On such platforms use
     /// a separate heap to allocate buffers that can be shared with host.
-    fn init_static_shared_pool(&mut self, range: Range<usize>) -> Result<()> {
+    fn init_static_shared_pool(&mut self, range: &Range<usize>) -> Result<()> {
         let size = NonZeroUsize::new(range.len()).unwrap();
-        let range = self.alloc_mut(range.start, size)?;
+        let range = self.map_data(range.start, size)?;
         let shared_pool = LockedFrameAllocator::<32>::new();
 
         shared_pool.lock().insert(range);
@@ -502,7 +495,7 @@ impl MemoryTracker {
         for region in &self.regions {
             if matches!(region.mem_type, MemoryType::ReadWrite) {
                 self.page_table
-                    .flush_dirty_pages(&get_va_range(&region.range))
+                    .flush_dirty_pages(&region.range())
                     .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
             }
         }
