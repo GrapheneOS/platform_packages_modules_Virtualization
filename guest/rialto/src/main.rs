@@ -88,7 +88,13 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     // We do not need to validate the DT since it is already validated in pvmfw.
     let fdt = libfdt::Fdt::from_slice(fdt)?;
 
-    let memory_range = fdt.first_memory_range()?;
+    let mut memory_range = fdt.first_memory_range()?;
+    // "/memory" may include the pvmfw region, which we don't supported reusing in rialto, so
+    // truncate it off if present.
+    #[cfg(target_arch = "aarch64")]
+    if memory_range.start == crosvm::PVMFW_START {
+        memory_range.start = crosvm::MEM_START;
+    }
     resize_available_memory(&memory_range).inspect_err(|_| {
         error!("Failed to use memory range value from DT: {memory_range:#x?}");
     })?;
