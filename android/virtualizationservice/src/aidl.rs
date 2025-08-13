@@ -349,8 +349,27 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     ) -> std::result::Result<(), binder::Status> {
         check_manage_access()?;
         check_use_custom_virtual_machine()?;
+
+        let service = self.clone();
+        let mut dr = DeathRecipient::new(move || {
+            warn!("Display service died. Clearing it.");
+            if let Err(e) = service.clearDisplayService() {
+                error!("Failed to clear display service from death recipient: {:?}", e);
+            }
+        });
+
+        let mut binder = ibinder.clone();
+        binder.link_to_death(&mut dr)?;
+
         let state = &mut *self.state.lock().unwrap();
-        state.display_service = Some(ibinder.clone());
+        if let Some((mut old_binder, mut old_dr)) = state.display_service.take() {
+            if old_binder.is_binder_alive() {
+                if let Err(e) = old_binder.unlink_to_death(&mut old_dr) {
+                    error!("Failed to unlink old display service: {:?}", e);
+                }
+            }
+        }
+        state.display_service = Some((ibinder.clone(), dr));
         self.display_service_set.notify_all();
         Ok(())
     }
@@ -359,7 +378,13 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         check_manage_access()?;
         check_use_custom_virtual_machine()?;
         let state = &mut *self.state.lock().unwrap();
-        state.display_service = None;
+        if let Some((mut binder, mut dr)) = state.display_service.take() {
+            if binder.is_binder_alive() {
+                if let Err(e) = binder.unlink_to_death(&mut dr) {
+                    error!("Failed to unlink display service: {:?}", e);
+                }
+            }
+        }
         self.display_service_set.notify_all();
         Ok(())
     }
@@ -373,7 +398,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             .unwrap();
         Ok((state.display_service)
             .as_ref()
-            .cloned()
+            .map(|(binder, _dr)| binder.clone())
             .expect("Display service cannot be None in this context"))
     }
     fn removeMemlockRlimit(&self) -> binder::Result<()> {
@@ -833,7 +858,7 @@ struct GlobalState {
     /// State relating to secrets held by (optional) Secretkeeper instance on behalf of VMs.
     sk_state: Option<maintenance::State>,
 
-    display_service: Option<binder::SpIBinder>,
+    display_service: Option<(binder::SpIBinder, DeathRecipient)>,
 }
 
 impl GlobalState {
