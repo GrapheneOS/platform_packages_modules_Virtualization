@@ -23,7 +23,7 @@ rust_defaults {
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
     visibility: [
-        "//packages/modules/Virtualization/guest/rialto:__subpackages__",
+        "//packages/modules/Virtualization/guest/service_vm:__subpackages__",
     ],
     prefer_rlib: true,
 }

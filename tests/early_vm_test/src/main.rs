@@ -34,9 +34,9 @@ use vmclient::VmInstance;
 const VM_MEMORY_MB: i32 = 16;
 
 #[derive(Parser)]
-/// Collection of CLI for avf_early_vm_test_rialto
+/// Collection of CLI for avf_early_vm_test_service_vm
 pub struct Args {
-    /// Path to the Rialto kernel image.
+    /// Path to the Service VM kernel image.
     #[arg(long)]
     kernel: PathBuf,
 

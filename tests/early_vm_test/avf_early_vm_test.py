@@ -15,14 +15,13 @@
 # limitations under the License.
 #
 
-import logging
 import os
 import subprocess
 import unittest
 
 _DEFAULT_COMMAND_TIMEOUT = 300
 _LAUNCHER_PATH = "/system_ext/bin/avf_early_vm_test_launcher"
-_RIALTO_PATH = "/system_ext/etc/avf/rialto_test.bin"
+_SERVICE_VM_KERNEL_PATH = "/system_ext/etc/avf/service_vm_test.bin"
 
 def _RunCommand(cmd, timeout=_DEFAULT_COMMAND_TIMEOUT):
     with subprocess.Popen(args=cmd,
@@ -45,8 +44,8 @@ class AvfEarlyVmTest(unittest.TestCase):
         self.assertTrue(self._serial_number, "$ANDROID_SERIAL is empty.")
 
     def _TestAvfEarlyVm(self, protected):
-        adb_cmd = ["adb", "-s", self._serial_number, "shell", _LAUNCHER_PATH, "--kernel",
-                   _RIALTO_PATH]
+        adb_cmd = ["adb", "-s", self._serial_number, "shell", _LAUNCHER_PATH,
+                   "--kernel", _SERVICE_VM_KERNEL_PATH]
         if protected:
             adb_cmd.append("--protected")
 

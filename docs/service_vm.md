@@ -16,7 +16,7 @@ across all reboots.
 
 ## Architecture
 
-[Rialto][rialto] is used as the bare-metal kernel for the Service VM. It
+[service_vm][service_vm] is used as the bare-metal kernel for the Service VM. It
 shares some low-level setup, such as memory management and virtio device
 parsing, with pvmfw. The common setup code is grouped in [libvmbase/][libvmbase].
 
@@ -35,7 +35,7 @@ serialized in CBOR format and transmitted over a virtio-vsock device.
     [virtualizationservice][virtualizationservice] process owns and manages the
     Service VM instance.
 
-[rialto]: ../guest/rialto
+[service_vm]: ../guest/service_vm
 [libvmbase]: ../libs/libvmbase
 [libservice_vm_comm]: ../libs/libservice_vm_comm
 [libservice_vm_requests]: ../libs/libservice_vm_requests

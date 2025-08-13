@@ -73,9 +73,9 @@ fn listen_from_guest(port: u32) -> Result<VsockStream> {
     }
 }
 
-fn run_rialto(protected_vm: bool) -> Result<()> {
-    let kernel_file =
-        File::open("/data/nativetest64/vendor/rialto.bin").context("Failed to open kernel file")?;
+fn run_service_vm(protected_vm: bool) -> Result<()> {
+    let kernel_file = File::open("/data/nativetest64/vendor/service_vm.bin")
+        .context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
 
     // SAFETY: AVirtualMachineRawConfig_create() isn't unsafe but rust_bindgen forces it to be seen
@@ -90,7 +90,7 @@ fn run_rialto(protected_vm: bool) -> Result<()> {
 
     // SAFETY: config is the only reference to a valid object
     unsafe {
-        AVirtualMachineRawConfig_setName(config, c"vts_libavf_test_rialto".as_ptr());
+        AVirtualMachineRawConfig_setName(config, c"vts_libavf_test_service_vm".as_ptr());
         AVirtualMachineRawConfig_setKernel(config, kernel_fd);
         AVirtualMachineRawConfig_setProtectedVm(config, protected_vm);
         AVirtualMachineRawConfig_setMemoryMiB(config, VM_MEMORY_MB);
@@ -177,9 +177,9 @@ fn run_rialto(protected_vm: bool) -> Result<()> {
 }
 
 #[test]
-fn test_run_rialto_protected() -> Result<()> {
+fn test_run_service_vm_protected() -> Result<()> {
     if hypervisor_props::is_protected_vm_supported()? {
-        run_rialto(true /* protected_vm */)
+        run_service_vm(true /* protected_vm */)
     } else {
         info!("pVMs are not supported on device. skipping test");
         Ok(())
@@ -187,9 +187,9 @@ fn test_run_rialto_protected() -> Result<()> {
 }
 
 #[test]
-fn test_run_rialto_non_protected() -> Result<()> {
+fn test_run_service_vm_non_protected() -> Result<()> {
     if hypervisor_props::is_vm_supported()? {
-        run_rialto(false /* protected_vm */)
+        run_service_vm(false /* protected_vm */)
     } else {
         info!("non-pVMs are not supported on device. skipping test");
         Ok(())

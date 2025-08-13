@@ -1,10 +1,10 @@
 prebuilt_etc {
     name: "avf_early_vm_test_kernel",
-    filename: "rialto.bin",
+    filename: "service_vm.bin",
     src: ":empty_file",
     target: {
         android_arm64: {
-            src: ":rialto_signed",
+            src: ":service_vm_signed",
         },
     },
     installable: false,
@@ -44,7 +44,7 @@ python_test_host {
         ":avf_early_vm_test_kernel",
         ":avf_early_vm_test_launcher",
     ],
-    data: ["early_vms_rialto_test.xml"],
+    data: ["early_vms_service_vm_test.xml"],
     test_suites: ["general-tests"],
     test_config: "AndroidTest.xml",
     test_options: {

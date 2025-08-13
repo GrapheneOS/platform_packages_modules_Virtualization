@@ -507,7 +507,7 @@ virt_apex_non_gki_files = {
     'super.img': 'etc/fs/microdroid_super.img',
     'initrd_normal.img': 'etc/microdroid_initrd_normal.img',
     'initrd_debuggable.img': 'etc/microdroid_initrd_debuggable.img',
-    'rialto': 'etc/rialto.bin',
+    'service_vm': 'etc/service_vm.bin',
 }
 
 def TargetFiles(input_dir):
@@ -631,19 +631,19 @@ def SignVirtApex(args):
             resign_kernel_tasks.append(task)
             original_kernels[kernel_name] = original_kernel_descriptors
 
-    # Re-sign rialto if it exists. Rialto only exists in arm64 environment.
-    if os.path.exists(files['rialto']):
+    # Re-sign service_vm if it exists; it only exists in arm64 environment.
+    if os.path.exists(files['service_vm']):
         update_initrd_digests_task = Async(
-            update_initrd_digests_of_kernels_in_rialto, original_kernels, args, files,
+            update_initrd_digests_of_kernels_in_service_vm, original_kernels, args, files,
             wait=resign_kernel_tasks)
-        Async(resign_rialto, args, key, files['rialto'], wait=[update_initrd_digests_task])
+        Async(resign_service_vm, args, key, files['service_vm'], wait=[update_initrd_digests_task])
 
-def resign_rialto(args, key, rialto_path):
-    _, original_descriptors = AvbInfo(args, rialto_path)
-    AddHashFooter(args, key, rialto_path)
+def resign_service_vm(args, key, service_vm_path):
+    _, original_descriptors = AvbInfo(args, service_vm_path)
+    AddHashFooter(args, key, service_vm_path)
 
     # Verify the new AVB footer.
-    updated_info, updated_descriptors = AvbInfo(args, rialto_path)
+    updated_info, updated_descriptors = AvbInfo(args, service_vm_path)
     assert len(updated_descriptors) == len(original_descriptors), \
         (f"The number of descriptors must remain the same after resigning. "
          f"Got {len(updated_descriptors)} but expected {len(original_descriptors)}. "
@@ -652,45 +652,46 @@ def resign_rialto(args, key, rialto_path):
     updated_prop = find_all_values_by_key(updated_descriptors, "Prop")
     original_prop = find_all_values_by_key(original_descriptors, "Prop")
     assert original_prop == updated_prop, \
-        (f"Prop descriptors unexpectly changed after resigning rialto. "
+        (f"Prop descriptors unexpectly changed after resigning service_vm. "
          f"Original: {original_prop}, Updated: {updated_prop}")
-    assert updated_info["Rollback Index"] != "0", "Rollback index should not be zero for rialto."
+    assert updated_info["Rollback Index"] != "0", \
+        "Rollback index should not be zero for service_vm."
 
-    # Verify the only hash descriptor of rialto.
+    # Verify the only hash descriptor of service_vm.
     updated_hash_descriptors = extract_hash_descriptors(updated_descriptors)
     assert len(updated_hash_descriptors) == 1, \
-        f"There should be only one hash descriptor for rialto. " \
+        f"There should be only one hash descriptor for service_vm. " \
         f"Updated hash descriptors: {updated_hash_descriptors}"
-    # Since salt is not updated, the change of digest reflects the change of content of rialto
-    # kernel.
+    # Since salt is not updated, the change of digest reflects the change of content of
+    # service_vm
     if not args.do_not_update_bootconfigs:
         [(_, original_descriptor)] = extract_hash_descriptors(original_descriptors).items()
         [(_, updated_descriptor)] = updated_hash_descriptors.items()
         assert_different_value(original_descriptor, updated_descriptor, "Digest",
-                               "rialto_hash_descriptor")
+                               "service_vm_hash_descriptor")
 
 def assert_different_value(original, updated, key, context):
     assert original[key] != updated[key], \
         f"Value of '{key}' should change for '{context}'" \
         f"Original value: {original[key]}, updated value: {updated[key]}"
 
-def update_initrd_digests_of_kernels_in_rialto(original_kernels, args, files):
-    # Update the hashes of initrd_normal and initrd_debug in rialto if the
+def update_initrd_digests_of_kernels_in_service_vm(original_kernels, args, files):
+    # Update the hashes of initrd_normal and initrd_debug in service_vm if the
     # bootconfigs in them are updated.
     if args.do_not_update_bootconfigs:
         return
 
-    with open(files['rialto'], "rb") as file:
+    with open(files['service_vm'], "rb") as file:
         content = file.read()
 
     for kernel_name, descriptors in original_kernels.items():
-        content = update_initrd_digests_in_rialto(
+        content = update_initrd_digests_in_service_vm(
             descriptors, args, files, kernel_name, content)
 
-    with open(files['rialto'], "wb") as file:
+    with open(files['service_vm'], "wb") as file:
         file.write(content)
 
-def update_initrd_digests_in_rialto(
+def update_initrd_digests_in_service_vm(
         original_descriptors, args, files, kernel_name, content):
     _, updated_descriptors = AvbInfo(args, files[kernel_name])
 
@@ -703,7 +704,7 @@ def update_initrd_digests_in_rialto(
         f"\nOriginal descriptors: {original_descriptors}, " \
         f"\nUpdated descriptors: {updated_descriptors}"
 
-    # Check that the original and updated digests are different before updating rialto.
+    # Check that the original and updated digests are different before updating service_vm.
     partition_names = {'initrd_normal', 'initrd_debug'}
     assert set(original_digests.keys()) == set(updated_digests.keys()) == partition_names, \
         f"Original digests' partitions should be {partition_names}. " \
@@ -757,8 +758,8 @@ def VerifyVirtApex(args):
         if IsInitrdImage(k):
             # TODO(b/245277660): Verify that ramdisks contain the correct vbmeta digest
             continue
-        if k == 'rialto' and not os.path.exists(f):
-            # Rialto only exists in arm64 environment.
+        if k == 'service_vm' and not os.path.exists(f):
+            # service_vm only exists in arm64 environment.
             continue
         if k == 'super.img':
             Async(check_avb_pubkey, system_a_img)

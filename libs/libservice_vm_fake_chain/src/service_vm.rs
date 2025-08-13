@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-//! Provides functions to build fake DICE artifacts for non-protected rialto used in
+//! Provides functions to build fake DICE artifacts for non-protected Service VM used in
 //! end-to-end tests.
 
 use alloc::vec;
@@ -150,7 +150,7 @@ pub(crate) fn fake_dice_artifacts_up_to_pvmfw() -> Result<(CdiValues, Vec<u8>)> 
 /// The fake DICE chain has the following nodes:
 /// Root public key -> pvmfw certificate -> service VM certificate
 ///
-/// The fake DICE chain is solely used in non-protected rialto for testing
+/// The fake DICE chain is solely used in non-protected Service VM for testing
 /// purposes.
 pub fn fake_service_vm_dice_artifacts() -> Result<OwnedDiceArtifacts> {
     let (cdi_values, dice_chain) = fake_dice_artifacts_up_to_pvmfw()?;

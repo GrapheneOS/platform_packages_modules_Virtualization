@@ -22,8 +22,8 @@
     <option name="abort-on-push-failure" value="true" />
         <option name="remount-system" value="true" />
         <option name="push-file" key="avf_early_vm_test_launcher" value="/system_ext/bin/avf_early_vm_test_launcher" />
-        <option name="push-file" key="rialto.bin" value="/system_ext/etc/avf/rialto_test.bin" />
-        <option name="push-file" key="early_vms_rialto_test.xml" value="/system_ext/etc/avf/early_vms_rialto_test.xml" />
+        <option name="push-file" key="service_vm.bin" value="/system_ext/etc/avf/service_vm_test.bin" />
+        <option name="push-file" key="early_vms_service_vm_test.xml" value="/system_ext/etc/avf/early_vms_service_vm_test.xml" />
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.python.PythonBinaryHostTest">

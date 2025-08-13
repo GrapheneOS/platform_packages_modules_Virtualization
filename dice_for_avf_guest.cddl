@@ -19,7 +19,7 @@
 ; Each components of VM must specify the value corresponding to `Component name`(-70002).
 ; For provided reference implementations:
 ;
-; 1. "vm_entry" - Guest 'OS'. This is the payload booted by pVM firmware. For e.g, Microdroid, Rialto.
+; 1. "vm_entry" - Guest 'OS'. This is the payload booted by pVM firmware. For e.g, Microdroid, Service VM.
 ; 2. "Microdroid vendor" - The vendor image, specific to Microdroid.
 ; 3. "Microdroid Payload" - Payload run by Microdroid Manager.
 

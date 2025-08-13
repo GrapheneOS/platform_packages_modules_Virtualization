@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Supports for the communication between rialto and host.
+//! Supports for the communication between Service VM and host.
 
 use crate::error::Result;
 use ciborium_io::{Read, Write};
@@ -35,7 +35,7 @@ const WRITE_BUF_CAPACITY: usize = 512;
 
 pub struct VsockStream<H: Hal, T: Transport> {
     connection_manager: VsockConnectionManager<H, T>,
-    /// Peer address. The same port is used on rialto and peer for convenience.
+    /// Peer address. The same port is used on Service VM and peer for convenience.
     peer_addr: VsockAddr,
     write_buf: ArrayVec<[u8; WRITE_BUF_CAPACITY]>,
 }

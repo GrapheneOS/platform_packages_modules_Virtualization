@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This module contains the error thrown by Rialto.
+//! This module contains the error thrown by Service VM.
 
 use core::{fmt, result};
 use diced_open_dice::DiceError;

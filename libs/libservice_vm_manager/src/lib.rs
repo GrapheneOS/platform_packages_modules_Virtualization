@@ -40,7 +40,7 @@ use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 pub const VM_MEMORY_MB: i32 = 6;
 
 const VIRT_DATA_DIR: &str = "/data/misc/apexdata/com.android.virt";
-const RIALTO_PATH: &str = "/apex/com.android.virt/etc/rialto.bin";
+const SERVICE_VM_KERNEL_PATH: &str = "/apex/com.android.virt/etc/service_vm.bin";
 const INSTANCE_IMG_NAME: &str = "service_vm_instance.img";
 const INSTANCE_ID_FILENAME: &str = "service_vm_instance_id";
 const INSTANCE_IMG_SIZE_BYTES: i64 = 1 << 20; // 1MB
@@ -235,12 +235,13 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
         guid: None,
     }];
     let cpu_options = CpuOptions { cpuTopology: CpuTopology::CpuCount(1) };
-    let rialto = File::open(RIALTO_PATH).context("Failed to open Rialto kernel binary")?;
+    let service_vm =
+        File::open(SERVICE_VM_KERNEL_PATH).context("Failed to open Service VM kernel binary")?;
     let instance_id_file = Path::new(VIRT_DATA_DIR).join(INSTANCE_ID_FILENAME);
     let instance_id = get_or_allocate_instance_id(service.as_ref(), instance_id_file)?;
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: String::from("Service VM"),
-        kernel: Some(ParcelFileDescriptor::new(rialto)),
+        kernel: Some(ParcelFileDescriptor::new(service_vm)),
         disks: vec![DiskImage { image: None, partitions: writable_partitions, writable: true }],
         instanceId: instance_id,
         protectedVm: true,

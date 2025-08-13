@@ -14,7 +14,7 @@
      limitations under the License.
 -->
 
-<configuration description="Config for rialto_test">
+<configuration description="Config for service_vm_test">
   <!--
     We need root privilege to bypass selinux because shell cannot create socket.
     Otherwise, we hit the following errors:
@@ -25,11 +25,11 @@
   <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer"/>
 
   <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
-    <option name="push-file" key="rialto_test" value="/data/local/tmp/rialto_test" />
+    <option name="push-file" key="service_vm_test" value="/data/local/tmp/service_vm_test" />
   </target_preparer>
 
   <test class="com.android.tradefed.testtype.rust.RustBinaryTest" >
     <option name="test-device-path" value="/data/local/tmp" />
-    <option name="module-name" value="rialto_test" />
+    <option name="module-name" value="service_vm_test" />
   </test>
 </configuration>

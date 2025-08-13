@@ -3,7 +3,7 @@
 {
   "avf-postsubmit": [
     {
-      "name": "rialto_test"
+      "name": "service_vm_test"
     }
   ]
 }

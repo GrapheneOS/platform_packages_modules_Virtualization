@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Project Rialto main source file.
+//! Service VM kernel's main source file.
 
 #![no_main]
 #![no_std]
@@ -79,7 +79,7 @@ fn vm_type(fdt: &libfdt::Fdt) -> Result<VmType> {
 /// Behavior is undefined if any of the following conditions are violated:
 /// * The `fdt_addr` must be a valid pointer and points to a valid `Fdt`.
 unsafe fn try_main(fdt_addr: usize) -> Result<()> {
-    info!("Welcome to Rialto!");
+    info!("Welcome to Service VM!");
 
     let fdt_size = NonZeroUsize::new(crosvm::FDT_MAX_SIZE).unwrap();
     map_rodata(fdt_addr, fdt_size)?;
@@ -101,7 +101,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
 
     let swiotlb_range = SwiotlbInfo::new_from_fdt(fdt)
         .inspect_err(|_| {
-            error!("Rialto failed when access swiotlb");
+            error!("Service VM failed when access swiotlb");
         })?
         .and_then(|info| info.fixed_range());
     init_shared_pool(swiotlb_range).inspect_err(|_| {
@@ -162,13 +162,13 @@ fn find_socket_device<T: Hal>(
         .ok_or(Error::MissingVirtIOSocketDevice)
 }
 
-/// Entry point for Rialto.
+/// Entry point for Service VM.
 pub fn main(argv: &[usize]) {
     log::set_max_level(log::LevelFilter::Debug);
     // SAFETY: `fdt_addr` is supposed to be a valid pointer and points to
     // a valid `Fdt`.
     if let Err(e) = unsafe { try_main(argv[0]) } {
-        error!("Rialto failed with {e}");
+        error!("Service VM failed with {e}");
         reboot()
     }
 }

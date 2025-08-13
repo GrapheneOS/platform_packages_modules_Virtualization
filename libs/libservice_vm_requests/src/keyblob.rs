@@ -33,8 +33,8 @@ const KEK_INFO: &[u8] = b"rialto keyblob kek";
 /// of the KEK, there is no need for an additional random nonce.
 const PRIVATE_KEY_NONCE: &[u8; AES_GCM_NONCE_LENGTH] = &[0; AES_GCM_NONCE_LENGTH];
 
-/// Since Rialto functions as both the sender and receiver of the message, no additional data is
-/// needed.
+/// Since Service VM functions as both the sender and receiver of the message, no additional data
+/// is needed.
 const PRIVATE_KEY_AD: &[u8] = &[];
 
 // Encrypted key blob.
