@@ -367,10 +367,16 @@ generate_output_package() {
 
 	echo ${build_id} > build_id
 
-	local root_partition_num=1
-	loop=$(losetup -f --show --partscan $raw_disk_image)
-	dd if="${loop}p$root_partition_num" of=root_part
-	losetup -d "${loop}"
+	if [[ "$may_skip_build" == 0 || ! -f "root_part" ]]; then
+		local root_partition_num=1
+		loop=$(losetup -f --show --partscan $raw_disk_image)
+		dd if="${loop}p$root_partition_num" of=root_part
+		losetup -d "${loop}"
+
+		if [[ "$cloud_init" == 1 ]]; then
+			build_rootfs
+		fi
+	fi
 
 	cp ${vm_config} vm_config.json
 	# TODO(b/363985291): remove this when ballooning is supported on generic kernel
@@ -398,7 +404,7 @@ generate_output_package() {
 		contents+=(
 			efi_part
 		)
-	else
+	elif [[ "$cloud_init" != 1 ]]; then
 		contents+=(
 			vmlinuz
 			initrd.img
@@ -407,8 +413,6 @@ generate_output_package() {
 	fi
 
 	if [[ "$cloud_init" == 1 ]]; then
-		build_rootfs
-
 		contents+=(
 			${cidata_image}
 		)
