@@ -31,6 +31,7 @@ pub mod layout;
 pub mod linker;
 pub mod logger;
 pub mod memory;
+mod mmu;
 pub mod power;
 pub mod rand;
 pub mod uart;
