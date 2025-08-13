@@ -404,7 +404,7 @@ generate_output_package() {
 		contents+=(
 			efi_part
 		)
-	elif [[ "$cloud_init" != 1 ]]; then
+	else
 		contents+=(
 			vmlinuz
 			initrd.img
