@@ -28,7 +28,7 @@ use std::{fs, matches, path::Path};
 
 const KEY_NAMES_DSA: &[&str] = &["1024", "2048", "3072"];
 const KEY_NAMES_ECDSA: &[&str] = &["p256", "p384", "p521"];
-const KEY_NAMES_RSA: &[&str] = &["1024", "2048", "3072", "4096", "8192", "16384"];
+const KEY_NAMES_RSA: &[&str] = &["1024", "2048", "3072", "4096", "8192"];
 
 const SDK_INT: u32 = 31;
 
