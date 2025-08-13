@@ -35,7 +35,7 @@ pub struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::builder().filter_level(log::LevelFilter::Debug).init();
     let args = Args::parse();
-    let gateway_ip_addr = netdev::get_default_gateway()?.ipv4[0];
+    let gateway_ip_addr = linux::net::get_default_gateway()?;
 
     // Wait for `grpc_port_file` becomes available.
     const GRPC_PORT_MAX_RETRY_COUNT: u32 = 10;
