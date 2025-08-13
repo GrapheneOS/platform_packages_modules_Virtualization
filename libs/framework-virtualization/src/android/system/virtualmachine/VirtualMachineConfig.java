@@ -355,6 +355,8 @@ public final class VirtualMachineConfig {
         try {
             return fromPersistableBundle(b);
         } catch (NullPointerException | IllegalArgumentException | IllegalStateException e) {
+            // Please don't change this error message unless b/437160991 is fixed. Clients depend on
+            // this error message as a temporary fix for b/433697078.
             throw new VirtualMachineException("Persisted VM config is invalid", e);
         }
     }
