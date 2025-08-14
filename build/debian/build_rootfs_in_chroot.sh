@@ -7,6 +7,10 @@ set -ex
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
+remove_packages() {
+	apt purge -y linux-image-*
+}
+
 # cloud-init requires several minutes of extra delay for installing packages,
 # Preinstall required packages here to reduce initial booting time.
 install_packages() {
@@ -51,6 +55,7 @@ modify_pre_cloud_init_configs() {
 	sed -i 's/#LLMNR=yes/LLMNR=no/' /etc/systemd/resolved.conf
 }
 
+remove_packages
 install_packages
 install_ttyd
 modify_pre_cloud_init_configs
