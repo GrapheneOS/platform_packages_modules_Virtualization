@@ -698,27 +698,25 @@ fn try_run_payload(
     .context("Failed to run payload")?;
 
     let mut tenant_processes: Vec<Child> = Vec::new();
-    if cfg!(advance_multitenancy) {
-        for tenant in config.tenants.iter() {
-            match tenant {
-                // For now, we only support APEX
-                TenantConfig::Apex(apex_conf) => {
-                    let tenant_command =
-                        get_task_command(&apex_conf.name, &apex_conf.task, /* is_apex */ true)
-                            .context("Failed to find tenant")?;
-                    let tenant_process = exec_task(
-                        tenant_command,
-                        cgroup_config.as_ref(),
-                        service,
-                        &std_redirect,
-                        /* notify_payload_started */ false,
-                    )
-                    .context("Failed to run tenant")?;
-                    tenant_processes.push(tenant_process);
-                }
-                TenantConfig::Apk(apk_conf) => {
-                    warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
-                }
+    for tenant in config.tenants.iter() {
+        match tenant {
+            // For now, we only support APEX
+            TenantConfig::Apex(apex_conf) => {
+                let tenant_command =
+                    get_task_command(&apex_conf.name, &apex_conf.task, /* is_apex */ true)
+                        .context("Failed to find tenant")?;
+                let tenant_process = exec_task(
+                    tenant_command,
+                    cgroup_config.as_ref(),
+                    service,
+                    &std_redirect,
+                    /* notify_payload_started */ false,
+                )
+                .context("Failed to run tenant")?;
+                tenant_processes.push(tenant_process);
+            }
+            TenantConfig::Apk(apk_conf) => {
+                warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
             }
         }
     }

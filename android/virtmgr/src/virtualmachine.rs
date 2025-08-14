@@ -1062,6 +1062,10 @@ fn load_app_config(
         }
     };
 
+    if !cfg!(advance_multitenancy) {
+        check_no_additional_tenants(&vm_payload_config)?;
+    }
+
     let payload_config_os = vm_payload_config.os.name.as_str();
     if !payload_config_os.is_empty() && payload_config_os != "microdroid" {
         bail!("'os' in payload config is deprecated");
@@ -1833,6 +1837,13 @@ fn check_protected_vm_is_supported() -> binder::Result<()> {
         Err(anyhow!("pVM is not supported"))
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
     }
+}
+
+fn check_no_additional_tenants(config: &VmPayloadConfig) -> Result<()> {
+    if config.tenants.is_empty() {
+        return Ok(());
+    }
+    Err(anyhow!("Multitenancy is not supported"))
 }
 
 fn check_no_additional_tenants_idsig(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
