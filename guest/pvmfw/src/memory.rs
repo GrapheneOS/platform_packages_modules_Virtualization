@@ -16,7 +16,6 @@
 
 use crate::entry::{BootArgs, RebootReason};
 use crate::fdt::{read_initrd_range_from, read_kernel_range_from};
-use core::num::NonZeroUsize;
 use core::slice;
 use log::debug;
 use log::error;
@@ -25,8 +24,9 @@ use log::warn;
 use vmbase::{
     bzimage,
     layout::crosvm,
-    memory::{map_data, map_rodata, resize_available_memory},
+    memory::{map_data, map_rodata, resize_available_memory, MemoryTrackerError},
 };
+#[cfg(target_arch = "x86_64")]
 use zerocopy::FromBytes;
 
 pub(crate) struct MemorySlices<'a> {
@@ -38,38 +38,116 @@ pub(crate) struct MemorySlices<'a> {
     pub boot_params: Option<&'a mut bzimage::boot_params>,
 }
 
-impl<'a> MemorySlices<'a> {
-    pub fn new(boot_args: BootArgs) -> Result<Self, RebootReason> {
-        let mut boot_params = None;
+fn map_data_slice_mut<'a>(addr: usize, size: usize) -> Result<&'a mut [u8], MemoryTrackerError> {
+    let nonzero_size = size.try_into().map_err(|_| {
+        error!("Invalid size specified for the range: {size:#x}");
+        MemoryTrackerError::SizeTooSmall
+    })?;
+    map_data(addr, nonzero_size)?;
 
-        if let Some(boot_params_addr) = boot_args.boot_params {
-            let boot_params_size = NonZeroUsize::new(size_of::<bzimage::boot_params>()).unwrap();
-            map_data(boot_params_addr, boot_params_size).map_err(|e| {
-                error!("Failed to map the boot_params range: {e}");
-                RebootReason::InternalError
-            })?;
+    // SAFETY: map_data validated the range to be in main memory, mapped, and not overlap.
+    let mut_slice = unsafe { slice::from_raw_parts_mut(addr as *mut u8, size) };
 
-            // SAFETY: map_data validated the range to be in main memory, mapped, and not overlap.
-            let boot_params_slice = unsafe {
-                slice::from_raw_parts_mut(boot_params_addr as *mut u8, boot_params_size.into())
-            };
-            let boot_params_ref = bzimage::boot_params::mut_from_bytes(boot_params_slice).unwrap();
-            boot_params = Some(boot_params_ref);
-        }
+    Ok(mut_slice)
+}
 
-        let fdt: usize = boot_args.fdt.expect("Missing DT address");
-        let fdt_size = NonZeroUsize::new(crosvm::FDT_MAX_SIZE).unwrap();
-        // TODO - Only map the FDT as read-only, until we modify it right before jump_to_payload()
-        // e.g. by generating a DTBO for a template DT in main() and, on return, re-map DT as RW,
-        // overwrite with the template DT and apply the DTBO.
-        map_data(fdt, fdt_size).map_err(|e| {
-            error!("Failed to allocate the FDT range: {e}");
+fn map_data_slice<'a>(addr: usize, size: usize) -> Result<&'a [u8], MemoryTrackerError> {
+    let nonzero_size = size.try_into().map_err(|e| {
+        error!("Invalid size specified for the range: {e}");
+        MemoryTrackerError::SizeTooSmall
+    })?;
+    map_rodata(addr, nonzero_size)?;
+
+    // SAFETY: map_rodata validated the range to be in main memory, mapped, and not overlap.
+    let slice = unsafe { slice::from_raw_parts(addr as *const u8, size) };
+
+    Ok(slice)
+}
+
+#[cfg(target_arch = "x86_64")]
+fn from_boot_args<'a>(
+    boot_args: &BootArgs,
+) -> Result<(Option<&'a mut bzimage::boot_params>, &'a mut [u8]), RebootReason> {
+    let Some(boot_params_addr) = boot_args.boot_params else {
+        error!("Missing boot_params address in boot_args");
+        return Err(RebootReason::InvalidPayload);
+    };
+
+    let boot_params_slice = map_data_slice_mut(boot_params_addr, size_of::<bzimage::boot_params>())
+        .map_err(|e| {
+            error!("Failed to map the boot_params range: {e}");
+            RebootReason::InternalError
+        })?;
+    let boot_params_ref = bzimage::boot_params::mut_from_bytes(boot_params_slice).unwrap();
+
+    let setup_data_addr = boot_params_ref.hdr.setup_data();
+    if setup_data_addr != crosvm::SETUP_DATA_START {
+        error!(
+            "setup_data not as per crosvm memory layout, actual: {:#x}, expected: {:#x}",
+            setup_data_addr,
+            crosvm::SETUP_DATA_START
+        );
+        return Err(RebootReason::InvalidPayload);
+    }
+
+    // Map the whole SETUP_DATA space which also include the fdt.
+    let setup_data_slice =
+        map_data_slice_mut(setup_data_addr, crosvm::SETUP_DATA_SIZE).map_err(|e| {
+            error!("Failed to map the setup_data range: {e}");
             RebootReason::InternalError
         })?;
 
-        // SAFETY: map_data validated the range to be in main memory, mapped, and not overlap.
-        let untrusted_fdt = unsafe { slice::from_raw_parts_mut(fdt as *mut u8, fdt_size.into()) };
-        let untrusted_fdt = libfdt::Fdt::from_mut_slice(untrusted_fdt).map_err(|e| {
+    if let Some(setup_dtb) =
+        bzimage::find_setup_data_entry(setup_data_slice, bzimage::setup_data_header::SETUP_DTB)
+    {
+        if setup_dtb.len() > crosvm::FDT_MAX_SIZE {
+            error!(
+                "SETUP_DTB size is larger than expected maximum size ({} > {})!",
+                setup_dtb.len(),
+                crosvm::FDT_MAX_SIZE
+            );
+            return Err(RebootReason::InvalidPayload);
+        }
+
+        if let Some(fdt) = boot_args.fdt {
+            if fdt != setup_dtb.as_ptr() as usize {
+                error!("fdt present in boot_args, but doesn't match SETUP_DTB!");
+                return Err(RebootReason::InternalError);
+            }
+        }
+        return Ok((Some(boot_params_ref), setup_dtb));
+    }
+
+    error!("SETUP_DTB not found in setup_data!");
+    Err(RebootReason::InvalidPayload)
+}
+
+#[cfg(target_arch = "aarch64")]
+fn from_boot_args<'a>(
+    boot_args: &BootArgs,
+) -> Result<(Option<&'a mut bzimage::boot_params>, &'a mut [u8]), RebootReason> {
+    let fdt: usize = boot_args.fdt.expect("Missing DT address");
+
+    // TODO - Only map the FDT as read-only, until we modify it right before jump_to_payload()
+    // e.g. by generating a DTBO for a template DT in main() and, on return, re-map DT as RW,
+    // overwrite with the template DT and apply the DTBO.
+    let fdt = map_data_slice_mut(fdt, crosvm::FDT_MAX_SIZE).map_err(|e| {
+        error!("Failed to map the FDT range: {e}");
+        RebootReason::InternalError
+    })?;
+
+    if boot_args.boot_params.is_some() {
+        error!("boot_params is not expected to be present for arm64!");
+        return Err(RebootReason::InternalError);
+    }
+    Ok((None, fdt))
+}
+
+impl<'a> MemorySlices<'a> {
+    pub fn new(boot_args: BootArgs) -> Result<Self, RebootReason> {
+        let (boot_params, fdt) = from_boot_args(&boot_args)?;
+
+        let untrusted_fdt = libfdt::Fdt::from_mut_slice(fdt).map_err(|e| {
             error!("Failed to load input FDT: {e}");
             RebootReason::InvalidFdt
         })?;
@@ -107,38 +185,25 @@ impl<'a> MemorySlices<'a> {
             error!("Failed to locate the kernel from the DT");
             return Err(RebootReason::InvalidPayload);
         };
-        let kernel_size = kernel_size.try_into().map_err(|_| {
-            error!("Invalid kernel size: {kernel_size:#x}");
-            RebootReason::InvalidPayload
-        })?;
 
-        map_rodata(kernel_start, kernel_size).map_err(|e| {
+        let kernel = map_data_slice(kernel_start, kernel_size).map_err(|e| {
             error!("Failed to map kernel range: {e}");
             RebootReason::InternalError
         })?;
 
-        let kernel = kernel_start as *const u8;
-        // SAFETY: map_rodata validated the range to be in main memory, mapped, and not overlap.
-        let kernel = unsafe { slice::from_raw_parts(kernel, kernel_size.into()) };
-
+        // TODO(b/438297984): validate the initrd details match setup_header
         let initrd_range = read_initrd_range_from(untrusted_fdt).map_err(|e| {
             error!("Failed to read initrd range: {e}");
             RebootReason::InvalidFdt
         })?;
         let ramdisk = if let Some(r) = initrd_range {
             debug!("Located ramdisk at {r:?}");
-            let ramdisk_size = r.len().try_into().map_err(|_| {
-                error!("Invalid ramdisk size: {:#x}", r.len());
-                RebootReason::InvalidRamdisk
-            })?;
-            map_rodata(r.start, ramdisk_size).map_err(|e| {
+
+            let ramdisk_slice = map_data_slice(r.start, r.len()).map_err(|e| {
                 error!("Failed to obtain the initrd range: {e}");
                 RebootReason::InvalidRamdisk
             })?;
-
-            // SAFETY: map_rodata validated the range to be in main memory, mapped, and not
-            // overlap.
-            Some(unsafe { slice::from_raw_parts(r.start as *const u8, r.len()) })
+            Some(ramdisk_slice)
         } else {
             info!("Couldn't locate the ramdisk from the device tree");
             None

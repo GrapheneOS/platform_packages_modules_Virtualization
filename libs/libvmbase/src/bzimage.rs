@@ -21,6 +21,50 @@ use core::mem;
 use static_assertions::const_assert_eq;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
+/// Linux setup data linked list entry
+#[derive(Debug, FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
+#[repr(C, packed)]
+pub struct setup_data_header {
+    /// Address of next node in linked list
+    pub next: u64,
+    /// Type of node
+    pub type_: u32,
+    /// Data length in this node [bytes]
+    pub len: u32,
+}
+
+const_assert_eq!(mem::size_of::<setup_data_header>(), 16);
+
+impl setup_data_header {
+    /// Device Tree Blob type
+    pub const SETUP_DTB: u32 = 2;
+}
+
+/// Returns the data of first setup_data entry matching the type: type_.
+///
+/// we expect the setup_data entries to be packed contiguously one after the other
+/// in the same order as they are in the linked list. crosvm packs it this way and
+/// verifying this order implicitly verifies that the data does not overlap.
+pub fn find_setup_data_entry(mut setup_data_slice: &mut [u8], type_: u32) -> Option<&mut [u8]> {
+    let mut hdr;
+
+    loop {
+        (hdr, setup_data_slice) = setup_data_header::mut_from_prefix(setup_data_slice).ok()?;
+
+        if hdr.type_ == type_ {
+            return if hdr.len > 0 { setup_data_slice.get_mut(..hdr.len as usize) } else { None };
+        }
+
+        if hdr.next == 0 {
+            return None;
+        }
+
+        let next = usize::try_from(hdr.next).unwrap();
+        let offset = next.checked_sub(setup_data_slice.as_ptr() as _).unwrap();
+        setup_data_slice = setup_data_slice.get_mut(offset..)?;
+    }
+}
+
 /// Structure of "zero page" memory
 #[derive(FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
 #[repr(C, packed)]
@@ -47,6 +91,19 @@ const_assert_eq!(mem::offset_of!(boot_params, e820_entries), 0x1e8);
 const_assert_eq!(mem::offset_of!(boot_params, hdr), 0x1f1);
 const_assert_eq!(mem::offset_of!(boot_params, e820_table), 0x2d0);
 const_assert_eq!(mem::size_of::<boot_params>(), 0x1000);
+
+impl boot_params {
+    /// Add new e820 entry
+    /// TODO(b/432207991): validation and sanitization
+    pub fn push_e820_entry(&mut self, addr: u64, size: u64, type_: u32) {
+        let next_entry = usize::from(self.e820_entries);
+        let entry = self.e820_table.get_mut(next_entry).expect("out of e820 entries");
+        entry.addr = addr;
+        entry.size = size;
+        entry.type_ = type_;
+        self.e820_entries += 1;
+    }
+}
 
 /// Linux x86 bzImage header
 #[derive(Debug, FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned)]
@@ -132,6 +189,11 @@ impl setup_header {
         self.entry_point_32_offset() + Self::ENTRY_POINT_64_OFFSET
     }
 
+    /// Returns setup_data linked list head pointer.
+    pub fn setup_data(&self) -> usize {
+        self.setup_data.try_into().unwrap()
+    }
+
     /// Attempts to parse a bzImage kernel and return its header, if valid.
     pub fn get_from_bzimage(kernel: &[u8]) -> Option<&Self> {
         let hdr_bytes = kernel.get(Self::OFFSET..)?;
@@ -162,3 +224,16 @@ pub struct e820_entry {
 }
 
 const_assert_eq!(mem::size_of::<e820_entry>(), 20);
+
+impl e820_entry {
+    /// Normal usable memory
+    pub const TYPE_RAM: u32 = 1;
+    /// Reserved memory
+    pub const TYPE_RESERVED: u32 = 2;
+    /// ACPI reclaimable memory
+    pub const TYPE_ACPI: u32 = 3;
+    /// ACPI NVS memory
+    pub const TYPE_NVS: u32 = 4;
+    /// Bad unusable memory
+    pub const TYPE_UNUSABLE: u32 = 5;
+}
