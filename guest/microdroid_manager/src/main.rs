@@ -45,7 +45,7 @@ use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
-use crate::verify::verify_payload;
+use crate::verify::{integrity_protect_tenant_apks, verify_payload};
 use crate::vm_internal_service::VmInternalService;
 use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
@@ -561,7 +561,13 @@ fn try_run_payload(
         config.extra_apks.len(),
         instance_data.extra_apks_data.len()
     );
-    mount_extra_apks(&config, &mut zipfuse)?;
+    mount_additional_apks(&mut zipfuse, config.extra_apks.len(), AdditionalApkType::ExtraApk)
+        .context("Failed to mount extra apks")?;
+
+    // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
+    integrity_protect_tenant_apks()?;
+    mount_additional_apks(&mut zipfuse, config.tenants.len(), AdditionalApkType::TenantApk)
+        .context("Failed to mount tenant apks")?;
 
     // Wait until apex config is done. (e.g. linker configuration for apexes)
     wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
@@ -849,20 +855,38 @@ fn post_payload_work() -> Result<()> {
     }
     Ok(())
 }
+// Additional APKs mounted in Micrdroid are 2 types
+enum AdditionalApkType {
+    // Represent the legacy data files
+    ExtraApk,
+    // With Advance multiteanancy MM supports mounting & running payloads from tenant apk
+    TenantApk,
+}
 
-fn mount_extra_apks(config: &VmPayloadConfig, zipfuse: &mut Zipfuse) -> Result<()> {
+fn mount_additional_apks(zipfuse: &mut Zipfuse, len: usize, apk: AdditionalApkType) -> Result<()> {
     // For now, only the number of apks is important, as the mount point and dm-verity name is fixed
-    for i in 0..config.extra_apks.len() {
-        let mount_dir = format!("/mnt/extra-apk/{i}");
-        create_dir(Path::new(&mount_dir)).context("Failed to create mount dir for extra apks")?;
+    for i in 0..len {
+        // TODO(b/416315992): Use package name as the directory name instead,
+        // numerical index may not stay the same across updates of TenancyConfig & are therefore
+        // fragile.
+        let (option, dev, mount_dir, ready_prop) = match apk {
+            AdditionalApkType::ExtraApk => (
+                "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:extra_apk_file:s0",
+                PathBuf::from(format!("/dev/block/mapper/extra-apk-{i}")),
+                PathBuf::from(format!("/mnt/extra-apk/{i}")),
+                format!("microdroid_manager.extra_apk.mounted.{i}"),
+            ),
+            AdditionalApkType::TenantApk => (
+                "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:tenant_apk_file:s0",
+                PathBuf::from(format!("/dev/block/mapper/tenant-apk-{i}")),
+                PathBuf::from(format!("/mnt/tenant-apk/{i}")),
+                format!("microdroid_manager.tenant_apk.mounted.{i}"),
+            ),
+        };
+        create_dir(&mount_dir).context("Failed to create mount dir for additional apks")?;
 
         // These run asynchronously in parallel - we wait later for them to complete.
-        zipfuse.mount(
-            "fscontext=u:object_r:zipfusefs:s0,context=u:object_r:extra_apk_file:s0",
-            Path::new(&format!("/dev/block/mapper/extra-apk-{i}")),
-            Path::new(&mount_dir),
-            format!("microdroid_manager.extra_apk.mounted.{i}"),
-        )?;
+        zipfuse.mount(option, &dev, &mount_dir, ready_prop)?;
     }
 
     Ok(())
