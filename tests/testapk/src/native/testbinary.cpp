@@ -491,6 +491,13 @@ Result<void> verify_vm_share() {
     return {};
 }
 
+Result<void> verify_packages_mounted() {
+    const char* path = "/mnt/tenant-apk/0";
+    struct stat sb;
+    if (stat(path, &sb)) return ErrnoError() << path << " stat failed";
+    return {};
+}
+
 } // Anonymous namespace
 
 extern "C" int AVmPayload_main() {
@@ -503,6 +510,7 @@ extern "C" int AVmPayload_main() {
     // appropriate.
     report_test("extra_apk_build_manifest", verify_build_manifest());
     report_test("extra_apk_vm_share", verify_vm_share());
+    report_test("tenant_packages_mounted", verify_packages_mounted());
 
     __system_property_set("debug.microdroid.app.run", "true");
 

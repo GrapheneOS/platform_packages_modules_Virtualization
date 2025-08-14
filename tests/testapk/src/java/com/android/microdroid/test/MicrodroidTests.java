@@ -1161,6 +1161,31 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
+    public void tenantApk() throws Exception {
+        assumeSupportedDevice();
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_apk_tenant.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_apk", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mExtraApkTestProp =
+                                    ts.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                        });
+        assertThat(testResults.mExtraApkTestProp).isEqualTo("PASS");
+    }
+
+    @Test
+    @CddTest
     public void extraApkInVmConfig() throws Exception {
         assumeSupportedDevice();
 

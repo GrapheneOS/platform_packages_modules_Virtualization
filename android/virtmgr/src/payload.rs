@@ -330,11 +330,23 @@ fn make_payload_disk(
     let pm = PackageManager::new()?;
     let apex_list = pm.get_apex_list(vm_payload_config.prefer_staged)?;
 
-    // collect APEXes from config
+    let mut tenant_apex_configs: Vec<ApexConfig> = Vec::new();
+    let mut tenant_apk_configs: Vec<microdroid_payload_config::TenantApkConfig> = Vec::new();
+    for tenant in vm_payload_config.tenants.iter() {
+        match tenant {
+            TenantConfig::Apex(apex_conf) => {
+                tenant_apex_configs.push(ApexConfig { name: apex_conf.name.clone() });
+            }
+            TenantConfig::Apk(apk_conf) => {
+                tenant_apk_configs.push(apk_conf.clone());
+            }
+        }
+    }
+
     let (mut apex_infos, mut tenant_apex_infos) = collect_apex_infos(
         &apex_list,
         &vm_payload_config.apexes,
-        &vm_payload_config.tenants,
+        &tenant_apex_configs,
         debug_config,
     )?;
     check_apexes_are_aligned(&apex_infos)?;
@@ -401,6 +413,46 @@ fn make_payload_disk(
         });
     }
 
+    let tenant_files: Vec<_> = tenant_apk_configs
+        .iter()
+        .enumerate()
+        .map(|(i, apk)| {
+            // TODO(b/416315992): Get package manager to find the path in case package name is
+            // mentioned.
+            File::open(PathBuf::from(&apk.path))
+                .with_context(|| format!("Failed to open tenant apk #{i} {}", apk.path))
+        })
+        .collect::<Result<_>>()?;
+
+    if tenant_files.len() != app_config.tenantIdsigs.len() {
+        bail!(
+            "payload config has {} tenant apks, but app config has {} idsigs",
+            tenant_files.len(),
+            app_config.tenantIdsigs.len()
+        );
+    }
+
+    for (i, (tenant_file, tenant_idsig)) in
+        tenant_files.into_iter().zip(app_config.tenantIdsigs.iter()).enumerate()
+    {
+        partitions.push(aidl::Partition {
+            label: format!("tenant-apk-{i}"),
+            image: Some(ParcelFileDescriptor::new(tenant_file)),
+            writable: false,
+            guid: None,
+        });
+        partitions.push(aidl::Partition {
+            label: format!("tenant-idsig-{i}"),
+            image: Some(ParcelFileDescriptor::new(
+                tenant_idsig
+                    .as_ref()
+                    .try_clone()
+                    .with_context(|| format!("Failed to clone the tenant idsig #{i}"))?,
+            )),
+            writable: false,
+            guid: None,
+        });
+    }
     Ok(aidl::DiskImage { image: None, partitions, writable: false })
 }
 
@@ -465,31 +517,13 @@ fn check_apexes_are_aligned(requested_apexes: &Vec<&ApexInfo>) -> Result<()> {
 fn collect_apex_infos<'a>(
     apex_list: &'a ApexInfoList,
     apex_configs: &[ApexConfig],
-    tenants_config: &[TenantConfig],
+    tenant_apex_configs: &[ApexConfig],
     debug_config: &DebugConfig,
 ) -> Result<(Vec<&'a ApexInfo>, Vec<&'a ApexInfo>)> {
     // APEXes which any Microdroid VM needs.
     // TODO(b/192200378) move this to microdroid.json?
     let required_apexes: &[_] =
         if debug_config.should_include_debug_apexes() { &["com.android.adbd"] } else { &[] };
-
-    let tenant_apex_configs: Vec<ApexConfig> = if cfg!(advance_multitenancy) {
-        tenants_config
-            .iter()
-            .filter_map(|tenant| match tenant {
-                TenantConfig::Apex(apex_conf) => Some(ApexConfig { name: apex_conf.name.clone() }),
-                TenantConfig::Apk(apk_conf) => {
-                    warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
-                    None
-                }
-            })
-            .collect()
-    } else {
-        if !tenants_config.is_empty() {
-            bail!("tenants specified even though multi-tenancy is disabled");
-        }
-        vec![]
-    };
 
     let mut apex_infos = Vec::new();
     let mut tenant_apex_infos = Vec::new();
@@ -807,28 +841,10 @@ export OTHER /foo/bar:/baz:/apex/second.valid.apex/:gibberish:"#;
         let apex_info_map = HashMap::from(apex_infos_for_test);
         let apex_configs = vec![];
         let tenants_config = vec![
-            TenantConfig::Apex(microdroid_payload_config::TenantApexConfig {
-                name: "apex-foo".to_string(),
-                task: microdroid_payload_config::Task {
-                    type_: microdroid_payload_config::TaskType::MicrodroidLauncher,
-                    command: "_dont_care.so".to_string(),
-                },
-            }),
-            TenantConfig::Apex(microdroid_payload_config::TenantApexConfig {
-                name: "apex-bar".to_string(),
-                task: microdroid_payload_config::Task {
-                    type_: microdroid_payload_config::TaskType::MicrodroidLauncher,
-                    command: "_dont_care.so".to_string(),
-                },
-            }),
-            TenantConfig::Apk(microdroid_payload_config::TenantApkConfig {
-                path: "some.apk".to_string(),
-                task: microdroid_payload_config::Task {
-                    type_: microdroid_payload_config::TaskType::MicrodroidLauncher,
-                    command: "_dont_care.so".to_string(),
-                },
-            }),
+            ApexConfig { name: "apex-foo".to_string() },
+            ApexConfig { name: "apex-bar".to_string() },
         ];
+
         assert_eq!(
             collect_apex_infos(
                 &apex_info_list,

@@ -48,6 +48,7 @@ on early-init
 on init
     mkdir /mnt/apk 0755 root root
     mkdir /mnt/extra-apk 0755 root root
+    mkdir /mnt/tenant-apk 0755 root root
 
     # Allow the payload access to the console (default is 0600)
     chmod 0666 /dev/console

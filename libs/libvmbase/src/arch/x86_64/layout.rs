@@ -30,8 +30,14 @@ pub const MMIO_RANGE: Range<usize> = MMIO_START..MMIO_END;
 /// The start of the system's contiguous "main" memory.
 pub const MEM_START: usize = 0x0;
 
+/// Start of SETUP_DATA as define by crosvm
+pub const SETUP_DATA_START: usize = 0x2_0800;
+
+/// Size of SETUP_DATA as define by crosvm
+pub const SETUP_DATA_SIZE: usize = 0x7_E000;
+
 /// Size of the FDT region as defined by crosvm.
-pub const FDT_MAX_SIZE: usize = 1 << 20;
+pub const FDT_MAX_SIZE: usize = 1 << 14;
 
 /// First address past the end of RAM in the low 4 GB.
 pub const MAX_VIRT_ADDR: usize = 0xD000_0000;

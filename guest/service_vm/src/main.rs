@@ -88,6 +88,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     // We do not need to validate the DT since it is already validated in pvmfw.
     let fdt = libfdt::Fdt::from_slice(fdt)?;
 
+    #[allow(unused_mut)]
     let mut memory_range = fdt.first_memory_range()?;
     // "/memory" may include the pvmfw region, which we don't supported reusing in rialto, so
     // truncate it off if present.

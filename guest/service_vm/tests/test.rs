@@ -51,7 +51,7 @@ use x509_cert::{
 };
 
 const UNSIGNED_SERVICE_VM_KERNEL_PATH: &str =
-    "/data/local/tmp/service_vm/arm64/service_vm_unsigned.bin";
+    "/data/local/tmp/service_vm_test/arm64/service_vm_unsigned.bin";
 const INSTANCE_IMG_PATH: &str = "/data/local/tmp/service_vm_test/arm64/instance.img";
 const TEST_CERT_CHAIN_PATH: &str = "testdata/rkp_cert_chain.der";
 
