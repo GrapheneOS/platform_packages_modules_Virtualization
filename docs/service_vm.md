@@ -38,7 +38,7 @@ serialized in CBOR format and transmitted over a virtio-vsock device.
 [service_vm]: ../guest/service_vm
 [libvmbase]: ../libs/libvmbase
 [libservice_vm_comm]: ../libs/libservice_vm_comm
-[libservice_vm_requests]: ../libs/libservice_vm_requests
+[libservice_vm_requests]: ../guest/service_vm/requests
 [libservice_vm_manager]: ../libs/libservice_vm_manager
 [virtualizationservice]: ../android/virtualizationservice
 
