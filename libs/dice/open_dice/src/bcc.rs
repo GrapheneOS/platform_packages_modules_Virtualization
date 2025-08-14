@@ -97,29 +97,31 @@ pub fn bcc_main_flow(
     next_chain: &mut [u8],
 ) -> Result<usize> {
     let mut next_chain_size = 0;
-    check_result(
-        // SAFETY: `DiceAndroidMainFlow` only reads the `current_chain` and CDI values and writes
-        // to `next_chain` and next CDI values within its bounds. It also reads `input_values` as a
-        // constant input and doesn't store any pointer.
-        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
-        // and a null pointer otherwise.
-        unsafe {
-            DiceAndroidMainFlow(
-                context(),
-                current_cdi_attest.as_ptr(),
-                current_cdi_seal.as_ptr(),
-                current_chain.as_ptr(),
-                current_chain.len(),
-                input_values.as_ptr(),
-                next_chain.len(),
-                next_chain.as_mut_ptr(),
-                &mut next_chain_size,
-                next_cdi_values.cdi_attest.as_mut_ptr(),
-                next_cdi_values.cdi_seal.as_mut_ptr(),
-            )
-        },
-        next_chain_size,
-    )?;
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: `DiceAndroidMainFlow` only reads the `current_chain` and CDI values and
+            // writes to `next_chain` and next CDI values within its bounds. It also
+            // reads `input_values` as a constant input and doesn't store any pointer.
+            // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+            // open-dice and a null pointer otherwise.
+            unsafe {
+                DiceAndroidMainFlow(
+                    ctx,
+                    current_cdi_attest.as_ptr(),
+                    current_cdi_seal.as_ptr(),
+                    current_chain.as_ptr(),
+                    current_chain.len(),
+                    input_values.as_ptr(),
+                    next_chain.len(),
+                    next_chain.as_mut_ptr(),
+                    &mut next_chain_size,
+                    next_cdi_values.cdi_attest.as_mut_ptr(),
+                    next_cdi_values.cdi_seal.as_mut_ptr(),
+                )
+            },
+            next_chain_size,
+        )
+    })?;
     Ok(next_chain_size)
 }
 

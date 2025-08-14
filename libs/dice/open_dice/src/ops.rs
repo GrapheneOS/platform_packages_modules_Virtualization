@@ -87,22 +87,24 @@ pub fn keypair_from_seed(seed: &[u8; PRIVATE_KEY_SEED_SIZE]) -> Result<(Vec<u8>,
     // function only derives the key pair cryptographically without caring about which
     // principal it is for. Hence, we arbitrarily set it to `DicePrincipal::kDicePrincipalSubject`.
     let principal = DicePrincipal::kDicePrincipalSubject;
-    check_result(
-        // SAFETY: The function writes to the `public_key` and `private_key` within the given
-        // bounds, and only reads the `seed`.
-        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
-        // and a null pointer otherwise.
-        unsafe {
-            DiceKeypairFromSeed(
-                context(),
-                principal,
-                seed.as_ptr(),
-                public_key.as_mut_ptr(),
-                private_key.as_mut_ptr(),
-            )
-        },
-        public_key.len(),
-    )?;
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: The function writes to the `public_key` and `private_key` within the given
+            // bounds, and only reads the `seed`.
+            // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+            // open-dice and a null pointer otherwise.
+            unsafe {
+                DiceKeypairFromSeed(
+                    ctx,
+                    principal,
+                    seed.as_ptr(),
+                    public_key.as_mut_ptr(),
+                    private_key.as_mut_ptr(),
+                )
+            },
+            public_key.len(),
+        )
+    })?;
     Ok((public_key, private_key))
 }
 
@@ -172,22 +174,24 @@ pub fn derive_cdi_leaf_priv_multialg(
 /// Signs the `message` with the given `private_key` using `DiceSign`.
 pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Vec<u8>> {
     let mut signature = vec![0u8; VM_KEY_ALGORITHM.signature_size()];
-    check_result(
-        // SAFETY: The function writes to the `signature` within the given bounds, and only reads
-        // the message and the private key.
-        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
-        // and a null pointer otherwise.
-        unsafe {
-            DiceSign(
-                context(),
-                message.as_ptr(),
-                message.len(),
-                private_key.as_ptr(),
-                signature.as_mut_ptr(),
-            )
-        },
-        signature.len(),
-    )?;
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: The function writes to the `signature` within the given bounds, and only
+            // reads the message and the private key.
+            // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+            // open-dice and a null pointer otherwise.
+            unsafe {
+                DiceSign(
+                    ctx,
+                    message.as_ptr(),
+                    message.len(),
+                    private_key.as_ptr(),
+                    signature.as_mut_ptr(),
+                )
+            },
+            signature.len(),
+        )
+    })?;
     Ok(signature)
 }
 
@@ -203,28 +207,30 @@ pub fn sign_cose_sign1(
 ) -> Result<usize> {
     let mut encoded_signature_actual_size = 0;
 
-    check_result(
-        // SAFETY: The function writes to `encoded_signature` and `encoded_signature_actual_size`
-        // within the given bounds. It only reads `message`, `aad`, and `private_key` within their
-        // given bounds.
-        //
-        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
-        // and a null pointer otherwise.
-        unsafe {
-            DiceCoseSignAndEncodeSign1(
-                context(),
-                message.as_ptr(),
-                message.len(),
-                aad.as_ptr(),
-                aad.len(),
-                private_key.as_ptr(),
-                encoded_signature.len(),
-                encoded_signature.as_mut_ptr(),
-                &mut encoded_signature_actual_size,
-            )
-        },
-        encoded_signature_actual_size,
-    )?;
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: The function writes to `encoded_signature` and
+            // `encoded_signature_actual_size` within the given bounds. It only reads
+            // `message`, `aad`, and `private_key` within their given bounds.
+            //
+            // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+            // open-dice and a null pointer otherwise.
+            unsafe {
+                DiceCoseSignAndEncodeSign1(
+                    ctx,
+                    message.as_ptr(),
+                    message.len(),
+                    aad.as_ptr(),
+                    aad.len(),
+                    private_key.as_ptr(),
+                    encoded_signature.len(),
+                    encoded_signature.as_mut_ptr(),
+                    &mut encoded_signature_actual_size,
+                )
+            },
+            encoded_signature_actual_size,
+        )
+    })?;
     Ok(encoded_signature_actual_size)
 }
 
@@ -302,21 +308,23 @@ pub fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<()>
     {
         return Err(DiceError::InvalidInput);
     }
-    check_result(
-        // SAFETY: only reads the messages, signature and public key as constant values.
-        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
-        // and a null pointer otherwise.
-        unsafe {
-            DiceVerify(
-                context(),
-                message.as_ptr(),
-                message.len(),
-                signature.as_ptr(),
-                public_key.as_ptr(),
-            )
-        },
-        0,
-    )
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: only reads the messages, signature and public key as constant values.
+            // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+            // open-dice and a null pointer otherwise.
+            unsafe {
+                DiceVerify(
+                    ctx,
+                    message.as_ptr(),
+                    message.len(),
+                    signature.as_ptr(),
+                    public_key.as_ptr(),
+                )
+            },
+            0,
+        )
+    })
 }
 
 /// Multialg variant of `verify`.
@@ -365,23 +373,25 @@ pub fn generate_certificate(
     certificate: &mut [u8],
 ) -> Result<usize> {
     let mut certificate_actual_size = 0;
-    check_result(
-        // SAFETY: The function writes to the `certificate` within the given bounds, and only reads
-        // the input values and the key seeds.
-        // The first argument is a pointer to a valid |DiceContext_| object for multi-alg open-dice
-        // and a null pointer otherwise.
-        unsafe {
-            DiceGenerateCertificate(
-                context(),
-                subject_private_key_seed.as_ptr(),
-                authority_private_key_seed.as_ptr(),
-                input_values.as_ptr(),
-                certificate.len(),
-                certificate.as_mut_ptr(),
-                &mut certificate_actual_size,
-            )
-        },
-        certificate_actual_size,
-    )?;
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: The function writes to the `certificate` within the given bounds, and only
+            // reads the input values and the key seeds.
+            // The first argument is a pointer to a valid |DiceContext_| object for multi-alg
+            // open-dice and a null pointer otherwise.
+            unsafe {
+                DiceGenerateCertificate(
+                    ctx,
+                    subject_private_key_seed.as_ptr(),
+                    authority_private_key_seed.as_ptr(),
+                    input_values.as_ptr(),
+                    certificate.len(),
+                    certificate.as_mut_ptr(),
+                    &mut certificate_actual_size,
+                )
+            },
+            certificate_actual_size,
+        )
+    })?;
     Ok(certificate_actual_size)
 }
