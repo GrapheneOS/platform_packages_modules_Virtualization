@@ -513,7 +513,7 @@ that is compatible with their guest kernel. These are:
   - `"desktop-trusty"` is reserved for the Trusty-based desktop TEE VM
 
 [dice-comp-name]: https://cs.android.com/android/platform/superproject/main/+/main:external/open-dice/docs/android.md;l=81;drc=6d511e9533eac05d64d47fcd78ac5d881e72c3de
-[rkp-vm]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/service_vm.md;l=45;drc=1afff42ab507ea58579d4b3801fad5157e6663bb
+[rkp-vm]: ../service_vm/README.md#rkp-remote-key-provisioning
 
 ## Development
 
