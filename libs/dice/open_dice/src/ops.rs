@@ -17,8 +17,8 @@
 //! main DICE functions depend on.
 
 use crate::dice::{
-    context, derive_cdi_private_key_seed, DiceArtifacts, Hash, InputValues, PrivateKey, HASH_SIZE,
-    PRIVATE_KEY_SEED_SIZE, PRIVATE_KEY_SIZE, VM_KEY_ALGORITHM,
+    context, derive_cdi_private_key_seed, DiceArtifacts, DiceContext, Hash, InputValues,
+    PrivateKey, HASH_SIZE, PRIVATE_KEY_SEED_SIZE, PRIVATE_KEY_SIZE, VM_KEY_ALGORITHM,
 };
 use crate::error::{check_result, DiceError, Result};
 #[cfg(feature = "multialg")]
@@ -302,13 +302,20 @@ pub fn sign_cose_sign1_with_cdi_leaf_priv_multialg(
 }
 
 /// Verifies the `signature` of the `message` with the given `public_key` using `DiceVerify`.
-pub fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<()> {
-    if signature.len() != VM_KEY_ALGORITHM.signature_size()
-        || public_key.len() != VM_KEY_ALGORITHM.public_key_size()
+pub fn verify(
+    dice_context: Option<DiceContext>,
+    message: &[u8],
+    signature: &[u8],
+    public_key: &[u8],
+) -> Result<()> {
+    let subject_algorithm =
+        dice_context.map(|ctx| ctx.subject_algorithm).unwrap_or(VM_KEY_ALGORITHM);
+    if signature.len() != subject_algorithm.signature_size()
+        || public_key.len() != subject_algorithm.public_key_size()
     {
         return Err(DiceError::InvalidInput);
     }
-    context(None, |ctx| {
+    context(dice_context, |ctx| {
         check_result(
             // SAFETY: only reads the messages, signature and public key as constant values.
             // The first argument is a pointer to a valid |DiceContext_| object for multi-alg

@@ -24,7 +24,8 @@ mod tests {
     #[cfg(feature = "multialg")]
     use diced_open_dice::{
         keypair_from_seed_multialg, retry_sign_cose_sign1_multialg,
-        retry_sign_cose_sign1_with_cdi_leaf_priv_multialg, verify_multialg, KeyAlgorithm,
+        retry_sign_cose_sign1_with_cdi_leaf_priv_multialg, verify_multialg, DiceContext,
+        KeyAlgorithm,
     };
 
     use coset::{CborSerializable, CoseSign1};
@@ -127,10 +128,10 @@ mod tests {
 
         let mut signature = sign(b"MyMessage", priv_key.as_array()).unwrap();
         assert_eq!(&signature, EXPECTED_SIGNATURE);
-        assert!(verify(b"MyMessage", &signature, &pub_key).is_ok());
-        assert!(verify(b"MyMessage_fail", &signature, &pub_key).is_err());
+        assert!(verify(None, b"MyMessage", &signature, &pub_key).is_ok());
+        assert!(verify(None, b"MyMessage_fail", &signature, &pub_key).is_err());
         signature[0] += 1;
-        assert!(verify(b"MyMessage", &signature, &pub_key).is_err());
+        assert!(verify(None, b"MyMessage", &signature, &pub_key).is_err());
     }
 
     #[test]
@@ -145,23 +146,27 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result =
-            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(data, sign, &pub_key));
+            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(None, data, sign, &pub_key));
         assert!(verify_result.is_ok());
 
         verify_result =
-            cose_sign1.verify_signature(b"BadAad", |sign, data| verify(data, sign, &pub_key));
+            cose_sign1.verify_signature(b"BadAad", |sign, data| verify(None, data, sign, &pub_key));
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result =
-            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(data, sign, &pub_key));
+            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(None, data, sign, &pub_key));
         assert!(verify_result.is_err());
     }
 
     #[cfg(feature = "multialg")]
     #[test]
     fn sign_cose_sign1_verify_multialg() {
+        let dice_context = DiceContext {
+            authority_algorithm: KeyAlgorithm::EcdsaP256,
+            subject_algorithm: KeyAlgorithm::EcdsaP256,
+        };
         let (pub_key, priv_key) = get_test_key_pair_ec_p256();
 
         let signature_res = retry_sign_cose_sign1_multialg(
@@ -177,19 +182,19 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
-            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, &pub_key)
         });
         assert!(verify_result.is_ok());
 
         verify_result = cose_sign1.verify_signature(b"BadAad", |sign, data| {
-            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, &pub_key)
         });
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
-            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, &pub_key)
         });
         assert!(verify_result.is_err());
     }
@@ -222,17 +227,17 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result = cose_sign1
-            .verify_signature(b"MyAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+            .verify_signature(b"MyAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
         assert!(verify_result.is_ok());
 
         verify_result = cose_sign1
-            .verify_signature(b"BadAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+            .verify_signature(b"BadAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result = cose_sign1
-            .verify_signature(b"MyAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+            .verify_signature(b"MyAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
         assert!(verify_result.is_err());
     }
 
