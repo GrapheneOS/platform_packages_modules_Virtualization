@@ -86,7 +86,6 @@ import com.google.common.truth.BooleanSubject;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
@@ -1162,11 +1161,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
-    @Ignore("b/438992434") // TODO(b/438992434): Guard with flag before re-enabling
     public void tenantApk() throws Exception {
         assumeSupportedDevice();
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig("assets/vm_config_apk_tenant.json")
                         .setMemoryBytes(minMemoryRequired())
