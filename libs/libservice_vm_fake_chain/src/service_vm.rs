@@ -104,7 +104,7 @@ pub(crate) fn fake_dice_artifacts_up_to_pvmfw() -> Result<(CdiValues, Vec<u8>)> 
     })?;
 
     // Gets the root public key in DICE chain.
-    let (public_key, _) = keypair_from_seed(private_key_seed.as_array()).map_err(|e| {
+    let (public_key, _) = keypair_from_seed(None, private_key_seed.as_array()).map_err(|e| {
         error!("Failed to generate key pair: {e}");
         e
     })?;

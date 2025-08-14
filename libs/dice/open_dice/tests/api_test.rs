@@ -284,7 +284,7 @@ mod tests {
         let cdi_private_key_seed =
             derive_cdi_private_key_seed(cdi_attest.try_into().unwrap()).unwrap();
         assert_eq!(cdi_private_key_seed.as_array(), EXPECTED_CDI_PRIVATE_KEY_SEED);
-        let (pub_key, priv_key) = keypair_from_seed(cdi_private_key_seed.as_array()).unwrap();
+        let (pub_key, priv_key) = keypair_from_seed(None, cdi_private_key_seed.as_array()).unwrap();
         assert_eq!(&pub_key, EXPECTED_PUB_KEY);
         assert_eq!(priv_key.as_array(), EXPECTED_PRIV_KEY);
 

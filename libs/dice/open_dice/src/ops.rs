@@ -78,16 +78,22 @@ pub fn kdf(ikm: &[u8], salt: &[u8], info: &[u8], derived_key: &mut [u8]) -> Resu
 
 /// Deterministically generates a public and private key pair from `seed`.
 /// Since this is deterministic, `seed` is as sensitive as a private key and can
-/// be used directly as the private key.
-pub fn keypair_from_seed(seed: &[u8; PRIVATE_KEY_SEED_SIZE]) -> Result<(Vec<u8>, PrivateKey)> {
-    let mut public_key = vec![0u8; VM_KEY_ALGORITHM.public_key_size()];
+/// be used directly as the private key. The key algorithm is determined from the `dice_context`
+/// provided or is ED25519 in case of `None`.
+pub fn keypair_from_seed(
+    dice_context: Option<DiceContext>,
+    seed: &[u8; PRIVATE_KEY_SEED_SIZE],
+) -> Result<(Vec<u8>, PrivateKey)> {
+    let subject_algorithm =
+        dice_context.map(|ctx| ctx.subject_algorithm).unwrap_or(VM_KEY_ALGORITHM);
+    let mut public_key = vec![0u8; subject_algorithm.public_key_size()];
     let mut private_key = PrivateKey::default();
     // This function is used with an open-dice config that uses the same algorithms for the
     // subject and authority. Therefore, the principal is irrelevant in this context as this
     // function only derives the key pair cryptographically without caring about which
     // principal it is for. Hence, we arbitrarily set it to `DicePrincipal::kDicePrincipalSubject`.
     let principal = DicePrincipal::kDicePrincipalSubject;
-    context(None, |ctx| {
+    context(dice_context, |ctx| {
         check_result(
             // SAFETY: The function writes to the `public_key` and `private_key` within the given
             // bounds, and only reads the `seed`.
@@ -156,7 +162,7 @@ pub fn keypair_from_seed_multialg(
 /// security/rkp/aidl/android/hardware/security/keymint/IRemotelyProvisionedComponent.aidl
 pub fn derive_cdi_leaf_priv(dice_artifacts: &dyn DiceArtifacts) -> Result<PrivateKey> {
     let cdi_priv_key_seed = derive_cdi_private_key_seed(dice_artifacts.cdi_attest())?;
-    let (_, private_key) = keypair_from_seed(cdi_priv_key_seed.as_array())?;
+    let (_, private_key) = keypair_from_seed(None, cdi_priv_key_seed.as_array())?;
     Ok(private_key)
 }
 
