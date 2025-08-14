@@ -360,7 +360,7 @@ mod tests {
                 &[0u8; HIDDEN_SIZE],
                 false,
                 &mut buffer_without_defer,
-                context.clone(),
+                context,
             )
             .unwrap();
         let handover1 = from_serialized_handover(&buffer_without_defer);
@@ -372,7 +372,7 @@ mod tests {
                 &[0u8; HIDDEN_SIZE],
                 true,
                 &mut buffer_with_defer,
-                context.clone(),
+                context,
             )
             .unwrap();
         let handover2 = from_serialized_handover(&buffer_with_defer);
@@ -384,7 +384,7 @@ mod tests {
                 &[0u8; HIDDEN_SIZE],
                 false,
                 &mut buffer_without_defer_retry,
-                context.clone(),
+                context,
             )
             .unwrap();
         let handover3 = from_serialized_handover(&buffer_without_defer_retry);
