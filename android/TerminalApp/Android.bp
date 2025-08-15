@@ -48,6 +48,7 @@ android_app {
     apex_available: [
         "com.android.virt",
     ],
+    jarjar_rules: "jarjar-rules.txt",
 }
 
 aidl_interface {
