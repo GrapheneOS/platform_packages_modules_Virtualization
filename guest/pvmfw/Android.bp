@@ -563,6 +563,9 @@ bootimg {
         android_arm64: {
             enabled: true,
         },
+        android_x86_64: {
+            enabled: true,
+        },
     },
     use_avb: true,
     avb_private_key: ":pvmfw_sign_key",
