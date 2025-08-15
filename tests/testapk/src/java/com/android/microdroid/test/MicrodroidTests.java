@@ -488,6 +488,27 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
+    @Test
+    @CddTest
+    public void preconnectedBinderException() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    vm.binderFromPreconnectedClient(
+                            () -> {
+                                throw new RuntimeException(); /* oops! */
+                            });
+                });
+    }
+
     @CddTest
     public void vmLifecycleChecks() throws Exception {
         assumeSupportedDevice();
