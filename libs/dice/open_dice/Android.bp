@@ -86,6 +86,7 @@ rust_library {
     visibility: [
         "//packages/modules/Virtualization:__subpackages__",
         "//system/software_defined_vehicle:__subpackages__",
+        "//external/gsc-utils:__subpackages__",
     ],
     apex_available: [
         "//apex_available:platform",
