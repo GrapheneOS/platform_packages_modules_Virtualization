@@ -33,11 +33,12 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 #[cfg(not(test))]
-use crate::wrappers::{system_properties, AuthFsFactory};
+use {crate::wrappers::AuthFsFactory, compos_wrappers::system_properties};
 
 #[cfg(test)]
-use crate::wrappers::{
-    mock_system_properties as system_properties, MockAuthFsFactory as AuthFsFactory,
+use {
+    crate::wrappers::MockAuthFsFactory as AuthFsFactory,
+    compos_wrappers_with_mocks::mock_system_properties as system_properties,
 };
 
 use authfs_aidl_interface::aidl::com::android::virt::fs::IAuthFsService::IAuthFsService;
@@ -257,13 +258,7 @@ impl IVerifiedDex2OatService for VerifiedDex2OatService {
 #[cfg(test)]
 mod test {
     use crate::compsvc::CompOsService;
-    use crate::wrappers::{
-        minijail::{
-            Command as mock_minijail_command, MockCommandFactory as mock_minijail_command_factory,
-            MockMinijail,
-        },
-        mock_command_line_helper, mock_system_properties, MockAuthFsFactory as AuthFsFactory,
-    };
+    use crate::wrappers::{mock_command_line_helper, MockAuthFsFactory};
     use authfs_aidl_interface::aidl::com::android::virt::fs::{
         AuthFsConfig::AuthFsConfig, IAuthFs::MockIAuthFs, IAuthFsService::MockIAuthFsService,
     };
@@ -272,6 +267,13 @@ mod test {
         CompilationMode::CompilationMode, ICompOsService, OdrefreshArgs::OdrefreshArgs,
     };
     use compos_common::odrefresh::ODREFRESH_PATH;
+    use compos_wrappers_with_mocks::{
+        minijail::{
+            Command as mock_minijail_command, MockCommandFactory as mock_minijail_command_factory,
+            MockMinijail,
+        },
+        mock_system_properties,
+    };
     use mockall::predicate::eq;
     use std::{
         collections::HashSet,
@@ -357,7 +359,7 @@ mod test {
                 })
                 .times(1)
                 .return_once(move |_| Ok(Strong::new(Box::new(authfs))));
-            let ctx = AuthFsFactory::new_authfs_service_context();
+            let ctx = MockAuthFsFactory::new_authfs_service_context();
             ctx.expect().return_once(move || Ok(Strong::new(Box::new(authfs_svc))));
             ctx
         };
