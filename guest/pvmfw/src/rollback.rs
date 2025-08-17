@@ -35,12 +35,12 @@ use vmbase::virtio::pci;
 
 /// Criteria hard-coded into pvmfw, to perform fixed image verification.
 enum FixedRollbackCriterion {
-    #[cfg_attr(not(platform_has_desktop_trusty), allow(dead_code))]
+    #[cfg_attr(not(feature = "platform_has_desktop_trusty"), allow(dead_code))]
     /// Image must match the exact AVB digest (incl. image hash, rollback index, or public key).
     AvbDigest { digest: Digest },
     /// Image must match the exact rollback index and have been signed with the given public key.
     RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
-    #[cfg_attr(platform_has_desktop_trusty, allow(dead_code))]
+    #[cfg_attr(feature = "platform_has_desktop_trusty", allow(dead_code))]
     /// Image identifier is reserved but not supported on this platform so must be rejected.
     Reserved { name: &'static str },
 }
@@ -99,11 +99,14 @@ fn get_fixed_rollback_protection(
         }),
         VerifiedBootData::DESKTOP_TRUSTY_VM_NAME => {
             cfg_if::cfg_if! {
-                if #[cfg(platform_has_desktop_trusty)] {
-                    let digest = include_bytes!(
+                if #[cfg(feature = "platform_has_desktop_trusty")] {
+                    const DIGEST: &Digest = include_bytes!(
                         concat!(env!("OUT_DIR"), "/desktop_trusty.vbmetadigest")
-                    ).try_into().unwrap();
-                    Some(FixedRollbackCriterion::AvbDigest { digest })
+                    );
+
+                    static_assertions::const_assert!(DIGEST.len() == pvmfw_avb::DIGEST_LEN);
+
+                    Some(FixedRollbackCriterion::AvbDigest { digest: *DIGEST })
                 } else {
                     let name = VerifiedBootData::DESKTOP_TRUSTY_VM_NAME;
                     Some(FixedRollbackCriterion::Reserved { name })
