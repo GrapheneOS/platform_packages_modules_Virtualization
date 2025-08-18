@@ -200,7 +200,7 @@ pub fn retry_sign_cose_sign1_with_cdi_leaf_priv(
     dice_artifacts: &dyn DiceArtifacts,
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
-        sign_cose_sign1_with_cdi_leaf_priv(message, aad, dice_artifacts, encoded_signature)
+        sign_cose_sign1_with_cdi_leaf_priv(None, message, aad, dice_artifacts, encoded_signature)
     })
 }
 

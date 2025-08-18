@@ -289,13 +289,14 @@ pub fn sign_cose_sign1_multialg(
 ///
 /// Returns the actual size of encoded_signature on success.
 pub fn sign_cose_sign1_with_cdi_leaf_priv(
+    dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
     dice_artifacts: &dyn DiceArtifacts,
     encoded_signature: &mut [u8],
 ) -> Result<usize> {
-    let private_key = derive_cdi_leaf_priv(None, dice_artifacts)?;
-    sign_cose_sign1(None, message, aad, private_key.as_array(), encoded_signature)
+    let private_key = derive_cdi_leaf_priv(dice_context, dice_artifacts)?;
+    sign_cose_sign1(dice_context, message, aad, private_key.as_array(), encoded_signature)
 }
 
 /// Multialg variant of `sign_cose_sign1_with_cdi_leaf_priv`.
