@@ -174,7 +174,7 @@ pub fn retry_sign_cose_sign1(
     private_key: &[u8; PRIVATE_KEY_SIZE],
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
-        sign_cose_sign1(message, aad, private_key, encoded_signature)
+        sign_cose_sign1(None, message, aad, private_key, encoded_signature)
     })
 }
 

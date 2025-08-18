@@ -209,6 +209,7 @@ pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Vec<
 ///
 /// Returns the actual size of encoded_signature on success.
 pub fn sign_cose_sign1(
+    dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
     private_key: &[u8; PRIVATE_KEY_SIZE],
@@ -216,7 +217,7 @@ pub fn sign_cose_sign1(
 ) -> Result<usize> {
     let mut encoded_signature_actual_size = 0;
 
-    context(None, |ctx| {
+    context(dice_context, |ctx| {
         check_result(
             // SAFETY: The function writes to `encoded_signature` and
             // `encoded_signature_actual_size` within the given bounds. It only reads
@@ -294,7 +295,7 @@ pub fn sign_cose_sign1_with_cdi_leaf_priv(
     encoded_signature: &mut [u8],
 ) -> Result<usize> {
     let private_key = derive_cdi_leaf_priv(None, dice_artifacts)?;
-    sign_cose_sign1(message, aad, private_key.as_array(), encoded_signature)
+    sign_cose_sign1(None, message, aad, private_key.as_array(), encoded_signature)
 }
 
 /// Multialg variant of `sign_cose_sign1_with_cdi_leaf_priv`.
