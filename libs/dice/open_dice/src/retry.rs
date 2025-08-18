@@ -196,12 +196,19 @@ pub fn retry_sign_cose_sign1_multialg(
 /// CDI Attest of the given `dice_artifacts` and returns the signature
 /// as an encoded CoseSign1 object.
 pub fn retry_sign_cose_sign1_with_cdi_leaf_priv(
+    dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
     dice_artifacts: &dyn DiceArtifacts,
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
-        sign_cose_sign1_with_cdi_leaf_priv(None, message, aad, dice_artifacts, encoded_signature)
+        sign_cose_sign1_with_cdi_leaf_priv(
+            dice_context,
+            message,
+            aad,
+            dice_artifacts,
+            encoded_signature,
+        )
     })
 }
 

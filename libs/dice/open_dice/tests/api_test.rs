@@ -220,7 +220,8 @@ mod tests {
     fn sign_cose_sign1_with_cdi_leaf_priv_verify() {
         let dice = TestArtifactsForSigning {};
 
-        let signature_res = retry_sign_cose_sign1_with_cdi_leaf_priv(b"MyMessage", b"MyAad", &dice);
+        let signature_res =
+            retry_sign_cose_sign1_with_cdi_leaf_priv(None, b"MyMessage", b"MyAad", &dice);
         assert!(signature_res.is_ok());
         let signature = signature_res.unwrap();
         let cose_sign1_res = CoseSign1::from_slice(&signature);
