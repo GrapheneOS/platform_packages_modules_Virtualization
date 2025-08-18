@@ -1,0 +1,2 @@
+# Don't repackage AVF flags
+rule com.android.internal.hidden_from_bootclasspath.com.android.system.virtualmachine.flags.** com.android.system.virtualmachine.flags.@1
