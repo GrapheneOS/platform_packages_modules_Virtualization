@@ -720,6 +720,9 @@ impl VirtualizationService {
         let gdb_port = NonZeroU16::new(config.gdbPort as u16);
         let detect_hangup = is_app_config && gdb_port.is_none();
 
+        // TODO(ioffe): query the sysprop here to enable VM boot tracing.
+        // TODO(ioffe): also provide a way to configure what trace events should be enabled during
+        //  kernel init.
         let context = RunContext {
             config,
             debug_config: &debug_config,
@@ -747,6 +750,7 @@ impl VirtualizationService {
         let instance = Arc::new(
             VmInstance::new(
                 crosvm_config,
+                debug_config.debug_level == aidl::DebugLevel::FULL,
                 temporary_directory,
                 requester_uid,
                 requester_debug_pid,
@@ -2038,9 +2042,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         guest_agent: &Strong<dyn aidl::IGuestAgent>,
     ) -> binder::Result<()> {
         let vm = &self.vm_instance;
-        let cid = vm.cid;
-        *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
-        info!("VM with CID {cid} has registered a guest agent");
+        vm.set_guest_agent(guest_agent);
         Ok(())
     }
 
