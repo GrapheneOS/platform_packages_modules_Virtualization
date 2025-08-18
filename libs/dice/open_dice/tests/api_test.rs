@@ -138,7 +138,8 @@ mod tests {
     fn sign_cose_sign1_verify() {
         let (pub_key, priv_key) = get_test_key_pair();
 
-        let signature_res = retry_sign_cose_sign1(b"MyMessage", b"MyAad", priv_key.as_array());
+        let signature_res =
+            retry_sign_cose_sign1(None, b"MyMessage", b"MyAad", priv_key.as_array());
         assert!(signature_res.is_ok());
         let signature = signature_res.unwrap();
         let cose_sign1_res = CoseSign1::from_slice(&signature);
