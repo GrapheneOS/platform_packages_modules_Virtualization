@@ -1395,8 +1395,8 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
 pub struct VmInstance {
     /// The current state of the VM.
     pub vm_state: Mutex<VmState>,
-    /// Condvar that is notified when `vm_state` becomes `Dead`.
-    vm_dead_convar: Condvar,
+    /// Condvar that is notified when `vm_state` changes.
+    vm_state_changed_condvar: Condvar,
     /// Whether this VmInstance requires VirtualMachineService
     pub requires_vm_service: bool,
     /// Hold the reference to RpcServer running VirtualMachineService
@@ -1477,7 +1477,7 @@ impl VmInstance {
             .map_or_else(|| format!("{requester_uid}"), |u| u.name);
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
-            vm_dead_convar: Condvar::new(),
+            vm_state_changed_condvar: Condvar::new(),
             requires_vm_service,
             vm_service: Mutex::new(None),
             cid,
@@ -1605,7 +1605,7 @@ impl VmInstance {
         let failure_reason = cleaner_context.failure_reason.lock().unwrap();
 
         *self.vm_state.lock().unwrap() = VmState::Dead;
-        self.vm_dead_convar.notify_all();
+        self.vm_state_changed_condvar.notify_all();
 
         info!("{} exited", &self);
 
@@ -1771,7 +1771,7 @@ impl VmInstance {
                 // or killed, the state is set to Dead. See monitor_vm_exit_thread.
                 let shutdown_timeout = Duration::from_secs(5);
                 let result = self
-                    .vm_dead_convar
+                    .vm_state_changed_condvar
                     .wait_timeout_while(self.vm_state.lock().unwrap(), shutdown_timeout, |state| {
                         matches!(state, VmState::ShuttingDown { .. })
                     })
