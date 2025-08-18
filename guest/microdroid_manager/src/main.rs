@@ -566,7 +566,9 @@ fn try_run_payload(
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
     integrity_protect_tenant_apks()?;
-    mount_additional_apks(&mut zipfuse, config.tenants.len(), AdditionalApkType::TenantApk)
+    let tenant_apk_count =
+        config.tenants.iter().filter(|t| matches!(t, TenantConfig::Apk(_))).count();
+    mount_additional_apks(&mut zipfuse, tenant_apk_count, AdditionalApkType::TenantApk)
         .context("Failed to mount tenant apks")?;
 
     // Wait until apex config is done. (e.g. linker configuration for apexes)
