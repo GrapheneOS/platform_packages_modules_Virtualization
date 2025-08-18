@@ -142,7 +142,7 @@ impl From<KeyAlgorithm> for DiceKeyAlgorithm {
 
 /// Represents the context used for DICE operations.
 #[cfg(feature = "multialg")]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct DiceContext {
     /// The algorithm used for the authority key.
     pub authority_algorithm: KeyAlgorithm,
