@@ -1395,7 +1395,7 @@ fn validate_vsock_port(port: u32) -> binder::Result<()> {
     } else {
         Err(Status::new_service_specific_error_str(
             aidl::ERROR_UNEXPECTED,
-            Some("Can't connect to privileged port {port}"),
+            Some(format!("Can't connect to privileged port {port}")),
         ))
     }
 }
