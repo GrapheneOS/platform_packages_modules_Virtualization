@@ -160,9 +160,12 @@ pub fn keypair_from_seed_multialg(
 /// Refer to the following documentation for more information about CDI_Leaf_Priv:
 ///
 /// security/rkp/aidl/android/hardware/security/keymint/IRemotelyProvisionedComponent.aidl
-pub fn derive_cdi_leaf_priv(dice_artifacts: &dyn DiceArtifacts) -> Result<PrivateKey> {
+pub fn derive_cdi_leaf_priv(
+    dice_context: Option<DiceContext>,
+    dice_artifacts: &dyn DiceArtifacts,
+) -> Result<PrivateKey> {
     let cdi_priv_key_seed = derive_cdi_private_key_seed(dice_artifacts.cdi_attest())?;
-    let (_, private_key) = keypair_from_seed(None, cdi_priv_key_seed.as_array())?;
+    let (_, private_key) = keypair_from_seed(dice_context, cdi_priv_key_seed.as_array())?;
     Ok(private_key)
 }
 
@@ -290,7 +293,7 @@ pub fn sign_cose_sign1_with_cdi_leaf_priv(
     dice_artifacts: &dyn DiceArtifacts,
     encoded_signature: &mut [u8],
 ) -> Result<usize> {
-    let private_key = derive_cdi_leaf_priv(dice_artifacts)?;
+    let private_key = derive_cdi_leaf_priv(None, dice_artifacts)?;
     sign_cose_sign1(message, aad, private_key.as_array(), encoded_signature)
 }
 
