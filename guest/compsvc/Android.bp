@@ -3,7 +3,7 @@ package {
 }
 
 rust_defaults {
-    name: "compsvc_defaults",
+    name: "compsvc_common_defaults",
     edition: "2021",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/compsvc_main.rs"],
@@ -24,39 +24,43 @@ rust_defaults {
         "libprotobuf",
         "libregex",
         "librpcbinder_rs",
-        "librustutils",
         "libscopeguard",
         "libvm_payload_rs",
     ],
+}
+
+rust_defaults {
+    name: "compsvc_release_defaults",
+    defaults: ["compsvc_common_defaults"],
     prefer_rlib: true,
+    rustlibs: ["libcompos_wrappers"],
     shared_libs: [
         "libcrypto",
     ],
+    apex_available: [
+        "com.android.compos",
+    ],
+
 }
 
 rust_binary {
     name: "compsvc",
-    defaults: ["compsvc_defaults"],
-    apex_available: [
-        "com.android.compos",
-    ],
+    defaults: ["compsvc_release_defaults"],
 }
 
 rust_binary {
     name: "dex2oatsvc",
     cfgs: ["compos_verified_dex2oat"],
-    defaults: ["compsvc_defaults"],
-    apex_available: [
-        "com.android.compos",
-    ],
+    defaults: ["compsvc_release_defaults"],
 }
 
 rust_test {
     name: "compsvc_test",
-    defaults: ["compsvc_defaults"],
+    defaults: ["compsvc_common_defaults"],
     test_suites: ["general-tests"],
     auto_gen_config: true,
     rustlibs: [
+        "libcompos_wrappers_with_mocks",
         "libmockall",
         "libtempfile",
     ],

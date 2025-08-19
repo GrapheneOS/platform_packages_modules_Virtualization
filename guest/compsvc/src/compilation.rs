@@ -15,18 +15,20 @@
  */
 
 #[cfg(not(test))]
-use crate::wrappers::{
-    command_line_helper::run_derive_classpath,
+use crate::wrappers::command_line_helper::run_derive_classpath;
+#[cfg(test)]
+use crate::wrappers::mock_command_line_helper::run_derive_classpath;
+use anyhow::{anyhow, bail, Context, Result};
+#[cfg(not(test))]
+use compos_wrappers::{
     minijail::{CommandFactory as minijail_command_factory, Minijail},
     system_properties,
 };
 #[cfg(test)]
-use crate::wrappers::{
+use compos_wrappers_with_mocks::{
     minijail::{MockCommandFactory as minijail_command_factory, MockMinijail as Minijail},
-    mock_command_line_helper::run_derive_classpath,
-    system_properties,
+    mock_system_properties as system_properties,
 };
-use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
 use regex::Regex;
 use std::collections::HashMap;

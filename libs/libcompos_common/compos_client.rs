@@ -57,7 +57,7 @@ pub enum CompOsService {
 }
 
 /// CPU topology configuration for a virtual machine.
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub enum VmCpuTopology {
     /// Run VM with 1 vCPU only.
     #[default]
@@ -67,7 +67,7 @@ pub enum VmCpuTopology {
 }
 
 /// What the CompOS VM will be used for.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompOsType {
     /// VM provides interfaces for verified dex2oat.
     Dex2Oat,
@@ -76,7 +76,7 @@ pub enum CompOsType {
 }
 
 /// Parameters to be used when creating a virtual machine instance.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VmParameters {
     /// The name of VM for identifying.
     pub name: String,
