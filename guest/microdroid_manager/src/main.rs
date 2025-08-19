@@ -550,10 +550,18 @@ fn try_run_payload(
 
     let config = load_config(payload_metadata).context("Failed to load payload metadata")?;
 
-    let task = config
-        .task
-        .as_ref()
-        .ok_or_else(|| MicrodroidError::PayloadInvalidConfig("No task in VM config".to_string()))?;
+    let task = config.task.as_ref();
+    if task.is_none() {
+        let has_tenant_with_task = config.tenants.iter().any(|t| match t {
+            TenantConfig::Apex(c) => c.task.is_some(),
+            TenantConfig::Apk(c) => c.task.is_some(),
+        });
+        if !has_tenant_with_task {
+            bail!(MicrodroidError::PayloadInvalidConfig(
+                "No task in VM config and no tenants with a task".to_string()
+            ));
+        }
+    }
 
     ensure!(
         config.extra_apks.len() == instance_data.extra_apks_data.len(),
@@ -687,35 +695,53 @@ fn try_run_payload(
             .context("set microdroid_manager.init_done")?;
     }
 
-    info!("boot completed, time to run payload");
-    let main_command = get_task_command(VM_APK_CONTENTS_PATH, task, /* is_apex */ false)
-        .context("Failed to find payload")?;
-    let payload_process = exec_task(
-        main_command,
-        cgroup_config.as_ref(),
-        service,
-        &std_redirect,
-        /* notify_payload_started */ true,
-    )
-    .context("Failed to run payload")?;
+    // TODO(b/434925716): Remove notified_payload_started once we handle per tenant notifications
+    let mut notified_payload_started = task.is_some();
+    let mut payload_process = if let Some(task) = task {
+        info!("boot completed, time to run payload");
+        let main_command = get_task_command(VM_APK_CONTENTS_PATH, task, /* is_apex */ false)
+            .context("Failed to find payload")?;
+        Some(
+            exec_task(
+                main_command,
+                cgroup_config.as_ref(),
+                service,
+                &std_redirect,
+                /* notify_payload_started */ true,
+            )
+            .context("Failed to run payload")?,
+        )
+    } else {
+        None
+    };
 
     let mut tenant_processes: Vec<Child> = Vec::new();
     for tenant in config.tenants.iter() {
         match tenant {
             // For now, we only support APEX
             TenantConfig::Apex(apex_conf) => {
-                let tenant_command =
-                    get_task_command(&apex_conf.name, &apex_conf.task, /* is_apex */ true)
-                        .context("Failed to find tenant")?;
-                let tenant_process = exec_task(
-                    tenant_command,
-                    cgroup_config.as_ref(),
-                    service,
-                    &std_redirect,
-                    /* notify_payload_started */ false,
-                )
-                .context("Failed to run tenant")?;
-                tenant_processes.push(tenant_process);
+                if let Some(task) = &apex_conf.task {
+                    let tenant_command =
+                        get_task_command(&apex_conf.name, task, /* is_apex */ true)
+                            .context("Failed to find tenant")?;
+                    let should_notify = !notified_payload_started;
+                    let tenant_process = exec_task(
+                        tenant_command,
+                        cgroup_config.as_ref(),
+                        service,
+                        &std_redirect,
+                        should_notify,
+                    )
+                    .context("Failed to run tenant")?;
+                    if should_notify {
+                        notified_payload_started = true;
+                    }
+                    if payload_process.is_none() {
+                        payload_process = Some(tenant_process);
+                    } else {
+                        tenant_processes.push(tenant_process);
+                    }
+                }
             }
             TenantConfig::Apk(apk_conf) => {
                 warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
@@ -728,7 +754,8 @@ fn try_run_payload(
     // We need to wait for processes to finish asynchronously, to avoid zombies.
     let mut pids_to_reap: HashSet<Pid> =
         tenant_processes.iter().map(|p| Pid::from_raw(p.id() as i32)).collect();
-    let payload_pid = Pid::from_raw(payload_process.id() as i32);
+    let payload_pid =
+        Pid::from_raw(payload_process.as_ref().expect("payload process not set").id() as i32);
     pids_to_reap.insert(payload_pid);
 
     let exit_status = wait_for_all_processes(&mut pids_to_reap, payload_pid)?;
@@ -738,6 +765,7 @@ fn try_run_payload(
 // TODO(b/434925716): Report exit status of all the tenants back to the host
 /// Wait for all processes in `pids_to_reap` to exit.
 /// It returns the `ExitStatus` of the main payload process.
+/// If there is no main payload, it returns the exit status of the first tenant
 fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<ExitStatus> {
     let mut payload_exit_status: Option<ExitStatus> = None;
     let mut ignored_pids_count = HashMap::new();
