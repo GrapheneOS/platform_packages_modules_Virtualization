@@ -54,7 +54,7 @@ fn try_lock_memory_tracker() -> Result<SpinMutexGuard<'static, Option<MemoryTrac
     MEMORY.try_lock().ok_or(MemoryTrackerError::Unavailable)
 }
 
-/// Switch the MMU to the provided PageTable.
+/// Switch the MMU to the dynamic page tables, enabling mapping more regions.
 ///
 /// Panics if called more than once.
 pub(crate) fn switch_to_dynamic_page_tables() {
