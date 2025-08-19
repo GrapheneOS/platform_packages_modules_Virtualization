@@ -41,10 +41,51 @@ pub fn get_default_gateway() -> Result<String, Error> {
     while let Some(Ok(line)) = lines.next() {
         let items: Vec<_> = line.split_whitespace().collect();
         if items[dest_idx] == DEFAULT_ROUTE_DESTINATION {
-            let ip_as_int = u32::from_str_radix(items[gateway_idx], 16)
+            let ip_be = u32::from_str_radix(items[gateway_idx], 16)
                 .context("Cannot convert gateway address. Unexpected address format")?;
-            return Ok(Ipv4Addr::from_bits(ip_as_int).to_string());
+            // Kernel keeps the IP address as big endian while Ipv4Addr takes native endian.
+            let ip_ne = u32::from_be(ip_be);
+            return Ok(Ipv4Addr::from_bits(ip_ne).to_string());
         }
     }
     Err(anyhow!("Cannot find default gateway"))
+}
+
+/// This test runs on the host Linux.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::ensure;
+    use std::process::Command;
+
+    fn is_tool_available(tool_name: &str) -> bool {
+        Command::new("which").arg(tool_name).output().is_ok_and(|which| which.status.success())
+    }
+
+    #[test]
+    fn test_get_default_gateway() -> Result<(), Error> {
+        let gateway = get_default_gateway()?;
+
+        let ip_route = if is_tool_available("route") {
+            Command::new("bash")
+                .arg("-c")
+                .arg("route | grep -e '^default' | awk '{print $2}'")
+                .output()?
+        } else if is_tool_available("ip") {
+            Command::new("bash")
+                .arg("-c")
+                .arg("ip route | grep -e '^default' | awk '{print $3}'")
+                .output()?
+        } else {
+            println!("Skipping test since no suitable tool available");
+            return Ok(());
+        };
+        let ip_route_gateway = str::from_utf8(&ip_route.stdout)
+            .with_context(|| "Failed to run 'ip route'. {ip_route:?}")?
+            .trim();
+        ensure!(!ip_route_gateway.is_empty(), "Failed to find default route. {ip_route:?}");
+
+        assert_eq!(gateway, ip_route_gateway);
+        Ok(())
+    }
 }

@@ -139,7 +139,8 @@ pub struct TenantApexConfig {
     /// The path of Tenant APK
     pub name: String,
     /// Tenant task
-    pub task: Task,
+    #[serde(default)]
+    pub task: Option<Task>,
 }
 
 /// Tenant Apk config
@@ -148,5 +149,6 @@ pub struct TenantApkConfig {
     /// The path of Tenant APK
     pub path: String,
     /// Tenant task
-    pub task: Task,
+    #[serde(default)]
+    pub task: Option<Task>,
 }
