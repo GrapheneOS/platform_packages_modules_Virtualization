@@ -206,8 +206,8 @@ mod tests {
     };
     use pvmfw_avb::Capability;
     use pvmfw_avb::DebugLevel;
-    use pvmfw_avb::Digest;
     use pvmfw_avb::VerifiedBootData;
+    use pvmfw_avb::{Digest, DIGEST_LEN};
     use std::collections::HashMap;
     use std::mem::size_of;
     use std::vec;
@@ -219,7 +219,7 @@ mod tests {
         kernel_digest: [1u8; size_of::<Digest>()],
         initrd_digest: Some([2u8; size_of::<Digest>()]),
         public_key: b"public key",
-        vbmeta_digest: [0u8; 32],
+        vbmeta_digest: [0u8; DIGEST_LEN],
         name: None,
         capabilities: vec![],
         rollback_index: 42,

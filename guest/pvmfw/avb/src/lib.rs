@@ -24,4 +24,4 @@ mod partition;
 mod verify;
 
 pub use error::PvmfwVerifyError;
-pub use verify::{verify_payload, Capability, DebugLevel, Digest, VerifiedBootData};
+pub use verify::{verify_payload, Capability, DebugLevel, Digest, VerifiedBootData, DIGEST_LEN};
