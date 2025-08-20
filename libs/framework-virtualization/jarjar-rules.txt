@@ -8,3 +8,6 @@ keep android.system.virtualmachine.VirtualizationFrameworkInitializer
 
 # We statically link PlatformProperties, rename to avoid clashes.
 rule android.sysprop.** com.android.system.virtualmachine.sysprop.@1
+
+# AVF internal build flags
+rule android.system.virtualmachine.BuildFlags** android.system.virtualmachine.AvfInternalBuildFlags@1
