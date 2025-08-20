@@ -76,7 +76,7 @@ fn build_csr(
     let csr_payload = csr_payload.into_cbor_vec()?;
 
     // Builds signed CSR Payload.
-    let cdi_leaf_priv = derive_cdi_leaf_priv(dice_artifacts)?;
+    let cdi_leaf_priv = derive_cdi_leaf_priv(None, dice_artifacts)?;
     let signed_csr_payload = build_signed_data(csr_payload, &cdi_leaf_priv, attestation_key)?
         .to_vec()
         .context("Failed to serialize signed CSR payload")?;

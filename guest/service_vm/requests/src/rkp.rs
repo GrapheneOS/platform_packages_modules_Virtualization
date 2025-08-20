@@ -148,7 +148,7 @@ fn derive_hmac_key(dice_artifacts: &dyn DiceArtifacts) -> Result<Zeroizing<[u8; 
 
 /// Builds the `SignedData` for the given payload.
 fn build_signed_data(payload: &Value, dice_artifacts: &dyn DiceArtifacts) -> Result<CoseSign1> {
-    let cdi_leaf_priv = derive_cdi_leaf_priv(dice_artifacts).map_err(|e| {
+    let cdi_leaf_priv = derive_cdi_leaf_priv(None, dice_artifacts).map_err(|e| {
         error!("Failed to derive the CDI_Leaf_Priv: {e}");
         RequestProcessingError::InternalError
     })?;
