@@ -16,12 +16,12 @@
 
 use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
 use crate::dsb;
+use crate::mmu::MmuError;
 use crate::read_sysreg;
 use aarch64_paging::idmap::IdMap;
 use aarch64_paging::paging::{
     Attributes, Constraints, Descriptor, MemoryRegion, TranslationRegime,
 };
-use aarch64_paging::MapError;
 use core::result;
 
 /// Software bit used to indicate a device that should be lazily mapped.
@@ -44,7 +44,7 @@ const DATA: Attributes = MEMORY.union(Attributes::UXN);
 const RODATA: Attributes = DATA.union(Attributes::READ_ONLY);
 const DATA_DBM: Attributes = RODATA.union(Attributes::DBM);
 
-type Result<T> = result::Result<T, MapError>;
+type Result<T> = result::Result<T, MmuError>;
 
 /// High-level API for managing MMU mappings.
 pub struct PageTable {
@@ -103,13 +103,15 @@ impl PageTable {
     /// Maps the given range of virtual addresses to the physical addresses as lazily mapped
     /// nGnRE device memory.
     pub fn mark_as_lazy_device(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, DEVICE_LAZY)
+        self.idmap.map_range(range, DEVICE_LAZY)?;
+        Ok(())
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as valid device
     /// nGnRE device memory.
     pub fn map_device(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, DEVICE)
+        self.idmap.map_range(range, DEVICE)?;
+        Ok(())
     }
 
     /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
@@ -126,13 +128,15 @@ impl PageTable {
             }
             d.modify_flags(Attributes::VALID, Attributes::empty());
             Ok(())
-        })
+        })?;
+        Ok(())
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as non-executable
     /// and writable normal memory.
     pub fn map_data(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, DATA)
+        self.idmap.map_range(range, DATA)?;
+        Ok(())
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as non-executable,
@@ -146,19 +150,22 @@ impl PageTable {
             range,
             DATA_DBM,
             Constraints::NO_BLOCK_MAPPINGS | Constraints::NO_CONTIGUOUS_HINT,
-        )
+        )?;
+        Ok(())
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as read-only
     /// normal memory.
     pub fn map_code(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, CODE)
+        self.idmap.map_range(range, CODE)?;
+        Ok(())
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as non-executable
     /// and read-only normal memory.
     pub fn map_rodata(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, RODATA)
+        self.idmap.map_range(range, RODATA)?;
+        Ok(())
     }
 
     /// Marks a previously-registered R/W region as "dirty" i.e. it has been written to.
@@ -166,7 +173,8 @@ impl PageTable {
         self.idmap.modify_range(range, &|r: &MemoryRegion, d: &mut Descriptor, _: usize| {
             mark_dirty_block(r, d, /* unused */ 0)?;
             Ok(())
-        })
+        })?;
+        Ok(())
     }
 
     /// Acts as a barrier, ensuring that the dirty state is properly updated on return.
@@ -186,7 +194,8 @@ impl PageTable {
         self.idmap.walk_range(range, &mut |r: &MemoryRegion, d: &Descriptor, _: usize| {
             flush_dirty_range(r, d, /* unused */ 0)?;
             Ok(())
-        })
+        })?;
+        Ok(())
     }
 }
 

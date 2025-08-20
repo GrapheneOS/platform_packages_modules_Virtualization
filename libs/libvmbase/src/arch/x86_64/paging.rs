@@ -25,36 +25,6 @@ pub const PAGE_SHIFT: usize = 12;
 /// The page size in bytes assumed by this library, 4 KiB.
 pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
 
-/// Enum describing memory mapping errors
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MapError {
-    /// Error at addres range
-    AddressRange(VirtualAddress),
-    /// Invalid VA
-    InvalidVirtualAddress(VirtualAddress),
-    /// Error invalid start and end addresses
-    RegionBackwards(MemoryRegion),
-    /// Memory vioalation error for memory range
-    BreakBeforeMakeViolation(MemoryRegion),
-}
-
-impl Display for MapError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::AddressRange(va) => write!(f, "Virtual address {va} out of range"),
-            Self::InvalidVirtualAddress(va) => {
-                write!(f, "Invalid virtual address {va} for mapping")
-            }
-            Self::RegionBackwards(region) => {
-                write!(f, "End of memory region {region} is before start.")
-            }
-            Self::BreakBeforeMakeViolation(region) => {
-                write!(f, "Cannot remap region {region} while translation is live.")
-            }
-        }
-    }
-}
-
 /// x86_64 memory Virtual Address
 #[derive(IntoBytes, FromBytes, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]

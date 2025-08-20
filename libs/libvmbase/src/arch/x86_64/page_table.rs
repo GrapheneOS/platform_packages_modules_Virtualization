@@ -14,10 +14,11 @@
 
 //! Page table management.
 
-use crate::arch::x86_64::paging::{MapError, MemoryRegion};
+use crate::arch::x86_64::paging::MemoryRegion;
+use crate::mmu::MmuError;
 use core::result;
 
-type Result<T> = result::Result<T, MapError>;
+type Result<T> = result::Result<T, MmuError>;
 
 /// High-level API for managing MMU mappings.
 #[derive(Default)]
