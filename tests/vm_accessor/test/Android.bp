@@ -22,6 +22,7 @@ package {
 rust_test {
     name: "vm_accessor_test",
     srcs: ["src/test.rs"],
+    defaults: ["avf_build_flags_rust"],
     test_suites: [
         "general-tests",
     ],

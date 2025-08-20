@@ -14,6 +14,10 @@
 
 //! VM with the simplest service for IAccessor demo
 
+use android_frameworks_stats::aidl::android::frameworks::stats::{
+    IStats::{BpStats, IStats},
+    VendorAtom::VendorAtom,
+};
 use anyhow::Result;
 use com_android_virt_accessor_demo_vm_service::{
     aidl::com::android::virt::accessor_demo::vm_service::IAccessorVmService::{
@@ -60,5 +64,18 @@ impl AccessorVmService {
 impl IAccessorVmService for AccessorVmService {
     fn add(&self, a: i32, b: i32) -> binder::Result<i32> {
         Ok(a + b)
+    }
+
+    fn tryGetHostStatsService(&self) -> binder::Result<()> {
+        // Get the IStats service
+        let stats_service_descriptor =
+            <BpStats as IStats>::get_descriptor().to_owned() + "/default";
+        let stats: Strong<dyn IStats> = loop {
+            match binder::wait_for_interface(&stats_service_descriptor) {
+                Ok(svc) => break svc,
+                Err(e) => error!("failed to get stats service: {e}, retrying"),
+            }
+        };
+        stats.reportVendorAtom(&VendorAtom::default())
     }
 }
