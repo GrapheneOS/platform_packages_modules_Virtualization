@@ -14,10 +14,14 @@
 
 //! Page table management.
 
-use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
+use crate::arch::aarch64::id_aa64mmfr1_el1_hafdbs;
+use crate::arch::aarch64::set_tcr_el1_ha_hd;
+use crate::arch::flush_region;
 use crate::dsb;
+use crate::isb;
 use crate::mmu::MmuError;
 use crate::read_sysreg;
+use crate::tlbi;
 use aarch64_paging::idmap::IdMap;
 use aarch64_paging::paging::{
     Attributes, Constraints, Descriptor, MemoryRegion, TranslationRegime,
@@ -49,11 +53,12 @@ type Result<T> = result::Result<T, MmuError>;
 /// High-level API for managing MMU mappings.
 pub struct PageTable {
     idmap: IdMap,
+    uses_hafdbs: bool,
 }
 
 impl From<IdMap> for PageTable {
     fn from(idmap: IdMap) -> Self {
-        Self { idmap }
+        Self { idmap, uses_hafdbs: false }
     }
 }
 
@@ -91,10 +96,11 @@ impl PageTable {
     /// code being currently executed. Otherwise, the Rust execution model (on which the borrow
     /// checker relies) would be violated.
     pub unsafe fn activate(&mut self) {
+        self.uses_hafdbs = cfg!(feature = "cpu_feat_hafdbs") && id_aa64mmfr1_el1_hafdbs();
         // Activate dirty state management first, otherwise we may get permission faults
         // immediately after activating the new page table. This has no effect before the new page
         // table is activated because none of the entries in the initial idmap have the DBM flag.
-        set_dbm_enabled(true);
+        set_tcr_el1_ha_hd(self.uses_hafdbs);
         // SAFETY: the caller of this unsafe function asserts that switching to a different
         // translation is safe
         unsafe { self.idmap.activate() }
@@ -171,7 +177,21 @@ impl PageTable {
     /// Marks a previously-registered R/W region as "dirty" i.e. it has been written to.
     pub(crate) fn mark_data_dirty(&mut self, range: &MemoryRegion) -> Result<()> {
         self.idmap.modify_range(range, &|r: &MemoryRegion, d: &mut Descriptor, _: usize| {
-            mark_dirty_block(r, d, /* unused */ 0)?;
+            let flags = d.flags().ok_or(())?;
+            assert!(flags.contains(Attributes::READ_ONLY), "unexpected PTE writable state");
+            if !flags.contains(Attributes::DBM) {
+                return Err(());
+            }
+            d.modify_flags(Attributes::empty(), Attributes::READ_ONLY);
+            // Updating the read-only bit of a PTE requires TLB invalidation.
+            tlbi!("vale1", Self::ASID, r.start().0);
+            // A TLB maintenance instruction is only guaranteed to be complete after a DSB
+            // instruction.
+            dsb!("ish");
+            // An ISB instruction is required to ensure the effects of completed TLB maintenance
+            // instructions are visible to instructions fetched afterwards.
+            // See ARM ARM E2.3.10, and G5.9.
+            isb!();
             Ok(())
         })?;
         Ok(())
@@ -192,7 +212,10 @@ impl PageTable {
     /// with also be flushed.
     pub(crate) fn flush_dirty_pages(&mut self, range: &MemoryRegion) -> Result<()> {
         self.idmap.walk_range(range, &mut |r: &MemoryRegion, d: &Descriptor, _: usize| {
-            flush_dirty_range(r, d, /* unused */ 0)?;
+            let flags = d.flags().ok_or(())?;
+            if !flags.contains(Attributes::READ_ONLY) {
+                flush_region(r.start().0, r.len());
+            }
             Ok(())
         })?;
         Ok(())
@@ -201,7 +224,9 @@ impl PageTable {
 
 impl Drop for PageTable {
     fn drop(&mut self) {
-        set_dbm_enabled(false);
+        if self.uses_hafdbs {
+            set_tcr_el1_ha_hd(false);
+        }
         // Dropping self.idmap sets TTBR_EL0 back to the static PTs.
     }
 }

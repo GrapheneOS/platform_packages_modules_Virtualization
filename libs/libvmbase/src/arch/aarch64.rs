@@ -15,7 +15,6 @@
 //! Wrappers of assembly calls.
 
 pub mod bionic;
-pub mod dbm;
 pub mod exceptions;
 pub mod hvc;
 pub mod layout;
@@ -130,4 +129,27 @@ pub fn min_dcache_line_size() -> usize {
     let dminline = (ctr_el0 >> DMINLINE_SHIFT) & DMINLINE_MASK;
 
     1 << dminline
+}
+
+/// Reads the hardware dirty bit management flag (ID_AA64MMFR1_EL1.HAFDBS[1]).
+#[inline]
+pub fn id_aa64mmfr1_el1_hafdbs() -> bool {
+    const ID_AA64MMFR1_EL1_HAFDBS: usize = 1 << 1;
+    read_sysreg!("id_aa64mmfr1_el1") & ID_AA64MMFR1_EL1_HAFDBS != 0
+}
+
+/// Sets or clears TCR_EL1.{HA,HD} bits controlling hardware management of access and dirty state.
+#[inline]
+fn set_tcr_el1_ha_hd(enabled: bool) {
+    const TCR_EL1_HA_HD_BITS: usize = 3 << 39;
+
+    let mut tcr = read_sysreg!("tcr_el1");
+    if enabled {
+        tcr |= TCR_EL1_HA_HD_BITS;
+    } else {
+        tcr &= !TCR_EL1_HA_HD_BITS;
+    }
+    // SAFETY: Changing this bit in TCR doesn't affect Rust's view of memory.
+    unsafe { write_sysreg!("tcr_el1", tcr) }
+    isb!();
 }

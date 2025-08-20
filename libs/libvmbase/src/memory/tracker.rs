@@ -37,7 +37,7 @@ use spin::mutex::{SpinMutex, SpinMutexGuard};
 use tinyvec::ArrayVec;
 
 /// A global static variable representing the system memory tracker, protected by a spin mutex.
-pub(crate) static MEMORY: SpinMutex<Option<MemoryTracker>> = SpinMutex::new(None);
+static MEMORY: SpinMutex<Option<MemoryTracker>> = SpinMutex::new(None);
 
 fn get_va_range(range: &MemoryRange) -> VaRange {
     VaRange::new(range.start, range.end)
@@ -192,6 +192,22 @@ pub fn map_device(addr: usize, size: NonZeroUsize) -> Result<()> {
     tracker.map_mmio_range(range.clone())
 }
 
+/// Handles a permission fault for a write to a data region, mapped as RO to track the dirty state.
+pub(crate) fn handle_read_only_fault(addr: VirtualAddress) -> Result<()> {
+    let mut locked_tracker = try_lock_memory_tracker()?;
+    let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
+    tracker.handle_permission_fault(addr)?;
+    Ok(())
+}
+
+/// Handler for faults triggered by accesses to MMIO, previously marked as lazy MMIO.
+pub(crate) fn handle_lazy_mmio_fault(addr: VirtualAddress) -> Result<()> {
+    let mut locked_tracker = try_lock_memory_tracker()?;
+    let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
+    tracker.handle_mmio_fault(addr)?;
+    Ok(())
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 enum MemoryType {
     #[default]
@@ -206,7 +222,7 @@ struct MemoryRegion {
 }
 
 /// Tracks non-overlapping slices of main memory.
-pub(crate) struct MemoryTracker {
+struct MemoryTracker {
     total: MemoryRange,
     page_table: PageTable,
     regions: ArrayVec<[MemoryRegion; MemoryTracker::CAPACITY]>,
