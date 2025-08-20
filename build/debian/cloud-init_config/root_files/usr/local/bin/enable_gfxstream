@@ -1,6 +1,11 @@
 #!/bin/bash
+cat << EOF > home/droid/weston.env
+MESA_LOADER_DRIVER_OVERRIDE=zink
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/gfxstream_vk_icd.json
+MESA_VK_WSI_DEBUG=sw,linear
+EOF
 sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty7 sleep 1d
-systemctl --user start weston&
+systemctl --user start weston& disown
 export DISPLAY=:0
 export MESA_LOADER_DRIVER_OVERRIDE=zink
 
