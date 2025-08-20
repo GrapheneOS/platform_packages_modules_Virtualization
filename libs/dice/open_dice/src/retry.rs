@@ -168,6 +168,12 @@ pub fn retry_generate_certificate(
 
 /// Signs a message with the given private key and returns the signature
 /// as an encoded CoseSign1 object.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 pub fn retry_sign_cose_sign1(
     dice_context: Option<DiceContext>,
     message: &[u8],
@@ -195,6 +201,12 @@ pub fn retry_sign_cose_sign1_multialg(
 /// Signs a message with the given the private key derived from the
 /// CDI Attest of the given `dice_artifacts` and returns the signature
 /// as an encoded CoseSign1 object.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 pub fn retry_sign_cose_sign1_with_cdi_leaf_priv(
     dice_context: Option<DiceContext>,
     message: &[u8],

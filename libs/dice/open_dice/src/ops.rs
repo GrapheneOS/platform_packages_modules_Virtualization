@@ -78,8 +78,13 @@ pub fn kdf(ikm: &[u8], salt: &[u8], info: &[u8], derived_key: &mut [u8]) -> Resu
 
 /// Deterministically generates a public and private key pair from `seed`.
 /// Since this is deterministic, `seed` is as sensitive as a private key and can
-/// be used directly as the private key. The key algorithm is determined from the `dice_context`
-/// provided or is ED25519 in case of `None`.
+/// be used directly as the private key.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 pub fn keypair_from_seed(
     dice_context: Option<DiceContext>,
     seed: &[u8; PRIVATE_KEY_SEED_SIZE],
@@ -157,6 +162,12 @@ pub fn keypair_from_seed_multialg(
 /// The corresponding public key is included in the leaf certificate of the DICE chain
 /// contained in `dice_artifacts`.
 ///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
+///
 /// Refer to the following documentation for more information about CDI_Leaf_Priv:
 ///
 /// security/rkp/aidl/android/hardware/security/keymint/IRemotelyProvisionedComponent.aidl
@@ -206,6 +217,12 @@ pub fn sign(message: &[u8], private_key: &[u8; PRIVATE_KEY_SIZE]) -> Result<Vec<
 
 /// Signs the `message` with the given `private_key` and places a `CoseSign1` encoded
 /// object in `encoded_signature`. Uses `DiceCoseSignAndEncodeSign1`.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 ///
 /// Returns the actual size of encoded_signature on success.
 pub fn sign_cose_sign1(
@@ -287,6 +304,12 @@ pub fn sign_cose_sign1_multialg(
 /// CDI Attest. On success, places a `CoseSign1` encoded object in `encoded_signature`.
 /// Uses `DiceCoseSignAndEncodeSign1`.
 ///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
+///
 /// Returns the actual size of encoded_signature on success.
 pub fn sign_cose_sign1_with_cdi_leaf_priv(
     dice_context: Option<DiceContext>,
@@ -313,6 +336,12 @@ pub fn sign_cose_sign1_with_cdi_leaf_priv_multialg(
 }
 
 /// Verifies the `signature` of the `message` with the given `public_key` using `DiceVerify`.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 pub fn verify(
     dice_context: Option<DiceContext>,
     message: &[u8],
