@@ -216,7 +216,7 @@ enum MemoryType {
 }
 
 #[derive(Clone, Debug, Default)]
-struct MemoryRegion {
+struct TrackedRegion {
     range: MemoryRange,
     mem_type: MemoryType,
 }
@@ -225,7 +225,7 @@ struct MemoryRegion {
 struct MemoryTracker {
     total: MemoryRange,
     page_table: PageTable,
-    regions: ArrayVec<[MemoryRegion; MemoryTracker::CAPACITY]>,
+    regions: ArrayVec<[TrackedRegion; MemoryTracker::CAPACITY]>,
     mmio_regions: ArrayVec<[MemoryRange; MemoryTracker::MMIO_CAPACITY]>,
     mmio_range: MemoryRange,
     image_footer: Option<MemoryRange>,
@@ -282,7 +282,7 @@ impl MemoryTracker {
 
     /// Allocate the address range for a const slice; returns None if failed.
     fn alloc_range(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
-        let region = MemoryRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
+        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
         self.check_allocatable(&region)?;
         self.page_table.map_rodata(&get_va_range(range)).map_err(|e| {
             error!("Error during range allocation: {e}");
@@ -301,7 +301,7 @@ impl MemoryTracker {
         &mut self,
         range: &MemoryRange,
     ) -> Result<MemoryRange> {
-        let region = MemoryRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
+        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
         self.check_no_overlap(&region)?;
         self.page_table.map_rodata(&get_va_range(range)).map_err(|e| {
             error!("Error during range allocation: {e}");
@@ -312,7 +312,7 @@ impl MemoryTracker {
 
     /// Allocate the address range for a mutable slice; returns None if failed.
     fn alloc_range_mut(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
-        let region = MemoryRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
+        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
         self.page_table.map_data_track_dirty_state(&get_va_range(range)).map_err(|e| {
             error!("Error during mutable range allocation: {e}");
@@ -322,7 +322,7 @@ impl MemoryTracker {
     }
 
     fn alloc_range_mut_noflush(&mut self, range: &MemoryRange) -> Result<MemoryRange> {
-        let region = MemoryRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
+        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
         self.page_table.map_data(&get_va_range(range)).map_err(|e| {
             error!("Error during non-flushed mutable range allocation: {e}");
@@ -396,7 +396,7 @@ impl MemoryTracker {
     /// - It is within the range of the `MemoryTracker`.
     /// - It does not overlap with any previously allocated regions.
     /// - The `regions` ArrayVec has sufficient capacity to add it.
-    fn check_allocatable(&self, region: &MemoryRegion) -> Result<()> {
+    fn check_allocatable(&self, region: &TrackedRegion) -> Result<()> {
         if !region.range.is_within(&self.total) {
             return Err(MemoryTrackerError::OutOfRange);
         }
@@ -405,7 +405,7 @@ impl MemoryTracker {
 
     /// Checks that the given region doesn't overlap with any other previously allocated regions,
     /// and that the regions ArrayVec has capacity to add it.
-    fn check_no_overlap(&self, region: &MemoryRegion) -> Result<()> {
+    fn check_no_overlap(&self, region: &TrackedRegion) -> Result<()> {
         if self.regions.iter().any(|r| region.range.overlaps(&r.range)) {
             return Err(MemoryTrackerError::Overlaps);
         }
@@ -415,7 +415,7 @@ impl MemoryTracker {
         Ok(())
     }
 
-    fn add(&mut self, region: MemoryRegion) -> Result<MemoryRange> {
+    fn add(&mut self, region: TrackedRegion) -> Result<MemoryRange> {
         if self.regions.try_push(region).is_some() {
             return Err(MemoryTrackerError::Full);
         }
