@@ -12,5 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(target_arch = "aarch64")]
-mod aarch64;
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+cc_genrule {
+    name: "vmbase_idmap_S",
+    target: {
+        android_arm64: {
+            srcs: ["aarch64/idmap.S"],
+        },
+        android_x86_64: {
+            srcs: ["x86_64/idmap.S"],
+        },
+    },
+    out: ["vmbase_idmap.S"],
+    cmd: "cp $(in) $(out)",
+}

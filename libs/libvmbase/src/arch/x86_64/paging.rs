@@ -34,10 +34,6 @@ pub enum MapError {
     InvalidVirtualAddress(VirtualAddress),
     /// Error invalid start and end addresses
     RegionBackwards(MemoryRegion),
-    /// Error during updating PTE
-    PteUpdateFault(Descriptor),
-    /// Invalid flag
-    InvalidFlags(Attributes),
     /// Memory vioalation error for memory range
     BreakBeforeMakeViolation(MemoryRegion),
 }
@@ -52,59 +48,10 @@ impl Display for MapError {
             Self::RegionBackwards(region) => {
                 write!(f, "End of memory region {region} is before start.")
             }
-            Self::PteUpdateFault(desc) => {
-                write!(f, "Error updating page table entry {desc:?}")
-            }
-            Self::InvalidFlags(flags) => {
-                write!(f, "Flags {flags:?} unsupported for mapping.")
-            }
             Self::BreakBeforeMakeViolation(region) => {
                 write!(f, "Cannot remap region {region} while translation is live.")
             }
         }
-    }
-}
-
-/// Enum describing memory attribute - stub
-#[allow(non_camel_case_types)]
-#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Attributes {
-    /// Read only memory attribute
-    READ_ONLY,
-    /// Valid memory attribute
-    VALID,
-    /// Dirty memory attribute
-    DBM,
-    /// Atribite not set
-    NONE,
-}
-
-impl Attributes {
-    /// Return empty attribute
-    pub fn empty() -> Self {
-        Self::NONE
-    }
-
-    /// returns true if attribute is set
-    pub const fn contains(&self, _other: Self) -> bool {
-        false
-    }
-}
-
-/// Descriptor stub
-#[derive(IntoBytes, FromBytes, Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(C)]
-pub struct Descriptor(usize);
-
-impl Descriptor {
-    /// Return flag for particular descriptor
-    pub fn flags(self) -> Option<Attributes> {
-        None
-    }
-
-    /// Modify flags for descriptior
-    pub fn modify_flags(&mut self, _set: Attributes, _clear: Attributes) {
-        // TODO set flag value in entry
     }
 }
 

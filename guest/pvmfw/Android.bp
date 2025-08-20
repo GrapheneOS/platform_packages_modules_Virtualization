@@ -361,30 +361,10 @@ cc_binary {
 
 cc_defaults {
     name: "pvmfw.defaults",
-    defaults: ["vmbase_elf_defaults"],
+    defaults: ["vmbase_elf_0x7fc00000_defaults"],
     static_libs: [
         "libvmbase_dice_clear_memory",
     ],
-    target: {
-        android_arm64: {
-            srcs: [
-                "asm/aarch64/idmap.S",
-            ],
-            linker_scripts: [
-                "asm/aarch64/image.ld",
-                ":vmbase_sections",
-            ],
-        },
-        android_x86_64: {
-            srcs: [
-                "asm/x86_64/idmap.S",
-            ],
-            linker_scripts: [
-                "asm/x86_64/image.ld",
-                ":vmbase_sections",
-            ],
-        },
-    },
     // `installable: false` is inherited from vmbase_elf_defaults, and that
     // hides this module from Make, which makes it impossible for the Make world
     // to place the unstripped binary to the symbols directory. Marking back as

@@ -20,6 +20,7 @@ use crate::{
         platform::{emergency_uart, DEFAULT_EMERGENCY_CONSOLE_INDEX},
         VirtualAddress,
     },
+    logger,
     memory::{page_4kb_of, MemoryTrackerError, MEMORY},
     power::reboot,
     read_sysreg,
@@ -165,4 +166,64 @@ pub fn handle_permission_fault(far: VirtualAddress) -> result::Result<(), Handle
     let mut guard = MEMORY.try_lock().ok_or(HandleExceptionError::PageTableUnavailable)?;
     let memory = guard.as_mut().ok_or(HandleExceptionError::PageTableNotInitialized)?;
     Ok(memory.handle_permission_fault(far)?)
+}
+
+fn handle_exception(exception: &ArmException) -> Result<(), HandleExceptionError> {
+    // Handle all translation faults on both read and write, and MMIO guard map
+    // flagged invalid pages or blocks that caused the exception.
+    // Handle permission faults for DBM flagged entries, and flag them as dirty on write.
+    match exception.esr {
+        Esr::DataAbortTranslationFault => handle_translation_fault(exception.far),
+        Esr::DataAbortPermissionFault => handle_permission_fault(exception.far),
+        _ => Err(HandleExceptionError::UnknownException),
+    }
+}
+
+#[no_mangle]
+extern "C" fn sync_exception_current(elr: u64, _spsr: u64) {
+    // Disable logging in exception handler to prevent unsafe writes to UART.
+    let _guard = logger::suppress();
+
+    let exception = ArmException::from_el1_regs();
+    if let Err(e) = handle_exception(&exception) {
+        exception.print_and_reboot("sync_exception_current", e, elr);
+    }
+}
+
+#[no_mangle]
+extern "C" fn irq_current(_elr: u64, _spsr: u64) {
+    panic!("irq_current");
+}
+
+#[no_mangle]
+extern "C" fn fiq_current(_elr: u64, _spsr: u64) {
+    panic!("fiq_current");
+}
+
+#[no_mangle]
+extern "C" fn serr_current(_elr: u64, _spsr: u64) {
+    let esr = read_sysreg!("esr_el1");
+    panic!("serr_current, esr={esr:#08x}");
+}
+
+#[no_mangle]
+extern "C" fn sync_lower(_elr: u64, _spsr: u64) {
+    let esr = read_sysreg!("esr_el1");
+    panic!("sync_lower, esr={esr:#08x}");
+}
+
+#[no_mangle]
+extern "C" fn irq_lower(_elr: u64, _spsr: u64) {
+    panic!("irq_lower");
+}
+
+#[no_mangle]
+extern "C" fn fiq_lower(_elr: u64, _spsr: u64) {
+    panic!("fiq_lower");
+}
+
+#[no_mangle]
+extern "C" fn serr_lower(_elr: u64, _spsr: u64) {
+    let esr = read_sysreg!("esr_el1");
+    panic!("serr_lower, esr={esr:#08x}");
 }

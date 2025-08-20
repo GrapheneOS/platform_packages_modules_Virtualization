@@ -14,6 +14,8 @@
 
 //! Page table management.
 
+use crate::arch::dbm::{flush_dirty_range, mark_dirty_block, set_dbm_enabled};
+use crate::dsb;
 use crate::read_sysreg;
 use aarch64_paging::idmap::IdMap;
 use aarch64_paging::paging::{
@@ -89,6 +91,10 @@ impl PageTable {
     /// code being currently executed. Otherwise, the Rust execution model (on which the borrow
     /// checker relies) would be violated.
     pub unsafe fn activate(&mut self) {
+        // Activate dirty state management first, otherwise we may get permission faults
+        // immediately after activating the new page table. This has no effect before the new page
+        // table is activated because none of the entries in the initial idmap have the DBM flag.
+        set_dbm_enabled(true);
         // SAFETY: the caller of this unsafe function asserts that switching to a different
         // translation is safe
         unsafe { self.idmap.activate() }
@@ -96,7 +102,7 @@ impl PageTable {
 
     /// Maps the given range of virtual addresses to the physical addresses as lazily mapped
     /// nGnRE device memory.
-    pub fn map_device_lazy(&mut self, range: &MemoryRegion) -> Result<()> {
+    pub fn mark_as_lazy_device(&mut self, range: &MemoryRegion) -> Result<()> {
         self.idmap.map_range(range, DEVICE_LAZY)
     }
 
@@ -104,6 +110,23 @@ impl PageTable {
     /// nGnRE device memory.
     pub fn map_device(&mut self, range: &MemoryRegion) -> Result<()> {
         self.idmap.map_range(range, DEVICE)
+    }
+
+    /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
+    ///
+    /// Returns an error if any PTE in the range is not an invalid lazy MMIO mapping.
+    pub fn map_device_expect_lazy(&mut self, range: &MemoryRegion) -> Result<()> {
+        // This must be safe and free from break-before-make (BBM) violations, given that the
+        // initial lazy mapping has the valid bit cleared, and each newly created valid descriptor
+        // created inside the mapping has the same size and alignment.
+        self.idmap.modify_range(range, &|_: &MemoryRegion, d: &mut Descriptor, _: usize| {
+            let flags = d.flags().expect("Unsupported PTE flags set");
+            if !flags.contains(MMIO_LAZY_MAP_FLAG) || flags.contains(Attributes::VALID) {
+                return Err(());
+            }
+            d.modify_flags(Attributes::VALID, Attributes::empty());
+            Ok(())
+        })
     }
 
     /// Maps the given range of virtual addresses to the physical addresses as non-executable
@@ -114,7 +137,7 @@ impl PageTable {
 
     /// Maps the given range of virtual addresses to the physical addresses as non-executable,
     /// read-only and writable-clean normal memory.
-    pub fn map_data_dbm(&mut self, range: &MemoryRegion) -> Result<()> {
+    pub fn map_data_track_dirty_state(&mut self, range: &MemoryRegion) -> Result<()> {
         // Map the region down to pages to minimize the size of the regions that will be marked
         // dirty once a store hits them, but also to ensure that we can clear the read-only
         // attribute while the mapping is live without causing break-before-make (BBM) violations.
@@ -138,22 +161,38 @@ impl PageTable {
         self.idmap.map_range(range, RODATA)
     }
 
-    /// Applies the provided updater function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn modify_range<F>(&mut self, range: &MemoryRegion, f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &mut Descriptor, usize) -> result::Result<(), ()>,
-    {
-        self.idmap.modify_range(range, f)
+    /// Marks a previously-registered R/W region as "dirty" i.e. it has been written to.
+    pub(crate) fn mark_data_dirty(&mut self, range: &MemoryRegion) -> Result<()> {
+        self.idmap.modify_range(range, &|r: &MemoryRegion, d: &mut Descriptor, _: usize| {
+            mark_dirty_block(r, d, /* unused */ 0)?;
+            Ok(())
+        })
     }
 
-    /// Applies the provided callback function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn walk_range<F>(&self, range: &MemoryRegion, f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &Descriptor, usize) -> result::Result<(), ()>,
-    {
-        let mut callback = |mr: &MemoryRegion, d: &Descriptor, l: usize| f(mr, d, l);
-        self.idmap.walk_range(range, &mut callback)
+    /// Acts as a barrier, ensuring that the dirty state is properly updated on return.
+    pub(crate) fn sync_dirty_state(&mut self) -> Result<()> {
+        // Execute a barrier instruction to ensure all hardware updates to the page table have been
+        // observed before reading PTE flags to determine dirty state.
+        dsb!("ish");
+        Ok(())
+    }
+
+    /// Flushes the data caches over every page of `range` that was marked dirty.
+    ///
+    /// Pages may be marked automatically by hardware if mapped with `map_data_track_dirty_state()`
+    /// and/or with calls to `mark_data_dirty()`. Any region that has been mapped with `map_data()`
+    /// with also be flushed.
+    pub(crate) fn flush_dirty_pages(&mut self, range: &MemoryRegion) -> Result<()> {
+        self.idmap.walk_range(range, &mut |r: &MemoryRegion, d: &Descriptor, _: usize| {
+            flush_dirty_range(r, d, /* unused */ 0)?;
+            Ok(())
+        })
+    }
+}
+
+impl Drop for PageTable {
+    fn drop(&mut self) {
+        set_dbm_enabled(false);
+        // Dropping self.idmap sets TTBR_EL0 back to the static PTs.
     }
 }

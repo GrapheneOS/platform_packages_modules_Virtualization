@@ -24,54 +24,9 @@ rust_ffi_static {
     },
 }
 
-genrule {
-    name: "vmbase_image.ld.S.mm",
-    // Soong won't let us use cc_object to preprocess *.ld.S files because it
-    // can't resist feeding any and all *.S files to the assembler, which fails
-    // because linker scripts typically aren't valid assembly. Also, cc_object
-    // rejects inputs that don't end in one of .{s,S,c,cpp,cc,cxx,mm}. So keep
-    // the proper extension (.ld.S) for the file in VCS and use this convoluted
-    // extra step to please Soong by pretending that our linker script is in
-    // fact some Object C++ code, which fortunately it doesn't try to compile.
-    srcs: ["image.ld.S"],
-    out: ["image.ld.S.mm"],
-    cmd: "cp $(in) $(out)",
-    visibility: ["//visibility:private"],
-}
-
-cc_defaults {
-    name: "vmbase_example_ld_defaults",
-    defaults: ["vmbase_cc_defaults"],
-    cflags: [
-        "-E",
-        "-P",
-        "-xassembler-with-cpp", // allow C preprocessor directives
-        // Soong passes an implicit -c before -E. Suppress the warning about -c
-        // being unused.
-        "-Wno-unused-command-line-argument",
-    ],
-    srcs: [":vmbase_image.ld.S.mm"],
-    visibility: ["//visibility:private"],
-}
-
-cc_object {
-    name: "vmbase_example_bios.ld",
-    defaults: ["vmbase_example_ld_defaults"],
-    cflags: ["-DVMBASE_EXAMPLE_IS_BIOS"],
-}
-
-cc_object {
-    name: "vmbase_example_kernel.ld",
-    defaults: ["vmbase_example_ld_defaults"],
-    cflags: ["-DVMBASE_EXAMPLE_IS_KERNEL"],
-}
-
 cc_defaults {
     name: "vmbase_example_elf_defaults",
     defaults: ["vmbase_elf_defaults"],
-    srcs: [
-        "idmap.S",
-    ],
     static_libs: [
         "libvmbase_example",
     ],
@@ -85,21 +40,17 @@ cc_defaults {
 
 cc_binary {
     name: "vmbase_example_bios",
-    defaults: ["vmbase_example_elf_defaults"],
-    asflags: ["-DVMBASE_EXAMPLE_IS_BIOS"],
-    linker_scripts: [
-        ":vmbase_example_bios.ld",
-        ":vmbase_sections",
+    defaults: [
+        "vmbase_elf_0x80200000_defaults",
+        "vmbase_example_elf_defaults",
     ],
 }
 
 cc_binary {
     name: "vmbase_example_kernel",
-    defaults: ["vmbase_example_elf_defaults"],
-    asflags: ["-DVMBASE_EXAMPLE_IS_KERNEL"],
-    linker_scripts: [
-        ":vmbase_example_kernel.ld",
-        ":vmbase_sections",
+    defaults: [
+        "vmbase_elf_0x80000000_defaults",
+        "vmbase_example_elf_defaults",
     ],
 }
 

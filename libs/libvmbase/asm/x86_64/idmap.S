@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+#if defined(VMBASE_IMAGE_LOAD_ADDR)
+#if VMBASE_IMAGE_LOAD_ADDR != 0x7fc00000
+#error "Unsupported VMBASE_IMAGE_LOAD_ADDR"
+#endif
+#endif
+
 .set .L_PRESENT, 1 << 0
 .set .L_WRITABLE, 1 << 1
 .set .L_USER, 1 << 2
