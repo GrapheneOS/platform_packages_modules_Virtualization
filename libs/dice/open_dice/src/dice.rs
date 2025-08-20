@@ -141,7 +141,6 @@ impl From<KeyAlgorithm> for DiceKeyAlgorithm {
 }
 
 /// Represents the context used for DICE operations.
-#[cfg(feature = "multialg")]
 #[derive(Debug, Clone, Copy)]
 pub struct DiceContext {
     /// The algorithm used for the authority key.
@@ -166,17 +165,28 @@ const VM_DICE_CONTEXT: DiceContext_ = DiceContext_ {
     subject_algorithm: DiceKeyAlgorithm::kDiceKeyAlgorithmEd25519,
 };
 
-/// Returns the pointer points to |DiceContext_| for DICE operations when `multialg`
-/// feature is enabled.
+/// Converts the optionally provided `DiceContext` object into `DiceContext_` and passes a
+/// type-erased pointer to it to the closure `f`. The closure is expected to be a `check_result`
+/// call, and the pointer passed to it is further passed to the underlying `libopen_dice` library.
+/// If `context` is `None`, the default context is passed along that sets both authority and
+/// subject algorithms to Ed25519.
 #[cfg(feature = "multialg")]
-pub(crate) fn context() -> *mut c_void {
-    &VM_DICE_CONTEXT as *const DiceContext_ as *mut c_void
+pub(crate) fn context(
+    context: Option<DiceContext>,
+    f: impl FnOnce(*mut c_void) -> Result<()>,
+) -> Result<()> {
+    let dice_context = context.map(DiceContext_::from).unwrap_or(VM_DICE_CONTEXT);
+    f(&dice_context as *const DiceContext_ as *mut c_void)
 }
 
-/// Returns a null pointer when `multialg` feature is disabled.
+/// The non-multialg version of this helper passes `NULL` to the `libopen_dice` functions. In those
+/// versions the context is not used.
 #[cfg(not(feature = "multialg"))]
-pub(crate) fn context() -> *mut c_void {
-    ptr::null_mut()
+pub(crate) fn context(
+    _context: Option<DiceContext>,
+    f: impl FnOnce(*mut c_void) -> Result<()>,
+) -> Result<()> {
+    f(ptr::null_mut())
 }
 
 /// A trait for types that represent Dice artifacts, which include:
@@ -386,23 +396,25 @@ pub fn dice_main_flow(
     next_cdi_values: &mut CdiValues,
 ) -> Result<usize> {
     let mut next_cdi_certificate_actual_size = 0;
-    check_result(
-        // SAFETY: The function only reads the current CDI values and inputs and writes
-        // to `next_cdi_certificate` and next CDI values within its bounds.
-        unsafe {
-            DiceMainFlow(
-                context(),
-                current_cdi_attest.as_ptr(),
-                current_cdi_seal.as_ptr(),
-                input_values.as_ptr(),
-                next_cdi_certificate.len(),
-                next_cdi_certificate.as_mut_ptr(),
-                &mut next_cdi_certificate_actual_size,
-                next_cdi_values.cdi_attest.as_mut_ptr(),
-                next_cdi_values.cdi_seal.as_mut_ptr(),
-            )
-        },
-        next_cdi_certificate_actual_size,
-    )?;
+    context(None, |ctx| {
+        check_result(
+            // SAFETY: The function only reads the current CDI values and inputs and writes
+            // to `next_cdi_certificate` and next CDI values within its bounds.
+            unsafe {
+                DiceMainFlow(
+                    ctx,
+                    current_cdi_attest.as_ptr(),
+                    current_cdi_seal.as_ptr(),
+                    input_values.as_ptr(),
+                    next_cdi_certificate.len(),
+                    next_cdi_certificate.as_mut_ptr(),
+                    &mut next_cdi_certificate_actual_size,
+                    next_cdi_values.cdi_attest.as_mut_ptr(),
+                    next_cdi_values.cdi_seal.as_mut_ptr(),
+                )
+            },
+            next_cdi_certificate_actual_size,
+        )
+    })?;
     Ok(next_cdi_certificate_actual_size)
 }

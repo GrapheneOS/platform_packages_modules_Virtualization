@@ -142,7 +142,7 @@ fn sample_bcc_and_cdis_are_as_expected() {
 #[test]
 fn cdi_leaf_priv_corresponds_to_leaf_public_key_in_dice_chain() -> Result<()> {
     let dice_artifacts = make_sample_bcc_and_cdis().unwrap();
-    let private_key = derive_cdi_leaf_priv(&dice_artifacts).unwrap();
+    let private_key = derive_cdi_leaf_priv(None, &dice_artifacts).unwrap();
     let signature = sign(MESSAGE, private_key.as_array()).unwrap();
 
     let session = Session::default();

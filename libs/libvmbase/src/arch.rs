@@ -39,12 +39,6 @@ pub use aarch64::layout;
 pub use x86_64::layout;
 
 #[cfg(target_arch = "aarch64")]
-pub use aarch64::dbm;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::dbm;
-
-#[cfg(target_arch = "aarch64")]
 pub use aarch64::rand;
 
 #[cfg(target_arch = "x86_64")]

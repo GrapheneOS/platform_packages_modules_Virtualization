@@ -33,16 +33,31 @@
 .set .L_BLOCK_MEM, .L_TT_TYPE_BLOCK | .L_TT_MT_MEM | .L_TT_AF | .L_TT_XN | .L_TT_NG
 .set .L_BLOCK_MEM_XIP, .L_TT_TYPE_BLOCK | .L_TT_MT_MEM | .L_TT_AF | .L_TT_NG | .L_TT_RO
 
+.set .L_PT_SZ, (4 << 10)
+.set .L_PTE_L1_SZ, (1 << 30)
+.set .L_PTE_L2_SZ, (2 << 20)
+
+#if defined(VMBASE_IMAGE_LOAD_ADDR)
+.set .L_OFFSET_L1, (VMBASE_IMAGE_LOAD_ADDR) / .L_PTE_L1_SZ
+.set .L_OFFSET_L2, (VMBASE_IMAGE_LOAD_ADDR) % .L_PTE_L1_SZ / .L_PTE_L2_SZ
+.set .L_XIP_ADDR, (VMBASE_IMAGE_LOAD_ADDR)
+.set .L_MEM_ADDR, (VMBASE_IMAGE_LOAD_ADDR) + .L_PTE_L2_SZ
+#else
+#error "VMBASE_IMAGE_LOAD_ADDR undefined"
+#endif
+
 .section ".rodata.idmap", "a", %progbits
 .global idmap
 .align 12
 idmap:
 	/* level 1 */
 	.quad		.L_BLOCK_DEV | 0x0		// 1 GB of device mappings
-	.quad		.L_TT_TYPE_TABLE + 0f		// Unmapped device memory, and pVM firmware
-	.fill		510, 8, 0x0			// 510 GB of remaining VA space
+	.fill		.L_OFFSET_L1 - 1, 8, 0x0
+	.quad		.L_TT_TYPE_TABLE + 0f
+	.balign		.L_PT_SZ, 0x0
 
-	/* level 2 */
-0:	.fill		510, 8, 0x0
-	.quad		.L_BLOCK_MEM_XIP | 0x7fc00000	// pVM firmware image
-	.quad		.L_BLOCK_MEM	 | 0x7fe00000	// Writable memory for stack, heap &c.
+0:	/* level 2 */
+	.fill		.L_OFFSET_L2, 8, 0x0
+	.quad		.L_BLOCK_MEM_XIP | .L_XIP_ADDR
+	.quad		.L_BLOCK_MEM	 | .L_MEM_ADDR
+	.balign		.L_PT_SZ, 0x0

@@ -106,7 +106,7 @@ pub fn make_sample_bcc_and_cdis() -> Result<OwnedDiceArtifacts> {
     })?;
 
     // Gets the root public key in DICE chain (BCC).
-    let (public_key, _) = keypair_from_seed(private_key_seed.as_array()).map_err(|e| {
+    let (public_key, _) = keypair_from_seed(None, private_key_seed.as_array()).map_err(|e| {
         error!("In make_sample_bcc_and_cids: Failed to generate key pair. Error: {e}");
         e
     })?;

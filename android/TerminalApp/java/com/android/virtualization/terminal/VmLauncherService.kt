@@ -351,6 +351,7 @@ class VmLauncherService : Service() {
         var changed = false
         // TODO: use resources to check if gfxstream is supported.
         if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
+            builder.addParam("gfxstream_enabled")
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
                     .setBackend("gfxstream")

@@ -20,7 +20,8 @@ use crate::{
         platform::{emergency_uart, DEFAULT_EMERGENCY_CONSOLE_INDEX},
         VirtualAddress,
     },
-    memory::{page_4kb_of, MemoryTrackerError, MEMORY},
+    logger,
+    memory::{handle_lazy_mmio_fault, handle_read_only_fault, page_4kb_of, MemoryTrackerError},
     power::reboot,
     read_sysreg,
 };
@@ -30,10 +31,6 @@ use core::result;
 /// Represents an error that can occur while handling an exception.
 #[derive(Debug)]
 pub enum HandleExceptionError {
-    /// The page table is unavailable.
-    PageTableUnavailable,
-    /// The page table has not been initialized.
-    PageTableNotInitialized,
     /// An internal error occurred in the memory tracker.
     InternalError(MemoryTrackerError),
     /// An unknown exception occurred.
@@ -49,8 +46,6 @@ impl From<MemoryTrackerError> for HandleExceptionError {
 impl fmt::Display for HandleExceptionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::PageTableUnavailable => write!(f, "Page table is not available."),
-            Self::PageTableNotInitialized => write!(f, "Page table is not initialized."),
             Self::InternalError(e) => write!(f, "Error while updating page table: {e}"),
             Self::UnknownException => write!(f, "An unknown exception occurred, not handled."),
         }
@@ -151,18 +146,64 @@ impl ArmException {
     }
 }
 
-/// Handles a translation fault with the given fault address register (FAR).
-#[inline]
-pub fn handle_translation_fault(far: VirtualAddress) -> result::Result<(), HandleExceptionError> {
-    let mut guard = MEMORY.try_lock().ok_or(HandleExceptionError::PageTableUnavailable)?;
-    let memory = guard.as_mut().ok_or(HandleExceptionError::PageTableNotInitialized)?;
-    Ok(memory.handle_mmio_fault(far)?)
+fn handle_exception(exception: &ArmException) -> result::Result<(), HandleExceptionError> {
+    // Handle all translation faults on both read and write, and MMIO guard map
+    // flagged invalid pages or blocks that caused the exception.
+    // Handle permission faults for DBM flagged entries, and flag them as dirty on write.
+    match exception.esr {
+        Esr::DataAbortTranslationFault => handle_lazy_mmio_fault(exception.far)?,
+        // TODO(ptosi): Properly filter the ESR for write faults only
+        Esr::DataAbortPermissionFault => handle_read_only_fault(exception.far)?,
+        _ => return Err(HandleExceptionError::UnknownException),
+    }
+    Ok(())
 }
 
-/// Handles a permission fault with the given fault address register (FAR).
-#[inline]
-pub fn handle_permission_fault(far: VirtualAddress) -> result::Result<(), HandleExceptionError> {
-    let mut guard = MEMORY.try_lock().ok_or(HandleExceptionError::PageTableUnavailable)?;
-    let memory = guard.as_mut().ok_or(HandleExceptionError::PageTableNotInitialized)?;
-    Ok(memory.handle_permission_fault(far)?)
+#[no_mangle]
+extern "C" fn sync_exception_current(elr: u64, _spsr: u64) {
+    // Disable logging in exception handler to prevent unsafe writes to UART.
+    let _guard = logger::suppress();
+
+    let exception = ArmException::from_el1_regs();
+    if let Err(e) = handle_exception(&exception) {
+        exception.print_and_reboot("sync_exception_current", e, elr);
+    }
+}
+
+#[no_mangle]
+extern "C" fn irq_current(_elr: u64, _spsr: u64) {
+    panic!("irq_current");
+}
+
+#[no_mangle]
+extern "C" fn fiq_current(_elr: u64, _spsr: u64) {
+    panic!("fiq_current");
+}
+
+#[no_mangle]
+extern "C" fn serr_current(_elr: u64, _spsr: u64) {
+    let esr = read_sysreg!("esr_el1");
+    panic!("serr_current, esr={esr:#08x}");
+}
+
+#[no_mangle]
+extern "C" fn sync_lower(_elr: u64, _spsr: u64) {
+    let esr = read_sysreg!("esr_el1");
+    panic!("sync_lower, esr={esr:#08x}");
+}
+
+#[no_mangle]
+extern "C" fn irq_lower(_elr: u64, _spsr: u64) {
+    panic!("irq_lower");
+}
+
+#[no_mangle]
+extern "C" fn fiq_lower(_elr: u64, _spsr: u64) {
+    panic!("fiq_lower");
+}
+
+#[no_mangle]
+extern "C" fn serr_lower(_elr: u64, _spsr: u64) {
+    let esr = read_sysreg!("esr_el1");
+    panic!("serr_lower, esr={esr:#08x}");
 }

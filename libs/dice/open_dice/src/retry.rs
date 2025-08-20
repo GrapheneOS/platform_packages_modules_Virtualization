@@ -19,8 +19,8 @@
 
 use crate::bcc::{bcc_format_config_descriptor, bcc_main_flow, BccHandover, DiceConfigValues};
 use crate::dice::{
-    dice_main_flow, Cdi, CdiValues, DiceArtifacts, InputValues, CDI_SIZE, PRIVATE_KEY_SEED_SIZE,
-    PRIVATE_KEY_SIZE,
+    dice_main_flow, Cdi, CdiValues, DiceArtifacts, DiceContext, InputValues, CDI_SIZE,
+    PRIVATE_KEY_SEED_SIZE, PRIVATE_KEY_SIZE,
 };
 use crate::error::{DiceError, Result};
 use crate::ops::{generate_certificate, sign_cose_sign1, sign_cose_sign1_with_cdi_leaf_priv};
@@ -168,13 +168,20 @@ pub fn retry_generate_certificate(
 
 /// Signs a message with the given private key and returns the signature
 /// as an encoded CoseSign1 object.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 pub fn retry_sign_cose_sign1(
+    dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
     private_key: &[u8; PRIVATE_KEY_SIZE],
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
-        sign_cose_sign1(message, aad, private_key, encoded_signature)
+        sign_cose_sign1(dice_context, message, aad, private_key, encoded_signature)
     })
 }
 
@@ -194,13 +201,26 @@ pub fn retry_sign_cose_sign1_multialg(
 /// Signs a message with the given the private key derived from the
 /// CDI Attest of the given `dice_artifacts` and returns the signature
 /// as an encoded CoseSign1 object.
+///
+/// The behavior of the `dice_context` parameter depends on the library variant being used:
+/// * **When using the multi-alg variant:** `dice_context` specifies the DICE context used during
+///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
+/// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
+///   determined by the underlying `open-dice` library in this case.
 pub fn retry_sign_cose_sign1_with_cdi_leaf_priv(
+    dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
     dice_artifacts: &dyn DiceArtifacts,
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
-        sign_cose_sign1_with_cdi_leaf_priv(message, aad, dice_artifacts, encoded_signature)
+        sign_cose_sign1_with_cdi_leaf_priv(
+            dice_context,
+            message,
+            aad,
+            dice_artifacts,
+            encoded_signature,
+        )
     })
 }
 
