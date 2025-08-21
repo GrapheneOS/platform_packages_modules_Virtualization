@@ -113,6 +113,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -570,7 +571,6 @@ public class VirtualMachine implements AutoCloseable {
         try {
             VirtualizationService virtualizationService = VirtualizationService.getInstance();
             VirtualMachine vm = new VirtualMachine(context, name, config, virtualizationService);
-            config.serialize(vm.mConfigFilePath);
             try {
                 vm.mInstanceFilePath.createNewFile();
             } catch (IOException e) {
@@ -633,6 +633,8 @@ public class VirtualMachine implements AutoCloseable {
                             "failed to create encrypted storage partition", e);
                 }
             }
+            // persist the config only after we pass all the checks above.
+            config.serialize(vm.mConfigFilePath);
             return vm;
         } catch (VirtualMachineException | RuntimeException e) {
             // If anything goes wrong, delete any files created so far and the VM's directory
@@ -656,7 +658,19 @@ public class VirtualMachine implements AutoCloseable {
             return null;
         }
         File configFilePath = new File(thisVmDir, CONFIG_FILE);
-        VirtualMachineConfig config = VirtualMachineConfig.from(configFilePath);
+        VirtualMachineConfig config = null;
+        try {
+            config = VirtualMachineConfig.from(configFilePath);
+            Objects.requireNonNull(config);
+        } catch (VirtualMachineException e) {
+            Log.e(
+                    TAG,
+                    "Failed to load virtual machine config from "
+                            + configFilePath
+                            + ". It may be corrupted: "
+                            + e);
+            return null;
+        }
         VirtualMachine vm =
                 new VirtualMachine(context, name, config, VirtualizationService.getInstance());
 
@@ -2037,6 +2051,7 @@ public class VirtualMachine implements AutoCloseable {
      *
      * <p>NOTE: Modification of the encrypted storage size is restricted to expansion only and is an
      * irreversible operation.
+     *
      * <p>NOTE: This method may block and should not be called on the main thread.
      *
      * @return the old config
