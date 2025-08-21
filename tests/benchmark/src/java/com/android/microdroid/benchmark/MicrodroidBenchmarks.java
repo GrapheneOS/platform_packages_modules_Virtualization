@@ -413,7 +413,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     }
 
     private static class VirtioBlkListener implements BenchmarkVmListener.InnerListener {
-        private static final String FILENAME = APEX_ETC_FS + "microdroid_super.img";
+        private static final String FILENAME = "/dev/block/by-name/microdroid-apk";
 
         private final List<Double> mReadRates;
         private final boolean mIsRand;
