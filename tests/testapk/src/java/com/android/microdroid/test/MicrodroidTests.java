@@ -3568,6 +3568,29 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
+    @Test
+    public void vmNameIsHostname() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("MultiTenancy feature not supported", isFeatureMultiTenantSupported());
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        // Run a non-debuggable pVM to also cover pvmfw filtering logic in this
+                        // test.
+                        .setDebugLevel(DEBUG_LEVEL_NONE)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm-name42", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mHostname = ts.getHostname();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mHostname).isEqualTo("test_vm-name42");
+    }
+
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {
         Parcel parcel = Parcel.obtain();
         descriptor.writeToParcel(parcel, 0);

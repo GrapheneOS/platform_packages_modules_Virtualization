@@ -454,6 +454,17 @@ Result<void> start_test_service() {
             return ScopedAStatus::ok();
         }
 
+        ScopedAStatus getHostname(std::string* out) override {
+            char hostname[64];
+            if (gethostname(hostname, 64) != 0) {
+                std::string msg = "gethostname failed (" + std::to_string(errno) + ")";
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   msg.c_str());
+            }
+            *out = std::string(hostname);
+            return ScopedAStatus::ok();
+        }
+
         ScopedAStatus quit() override { exit(0); }
     };
     auto testService = ndk::SharedRefBase::make<TestService>();

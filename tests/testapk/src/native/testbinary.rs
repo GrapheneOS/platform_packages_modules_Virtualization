@@ -145,6 +145,9 @@ impl ITestService for TestService {
     fn requestEncryptedStoreSetup(&self) -> BinderResult<()> {
         unimplemented()
     }
+    fn getHostname(&self) -> BinderResult<String> {
+        unimplemented()
+    }
 }
 
 fn unimplemented<T>() -> BinderResult<T> {

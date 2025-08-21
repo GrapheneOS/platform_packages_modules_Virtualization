@@ -337,6 +337,14 @@ impl CrosvmCommand {
             self.args(["--params", params]);
         }
 
+        if !config.name.is_empty() {
+            if !is_valid_vm_name(&config.name) {
+                bail!("Invalid VM name \"{}\"", config.name);
+            }
+            let hostname_param = format!("hostname={}", config.name);
+            self.args(["--params", &hostname_param]);
+        }
+
         if let Some(initrd) = &config.initrd {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
@@ -2249,6 +2257,12 @@ fn path_to_cstring(path: &Path) -> CString {
     panic!("bad path: {path:?}");
 }
 
+// This is a duplicate of the check done by pvmfw.
+// We do it in virtmgr just to fail fast without even trying to boot a VM with invalid name.
+fn is_valid_vm_name(name: &str) -> bool {
+    name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 struct SwiotlbEstimateInputs {
     guest_page_size: u32,
     block_count: u32,
@@ -2355,5 +2369,12 @@ mod tests {
             }),
             10
         );
+    }
+
+    #[test]
+    fn test_is_valid_vm_name() {
+        assert!(is_valid_vm_name("val_id-na42me"));
+        assert!(!is_valid_vm_name("\\invalid_%name%"));
+        assert!(!is_valid_vm_name("a_🐸_in_vm_name"));
     }
 }
