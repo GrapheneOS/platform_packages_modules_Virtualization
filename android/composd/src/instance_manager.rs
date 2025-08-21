@@ -18,11 +18,16 @@
 //! a time, started on demand.
 
 use crate::instance_starter::{CompOsInstance, InstanceStarter};
+use crate::wrappers::compos_common_injection;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice;
 use anyhow::{anyhow, bail, Context, Result};
 use binder::Strong;
-use compos_common::compos_client::{CompOsType, VmCpuTopology, VmParameters};
-use compos_common::{CURRENT_INSTANCE_DIR, TEST_INSTANCE_DIR};
+
+use compos_common_injection::{
+    compos_client::{CompOsType, VmCpuTopology, VmParameters},
+    CURRENT_INSTANCE_DIR, TEST_INSTANCE_DIR,
+};
+
 use log::info;
 use rustutils::system_properties;
 use std::str::FromStr;

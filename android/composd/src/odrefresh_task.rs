@@ -16,8 +16,14 @@
 
 //! Handle running odrefresh in the VM, with an async interface to allow cancellation
 
+#[cfg(not(test))]
+use compos_wrappers::fsverity;
+#[cfg(test)]
+use compos_wrappers_with_mocks::mock_fsverity as fsverity;
+
 use crate::fd_server_helper::FdServerConfig;
 use crate::instance_starter::CompOsInstance;
+use crate::wrappers::compos_common_injection;
 use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::ICompilationTask,
     ICompilationTaskCallback::{FailureReason::FailureReason, ICompilationTaskCallback},
@@ -27,13 +33,13 @@ use binder::{Interface, Result as BinderResult, Strong};
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
     CompilationMode::CompilationMode, ICompOsService, OdrefreshArgs::OdrefreshArgs,
 };
-use compos_common::BUILD_MANIFEST_SYSTEM_EXT_APK_PATH;
-use compos_common::{
+use compos_common_injection::{
     compos_client::CompOsService,
     odrefresh::{
         is_system_property_interesting, ExitCode, CURRENT_ARTIFACTS_SUBDIR,
         ODREFRESH_OUTPUT_ROOT_DIR, PENDING_ARTIFACTS_SUBDIR,
     },
+    BUILD_MANIFEST_SYSTEM_EXT_APK_PATH,
 };
 use log::{error, info, warn};
 use odsign_proto::odsign_info::OdsignInfo;

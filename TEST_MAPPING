@@ -18,6 +18,9 @@
     },
     {
       "name": "avf_backcompat_tests"
+    },
+    {
+      "name": "composd_test"
     }
   ],
   // Tests runs after CLs are submitted. All AVF tests and benchmarks are here.
