@@ -1050,10 +1050,13 @@ fn load_crashkernel_if_supported() -> Result<()> {
 
     if requested {
         let status = Command::new("/system/bin/kexec_load").status()?;
-        if !status.success() {
+        if status.success() {
+            info!("ramdump is loaded: debuggable={debuggable}, ramdump={ramdump}");
+        } else if status.code() == Some(libc::ENOSYS) {
+            info!("ramdump is not supported");
+        } else {
             return Err(anyhow!("Failed to load crashkernel: {status}"));
         }
-        info!("ramdump is loaded: debuggable={debuggable}, ramdump={ramdump}");
     }
     Ok(())
 }
