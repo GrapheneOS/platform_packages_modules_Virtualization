@@ -744,7 +744,7 @@ fn try_run_payload(
                 }
             }
             TenantConfig::Apk(apk_conf) => {
-                warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
+                warn!("APK tenants are not supported, skipping: {:?}", apk_conf.name);
             }
         }
     }

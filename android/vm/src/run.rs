@@ -194,6 +194,7 @@ pub fn command_run_app(
         apk: apk_fd.into(),
         idsig: idsig_fd.into(),
         extraIdsigs: extra_idsig_fds,
+        tenantApks: vec![],
         tenantIdsigs: vec![],
         instanceImage: open_parcel_file(&config.instance, true /* writable */)?.into(),
         instanceId: instance_id,

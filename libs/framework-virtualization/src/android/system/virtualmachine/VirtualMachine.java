@@ -1721,14 +1721,17 @@ public class VirtualMachine implements AutoCloseable {
         }
         appConfig.extraIdsigs = extraIdsigs;
 
+        List<ParcelFileDescriptor> tenantApks = new ArrayList<>();
         List<ParcelFileDescriptor> tenantIdsigs = new ArrayList<>();
         for (ApkSpec apk : mTenantApks) {
             service.createOrUpdateIdsigFile(
                     ParcelFileDescriptor.open(apk.apk, MODE_READ_ONLY),
                     ParcelFileDescriptor.open(apk.idsig, MODE_READ_WRITE));
             // Re-open idsig files in read-only mode
+            tenantApks.add(ParcelFileDescriptor.open(apk.apk, MODE_READ_ONLY));
             tenantIdsigs.add(ParcelFileDescriptor.open(apk.idsig, MODE_READ_ONLY));
         }
+        appConfig.tenantApks = tenantApks;
         appConfig.tenantIdsigs = tenantIdsigs;
     }
 
@@ -2355,22 +2358,35 @@ public class VirtualMachine implements AutoCloseable {
 
     private static List<ApkSpec> setupTenantApksFromConfigFile(
             Context context, File vmDir, String configPath) throws VirtualMachineException {
+        List<String> apkList;
         try (ZipFile zipFile = new ZipFile(context.getPackageCodePath())) {
             InputStream inputStream = zipFile.getInputStream(zipFile.getEntry(configPath));
-            List<String> apkList =
+            apkList =
                     parseTenantApkListFromPayloadConfig(
                             new JsonReader(new InputStreamReader(inputStream)));
-            List<ApkSpec> apks = new ArrayList<>(apkList.size());
-            for (int i = 0; i < apkList.size(); ++i) {
-                apks.add(
-                        new ApkSpec(
-                                new File(apkList.get(i)),
-                                new File(vmDir, TENANT_IDSIG_FILE_PREFIX + i)));
-            }
-            return apks;
         } catch (IOException e) {
             throw new VirtualMachineException("Couldn't parse tenant apks from the vm config", e);
         }
+
+        List<ApkSpec> apks = new ArrayList<>(apkList.size());
+        for (int i = 0; i < apkList.size(); ++i) {
+            String packageName = apkList.get(i);
+            ApplicationInfo appInfo;
+            try {
+                appInfo =
+                        context.getPackageManager()
+                                .getApplicationInfo(
+                                        packageName, PackageManager.ApplicationInfoFlags.of(0));
+            } catch (PackageManager.NameNotFoundException e) {
+                throw new VirtualMachineException(
+                        "Tenant apk package " + packageName + " not found", e);
+            }
+            apks.add(
+                    new ApkSpec(
+                            new File(appInfo.sourceDir),
+                            new File(vmDir, TENANT_IDSIG_FILE_PREFIX + i)));
+        }
+        return apks;
     }
 
     private static List<String> parseExtraApkListFromPayloadConfig(JsonReader reader)
@@ -2420,13 +2436,13 @@ public class VirtualMachine implements AutoCloseable {
                     while (reader.hasNext()) {
                         reader.beginObject(); // Start of a tenant object
                         String pkg = "";
-                        String path = "";
+                        String name = "";
                         while (reader.hasNext()) {
                             String tenantName = reader.nextName();
                             if (tenantName.equals("package")) {
                                 pkg = reader.nextString();
-                            } else if (tenantName.equals("path")) {
-                                path = reader.nextString();
+                            } else if (tenantName.equals("name")) {
+                                name = reader.nextString();
                             } else {
                                 reader.skipValue(); // Skip other fields
                             }
@@ -2434,7 +2450,7 @@ public class VirtualMachine implements AutoCloseable {
                         reader.endObject(); // End of a tenant object
 
                         if ("apk".equals(pkg)) {
-                            apks.add(path);
+                            apks.add(name);
                         }
                     }
                     reader.endArray(); // End of the tenants array

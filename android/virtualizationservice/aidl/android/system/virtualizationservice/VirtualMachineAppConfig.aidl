@@ -40,6 +40,12 @@ parcelable VirtualMachineAppConfig {
     /** Idsigs for the extra APKs. Must match with the extra_apks in the payload config. */
     List<ParcelFileDescriptor> extraIdsigs;
 
+    /**
+     * Tenant APKs. Must match with the tenant in the payload config, FD is required as otherwise
+     * virtmgr may not have access to open the file
+     */
+    List<ParcelFileDescriptor> tenantApks;
+
     /** Idsigs for the tenant APKs. Must match with the tenant in the payload config. */
     List<ParcelFileDescriptor> tenantIdsigs;
 
