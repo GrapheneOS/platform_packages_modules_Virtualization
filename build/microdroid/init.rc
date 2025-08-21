@@ -97,6 +97,10 @@ on late-init
     # some services can be started.
     trigger late-fs
 
+    # Microdroid doesn't have bpf programs. This is just to trigger init-perfetto.rc so that
+    # stack tracing is possible when selinux is not enforced (i.e. a rooted VM)
+    trigger load-bpf-programs
+
     # Wait for microdroid_manager to finish setting up sysprops from the payload config.
     # Some further actions in the boot sequence might depend on the sysprops from the payloag,
     # e.g. microdroid.config.enable_authfs configures whether to run authfs_service after
