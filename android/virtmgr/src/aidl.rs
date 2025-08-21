@@ -70,3 +70,7 @@ pub use android_hardware_security_authgraph::aidl::android::hardware::security::
     SessionInfo::SessionInfo,
     SessionInitiationInfo::SessionInitiationInfo,
 };
+pub use android_frameworks_stats::aidl::android::frameworks::stats::{
+    IStats::{BnStats, BpStats, IStats},
+    VendorAtom::VendorAtom,
+};
