@@ -18,7 +18,6 @@ use crate::{
     arch::{
         aarch64::layout::UART_PAGE_ADDR,
         platform::{emergency_uart, DEFAULT_EMERGENCY_CONSOLE_INDEX},
-        VirtualAddress,
     },
     logger,
     memory::{handle_lazy_mmio_fault, handle_read_only_fault, page_4kb_of, MemoryTrackerError},
@@ -103,12 +102,12 @@ pub struct ArmException {
     /// The value of the exception syndrome register.
     pub esr: Esr,
     /// The faulting virtual address read from the fault address register.
-    pub far: VirtualAddress,
+    pub far: usize,
 }
 
 impl fmt::Display for ArmException {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ArmException: esr={}, far={}", self.esr, self.far)
+        write!(f, "ArmException: esr={}, far={:#018x}", self.esr, self.far)
     }
 }
 
@@ -119,7 +118,7 @@ impl ArmException {
     pub fn from_el1_regs() -> Self {
         let esr: Esr = read_sysreg!("esr_el1").into();
         let far = read_sysreg!("far_el1");
-        Self { esr, far: VirtualAddress(far) }
+        Self { esr, far }
     }
 
     /// Prints the details of an obj and the exception, excluding UART exceptions, and then reboots.
@@ -142,7 +141,7 @@ impl ArmException {
     }
 
     fn is_uart_exception(&self) -> bool {
-        self.esr == Esr::DataAbortSyncExternalAbort && page_4kb_of(self.far.0) == UART_PAGE_ADDR
+        self.esr == Esr::DataAbortSyncExternalAbort && page_4kb_of(self.far) == UART_PAGE_ADDR
     }
 }
 

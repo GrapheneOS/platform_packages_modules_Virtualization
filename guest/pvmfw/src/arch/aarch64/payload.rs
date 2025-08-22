@@ -44,29 +44,29 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
     let scratch = layout::data_bss_range();
 
     assert_ne!(scratch.end - scratch.start, 0, "scratch memory is empty.");
-    assert_eq!(scratch.start.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
-    assert_eq!(scratch.end.0 % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
+    assert_eq!(scratch.start % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
+    assert_eq!(scratch.end % ASM_STP_ALIGN, 0, "scratch memory is misaligned.");
 
     // A sub-region of the scratch memory might contain data for the next stage so skip zeroing it.
     // Alternatively, an empty region at the start of the scratch region is compatible with the ASM
     // implementation and results in the whole scratch region being zeroed.
-    let skipped = preserved_memory.unwrap_or(scratch.start.0..scratch.start.0);
+    let skipped = preserved_memory.unwrap_or(scratch.start..scratch.start);
 
-    assert!(skipped.is_within(&(scratch.start.0..scratch.end.0)));
+    assert!(skipped.is_within(&scratch));
     assert_eq!(skipped.start % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
     assert_eq!(skipped.end % ASM_STP_ALIGN, 0, "Misaligned skipped region.");
 
     let stack = layout::stack_range();
 
     assert_ne!(stack.end - stack.start, 0, "stack region is empty.");
-    assert_eq!(stack.start.0 % ASM_STP_ALIGN, 0, "Misaligned stack region.");
-    assert_eq!(stack.end.0 % ASM_STP_ALIGN, 0, "Misaligned stack region.");
+    assert_eq!(stack.start % ASM_STP_ALIGN, 0, "Misaligned stack region.");
+    assert_eq!(stack.end % ASM_STP_ALIGN, 0, "Misaligned stack region.");
 
     let eh_stack = layout::eh_stack_range();
 
     assert_ne!(eh_stack.end - eh_stack.start, 0, "EH stack region is empty.");
-    assert_eq!(eh_stack.start.0 % ASM_STP_ALIGN, 0, "Misaligned EH stack region.");
-    assert_eq!(eh_stack.end.0 % ASM_STP_ALIGN, 0, "Misaligned EH stack region.");
+    assert_eq!(eh_stack.start % ASM_STP_ALIGN, 0, "Misaligned EH stack region.");
+    assert_eq!(eh_stack.end % ASM_STP_ALIGN, 0, "Misaligned EH stack region.");
 
     // Zero all memory that could hold secrets and that can't be safely written to from Rust.
     // Disable the exception vector, caches and page table and then jump to the payload at the
@@ -158,13 +158,13 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             sctlr_el1_val = in(reg) SCTLR_EL1_VAL,
             skipped = in(reg) u64::try_from(skipped.start).unwrap(),
             skipped_end = in(reg) u64::try_from(skipped.end).unwrap(),
-            cache_line = in(reg) u64::try_from(scratch.start.0).unwrap(),
-            scratch = in(reg) u64::try_from(scratch.start.0).unwrap(),
-            scratch_end = in(reg) u64::try_from(scratch.end.0).unwrap(),
-            stack = in(reg) u64::try_from(stack.start.0).unwrap(),
-            stack_end = in(reg) u64::try_from(stack.end.0).unwrap(),
-            eh_stack = in(reg) u64::try_from(eh_stack.start.0).unwrap(),
-            eh_stack_end = in(reg) u64::try_from(eh_stack.end.0).unwrap(),
+            cache_line = in(reg) u64::try_from(scratch.start).unwrap(),
+            scratch = in(reg) u64::try_from(scratch.start).unwrap(),
+            scratch_end = in(reg) u64::try_from(scratch.end).unwrap(),
+            stack = in(reg) u64::try_from(stack.start).unwrap(),
+            stack_end = in(reg) u64::try_from(stack.end).unwrap(),
+            eh_stack = in(reg) u64::try_from(eh_stack.start).unwrap(),
+            eh_stack_end = in(reg) u64::try_from(eh_stack.end).unwrap(),
             dcache_line_size = in(reg) u64::try_from(min_dcache_line_size()).unwrap(),
             in("x0") u64::try_from(fdt_address).unwrap(),
             in("x30") u64::try_from(entrypoint).unwrap(),

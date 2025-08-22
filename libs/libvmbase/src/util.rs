@@ -14,7 +14,6 @@
 
 //! Utility functions.
 
-use crate::arch::paging::MemoryRegion;
 use core::ops::Range;
 
 /// Computes the largest multiple of the provided alignment smaller or equal to the address.
@@ -81,15 +80,5 @@ impl<T: PartialOrd> RangeExt for Range<T> {
 
     fn overlaps(&self, other: &Self) -> bool {
         self.start < other.end && other.start < self.end
-    }
-}
-
-impl RangeExt for MemoryRegion {
-    fn is_within(&self, other: &Self) -> bool {
-        self.start() >= other.start() && self.end() <= other.end()
-    }
-
-    fn overlaps(&self, other: &Self) -> bool {
-        self.start() < other.end() && other.start() < self.end()
     }
 }
