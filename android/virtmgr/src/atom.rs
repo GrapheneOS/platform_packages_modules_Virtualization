@@ -33,7 +33,7 @@ fn get_apex_list(config: &aidl::VirtualMachineAppConfig) -> String {
     match &config.payload {
         aidl::Payload::PayloadConfig(_) => String::new(),
         aidl::Payload::ConfigPath(config_path) => {
-            let vm_payload_config = get_vm_payload_config(&config.apk, config_path);
+            let vm_payload_config = get_vm_payload_config(config.apk.as_ref(), config_path);
             if let Ok(vm_payload_config) = vm_payload_config {
                 vm_payload_config
                     .apexes
@@ -49,7 +49,7 @@ fn get_apex_list(config: &aidl::VirtualMachineAppConfig) -> String {
 }
 
 fn get_vm_payload_config(
-    apk_fd: &Option<ParcelFileDescriptor>,
+    apk_fd: Option<&ParcelFileDescriptor>,
     config_path: &str,
 ) -> Result<VmPayloadConfig> {
     let apk = apk_fd.as_ref().ok_or_else(|| anyhow!("APK is none"))?;
