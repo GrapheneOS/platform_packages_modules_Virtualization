@@ -1065,26 +1065,26 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
 /// The VM should be loaded with `crashkernel=' parameter in the cmdline to allocate memory
 /// for crashkernel.
 fn load_crashkernel_if_supported() -> Result<()> {
-    let supported = std::fs::read_to_string("/proc/cmdline")?.contains(" crashkernel=");
-    info!("ramdump supported: {supported}");
-
-    if !supported {
+    let allocated = std::fs::read_to_string("/proc/cmdline")?.contains(" crashkernel=");
+    if !allocated {
+        info!("memory for crashkernel is not allocated");
         return Ok(());
     }
 
-    let debuggable = is_debuggable();
-    let ramdump = get_debug_policy_bool(AVF_DEBUG_POLICY_RAMDUMP);
-    let requested = debuggable | ramdump;
+    let requested = is_debuggable();
+    let forced = get_debug_policy_bool(AVF_DEBUG_POLICY_RAMDUMP);
+    if !(requested || forced) {
+        info!("memory for crashkernel is allocated but ramdump is not required");
+        return Ok(());
+    }
 
-    if requested {
-        let status = Command::new("/system/bin/kexec_load").status()?;
-        if status.success() {
-            info!("ramdump is loaded: debuggable={debuggable}, ramdump={ramdump}");
-        } else if status.code() == Some(libc::ENOSYS) {
-            info!("ramdump is not supported");
-        } else {
-            return Err(anyhow!("Failed to load crashkernel: {status}"));
-        }
+    let status = Command::new("/system/bin/kexec_load").status()?;
+    if status.success() {
+        info!("crashkernel for ramdump is loaded: requested={requested}, forced={forced}");
+    } else if status.code() == Some(libc::ENOSYS) {
+        warn!("crashkernel for ramdump is not supported");
+    } else {
+        return Err(anyhow!("crashkernel for ramdump failed to load: {status}"));
     }
     Ok(())
 }
