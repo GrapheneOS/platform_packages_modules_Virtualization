@@ -25,6 +25,7 @@ mod odrefresh_task;
 mod service;
 #[cfg(test)]
 mod test_util;
+mod verified_dex2oat_task;
 mod wrappers;
 use crate::instance_manager::InstanceManager;
 use anyhow::{Context, Result};

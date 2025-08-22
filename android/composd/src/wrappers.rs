@@ -59,6 +59,7 @@ pub mod binder {
         }
     }
 }
+
 pub mod compos_common_injection {
     #[cfg(not(test))]
     pub use compos_common::*;
