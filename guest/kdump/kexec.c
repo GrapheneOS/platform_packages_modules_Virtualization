@@ -54,6 +54,7 @@ int main() {
     if (syscall(SYS_kexec_file_load, open_checked(KERNEL), open_checked(INITRD), cmdline_len,
                 CMDLINE, KEXEC_FILE_ON_CRASH) == -1) {
         fprintf(stderr, "Failed to load panic kernel: %s\n", strerror(errno));
+        if (errno == ENOSYS) return ENOSYS;
         if (errno == EADDRNOTAVAIL) {
             struct stat st;
             off_t kernel_size = 0;
