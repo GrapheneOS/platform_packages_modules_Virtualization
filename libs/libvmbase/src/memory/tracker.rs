@@ -225,9 +225,9 @@ impl TrackedRegion {
 }
 
 /// Tracks non-overlapping slices of main memory.
-struct MemoryTracker<T: MmuOps> {
+struct MemoryTracker<Mmu: MmuOps> {
     total: Range<usize>,
-    page_table: T,
+    mmu: Mmu,
     regions: ArrayVec<[TrackedRegion; 5]>,
     mmio_regions: ArrayVec<[Range<usize>; 5]>,
     mmio_range: Range<usize>,
@@ -235,7 +235,7 @@ struct MemoryTracker<T: MmuOps> {
     mmio_sharer: MmioSharer,
 }
 
-impl<T: MmuOps> MemoryTracker<T> {
+impl<Mmu: MmuOps> MemoryTracker<Mmu> {
     /// Creates a new instance from an active page table, covering the maximum RAM size.
     fn new(total: Range<usize>, mmio_range: Range<usize>) -> Self {
         assert!(
@@ -243,17 +243,17 @@ impl<T: MmuOps> MemoryTracker<T> {
             "MMIO space should not overlap with the main memory region."
         );
 
-        let mut page_table = T::clone_static_page_tables();
+        let mut mmu = Mmu::clone_static_page_tables();
 
         debug!("Activating dynamic page table...");
-        // SAFETY: page_table duplicates the static mappings for everything that the Rust code is
+        // SAFETY: MmuOps duplicates the static mappings for everything that the Rust code is
         // aware of so activating it shouldn't have any visible effect.
-        unsafe { page_table.activate() }
+        unsafe { mmu.activate() }
         debug!("... Success!");
 
         Self {
             total,
-            page_table,
+            mmu,
             regions: ArrayVec::new(),
             mmio_regions: ArrayVec::new(),
             mmio_range,
@@ -284,7 +284,7 @@ impl<T: MmuOps> MemoryTracker<T> {
         let region =
             TrackedRegion { range: base..(base + size.get()), mem_type: MemoryType::ReadOnly };
         self.check_allocatable(&region)?;
-        self.page_table.map_rodata(&region.range()).map_err(|e| {
+        self.mmu.map_rodata(&region.range()).map_err(|e| {
             error!("Error during range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -303,7 +303,7 @@ impl<T: MmuOps> MemoryTracker<T> {
     ) -> Result<Range<usize>> {
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
         self.check_no_overlap(&region)?;
-        self.page_table.map_rodata(&region.range()).map_err(|e| {
+        self.mmu.map_rodata(&region.range()).map_err(|e| {
             error!("Error during range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -314,7 +314,7 @@ impl<T: MmuOps> MemoryTracker<T> {
         let range = base..(base + size.get());
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
-        self.page_table.map_data_track_dirty_state(&region.range()).map_err(|e| {
+        self.mmu.map_data_track_dirty_state(&region.range()).map_err(|e| {
             error!("Error during mutable range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -325,7 +325,7 @@ impl<T: MmuOps> MemoryTracker<T> {
         let range = base..(base + size.get());
         let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
         self.check_allocatable(&region)?;
-        self.page_table.map_data(&region.range()).map_err(|e| {
+        self.mmu.map_data(&region.range()).map_err(|e| {
             error!("Error during non-flushed mutable range allocation: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -338,7 +338,7 @@ impl<T: MmuOps> MemoryTracker<T> {
             return Err(MemoryTrackerError::FooterAlreadyMapped);
         }
         let range = layout::image_footer_range();
-        self.page_table.map_data_track_dirty_state(&range).map_err(|e| {
+        self.mmu.map_data_track_dirty_state(&range).map_err(|e| {
             error!("Error during image footer map: {e}");
             MemoryTrackerError::FailedToMap
         })?;
@@ -360,12 +360,12 @@ impl<T: MmuOps> MemoryTracker<T> {
         }
 
         if get_mmio_guard().is_some() {
-            self.page_table.mark_as_lazy_device(range).map_err(|e| {
+            self.mmu.mark_as_lazy_device(range).map_err(|e| {
                 error!("Error during lazy MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
         } else {
-            self.page_table.map_device(range).map_err(|e| {
+            self.mmu.map_device(range).map_err(|e| {
                 error!("Error during MMIO device mapping: {e}");
                 MemoryTrackerError::FailedToMap
             })?;
@@ -475,7 +475,7 @@ impl<T: MmuOps> MemoryTracker<T> {
     /// table entry and MMIO guard mapping the block. Breaks apart a block entry if required.
     pub(crate) fn handle_mmio_fault(&mut self, addr: usize) -> Result<()> {
         let shared_range = self.mmio_sharer.share(addr)?;
-        self.page_table
+        self.mmu
             .map_device_expect_lazy(&shared_range)
             .map_err(|_| MemoryTrackerError::InvalidPte)?;
 
@@ -484,14 +484,14 @@ impl<T: MmuOps> MemoryTracker<T> {
 
     /// Flush all memory regions that may have been written to.
     fn flush_dirty_pages(&mut self) -> MmuResult<()> {
-        self.page_table.sync_dirty_state()?;
+        self.mmu.sync_dirty_state()?;
         for region in &self.regions {
             if matches!(region.mem_type, MemoryType::ReadWrite) {
-                self.page_table.flush_dirty_pages(&region.range())?;
+                self.mmu.flush_dirty_pages(&region.range())?;
             }
         }
         if let Some(range) = &self.image_footer {
-            self.page_table.flush_dirty_pages(range)?;
+            self.mmu.flush_dirty_pages(range)?;
         }
         Ok(())
     }
@@ -500,13 +500,13 @@ impl<T: MmuOps> MemoryTracker<T> {
     /// In general, this should be called from the exception handler when hardware dirty
     /// state management is disabled or unavailable.
     pub(crate) fn handle_permission_fault(&mut self, addr: usize) -> Result<()> {
-        self.page_table
+        self.mmu
             .mark_data_dirty(&(addr..addr + 1))
             .map_err(|_| MemoryTrackerError::SetPteDirtyFailed)
     }
 }
 
-impl<T: MmuOps> Drop for MemoryTracker<T> {
+impl<Mmu: MmuOps> Drop for MemoryTracker<Mmu> {
     fn drop(&mut self) {
         self.flush_dirty_pages().unwrap();
         self.unshare_all_memory();
