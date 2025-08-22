@@ -22,7 +22,7 @@ use crate::arch::aarch64::page_table::PageTable;
 use crate::arch::x86_64::page_table::PageTable;
 use crate::layout;
 use crate::memory::shared::{MemorySharer, MmioSharer};
-use crate::mmu::MmuOps;
+use crate::mmu::{MmuOps, MmuResult};
 use crate::util::RangeExt as _;
 use alloc::boxed::Box;
 use buddy_system_allocator::LockedFrameAllocator;
@@ -483,19 +483,15 @@ impl<T: MmuOps> MemoryTracker<T> {
     }
 
     /// Flush all memory regions that may have been written to.
-    fn flush_dirty_pages(&mut self) -> Result<()> {
-        self.page_table.sync_dirty_state().map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
+    fn flush_dirty_pages(&mut self) -> MmuResult<()> {
+        self.page_table.sync_dirty_state()?;
         for region in &self.regions {
             if matches!(region.mem_type, MemoryType::ReadWrite) {
-                self.page_table
-                    .flush_dirty_pages(&region.range())
-                    .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
+                self.page_table.flush_dirty_pages(&region.range())?;
             }
         }
         if let Some(range) = &self.image_footer {
-            self.page_table
-                .flush_dirty_pages(range)
-                .map_err(|_| MemoryTrackerError::FlushRegionFailed)?;
+            self.page_table.flush_dirty_pages(range)?;
         }
         Ok(())
     }
