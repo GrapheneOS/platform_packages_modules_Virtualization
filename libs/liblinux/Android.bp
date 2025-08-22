@@ -26,6 +26,7 @@ rust_library {
     edition: "2021",
     rustlibs: [
         "libanyhow",
+        "libglob",
     ],
     visibility: ["//packages/modules/Virtualization/guest/__subpackages__"],
 }
@@ -33,5 +34,8 @@ rust_library {
 rust_test_host {
     name: "liblinux_tests",
     srcs: ["src/lib.rs"],
-    rustlibs: ["libanyhow"],
+    rustlibs: [
+        "libanyhow",
+        "libglob",
+    ],
 }

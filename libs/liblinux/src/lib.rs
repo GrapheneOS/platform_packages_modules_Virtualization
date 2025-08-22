@@ -15,3 +15,4 @@
 //! Libraries for guest agents running inside Linux VM in Android.
 
 pub mod net;
+mod proc;
