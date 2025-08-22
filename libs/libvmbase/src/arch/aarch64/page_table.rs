@@ -19,7 +19,7 @@ use crate::arch::aarch64::set_tcr_el1_ha_hd;
 use crate::arch::flush_region;
 use crate::dsb;
 use crate::isb;
-use crate::mmu::MmuError;
+use crate::mmu::{MmuOps, MmuResult};
 use crate::read_sysreg;
 use crate::tlbi;
 use aarch64_paging::idmap::IdMap;
@@ -27,7 +27,6 @@ use aarch64_paging::paging::{
     Attributes, Constraints, Descriptor, MemoryRegion, TranslationRegime, VirtualAddress,
 };
 use core::ops::Range;
-use core::result;
 
 /// Software bit used to indicate a device that should be lazily mapped.
 pub const MMIO_LAZY_MAP_FLAG: Attributes = Attributes::SWFLAG_0;
@@ -48,8 +47,6 @@ const CODE: Attributes = MEMORY.union(Attributes::READ_ONLY);
 const DATA: Attributes = MEMORY.union(Attributes::UXN);
 const RODATA: Attributes = DATA.union(Attributes::READ_ONLY);
 const DATA_DBM: Attributes = RODATA.union(Attributes::DBM);
-
-type Result<T> = result::Result<T, MmuError>;
 
 /// High-level API for managing MMU mappings.
 pub struct PageTable {
@@ -88,15 +85,10 @@ impl PageTable {
 
     /// Level of the underlying page table's root page.
     const ROOT_LEVEL: usize = 1;
+}
 
-    /// Activates the page table.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure that the PageTable instance has valid and identical mappings for the
-    /// code being currently executed. Otherwise, the Rust execution model (on which the borrow
-    /// checker relies) would be violated.
-    pub unsafe fn activate(&mut self) {
+impl MmuOps for PageTable {
+    unsafe fn activate(&mut self) {
         self.uses_hafdbs = cfg!(feature = "cpu_feat_hafdbs") && id_aa64mmfr1_el1_hafdbs();
         // Activate dirty state management first, otherwise we may get permission faults
         // immediately after activating the new page table. This has no effect before the new page
@@ -107,24 +99,17 @@ impl PageTable {
         unsafe { self.idmap.activate() }
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as lazily mapped
-    /// nGnRE device memory.
-    pub fn mark_as_lazy_device(&mut self, range: &Range<usize>) -> Result<()> {
+    fn mark_as_lazy_device(&mut self, range: &Range<usize>) -> MmuResult<()> {
         self.idmap.map_range(&as_memory_region(range), DEVICE_LAZY)?;
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as valid device
-    /// nGnRE device memory.
-    pub fn map_device(&mut self, range: &Range<usize>) -> Result<()> {
+    fn map_device(&mut self, range: &Range<usize>) -> MmuResult<()> {
         self.idmap.map_range(&as_memory_region(range), DEVICE)?;
         Ok(())
     }
 
-    /// Modify the PTEs corresponding to a given range from (invalid) "lazy MMIO" to valid MMIO.
-    ///
-    /// Returns an error if any PTE in the range is not an invalid lazy MMIO mapping.
-    pub fn map_device_expect_lazy(&mut self, range: &Range<usize>) -> Result<()> {
+    fn map_device_expect_lazy(&mut self, range: &Range<usize>) -> MmuResult<()> {
         let region = as_memory_region(range);
         // This must be safe and free from break-before-make (BBM) violations, given that the
         // initial lazy mapping has the valid bit cleared, and each newly created valid descriptor
@@ -140,16 +125,12 @@ impl PageTable {
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable
-    /// and writable normal memory.
-    pub fn map_data(&mut self, range: &Range<usize>) -> Result<()> {
+    fn map_data(&mut self, range: &Range<usize>) -> MmuResult<()> {
         self.idmap.map_range(&as_memory_region(range), DATA)?;
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable,
-    /// read-only and writable-clean normal memory.
-    pub fn map_data_track_dirty_state(&mut self, range: &Range<usize>) -> Result<()> {
+    fn map_data_track_dirty_state(&mut self, range: &Range<usize>) -> MmuResult<()> {
         let region = as_memory_region(range);
         // Map the region down to pages to minimize the size of the regions that will be marked
         // dirty once a store hits them, but also to ensure that we can clear the read-only
@@ -163,22 +144,17 @@ impl PageTable {
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as read-only
-    /// normal memory.
-    pub fn map_code(&mut self, range: &Range<usize>) -> Result<()> {
+    fn map_code(&mut self, range: &Range<usize>) -> MmuResult<()> {
         self.idmap.map_range(&as_memory_region(range), CODE)?;
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable
-    /// and read-only normal memory.
-    pub fn map_rodata(&mut self, range: &Range<usize>) -> Result<()> {
+    fn map_rodata(&mut self, range: &Range<usize>) -> MmuResult<()> {
         self.idmap.map_range(&as_memory_region(range), RODATA)?;
         Ok(())
     }
 
-    /// Marks a previously-registered R/W region as "dirty" i.e. it has been written to.
-    pub(crate) fn mark_data_dirty(&mut self, range: &Range<usize>) -> Result<()> {
+    fn mark_data_dirty(&mut self, range: &Range<usize>) -> MmuResult<()> {
         let region = as_memory_region(range);
         self.idmap.modify_range(&region, &|r: &MemoryRegion, d: &mut Descriptor, _: usize| {
             let flags = d.flags().ok_or(())?;
@@ -201,20 +177,14 @@ impl PageTable {
         Ok(())
     }
 
-    /// Acts as a barrier, ensuring that the dirty state is properly updated on return.
-    pub(crate) fn sync_dirty_state(&mut self) -> Result<()> {
+    fn sync_dirty_state(&mut self) -> MmuResult<()> {
         // Execute a barrier instruction to ensure all hardware updates to the page table have been
         // observed before reading PTE flags to determine dirty state.
         dsb!("ish");
         Ok(())
     }
 
-    /// Flushes the data caches over every page of `range` that was marked dirty.
-    ///
-    /// Pages may be marked automatically by hardware if mapped with `map_data_track_dirty_state()`
-    /// and/or with calls to `mark_data_dirty()`. Any region that has been mapped with `map_data()`
-    /// with also be flushed.
-    pub(crate) fn flush_dirty_pages(&mut self, range: &Range<usize>) -> Result<()> {
+    fn flush_dirty_pages(&mut self, range: &Range<usize>) -> MmuResult<()> {
         let region = as_memory_region(range);
         self.idmap.walk_range(&region, &mut |r: &MemoryRegion, d: &Descriptor, _: usize| {
             let flags = d.flags().ok_or(())?;
