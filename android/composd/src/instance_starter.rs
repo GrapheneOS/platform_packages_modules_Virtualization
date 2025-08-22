@@ -59,6 +59,14 @@ pub struct CompOsInstance {
 }
 
 impl CompOsInstance {
+    #[cfg(test)]
+    pub fn new_for_test(
+        vm_instance: ComposClient,
+        service: CompOsService,
+        lazy_service_guard: LazyServiceGuard,
+    ) -> Self {
+        Self { vm_instance, service, lazy_service_guard, instance_tracker: Default::default() }
+    }
     pub fn get_service(&self) -> CompOsService {
         self.service.clone()
     }
