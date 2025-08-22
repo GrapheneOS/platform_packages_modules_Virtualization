@@ -35,7 +35,6 @@ rust_binary {
         "com.android.compos",
     ],
     rustlibs: [
-        "libfsverity_rs",
         "libcompos_wrappers",
         "libcompos_common",
     ],
@@ -57,4 +56,5 @@ rust_test {
         "libcompos_wrappers_with_mocks",
         "libcompos_common_with_mocks",
     ],
+    flags: ["-A dead_code"],
 }
