@@ -19,6 +19,7 @@
 
 use crate::instance_manager::InstanceManager;
 use crate::odrefresh_task::OdrefreshTask;
+
 use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::{BnCompilationTask, ICompilationTask},
     ICompilationTaskCallback::ICompilationTaskCallback,
@@ -29,7 +30,12 @@ use android_system_composd::aidl::android::system::composd::{
 use anyhow::{Context, Result};
 use binder::{self, BinderFeatures, ExceptionCode, Interface, Status, Strong, ThreadState};
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::CompilationMode::CompilationMode;
-use compos_common::{
+#[cfg(not(test))]
+use compos_common as compos_common_injection;
+#[cfg(test)]
+use compos_common_with_mocks as compos_common_injection;
+
+use compos_common_injection::{
     binder::to_binder_result,
     compos_client::CompOsType,
     odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR},

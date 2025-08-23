@@ -50,14 +50,6 @@ pub use aarch64::uart;
 #[cfg(target_arch = "x86_64")]
 pub use x86_64::uart;
 
-#[cfg(target_arch = "aarch64")]
-pub use aarch64_paging::paging;
-
-#[cfg(target_arch = "x86_64")]
-pub use x86_64::paging;
-
-pub use paging::VirtualAddress;
-
 /// Flush `size` bytes of data cache by virtual address.
 #[inline]
 pub(crate) fn flush_region(start: usize, size: usize) {

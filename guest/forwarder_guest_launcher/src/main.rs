@@ -36,6 +36,7 @@ const TTYD_PORT: i32 = 7681;
 const TCPSTATES_STATE_CLOSE: &str = "CLOSE";
 const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 
+#[derive(Debug)]
 struct TcpState {
     lport: i32,
     rport: i32,
@@ -131,20 +132,18 @@ async fn report_active_ports(
         .position(|col| *col == "NEWSTATE")
         .ok_or(anyhow!("Failed to find NEWSTATE from header"))?;
 
-    // TODO(b/340126051): Consider using NETLINK_SOCK_DIAG for the optimization.
-    let listeners = listeners::get_all()?;
-    let mut listening_ports: HashMap<_, _> = listeners
-        .iter()
-        .map(|x| {
-            (
-                x.socket.port().into(),
-                ActivePort { port: x.socket.port().into(), comm: x.process.name.to_string() },
-            )
+    debug!("Collecting already opened ports");
+    let mut listening_ports: HashMap<_, _> = linux::net::get_listening_tcp4_ports_from_localhost()?
+        .into_iter()
+        .filter(|(x, _)| is_forwardable_port((*x).into()))
+        .map(|(port, comm)| {
+            debug!("Port {port} is already opened by {comm:?}");
+            (port.into(), ActivePort { port: port.into(), comm })
         })
-        .filter(|(x, _)| is_forwardable_port(*x))
         .collect();
     send_active_ports_report(listening_ports.clone(), &mut client).await?;
 
+    debug!("Starting monitoring ports");
     while let Some(line) = lines.next_line().await? {
         let items: Vec<_> = line.split_whitespace().collect();
         let state = TcpState {
@@ -169,10 +168,12 @@ async fn report_active_ports(
         }
         match state.newstate.as_str() {
             TCPSTATES_STATE_LISTEN => {
+                debug!("New listening port {} by {}", state.lport, state.comm);
                 listening_ports
                     .insert(state.lport, ActivePort { port: state.lport, comm: state.comm });
             }
             TCPSTATES_STATE_CLOSE => {
+                debug!("Listening port {} by {} is now closed", state.lport, state.comm);
                 listening_ports.remove(&state.lport);
             }
             _ => continue,
@@ -205,6 +206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let channel = Endpoint::from_shared(addr)?.connect().await?;
     let client = DebianServiceClient::new(channel);
 
+    debug!("Starting to monitor and forwarding ports");
     try_join!(process_forwarding_request_queue(client.clone()), report_active_ports(client))?;
     Ok(())
 }
