@@ -60,8 +60,11 @@ use microdroid_payload_config::{
     ApkConfig, OsConfig, Task, TaskType, TenantConfig, VmPayloadConfig,
 };
 use nix::mount::{umount2, MntFlags};
-use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
-use nix::sys::wait::{waitid, waitpid, Id, WaitPidFlag, WaitStatus};
+use nix::sys::signal::{
+    pthread_sigmask, sigaction, SaFlags, SigAction, SigHandler, SigSet, SigmaskHow, Signal,
+};
+use nix::sys::signalfd::{SfdFlags, SignalFd};
+use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
 use nix::unistd::Pid;
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
@@ -72,7 +75,7 @@ use rustutils::system_properties;
 use rustutils::system_properties::PropertyWatcher;
 use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
 use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
@@ -83,10 +86,9 @@ use std::os::raw::c_char;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::OwnedFd;
 use std::os::unix::process::CommandExt;
-use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
 use std::sync::Arc;
@@ -320,6 +322,10 @@ fn try_main() -> Result<()> {
             .with_max_level(log::LevelFilter::Info),
     );
     info!("started.");
+
+    let mut mask = SigSet::empty();
+    mask.add(Signal::SIGCHLD);
+    pthread_sigmask(SigmaskHow::SIG_BLOCK, Some(&mask), None)?;
 
     load_crashkernel_if_supported().context("Failed to load crashkernel")?;
 
@@ -764,62 +770,45 @@ fn try_run_payload(
 
 // TODO(b/434925716): Report exit status of all the tenants back to the host
 /// Wait for all processes in `pids_to_reap` to exit.
-/// It returns the `ExitStatus` of the main payload process.
+/// It returns the `WaitStatus` of the main payload process.
 /// If there is no main payload, it returns the exit status of the first tenant
-fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<ExitStatus> {
-    let mut payload_exit_status: Option<ExitStatus> = None;
-    let mut ignored_pids_count = HashMap::new();
-    const IGNORE_THRESHOLD: u32 = 4;
+fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<WaitStatus> {
+    let mut payload_exit_status: Option<WaitStatus> = None;
+
+    let mut mask = SigSet::empty();
+    mask.add(Signal::SIGCHLD);
+    let sfd = SignalFd::with_flags(&mask, SfdFlags::SFD_CLOEXEC)?;
 
     while !pids_to_reap.is_empty() {
-        // Wait for any child process to change state, without reaping it. This avoids a race
-        // condition where we might reap a child that another thread is waiting for.
-        let wait_status = match waitid(Id::All, WaitPidFlag::WEXITED | WaitPidFlag::WNOWAIT) {
-            Ok(status) => status,
-            Err(nix::errno::Errno::ECHILD) => {
-                // No more children to wait for.
-                if !pids_to_reap.is_empty() {
-                    warn!("No more child processes to wait for, but expected {pids_to_reap:?}");
+        // Wait for a SIGCHLD signal
+        sfd.read_signal()?;
+
+        // Linux's signal handling mechanism coalesces multiple signals of the same type into
+        // a single event, if they occur in quick succession. So there can be instances when
+        // more than 1 SIGCHLD event occurs but read_signal only receives 1.
+        // Thus, iteratively check for pids that we manage and reap the ones that have exited
+        for pid in pids_to_reap.clone().into_iter() {
+            match waitpid(pid, Some(WaitPidFlag::WNOHANG)) {
+                Ok(wait_status) => match wait_status {
+                    WaitStatus::Exited(..) | WaitStatus::Signaled(..) => {
+                        info!("Process {pid} exited with {wait_status:?}");
+                        pids_to_reap.remove(&pid);
+                        if pid == payload_pid {
+                            payload_exit_status = Some(wait_status);
+                        }
+                    }
+                    // StillAlive, Stopped, Continued, etc. are ignored
+                    _ => continue,
+                },
+                Err(nix::errno::Errno::ECHILD) => {
+                    // This can happen if another thread reaps the process
+                    warn!("Tracked process {pid} was already reaped.");
+                    pids_to_reap.remove(&pid);
                 }
-                break;
-            }
-            Err(e) => bail!("Failed to wait for child process with waitid: {:?}", e),
-        };
-
-        let Some(pid) = wait_status.pid() else { bail!("Invalid wait status") };
-
-        if pids_to_reap.contains(&pid) {
-            // This is a process we are responsible for. We have its status, so now we reap it.
-            let exit_status = match wait_status {
-                WaitStatus::Exited(_, exit_code) => ExitStatusExt::from_raw(exit_code << 8),
-                WaitStatus::Signaled(_, signal, _) => ExitStatusExt::from_raw(signal as i32),
-                _ => {
-                    // Should be unreachable as we've filtered for Exited and Signaled above
-                    warn!("Process {pid} had unexpected status {wait_status:?}");
-                    continue;
+                Err(e) => {
+                    return Err(e)
+                        .with_context(|| format!("Failed to wait for child process {pid}"));
                 }
-            };
-            waitpid(pid, None)?;
-            pids_to_reap.remove(&pid);
-            info!("Process {pid} exited with {exit_status}");
-            if pid == payload_pid {
-                payload_exit_status = Some(exit_status);
-            }
-        } else {
-            let count = ignored_pids_count.entry(pid).or_insert(0);
-            *count += 1;
-
-            if *count >= IGNORE_THRESHOLD {
-                info!("Reaping ignored pid {pid} that was not handled by its owner after {count} attempts");
-                waitpid(pid, None)?;
-                ignored_pids_count.remove(&pid);
-            } else {
-                // Not a process we are tracking. Yield to avoid a busy-loop,
-                // giving the other thread a chance to reap it.
-                info!(
-                    "Ignoring exit of pid {pid} (attempt {count}), another thread should reap it"
-                );
-                std::thread::yield_now();
             }
         }
     }
@@ -827,24 +816,19 @@ fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> 
     payload_exit_status.ok_or_else(|| anyhow!("Payload process hasn't exited or status not saved"))
 }
 
-fn get_payload_exit_code(exit_status: ExitStatus) -> Result<i32> {
-    if let Some(exit_code) = exit_status.code() {
-        return Ok(exit_code);
-    }
-
-    if let Some(signal) = exit_status.signal() {
-        if signal == Signal::SIGTERM as i32 {
-            info!("payload exited with SIGTERM");
-            return Ok(0);
+fn get_payload_exit_code(wait_status: WaitStatus) -> Result<i32> {
+    match wait_status {
+        WaitStatus::Exited(_, exit_code) => Ok(exit_code),
+        WaitStatus::Signaled(_, signal, _) => {
+            if signal == Signal::SIGTERM {
+                info!("payload exited with SIGTERM");
+                Ok(0)
+            } else {
+                Err(anyhow!("Payload exited due to signal: {} ({})", signal as i32, signal))
+            }
         }
-        return Err(anyhow!(
-            "Payload exited due to signal: {} ({})",
-            signal,
-            Signal::try_from(signal).map_or("unknown", |s| s.as_str())
-        ));
+        _ => Err(anyhow!("Payload has neither exit code nor signal")),
     }
-
-    Err(anyhow!("Payload has neither exit code nor signal"))
 }
 
 fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result<()> {
