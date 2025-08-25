@@ -367,8 +367,8 @@ generate_output_package() {
 
 	echo ${build_id} > build_id
 
+	local root_partition_num=1
 	if [[ "$may_skip_build" == 0 || ! -f "root_part" ]]; then
-		local root_partition_num=1
 		loop=$(losetup -f --show --partscan $raw_disk_image)
 		dd if="${loop}p$root_partition_num" of=root_part
 		losetup -d "${loop}"
