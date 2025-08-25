@@ -28,6 +28,8 @@ import java.lang.Exception
 import java.lang.RuntimeException
 
 class ErrorActivity : BaseActivity() {
+    private var launchingNewActivity: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -52,7 +54,21 @@ class ErrorActivity : BaseActivity() {
         cause.text = e?.let { getString(R.string.error_code, getStackTrace(it)) }
     }
 
+    override fun onStop() {
+        super.onStop()
+
+        if (launchingNewActivity) {
+            launchingNewActivity = false
+        } else {
+            // If we're not launching a new activity, finish error activity
+            // to provide convenient way to restart without swiping the task.
+            finish()
+        }
+    }
+
     private fun launchRecoveryActivity() {
+        launchingNewActivity = true
+
         val intent = Intent(this, SettingsRecoveryActivity::class.java)
         startActivity(intent)
     }
@@ -63,6 +79,8 @@ class ErrorActivity : BaseActivity() {
         fun start(context: Context, e: Exception) {
             val intent = Intent(context, ErrorActivity::class.java)
             intent.putExtra(EXTRA_CAUSE, e)
+
+            // Prevent go-back to resume MainActivity
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
         }
