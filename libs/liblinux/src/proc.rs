@@ -14,7 +14,7 @@
 
 //! Libraries for Linux /proc/*
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
@@ -33,7 +33,7 @@ impl ProcHelper {
             Err(e) if e.kind() == ErrorKind::PermissionDenied => {
                 return Ok(None);
             }
-            e => e?,
+            e => e.with_context(|| format!("Failed to readlink {fd:?}"))?,
         };
         let path_str = link.to_str().ok_or(anyhow!("Failed to readlink {fd:?}"))?;
         if path_str.starts_with("socket:[") {
@@ -67,13 +67,17 @@ impl ProcHelper {
                 // Skip /proc/self/comm and /proc/thread-self/comm
                 continue;
             };
-            let comm = fs::read_to_string(&comm)?.trim().to_string();
+            let comm = fs::read_to_string(&comm)
+                .with_context(|| format!("Failed to read comm {comm:?}"))?
+                .trim()
+                .to_string();
             pid_to_comm.insert(pid, comm);
 
-            let fds = match fs::read_dir(process.join("fd")) {
+            let fd_dir = process.join("fd");
+            let fds = match fs::read_dir(&fd_dir) {
                 Ok(fds) => fds,
                 Err(e) if e.kind() == ErrorKind::PermissionDenied => continue,
-                e => e?,
+                e => e.with_context(|| format!("Failed to read dir {fd_dir:?}"))?,
             };
             for fd in fds {
                 let Some(inode) = Self::get_socket_inode(&fd?.path())? else {
