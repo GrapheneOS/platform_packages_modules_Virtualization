@@ -233,7 +233,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         String name = "test_vm_createTwice";
         deleteVirtualMachineIfExists(name);
         try (VirtualMachine vm = vmm.create(name, config)) {
-            assertThrows(VirtualMachineException.class, () -> vmm.create(name, config));
+            assertThrowsVmException(
+                    () -> vmm.create(name, config),
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS,
+                    null);
         }
     }
 
@@ -482,9 +485,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         try (VirtualMachine vm = forceCreateNewVirtualMachine(name, config)) {
             descriptor = vm.toDescriptor();
 
-            assertThrows(
-                    VirtualMachineException.class,
-                    () -> getVirtualMachineManager().importFromDescriptor(name, descriptor));
+            assertThrowsVmException(
+                    () -> getVirtualMachineManager().importFromDescriptor(name, descriptor),
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS,
+                    null);
         }
     }
 
@@ -523,21 +527,35 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
 
         // These methods require a running VM
-        assertThrowsVmExceptionContaining(
-                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT), "not in running state");
-        assertThrowsVmExceptionContaining(
+        assertThrowsVmException(
+                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED,
+                "not in running state");
+        assertThrowsVmException(
                 () -> vm.connectToVsockServer(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED,
                 "not in running state");
 
         vm.run();
         assertThat(vm.getStatus()).isEqualTo(STATUS_RUNNING);
 
         // These methods require a stopped VM
-        assertThrowsVmExceptionContaining(() -> vm.run(), "not in stopped state");
-        assertThrowsVmExceptionContaining(() -> vm.setConfig(config), "not in stopped state");
-        assertThrowsVmExceptionContaining(() -> vm.toDescriptor(), "not in stopped state");
-        assertThrowsVmExceptionContaining(
-                () -> getVirtualMachineManager().delete("test_vm"), "not in stopped state");
+        assertThrowsVmException(
+                () -> vm.run(),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
+        assertThrowsVmException(
+                () -> vm.setConfig(config),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
+        assertThrowsVmException(
+                () -> vm.toDescriptor(),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
+        assertThrowsVmException(
+                () -> getVirtualMachineManager().delete("test_vm"),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
 
         vm.stop();
 
@@ -547,13 +565,24 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(vm.getStatus()).isEqualTo(STATUS_DELETED);
 
         // None of these should work for a deleted VM
-        assertThrowsVmExceptionContaining(
-                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT), "deleted");
-        assertThrowsVmExceptionContaining(
-                () -> vm.connectToVsockServer(VirtualMachine.MIN_VSOCK_PORT), "deleted");
-        assertThrowsVmExceptionContaining(() -> vm.run(), "deleted");
-        assertThrowsVmExceptionContaining(() -> vm.setConfig(config), "deleted");
-        assertThrowsVmExceptionContaining(() -> vm.toDescriptor(), "deleted");
+        assertThrowsVmException(
+                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
+        assertThrowsVmException(
+                () -> vm.connectToVsockServer(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
+        assertThrowsVmException(
+                () -> vm.run(), VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED, "deleted");
+        assertThrowsVmException(
+                () -> vm.setConfig(config),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
+        assertThrowsVmException(
+                () -> vm.toDescriptor(),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
         // This is indistinguishable from the VM having never existed, so the message
         // is non-specific.
         assertThrowsVmException(() -> getVirtualMachineManager().delete("test_vm"));
@@ -612,7 +641,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             // Let globalTimeout to handle timeout.
             beforeCrash.stopped.await();
             assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
-            assertThrowsVmExceptionContaining(() -> vm.stop(), "not running");
+            assertThrowsVmException(
+                    () -> vm.stop(),
+                    VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED,
+                    "not running");
 
             // Try run again. It should recover virtmgr and run VM.
             SimpleVirtualMachineCallback afterCrash = new SimpleVirtualMachineCallback();
@@ -1671,8 +1703,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setApkPath("/does/not/exist")
                         .build();
 
-        assertThrowsVmExceptionContaining(
+        assertThrowsVmException(
                 () -> tryBootVmWithConfig(config, "test_vm_invalid_apk_path"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
                 "Failed to open APK");
     }
 
@@ -1684,8 +1717,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .addExtraApk("com.example.nosuch.package")
                         .build();
-        assertThrowsVmExceptionContaining(
+        assertThrowsVmException(
                 () -> tryBootVmWithConfig(config, "test_vm_invalid_extra_apk_package"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
                 "Extra APK package not found");
     }
 
@@ -2189,8 +2223,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                     .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES / 2)
                     .build();
-        assertThrowsVmExceptionContaining(
-            () -> vm.setConfig(newConfig), "incompatible config");
+        assertThrowsVmException(
+                () -> vm.setConfig(newConfig),
+                VirtualMachineException.CODE_CONFIG_INCOMPATIBLE,
+                "incompatible config");
     }
 
     private boolean deviceCapableOfProtectedVm() {
@@ -2395,10 +2431,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         vm.run();
 
         try {
-            assertThrowsVmExceptionContaining(
-                    () -> vm.getConsoleOutput(), "Capturing vm outputs is turned off");
-            assertThrowsVmExceptionContaining(
-                    () -> vm.getLogOutput(), "Capturing vm outputs is turned off");
+            assertThrowsVmException(
+                    () -> vm.getConsoleOutput(),
+                    VirtualMachineException.CODE_FEATURE_DISABLED,
+                    "Capturing vm outputs is turned off");
+            assertThrowsVmException(
+                    () -> vm.getLogOutput(),
+                    VirtualMachineException.CODE_FEATURE_DISABLED,
+                    "Capturing vm outputs is turned off");
         } finally {
             vm.stop();
         }
@@ -2418,8 +2458,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         vm.run();
 
         try {
-            assertThrowsVmExceptionContaining(
-                    () -> vm.getConsoleInput(), "VM console input is not supported");
+            assertThrowsVmException(
+                    () -> vm.getConsoleInput(),
+                    VirtualMachineException.CODE_FEATURE_DISABLED,
+                    "VM console input is not supported");
         } finally {
             vm.stop();
         }
@@ -3599,6 +3641,15 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             ThrowingRunnable runnable, String expectedContents) {
         Exception e = assertThrows(VirtualMachineException.class, runnable);
         assertThat(e).hasMessageThat().contains(expectedContents);
+    }
+
+    private void assertThrowsVmException(ThrowingRunnable runnable, int code, String msg) {
+        VirtualMachineException e = assertThrows(VirtualMachineException.class, runnable);
+        if (com.android.system.virtualmachine.flags.Flags.virtualmachineexceptionCode()) {
+            assertThat(e.getCode()).isEqualTo(code);
+        } else if (msg != null) {
+            assertThat(e).hasMessageThat().contains(msg);
+        }
     }
 
     private void installApp(String apkName, String... additionalArgs) throws Exception {

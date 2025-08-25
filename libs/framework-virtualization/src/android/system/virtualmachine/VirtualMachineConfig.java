@@ -332,7 +332,10 @@ public final class VirtualMachineConfig {
         } catch (IOException e) {
             // Please don't change this error message unless b/437160991 is fixed. Clients depend on
             // this error message as a temporary fix for b/433697078.
-            throw new VirtualMachineException("Failed to read VM config from file", e);
+            throw new VirtualMachineException(
+                    "Failed to read VM config from file",
+                    e,
+                    VirtualMachineException.CODE_CONFIG_FILE_CORRUPTED);
         }
     }
 
@@ -343,7 +346,10 @@ public final class VirtualMachineConfig {
         try (AutoCloseInputStream input = new AutoCloseInputStream(fd)) {
             return fromInputStream(input);
         } catch (IOException e) {
-            throw new VirtualMachineException("failed to read VM config from file descriptor", e);
+            throw new VirtualMachineException(
+                    "failed to read VM config from file descriptor",
+                    e,
+                    VirtualMachineException.CODE_CONFIG_FILE_CORRUPTED);
         }
     }
 
@@ -357,7 +363,10 @@ public final class VirtualMachineConfig {
         } catch (NullPointerException | IllegalArgumentException | IllegalStateException e) {
             // Please don't change this error message unless b/437160991 is fixed. Clients depend on
             // this error message as a temporary fix for b/433697078.
-            throw new VirtualMachineException("Persisted VM config is invalid", e);
+            throw new VirtualMachineException(
+                    "Persisted VM config is invalid",
+                    e,
+                    VirtualMachineException.CODE_CONFIG_FILE_CORRUPTED);
         }
     }
 
@@ -932,7 +941,8 @@ public final class VirtualMachineConfig {
         try {
             vsConfig.apk = ParcelFileDescriptor.open(new File(apkPath), MODE_READ_ONLY);
         } catch (FileNotFoundException e) {
-            throw new VirtualMachineException("Failed to open APK", e);
+            throw new VirtualMachineException(
+                    "Failed to open APK", e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
         if (mPayloadBinaryName != null) {
             VirtualMachinePayloadConfig payloadConfig = new VirtualMachinePayloadConfig();
@@ -976,7 +986,8 @@ public final class VirtualMachineConfig {
             } catch (FileNotFoundException e) {
                 throw new VirtualMachineException(
                         "Failed to open vendor disk image " + mVendorDiskImage.getAbsolutePath(),
-                        e);
+                        e,
+                        VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
             }
             vsConfig.customConfig = customConfig;
         }
@@ -1001,7 +1012,8 @@ public final class VirtualMachineConfig {
                     packageManager.getApplicationInfo(
                             mPackageName, PackageManager.ApplicationInfoFlags.of(0));
         } catch (PackageManager.NameNotFoundException e) {
-            throw new VirtualMachineException("Package not found", e);
+            throw new VirtualMachineException(
+                    "Package not found", e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
 
         String[] splitApkPaths = appInfo.splitSourceDirs;
