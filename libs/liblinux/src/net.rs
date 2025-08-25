@@ -44,7 +44,8 @@ pub fn get_default_gateway() -> Result<String, Error> {
     const DEFAULT_ROUTE_DESTINATION: &str = "00000000";
 
     // /proc/net/route isn't an ordinary file, so better not use tokio.
-    let file = File::open("/proc/net/route")?;
+    let file = File::open("/proc/net/route")
+        .context("Failed to open /proc/net/route. Ensure this is running with Linux kernel")?;
     let mut lines = io::BufReader::new(file).lines();
 
     let header_line = lines.next().ok_or(anyhow!("Cannot find header from /proc/net/route"))??;
@@ -72,7 +73,8 @@ pub fn get_default_gateway() -> Result<String, Error> {
 pub fn get_listening_tcp4_ports_from_localhost() -> Result<HashMap<u16, String>, Error> {
     let proc = ProcHelper::new()?;
 
-    let file = File::open("/proc/net/tcp")?;
+    let file = File::open("/proc/net/tcp")
+        .context("Failed to open /proc/net/tcp. Ensure this is running with Linux kernel")?;
     let mut lines = io::BufReader::new(file).lines();
 
     // /proc/net/tcp{,6} format is stable and documented below.
