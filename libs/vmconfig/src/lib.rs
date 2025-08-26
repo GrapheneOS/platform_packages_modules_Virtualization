@@ -117,10 +117,10 @@ impl VmConfig {
         let cpu_options = CpuOptions { cpuTopology: cpu_topology };
         let usb_config = self.usb_config.clone().map(|x| x.to_parcelable()).transpose()?;
         Ok(VirtualMachineRawConfig {
-            kernel: maybe_open_parcel_file(&self.kernel, false)?,
-            initrd: maybe_open_parcel_file(&self.initrd, false)?,
+            kernel: maybe_open_parcel_file(self.kernel.as_ref(), false)?,
+            initrd: maybe_open_parcel_file(self.initrd.as_ref(), false)?,
             params: self.params.clone(),
-            bootloader: maybe_open_parcel_file(&self.bootloader, false)?,
+            bootloader: maybe_open_parcel_file(self.bootloader.as_ref(), false)?,
             disks: self.disks.iter().map(DiskImage::to_parcelable).collect::<Result<_, Error>>()?,
             protectedVm: self.protected,
             memoryMib: memory_mib,
@@ -171,7 +171,7 @@ impl DiskImage {
         let partitions =
             self.partitions.iter().map(Partition::to_parcelable).collect::<Result<_>>()?;
         Ok(AidlDiskImage {
-            image: maybe_open_parcel_file(&self.image, self.writable)?,
+            image: maybe_open_parcel_file(self.image.as_ref(), self.writable)?,
             writable: self.writable,
             partitions,
         })
@@ -230,8 +230,8 @@ pub fn open_parcel_file(filename: &Path, writable: bool) -> Result<ParcelFileDes
 
 /// If the given filename is `Some`, try to open it and wrap it in a [`ParcelFileDescriptor`].
 fn maybe_open_parcel_file(
-    filename: &Option<PathBuf>,
+    filename: Option<&PathBuf>,
     writable: bool,
 ) -> Result<Option<ParcelFileDescriptor>> {
-    filename.as_deref().map(|filename| open_parcel_file(filename, writable)).transpose()
+    filename.map(|filename| open_parcel_file(filename, writable)).transpose()
 }
