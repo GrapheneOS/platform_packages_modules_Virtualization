@@ -20,6 +20,7 @@ ifeq ($(findstring enabled, $(TRUSTY_SYSTEM_VM)),enabled)
 TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES ?= trusty_security_vm.elf \
 	trusty_security_vm_launcher \
 	trusty_security_vm_launcher.rc \
+	trusty_security_vm_instance_id \
 	trusty_security_vm_rpc_services.json \
 	early_vms.xml \
 
