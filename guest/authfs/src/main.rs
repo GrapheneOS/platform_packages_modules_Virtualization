@@ -305,7 +305,7 @@ fn try_main() -> Result<()> {
     fusefs::mount_and_enter_message_loop(
         authfs,
         &args.mount_point,
-        &args.extra_options,
+        args.extra_options.as_ref(),
         args.thread_number,
     )?;
     bail!("Unexpected exit after the handler loop")

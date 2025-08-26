@@ -34,7 +34,9 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use vmclient::VmInstance;
 
-#[derive(Parser)]
+const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+
+#[derive(Parser, Debug)]
 /// Collection of CLI for trusty_security_vm_launcher
 pub struct Args {
     /// Path to the trusty kernel image.
@@ -68,6 +70,12 @@ pub struct Args {
     /// Custom VM firmware to use (test & development only).
     #[arg(long)]
     custom_pvmfw: Option<PathBuf>,
+
+    /// If enabled, allow this VM to access FF-A. The launching process must
+    /// have CAP_IPC_OWNER and be configured by selinux to use guest_ffa_tee_service.
+    /// This is only settable on a protected vm (enforced by virtmgr).
+    #[arg(long)]
+    allow_ffa: bool,
 }
 
 fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
@@ -131,6 +139,11 @@ fn main() -> Result<()> {
         None
     };
 
+    let tee_services = match args.allow_ffa {
+        true => vec![GUEST_FFA_TEE_SERVICE.to_owned()],
+        false => Vec::new(),
+    };
+
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: args.name.to_owned(),
         kernel,
@@ -140,14 +153,16 @@ fn main() -> Result<()> {
         memoryMib: args.memory_size_mib,
         cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
         platformVersion: "~1.0".to_owned(),
+        teeServices: tee_services,
         // TODO: add instanceId
         ..Default::default()
     });
 
-    info!("creating VM");
+    info!("creating VM with config {:?}", &vm_config);
     let console_out = create_log_writer(&args.name)?;
     // Creates only one pipe and one thread for efficiency.
     let log_out = console_out.try_clone().context("Failed to clone console_out fd for log_out")?;
+
     let vm = VmInstance::create(
         service.as_ref(),
         &vm_config,

@@ -673,8 +673,8 @@ impl VirtualizationService {
             .with_log()
             .or_binder_exception(ExceptionCode::SECURITY)?;
         }
-        let kernel = maybe_clone_file(&config.kernel)?;
-        let initrd = maybe_clone_file(&config.initrd)?;
+        let kernel = maybe_clone_file(config.kernel.as_ref())?;
+        let initrd = maybe_clone_file(config.initrd.as_ref())?;
 
         if config.protectedVm {
             // Fail fast with a meaningful error message in case device doesn't support pVMs.
@@ -682,7 +682,7 @@ impl VirtualizationService {
 
             // In a protected VM, we require custom kernels to come from a trusted source
             // (b/237054515).
-            check_label_for_kernel_files(&kernel, &initrd, calling_partition)
+            check_label_for_kernel_files(kernel.as_ref(), initrd.as_ref(), calling_partition)
                 .or_service_specific_exception(-1)?;
 
             // Check if partition images are labeled incorrectly. This is to prevent random images
@@ -979,7 +979,7 @@ fn assemble_shared_paths(
                     .join(&path.socketPath)
                     .to_string_lossy()
                     .to_string(),
-                socket_fd: maybe_clone_file(&path.socketFd)?,
+                socket_fd: maybe_clone_file(path.socketFd.as_ref())?,
                 app_domain: path.appDomain,
             })
         })
@@ -1325,8 +1325,8 @@ fn check_label_for_partition(
 }
 
 fn check_label_for_kernel_files(
-    kernel: &Option<File>,
-    initrd: &Option<File>,
+    kernel: Option<&File>,
+    initrd: Option<&File>,
     calling_partition: CallingPartition,
 ) -> Result<()> {
     if let Some(f) = kernel {
@@ -1727,9 +1727,9 @@ pub fn clone_file(file: &ParcelFileDescriptor) -> binder::Result<File> {
         .map(File::from)
 }
 
-/// Converts an `&Option<ParcelFileDescriptor>` to an `Option<File>` by cloning the file.
-fn maybe_clone_file(file: &Option<ParcelFileDescriptor>) -> binder::Result<Option<File>> {
-    file.as_ref().map(clone_file).transpose()
+/// Converts an `Option<&ParcelFileDescriptor>` to an `Option<File>` by cloning the file.
+fn maybe_clone_file(file: Option<&ParcelFileDescriptor>) -> binder::Result<Option<File>> {
+    file.map(clone_file).transpose()
 }
 
 /// Converts a `VsockStream` to a `ParcelFileDescriptor`.

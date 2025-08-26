@@ -636,7 +636,7 @@ fn try_run_payload(
             let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
             Some(
-                prepare_encryptedstore(&key, &std_redirect_for_enc_store)
+                prepare_encryptedstore(&key, std_redirect_for_enc_store.as_ref().as_ref())
                     .context("encryptedstore run")?,
             )
         }
@@ -712,7 +712,7 @@ fn try_run_payload(
                 main_command,
                 cgroup_config.as_ref(),
                 service,
-                &std_redirect,
+                std_redirect.as_ref().as_ref(),
                 /* notify_payload_started */ true,
             )
             .context("Failed to run payload")?,
@@ -735,7 +735,7 @@ fn try_run_payload(
                         tenant_command,
                         cgroup_config.as_ref(),
                         service,
-                        &std_redirect,
+                        std_redirect.as_ref().as_ref(),
                         should_notify,
                     )
                     .context("Failed to run tenant")?;
@@ -1105,7 +1105,7 @@ fn exec_task(
     payload_cmd: PayloadCommand,
     cgroup_config: Option<&CgroupConfig>,
     service: &Strong<dyn IVirtualMachineService>,
-    std_redirect: &Option<OwnedFd>,
+    std_redirect: Option<&OwnedFd>,
     notify_payload_started: bool,
 ) -> Result<Child> {
     info!("executing main task {:?}...", payload_cmd.command);
@@ -1204,7 +1204,7 @@ fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Resul
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(key: &[u8], std_redirect: &Option<OwnedFd>) -> Result<Child> {
+fn prepare_encryptedstore(key: &[u8], std_redirect: Option<&OwnedFd>) -> Result<Child> {
     let (stdout, stderr) = if let Some(fd) = std_redirect {
         (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
     } else {
@@ -1277,7 +1277,7 @@ fn delayed_prepare_encryptedstore(
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
         }
     }
-    prepare_encryptedstore(&key, &std_redirect)?
+    prepare_encryptedstore(&key, std_redirect.as_ref().as_ref())?
         .wait()
         .context("failed waiting for encryptedstore binary to finish")?;
 

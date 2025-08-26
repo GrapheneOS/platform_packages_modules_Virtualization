@@ -35,7 +35,7 @@ const MAX_READ_BYTES: u32 = 65536;
 pub fn mount_and_enter_message_loop(
     authfs: AuthFs,
     mountpoint: &Path,
-    extra_options: &Option<String>,
+    extra_options: Option<&String>,
     threads: Option<NonZeroU8>,
 ) -> Result<(), fuse::Error> {
     let dev_fuse = OpenOptions::new()
