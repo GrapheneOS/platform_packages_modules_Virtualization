@@ -100,3 +100,68 @@ pub mod file {
         }
     }
 }
+/// Utilities for creating fake directories.
+pub mod dir {
+    use anyhow::{Error, Result};
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+    };
+
+    pub const SYSTEM_SUBDIR: &str = "system";
+    pub const STAGING_SUBDIR: &str = "staging";
+
+    pub fn rebase_subdir(root_path: &Path, dir: &str) -> PathBuf {
+        root_path.join(dir.strip_prefix("/").unwrap_or(dir))
+    }
+    pub fn get_system_subdir(root_path: &Path) -> PathBuf {
+        rebase_subdir(root_path, SYSTEM_SUBDIR)
+    }
+    pub fn create_subdir(root_path: &Path, dir: &str) -> Result<()> {
+        let subdir = rebase_subdir(root_path, dir);
+        if let Err(e) = fs::create_dir_all(&subdir) {
+            return Err(Error::msg(format!("unable to create {}:{}", subdir.display(), e)));
+        }
+        Ok(())
+    }
+}
+
+pub mod sync {
+    use anyhow::{Error, Result};
+    use std::{
+        sync::{Arc, Condvar, Mutex},
+        time::{Duration, Instant},
+    };
+    pub struct CompletionBarrier {
+        completed: Mutex<bool>,
+        condvar: Condvar,
+    }
+    impl CompletionBarrier {
+        pub fn new() -> Arc<Self> {
+            Arc::new(CompletionBarrier { completed: Mutex::new(false), condvar: Condvar::new() })
+        }
+
+        pub fn wait_for_completion(&self, timeout: Duration) -> Result<(), Error> {
+            let start = Instant::now();
+            let (lock, cvar) = (&self.completed, &self.condvar);
+            let mut completed = lock.lock().unwrap();
+            while !*completed {
+                let elapsed = start.elapsed();
+                if elapsed >= timeout {
+                    return Err(Error::msg("Timed out"));
+                }
+                let remaining_timeout = timeout - elapsed;
+                let result = cvar.wait_timeout(completed, remaining_timeout).unwrap();
+                completed = result.0;
+            }
+            Ok(())
+        }
+
+        pub fn mark_completed(&self) {
+            let (lock, cvar) = (&self.completed, &self.condvar);
+            let mut finished = lock.lock().unwrap();
+            *finished = true;
+            cvar.notify_one();
+        }
+    }
+}

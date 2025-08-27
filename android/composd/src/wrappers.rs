@@ -17,6 +17,17 @@
 //! wrapper is a module to enable unit testing by wrapping lower level functions in a mockable
 //! module, struct or trait.
 
+#[cfg_attr(test, mockall::automock)]
+pub mod composd_native {
+    use anyhow::Result;
+    use std::path::Path;
+
+    /// Wraps composd_native::palette_create_odrefresh_staging_directory().
+    pub fn palette_create_odrefresh_staging_directory() -> Result<&'static Path> {
+        composd_native::palette_create_odrefresh_staging_directory()
+    }
+}
+
 pub mod binder {
     pub struct LazyServiceGuard {
         _lazy_service_guard: binder::LazyServiceGuard,
