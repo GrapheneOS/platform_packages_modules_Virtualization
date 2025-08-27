@@ -30,11 +30,12 @@ use log::{error, info, trace, warn, LevelFilter};
 use nix::fcntl::OFlag;
 use serde::Deserialize;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use vmclient::VmInstance;
 
 const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+const INSTANCE_ID_SIZE: usize = 64;
 
 #[derive(Parser, Debug)]
 /// Collection of CLI for trusty_security_vm_launcher
@@ -76,6 +77,10 @@ pub struct Args {
     /// This is only settable on a protected vm (enforced by virtmgr).
     #[arg(long)]
     allow_ffa: bool,
+
+    /// Path to a file containing the VM instance ID.
+    #[arg(long, value_name = "FILE")]
+    vm_instance_id: Option<PathBuf>,
 }
 
 fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
@@ -144,6 +149,14 @@ fn main() -> Result<()> {
         false => Vec::new(),
     };
 
+    let instance_id = if let Some(path) = args.vm_instance_id.as_ref() {
+        info!("Loading VM Instance ID from file: {path:?}");
+        load_instance_id(path)?
+    } else {
+        warn!("No VM Instance ID file provided. Using default instance ID.");
+        [0u8; INSTANCE_ID_SIZE]
+    };
+
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: args.name.to_owned(),
         kernel,
@@ -154,7 +167,7 @@ fn main() -> Result<()> {
         cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
         platformVersion: "~1.0".to_owned(),
         teeServices: tee_services,
-        // TODO: add instanceId
+        instanceId: instance_id,
         ..Default::default()
     });
 
@@ -194,6 +207,28 @@ fn main() -> Result<()> {
         error!("VM ended: {death_reason:?}");
         Ok(())
     }
+}
+
+fn load_instance_id(path: &Path) -> Result<[u8; INSTANCE_ID_SIZE]> {
+    let mut file =
+        File::open(path).with_context(|| format!("open VM Instance ID file: {:?}", path))?;
+
+    let metadata = file
+        .metadata()
+        .with_context(|| format!("get metadata for VM Instance ID file: {:?}", path))?;
+
+    ensure!(
+        metadata.len() == INSTANCE_ID_SIZE as u64,
+        "VM Instance ID file {:?} has incorrect size. Expected {}, Got {}",
+        path,
+        INSTANCE_ID_SIZE,
+        metadata.len()
+    );
+
+    let mut buffer = [0u8; INSTANCE_ID_SIZE];
+    file.read_exact(&mut buffer)
+        .with_context(|| format!("read VM Instance ID file: {:?}", path))?;
+    Ok(buffer)
 }
 
 /// Defines the structure of a single RPC service configuration in the JSON file.

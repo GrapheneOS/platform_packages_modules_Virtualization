@@ -3,6 +3,7 @@ service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher 
 --name security_vm \
 --kernel /system_ext/etc/vm/trusty_vm/trusty_security_vm.elf \
 --rpc-services-config /system_ext/etc/vm/trusty_vm/security_vm_rpc_services.json \
+--vm-instance-id /system_ext/etc/vm/trusty_vm/security_vm_instance_id \
 --memory-size-mib 32 \
 --protected
     disabled

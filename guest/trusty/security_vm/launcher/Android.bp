@@ -47,3 +47,21 @@ rust_binary {
         default: false,
     }),
 }
+
+prebuilt_etc {
+    name: "trusty_security_vm_instance_id",
+    src: ":security_vm_instance_id",
+    system_ext_specific: true,
+    relative_install_path: "vm/trusty_vm",
+    filename: "security_vm_instance_id",
+}
+
+genrule {
+    name: "security_vm_instance_id",
+    srcs: ["security_vm_instance_id_config.json"],
+    out: ["security_vm_instance_id"],
+    tools: [
+        "gen_instance_id_for_vm_with_trusted_hal",
+    ],
+    cmd: "$(location gen_instance_id_for_vm_with_trusted_hal) -i $(in) -o $(out)",
+}
