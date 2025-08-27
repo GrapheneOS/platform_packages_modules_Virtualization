@@ -66,6 +66,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -441,13 +442,14 @@ public final class VirtualMachineConfig {
         // serialization is done successfully.
         File tempFile = null;
         try {
-            tempFile = File.createTempFile("vm_config", null);
+            // Must be in the same filesystem as the target path, otherwise the move will fail.
+            tempFile = File.createTempFile("vm_config", null, file.getParentFile());
         } catch (IOException e) {
             throw new VirtualMachineException("failed to create temporary VM config file", e);
         }
         try (FileOutputStream output = new FileOutputStream(tempFile)) {
             serializeOutputStream(output);
-            tempFile.renameTo(file);
+            Files.move(tempFile.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             throw new VirtualMachineException("failed to write VM config", e);
         } finally {
