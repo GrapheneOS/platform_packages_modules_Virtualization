@@ -259,18 +259,26 @@ impl VirtualizationServiceInternal {
         }
     }
 
-    fn debug_list_vms_unchecked(&self) -> Vec<VirtualMachineDebugInfo> {
-        self.state
+    fn debug_list_vms_unchecked(
+        &self,
+    ) -> Vec<(Strong<dyn IVirtualMachine>, VirtualMachineDebugInfo)> {
+        // Make a local copy of the list of VMs to avoid holding a lock while they are queried.
+        let vms = self
+            .state
             .lock()
             .unwrap()
             .virtual_machines
             .iter()
+            .map(|(cid, (vm, _))| (*cid, vm.clone()))
+            .collect::<Vec<_>>();
+        vms.iter()
             .filter_map(|(cid, vm)| {
-                vm.0.getDebugInfo()
+                vm.getDebugInfo()
                     .inspect_err(|e| {
                         error!("Failed to get debug info for VM with CID {cid}: {e:?}")
                     })
                     .ok()
+                    .map(|debug_info| (vm.clone(), debug_info))
             })
             .collect()
     }
@@ -280,22 +288,7 @@ impl Interface for VirtualizationServiceInternal {
     fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), StatusCode> {
         check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
 
-        // We also need handles for the VMs, so we can't call debug_list_vms_unchecked here
-        let vms = self
-            .state
-            .lock()
-            .unwrap()
-            .virtual_machines
-            .iter()
-            .filter_map(|(cid, vm)| {
-                vm.0.getDebugInfo()
-                    .inspect_err(|e| {
-                        error!("Failed to get debug info for VM with CID {cid}: {e:?}")
-                    })
-                    .ok()
-                    .map(|debug_info| (vm.0.as_binder(), debug_info))
-            })
-            .collect::<Vec<_>>();
+        let vms = self.debug_list_vms_unchecked();
         writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
 
         let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
@@ -317,7 +310,7 @@ impl Interface for VirtualizationServiceInternal {
             // TODO(b/429048207): Use vm.dump().
             let (read_fd, write_fd) = pipe2(OFlag::O_CLOEXEC).or(Err(StatusCode::UNKNOWN_ERROR))?;
             let args = args.clone();
-            let mut vm_binder = vm.0;
+            let mut vm_binder = vm.0.as_binder();
             // Spawn a thread for vm_binder.dump() call, so std::io::copy(...) can be done
             // simultaneously. If read_fd isn't consumed by std::io::copy, writing to write_fd may
             // be blocked.
@@ -503,7 +496,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         check_debug_access()?;
         info!("debugListVMs");
 
-        Ok(self.debug_list_vms_unchecked())
+        Ok(self.debug_list_vms_unchecked().into_iter().map(|(_, info)| info).collect())
     }
 
     fn enableTestAttestation(&self) -> binder::Result<()> {
