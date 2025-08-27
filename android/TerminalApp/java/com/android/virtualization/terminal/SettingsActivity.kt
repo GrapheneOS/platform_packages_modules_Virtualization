@@ -57,6 +57,16 @@ class SettingsActivity : AppCompatActivity() {
                 SettingsItemEnum.Recovery,
             )
         )
+        if (GraphicsManager.getInstance(this).availableAccelerationTypes.size > 1) {}
+
+        settingsItems.add(
+            SettingsItem(
+                resources.getString(R.string.settings_graphics_acceleration_title),
+                resources.getString(R.string.settings_graphics_acceleration_subtitle),
+                R.drawable.ic_display,
+                SettingsItemEnum.GraphicAcceleration,
+            )
+        )
 
         val settingsListItemAdapter = SettingsItemAdapter(settingsItems)
 

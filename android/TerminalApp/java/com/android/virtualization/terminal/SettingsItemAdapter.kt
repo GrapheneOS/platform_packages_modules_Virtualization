@@ -15,12 +15,14 @@
  */
 package com.android.virtualization.terminal
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
@@ -47,14 +49,61 @@ class SettingsItemAdapter(private val dataSet: List<SettingsItem>) :
         viewHolder.subTitle.text = dataSet[position].subTitle
 
         viewHolder.card.setOnClickListener { view ->
+            val type = dataSet[position].settingsItemEnum
+            if (type == SettingsItemEnum.GraphicAcceleration) {
+                val graphicsManager = GraphicsManager.getInstance(view.context)
+                val currentType = graphicsManager.accelerationType
+                val availableOptions = graphicsManager.availableAccelerationTypes
+                var originalSelection = availableOptions.indexOf(currentType)
+
+                if (originalSelection == -1) {
+                    originalSelection = 0
+                }
+
+                var newSelection = originalSelection
+
+                AlertDialog.Builder(view.context)
+                    .setTitle(R.string.settings_graphics_acceleration_title)
+                    .setPositiveButton(android.R.string.ok) { dialog, which ->
+                        if (newSelection != -1) {
+                            val selectedType = availableOptions[newSelection]
+                            graphicsManager.accelerationType = selectedType
+                        }
+
+                        if (originalSelection != newSelection) {
+                            Toast.makeText(
+                                    view.context,
+                                    R.string.settings_graphics_acceleration_toast_reboot_required,
+                                    Toast.LENGTH_SHORT,
+                                )
+                                .show()
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel) { dialog, which ->
+                        dialog.dismiss()
+                    }
+                    .setSingleChoiceItems(
+                        availableOptions
+                            .map { view.context.getString(it.descriptionId) }
+                            .toTypedArray(),
+                        originalSelection,
+                    ) { dialog, which ->
+                        newSelection = which
+                    }
+                    .create()
+                    .show()
+                return@setOnClickListener
+            }
             val intent =
                 Intent(
                     viewHolder.itemView.context,
-                    when (dataSet[position].settingsItemEnum) {
+                    when (type) {
                         SettingsItemEnum.DiskResize -> SettingsDiskResizeActivity::class.java
                         SettingsItemEnum.PortForwarding ->
                             SettingsPortForwardingActivity::class.java
                         SettingsItemEnum.Recovery -> SettingsRecoveryActivity::class.java
+                        SettingsItemEnum.GraphicAcceleration ->
+                            throw IllegalStateException("should be handled above")
                     },
                 )
             view.context.startActivity(intent)
