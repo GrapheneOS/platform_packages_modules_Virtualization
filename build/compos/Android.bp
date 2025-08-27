@@ -56,6 +56,7 @@ apex {
         // Adding it explicitly here is required because the existence of
         // it in Microdroid cannot be guaranteed.
         "libminijail",
+        "libcom_android_compos_ffi_c",
     ],
 
     systemserverclasspath_fragments: ["com.android.compos-systemserverclasspath-fragment"],
