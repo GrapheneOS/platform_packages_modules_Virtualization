@@ -127,27 +127,17 @@ pub struct ApkConfig {
 pub enum TenantConfig {
     /// APEX Tenant
     #[serde(rename = "apex")]
-    Apex(TenantApexConfig),
+    Apex(TenantConfiguration),
     /// APK Tenant
     #[serde(rename = "apk")]
-    Apk(TenantApkConfig),
+    Apk(TenantConfiguration),
 }
 
-/// Tenant Apex config
+/// Tenant config
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TenantApexConfig {
-    /// The path of Tenant APK
+pub struct TenantConfiguration {
+    /// Tenant package name
     pub name: String,
-    /// Tenant task
-    #[serde(default)]
-    pub task: Option<Task>,
-}
-
-/// Tenant Apk config
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TenantApkConfig {
-    /// The path of Tenant APK
-    pub path: String,
     /// Tenant task
     #[serde(default)]
     pub task: Option<Task>,

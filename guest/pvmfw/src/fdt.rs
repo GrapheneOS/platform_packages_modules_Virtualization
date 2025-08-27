@@ -487,7 +487,7 @@ fn get_nth_compatible<'a>(
 fn patch_cpus(
     fdt: &mut Fdt,
     cpus: &[CpuInfo],
-    topology: &Option<CpuTopology>,
+    topology: Option<&CpuTopology>,
 ) -> libfdt::Result<()> {
     const COMPAT: &CStr = c"arm,armv8";
     let mut cpu_phandles = Vec::new();
@@ -918,7 +918,7 @@ fn validate_wdt_info(wdt: &WdtInfo, num_cpus: usize) -> Result<(), RebootReason>
 
 fn patch_wdt_info(
     fdt: &mut Fdt,
-    wdt_info: &Option<WdtInfo>,
+    wdt_info: Option<&WdtInfo>,
     num_cpus: usize,
 ) -> libfdt::Result<()> {
     let Some(mut node) = fdt.root_mut().next_compatible(c"qemu,vcpu-stall-detector")? else {
@@ -1082,7 +1082,7 @@ struct VcpufreqInfo {
     size: u64,
 }
 
-fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt::Result<()> {
+fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: Option<&VcpufreqInfo>) -> libfdt::Result<()> {
     if let Some(mut node) = fdt.node_mut(c"/cpufreq")? {
         if let Some(info) = vcpufreq_info {
             node.setprop_addrrange_inplace(c"reg", info.addr, info.size)?;
@@ -1395,11 +1395,11 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
             RebootReason::InvalidFdt
         })?;
     }
-    patch_cpus(fdt, &info.cpus, &info.cpu_topology).map_err(|e| {
+    patch_cpus(fdt, &info.cpus, info.cpu_topology.as_ref()).map_err(|e| {
         error!("Failed to patch cpus to DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    patch_vcpufreq(fdt, &info.vcpufreq_info).map_err(|e| {
+    patch_vcpufreq(fdt, info.vcpufreq_info.as_ref()).map_err(|e| {
         error!("Failed to patch vcpufreq info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
@@ -1409,7 +1409,7 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
             RebootReason::InvalidFdt
         })?;
     }
-    patch_wdt_info(fdt, &info.wdt_info, info.cpus.len()).map_err(|e| {
+    patch_wdt_info(fdt, info.wdt_info.as_ref(), info.cpus.len()).map_err(|e| {
         error!("Failed to patch wdt info to DT: {e}");
         RebootReason::InvalidFdt
     })?;

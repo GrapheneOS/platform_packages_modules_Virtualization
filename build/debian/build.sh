@@ -324,37 +324,6 @@ build_debian() {
 	fi
 }
 
-build_rootfs() {
-	local chroot_workspace=$(mktemp -d)
-
-	mkdir -p "${chroot_workspace}"
-
-	mount "${workdir}/root_part" "${chroot_workspace}"
-
-	mkdir -p "${chroot_workspace}/mnt/build"
-	mkdir -p "${chroot_workspace}/mnt/ttyd"
-	mount --bind "${SCRIPT_DIR}" "${chroot_workspace}/mnt/build"
-	mount --bind "${chroot_ttyd}" "${chroot_workspace}/mnt/ttyd"
-	mount --rbind /dev "${chroot_workspace}/dev"
-	mount --rbind /proc "${chroot_workspace}/proc"
-	mount --rbind /sys "${chroot_workspace}/sys"
-
-	mv -v "${chroot_workspace}/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf.bak" || true
-	cp -vP "/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf"
-
-	chroot "${chroot_workspace}" /bin/bash -c /mnt/build/build_rootfs_in_chroot.sh
-
-	rm ${chroot_workspace}/etc/resolv.conf
-	mv -v "${chroot_workspace}/etc/resolv.conf.bak" "${chroot_workspace}/etc/resolv.conf" || true
-	umount "${chroot_workspace}/mnt/ttyd"
-	umount "${chroot_workspace}/mnt/build"
-
-	rm -r "${chroot_workspace}/mnt/ttyd"
-	rm -r "${chroot_workspace}/mnt/build"
-	umount -R "${chroot_workspace}"
-	rm -r "${chroot_workspace}"
-}
-
 generate_output_package() {
 	local vm_config="$SCRIPT_DIR/vm_config.json"
 	if [[ "$cloud_init" == 1 ]]; then
@@ -374,7 +343,11 @@ generate_output_package() {
 		losetup -d "${loop}"
 
 		if [[ "$cloud_init" == 1 ]]; then
-			build_rootfs
+			${SCRIPT_DIR}/chroot_rootfs.sh \
+				-b "${SCRIPT_DIR}:/mnt/build" \
+				-b "${chroot_ttyd}:/mnt/ttyd" \
+				-c /mnt/build/build_rootfs_in_chroot.sh \
+				root_part
 		fi
 	fi
 
