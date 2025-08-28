@@ -133,6 +133,8 @@ pub enum TenantConfig {
     Apk(TenantConfiguration),
 }
 
+// TODO: More (optional) configuration need to be added for tenant
+// such as min_version, expected signer. Ensure as they are added, verification code matches these.
 /// Tenant config
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TenantConfiguration {
