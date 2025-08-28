@@ -658,19 +658,7 @@ public class VirtualMachine implements AutoCloseable {
             return null;
         }
         File configFilePath = new File(thisVmDir, CONFIG_FILE);
-        VirtualMachineConfig config = null;
-        try {
-            config = VirtualMachineConfig.from(configFilePath);
-            Objects.requireNonNull(config);
-        } catch (VirtualMachineException e) {
-            Log.e(
-                    TAG,
-                    "Failed to load virtual machine config from "
-                            + configFilePath
-                            + ". It may be corrupted: "
-                            + e);
-            return null;
-        }
+        VirtualMachineConfig config = VirtualMachineConfig.from(configFilePath);
         VirtualMachine vm =
                 new VirtualMachine(context, name, config, VirtualizationService.getInstance());
 
