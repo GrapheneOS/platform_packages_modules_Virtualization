@@ -436,22 +436,10 @@ public final class VirtualMachineConfig {
 
     /** Persists this config to a file. */
     void serialize(@NonNull File file) throws VirtualMachineException {
-        // To prevent serialization failure from leaving the config file in an invalid state,
-        // serialize it to a temp file, and then rename it to the requrested file when the
-        // serialization is done successfully.
-        File tempFile = null;
-        try {
-            tempFile = File.createTempFile("vm_config", null);
-        } catch (IOException e) {
-            throw new VirtualMachineException("failed to create temporary VM config file", e);
-        }
-        try (FileOutputStream output = new FileOutputStream(tempFile)) {
+        try (FileOutputStream output = new FileOutputStream(file)) {
             serializeOutputStream(output);
-            tempFile.renameTo(file);
         } catch (IOException e) {
             throw new VirtualMachineException("failed to write VM config", e);
-        } finally {
-            tempFile.delete();
         }
     }
 
