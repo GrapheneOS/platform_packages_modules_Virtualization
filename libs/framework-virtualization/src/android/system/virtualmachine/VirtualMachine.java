@@ -2062,21 +2062,11 @@ public class VirtualMachine implements AutoCloseable {
             checkStopped();
 
             if (oldConfig != newConfig) {
-                File tempPath = new File(mConfigFilePath.getParent(), CONFIG_FILE + ".temp");
-                try {
-                    tempPath.delete(); // just in case
-                    newConfig.serialize(tempPath);
-
-                    // Replace old config atomically. This ensures that errors
-                    // while writing the new config won't leave the config on
-                    // disk in a broken state and also that any
-                    // VirtualMachineDescriptor that refers to the old file
-                    // does not see the new config.
-                    tempPath.renameTo(mConfigFilePath);
-                    mConfig = newConfig;
-                } finally {
-                    tempPath.delete();
-                }
+                // Delete any existing file before recreating; that ensures any
+                // VirtualMachineDescriptor that refers to the old file does not see the new config.
+                mConfigFilePath.delete();
+                newConfig.serialize(mConfigFilePath);
+                mConfig = newConfig;
             }
             return oldConfig;
         }
