@@ -1020,6 +1020,24 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
+    // b/441586847 - There was once a bug where the VM dir was malformed for DE
+    // context only. Check for a regression by forcing the VM to be loaded from
+    // disk.
+    @Test
+    public void loadVmFilesStoredInDeDir() throws Exception {
+        final Context ctx = getContext().createDeviceProtectedStorageContext();
+        final VirtualMachineManager vmm = ctx.getSystemService(VirtualMachineManager.class);
+        VirtualMachineConfig config = newVmConfigBuilderWithPayloadBinary("binary.so").build();
+        try {
+            VirtualMachine vm = vmm.create("vm-name", config);
+            vm.close();
+            vmm.testOnlyClearCache();
+            assertThat(vmm.get("vm-name")).isNotNull();
+        } finally {
+            vmm.delete("vm-name");
+        }
+    }
+
     @Test
     @CddTest
     public void vmFilesStoredInCeDirWhenCreatedFromCEContext() throws Exception {
