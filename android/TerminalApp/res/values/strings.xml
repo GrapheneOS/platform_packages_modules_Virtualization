@@ -195,4 +195,15 @@
 
     <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
     <string name="tab_default_title">Tab</string>
+
+    <!-- Settings menu title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_title">Graphics Acceleration</string>
+    <!-- Settings menu sub title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_subtitle">Change the renderer for graphics acceleration.</string>
+    <!-- Toast after selecting the graphics acceleration type [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_toast_reboot_required">Please restart Terminal app to apply the change.</string>
+    <!-- Software-based renderer [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_software_renderer">Software renderer</string>
+    <!-- Hardware-based renderer [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_hardware_renderer">GPU-accelerated renderer</string>
 </resources>

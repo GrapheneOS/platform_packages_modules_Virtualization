@@ -19,6 +19,7 @@ enum class SettingsItemEnum {
     DiskResize,
     PortForwarding,
     Recovery,
+    GraphicAcceleration,
 }
 
 class SettingsItem(

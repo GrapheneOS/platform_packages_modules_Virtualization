@@ -15,7 +15,7 @@
 //! Native helpers for composd.
 
 pub use art::*;
-
+#[cfg_attr(test, mockall::automock)]
 mod art {
     use anyhow::{anyhow, Result};
     use libc::c_char;

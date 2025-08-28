@@ -13,6 +13,10 @@ aidl_interface {
         },
         rust: {
             enabled: true,
+            gen_mockall: true,
+            additional_rustlibs: [
+                "libmockall",
+            ],
             apex_available: [
                 "com.android.compos",
             ],
