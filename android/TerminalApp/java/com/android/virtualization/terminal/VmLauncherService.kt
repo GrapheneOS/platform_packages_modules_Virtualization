@@ -24,6 +24,7 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -38,7 +39,6 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
-import android.widget.Toast
 import androidx.annotation.WorkerThread
 import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
@@ -344,13 +344,24 @@ class VmLauncherService : Service() {
         handler!!.post(r)
     }
 
+    private fun isGfxstreamEnabled(): Boolean {
+        if (
+            Build.isDebuggable() &&
+                Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))
+        ) {
+            return true
+        }
+        return GraphicsManager.getInstance(this).accelerationType ==
+            GraphicsManager.AccelerationType.Gfxstream
+    }
+
     private fun overrideConfigIfNecessary(
         builder: VirtualMachineCustomImageConfig.Builder,
         displayInfo: DisplayInfo?,
     ): Boolean {
         var changed = false
         // TODO: use resources to check if gfxstream is supported.
-        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
+        if (isGfxstreamEnabled()) {
             builder.addParam("gfxstream_enabled")
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
@@ -364,7 +375,6 @@ class VmLauncherService : Service() {
                     .setRendererFeatures("VulkanDisableCoherentMemoryAndEmulate:enabled")
                     .build()
             )
-            runOnMainThread { Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show() }
             changed = true
         }
 
