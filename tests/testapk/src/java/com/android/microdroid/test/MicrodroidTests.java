@@ -1327,7 +1327,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
-    public void tenantApk() throws Exception {
+    public void tenantPackages() throws Exception {
         assumeSupportedDevice();
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1336,11 +1336,11 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_apk_tenant.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_apk", config);
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenants", config);
         CompletableFuture<String> prop = readTenantPackagesMounted(vm);
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
                 .that(prop.getNow(null))

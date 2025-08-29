@@ -320,6 +320,7 @@ cc_library_shared {
     srcs: ["src/native/exitbinary.cpp"],
     header_libs: ["vm_payload_headers"],
     stl: "libc++_static",
+    apex_available: ["com.android.virt"],
 }
 
 // A payload which tries to link against libselinux, one of private libraries
