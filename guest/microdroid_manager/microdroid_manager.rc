@@ -1,7 +1,7 @@
 service microdroid_manager /system/bin/microdroid_manager
     disabled
     # print android log to kmsg
-    file /dev/kmsg w
+    stdio_to_kmsg
     setenv RUST_LOG info
     # TODO(jooyung) remove this when microdroid_manager becomes a daemon
     oneshot
