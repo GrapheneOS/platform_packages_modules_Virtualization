@@ -30,6 +30,20 @@ genrule {
     out: ["avf_debug_policy_without_adb.dtbo"],
 }
 
+genrule {
+    name: "test_avf_debug_policy_with_log",
+    defaults: ["dts_to_dtb"],
+    srcs: ["assets/avf_debug_policy_with_log.dts"],
+    out: ["avf_debug_policy_with_log.dtbo"],
+}
+
+genrule {
+    name: "test_avf_debug_policy_without_log",
+    defaults: ["dts_to_dtb"],
+    srcs: ["assets/avf_debug_policy_without_log.dts"],
+    out: ["avf_debug_policy_without_log.dtbo"],
+}
+
 java_test_host {
     name: "CustomPvmfwHostTestCases",
     srcs: ["java/**/*.java"],
@@ -53,6 +67,8 @@ java_test_host {
         ":test_avf_debug_policy_without_ramdump",
         ":test_avf_debug_policy_with_adb",
         ":test_avf_debug_policy_without_adb",
+        ":test_avf_debug_policy_with_log",
+        ":test_avf_debug_policy_without_log",
     ],
     device_first_data: [
         ":pvmfw_test",
