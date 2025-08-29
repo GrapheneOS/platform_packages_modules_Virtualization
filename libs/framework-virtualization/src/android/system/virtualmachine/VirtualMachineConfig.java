@@ -1128,7 +1128,7 @@ public final class VirtualMachineConfig {
             }
 
             if (mVmOutputCaptured && mDebugLevel != DEBUG_LEVEL_FULL) {
-                throw new IllegalStateException("debug level must be FULL to capture output");
+                Log.w(TAG, "debug level must be FULL to capture output unless debug policy is set");
             }
 
             if (mVmConsoleInputSupported && mDebugLevel != DEBUG_LEVEL_FULL) {

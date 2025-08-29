@@ -829,13 +829,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         e = assertThrows(IllegalStateException.class, () -> protectedNotSet.build());
         assertThat(e).hasMessageThat().contains("setProtectedVm must be called");
 
-        VirtualMachineConfig.Builder captureOutputOnNonDebuggable =
-                newVmConfigBuilderWithPayloadBinary("binary.so")
-                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_NONE)
-                        .setVmOutputCaptured(true);
-        e = assertThrows(IllegalStateException.class, () -> captureOutputOnNonDebuggable.build());
-        assertThat(e).hasMessageThat().contains("debug level must be FULL to capture output");
-
         VirtualMachineConfig.Builder captureInputOnNonDebuggable =
                 newVmConfigBuilderWithPayloadBinary("binary.so")
                         .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_NONE)
