@@ -26,6 +26,11 @@
 #include <android-base/file.h>
 #include <android-base/result.h>
 #include <android-base/unique_fd.h>
+#include <android/content/pm/IPackageManagerNative.h>
+#include <android/content/pm/PackageInfoNative.h>
+#include <androidfw/AssetsProvider.h>
+#include <binder/IServiceManager.h>
+#include <json/json.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -33,6 +38,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -249,12 +255,125 @@ Result<void> get_or_allocate_instance_id(IVirtualizationService& service,
     return {};
 }
 
+// Get the package path using IPackageManagerNative interface.
+Result<std::string> get_apk_path_from_package_name(const std::string& package_name) {
+    android::sp<android::IBinder> binder =
+            android::defaultServiceManager()->checkService(android::String16("package_native"));
+    if (binder == nullptr) {
+        return Error() << "Failed to get package_native service";
+    }
+
+    android::sp<android::content::pm::IPackageManagerNative> pm =
+            android::interface_cast<android::content::pm::IPackageManagerNative>(binder);
+    if (pm == nullptr) {
+        return Error() << "Failed to get IPackageManagerNative";
+    }
+
+    int32_t user_id = 0;
+    std::optional<android::content::pm::PackageInfoNative> package_info;
+    android::binder::Status status =
+            pm->getPackageInfoWithSigningInfo(android::String16(package_name.c_str()), user_id,
+                                              &package_info);
+
+    if (!status.isOk()) {
+        return Error() << "Failed to get package info for " << package_name << ": "
+                       << status.toString8().c_str();
+    }
+
+    if (!package_info || !package_info->sourceDir) {
+        return Error() << "Package " << package_name << " not found or sourceDir is null";
+    }
+
+    return std::string(android::String8(*package_info->sourceDir).c_str());
+}
+
+// Parses the JSON config file from the main APK, finds any tenant APKs,
+// prepares them, and adds them to the VirtualMachineAppConfig.
+Result<void> add_tenant_apks_from_config(IVirtualizationService& service,
+                                         const std::string& main_apk_path,
+                                         const std::string& config_path_in_apk,
+                                         const std::string& work_dir,
+                                         VirtualMachineAppConfig* app_config) {
+    auto assets_provider = android::ZipAssetsProvider::Create(main_apk_path, 0);
+    if (!assets_provider) {
+        return Error() << "Failed to create AssetsProvider for " << main_apk_path;
+    }
+
+    auto asset =
+            assets_provider->Open(config_path_in_apk, android::Asset::AccessMode::ACCESS_BUFFER);
+    if (!asset) {
+        return Error() << "Failed to open " << config_path_in_apk << " in APK " << main_apk_path;
+    }
+
+    std::string json_content(static_cast<const char*>(asset->getBuffer(true)), asset->getLength());
+
+    Json::CharReaderBuilder builder;
+    Json::Value root;
+    std::string errs;
+    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    if (!reader->parse(json_content.c_str(), json_content.c_str() + json_content.size(), &root,
+                       &errs)) {
+        return Error() << "Failed to parse " << config_path_in_apk << ": " << errs;
+    }
+
+    if (!root.isMember("tenants") || !root["tenants"].isArray()) {
+        // No tenants defined in the config, which is a valid case.
+        return {};
+    }
+
+    int i = 0;
+    for (const auto& tenant : root["tenants"]) {
+        if (!tenant.isMember("package") || tenant["package"].asString() != "apk" ||
+            !tenant.isMember("name") || !tenant["name"].isString()) {
+            // Not an APK tenant, skip.
+            continue;
+        }
+
+        const std::string package_name = tenant["name"].asString();
+        auto apk_path_result = get_apk_path_from_package_name(package_name);
+        if (!apk_path_result.ok()) {
+            return Error() << "Failed to get apk path for package '" << package_name
+                           << "': " << apk_path_result.error();
+        }
+        std::string apk_path = *apk_path_result;
+        auto apk_fd = OR_RETURN(open_file(apk_path, O_RDONLY));
+
+        std::string idsig_path = work_dir + "/tenant_idsig_" + std::to_string(i++) + ".idsig";
+        ScopedFileDescriptor idsig_fd = OR_RETURN(open_file(idsig_path, O_CREAT | O_RDWR));
+        ScopedAStatus ret = service.createOrUpdateIdsigFile(apk_fd, idsig_fd);
+        if (!ret.isOk()) {
+            return Error() << "Failed to create or update idsig file: " << idsig_path;
+        }
+
+        app_config->tenantApks.push_back(std::move(apk_fd));
+        app_config->tenantIdsigs.push_back(std::move(idsig_fd));
+    }
+
+    return {};
+}
+
+// The payload for the VM can be specified either as a path to a config file in the APK, or the
+// name of a native binary in the APK.
+struct VmPayload {
+    enum class Type {
+        kBinaryName,
+        kConfigPath,
+    };
+    Type type;
+    std::string value;
+
+    static VmPayload asBinaryName(std::string name) { return {Type::kBinaryName, std::move(name)}; }
+    static VmPayload asConfigPath(std::string path) { return {Type::kConfigPath, std::move(path)}; }
+};
+
 // Construct VirtualMachineAppConfig for a Microdroid-based VM named `vm_name` that executes a
 // shared library named `paylaod_binary_name` in the apk `main_apk_path`.
-Result<VirtualMachineAppConfig> create_vm_config(
-        IVirtualizationService& service, const std::string& work_dir, const std::string& vm_name,
-        const std::string& main_apk_path, const std::string& payload_config_or_binary,
-        bool debuggable, bool protected_vm, int32_t memory_mib) {
+Result<VirtualMachineAppConfig> create_vm_config(IVirtualizationService& service,
+                                                 const std::string& work_dir,
+                                                 const std::string& vm_name,
+                                                 const std::string& main_apk_path,
+                                                 const VmPayload& payload, bool debuggable,
+                                                 bool protected_vm, int32_t memory_mib) {
     ScopedFileDescriptor main_apk = OR_RETURN(open_file(main_apk_path, O_RDONLY));
     ScopedFileDescriptor idsig =
             OR_RETURN(create_or_update_idsig_file(service, work_dir, main_apk));
@@ -278,6 +397,11 @@ Result<VirtualMachineAppConfig> create_vm_config(
     app_config.protectedVm = protected_vm;
     app_config.memoryMib = memory_mib;
 
+    if (payload.type == VmPayload::Type::kConfigPath) {
+        OR_RETURN(add_tenant_apks_from_config(service, main_apk_path, payload.value, work_dir,
+                                              &app_config));
+    }
+
     // There are two ways to specify the payload. The simpler way is by specifying the name of the
     // payload binary as shown below. The other way (which is allowed only to system-level VMs) is
     // by passing the path to the JSON file in the main APK which has detailed specification about
@@ -287,12 +411,12 @@ Result<VirtualMachineAppConfig> create_vm_config(
     // For multi tenancy case, multiple tenants are only supported through
     // config JSON file
 #if AVF_ENABLE_ADVANCE_MULTITENANCY
-    app_config.payload = payload_config_or_binary;
+    app_config.payload = payload.value;
 #else
-    VirtualMachinePayloadConfig payload;
-    payload.payloadBinaryName = payload_config_or_binary;
+    VirtualMachinePayloadConfig payloadConfig;
+    payloadConfig.payloadBinaryName = payload.value;
 
-    app_config.payload = std::move(payload);
+    app_config.payload = std::move(payloadConfig);
 #endif
 
     return app_config;
@@ -464,9 +588,9 @@ Result<void> inner_main() {
             create_vm_config(*service, work_dir_path, "my_vm",
                              "/data/local/tmp/MicrodroidTestHelperApp.apk",
 #if AVF_ENABLE_ADVANCE_MULTITENANCY
-                             "assets/vm_config_multi_tenants.json",
+                             VmPayload::asConfigPath("assets/vm_config_multi_tenants.json"),
 #else
-                             "MicrodroidTestNativeLib.so",
+                             VmPayload::asBinaryName("MicrodroidTestNativeLib.so"),
 #endif
                              /* debuggable = */ true, // should be false for production VMs
                              /* protected_vm = */ true, 150));
