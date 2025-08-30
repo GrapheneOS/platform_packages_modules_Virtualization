@@ -164,6 +164,52 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
                 .isEqualTo(HEX_STRING_ZERO);
     }
 
+    @Test
+    public void testLog_consoleOutput() throws Exception {
+        prepareCustomDebugPolicy("avf_debug_policy_with_log.dtbo");
+
+        CommandResult result = tryLaunchProtectedNonDebuggableVm();
+
+        assertWithMessage("Microdroid's console message should have been enabled")
+                .that(hasConsoleOutput(result))
+                .isTrue();
+    }
+
+    @Test
+    public void testLog_logcat() throws Exception {
+        prepareCustomDebugPolicy("avf_debug_policy_with_log.dtbo");
+
+        tryLaunchProtectedNonDebuggableVm();
+
+        assertWithMessage("Microdroid's logcat should have been enabled")
+                .that(hasMicrodroidLogcatOutput())
+                .isTrue();
+    }
+
+    @Test
+    public void testNoLog_noConsoleOutput() throws Exception {
+        prepareCustomDebugPolicy("avf_debug_policy_without_log.dtbo");
+
+        CommandResult result = tryLaunchProtectedNonDebuggableVm();
+
+        assertWithMessage("Microdroid's console message shouldn't have been disabled, " + result)
+                .that(hasConsoleOutput(result))
+                .isFalse();
+    }
+
+    @Test
+    public void testNoLog_noLogcat() throws Exception {
+        prepareCustomDebugPolicy("avf_debug_policy_without_log.dtbo");
+
+        assertThrows(
+                "Microdroid shouldn't be recognized because of missing adb connection",
+                DeviceRuntimeException.class,
+                () ->
+                        launchProtectedVmAndWaitForBootCompleted(
+                                MICRODROID_DEBUG_NONE, BOOT_FAILURE_WAIT_TIME_MS));
+        assertThat(hasMicrodroidLogcatOutput()).isFalse();
+    }
+
     private boolean isDebugPolicyEnabled(@NonNull String dtPropertyPath)
             throws DeviceNotAvailableException {
         CommandRunner runner = new CommandRunner(getDevice());
@@ -246,10 +292,10 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
                         " ",
                         VIRT_APEX + "bin/vm",
                         "run-app",
+                        "--debug",
+                        "none",
                         "--log",
                         MICRODROID_LOG_PATH,
-                        "--console",
-                        MICRODROID_CONSOLE_PATH,
                         "--protected",
                         getPathForPackage(PACKAGE_NAME),
                         TEST_ROOT + "idsig",
