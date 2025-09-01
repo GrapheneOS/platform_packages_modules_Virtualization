@@ -45,7 +45,9 @@ use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
-use crate::verify::{integrity_protect_tenant_apks, verify_payload};
+use crate::verify::{
+    integrity_protect_tenant_apks, validate_tenant_apks_against_tenant_config, verify_payload,
+};
 use crate::vm_internal_service::VmInternalService;
 use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
@@ -579,7 +581,11 @@ fn try_run_payload(
         .context("Failed to mount extra apks")?;
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
-    integrity_protect_tenant_apks()?;
+    let tenant_apk_data_extracted_from_manifest = integrity_protect_tenant_apks()?;
+    validate_tenant_apks_against_tenant_config(
+        &tenant_apk_data_extracted_from_manifest,
+        &config.tenants,
+    )?;
     let tenant_apk_count =
         config.tenants.iter().filter(|t| matches!(t, TenantConfig::Apk(_))).count();
     mount_additional_apks(&mut zipfuse, tenant_apk_count, AdditionalApkType::TenantApk)

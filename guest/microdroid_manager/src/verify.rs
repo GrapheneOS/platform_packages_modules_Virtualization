@@ -22,9 +22,12 @@ use glob::glob;
 use itertools::sorted;
 use log::{info, warn};
 use microdroid_metadata::{write_metadata, Metadata};
+use microdroid_payload_config::TenantConfig;
 use openssl::sha::sha512;
 use rustutils::system_properties;
+use std::collections::HashSet;
 use std::fs::OpenOptions;
+use std::hash::Hash;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::str;
@@ -175,7 +178,7 @@ pub fn verify_payload(
     })
 }
 
-pub fn integrity_protect_tenant_apks() -> Result<()> {
+pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
     // sort globbed paths to match apks (tenant-{idx}) and idsigs (tenant-{idx})
     // e.g. "tenant-0" corresponds to "tenant-idsig-0"
     let tenant_apks =
@@ -188,8 +191,14 @@ pub fn integrity_protect_tenant_apks() -> Result<()> {
         tenant_apks.len(),
         tenant_idsigs.len()
     );
+    let tenant_hashes_from_idsig: Vec<_> = tenant_idsigs
+        .iter()
+        .map(|idsig| {
+            get_apk_root_hash_from_idsig(idsig).expect("Can't find root hash from tenant idsig")
+        })
+        .collect();
 
-    let tenant_apk_names: Vec<_> =
+    let tenant_apk_block_dev: Vec<_> =
         (0..tenant_apks.len()).map(|i| format!("tenant-apk-{}", i)).collect();
     let mut apkdmverity_arguments: Vec<ApkDmverityArgument> = vec![];
     for (i, tenant_apk) in tenant_apks.iter().enumerate() {
@@ -197,7 +206,7 @@ pub fn integrity_protect_tenant_apks() -> Result<()> {
             ApkDmverityArgument {
                 apk: tenant_apk.to_str().unwrap(),
                 idsig: tenant_idsigs[i].to_str().unwrap(),
-                name: &tenant_apk_names[i],
+                name: &tenant_apk_block_dev[i],
                 saved_root_hash: None,
             }
         });
@@ -206,7 +215,48 @@ pub fn integrity_protect_tenant_apks() -> Result<()> {
     let mut apkdmverity_child = run_apkdmverity(&apkdmverity_arguments)?;
 
     apkdmverity_child.wait()?;
+    let tenant_apks_data = tenant_hashes_from_idsig
+        .into_iter()
+        .enumerate()
+        .map(|(i, root_hash)| {
+            let mount_path = format!("/dev/block/mapper/{}", &tenant_apk_block_dev[i]);
+            get_data_from_apk(&mount_path, root_hash, false)
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(tenant_apks_data)
+}
+
+// Validation logic includes:
+// 1. The tenant_apk a subset of apks described in tenant_config (comparison is by package name)
+// 2. The order of description in tenant_config is irrelevant.
+pub(crate) fn validate_tenant_apks_against_tenant_config(
+    tenant_apk: &[ApkData], // data extracted from the apk passed from host
+    tenant_config: &[TenantConfig],
+) -> Result<()> {
+    let apk_names_in_config = tenant_config
+        .iter()
+        .filter_map(|config| {
+            if let TenantConfig::Apk(config) = config {
+                Some(config.name.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    let tenant_apk = tenant_apk.iter().map(|apk| apk.package_name.clone()).collect::<Vec<_>>();
+    ensure!(
+        is_subset(&tenant_apk, &apk_names_in_config),
+        MicrodroidError::PayloadVerificationFailed(format!(
+            "Tenant apk {tenant_apk:?} must be subset of TenancyConfig {tenant_config:?}"
+        ))
+    );
     Ok(())
+}
+
+fn is_subset<T: Eq + Hash + Clone>(a: &[T], b: &[T]) -> bool {
+    let b_set: HashSet<_> = b.iter().collect();
+    a.iter().all(|item| b_set.contains(item))
 }
 
 fn validate_manifest_info(info: &ApkManifestInfo) -> Result<()> {
