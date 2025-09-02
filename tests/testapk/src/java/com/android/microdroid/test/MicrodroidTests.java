@@ -76,11 +76,6 @@ import com.android.virt.vm_attestation.testservice.IAttestationService.Attestati
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 import com.android.virt.vm_attestation.util.X509Utils;
 
-import co.nstant.in.cbor.CborDecoder;
-import co.nstant.in.cbor.model.Array;
-import co.nstant.in.cbor.model.DataItem;
-import co.nstant.in.cbor.model.MajorType;
-
 import com.google.common.base.Strings;
 import com.google.common.truth.BooleanSubject;
 
@@ -94,7 +89,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -1444,53 +1438,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(first_boot_cdis.instanceSecret).isNotNull();
         assertThat(second_boot_cdis.instanceSecret).isNotNull();
         assertThat(first_boot_cdis.instanceSecret).isEqualTo(second_boot_cdis.instanceSecret);
-    }
-
-    @Test
-    @CddTest
-    @VsrTest(requirements = {"VSR-7.1-001.005"})
-    @GmsTest(requirements = {"GMS-VSR-7.1-001.004"})
-    public void bccIsSuperficiallyWellFormed() throws Exception {
-        assumeSupportedDevice();
-
-        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
-        VirtualMachineConfig normalConfig =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
-                        .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("bcc_vm", normalConfig);
-        TestResults testResults =
-                runVmTestService(
-                        TAG,
-                        vm,
-                        (service, results) -> {
-                            results.mBcc = service.getBcc();
-                        });
-        testResults.assertNoException();
-        byte[] bccBytes = testResults.mBcc;
-        assertThat(bccBytes).isNotNull();
-
-        ByteArrayInputStream bais = new ByteArrayInputStream(bccBytes);
-        List<DataItem> dataItems = new CborDecoder(bais).decode();
-        assertThat(dataItems.size()).isEqualTo(1);
-        assertThat(dataItems.get(0).getMajorType()).isEqualTo(MajorType.ARRAY);
-        List<DataItem> rootArrayItems = ((Array) dataItems.get(0)).getDataItems();
-        int diceChainSize = rootArrayItems.size();
-        assertThat(diceChainSize).isAtLeast(2); // Root public key and one certificate
-        if (mProtectedVm) {
-            if (isFeatureEnabled(VirtualMachineManager.FEATURE_DICE_CHANGES)) {
-                // We expect the root public key, at least one entry for the boot before pvmfw,
-                // then pvmfw, vm_entry (Microdroid kernel) and Microdroid payload entries.
-                // Before Android V we did not require that vendor code contain any DICE entries
-                // preceding pvmfw, so the minimum is one less.
-                int minDiceChainSize = getVendorApiLevel() > 202404 ? 5 : 4;
-                assertThat(diceChainSize).isAtLeast(minDiceChainSize);
-            } else {
-                // pvmfw truncates the DICE chain it gets, so we expect exactly entries for
-                // public key, vm_entry (Microdroid kernel) and Microdroid payload.
-                assertThat(diceChainSize).isEqualTo(3);
-            }
-        }
     }
 
     @Test

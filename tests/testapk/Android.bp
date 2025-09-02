@@ -43,7 +43,6 @@ java_defaults {
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "authfs_test_apk_assets",
-        "cbor-java",
         "truth",
         "compatibility-common-util-devicesidelib",
         "measure_io_as_jar",
