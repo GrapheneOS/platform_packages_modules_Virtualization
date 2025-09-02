@@ -1,13 +1,19 @@
 #!/bin/bash
+cat << EOF > /home/droid/weston.env
+MESA_LOADER_DRIVER_OVERRIDE=zink
+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/gfxstream_vk_icd.json
+MESA_VK_WSI_DEBUG=sw,linear
+EOF
 sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty7 sleep 1d
-systemctl --user start weston&
+(sleep 3s; systemctl --user start weston)& disown
 export DISPLAY=:0
 export MESA_LOADER_DRIVER_OVERRIDE=zink
 
 unset LIBGL_ALWAYS_SOFTWARE
 
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/gfxstream_vk_icd.json
-# remove this after TILING_OPTIMAL-based swap chain is used.
+
+# remove them after TILING_OPTIMAL-based swap chain is used.
 export MESA_VK_WSI_DEBUG=sw,linear
 export XWAYLAND_NO_GLAMOR=1
 export LIBGL_KOPPER_DRI2=1
