@@ -737,7 +737,6 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "params")
     @TestCaseName("{method}_protectedVm_{0}_os_{1}")
-    @Ignore("b/341087884") // TODO(b/341087884): fix & re-enable
     public void testTombstonesAreGeneratedUponKernelCrash(boolean protectedVm, String os)
             throws Exception {
         // Preconditions
