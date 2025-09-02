@@ -1824,9 +1824,6 @@ impl VmInstance {
     }
 
     fn try_shutdown(&self) -> bool {
-        // Notify monitor_tracing_sysprop_thread that VM is dying, so it should stop.
-        let prop_name = format!("persist.avf_vm.traced_relay.enable.{}", self.name);
-        system_properties::write(&prop_name, "-1").unwrap();
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
             return guest_agent
