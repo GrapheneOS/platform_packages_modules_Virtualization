@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"لمبے وقت تک چلنے والے ٹاسکس"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"سسٹم ایونٹس"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ٹیب"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"گرافکس ایکسلریشن"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"گرافکس ایکسلریشن کے لیے رینڈرر کو تبدیل کریں۔"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"تبدیلی کو لاگو کرنے کے لیے براہ کرم ٹرمینل ایپ کو دوبارہ شروع کریں۔"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"سافٹ ویئر رینڈرر"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"‫GPU کے ذریعے تیز کردہ رینڈرر"</string>
 </resources>

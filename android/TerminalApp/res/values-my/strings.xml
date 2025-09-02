@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"အချိန်ကြာသော လုပ်ဆောင်စရာများ"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"စနစ်ဖြစ်စဉ်များ"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"တဘ်"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"ဂရပ်ဖစ် လည်ပတ်နှုန်းမြှင့်ခြင်း"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ဂရပ်ဖစ် လည်ပတ်နှုန်းမြှင့်ခြင်းအတွက် ပုံဖော်စနစ်ကို ပြောင်းပါ။"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ပြောင်းလဲမှုသက်ရောက်ရန် ‘တာမီနယ်’ အက်ပ်ကို ပြန်စပါ။"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ဆော့ဖ်ဝဲပုံဖော်စနစ်"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-လည်ပတ်နှုန်းမြှင့်သည့် ပုံဖော်စနစ်"</string>
 </resources>

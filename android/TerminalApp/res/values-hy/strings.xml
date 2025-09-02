@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Երկար աշխատող առաջադրանքներ"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Համակարգի իրադարձություններ"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Ներդիր"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Գրաֆիկական արագացում"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Փոխեք գրաֆիկական արագացման արտապատկերիչը"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Փոփոխությունները կիրառելու համար վերագործարկեք Տերմինալ հավելվածը։"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Ծրագրային արտապատկերիչ"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-ի միջոցով արագացված արտապատկերիչ"</string>
 </resources>

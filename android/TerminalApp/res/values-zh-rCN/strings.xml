@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"长时间运行的任务"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"系统事件"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"标签页"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"图形加速"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"更改图形加速的渲染程序。"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"请重启终端应用以应用更改。"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"软件渲染程序"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU 加速的渲染程序"</string>
 </resources>

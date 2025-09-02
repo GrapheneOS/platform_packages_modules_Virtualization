@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ਲੰਬੇ ਸਮੇਂ ਤੱਕ ਚੱਲਣ ਵਾਲੇ ਕਾਰਜ"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"ਸਿਸਟਮ ਇਵੈਂਟ"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ਟੈਬ"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"ਗ੍ਰਾਫ਼ਿਕਸ ਐਕਸੈੱਲਰੇਸ਼ਨ"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ਗ੍ਰਾਫ਼ਿਕਸ ਐਕਸੈੱਲਰੇਸ਼ਨ ਲਈ ਰੈਂਡਰਰ ਨੂੰ ਬਦਲੋ।"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ਕਿਰਪਾ ਕਰਕੇ ਤਬਦੀਲੀ ਨੂੰ ਲਾਗੂ ਕਰਨ ਲਈ ਟਰਮੀਨਲ ਐਪ ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕਰੋ।"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ਸਾਫ਼ਟਵੇਅਰ ਰੈਂਡਰਰ"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-ਐਕਸੈੱਲਰੇਟਿਡ ਰੈਂਡਰਰ"</string>
 </resources>

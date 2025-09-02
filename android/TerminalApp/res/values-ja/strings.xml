@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"長時間実行タスク"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"システム イベント"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"タブ"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"グラフィック アクセラレーション"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"グラフィック アクセラレーションのレンダラを変更します。"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"変更を適用するには、Terminal アプリを再起動してください。"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ソフトウェア レンダラ"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU アクセラレーテッド レンダラ"</string>
 </resources>

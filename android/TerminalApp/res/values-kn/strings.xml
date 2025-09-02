@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ದೀರ್ಘಾವಧಿಯ ಕಾರ್ಯಗಳು"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"ಸಿಸ್ಟಮ್ ಈವೆಂಟ್‌ಗಳು"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ಟ್ಯಾಬ್"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"ಗ್ರಾಫಿಕ್ಸ್ ವೇಗವರ್ಧನೆ"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ಗ್ರಾಫಿಕ್ಸ್ ವೇಗವರ್ಧನೆಗಾಗಿ ರೆಂಡರರ್ ಅನ್ನು ಬದಲಾಯಿಸಿ."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ಬದಲಾವಣೆಯನ್ನು ಅನ್ವಯಿಸಲು ಟರ್ಮಿನಲ್ ಆ್ಯಪ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ಸಾಫ್ಟ್‌ವೇರ್ ರೆಂಡರರ್"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-ವೇಗವರ್ಧಿತ ರೆಂಡರರ್"</string>
 </resources>
