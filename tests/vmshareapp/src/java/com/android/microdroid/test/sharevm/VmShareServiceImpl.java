@@ -306,5 +306,10 @@ public class VmShareServiceImpl extends Service {
         public void requestEncryptedStoreSetup() {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public String getHostname() {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }

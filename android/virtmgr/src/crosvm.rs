@@ -37,6 +37,7 @@ use psi_rs::{init_psi_monitor, parse_psi_line, register_psi_monitor, PsiResource
 use regex::{Captures, Regex};
 use rpcbinder::RpcServer;
 use rustutils::system_properties;
+use rustutils::system_properties::PropertyWatcher;
 use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
@@ -335,6 +336,14 @@ impl CrosvmCommand {
 
         if let Some(params) = &config.params {
             self.args(["--params", params]);
+        }
+
+        if !config.name.is_empty() {
+            if !is_valid_vm_name(&config.name) {
+                bail!("Invalid VM name \"{}\"", config.name);
+            }
+            let hostname_param = format!("hostname={}", config.name);
+            self.args(["--params", &hostname_param]);
         }
 
         if let Some(initrd) = &config.initrd {
@@ -1159,6 +1168,8 @@ pub enum VmState {
         child: Arc<SharedChild>,
         /// The thread waiting for crosvm to finish.
         monitor_vm_exit_thread: JoinHandle<()>,
+        /// The thread monitoring for changes to the tracing sysprop of this VM.
+        monitor_tracing_sysprop_thread: Option<JoinHandle<()>>,
     },
     /// The VM is being shut down.
     ShuttingDown {
@@ -1204,6 +1215,7 @@ impl VmState {
             let mut config = *config;
             let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
+            let should_monitor_tracing_sysprop = instance.debuggable;
 
             let vhost_fs_devices = run_virtiofs(&config)?;
 
@@ -1272,6 +1284,20 @@ impl VmState {
                 })
                 .expect("Failed to create vm_exit_monitor thread");
 
+            let monitor_tracing_sysprop_thread = if should_monitor_tracing_sysprop {
+                let instance_clone = instance.clone();
+                Some(
+                    thread::Builder::new()
+                        .name("vm_monitor_tracing_thread".to_string())
+                        .spawn(move || {
+                            instance_clone.monitor_tracing_sysprop();
+                        })
+                        .expect("Failed to create vm_monitor_tracing thread"),
+                )
+            } else {
+                None
+            };
+
             if detect_hangup {
                 let child_clone = child.clone();
                 thread::Builder::new()
@@ -1283,7 +1309,8 @@ impl VmState {
             }
 
             // If it started correctly, update the state.
-            *self = VmState::Running { child, monitor_vm_exit_thread };
+            *self =
+                VmState::Running { child, monitor_vm_exit_thread, monitor_tracing_sysprop_thread };
             Ok(())
         } else {
             *self = state;
@@ -1387,8 +1414,8 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
 pub struct VmInstance {
     /// The current state of the VM.
     pub vm_state: Mutex<VmState>,
-    /// Condvar that is notified when `vm_state` becomes `Dead`.
-    vm_dead_convar: Condvar,
+    /// Condvar that is notified when `vm_state` changes.
+    vm_state_changed_condvar: Condvar,
     /// Whether this VmInstance requires VirtualMachineService
     pub requires_vm_service: bool,
     /// Hold the reference to RpcServer running VirtualMachineService
@@ -1401,6 +1428,8 @@ pub struct VmInstance {
     pub name: String,
     /// Whether the VM is a protected VM.
     pub protected: bool,
+    /// Whether the VM is debuggable
+    pub debuggable: bool,
     /// Directory of temporary files used by the VM while it is running.
     pub temporary_directory: PathBuf,
     /// The UID of the process which requested the VM.
@@ -1451,6 +1480,7 @@ impl VmInstance {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: CrosvmConfig,
+        debuggable: bool,
         temporary_directory: PathBuf,
         requester_uid: u32,
         requester_debug_pid: i32,
@@ -1469,13 +1499,14 @@ impl VmInstance {
             .map_or_else(|| format!("{requester_uid}"), |u| u.name);
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
-            vm_dead_convar: Condvar::new(),
+            vm_state_changed_condvar: Condvar::new(),
             requires_vm_service,
             vm_service: Mutex::new(None),
             cid,
             crosvm_control_socket_path: temporary_directory.join("crosvm.sock"),
             name,
             protected,
+            debuggable,
             temporary_directory,
             requester_uid,
             requester_debug_pid,
@@ -1545,6 +1576,10 @@ impl VmInstance {
             }
         }
 
+        // Notify monitor_tracing_sysprop_thread that VM is dying, so it should stop.
+        let prop_name = format!("persist.avf_vm.traced_relay.enable.{}", self.name);
+        system_properties::write(&prop_name, "-1").unwrap();
+
         // Then we really reap the process.
         let result = child.wait();
         match &result {
@@ -1597,7 +1632,7 @@ impl VmInstance {
         let failure_reason = cleaner_context.failure_reason.lock().unwrap();
 
         *self.vm_state.lock().unwrap() = VmState::Dead;
-        self.vm_dead_convar.notify_all();
+        self.vm_state_changed_condvar.notify_all();
 
         info!("{} exited", &self);
 
@@ -1672,6 +1707,80 @@ impl VmInstance {
         }
     }
 
+    /// Monitors changes to the perist.avf.vm_tracing.{name}.enabled sysprop.
+    fn monitor_tracing_sysprop(&self) {
+        let prop_name = format!("persist.avf_vm.traced_relay.enable.{}", self.name);
+        let ret = self
+            .vm_state_changed_condvar
+            .wait_while(self.vm_state.lock().unwrap(), |state| {
+                if let VmState::Running { .. } = state {
+                    // We should always be able to hold the lock. In the unlikely scenario when
+                    // lock() fails we just bail.
+                    self.guest_agent.lock().is_ok_and(|guest_agent| guest_agent.is_none())
+                } else {
+                    false
+                }
+            })
+            .unwrap();
+        drop(ret);
+
+        if !self.is_vm_running() {
+            // VM stopped before guest_agent was registered. Just bail from this thread.
+            return;
+        }
+        info!("monitoring changes to {prop_name}");
+        let mut prop = PropertyWatcher::new(&prop_name).unwrap();
+        loop {
+            // Wait for any change to the sysprop.
+            prop.wait(None).unwrap();
+            match prop.read(|_, value| Ok(value.parse::<i32>()?)) {
+                Err(e) => {
+                    // We should always be able to read the sysprop, so if we fail we just stop the
+                    // thread.
+                    error!("Failed to read {prop_name}: {:#?}", e);
+                    break;
+                }
+                // -1 Means that VM is stopping, just finish this thread.
+                Ok(-1) => break,
+                Ok(value) => {
+                    if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
+                        let start = if value == 1 {
+                            true
+                        } else if value == 0 {
+                            false
+                        } else {
+                            warn!("{prop_name} has unexpected value {value}");
+                            continue;
+                        };
+                        if start {
+                            info!(
+                                "starting traced_relay service for VM {} with CID {}",
+                                self.name, self.cid
+                            );
+                        } else {
+                            info!(
+                                "stopping traced_relay service for VM {} with CID {}",
+                                self.name, self.cid
+                            );
+                        }
+                        if let Err(e) = guest_agent.startOrStopTracedRelayService(start) {
+                            error!(
+                                "Failed to start/stop traced_relay service for VM {} with CID {}: {:#?}",
+                                self.name, self.cid, e
+                            );
+                        }
+                    } else {
+                        warn!(
+                            "guest_agent is not registered for VM {} with CID {}",
+                            self.name, self.cid
+                        );
+                    }
+                    continue;
+                }
+            }
+        }
+    }
+
     fn measure_vm_status(&self, pid: u32) {
         match get_guest_time(pid) {
             Ok(guest_time) => self.vm_metric.lock().unwrap().cpu_guest_time = Some(guest_time),
@@ -1715,6 +1824,9 @@ impl VmInstance {
     }
 
     fn try_shutdown(&self) -> bool {
+        // Notify monitor_tracing_sysprop_thread that VM is dying, so it should stop.
+        let prop_name = format!("persist.avf_vm.traced_relay.enable.{}", self.name);
+        system_properties::write(&prop_name, "-1").unwrap();
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
             return guest_agent
@@ -1744,7 +1856,12 @@ impl VmInstance {
                 );
                 drop(vm_state_mg); // make sure self.vm_state is not held
 
-                let VmState::Running { child, monitor_vm_exit_thread } = vm_state else {
+                let VmState::Running {
+                    child,
+                    monitor_vm_exit_thread,
+                    monitor_tracing_sysprop_thread,
+                } = vm_state
+                else {
                     unreachable!();
                 };
 
@@ -1763,7 +1880,7 @@ impl VmInstance {
                 // or killed, the state is set to Dead. See monitor_vm_exit_thread.
                 let shutdown_timeout = Duration::from_secs(5);
                 let result = self
-                    .vm_dead_convar
+                    .vm_state_changed_condvar
                     .wait_timeout_while(self.vm_state.lock().unwrap(), shutdown_timeout, |state| {
                         matches!(state, VmState::ShuttingDown { .. })
                     })
@@ -1779,6 +1896,10 @@ impl VmInstance {
                 // Wait once again. If the graceful shutdown was successful, this will return
                 // immediately.
                 monitor_vm_exit_thread.join().unwrap();
+
+                if let Some(monitor_tracing_sysprop_thread) = monitor_tracing_sysprop_thread {
+                    monitor_tracing_sysprop_thread.join().unwrap();
+                }
 
                 // Drop the channel to signal shutdown is finished.
                 // Done explicitly just for code visibility.
@@ -1938,6 +2059,13 @@ impl VmInstance {
             bail!("Failed to resume VM");
         }
         Ok(())
+    }
+
+    /// Sets the guest agent for this VM.
+    pub fn set_guest_agent(&self, guest_agent: &Strong<dyn aidl::IGuestAgent>) {
+        *self.guest_agent.lock().unwrap() = Some(guest_agent.clone());
+        self.vm_state_changed_condvar.notify_all();
+        info!("VM with CID {} has registered a guest agent", self.cid);
     }
 }
 
@@ -2249,6 +2377,12 @@ fn path_to_cstring(path: &Path) -> CString {
     panic!("bad path: {path:?}");
 }
 
+// This is a duplicate of the check done by pvmfw.
+// We do it in virtmgr just to fail fast without even trying to boot a VM with invalid name.
+fn is_valid_vm_name(name: &str) -> bool {
+    name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 struct SwiotlbEstimateInputs {
     guest_page_size: u32,
     block_count: u32,
@@ -2355,5 +2489,12 @@ mod tests {
             }),
             10
         );
+    }
+
+    #[test]
+    fn test_is_valid_vm_name() {
+        assert!(is_valid_vm_name("val_id-na42me"));
+        assert!(!is_valid_vm_name("\\invalid_%name%"));
+        assert!(!is_valid_vm_name("a_🐸_in_vm_name"));
     }
 }
