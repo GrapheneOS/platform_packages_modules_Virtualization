@@ -1584,6 +1584,12 @@ fn has_common_debug_policy(fdt: &Fdt, debug_feature_name: &CStr) -> libfdt::Resu
     Ok(false) // if the policy doesn't exist or not 1, don't enable the debug feature
 }
 
+fn validate_hostname(hostname: &str) -> bool {
+    hostname
+        .strip_prefix("=")
+        .is_some_and(|s| s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+}
+
 fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Result<()> {
     let has_crashkernel = has_common_debug_policy(fdt, c"ramdump")?;
     let has_console = has_common_debug_policy(fdt, c"log")?;
@@ -1593,6 +1599,7 @@ fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Resu
         ("crashkernel", Box::new(|_| has_crashkernel)),
         ("console", Box::new(|_| has_console)),
         ("coherent_pool", Box::new(|_| true)),
+        ("hostname", Box::new(|v| if let Some(v) = v { validate_hostname(v) } else { false })),
     ];
 
     // parse and filter out unwanted

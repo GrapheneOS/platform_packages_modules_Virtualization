@@ -118,4 +118,9 @@ interface ITestService {
      * This method is used for testing the delay encrypted store setup feature.
      */
     void requestEncryptedStoreSetup();
+
+    /**
+     * Returns the hostname of the VM.
+     */
+    String getHostname();
 }

@@ -51,7 +51,7 @@ use crate::verify::{
 use crate::vm_internal_service::VmInternalService;
 use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binder::{self, BinderFeatures, Interface, IntoBinderResult, SpIBinder, Strong};
+use binder::{self, BinderFeatures, ExceptionCode, Interface, IntoBinderResult, SpIBinder, Strong};
 use dice_driver::DiceDriver;
 use glob::glob;
 use keystore2_crypto::ZVec;
@@ -1238,6 +1238,22 @@ impl IGuestAgent for GuestAgent {
     fn startDumpVsockServer(&self, args: &[String]) -> binder::Result<i32> {
         info!("Default dump handler with args: {args:?}");
         start_dump_service().or_service_specific_exception(-1)
+    }
+
+    fn startOrStopTracedRelayService(&self, start: bool) -> binder::Result<()> {
+        if start {
+            info!("Requested to start traced_relay service");
+        } else {
+            info!("Requested to stop traced_relay service");
+        }
+        if !is_debuggable() {
+            return Err(anyhow!("traced_relay is only supported for debuggable VMs"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        let value = if start { "2" } else { "0" };
+        system_properties::write("persist.traced.enable", value)
+            .context("failed to start traced_relay service")
+            .or_service_specific_exception(-1)
     }
 
     fn shutdownAsync(&self) -> binder::Result<()> {

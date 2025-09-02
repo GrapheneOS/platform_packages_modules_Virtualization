@@ -694,6 +694,7 @@ public abstract class MicrodroidDeviceTestBase {
         public int mPageSize;
         public byte[] mPayloadRpData;
         public boolean mIsNewInstance;
+        public String mHostname;
 
         public void assertNoException() {
             if (mException != null) {
