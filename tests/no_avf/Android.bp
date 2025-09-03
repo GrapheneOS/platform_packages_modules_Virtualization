@@ -16,6 +16,7 @@ android_test {
         "truth",
     ],
     sdk_version: "test_current",
+    target_sdk_version: "36",
     compile_multilib: "both",
     min_sdk_version: "34",
 }
