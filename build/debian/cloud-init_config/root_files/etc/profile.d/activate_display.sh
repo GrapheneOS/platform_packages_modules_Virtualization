@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Only a user account can run this script.
-if [[ "$USER" == "droid" ]]; then
+# Only a user account in an interactive shell can run this script.
+if [[ "$USER" == "droid" && -n "$PS1" ]]; then
   if grep -q -w "gfxstream_enabled" /proc/cmdline; then
     source /usr/local/bin/enable_gfxstream
   else
