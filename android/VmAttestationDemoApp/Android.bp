@@ -4,13 +4,11 @@ package {
 
 android_app {
     name: "VmAttestationDemoApp",
-    installable: true,
     jni_libs: ["libvm_attestation_payload"],
     jni_uses_platform_apis: true,
     use_embedded_native_libs: true,
     sdk_version: "system_current",
     compile_multilib: "first",
-    apex_available: ["com.android.virt"],
 }
 
 rust_defaults {
