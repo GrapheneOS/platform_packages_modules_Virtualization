@@ -1735,13 +1735,17 @@ impl VmInstance {
             prop.wait(None).unwrap();
             match prop.read(|_, value| Ok(value.parse::<i32>()?)) {
                 Err(e) => {
-                    // We should always be able to read the sysprop, so if we fail we just stop the
-                    // thread.
                     error!("Failed to read {prop_name}: {:#?}", e);
-                    break;
+                    continue;
                 }
                 // -1 Means that VM is stopping, just finish this thread.
-                Ok(-1) => break,
+                Ok(-1) => {
+                    info!("VM has stopped resetting {prop_name}");
+                    if let Err(e) = system_properties::write(&prop_name, "") {
+                        error!("Failed to reset {prop_name}: {:#?}", e);
+                    }
+                    break;
+                }
                 Ok(value) => {
                     if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
                         let start = if value == 1 {
