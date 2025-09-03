@@ -60,17 +60,6 @@ internal class DisplayProvider(
         cursorView.setZOrderMediaOverlay(true)
     }
 
-    fun notifyDisplayIsGoingToInvisible() {
-        // When the display is going to be invisible (by putting in the background), save the frame
-        // of the main surface so that we can re-draw it next time the display becomes visible. This
-        // is to save the duration of time where nothing is drawn by VM.
-        try {
-            displayService.saveFrameForSurface(false /* forCursor */)
-        } catch (e: RemoteException) {
-            throw RuntimeException("Failed to save frame for the main surface", e)
-        }
-    }
-
     enum class SurfaceKind {
         MAIN,
         CURSOR,
@@ -94,12 +83,9 @@ internal class DisplayProvider(
                 Log.e(TAG, "Failed to present surface $surfaceKind to VM", e)
             }
             try {
-                when (surfaceKind) {
-                    SurfaceKind.MAIN -> displayService.drawSavedFrameForSurface(isForCursor())
-                    SurfaceKind.CURSOR -> {
-                        val stream = createNewCursorStream()
-                        displayService.setCursorStream(stream)
-                    }
+                if (surfaceKind == SurfaceKind.CURSOR) {
+                    val stream = createNewCursorStream()
+                    displayService.setCursorStream(stream)
                 }
             } catch (e: Exception) {
                 // TODO: don't consume exceptions here too
