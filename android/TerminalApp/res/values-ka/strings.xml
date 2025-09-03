@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ხანგრძლივად გაშვებული ამოცანები"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"სისტემური მოვლენები"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ჩანართი"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"გრაფიკის დაჩქარება"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"რენდერის შეცვლა გრაფიკის დაჩქარებისთვის."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ცვლილებისთვის გადატვირთეთ ტერმინალის აპი."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"პროგრამული უზრუნველყოფის რენდერი"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-თი დაჩქარებული რენდერი"</string>
 </resources>

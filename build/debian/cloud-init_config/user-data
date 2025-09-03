@@ -24,7 +24,7 @@ users:
 write_files:
   - content: |
       # Show title of current running command
-      trap 'echo -ne "\e]0;\$BASH_COMMAND\007"' DEBUG
+      trap 'echo -ne "\e]0;$BASH_COMMAND\007"' DEBUG
     path: /home/droid/.bash_aliases
     permission: '0644'
     owner: droid:users

@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tugasan yang memakan masa yang lama"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Peristiwa sistem"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Pecutan Grafik"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Tukar pemapar untuk pecutan grafik."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Sila mulakan semula apl Terminal untuk menggunakan perubahan."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Pemapar perisian"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Pemapar dipercepat GPU"</string>
 </resources>

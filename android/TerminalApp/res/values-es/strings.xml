@@ -96,4 +96,14 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tareas de larga duración"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Eventos del sistema"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
+    <!-- no translation found for settings_graphics_acceleration_title (2179805215574039827) -->
+    <skip />
+    <!-- no translation found for settings_graphics_acceleration_subtitle (1878600071238287413) -->
+    <skip />
+    <!-- no translation found for settings_graphics_acceleration_toast_reboot_required (1101999250451963292) -->
+    <skip />
+    <!-- no translation found for settings_graphics_acceleration_software_renderer (7443233826862412750) -->
+    <skip />
+    <!-- no translation found for settings_graphics_acceleration_hardware_renderer (7414936498621308937) -->
+    <skip />
 </resources>

@@ -96,4 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"งานที่ใช้เวลานาน"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"เหตุการณ์ของระบบ"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"แท็บ"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"การเร่งกราฟิก"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"เปลี่ยนโปรแกรมแสดงผลสำหรับการเร่งกราฟิก"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"โปรดรีสตาร์ทแอป Terminal เพื่อให้การเปลี่ยนแปลงมีผล"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"โปรแกรมแสดงผลซอฟต์แวร์"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"โปรแกรมแสดงผลที่เร่งด้วย GPU"</string>
 </resources>
