@@ -191,6 +191,9 @@ pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
         tenant_apks.len(),
         tenant_idsigs.len()
     );
+    if tenant_apks.is_empty() {
+        return Ok(vec![]);
+    }
     let tenant_hashes_from_idsig: Vec<_> = tenant_idsigs
         .iter()
         .map(|idsig| {
