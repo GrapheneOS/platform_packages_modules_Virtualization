@@ -18,7 +18,7 @@ use crate::aidl;
 use anyhow::{anyhow, Context, Error, Result};
 use libfdt::{Fdt, FdtError};
 use log::{info, warn};
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use std::ffi::{CString, NulError};
 use std::fs;
 use std::io::ErrorKind;

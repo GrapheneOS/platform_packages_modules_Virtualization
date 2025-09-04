@@ -47,7 +47,7 @@ use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
     BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo, Vsock::Vsock,
 };
 use rpcbinder::RpcServer;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;

@@ -36,8 +36,8 @@ use nix::{
 use psi_rs::{init_psi_monitor, parse_psi_line, register_psi_monitor, PsiResource, PsiStallType};
 use regex::{Captures, Regex};
 use rpcbinder::RpcServer;
-use rustutils::system_properties;
-use rustutils::system_properties::PropertyWatcher;
+use rustutils::android::system_properties;
+use rustutils::android::system_properties::PropertyWatcher;
 use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;

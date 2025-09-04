@@ -72,9 +72,9 @@ use payload::load_metadata;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
 use rpcbinder::{RpcServer, RpcSession};
-use rustutils::sockets::android_get_control_socket;
-use rustutils::system_properties;
-use rustutils::system_properties::PropertyWatcher;
+use rustutils::android::sockets::android_get_control_socket;
+use rustutils::android::system_properties;
+use rustutils::android::system_properties::PropertyWatcher;
 use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
 use std::collections::HashSet;

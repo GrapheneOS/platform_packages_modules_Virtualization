@@ -21,7 +21,7 @@ use dice_driver::DiceDriver;
 use diced_open_dice::{Hidden, OwnedDiceArtifacts, HIDDEN_SIZE};
 use microdroid_metadata::PayloadMetadata;
 use openssl::sha::{sha512, Sha512};
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use std::iter::once;
 
 /// Perform an open DICE derivation for the payload.
