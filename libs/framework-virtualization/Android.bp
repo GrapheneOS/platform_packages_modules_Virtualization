@@ -11,13 +11,13 @@ java_sdk_library {
 
     srcs: [
         "src/**/*.java",
-        ":avf-build-flags-java-gen",
     ],
     static_libs: [
         "android.system.virtualizationservice-java",
         "avf_aconfig_flags_java",
         // For android.sysprop.HypervisorProperties
         "PlatformProperties",
+        "AvfBuildFlags",
     ],
 
     apex_available: ["com.android.virt"],
@@ -64,5 +64,20 @@ gensrcs {
             true: "sed -ie 's/@support_long_running_vms_placeholder/true/g'",
             default: "sed -ie 's/@support_long_running_vms_placeholder/false/g'",
         }) + " $(genDir)/tmp.java && " +
+        select(release_flag("RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY"), {
+            true: "sed -ie 's/@support_advance_multitenancy/true/g'",
+            default: "sed -ie 's/@support_advance_multitenancy/false/g'",
+        }) + " $(genDir)/tmp.java && " +
         " cp $(genDir)/tmp.java $(out)",
+}
+
+java_library {
+    name: "AvfBuildFlags",
+    srcs: [":avf-build-flags-java-gen"],
+    sdk_version: "none",
+    system_modules: "core-all-system-modules",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
 }
