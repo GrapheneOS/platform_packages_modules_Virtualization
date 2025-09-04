@@ -103,15 +103,11 @@ class TerminalTabFragment() : Fragment() {
         override fun onReceivedTitle(view: WebView?, title: String?) {
             super.onReceivedTitle(view, title)
             title?.let { originalTitle ->
-                val ttydSuffix = " | login -f droid (localhost)"
+                // When the session is created. The format of the title will be
+                // 'droid@localhost: ~ | login -f droid (localhost)'
+                // or 'droid@debian: ~ | login -f droid (debian)'.
                 val displayedTitle =
-                    if (originalTitle.endsWith(ttydSuffix)) {
-                        // When the session is created. The format of the title will be
-                        // 'droid@localhost: ~ | login -f droid (localhost)'.
-                        originalTitle.dropLast(ttydSuffix.length)
-                    } else {
-                        originalTitle
-                    }
+                    originalTitle.substringBeforeLast(" | login -f droid (")
 
                 terminalViewModel.terminalTabs[id]
                     ?.customView
