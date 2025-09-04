@@ -728,35 +728,44 @@ fn try_run_payload(
     };
 
     let mut tenant_processes: Vec<Child> = Vec::new();
+    let mut tenant_index = 0;
     for tenant in config.tenants.iter() {
-        match tenant {
-            // For now, we only support APEX
+        let tenant_command = match tenant {
             TenantConfig::Apex(apex_conf) => {
                 if let Some(task) = &apex_conf.task {
-                    let tenant_command =
-                        get_task_command(&apex_conf.name, task, /* is_apex */ true)
-                            .context("Failed to find tenant")?;
-                    let should_notify = !notified_payload_started;
-                    let tenant_process = exec_task(
-                        tenant_command,
-                        cgroup_config.as_ref(),
-                        service,
-                        std_redirect.as_ref().as_ref(),
-                        should_notify,
-                    )
-                    .context("Failed to run tenant")?;
-                    if should_notify {
-                        notified_payload_started = true;
-                    }
-                    if payload_process.is_none() {
-                        payload_process = Some(tenant_process);
-                    } else {
-                        tenant_processes.push(tenant_process);
-                    }
+                    let command = get_task_command(&apex_conf.name, task, /* is_apex */ true)
+                        .context("Failed to find tenant in apex")?;
+                    Some(command)
+                } else {
+                    None
                 }
             }
             TenantConfig::Apk(apk_conf) => {
-                warn!("APK tenants are not supported, skipping: {:?}", apk_conf.name);
+                if let Some(task) = &apk_conf.task {
+                    let mnt_dir = format!("/mnt/tenant-apk/{tenant_index}");
+                    tenant_index += 1;
+                    let command = get_task_command(&mnt_dir, task, /* is_apex */ false)
+                        .context("Failed to find tenant in apk")?;
+                    Some(command)
+                } else {
+                    None
+                }
+            }
+        };
+        if let Some(command) = tenant_command {
+            let tenant_process = exec_task(
+                command,
+                cgroup_config.as_ref(),
+                service,
+                std_redirect.as_ref().as_ref(),
+                /* notify_payload_started */ !notified_payload_started,
+            )
+            .context("Failed to run tenant")?;
+            notified_payload_started = true;
+            if payload_process.is_none() {
+                payload_process = Some(tenant_process);
+            } else {
+                tenant_processes.push(tenant_process);
             }
         }
     }

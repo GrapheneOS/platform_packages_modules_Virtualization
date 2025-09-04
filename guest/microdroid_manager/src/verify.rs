@@ -143,8 +143,8 @@ pub fn verify_payload(
         system_properties::write("ctl.start", "apexd-vm")?;
     }
 
-    // TODO(inseob): add timeout
-    apkdmverity_child.wait()?;
+    let exitcode = apkdmverity_child.wait()?;
+    ensure!(exitcode.success(), "apkdmverity failed with {:?}", exitcode);
 
     // Do the full verification if the root_hash is un-trustful. This requires the full scanning of
     // the APK file and therefore can be very slow if the APK is large. Note that this step is
@@ -191,6 +191,9 @@ pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
         tenant_apks.len(),
         tenant_idsigs.len()
     );
+    if tenant_apks.is_empty() {
+        return Ok(vec![]);
+    }
     let tenant_hashes_from_idsig: Vec<_> = tenant_idsigs
         .iter()
         .map(|idsig| {
@@ -214,7 +217,9 @@ pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
     // Start apkdmverity and wait for the dm-verify block
     let mut apkdmverity_child = run_apkdmverity(&apkdmverity_arguments)?;
 
-    apkdmverity_child.wait()?;
+    let exitcode = apkdmverity_child.wait()?;
+    ensure!(exitcode.success(), "apkdmverity failed with {:?}", exitcode);
+
     let tenant_apks_data = tenant_hashes_from_idsig
         .into_iter()
         .enumerate()

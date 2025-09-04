@@ -55,7 +55,7 @@ use std::{
     fmt::{self, Debug, Formatter},
     fs::File,
     os::unix::io::{AsFd, AsRawFd, IntoRawFd, OwnedFd},
-    sync::{Arc, LazyLock, Mutex},
+    sync::Arc,
     time::Duration,
 };
 
@@ -141,8 +141,6 @@ impl VirtualizationService {
     }
 
     fn new_with_path(virtmgr_path: &str) -> Result<VirtualizationService, io::Error> {
-        static SPAWN_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
         let (wait_fd, ready_fd) = posix_pipe()?;
         let (client_fd, server_fd) = posix_socketpair()?;
         let mut command = Command::new(virtmgr_path);
@@ -166,14 +164,7 @@ impl VirtualizationService {
         };
         command.arg0(format!("virtmgr_{prog_name}"));
 
-        // SharedChild::spawn is not thread-safe. A race condition can occur between creating
-        // a pipe and setting the CLOEXEC flag, potentially leaking the file descriptor to a
-        // child process. We use a mutex to guard the call as a workaround.
-        // TODO(b/441646314): remove lock once SharedChild::spawn becomes thread safe.
-        let guard = SPAWN_LOCK.lock();
         let process = SharedChild::spawn(&mut command)?;
-        drop(guard);
-
         let is_tty = isatty(std::io::stdout().as_raw_fd())?;
         let cur_group_id = if is_tty { Some(tcgetpgrp(std::io::stdout())?) } else { None };
         let new_group_id = Pid::from_raw(process.id().try_into().unwrap());

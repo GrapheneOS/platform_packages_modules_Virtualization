@@ -1189,17 +1189,41 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_apk", config);
-
-        TestResults testResults =
-                runVmTestService(
-                        TAG,
-                        vm,
-                        (ts, tr) -> {
-                            tr.mExtraApkTestProp =
-                                    ts.readProperty(
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            // Note (from vm_config_apk_tenant): this service is registered by
+                            // tenant task.
+                            ITestService tsTenant =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String val =
+                                    tsTenant.readProperty(
                                             "debug.microdroid.test.tenant_packages_mounted");
-                        });
-        assertThat(testResults.mExtraApkTestProp).isEqualTo("PASS");
+                            prop.complete(val);
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        } finally {
+                            // TODO(b/440575189): The VM would not stop automatically, since one
+                            // payload is MicrodroidIdleNativeLib & does not exit.
+                            // Force close it for now.
+                            forceStop(vm);
+                        }
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(prop.getNow(null))
+                .isEqualTo("PASS");
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_apk's onPayloadReady"
+                                + " callback")
+                .that(exception.getNow(null))
+                .isNull();
     }
 
     @Test
