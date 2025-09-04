@@ -91,7 +91,7 @@ impl IsolatedCompilationService {
         let comp_os = self
             .instance_manager
             .start_current_instance(CompOsType::OdRefresh, base_os)
-            .context("Starting CompOS")?;
+            .context("Starting CompOS for staged APEXes")?;
 
         let target_dir_name = PENDING_ARTIFACTS_SUBDIR.to_owned();
         let task = OdrefreshTask::start(
@@ -113,7 +113,7 @@ impl IsolatedCompilationService {
         let comp_os = self
             .instance_manager
             .start_test_instance(CompOsType::OdRefresh, prefer_staged, base_os)
-            .context("Starting CompOS")?;
+            .context("Starting CompOS for test compile")?;
 
         let target_dir_name = TEST_ARTIFACTS_SUBDIR.to_owned();
         let task = OdrefreshTask::start(
