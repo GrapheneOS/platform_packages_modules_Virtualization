@@ -323,6 +323,11 @@ fn try_main() -> Result<()> {
             .with_tag("microdroid_manager")
             .with_max_level(log::LevelFilter::Info),
     );
+
+    // Manually log the panic message because we don't get tombstones for microdroid_manager
+    // (crashdump isn't given permission to in the SELinux policy).
+    std::panic::set_hook(Box::new(|panic_info| error!("{panic_info}")));
+
     info!("started.");
 
     let mut mask = SigSet::empty();
