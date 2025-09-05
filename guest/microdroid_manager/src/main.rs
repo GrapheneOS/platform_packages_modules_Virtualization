@@ -625,15 +625,16 @@ fn try_run_payload(
             let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
             info!("Delaying preparation of encryptedstore as requested ...");
             std::thread::spawn(move || {
-                // Should we violently crash here? Or should we just log the error and let payload
-                // decide what to do?
                 if let Err(e) = delayed_prepare_encryptedstore(
                     encrypted_store_mode,
                     service_clone,
                     vm_secret_for_enc_store,
                     std_redirect_for_enc_store,
                 ) {
-                    error!("delayed prepare encrypted store failed: {e:#?}");
+                    // Ideally we'd communicate this back to the main thread and error out in a
+                    // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
+                    // keep it simple and just SIGABRT.
+                    panic!("delayed prepare encrypted store failed: {e:#?}");
                 }
             });
             None
