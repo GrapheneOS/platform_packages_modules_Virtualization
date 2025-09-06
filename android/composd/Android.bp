@@ -11,6 +11,7 @@ rust_defaults {
         "android.system.composd-rust",
         "android.system.virtualizationservice-rust",
         "compos_aidl_interface-rust",
+        "libaconfig_compos_flags_rust",
         "libandroid_logger",
         "libanyhow",
         "libbinder_rs",

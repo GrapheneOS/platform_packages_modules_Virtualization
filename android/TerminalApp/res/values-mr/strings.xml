@@ -96,14 +96,9 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"दीर्घवेळ रन होणाऱ्या टास्क"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"सिस्टीम इव्‍हेंट"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"टॅब"</string>
-    <!-- no translation found for settings_graphics_acceleration_title (2179805215574039827) -->
-    <skip />
-    <!-- no translation found for settings_graphics_acceleration_subtitle (1878600071238287413) -->
-    <skip />
-    <!-- no translation found for settings_graphics_acceleration_toast_reboot_required (1101999250451963292) -->
-    <skip />
-    <!-- no translation found for settings_graphics_acceleration_software_renderer (7443233826862412750) -->
-    <skip />
-    <!-- no translation found for settings_graphics_acceleration_hardware_renderer (7414936498621308937) -->
-    <skip />
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"ग्राफिक ॲक्सिलरेशन"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ग्राफिक अ‍ॅक्सिलरेशनसाठी रेंडरर बदला."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"कृपया बदल लागू करण्यासाठी टर्मिनल अ‍ॅप रीस्टार्ट करा."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"सॉफ्टवेअर रेंडरर"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-अ‍ॅक्सिलरेटेड रेंडरर"</string>
 </resources>
