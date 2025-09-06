@@ -87,17 +87,20 @@ public class X509Utils {
                 .contains("O=AVF");
     }
 
+    // TODO: (b/439820104) Add an xTS running VM attestation in Multi-tenant VM and check that the
+    // `vmTenantComponents` contains the expected tenant.
     private static void verifyAvfAttestationExtension(
             X509Certificate cert, byte[] challenge, String payloadApk) throws Exception {
         byte[] extensionValue = cert.getExtensionValue(AVF_ATTESTATION_EXTENSION_OID);
         ASN1OctetString extString = ASN1OctetString.getInstance(extensionValue);
         ASN1Sequence seq = ASN1Sequence.getInstance(extString.getOctets());
-        // AVF attestation extension should contain 3 elements in the following format:
+        // AVF attestation extension should contain 4 elements in the following format:
         //
         //  AttestationExtension ::= SEQUENCE {
         //     attestationChallenge       OCTET_STRING,
         //     isVmSecure                 BOOLEAN,
-        //     vmComponents               SEQUENCE OF VmComponent,
+        //     vmPayloadComponents        SEQUENCE OF VmComponent,
+        //     vmTenantComponents         SEQUENCE OF VmComponent,
         //  }
         //   VmComponent ::= SEQUENCE {
         //     name               UTF8String,
@@ -105,7 +108,7 @@ public class X509Utils {
         //     codeHash           OCTET STRING,
         //     authorityHash      OCTET STRING,
         //  }
-        assertThat(seq).hasSize(3);
+        assertThat(seq).hasSize(4);
 
         ASN1OctetString expectedChallenge = new DEROctetString(challenge);
         assertThat(seq.getObjectAt(0)).isEqualTo(expectedChallenge);
@@ -114,6 +117,8 @@ public class X509Utils {
                 .isEqualTo(ASN1Boolean.FALSE);
         ASN1Sequence vmComponents = ASN1Sequence.getInstance(seq.getObjectAt(2));
         assertExtensionContainsPayloadApk(vmComponents, payloadApk);
+        ASN1Sequence vmTenantComponents = ASN1Sequence.getInstance(seq.getObjectAt(3));
+        assertThat(vmTenantComponents.size()).isEqualTo(0);
     }
 
     private static void assertExtensionContainsPayloadApk(
