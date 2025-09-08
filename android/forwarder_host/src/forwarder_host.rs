@@ -32,7 +32,7 @@ use jni::objects::{JIntArray, JObject, JValue};
 use jni::sys::jint;
 use jni::JNIEnv;
 use log::{debug, error, info, warn};
-use nix::sys::eventfd::EventFd;
+use nix::sys::eventfd::{EfdFlags, EventFd};
 use poll_token_derive::PollToken;
 use vmm_sys_util::poll::{PollContext, PollToken};
 use vsock::VsockListener;
@@ -45,8 +45,9 @@ const VMADDR_PORT_ANY: u32 = u32::MAX;
 static SHUTDOWN_EVT: LazyLock<EventFd> =
     LazyLock::new(|| EventFd::new().expect("Could not create shutdown eventfd"));
 
-static UPDATE_EVT: LazyLock<EventFd> =
-    LazyLock::new(|| EventFd::new().expect("Could not create update eventfd"));
+static UPDATE_EVT: LazyLock<EventFd> = LazyLock::new(|| {
+    EventFd::from_flags(EfdFlags::EFD_SEMAPHORE).expect("Could not create update eventfd")
+});
 
 static UPDATE_QUEUE: LazyLock<Arc<Mutex<VecDeque<u16>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(VecDeque::new())));
