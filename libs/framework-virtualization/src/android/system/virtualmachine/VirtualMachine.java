@@ -745,7 +745,10 @@ public class VirtualMachine implements AutoCloseable {
             // already created), FileAlreadyExistsException is thrown.
             Files.createDirectory(vmDir.toPath());
         } catch (FileAlreadyExistsException e) {
-            throw new VirtualMachineException("virtual machine already exists", e);
+            throw new VirtualMachineException(
+                    "virtual machine already exists",
+                    e,
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS);
         } catch (IOException e) {
             throw new VirtualMachineException("failed to create directory for VM", e);
         }
@@ -854,9 +857,13 @@ public class VirtualMachine implements AutoCloseable {
                 // no-op
                 return;
             case STATUS_RUNNING:
-                throw new VirtualMachineException("VM is not in stopped state");
+                throw new VirtualMachineException(
+                        "VM is not in stopped state",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING);
             case STATUS_DELETED:
-                throw new VirtualMachineException("VM has been deleted");
+                throw new VirtualMachineException(
+                        "VM has been deleted",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED);
         }
     }
 
@@ -915,11 +922,15 @@ public class VirtualMachine implements AutoCloseable {
     private IVirtualMachine getRunningVm() throws VirtualMachineException {
         switch (getStatus()) {
             case STATUS_STOPPED:
-                throw new VirtualMachineException("VM is not in running state");
+                throw new VirtualMachineException(
+                        "VM is not in running state",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
             case STATUS_RUNNING:
                 return mVirtualMachine;
             case STATUS_DELETED:
-                throw new VirtualMachineException("VM has been deleted");
+                throw new VirtualMachineException(
+                        "VM has been deleted",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED);
             default:
                 // unreachable code. Just make compiler happy.
                 return null;
@@ -1538,7 +1549,10 @@ public class VirtualMachine implements AutoCloseable {
                 try {
                     extraApkFiles.add(ParcelFileDescriptor.open(extraApk.apk, MODE_READ_ONLY));
                 } catch (FileNotFoundException e) {
-                    throw new VirtualMachineException("Failed to open extra APK", e);
+                    throw new VirtualMachineException(
+                            "Failed to open extra APK",
+                            e,
+                            VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
                 }
             }
             appConfig.payload.getPayloadConfig().extraApks = extraApkFiles;
@@ -1827,7 +1841,8 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     private String getHostConsoleName() throws VirtualMachineException {
         if (!mConnectVmConsole) {
-            throw new VirtualMachineException("Host console is not enabled");
+            throw new VirtualMachineException(
+                    "Host console is not enabled", VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createPtyConsole();
@@ -1854,7 +1869,9 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     public InputStream getConsoleOutput() throws VirtualMachineException {
         if (!mVmOutputCaptured) {
-            throw new VirtualMachineException("Capturing vm outputs is turned off");
+            throw new VirtualMachineException(
+                    "Capturing vm outputs is turned off",
+                    VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createVmOutputPipes();
@@ -1878,7 +1895,9 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     public OutputStream getConsoleInput() throws VirtualMachineException {
         if (!mVmConsoleInputSupported) {
-            throw new VirtualMachineException("VM console input is not supported");
+            throw new VirtualMachineException(
+                    "VM console input is not supported",
+                    VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createVmInputPipes();
@@ -1905,7 +1924,9 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     public InputStream getLogOutput() throws VirtualMachineException {
         if (!mVmOutputCaptured) {
-            throw new VirtualMachineException("Capturing vm outputs is turned off");
+            throw new VirtualMachineException(
+                    "Capturing vm outputs is turned off",
+                    VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createVmOutputPipes();
@@ -1946,14 +1967,16 @@ public class VirtualMachine implements AutoCloseable {
                 }
             }
         }
-        throw new VirtualMachineException("VM is not running");
+        throw new VirtualMachineException(
+                "VM is not running", VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
     }
 
     /** @hide */
     public void suspend() throws VirtualMachineException {
         synchronized (mLock) {
             if (mVirtualMachine == null) {
-                throw new VirtualMachineException("VM is not running");
+                throw new VirtualMachineException(
+                        "VM is not running", VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
             }
             try {
                 mVirtualMachine.suspend();
@@ -1969,7 +1992,8 @@ public class VirtualMachine implements AutoCloseable {
     public void resume() throws VirtualMachineException {
         synchronized (mLock) {
             if (mVirtualMachine == null) {
-                throw new VirtualMachineException("VM is not running");
+                throw new VirtualMachineException(
+                        "VM is not running", VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
             }
             try {
                 mVirtualMachine.resume();
@@ -2060,7 +2084,8 @@ public class VirtualMachine implements AutoCloseable {
             if (!oldConfig.isCompatibleWith(newConfig)
                     || oldConfig.getEncryptedStorageBytes()
                             > newConfig.getEncryptedStorageBytes()) {
-                throw new VirtualMachineException("incompatible config");
+                throw new VirtualMachineException(
+                        "incompatible config", VirtualMachineException.CODE_CONFIG_INCOMPATIBLE);
             }
             checkStopped();
 
@@ -2359,7 +2384,10 @@ public class VirtualMachine implements AutoCloseable {
                     parseTenantApkListFromPayloadConfig(
                             new JsonReader(new InputStreamReader(inputStream)));
         } catch (IOException e) {
-            throw new VirtualMachineException("Couldn't parse tenant apks from the vm config", e);
+            throw new VirtualMachineException(
+                    "Couldn't parse tenant apks from the vm config",
+                    e,
+                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
 
         List<ApkSpec> apks = new ArrayList<>(apkList.size());
@@ -2415,7 +2443,8 @@ public class VirtualMachine implements AutoCloseable {
             reader.endObject();
             return apks;
         } catch (IOException e) {
-            throw new VirtualMachineException(e);
+            throw new VirtualMachineException(
+                    e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
     }
 
@@ -2455,7 +2484,8 @@ public class VirtualMachine implements AutoCloseable {
             reader.endObject(); // End of the main JSON object
             return apks;
         } catch (IOException e) {
-            throw new VirtualMachineException(e);
+            throw new VirtualMachineException(
+                    e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
     }
 
@@ -2477,7 +2507,10 @@ public class VirtualMachine implements AutoCloseable {
 
             return extraApks;
         } catch (IOException e) {
-            throw new VirtualMachineException("Couldn't parse extra apks from the vm config", e);
+            throw new VirtualMachineException(
+                    "Couldn't parse extra apks from the vm config",
+                    e,
+                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
     }
 
@@ -2494,7 +2527,10 @@ public class VirtualMachine implements AutoCloseable {
                                 .getApplicationInfo(
                                         packageName, PackageManager.ApplicationInfoFlags.of(0));
             } catch (PackageManager.NameNotFoundException e) {
-                throw new VirtualMachineException("Extra APK package not found", e);
+                throw new VirtualMachineException(
+                        "Extra APK package not found",
+                        e,
+                        VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
             }
 
             extraApks.add(
