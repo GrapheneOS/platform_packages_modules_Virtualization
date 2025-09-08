@@ -323,6 +323,11 @@ fn try_main() -> Result<()> {
             .with_tag("microdroid_manager")
             .with_max_level(log::LevelFilter::Info),
     );
+
+    // Manually log the panic message because we don't get tombstones for microdroid_manager
+    // (crashdump isn't given permission to in the SELinux policy).
+    std::panic::set_hook(Box::new(|panic_info| error!("{panic_info}")));
+
     info!("started.");
 
     let mut mask = SigSet::empty();
@@ -594,15 +599,6 @@ fn try_run_payload(
     // Wait until apex config is done. (e.g. linker configuration for apexes)
     wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
 
-    let std_redirect = if is_debuggable() {
-        // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-        Arc::new(Some(rustutils::inherited_fd::take_fd_ownership(
-            env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
-        )?))
-    } else {
-        Arc::new(None)
-    };
-
     let vm_internal_binder = BnVmInternalService::new_binder(
         VmInternalService::new(service.clone()),
         BinderFeatures::default(),
@@ -618,22 +614,21 @@ fn try_run_payload(
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        let std_redirect_for_enc_store = std_redirect.clone();
         if config.delay_encrypted_store_setup {
             let service_clone = service.clone();
             let vm_secret_for_enc_store = vm_secret.clone();
             let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
             info!("Delaying preparation of encryptedstore as requested ...");
             std::thread::spawn(move || {
-                // Should we violently crash here? Or should we just log the error and let payload
-                // decide what to do?
                 if let Err(e) = delayed_prepare_encryptedstore(
                     encrypted_store_mode,
                     service_clone,
                     vm_secret_for_enc_store,
-                    std_redirect_for_enc_store,
                 ) {
-                    error!("delayed prepare encrypted store failed: {e:#?}");
+                    // Ideally we'd communicate this back to the main thread and error out in a
+                    // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
+                    // keep it simple and just SIGABRT.
+                    panic!("delayed prepare encrypted store failed: {e:#?}");
                 }
             });
             None
@@ -641,10 +636,7 @@ fn try_run_payload(
             info!("Preparing encryptedstore ...");
             let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
-            Some(
-                prepare_encryptedstore(&key, std_redirect_for_enc_store.as_ref().as_ref())
-                    .context("encryptedstore run")?,
-            )
+            Some(prepare_encryptedstore(&key).context("encryptedstore run")?)
         }
     } else {
         None
@@ -718,7 +710,6 @@ fn try_run_payload(
                 main_command,
                 cgroup_config.as_ref(),
                 service,
-                std_redirect.as_ref().as_ref(),
                 /* notify_payload_started */ true,
             )
             .context("Failed to run payload")?,
@@ -757,7 +748,6 @@ fn try_run_payload(
                 command,
                 cgroup_config.as_ref(),
                 service,
-                std_redirect.as_ref().as_ref(),
                 /* notify_payload_started */ !notified_payload_started,
             )
             .context("Failed to run tenant")?;
@@ -1120,7 +1110,6 @@ fn exec_task(
     payload_cmd: PayloadCommand,
     cgroup_config: Option<&CgroupConfig>,
     service: &Strong<dyn IVirtualMachineService>,
-    std_redirect: Option<&OwnedFd>,
     notify_payload_started: bool,
 ) -> Result<Child> {
     info!("executing main task {:?}...", payload_cmd.command);
@@ -1160,14 +1149,6 @@ fn exec_task(
 
     // Never accept input from outside
     command.stdin(Stdio::null());
-
-    let (stdout, stderr) = if let Some(fd) = std_redirect {
-        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
-    } else {
-        (Stdio::null(), Stdio::null())
-    };
-    command.stdout(stdout);
-    command.stderr(stderr);
 
     if notify_payload_started {
         info!("notifying payload started");
@@ -1219,20 +1200,13 @@ fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Resul
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(key: &[u8], std_redirect: Option<&OwnedFd>) -> Result<Child> {
-    let (stdout, stderr) = if let Some(fd) = std_redirect {
-        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
-    } else {
-        (Stdio::null(), Stdio::null())
-    };
+fn prepare_encryptedstore(key: &[u8]) -> Result<Child> {
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
         .arg(hex::encode(key))
         .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
-        .stdout(stdout)
-        .stderr(stderr)
         .spawn()
         .context("encryptedstore failed")
 }
@@ -1291,7 +1265,6 @@ fn delayed_prepare_encryptedstore(
     encrypted_store_mode: EncryptedStoreMode,
     service: Strong<dyn IVirtualMachineService>,
     vm_secret: Arc<VmSecret>,
-    std_redirect: Arc<Option<OwnedFd>>,
 ) -> Result<()> {
     info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
     wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
@@ -1308,7 +1281,7 @@ fn delayed_prepare_encryptedstore(
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
         }
     }
-    prepare_encryptedstore(&key, std_redirect.as_ref().as_ref())?
+    prepare_encryptedstore(&key)?
         .wait()
         .context("failed waiting for encryptedstore binary to finish")?;
 

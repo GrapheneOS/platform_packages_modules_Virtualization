@@ -220,7 +220,8 @@ public class VirtualMachineManager {
         VirtualMachine vm = getVmByName(name);
         if (vm != null) {
             throw new VirtualMachineException(
-                    "Failed to create VirtualMachine with name " + name + ". Already exist");
+                    "Failed to create VirtualMachine with name " + name + ". Already exist",
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS);
         }
         vm = VirtualMachine.create(mContext, name, config);
         mVmsByName.put(name, new WeakReference<>(vm));
@@ -288,7 +289,8 @@ public class VirtualMachineManager {
             vm = getVmByName(name);
             if (vm != null) {
                 throw new VirtualMachineException(
-                        "Failed to import VirtualMachine with name " + name + ". Already exist");
+                        "Failed to import VirtualMachine with name " + name + ". Already exist",
+                        VirtualMachineException.CODE_NAME_ALREADY_EXISTS);
             }
             vm = VirtualMachine.fromDescriptor(mContext, name, vmDescriptor);
             mVmsByName.put(name, new WeakReference<>(vm));
