@@ -30,11 +30,9 @@ use dm::{crypt::CipherType, util};
 use log::{error, info, warn};
 use rpcbinder::RpcSession;
 use rustutils::system_properties;
-use std::ffi::CString;
 use std::fs::{self, create_dir_all, OpenOptions};
-use std::io::{Error, Read, Write};
+use std::io::{Read, Write};
 use std::os::android::fs::MetadataExt;
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -364,31 +362,15 @@ fn resize_fs(device: &Path) -> Result<bool> {
 
 fn mount(source: &Path, mountpoint: &Path) -> Result<()> {
     create_dir_all(mountpoint).with_context(|| format!("Failed to create {:?}", &mountpoint))?;
-    let mount_options = CString::new(
-        "fscontext=u:object_r:encryptedstore_fs:s0,context=u:object_r:encryptedstore_file:s0,discard",
-    )
-    .unwrap();
-    let source = CString::new(source.as_os_str().as_bytes())?;
-    let mountpoint = CString::new(mountpoint.as_os_str().as_bytes())?;
-    let fstype = CString::new("ext4").unwrap();
-
-    // SAFETY: The source, target and filesystemtype are valid C strings. For ext4, data is expected
-    // to be a C string as well, which it is. None of these pointers are retained after mount
-    // returns.
-    let ret = unsafe {
-        libc::mount(
-            source.as_ptr(),
-            mountpoint.as_ptr(),
-            fstype.as_ptr(),
-            libc::MS_NOSUID | libc::MS_NODEV | libc::MS_NOEXEC,
-            mount_options.as_ptr() as *const std::ffi::c_void,
-        )
-    };
-    if ret < 0 {
-        Err(Error::last_os_error()).context("mount failed")
-    } else {
-        Ok(())
-    }
+    use nix::mount::MsFlags;
+    nix::mount::mount(
+        Some(source),
+        mountpoint,
+        Some(c"ext4"),
+        MsFlags::MS_NOSUID | MsFlags::MS_NODEV | MsFlags::MS_NOEXEC,
+        Some(c"fscontext=u:object_r:encryptedstore_fs:s0,context=u:object_r:encryptedstore_file:s0,discard"),
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]
