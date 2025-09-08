@@ -15,7 +15,7 @@
 use crate::instance::{ApexData, ApkData, EncryptedStoreMode, MicrodroidData};
 use crate::payload::{get_apex_data_from_payload, to_metadata};
 use crate::MicrodroidError;
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkmanifest::{get_manifest_info, ApkManifestInfo};
 use apkverify::{extract_signed_data, verify, V4Signature};
 use glob::glob;
@@ -23,11 +23,11 @@ use itertools::sorted;
 use log::{info, warn};
 use microdroid_metadata::{write_metadata, Metadata};
 use microdroid_payload_config::TenantConfig;
+use microdroid_payload_config::TenantConfiguration;
 use openssl::sha::sha512;
 use rustutils::system_properties;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs::OpenOptions;
-use std::hash::Hash;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::str;
@@ -235,33 +235,55 @@ pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
 // Validation logic includes:
 // 1. The tenant_apk a subset of apks described in tenant_config (comparison is by package name)
 // 2. The order of description in tenant_config is irrelevant.
+// 3. The rollback_index (or version_code if rollback_index is missing) >=  min_version in
+//    tenant_config
+// 4. The cert_hash of tenant apk == expected_authority in tenant_config
 pub(crate) fn validate_tenant_apks_against_tenant_config(
     tenant_apk: &[ApkData], // data extracted from the apk passed from host
     tenant_config: &[TenantConfig],
 ) -> Result<()> {
-    let apk_names_in_config = tenant_config
+    let config_map: HashMap<&String, &TenantConfiguration> = tenant_config
         .iter()
         .filter_map(|config| {
             if let TenantConfig::Apk(config) = config {
-                Some(config.name.clone())
+                Some((&config.name, config))
             } else {
                 None
             }
         })
-        .collect::<Vec<_>>();
-    let tenant_apk = tenant_apk.iter().map(|apk| apk.package_name.clone()).collect::<Vec<_>>();
-    ensure!(
-        is_subset(&tenant_apk, &apk_names_in_config),
-        MicrodroidError::PayloadVerificationFailed(format!(
-            "Tenant apk {tenant_apk:?} must be subset of TenancyConfig {tenant_config:?}"
-        ))
-    );
+        .collect();
+    for apk_data in tenant_apk {
+        let Some(config) = config_map.get(&apk_data.package_name) else {
+            bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                "APK ({}) found without a corresponding TenantConfig ({:?})",
+                apk_data.package_name, tenant_config
+            )));
+        };
+        // Version check!
+        if let Some(min_version) = config.min_version {
+            // Check rollback_index (or version_code if rollback_index is missing)  against
+            // min_version
+            let version = apk_data.rollback_index.map_or(apk_data.version_code, u64::from);
+            if version < min_version {
+                bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                    "APK ('{}') version ({}) is less than min_version ({})",
+                    apk_data.package_name, version, min_version
+                )));
+            }
+        }
+        // Expected authority check!
+        if let Some(expected_auth) = &config.expected_authority {
+            // Check version_code against min_version
+            let cert_hash = hex::encode(&apk_data.cert_hash);
+            if *expected_auth != cert_hash {
+                bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                    "APK ('{}') cert_hash ('{}') mismatches expected authority ({})",
+                    apk_data.package_name, cert_hash, expected_auth
+                )));
+            }
+        }
+    }
     Ok(())
-}
-
-fn is_subset<T: Eq + Hash + Clone>(a: &[T], b: &[T]) -> bool {
-    let b_set: HashSet<_> = b.iter().collect();
-    a.iter().all(|item| b_set.contains(item))
 }
 
 fn validate_manifest_info(info: &ApkManifestInfo) -> Result<()> {
