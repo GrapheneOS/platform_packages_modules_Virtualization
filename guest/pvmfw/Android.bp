@@ -563,6 +563,11 @@ bootimg {
     }),
     header_version: "3",
     partition_name: "pvmfw",
+    partition_size: select(soong_config_variable("ANDROID", "pvmfw_partition_size"), {
+        any @ size: size,
+        default: unset,
+    }),
+
     enabled: false,
     target: {
         android_arm64: {
