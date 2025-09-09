@@ -161,10 +161,10 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         }
     }
 
-    private boolean canBootMicrodroidWithMemory(int mem)
+    private OptionalLong canBootMicrodroidWithMemory(int mem)
             throws VirtualMachineException, InterruptedException, IOException {
         VirtualMachineConfig normalConfig =
-                newVmConfigBuilderWithPayloadBinary("MicrodroidIdleNativeLib.so")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_io.json")
                         .setDebugLevel(DEBUG_LEVEL_NONE)
                         .setMemoryBytes(mem * ONE_MEBI)
                         .setShouldUseHugepages(true)
@@ -174,11 +174,15 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         final int trialCount = 5;
         for (int i = 0; i < trialCount; i++) {
             forceCreateNewVirtualMachine("test_vm_minimum_memory", normalConfig);
-
-            if (tryBootVm(TAG, "test_vm_minimum_memory").payloadStarted) return true;
+            VirtualMachine vm = getVirtualMachineManager().get("test_vm_minimum_memory");
+            MemoryUsageListener listener = new MemoryUsageListener(this::executeCommand);
+            if (BenchmarkVmListener.create(listener).tryRunToFinish(TAG, vm)
+                    && listener.mCrosvm != null) {
+                return OptionalLong.of(listener.mCrosvm.mGuestRss / 1024);
+            }
         }
 
-        return false;
+        return OptionalLong.empty();
     }
 
     @Test
@@ -186,14 +190,18 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
             throws VirtualMachineException, InterruptedException, IOException {
         assume().withMessage("Skip on CF; too slow").that(isCuttlefish()).isFalse();
 
-        int lo = 16, hi = 512, minimum = 0;
+        setupDebugfs();
+
+        int lo = 16, hi = 512;
+        long minimumRss = 0;
         boolean found = false;
 
         while (lo <= hi) {
             int mid = (lo + hi) / 2;
-            if (canBootMicrodroidWithMemory(mid)) {
+            OptionalLong rss = canBootMicrodroidWithMemory(mid);
+            if (rss.isPresent()) {
                 found = true;
-                minimum = mid;
+                minimumRss = rss.getAsLong();
                 hi = mid - 1;
             } else {
                 lo = mid + 1;
@@ -203,7 +211,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         assertThat(found).isTrue();
 
         Bundle bundle = new Bundle();
-        bundle.putInt(METRIC_NAME_PREFIX + "minimum_required_memory", minimum);
+        bundle.putLong(METRIC_NAME_PREFIX + "minimum_required_memory", minimumRss);
         mInstrumentation.sendStatus(0, bundle);
     }
 
@@ -603,7 +611,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         @Override
         public void onPayloadReady(VirtualMachine vm, IBenchmarkService service)
                 throws RemoteException {
-            int vmPid = ProcessUtil.getCrosvmPid(Os.getpid(), "test_vm_mem_usage", mShellExecutor);
+            int vmPid = ProcessUtil.getCrosvmPid(Os.getpid(), vm.getName(), mShellExecutor);
 
             mMemTotal = service.getMemInfoEntry("MemTotal");
             mMemFree = service.getMemInfoEntry("MemFree");
