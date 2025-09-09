@@ -81,6 +81,22 @@ public class VirtualMachineManager {
     @GuardedBy("sCreateLock")
     private final Map<String, WeakReference<VirtualMachine>> mVmsByName = new ArrayMap<>();
 
+    // TODO(b/442597104): Remove this API once the cache is gone.
+    /**
+     * Clear internal cache of `VirtualMachine`s.
+     *
+     * <p>The cache makes it difficult to test some cases without a device restart or careful GC
+     * manipulation.
+     *
+     * @hide
+     */
+    @TestApi
+    public void testOnlyClearCache() {
+        synchronized (sCreateLock) {
+            mVmsByName.clear();
+        }
+    }
+
     /**
      * Capabilities of the virtual machine implementation.
      *

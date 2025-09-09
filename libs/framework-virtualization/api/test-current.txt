@@ -28,6 +28,7 @@ package android.system.virtualmachine {
     method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isFeatureEnabled(String) throws android.system.virtualmachine.VirtualMachineException;
     method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isRemoteAttestationSupported() throws android.system.virtualmachine.VirtualMachineException;
     method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isUpdatableVmSupported() throws android.system.virtualmachine.VirtualMachineException;
+    method public void testOnlyClearCache();
     field public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
     field public static final String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
     field public static final String FEATURE_NETWORK = "com.android.kvm.NETWORK";
