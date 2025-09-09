@@ -27,19 +27,13 @@ pub struct ProcHelper {
 }
 
 impl ProcHelper {
-    fn get_socket_inode(fd: &Path) -> Result<Option<u64>, Error> {
-        let link = match fs::read_link(fd) {
-            Ok(link) => link,
-            Err(e) if e.kind() == ErrorKind::PermissionDenied => {
-                return Ok(None);
-            }
-            e => e.with_context(|| format!("Failed to readlink {fd:?}"))?,
-        };
-        let path_str = link.to_str().ok_or(anyhow!("Failed to readlink {fd:?}"))?;
+    fn get_socket_inode(fd: &Path) -> Option<u64> {
+        let link = fs::read_link(fd).ok()?;
+        let path_str = link.to_str()?;
         if path_str.starts_with("socket:[") {
-            Ok(Some(path_str[8..path_str.len() - 1].parse()?))
+            Some(path_str[8..path_str.len() - 1].parse().ok()?)
         } else {
-            Ok(None)
+            None
         }
     }
 
@@ -80,10 +74,9 @@ impl ProcHelper {
                 e => e.with_context(|| format!("Failed to read dir {fd_dir:?}"))?,
             };
             for fd in fds {
-                let Some(inode) = Self::get_socket_inode(&fd?.path())? else {
-                    continue;
-                };
-                inode_to_pid.insert(inode, pid);
+                if let Some(inode) = Self::get_socket_inode(&fd?.path()) {
+                    inode_to_pid.insert(inode, pid);
+                }
             }
         }
         Ok(Self { pid_to_comm, inode_to_pid })
