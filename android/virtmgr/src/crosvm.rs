@@ -1735,13 +1735,17 @@ impl VmInstance {
             prop.wait(None).unwrap();
             match prop.read(|_, value| Ok(value.parse::<i32>()?)) {
                 Err(e) => {
-                    // We should always be able to read the sysprop, so if we fail we just stop the
-                    // thread.
                     error!("Failed to read {prop_name}: {:#?}", e);
-                    break;
+                    continue;
                 }
                 // -1 Means that VM is stopping, just finish this thread.
-                Ok(-1) => break,
+                Ok(-1) => {
+                    info!("VM has stopped resetting {prop_name}");
+                    if let Err(e) = system_properties::write(&prop_name, "") {
+                        error!("Failed to reset {prop_name}: {:#?}", e);
+                    }
+                    break;
+                }
                 Ok(value) => {
                     if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
                         let start = if value == 1 {
@@ -1824,9 +1828,6 @@ impl VmInstance {
     }
 
     fn try_shutdown(&self) -> bool {
-        // Notify monitor_tracing_sysprop_thread that VM is dying, so it should stop.
-        let prop_name = format!("persist.avf_vm.traced_relay.enable.{}", self.name);
-        system_properties::write(&prop_name, "-1").unwrap();
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
             return guest_agent
