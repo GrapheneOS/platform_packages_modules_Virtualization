@@ -340,7 +340,11 @@ impl SkVmSession {
         sealing_policy: Vec<u8>,
     ) -> Result<Self> {
         let secretkeeper_proxy = get_secretkeeper_service(vm_service)?;
-        let session = SkSession::new(secretkeeper_proxy, dice, Some(get_secretkeeper_identity()?))?;
+        let session = SkSession::new(
+            secretkeeper_proxy,
+            dice,
+            Some(get_secretkeeper_identity().context("Failed to get secretkeeper identity")?),
+        )?;
         let session = Mutex::new(session);
         Ok(Self { session, sealing_policy })
     }
