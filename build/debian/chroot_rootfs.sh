@@ -30,7 +30,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "b:c:" option; do
+	while getopts ":b:c:" option; do
 		case ${option} in
 			b)
 				chroot_mount+=("${OPTARG}")
@@ -83,7 +83,7 @@ mount_rootfs() {
 	else
 		mkdir -p "${chroot_workspace}/etc"
 	fi
-	cp -vP "/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf"
+	cp -vL "/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf"
 }
 
 enter_chroot() {
@@ -95,7 +95,9 @@ enter_chroot() {
 }
 
 clean_up() {
-	if [[ -f "${chroot_workspace}/etc/resolv.conf.bak" ]]; then
+	trap - EXIT
+
+	if [[ $(ls "${chroot_workspace}/etc/resolv.conf.bak") ]]; then
 		mv -v "${chroot_workspace}/etc/resolv.conf.bak" "${chroot_workspace}/etc/resolv.conf" || true
 	fi
 	rm -d ${chroot_workspace}/etc || true
@@ -115,12 +117,12 @@ clean_up() {
 
 trap clean_up EXIT
 
-check_sudo
-
 chroot_mount=()
 chroot_workspace=$(mktemp -d)
 chroot_command=""
 chroot_rootfs=
+
+check_sudo
 
 parse_options "$@"
 mount_rootfs
