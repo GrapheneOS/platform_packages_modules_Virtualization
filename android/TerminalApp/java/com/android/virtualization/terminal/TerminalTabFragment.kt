@@ -15,6 +15,8 @@
  */
 package com.android.virtualization.terminal
 
+import android.annotation.IntDef
+import android.annotation.MainThread
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.http.SslError
@@ -45,9 +47,18 @@ class TerminalTabFragment() : Fragment() {
     private lateinit var terminalView: TerminalView
     private lateinit var bootProgressView: View
     private lateinit var id: String
+    @TTYDStatus private var ttydStatus: Int = TTYD_STATUS_UNAVAILABLE
     private var certificates: Array<X509Certificate>? = null
     private var privateKey: PrivateKey? = null
     private val terminalViewModel: TerminalViewModel by activityViewModels()
+    private val ttydTimeoutRunnable =
+        object : Runnable {
+            override fun run() {
+                Log.e(TAG, "ttyd timeout")
+                // Let unhandled exception handler to handle this
+                throw Exception("ttyd timeout")
+            }
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -71,7 +82,7 @@ class TerminalTabFragment() : Fragment() {
         if (savedInstanceState != null) {
             terminalView.restoreState(savedInstanceState)
         } else {
-            (activity as MainActivity).connectToTerminalService(terminalView)
+            (activity as MainActivity).connectToTerminalService(this)
         }
     }
 
@@ -83,6 +94,32 @@ class TerminalTabFragment() : Fragment() {
     override fun onResume() {
         super.onResume()
         updateFocus()
+
+        if (ttydStatus != TTYD_STATUS_UNAVAILABLE && ttydStatus != TTYD_STATUS_LOADED) {
+            terminalView.getHandler().postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        terminalView.getHandler().removeCallbacks(ttydTimeoutRunnable)
+    }
+
+    override fun onDestroy() {
+        terminalView.terminalClose()
+        terminalViewModel.terminalTabFragments.remove(this)
+        super.onDestroy()
+    }
+
+    @MainThread
+    public fun loadUrl(url: String) {
+        Log.d(TAG, "loading $url")
+        if (isResumed()) {
+            terminalView.getHandler().postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
+        }
+        ttydStatus = TTYD_STATUS_STARTED
+        terminalView.loadUrl(url)
     }
 
     private fun initializeWebView() {
@@ -96,7 +133,7 @@ class TerminalTabFragment() : Fragment() {
         terminalView.addJavascriptInterface(TerminalViewInterface(context!!), "TerminalApp")
 
         (activity as MainActivity).modifierKeysController.addTerminalView(terminalView)
-        terminalViewModel.terminalViews.add(terminalView)
+        terminalViewModel.terminalTabFragments.add(this)
     }
 
     private inner class TerminalWebChromeClient : WebChromeClient() {
@@ -106,8 +143,7 @@ class TerminalTabFragment() : Fragment() {
                 // When the session is created. The format of the title will be
                 // 'droid@localhost: ~ | login -f droid (localhost)'
                 // or 'droid@debian: ~ | login -f droid (debian)'.
-                val displayedTitle =
-                    originalTitle.substringBeforeLast(" | login -f droid (")
+                val displayedTitle = originalTitle.substringBeforeLast(" | login -f droid (")
 
                 terminalViewModel.terminalTabs[id]
                     ?.customView
@@ -153,7 +189,8 @@ class TerminalTabFragment() : Fragment() {
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-            loadFailed = false
+            // Resets error status if it was
+            ttydStatus = TTYD_STATUS_STARTED
         }
 
         override fun onReceivedError(
@@ -161,26 +198,30 @@ class TerminalTabFragment() : Fragment() {
             request: WebResourceRequest,
             error: WebResourceError,
         ) {
-            loadFailed = true
+            ttydStatus = TTYD_STATUS_ERROR
             when (error.getErrorCode()) {
                 ERROR_CONNECT,
                 ERROR_HOST_LOOKUP,
                 ERROR_FAILED_SSL_HANDSHAKE,
                 ERROR_TIMEOUT -> {
+                    // Note that ERROR_TIMEOUT is for timeout after onPageStarted()
+                    // and can be called if MainActivity is started while screen is locked
+                    // after installation is completed.
                     view.reload()
                     return
                 }
-
-                else -> {
-                    val url: String? = request.getUrl().toString()
-                    val msg = error.getDescription()
-                    Log.e(MainActivity.TAG, "Failed to load $url: $msg")
-                }
             }
+
+            val url: String? = request.getUrl().toString()
+            val msg = error.getDescription()
+            Log.e(MainActivity.TAG, "Failed to load $url: $msg")
+
+            // Let unhandled exception handler to handle this
+            throw Exception(msg.toString())
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
-            if (loadFailed) {
+            if (ttydStatus == TTYD_STATUS_ERROR) {
                 return
             }
 
@@ -190,6 +231,9 @@ class TerminalTabFragment() : Fragment() {
                 object : WebView.VisualStateCallback() {
                     override fun onComplete(completedRequestId: Long) {
                         if (completedRequestId == requestId) {
+                            ttydStatus = TTYD_STATUS_LOADED
+                            view.getHandler().removeCallbacks(ttydTimeoutRunnable)
+
                             bootProgressView.visibility = View.GONE
                             terminalView.visibility = View.VISIBLE
                             terminalView.mapTouchToMouseEvent()
@@ -245,11 +289,15 @@ class TerminalTabFragment() : Fragment() {
 
     companion object {
         const val TAG: String = "VmTerminalApp"
-    }
+        const val TTYD_TIMEOUT_MS = 5_000L
 
-    override fun onDestroy() {
-        terminalView.terminalClose()
-        terminalViewModel.terminalViews.remove(terminalView)
-        super.onDestroy()
+        @IntDef(TTYD_STATUS_UNAVAILABLE, TTYD_STATUS_STARTED, TTYD_STATUS_LOADED, TTYD_STATUS_ERROR)
+        @Retention(AnnotationRetention.SOURCE)
+        annotation class TTYDStatus
+
+        const val TTYD_STATUS_UNAVAILABLE = 0
+        const val TTYD_STATUS_STARTED = 1
+        const val TTYD_STATUS_LOADED = 2
+        const val TTYD_STATUS_ERROR = 3
     }
 }
