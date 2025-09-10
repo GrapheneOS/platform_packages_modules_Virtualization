@@ -257,7 +257,9 @@ class VmLauncherService : Service() {
         getTerminalServiceInfo(timeout_secs)
             .thenAcceptAsync(
                 { info ->
-                    val ipAddress = info.hostAddresses[0].hostAddress
+                    // It must exist because it is checked in `getTerminalServiceInfo`
+                    val ipAddress =
+                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
                     val port = info.port
                     val bundle = Bundle()
                     bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
@@ -302,6 +304,13 @@ class VmLauncherService : Service() {
 
                 override fun onServiceUpdated(info: NsdServiceInfo) {
                     Log.i(TAG, "Service found: $info")
+                    val hasUsableAddress = info.hostAddresses.any { !it.isLinkLocalAddress }
+
+                    if (!hasUsableAddress) {
+                        Log.d(TAG, "Global ip addr isn't found, wait more: $info")
+                        return
+                    }
+
                     if (!found) {
                         found = true
                         nsdManager.unregisterServiceInfoCallback(this)

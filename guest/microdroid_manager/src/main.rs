@@ -563,6 +563,12 @@ fn try_run_payload(
 
     let config = load_config(payload_metadata).context("Failed to load payload metadata")?;
 
+    // TODO(b/429639517): Add a CI test to ensure ill-formed tenantConfig check robust
+    if let Some(invalid_tenant) = config.tenants.iter().find(|tenant| !tenant.is_wellformed()) {
+        bail!(MicrodroidError::PayloadInvalidConfig(format!(
+            "Invalid tenant configuration {invalid_tenant:?}"
+        )));
+    }
     let task = config.task.as_ref();
     if task.is_none() {
         let has_tenant_with_task = config.tenants.iter().any(|t| match t {
@@ -591,6 +597,8 @@ fn try_run_payload(
         &tenant_apk_data_extracted_from_manifest,
         &config.tenants,
     )?;
+
+    // TODO(b/429639517): Validate tenant apex against tenant_config
     let tenant_apk_count =
         config.tenants.iter().filter(|t| matches!(t, TenantConfig::Apk(_))).count();
     mount_additional_apks(&mut zipfuse, tenant_apk_count, AdditionalApkType::TenantApk)

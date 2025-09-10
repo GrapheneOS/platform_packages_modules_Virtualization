@@ -143,4 +143,29 @@ pub struct TenantConfiguration {
     /// Tenant task
     #[serde(default)]
     pub task: Option<Task>,
+    /// The minimum acceptable rollback_index (or version_code if rollback_index is missing) of the
+    /// tenant package.
+    #[serde(default)]
+    pub min_version: Option<u64>,
+    /// This is the expected authority
+    /// For APK: this is the hex encoding of the sha512 hash of the certificate.
+    /// For APEX: TODO(b/429639517) to be defined
+    #[serde(default)]
+    pub expected_authority: Option<String>,
+}
+
+impl TenantConfig {
+    /// Defines what constitutes a well-formed config.
+    pub fn is_wellformed(&self) -> bool {
+        match self {
+            TenantConfig::Apex(config) => {
+                // APEX configuration must have a minimum version, and an expected authority.
+                config.min_version.is_some() && config.expected_authority.is_some()
+            }
+            TenantConfig::Apk(_config) => {
+                // All APK configurations are considered valid.
+                true
+            }
+        }
+    }
 }

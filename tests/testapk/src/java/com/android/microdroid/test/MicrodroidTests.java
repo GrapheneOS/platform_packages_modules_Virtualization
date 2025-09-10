@@ -1233,6 +1233,66 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_apk", config);
+        CompletableFuture<String> prop = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(prop.getNow(null))
+                .isEqualTo("PASS");
+    }
+
+    @Test
+    @CddTest
+    public void invalidTenantAuthority() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_invalid_tenant_auth.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("tenant_with_different_cert", config);
+        CompletableFuture<String> res = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(res.getNow(null))
+                .isNull();
+    }
+
+    @Test
+    @CddTest
+    public void invalidTenantRollbackIndex() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        // MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk has rollback_index:1
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk");
+        // vm_config_tenant_rollback_index.json expects min_version: 2 for package
+        // com.android.microdroid.test_relaxed_rollback_protection_scheme
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_tenant_rollback_index.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("tenant_rollback_index_1", config);
+        CompletableFuture<String> result_rb_1 = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(result_rb_1.getNow(null))
+                .isNull();
+
+        // MicrodroidTestHelperAppRelaxedRollbackProtection_V7*.apk has rollback_index:2
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        VirtualMachine vm2 = forceCreateNewVirtualMachine("tenant_rollback_index_2", config);
+        CompletableFuture<String> result_rb_2 = readTenantPackagesMounted(vm2);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result_rb_2.getNow(null))
+                .isEqualTo("PASS");
+    }
+
+    private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)
+            throws Exception {
         CompletableFuture<String> prop = new CompletableFuture<>();
         CompletableFuture<Exception> exception = new CompletableFuture<>();
         VmEventListener listener =
@@ -1260,14 +1320,12 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                     }
                 };
         listener.runToFinish(TAG, vm);
-        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
-                .that(prop.getNow(null))
-                .isEqualTo("PASS");
         assertWithMessage(
                         "Unexpected exception while running test_vm_tenant_apk's onPayloadReady"
                                 + " callback")
                 .that(exception.getNow(null))
                 .isNull();
+        return prop;
     }
 
     @Test
