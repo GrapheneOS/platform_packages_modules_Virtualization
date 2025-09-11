@@ -2772,6 +2772,7 @@ public class VirtualMachine implements AutoCloseable {
             }
             try (FileOutputStream fos = new FileOutputStream(mKEKFile.getAbsolutePath())) {
                 fos.write(kekBlob);
+                fos.flush();
             } catch (IOException e) {
                 throw new RuntimeException("Failed to write to " + mKEKFile.getAbsolutePath(), e);
             }
