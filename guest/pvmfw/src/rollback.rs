@@ -36,8 +36,8 @@ use vmbase::virtio::pci;
 /// Criteria hard-coded into pvmfw, to perform fixed image verification.
 enum FixedRollbackCriterion {
     #[cfg_attr(not(feature = "platform_has_desktop_trusty"), allow(dead_code))]
-    /// Image must match the exact AVB digest (incl. image hash, rollback index, or public key).
-    AvbDigest { digest: Digest },
+    /// Image must match the exact kernel hash.
+    KernelHash { digest: Digest },
     /// Image must match the exact rollback index and have been signed with the given public key.
     RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
     #[cfg_attr(feature = "platform_has_desktop_trusty", allow(dead_code))]
@@ -101,12 +101,12 @@ fn get_fixed_rollback_protection(
             cfg_if::cfg_if! {
                 if #[cfg(feature = "platform_has_desktop_trusty")] {
                     const DIGEST: &Digest = include_bytes!(
-                        concat!(env!("OUT_DIR"), "/desktop_trusty.vbmetadigest")
+                        concat!(env!("OUT_DIR"), "/desktop_trusty.kernelhash")
                     );
 
                     static_assertions::const_assert!(DIGEST.len() == pvmfw_avb::DIGEST_LEN);
 
-                    Some(FixedRollbackCriterion::AvbDigest { digest: *DIGEST })
+                    Some(FixedRollbackCriterion::KernelHash { digest: *DIGEST })
                 } else {
                     let name = VerifiedBootData::DESKTOP_TRUSTY_VM_NAME;
                     Some(FixedRollbackCriterion::Reserved { name })
@@ -139,10 +139,10 @@ fn perform_fixed_rollback_protection(
                 Ok(())
             }
         }
-        FixedRollbackCriterion::AvbDigest { digest: expected_digest } => {
-            let digest = verified_boot_data.vbmeta_digest;
+        FixedRollbackCriterion::KernelHash { digest: expected_digest } => {
+            let digest = verified_boot_data.kernel_digest;
             if digest != expected_digest {
-                error!("Digest mismatch: expected {expected_digest:x?}, found {digest:x?}");
+                error!("Kernel hash mismatch: expected {expected_digest:x?}, found {digest:x?}");
                 Err(RebootReason::InvalidPayload)
             } else {
                 Ok(())

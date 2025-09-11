@@ -83,4 +83,11 @@ class BenchmarkVmListener extends VmEventListener {
         super.runToFinish(logTag, vm);
         assertWithMessage("Payload was never ready").that(mPayloadReady).isTrue();
     }
+
+    public boolean tryRunToFinish(String logTag, VirtualMachine vm)
+            throws VirtualMachineException, InterruptedException {
+        mPayloadReady = false;
+        super.runToFinish(logTag, vm);
+        return mPayloadReady;
+    }
 }

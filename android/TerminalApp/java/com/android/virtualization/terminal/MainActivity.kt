@@ -282,6 +282,7 @@ public class MainActivity :
             val intent = VmLauncherService.getIntentForShutdown(this, this)
             startService(intent)
         }
+        finishAndRemoveTask()
         super.onDestroy()
     }
 

@@ -20,7 +20,7 @@
     console.log.history = console.log.history || [];
     console.log.history.push(arguments);
     originalLog.apply(console, arguments);
-    if (typeof arguments[0] === 'string' && arguments[0].startsWith("[ttyd] websocket connection closed with code: ")) {
+    if (typeof arguments[0] === 'string' && arguments[0].startsWith("[ttyd] websocket connection closed with code: 1000")) {
         TerminalApp.closeTab()
     }
   };
