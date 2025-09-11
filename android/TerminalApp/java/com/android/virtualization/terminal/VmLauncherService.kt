@@ -247,8 +247,7 @@ class VmLauncherService : Service() {
             resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logDir = getFileStreamPath(virtualMachine.name + ".log").toPath()
-        Logger.setup(virtualMachine, logDir, bgThreads)
+        Logger.setup(this, virtualMachine, bgThreads)
 
         resultReceiver.send(RESULT_START, null)
 
