@@ -26,7 +26,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
-import java.lang.RuntimeException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -49,41 +48,37 @@ internal object Logger {
             return
         }
 
-        try {
-            if (Files.isRegularFile(dir)) {
-                Log.i(tag, "Removed legacy log file: $dir")
-                Files.delete(dir)
-            }
-            Files.createDirectories(dir)
-            deleteOldLogs(dir, 10)
-            val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
-            val console = vm.getConsoleOutput()
-            val file = Files.newOutputStream(logPath, StandardOpenOption.CREATE)
-            executor.execute({
-                try {
-                    console.use { console ->
-                        LineBufferedOutputStream(file).use { fileOutput ->
-                            Streams.copy(console, fileOutput)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w(tag, "Failed to log console output. VM may be shutting down", e)
-                }
-            })
-
-            val log = vm.getLogOutput()
-            executor.execute({
-                log.use {
-                    try {
-                        writeToLogd(it, tag)
-                    } catch (e: Exception) {
-                        Log.w(tag, "Failed to log VM log output. VM may be shutting down", e)
-                    }
-                }
-            })
-        } catch (e: Exception) {
-            throw RuntimeException(e)
+        if (Files.isRegularFile(dir)) {
+            Log.i(tag, "Removed legacy log file: $dir")
+            Files.delete(dir)
         }
+        Files.createDirectories(dir)
+        deleteOldLogs(dir, 10)
+        val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
+        val console = vm.getConsoleOutput()
+        val file = Files.newOutputStream(logPath, StandardOpenOption.CREATE)
+        executor.execute({
+            try {
+                console.use { console ->
+                    LineBufferedOutputStream(file).use { fileOutput ->
+                        Streams.copy(console, fileOutput)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(tag, "Failed to log console output. VM may be shutting down", e)
+            }
+        })
+
+        val log = vm.getLogOutput()
+        executor.execute({
+            log.use {
+                try {
+                    writeToLogd(it, tag)
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to log VM log output. VM may be shutting down", e)
+                }
+            }
+        })
     }
 
     // Called by ErrorActivity in another process.
