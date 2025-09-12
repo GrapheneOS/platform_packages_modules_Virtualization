@@ -186,6 +186,27 @@ Result<ScopedFileDescriptor> create_instance_image_file_if_needed(IVirtualizatio
     return instance;
 }
 
+// Get or create the encryptedstore disk image file, if it doesn't exist.
+Result<ScopedFileDescriptor> create_encryptedstore_image_file_if_needed(
+        IVirtualizationService& service, const std::string& work_dir) {
+    std::string path = work_dir + "/encryptedstore.img";
+
+    // If encryptedstore.img already exists, use it.
+    if (access(path.c_str(), F_OK) == 0) {
+        return open_file(path, O_RDWR);
+    }
+
+    // If not, create a new one.
+    ScopedFileDescriptor encryptedstore = OR_RETURN(open_file(path, O_CREAT | O_RDWR));
+    long size = 10 * 1024 * 1024; // 10MB
+    ScopedAStatus ret = service.initializeWritablePartition(encryptedstore, size,
+                                                          PartitionType::ENCRYPTEDSTORE);
+    if (!ret.isOk()) {
+        return Error() << "Failed to create encryptedstore disk image: " << path;
+    }
+    return encryptedstore;
+}
+
 // This looks up instance-id in local file if it exists, otherwise requests virtualizationservice
 // to allocate it one & then persists it in the instance-id file. VM uses this instance-id for
 // Secret Management.
@@ -239,6 +260,8 @@ Result<VirtualMachineAppConfig> create_vm_config(
             OR_RETURN(create_or_update_idsig_file(service, work_dir, main_apk));
     ScopedFileDescriptor instance =
             OR_RETURN(create_instance_image_file_if_needed(service, work_dir));
+    ScopedFileDescriptor encryptedstore =
+            OR_RETURN(create_encryptedstore_image_file_if_needed(service, work_dir));
     std::array<uint8_t, 64> instance_id;
     OR_RETURN(get_or_allocate_instance_id(service, work_dir, &instance_id));
 
@@ -247,6 +270,7 @@ Result<VirtualMachineAppConfig> create_vm_config(
     app_config.apk = std::move(main_apk);
     app_config.idsig = std::move(idsig);
     app_config.instanceImage = std::move(instance);
+    app_config.encryptedStorageImage = std::move(encryptedstore);
     app_config.instanceId = instance_id;
     if (debuggable) {
         app_config.debugLevel = VirtualMachineAppConfig::DebugLevel::FULL;
