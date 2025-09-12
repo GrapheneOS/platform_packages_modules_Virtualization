@@ -19,7 +19,7 @@ import androidx.lifecycle.ViewModel
 import com.google.android.material.tabs.TabLayout.Tab
 
 class TerminalViewModel : ViewModel() {
-    val terminalViews: MutableSet<TerminalView> = mutableSetOf()
+    val terminalTabFragments: MutableSet<TerminalTabFragment> = mutableSetOf()
     var selectedTabViewId: String? = null
     val terminalTabs: MutableMap<String, Tab> = mutableMapOf()
 }
