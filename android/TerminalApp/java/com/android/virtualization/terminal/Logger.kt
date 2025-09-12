@@ -15,9 +15,11 @@
  */
 package com.android.virtualization.terminal
 
+import android.content.Context
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineConfig
 import android.util.Log
+import androidx.annotation.WorkerThread
 import java.io.BufferedOutputStream
 import java.io.BufferedReader
 import java.io.IOException
@@ -30,14 +32,17 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.LocalDateTime
 import java.util.concurrent.ExecutorService
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import libcore.io.Streams
 
 /**
  * Forwards VM's console output to a file on the Android side, and VM's log output to Android logd.
  */
 internal object Logger {
-    fun setup(vm: VirtualMachine, dir: Path, executor: ExecutorService) {
+    fun setup(context: Context, vm: VirtualMachine, executor: ExecutorService) {
         val tag = vm.name
+        val dir = context.getFileStreamPath(vm.name + ".log").toPath()
 
         if (vm.config.debugLevel != VirtualMachineConfig.DEBUG_LEVEL_FULL) {
             Log.i(tag, "Logs are not captured. Non-debuggable VM.")
@@ -78,6 +83,28 @@ internal object Logger {
             })
         } catch (e: Exception) {
             throw RuntimeException(e)
+        }
+    }
+
+    // Called by ErrorActivity in another process.
+    @WorkerThread
+    public fun zipLogs(context: Context, logZipFilePath: Path) {
+        Files.newOutputStream(logZipFilePath, StandardOpenOption.CREATE).use { fos ->
+            ZipOutputStream(fos).use { zos ->
+                val logDirs =
+                    context.filesDir.listFiles { it.isDirectory() && it.name.endsWith(".log") }
+                for (dir in logDirs) {
+                    val logFiles = dir.listFiles { it.isFile() && it.name.endsWith(".txt") }
+                    for (file in logFiles) {
+                        // To prevent absolute paths in the zip
+                        val entryName = file.toRelativeString(context.filesDir)
+
+                        zos.putNextEntry(ZipEntry(entryName))
+                        Files.copy(file.toPath(), zos)
+                        zos.closeEntry()
+                    }
+                }
+            }
         }
     }
 
