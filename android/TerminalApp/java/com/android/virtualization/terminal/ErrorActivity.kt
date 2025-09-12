@@ -18,6 +18,7 @@ package com.android.virtualization.terminal
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.PowerManager
 import android.text.method.ScrollingMovementMethod
 import android.view.View
 import android.widget.TextView
@@ -59,9 +60,14 @@ class ErrorActivity : BaseActivity() {
 
         if (launchingNewActivity) {
             launchingNewActivity = false
-        } else {
-            // If we're not launching a new activity, finish error activity
-            // to provide convenient way to restart without swiping the task.
+            return
+        }
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (powerManager.isInteractive) {
+            // If user is not launching a new activity but actively moving away from
+            // error activity, finish immediately here.
+            // It would provide convenient way to restart without swiping the task.
             finish()
         }
     }
