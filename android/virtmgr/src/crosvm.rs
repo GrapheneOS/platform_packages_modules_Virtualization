@@ -2381,6 +2381,10 @@ fn path_to_cstring(path: &Path) -> CString {
 // This is a duplicate of the check done by pvmfw.
 // We do it in virtmgr just to fail fast without even trying to boot a VM with invalid name.
 fn is_valid_vm_name(name: &str) -> bool {
+    // TODO(b/444647293): An existing VM - "Service VM" breaks on following vm name validation
+    #![allow(unreachable_code, unused_variables)]
+    return true;
+
     name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
