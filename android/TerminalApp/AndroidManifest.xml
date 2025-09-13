@@ -18,6 +18,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.android.virtualization.terminal">
 
+    <queries>
+        <package android:name="com.google.android.apps.internal.betterbug" />
+    </queries>
+
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MANAGE_VIRTUAL_MACHINE" />
@@ -78,6 +82,15 @@
             <meta-data
                 android:name="${applicationId}.SplitInitializer"
                 android:value="androidx.startup" />
+        </provider>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.android.virtualization.terminal.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_file_path" />
         </provider>
         <activity android:name=".InstallerActivity"
             android:exported="false">

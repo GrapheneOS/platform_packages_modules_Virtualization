@@ -49,7 +49,6 @@ apex {
         // Used in VM
         "compos_key_helper",
         "compsvc",
-        "dex2oatsvc",
     ],
 
     native_shared_libs: [

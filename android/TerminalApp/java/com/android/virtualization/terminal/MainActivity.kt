@@ -264,11 +264,11 @@ public class MainActivity :
         }
     }
 
-    fun connectToTerminalService(terminalView: TerminalView) {
+    fun connectToTerminalService(terminalFragment: TerminalTabFragment) {
         terminalInfo.thenAcceptAsync(
             { info ->
                 val url = getTerminalServiceUrl(info.ipAddress, info.port)
-                runOnUiThread({ terminalView.loadUrl(url.toString()) })
+                runOnUiThread({ terminalFragment.loadUrl(url!!.toString()) })
             },
             executorService,
         )
@@ -314,8 +314,8 @@ public class MainActivity :
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
-        terminalViewModel.terminalViews.forEach { terminalView ->
-            connectToTerminalService(terminalView)
+        terminalViewModel.terminalTabFragments.forEach { terminalFragment ->
+            connectToTerminalService(terminalFragment)
         }
     }
 
