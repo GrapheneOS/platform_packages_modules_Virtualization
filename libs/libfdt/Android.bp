@@ -53,7 +53,7 @@ rust_defaults {
             ],
             rustlibs: [
                 "liblibfdt_bindgen",
-                "libzerocopy_nostd",
+                "libzerocopy",
             ],
         },
         host: {

@@ -39,7 +39,7 @@ rust_defaults {
         "libuuid_nostd",
         "libvirtio_drivers",
         "libvmbase",
-        "libzerocopy_nostd",
+        "libzerocopy",
         "libzeroize_nostd",
     ],
     srcs: [
