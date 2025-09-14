@@ -82,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Óleiðréttanleg villa"</string>
     <string name="error_desc" msgid="4588252235686826721">"Ekki tókst að endurheimta eftir villu.\nÞú getur prófað að endurræsa útstöðina eða velja einn af endurheimtarkostunum.\nEf allar tilraunir mistakast skaltu hreinsa öll gögn með því að kveikja/slökkva á Linux-útstöð í forritunarvalkostum."</string>
     <string name="error_code" msgid="3585291676855383649">"Villukóði: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for error_button_report_bug (5559616952618650716) -->
+    <skip />
+    <!-- no translation found for error_snackbar_report_bug (8432010448894076323) -->
+    <skip />
     <string name="upgrade_title" msgid="2882073508237099774">"Uppfærðu í nýrri stöð"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Linux-stöð sem þú varst að nota er úrelt. Uppfærðu til að halda áfram.\nGögn verða afrituð á <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Uppfæra"</string>

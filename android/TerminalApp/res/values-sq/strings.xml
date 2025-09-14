@@ -82,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Gabim i parikuperueshëm"</string>
     <string name="error_desc" msgid="4588252235686826721">"Rikuperimi nga një gabim dështoi.\nMund të provosh ta rinisësh terminalin ose provo një nga opsionet e rikuperimit.\nNëse dështojnë të gjitha përpjekjet, pastro të gjitha të dhënat duke aktivizuar/çaktivizuar terminalin e Linux nga opsionet e zhvilluesit."</string>
     <string name="error_code" msgid="3585291676855383649">"Kodi i gabimit: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for error_button_report_bug (5559616952618650716) -->
+    <skip />
+    <!-- no translation found for error_snackbar_report_bug (8432010448894076323) -->
+    <skip />
     <string name="upgrade_title" msgid="2882073508237099774">"Përmirësoje në një terminal të ri"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Terminali Linux që po përdorje është i papërditësuar. Përmirësoje për të vazhduar.\nTë dhënat do të rezervohen në <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Përmirëso"</string>
