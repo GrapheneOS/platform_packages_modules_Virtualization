@@ -11,6 +11,8 @@
     {
       "package": "apex",
       "name": "com.android.microdroid.test.tenant0",
+      "min_version": 1,
+      "expected_authority": "",
       "task": {
           "type": "microdroid_launcher",
           "command": "MicrodroidEmptyTenant.so"
