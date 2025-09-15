@@ -18,9 +18,6 @@
     },
     {
       "name": "avf_backcompat_tests"
-    },
-    {
-      "name": "composd_test"
     }
   ],
   // Tests runs after CLs are submitted. All AVF tests and benchmarks are here.
@@ -51,6 +48,9 @@
     },
     {
       "name": "art_standalone_dexpreopt_tests"
+    },
+    {
+      "name": "composd_test"
     },
     {
       "name": "composd_cmd.test"
