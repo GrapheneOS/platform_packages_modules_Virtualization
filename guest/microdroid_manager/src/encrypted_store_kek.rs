@@ -14,7 +14,7 @@
 
 //! Manages Key Encryption Keys (KEKs) used to set up encrypted store.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use keystore2_crypto::ZVec;
 use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
 
@@ -55,10 +55,9 @@ pub fn decrypt_kek(encrypted_key: &[u8], encryption_key: &[u8]) -> Result<ZVec> 
 
     let cipher = Cipher::aes_256_gcm();
     let aad = [0; 0];
-    let plaintext = decrypt_aead(cipher, encryption_key, Some(nonce), &aad, ciphertext, tag)
-        .context("decrypt_aead failed")?;
+    let plaintext = decrypt_aead(cipher, encryption_key, Some(nonce), &aad, ciphertext, tag)?;
 
-    ZVec::try_from(plaintext).context("conversion to ZVec failed")
+    Ok(ZVec::try_from(plaintext)?)
 }
 
 #[cfg(test)]
