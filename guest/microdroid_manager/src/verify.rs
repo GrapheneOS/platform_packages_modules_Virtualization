@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::instance::{ApexData, ApkData, EncryptedStoreMode, MicrodroidData};
-use crate::payload::{get_apex_data_from_payload, to_metadata};
+use crate::payload::{get_apex_data_from_payload, get_tenant_apex_data_from_payload, to_metadata};
 use crate::MicrodroidError;
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkmanifest::{get_manifest_info, ApkManifestInfo};
@@ -52,7 +52,7 @@ const APKDMVERITY_BIN: &str = "/system/bin/apkdmverity";
 pub fn verify_payload(
     metadata: &Metadata,
     saved_data: Option<&MicrodroidData>,
-) -> Result<MicrodroidData> {
+) -> Result<(MicrodroidData, Vec<ApexData>)> {
     let start_time = SystemTime::now();
 
     // Verify main APK
@@ -133,10 +133,28 @@ pub fn verify_payload(
     // APEX payload.
     let apex_data_from_payload = get_apex_data_from_payload(metadata)?;
 
+    let tenant_apex_data_from_payload = get_tenant_apex_data_from_payload(metadata)?;
+
     // To prevent a TOCTOU attack, we need to make sure that when apexd verifies & mounts the
     // APEXes it sees the same ones that we just read - so we write the metadata we just collected
     // to a file (that the host can't access) that apexd will then verify against. See b/199371341.
-    write_apex_payload_data(saved_data, &apex_data_from_payload)?;
+    if let Some(saved) = saved_data {
+        // We don't support APEX updates. (assuming that update will change root digest)
+        ensure!(
+            saved.apex_data == apex_data_from_payload,
+            MicrodroidError::PayloadChanged(String::from(
+                "APEXes have changed, have you considered
+                including apex as an updatable Tenant?"
+            ))
+        );
+    }
+    let mut all_apex_data = Vec::new();
+    all_apex_data.extend_from_slice(&apex_data_from_payload);
+    all_apex_data.extend_from_slice(&tenant_apex_data_from_payload);
+
+    // Pass metadata(with public keys and root digests) to apexd so that it uses the passed
+    // metadata instead of the default one (/dev/block/by-name/payload-metadata)
+    write_apex_payload_data(&all_apex_data)?;
 
     if cfg!(not(dice_changes)) {
         // Start apexd to activate APEXes
@@ -170,12 +188,14 @@ pub fn verify_payload(
     // because we have fully verified the APK signature (and apkdmverity checks all the data we
     // verified is consistent with the root hash) or because we have the saved APK data which will
     // be checked as identical to the data we have verified.
-
-    Ok(MicrodroidData {
-        apk_data: main_apk_data,
-        extra_apks_data,
-        apex_data: apex_data_from_payload,
-    })
+    Ok((
+        MicrodroidData {
+            apk_data: main_apk_data,
+            extra_apks_data,
+            apex_data: apex_data_from_payload,
+        },
+        tenant_apex_data_from_payload,
+    ))
 }
 
 pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
@@ -320,18 +340,8 @@ fn get_data_from_apk(
     })
 }
 
-fn write_apex_payload_data(
-    saved_data: Option<&MicrodroidData>,
-    apex_data_from_payload: &[ApexData],
-) -> Result<()> {
-    if let Some(saved_apex_data) = saved_data.map(|d| &d.apex_data) {
-        // We don't support APEX updates. (assuming that update will change root digest)
-        ensure!(
-            saved_apex_data == apex_data_from_payload,
-            MicrodroidError::PayloadChanged(String::from("APEXes have changed."))
-        );
-    }
-    let apex_metadata = to_metadata(apex_data_from_payload);
+fn write_apex_payload_data(data: &[ApexData]) -> Result<()> {
+    let apex_metadata = to_metadata(data);
     // Pass metadata(with public keys and root digests) to apexd so that it uses the passed
     // metadata instead of the default one (/dev/block/by-name/payload-metadata)
     OpenOptions::new()
