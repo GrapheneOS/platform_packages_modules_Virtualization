@@ -113,7 +113,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -247,8 +246,8 @@ public class VirtualMachine implements AutoCloseable {
     private static final String ENCRYPTED_STORE_KEK_FILE = "encrypted_store_kek.bin";
 
     // Both binders are for virtmgr, and not virtualizationservice
-    @NonNull private final IBinder.DeathRecipient mVSDeathRecipient;
-    @NonNull private final IBinder.DeathRecipient mVMDeathRecipient;
+    private IBinder.DeathRecipient mVSDeathRecipient;
+    private IBinder.DeathRecipient mVMDeathRecipient;
 
     /** The package which owns this VM. */
     @NonNull private final String mPackageName;
@@ -365,6 +364,10 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("mLock")
     @Nullable
     private IVirtualMachine mVirtualMachine;
+
+    /** CID of the "running" VM. */
+    @GuardedBy("mLock")
+    private int mCid = -1;
 
     @GuardedBy("mLock")
     @Nullable
@@ -492,9 +495,6 @@ public class VirtualMachine implements AutoCloseable {
         } else {
             mMemoryManagementCallbacks = null;
         }
-
-        mVSDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
-        mVMDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
     }
 
     /**
@@ -867,13 +867,17 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    private void handleStopped(@VirtualMachineCallback.StopReason int reason) {
+    private void handleStopped(int cid, @VirtualMachineCallback.StopReason int reason) {
         synchronized (mLock) {
-            if (mStopHandled) {
-                return;
+            // Since we just took the lock, we can't assume the stopped
+            // notification is for the current VM.
+            if (mCid == cid) {
+                if (mStopHandled) {
+                    return;
+                }
+                mStopHandled = true;
+                dropVm();
             }
-            mStopHandled = true;
-            dropVm();
         }
         executeCallback((cb) -> cb.onStopped(VirtualMachine.this, reason));
     }
@@ -900,6 +904,7 @@ public class VirtualMachine implements AutoCloseable {
                 Log.w(TAG, "Ignore exception unlinkToDeath() for IVirtualMachine, exception=" + e);
             }
             mVirtualMachine = null;
+            mCid = -1;
         }
         if (mVirtualizationService != null) {
             try {
@@ -1692,10 +1697,18 @@ public class VirtualMachine implements AutoCloseable {
                 mVirtualMachine =
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
-                int cid = mVirtualMachine.getCid();
-                mVirtualMachine.registerCallback(new CallbackTranslator(this, service, cid));
+                mCid = mVirtualMachine.getCid();
+                mVirtualMachine.registerCallback(new CallbackTranslator(this, service, mCid));
+
+                // Copy to a local variable so that the lambdas below are not
+                // updated when mCid is mutated.
+                int cid = mCid;
+                mVSDeathRecipient =
+                        () -> handleStopped(cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
+                mVMDeathRecipient = () -> handleStopped(cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
                 mVirtualMachine.asBinder().linkToDeath(mVMDeathRecipient, /* flags= */ 0);
                 service.asBinder().linkToDeath(mVSDeathRecipient, /* flags= */ 0);
+
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 }
@@ -2629,7 +2642,7 @@ public class VirtualMachine implements AutoCloseable {
             int translatedReason = getTranslatedReason(reason);
             VirtualMachine vm = mVirtualMachine.get();
             if (vm != null && mCid == cid) {
-                vm.handleStopped(translatedReason);
+                vm.handleStopped(cid, translatedReason);
             }
         }
 
