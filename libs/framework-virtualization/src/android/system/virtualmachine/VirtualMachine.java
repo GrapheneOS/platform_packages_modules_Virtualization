@@ -113,7 +113,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -2772,6 +2771,7 @@ public class VirtualMachine implements AutoCloseable {
             }
             try (FileOutputStream fos = new FileOutputStream(mKEKFile.getAbsolutePath())) {
                 fos.write(kekBlob);
+                fos.getFD().sync();
             } catch (IOException e) {
                 throw new RuntimeException("Failed to write to " + mKEKFile.getAbsolutePath(), e);
             }
