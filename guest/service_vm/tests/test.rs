@@ -324,7 +324,7 @@ fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
     let mut instance_id = [0u8; 64];
     rand_bytes(&mut instance_id).unwrap();
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: format!("Non protected Service VM kernel ({memory_mib}MiB)"),
+        name: format!("non_protected_service_vm_{memory_mib}MiB"),
         kernel: Some(ParcelFileDescriptor::new(service_vm)),
         protectedVm: false,
         memoryMib: memory_mib,
