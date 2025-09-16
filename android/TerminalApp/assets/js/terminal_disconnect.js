@@ -20,8 +20,18 @@
     console.log.history = console.log.history || [];
     console.log.history.push(arguments);
     originalLog.apply(console, arguments);
-    if (typeof arguments[0] === 'string' && arguments[0].startsWith("[ttyd] websocket connection closed with code: 1000")) {
-        TerminalApp.closeTab()
+    const message = arguments[0];
+    const WEBSOCKET_CLOSED_PREFIX = "[ttyd] websocket connection closed with code: ";
+    if (typeof message === 'string') {
+      if (message.startsWith(WEBSOCKET_CLOSED_PREFIX + "1000")) {
+        // 1000 is the code for "normal closure", which means the user closed the
+        // tab intentionally.
+        TerminalApp.closeTab();
+      } else if (message.startsWith(WEBSOCKET_CLOSED_PREFIX)) {
+        // Any other code means the connection was closed unexpectedly. Show an
+        // error message to the user.
+        TerminalApp.showError();
+      }
     }
   };
 })();

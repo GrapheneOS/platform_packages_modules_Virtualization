@@ -210,4 +210,7 @@
     <string name="settings_graphics_acceleration_software_renderer">Software renderer</string>
     <!-- Hardware-based renderer [CHAR LIMIT=none] -->
     <string name="settings_graphics_acceleration_hardware_renderer">GPU-accelerated renderer</string>
+
+    <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
+    <string name="ttyd_connection_error">Session is lost due to an internal error.</string>
 </resources>

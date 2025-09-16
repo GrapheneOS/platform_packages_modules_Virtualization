@@ -25,6 +25,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import android.webkit.ClientCertRequest
 import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
@@ -165,6 +166,16 @@ class TerminalTabFragment() : Fragment() {
                 }
             }
         }
+
+        @JavascriptInterface
+        fun showError() {
+            if (activity != null) {
+                activity?.runOnUiThread {
+                    Toast.makeText(activity, R.string.ttyd_connection_error, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
     }
 
     private inner class TerminalWebViewClient : WebViewClient() {
