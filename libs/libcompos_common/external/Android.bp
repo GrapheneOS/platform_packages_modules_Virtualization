@@ -8,6 +8,8 @@ rust_defaults {
         "android.system.composd-rust",
         "libbinder_rs",
         "libcompos_bindgen",
+        "liblibc",
+        "libparking_lot",
     ],
 }
 
