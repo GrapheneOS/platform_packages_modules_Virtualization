@@ -1585,10 +1585,6 @@ fn has_common_debug_policy(fdt: &Fdt, debug_feature_name: &CStr) -> libfdt::Resu
 }
 
 fn validate_hostname(hostname: &str) -> bool {
-    // TODO(b/444647293): An existing VM - "Service VM" breaks on following hostname validation
-    #![allow(unreachable_code, unused_variables)]
-    return true;
-
     hostname
         .strip_prefix("=")
         .is_some_and(|s| s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'))
