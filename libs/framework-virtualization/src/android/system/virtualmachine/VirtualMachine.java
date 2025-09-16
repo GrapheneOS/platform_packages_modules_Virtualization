@@ -2033,10 +2033,12 @@ public class VirtualMachine implements AutoCloseable {
         try {
             stop();
 
-            mVirtualizationService
-                    .getBinder()
-                    .asBinder()
-                    .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+            if (mVirtualizationService != null) {
+                mVirtualizationService
+                        .getBinder()
+                        .asBinder()
+                        .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+            }
         } catch (Exception e) {
             // Deliberately ignored; this almost certainly means the VM exited just as
             // we tried to stop it.
