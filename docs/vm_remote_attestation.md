@@ -85,7 +85,8 @@ The extension format is as follows:
 AttestationExtension ::= SEQUENCE {
     attestationChallenge       OCTET_STRING,
     isVmSecure                 BOOLEAN,
-    vmComponents               SEQUENCE OF VmComponent,
+    vmPayloadComponents        SEQUENCE OF VmComponent,
+    vmTenantComponents         SEQUENCE OF VmComponent,
 }
 
 VmComponent ::= SEQUENCE {
@@ -104,10 +105,13 @@ In `AttestationExtension`:
 -   The `isVmSecure` field indicates whether the attested pVM is secure. It is
     set to true only when all the DICE certificates in the pVM DICE chain are in
     normal mode.
--   The `vmComponents` field contains a list of all the APKs and apexes loaded
-    by the pVM. These components are extracted from the config descriptor of the
+-   The `vmPayloadComponents` field contains a list of all the APKs and apexes loaded
+    into the pVM. These components are extracted from the config descriptor of the
     last DiceChainEntry of the pVM DICE chain. Refer to
     [dice_for_avf_guest.cddl][dice_for_avf_guest_cddl] for more information.
+-   The `vmTenantComponents` fields are additional components loaded into the pVM.
+    pVM verifies the package & additionally executes the tasks from these whilst
+    ensuring a level of isolation between these tenants.
 
 [dice_for_avf_guest_cddl]: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/dice_for_avf_guest.cddl
 

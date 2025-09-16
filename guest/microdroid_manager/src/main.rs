@@ -44,7 +44,7 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
-use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
+use crate::instance::{ApexData, EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::verify::{
     integrity_protect_tenant_apks, validate_tenant_apks_against_tenant_config, verify_payload,
 };
@@ -390,7 +390,7 @@ fn verify_payload_with_instance_img(
     metadata: &Metadata,
     dice: &DiceDriver,
     state: &mut VmInstanceState,
-) -> Result<MicrodroidData> {
+) -> Result<(MicrodroidData, Vec<ApexData>)> {
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
@@ -412,7 +412,7 @@ fn verify_payload_with_instance_img(
     }
 
     // Verify the payload before using it.
-    let extracted_data = verify_payload(metadata, saved_data.as_ref())
+    let (extracted_data, tenant_apex_data) = verify_payload(metadata, saved_data.as_ref())
         .context("Payload verification failed")
         .map_err(|e| MicrodroidError::PayloadVerificationFailed(format!("{e:?}")))?;
 
@@ -442,7 +442,7 @@ fn verify_payload_with_instance_img(
         *state = VmInstanceState::NewlyCreated;
         extracted_data
     };
-    Ok(instance_data)
+    Ok((instance_data, tenant_apex_data))
 }
 
 // The VM instance run can be
@@ -481,7 +481,7 @@ fn try_run_payload(
     // Microdroid skips checking payload against instance image iff the device supports
     // secretkeeper. In that case Microdroid use VmSecret::V2, which provides instance state
     // and protection against rollback of boot images and packages.
-    let instance_data = if should_defer_rollback_protection() {
+    let (instance_data, tenant_apex_data) = if should_defer_rollback_protection() {
         verify_payload(&metadata, None)?
     } else {
         verify_payload_with_instance_img(&metadata, &dice, &mut state)?
@@ -516,9 +516,17 @@ fn try_run_payload(
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
     })?;
 
+    let tenant_apks_data_extracted_from_manifest = integrity_protect_tenant_apks()?;
+
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
-    let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
+    let dice_artifacts = dice_derivation(
+        dice,
+        &instance_data,
+        &payload_metadata,
+        &tenant_apks_data_extracted_from_manifest,
+        &tenant_apex_data,
+    )?;
     let vm_secret = Arc::new(
         VmSecret::new(dice_artifacts, service, &mut state)
             .context("Failed to create VM secrets")?,
@@ -592,9 +600,8 @@ fn try_run_payload(
         .context("Failed to mount extra apks")?;
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
-    let tenant_apk_data_extracted_from_manifest = integrity_protect_tenant_apks()?;
     validate_tenant_apks_against_tenant_config(
-        &tenant_apk_data_extracted_from_manifest,
+        &tenant_apks_data_extracted_from_manifest,
         &config.tenants,
     )?;
 

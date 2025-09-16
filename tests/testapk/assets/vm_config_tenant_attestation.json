@@ -1,0 +1,20 @@
+{
+    "version": 1,
+    "os": {
+      "name": "microdroid"
+    },
+    "task": {
+        "type": "microdroid_launcher",
+        "command": "MicrodroidTestNativeLib.so"
+    },
+    "tenants": [
+        {
+            "package": "apk",
+            "name": "com.android.microdroid.test",
+            "task": {
+                "type": "microdroid_launcher",
+                "command": "libvm_attestation_test_payload.so"
+            }
+        }
+    ]
+}

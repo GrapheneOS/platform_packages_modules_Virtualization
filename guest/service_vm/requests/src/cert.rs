@@ -46,7 +46,8 @@ const AVF_ATTESTATION_EXTENSION_V1: ObjectIdentifier =
 /// AttestationExtension ::= SEQUENCE {
 ///     attestationChallenge       OCTET_STRING,
 ///     isVmSecure                 BOOLEAN,
-///     vmComponents               SEQUENCE OF VmComponent,
+///     vmPayloadComponents        SEQUENCE OF VmComponent,
+///     vmTenantComponents         SEQUENCE OF VmComponent,
 /// }
 /// ```
 #[derive(Debug, Clone, Sequence)]
@@ -55,7 +56,8 @@ pub(crate) struct AttestationExtension<'a> {
     attestation_challenge: &'a [u8],
     /// Indicates whether the VM is operating under a secure configuration.
     is_vm_secure: bool,
-    vm_components: Vec<VmComponent<'a>>,
+    vm_payload_components: Vec<VmComponent<'a>>,
+    vm_tenant_components: Vec<VmComponent<'a>>,
 }
 
 impl AssociatedOid for AttestationExtension<'_> {
@@ -66,9 +68,10 @@ impl<'a> AttestationExtension<'a> {
     pub(crate) fn new(
         attestation_challenge: &'a [u8],
         is_vm_secure: bool,
-        vm_components: Vec<VmComponent<'a>>,
+        vm_payload_components: Vec<VmComponent<'a>>,
+        vm_tenant_components: Vec<VmComponent<'a>>,
     ) -> Self {
-        Self { attestation_challenge, is_vm_secure, vm_components }
+        Self { attestation_challenge, is_vm_secure, vm_payload_components, vm_tenant_components }
     }
 }
 

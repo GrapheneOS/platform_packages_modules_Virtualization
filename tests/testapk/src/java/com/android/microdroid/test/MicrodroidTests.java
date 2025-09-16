@@ -124,6 +124,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String TAG = "MicrodroidTests";
     private static final String TEST_APP_PACKAGE_NAME = "com.android.microdroid.test";
     private static final String VM_ATTESTATION_PAYLOAD_PATH = "libvm_attestation_test_payload.so";
+    private static final String TEST_TENANT_APK_NAME = "apk:com.android.microdroid.test";
+
     private static final String VM_ATTESTATION_MESSAGE = "Hello RKP from AVF!";
     private static final long TOLERANCE_BYTES = 400_000;
     private static final int ENCRYPTED_STORAGE_BYTES = 4_000_000;
@@ -355,7 +357,112 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         if (signingResult.status == AttestationStatus.OK) {
             X509Certificate[] certs =
                     X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
-            X509Utils.verifyAvfRelatedCerts(certs, challenge, TEST_APP_PACKAGE_NAME);
+            X509Utils.verifyAvfRelatedCerts(
+                    certs, challenge, TEST_APP_PACKAGE_NAME, new String[] {});
+            X509Utils.verifySignature(
+                    certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
+        }
+    }
+
+    private SigningResult attestation_signing_result(byte[] challenge) throws Exception {
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        ensureVmAttestationSupported();
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_attestation.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("cts_attestation_with_multitenant_payload", config);
+
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+        assertWithMessage(
+                        "VM attestation should either succeed or fail when the network is unstable")
+                .that(signingResult.status)
+                .isAnyOf(AttestationStatus.OK, AttestationStatus.ERROR_ATTESTATION_FAILED);
+        return signingResult;
+    }
+
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void vmAttestationWithMultipleTenantsWhenRemoteAttestationIsNotSupported()
+            throws Exception {
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        assume().withMessage(
+                        "This test does not apply to a device that supports Remote Attestation")
+                .that(isRemoteAttestationSupported())
+                .isFalse();
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_attestation.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine(
+                        "cts_attestation_not_supported_with_multitenant_payload", config);
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xcc);
+
+        // Act.
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+
+        // Assert.
+        assertThat(signingResult.status).isEqualTo(AttestationStatus.ERROR_UNSUPPORTED);
+    }
+
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceMaybeOffline()
+            throws Exception {
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        attestation_signing_result(challenge);
+    }
+
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void
+            vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceStableNetwork()
+                    throws Exception {
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult = attestation_signing_result(challenge);
+
+        assume().withMessage(
+                        "AttestationStatus is ERROR_ATTESTATION_FAILED possibly due to unstable"
+                        + " network, nothing more to test")
+                .that(signingResult)
+                .isNotEqualTo(AttestationStatus.ERROR_ATTESTATION_FAILED);
+
+        if (signingResult.status == AttestationStatus.OK) {
+            X509Certificate[] certs =
+                    X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+            X509Utils.verifyAvfRelatedCerts(
+                    certs,
+                    challenge,
+                    TEST_APP_PACKAGE_NAME,
+                    new String[] {TEST_TENANT_APK_NAME});
             X509Utils.verifySignature(
                     certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
         }
