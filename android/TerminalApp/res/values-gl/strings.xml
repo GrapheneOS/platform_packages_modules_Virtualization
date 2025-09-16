@@ -82,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"Produciuse un erro que impide a recuperación"</string>
     <string name="error_desc" msgid="4588252235686826721">"Non se puido recuperar a información despois dun erro.\nPodes probar a reiniciar o terminal ou tentar usar unha das opcións de recuperación.\nSe non se soluciona o problema, activa e desactiva o terminal de Linux nas opcións de programación para borrar todos os datos."</string>
     <string name="error_code" msgid="3585291676855383649">"Código de erro: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for error_button_report_bug (5559616952618650716) -->
+    <skip />
+    <!-- no translation found for error_snackbar_report_bug (8432010448894076323) -->
+    <skip />
     <string name="upgrade_title" msgid="2882073508237099774">"Actualizar a un terminal máis novo"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"O terminal de Linux que utilizaches non está actualizado. Para continuar, debes actualizalo.\nFarase unha copia de seguranza dos datos en <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Actualizar"</string>

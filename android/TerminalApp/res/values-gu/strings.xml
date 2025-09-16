@@ -82,6 +82,10 @@
     <string name="error_title" msgid="405150657301906598">"ભૂલને કારણે રિકવર કરવો અશક્ય"</string>
     <string name="error_desc" msgid="4588252235686826721">"કોઈ ભૂલમાંથી રિકવર કરવામાં નિષ્ફળ રહ્યાં.\nતમે ટર્મિનલને ફરી શરૂ કરવાનો પ્રયાસ કરી શકો છો અથવા રિકવરીના વિકલ્પોમાંનો કોઈ એક વિકલ્પ અજમાવી શકો છો.\nજો બધા પ્રયાસો નિષ્ફળ જાય, તો ડેવલપરના વિકલ્પોમાંથી Linux ટર્મિનલને ચાલુ/બંધ કરીને બધો ડેટા વાઇપ કરો."</string>
     <string name="error_code" msgid="3585291676855383649">"ભૂલનો કોડ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <!-- no translation found for error_button_report_bug (5559616952618650716) -->
+    <skip />
+    <!-- no translation found for error_snackbar_report_bug (8432010448894076323) -->
+    <skip />
     <string name="upgrade_title" msgid="2882073508237099774">"નવા ટર્મિનલ પર અપગ્રેડ કરો"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"તમે જે Linux ટર્મિનલનો ઉપયોગ કરતા હતા, તે જૂનું થઈ ગયું છે. આગળ વધવા માટે કૃપા કરીને અપગ્રેડ કરો.\n<xliff:g id="PATH">/mnt/backup</xliff:g> પર ડેટાનું બૅકઅપ લેવામાં આવશે"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"અપગ્રેડ કરો"</string>
