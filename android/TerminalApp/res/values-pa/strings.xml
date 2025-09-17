@@ -82,10 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"ਮੁੜ-ਹਾਸਲ ਨਾ ਹੋਣਯੋਗ ਡਾਟੇ ਸੰਬੰਧੀ ਗੜਬੜ"</string>
     <string name="error_desc" msgid="4588252235686826721">"ਗੜਬੜ ਨੂੰ ਠੀਕ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।\nਤੁਸੀਂ ਟਰਮੀਨਲ ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕਰਨ ਦੀ ਕੋਸ਼ਿਸ਼ ਕਰ ਸਕਦੇ ਹੋ ਜਾਂ ਰਿਕਵਰੀ ਦੇ ਵਿਕਲਪਾਂ ਵਿੱਚੋਂ ਕਿਸੇ ਇੱਕ ਨੂੰ ਅਜ਼ਮਾ ਕੇ ਦੇਖ ਸਕਦੇ ਹੋ।\nਜੇ ਸਾਰੀਆਂ ਕੋਸ਼ਿਸ਼ਾਂ ਅਸਫਲ ਹੋ ਜਾਂਦੀਆਂ ਹਨ, ਤਾਂ ਵਿਕਾਸਕਾਰ ਵਿਕਲਪਾਂ ਤੋਂ Linux ਟਰਮੀਨਲ ਨੂੰ ਚਾਲੂ/ਬੰਦ ਕਰ ਕੇ ਸਾਰਾ ਡਾਟਾ ਸਾਫ਼ ਕਰੋ।"</string>
     <string name="error_code" msgid="3585291676855383649">"ਗੜਬੜ ਕੋਡ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for error_button_report_bug (5559616952618650716) -->
-    <skip />
-    <!-- no translation found for error_snackbar_report_bug (8432010448894076323) -->
-    <skip />
+    <string name="error_button_report_bug" msgid="5559616952618650716">"ਬੱਗ ਦੀ ਰਿਪੋਰਟ ਕਰੋ"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"ਲੌਗਾਂ ਨੂੰ ਇਕੱਤਰ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"ਨਵੇਂ ਟਰਮੀਨਲ \'ਤੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"ਤੁਹਾਡੇ ਵੱਲੋਂ ਵਰਤਿਆ ਜਾ ਰਿਹਾ Linux ਟਰਮੀਨਲ ਪੁਰਾਣਾ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਅੱਗੇ ਵਧਣ ਲਈ ਅੱਪਗ੍ਰੇਡ ਕਰੋ।\nਡਾਟੇ ਦਾ ਬੈਕਅੱਪ <xliff:g id="PATH">/mnt/backup</xliff:g> ਵਿੱਚ ਲਿਆ ਜਾਵੇਗਾ"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"ਅੱਪਗ੍ਰੇਡ ਕਰੋ"</string>
@@ -105,4 +103,6 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ਕਿਰਪਾ ਕਰਕੇ ਤਬਦੀਲੀ ਨੂੰ ਲਾਗੂ ਕਰਨ ਲਈ ਟਰਮੀਨਲ ਐਪ ਨੂੰ ਮੁੜ-ਸ਼ੁਰੂ ਕਰੋ।"</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ਸਾਫ਼ਟਵੇਅਰ ਰੈਂਡਰਰ"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-ਐਕਸੈੱਲਰੇਟਿਡ ਰੈਂਡਰਰ"</string>
+    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
+    <skip />
 </resources>

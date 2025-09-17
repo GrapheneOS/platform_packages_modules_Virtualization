@@ -82,10 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Nieodwracalny błąd"</string>
     <string name="error_desc" msgid="4588252235686826721">"Nie udało się przywrócić aplikacji po błędzie.\nMożesz spróbować ponownie uruchomić terminal lub skorzystać z jednej z opcji odzyskiwania.\nJeśli wszystkie próby zawiodą, wyczyść dane, włączając/wyłączając terminal Linuxa w opcjach dla programistów."</string>
     <string name="error_code" msgid="3585291676855383649">"Kod błędu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <!-- no translation found for error_button_report_bug (5559616952618650716) -->
-    <skip />
-    <!-- no translation found for error_snackbar_report_bug (8432010448894076323) -->
-    <skip />
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Zgłoś błąd"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Zbieram dzienniki"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Uaktualnij terminal do nowszej wersji"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Używany przez Ciebie terminal Linuxa jest nieaktualny. Aby kontynuować, uaktualnij go.\nKopia zapasowa danych zostanie utworzona w tej lokalizacji: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Uaktualnij"</string>
@@ -105,4 +103,6 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Aby zastosować zmianę, uruchom ponownie aplikację Terminal."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Programowy mechanizm renderowania"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Mechanizm renderowania z akceleracją przez GPU"</string>
+    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
+    <skip />
 </resources>
