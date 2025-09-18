@@ -18,6 +18,7 @@
 use android_system_composd::aidl::android::system::composd::ICompilationTask::ICompilationTask;
 use binder::{Interface, Result as BinderResult};
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct VerifiedDex2OatTask {}
 
