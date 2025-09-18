@@ -173,6 +173,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @After
     public void tearDown() {
+        deleteAllExistingVMsByApp();
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         // Some tests might install additional apks, so we need to clean them up here.
         uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);

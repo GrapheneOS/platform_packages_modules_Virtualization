@@ -58,6 +58,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -210,6 +214,32 @@ public abstract class MicrodroidDeviceTestBase {
         }
         if (deleteExisting) {
             vmm.delete(name);
+        }
+    }
+
+    protected void deleteAllExistingVMsByApp() {
+        Context context = getContext();
+        Path vmDir = Paths.get(context.getDataDir().getPath(), "vm");
+
+        if (!Files.exists(vmDir)) {
+            Log.w(
+                    TAG,
+                    "Deletion of all existing Vms requested, but VM directory does not exist"
+                            + vmDir);
+        }
+        VirtualMachineManager vmm = getVirtualMachineManager();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(vmDir)) {
+            // Iterate over all the VM directories to find names of the VM
+            for (Path entry : stream) {
+                if (Files.isDirectory(entry)) {
+                    // subdirectoryName is the vm name!
+                    String name = entry.getFileName().toString();
+                    vmm.delete(name);
+                    Log.i(TAG, "Deletion an existing VM " + name);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Deletion of existing VMs by the app failed " + e);
         }
     }
 
