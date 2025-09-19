@@ -53,6 +53,7 @@ use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binder::{self, BinderFeatures, ExceptionCode, Interface, IntoBinderResult, SpIBinder, Strong};
 use dice_driver::DiceDriver;
+use encryptedstore_query::needs_formatting;
 use glob::glob;
 use keystore2_crypto::ZVec;
 use libc::{VMADDR_CID_HOST, VMADDR_PORT_ANY};
@@ -1289,8 +1290,8 @@ fn delayed_prepare_encryptedstore(
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     match encrypted_store_mode {
         EncryptedStoreMode::KEKsStoredOnHost => {
-            get_encrypted_store_key(&service, &vm_secret, &mut key)
-                .context("get encrypted store key")?;
+            encrypted_store_key(&service, &vm_secret, &mut key)
+                .context("KEK based encrypted store key setup failed")?;
         }
         EncryptedStoreMode::DefaultKey => {
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
@@ -1308,16 +1309,17 @@ fn delayed_prepare_encryptedstore(
         .context("set microdroid_manager.init_done")
 }
 
-fn get_encrypted_store_key(
+fn encrypted_store_key(
     service: &Strong<dyn IVirtualMachineService>,
     vm_secret: &VmSecret,
     key: &mut [u8],
 ) -> Result<()> {
-    let kek_wrapper = service.getEncryptedStoreKEK().context("failed to get KEK")?;
+    let kek_wrapper =
+        service.getEncryptedStoreKEK().context("failed to get host-side KEK handler")?;
     let kek_wrapper = if let Some(kek_wrapper) = kek_wrapper {
         kek_wrapper
     } else {
-        bail!("expected encrypted store KEK from host but got nothing");
+        bail!("expected encrypted store KEK handler from host but got nothing");
     };
 
     // This key is used to encrypt the key used for encrypted store setup.
@@ -1325,16 +1327,21 @@ fn get_encrypted_store_key(
     vm_secret
         .derive_encryptedstore_key_encryption_key(&mut encryption_key)
         .context("failed to derive encryptedstore_key encryption key")?;
-    let kek = kek_wrapper.getKEK().context("failed to get KEK")?;
-    if let Some(kek) = kek {
-        let decrypted_key = decrypt_kek(&kek, &encryption_key).context("failed to decrypt KEK")?;
-        key.copy_from_slice(&decrypted_key);
-    } else {
+    if needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
+        .context("failed to check if device formatted")?
+    {
+        // Encrytedstore disk has never been setup - force provision a new KEK!
+        info!("Creating new KEK blob");
         vm_secret.derive_random_key(key).context("derive random key")?;
         let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;
-        kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK to host")?;
+        kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK blob to host")?;
+    } else {
+        let kek = kek_wrapper.getKEK().context("failed to get KEK blob")?;
+        let kek = kek.ok_or(anyhow!("Missing KEK blob"))?;
+        let decrypted_key =
+            decrypt_kek(&kek, &encryption_key).context("failed to decrypt KEK blob")?;
+        key.copy_from_slice(&decrypted_key);
     }
-
     Ok(())
 }
 

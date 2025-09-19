@@ -2778,6 +2778,10 @@ public class VirtualMachine implements AutoCloseable {
         @Override
         public void onKEKCreated(byte[] kekBlob) {
             try {
+                if (mKEKFile.exists()) {
+                    Log.w(TAG, "KEK existed, overwriting..." + mKEKFile.getAbsolutePath());
+                    mKEKFile.delete();
+                }
                 mKEKFile.getParentFile().mkdirs();
                 mKEKFile.createNewFile();
             } catch (IOException e) {
