@@ -3516,27 +3516,23 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void encryptedStoreKekOnCe_vmIsOnDe() throws Exception {
         assumeSupportedDevice();
         installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
-        Context testHelperAppCtx =
-                getContext()
-                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
-                        .createDeviceProtectedStorageContext();
-        encryptedStoreKEKTest(testHelperAppCtx, "test_vm_enc_store_kek_on_ce_vm_on_de");
+        Context ctx = getContext().createDeviceProtectedStorageContext();
+        encryptedStoreKEKTest(ctx, "test_vm_enc_store_kek_on_ce_vm_on_de");
     }
 
     @Test
     public void encryptedStoreKekOnCe_vmIsOnCe() throws Exception {
         assumeSupportedDevice();
         installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
-        Context testHelperAppCtx =
-                getContext()
-                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
-                        .createCredentialProtectedStorageContext();
-        encryptedStoreKEKTest(testHelperAppCtx, "test_vm_enc_store_kek_on_ce_vm_on_ce");
+        Context ctx = getContext().createCredentialProtectedStorageContext();
+        encryptedStoreKEKTest(ctx, "test_vm_enc_store_kek_on_ce_vm_on_ce");
     }
 
     private void encryptedStoreKEKTest(Context context, String testName) throws Exception {
+        Context testHelperAppCtx =
+                getContext().createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0);
         VirtualMachineConfig config =
-                new VirtualMachineConfig.Builder(context)
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setPayloadBinaryName("MicrodroidTestNativeLib.so")
                         .setProtectedVm(isProtectedVm())
@@ -3545,7 +3541,17 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(minMemoryRequired())
                         .build();
 
-        VirtualMachine vm = forceCreateNewVirtualMachine(testName, config);
+        VirtualMachineManager vmm = context.getSystemService(VirtualMachineManager.class);
+        try {
+            if (vmm.get(testName) != null) {
+                vmm.delete(testName);
+            }
+        } catch (VirtualMachineException e) {
+            // VirtualMachineManager#get might throw VirtualMachineException, which means that VM
+            // exist but didn't load successfully, delete it.
+            vmm.delete(testName);
+        }
+        VirtualMachine vm = vmm.create(testName, config);
 
         TestResults testResults =
                 runVmTestService(
@@ -3571,6 +3577,28 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
         assertThat(testResults.mFileContent).isEqualTo("Hello!");
+
+        // Check that VM files are created in the expected location.
+        File vmDir = new File(new File(context.getDataDir(), "vm"), testName);
+        assertWithMessage(vmDir.getAbsolutePath() + " does not exist")
+                .that(vmDir.exists())
+                .isTrue();
+        File instanceImg = new File(vmDir, "instance.img");
+        assertWithMessage(instanceImg.getAbsolutePath() + " does not exist")
+                .that(instanceImg.exists())
+                .isTrue();
+        File encStoreImg = new File(vmDir, "storage.img");
+        assertWithMessage(encStoreImg.getAbsolutePath() + " doest no exist")
+                .that(encStoreImg.exists())
+                .isTrue();
+        // The KEK file is always stored on CE directory.
+        Context ceContext = context.createCredentialProtectedStorageContext();
+        File ceVmDir = new File(new File(ceContext.getDataDir(), "vm"), testName);
+        assertWithMessage(ceVmDir.getAbsolutePath() + " does not exist")
+                .that(ceVmDir.exists())
+                .isTrue();
+        File kek = new File(ceVmDir, "encrypted_store_kek.bin");
+        assertWithMessage(kek.getAbsolutePath() + " does not exist").that(kek.exists()).isTrue();
     }
 
     /**
