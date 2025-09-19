@@ -1,0 +1,1 @@
+    interface aidl android.os.IAccessor/sharedsecret/security_vm_shared_secret

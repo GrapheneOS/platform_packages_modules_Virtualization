@@ -2,10 +2,22 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+genrule {
+    name: "security_vm_launcher-arm64_combined",
+    srcs: [
+        "security_vm_launcher-arm64.rc.base",
+    ] + select(soong_config_variable("trusty_system_vm", "placeholder_trusted_hal"), {
+        true: ["security_vm_launcher-arm64.rc.placeholder"],
+        default: [],
+    }),
+    out: ["security_vm_launcher-arm64.rc"],
+    cmd: "cat $(in) > $(out)",
+}
+
 prebuilt_etc {
     name: "trusty_security_vm_launcher.rc",
     src: select((os(), arch(), soong_config_variable("trusty_system_vm", "enabled")), {
-        ("android", "arm64", true): "security_vm_launcher-arm64.rc",
+        ("android", "arm64", true): ":security_vm_launcher-arm64_combined",
         ("android", "x86_64", true): "security_vm_launcher-x86_64.rc",
         (default, default, default): ":empty_file",
     }),
@@ -16,7 +28,10 @@ prebuilt_etc {
 
 prebuilt_etc {
     name: "trusty_security_vm_rpc_services.json",
-    src: "security_vm_rpc_services.json",
+    src: select(soong_config_variable("trusty_system_vm", "placeholder_trusted_hal"), {
+        true: "security_vm_rpc_services_hal_placeholders.json",
+        default: "security_vm_rpc_services.json",
+    }),
     system_ext_specific: true,
     relative_install_path: "vm/trusty_vm",
     filename: "security_vm_rpc_services.json",
