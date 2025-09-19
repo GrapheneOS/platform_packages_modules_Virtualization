@@ -31,17 +31,17 @@ use log::{error, info, warn};
 use rpcbinder::RpcSession;
 use rustutils::system_properties;
 use std::fs::{self, create_dir_all, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::android::fs::MetadataExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::LazyLock;
+use encryptedstore_query::{needs_formatting, UNFORMATTED_STORAGE_MAGIC};
 
 const E2FSCK_BIN: &str = "/system/bin/e2fsck";
 const MK2FS_BIN: &str = "/system/bin/mke2fs";
 const RESIZE2FS_BIN: &str = "/system/bin/resize2fs";
-const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
 
 static INTERNAL_CONNECTION: LazyLock<Strong<dyn IVmInternalService>> = LazyLock::new(|| {
     warn!("acquiring new connection to IVmInternalService");
@@ -165,8 +165,13 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     set_queue_tunable(blkdevice, "rq_affinity", "2")
         .context("Failed to set rq_affinity for virtio-blk device")?;
 
+    // The raw disk contains "UNFORMATTED_STORAGE_MAGIC" to indicate we need to format the crypt
+    // device. This is an indication that its setup has never been done. Zero it & set it up!
     let needs_formatting =
-        needs_formatting(blkdevice).context("Unable to check if formatting is required")?;
+        needs_formatting(blkdevice).context("Unable to check if data device is unformatted")?;
+    if needs_formatting {
+        zeroize_header(blkdevice).context("Zeroing the header")?;
+    }
     let crypt_device =
         enable_crypt(blkdevice, key, "cryptdev").context("Unable to map crypt device")?;
 
@@ -250,24 +255,14 @@ fn enable_crypt(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
     dm.create_crypt_device(name, &target).context("Failed to create dm-crypt device")
 }
 
-// The disk contains UNFORMATTED_STORAGE_MAGIC to indicate we need to format the crypt device.
-// This function looks for it, zeroing it, if present.
-fn needs_formatting(data_device: &Path) -> Result<bool> {
+fn zeroize_header(data_device: &Path) -> Result<()> {
     let mut file = OpenOptions::new()
-        .read(true)
         .write(true)
         .open(data_device)
         .with_context(|| format!("Failed to open {data_device:?}"))?;
 
-    let mut buf = [0; UNFORMATTED_STORAGE_MAGIC.len()];
-    file.read_exact(&mut buf)?;
-
-    if buf == UNFORMATTED_STORAGE_MAGIC.as_bytes() {
-        buf.fill(0);
-        file.write_all(&buf)?;
-        return Ok(true);
-    }
-    Ok(false)
+    file.write_all(&[0; UNFORMATTED_STORAGE_MAGIC.len()])?;
+    Ok(())
 }
 
 fn format_ext4(device: &Path) -> Result<()> {
