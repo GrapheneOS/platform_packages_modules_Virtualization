@@ -23,6 +23,8 @@ import com.android.microdroid.testservice.IAppCallback;
  */
 interface ITestService {
     const long PORT = 5678;
+    /* Some tests run multiple instances of ITestService on different vsock ports */
+    const long ALTERNATE_PORT = 5679;
 
     const long ECHO_REVERSE_PORT = 0x80000001L; // Deliberately chosen to be > 2^31, < 2^32
 
