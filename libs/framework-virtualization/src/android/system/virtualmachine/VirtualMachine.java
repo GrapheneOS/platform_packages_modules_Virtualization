@@ -2325,6 +2325,11 @@ public class VirtualMachine implements AutoCloseable {
     public VirtualMachineDescriptor toDescriptor() throws VirtualMachineException {
         synchronized (mLock) {
             checkStopped();
+            if (mEncryptedStoreKEK != null) {
+                throw new VirtualMachineException(
+                        "`toDescriptor` is disabled for VMs with encryptedstore keyblob in CE",
+                        VirtualMachineException.CODE_FEATURE_DISABLED);
+            }
             try {
                 return new VirtualMachineDescriptor(
                         ParcelFileDescriptor.open(mConfigFilePath, MODE_READ_ONLY),
