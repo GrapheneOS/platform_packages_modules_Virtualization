@@ -23,8 +23,12 @@ use anyhow::{anyhow, Context};
 use avflog::LogResult;
 use binder::{Interface, ExceptionCode, Strong, IntoBinderResult, Status};
 use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
+use log::{error, info};
 use crate::vm_secret::VmSecret;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
 /// Implementation of `IVmPayloadService`.
 pub(crate) struct VmPayloadService {
@@ -32,11 +36,22 @@ pub(crate) struct VmPayloadService {
     virtual_machine_service: Strong<dyn IVirtualMachineService>,
     secret: Arc<VmSecret>,
     is_new_instance: bool,
+    total_tasks: usize,
+    tasks_ready: AtomicUsize,
 }
 
 impl IVmPayloadService for VmPayloadService {
     fn notifyPayloadReady(&self) -> binder::Result<()> {
-        self.virtual_machine_service.notifyPayloadReady()
+        let tasks_ready = self.tasks_ready.fetch_add(1, Ordering::SeqCst) + 1;
+        if tasks_ready == self.total_tasks {
+            self.virtual_machine_service
+                .notifyPayloadReady()
+                .inspect(|_| info!("Notified host payload ready successfully"))
+                .inspect_err(|e| error!("Failed to notify host about payload ready: {e:?}"))
+        } else {
+            info!("Received {} of {} payload ready notifications.", tasks_ready, self.total_tasks);
+            Ok(())
+        }
     }
 
     fn getVmInstanceSecret(&self, identifier: &[u8], size: i32) -> binder::Result<Vec<u8>> {
@@ -130,8 +145,16 @@ impl VmPayloadService {
         vm_service: Strong<dyn IVirtualMachineService>,
         secret: Arc<VmSecret>,
         is_new_instance: bool,
+        total_tasks: usize,
     ) -> VmPayloadService {
-        Self { allow_restricted_apis, virtual_machine_service: vm_service, secret, is_new_instance }
+        Self {
+            allow_restricted_apis,
+            virtual_machine_service: vm_service,
+            secret,
+            is_new_instance,
+            total_tasks,
+            tasks_ready: AtomicUsize::new(0),
+        }
     }
 
     fn check_restricted_apis_allowed(&self) -> binder::Result<()> {

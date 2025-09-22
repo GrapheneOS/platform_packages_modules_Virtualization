@@ -657,12 +657,23 @@ fn try_run_payload(
         None
     };
 
+    let total_tasks = config.task.is_some() as usize
+        + config
+            .tenants
+            .iter()
+            .filter(|t| match t {
+                TenantConfig::Apex(c) => c.task.is_some(),
+                TenantConfig::Apk(c) => c.task.is_some(),
+            })
+            .count();
+
     let vm_payload_binder = BnVmPayloadService::new_binder(
         VmPayloadService::new(
             allow_restricted_apis,
             service.clone(),
             vm_secret.clone(),
             is_new_instance,
+            total_tasks,
         ),
         BinderFeatures::default(),
     );
