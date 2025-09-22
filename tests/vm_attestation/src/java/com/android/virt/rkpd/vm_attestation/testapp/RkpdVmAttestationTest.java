@@ -31,6 +31,7 @@ import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 import com.android.virt.vm_attestation.util.X509Utils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -98,6 +99,11 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         }
         prepareTestSetup(true /* protectedVm */, mOs);
         setMaxPerformanceTaskProfile();
+    }
+
+    @After
+    public void tearDown() {
+        deleteAllExistingVMsByApp();
     }
 
     @Test

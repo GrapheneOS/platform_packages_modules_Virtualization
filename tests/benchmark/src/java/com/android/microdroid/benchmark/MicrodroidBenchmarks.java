@@ -156,6 +156,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
 
     @After
     public void tearDown() throws IOException {
+        deleteAllExistingVMsByApp();
         if (mTeardownDebugfs) {
             executeCommand("umount /sys/kernel/debug");
         }
