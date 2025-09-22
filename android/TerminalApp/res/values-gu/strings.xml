@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ફેરફાર લાગુ કરવા માટે કૃપા કરીને Terminal ઍપ ફરી શરૂ કરો."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"સૉફ્ટવેર રેન્ડરર"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-ઍક્સલરેટેડ રેન્ડરર"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"કોઈ આંતરિક ભૂલને કારણે સત્ર ગુમાવ્યું છે."</string>
 </resources>
