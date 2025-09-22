@@ -118,7 +118,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
 import java.util.zip.ZipFile;
 
 /**
@@ -331,14 +330,11 @@ public class VirtualMachine implements AutoCloseable {
 
     // A note on lock ordering:
     // You can take mLock while holding VirtualMachineManager.sCreateLock, but not vice versa.
-    // We never take any other lock while holding mCallbackLock; therefore you can
-    // take mCallbackLock while holding any other lock.
+    // We never take any other lock while holding CallbackTranslator.mLock; therefore you can
+    // take CallbackTranslator.mLock while holding any other lock.
 
     /** Lock protecting our mutable state (other than callbacks). */
     private final Object mLock = new Object();
-
-    /** Lock protecting callbacks. */
-    private final Object mCallbackLock = new Object();
 
     private final boolean mVmOutputCaptured;
 
@@ -419,15 +415,28 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("mLock")
     private boolean mStopHandled = false;
 
-    /** The registered callback */
-    @GuardedBy("mCallbackLock")
+    /**
+     * The registered callback.
+     *
+     * <p>Don't use directly for callbacks! Only for creating CallbackTranslator.
+     */
+    @GuardedBy("mLock")
     @Nullable
-    private VirtualMachineCallback mCallback;
+    private VirtualMachineCallback mConfiguredCallback;
 
-    /** The executor on which the callback will be executed */
-    @GuardedBy("mCallbackLock")
+    /**
+     * The executor on which the callback will be executed.
+     *
+     * <p>Don't use directly for callbacks! Only for creating CallbackTranslator.
+     */
+    @GuardedBy("mLock")
     @Nullable
-    private Executor mCallbackExecutor;
+    private Executor mConfiguredCallbackExecutor;
+
+    /** The actual callback binder object registered for the current VM. */
+    @GuardedBy("mLock")
+    @Nullable
+    private CallbackTranslator mCallbackTranslator;
 
     private static class ApkSpec {
         public final File apk;
@@ -879,7 +888,6 @@ public class VirtualMachine implements AutoCloseable {
                 dropVm();
             }
         }
-        executeCallback((cb) -> cb.onStopped(VirtualMachine.this, reason));
     }
 
 
@@ -920,6 +928,7 @@ public class VirtualMachine implements AutoCloseable {
             }
             mVirtualizationService = null;
         }
+        mCallbackTranslator = null;
     }
 
     /** If we have an IVirtualMachine in the running state return it, otherwise throw. */
@@ -952,9 +961,15 @@ public class VirtualMachine implements AutoCloseable {
     public void setCallback(
             @NonNull @CallbackExecutor Executor executor,
             @NonNull VirtualMachineCallback callback) {
-        synchronized (mCallbackLock) {
-            mCallback = callback;
-            mCallbackExecutor = executor;
+        synchronized (mLock) {
+            mConfiguredCallback = callback;
+            mConfiguredCallbackExecutor = executor;
+            if (mCallbackTranslator != null) {
+                synchronized (mCallbackTranslator.mLock) {
+                    mCallbackTranslator.mCallback = callback;
+                    mCallbackTranslator.mCallbackExecutor = executor;
+                }
+            }
         }
     }
 
@@ -965,28 +980,15 @@ public class VirtualMachine implements AutoCloseable {
      */
     @SystemApi
     public void clearCallback() {
-        synchronized (mCallbackLock) {
-            mCallback = null;
-            mCallbackExecutor = null;
-        }
-    }
-
-    /** Executes a callback on the callback executor. */
-    private void executeCallback(Consumer<VirtualMachineCallback> fn) {
-        final VirtualMachineCallback callback;
-        final Executor executor;
-        synchronized (mCallbackLock) {
-            callback = mCallback;
-            executor = mCallbackExecutor;
-        }
-        if (callback == null || executor == null) {
-            return;
-        }
-        final long restoreToken = Binder.clearCallingIdentity();
-        try {
-            executor.execute(() -> fn.accept(callback));
-        } finally {
-            Binder.restoreCallingIdentity(restoreToken);
+        synchronized (mLock) {
+            mConfiguredCallback = null;
+            mConfiguredCallbackExecutor = null;
+            if (mCallbackTranslator != null) {
+                synchronized (mCallbackTranslator.mLock) {
+                    mCallbackTranslator.mCallback = null;
+                    mCallbackTranslator.mCallbackExecutor = null;
+                }
+            }
         }
     }
 
@@ -1698,14 +1700,23 @@ public class VirtualMachine implements AutoCloseable {
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
                 mCid = mVirtualMachine.getCid();
-                mVirtualMachine.registerCallback(new CallbackTranslator(this, service, mCid));
+                mCallbackTranslator =
+                        new CallbackTranslator(
+                                this, service, mConfiguredCallback, mConfiguredCallbackExecutor);
+                mVirtualMachine.registerCallback(mCallbackTranslator);
 
                 // Copy to a local variable so that the lambdas below are not
-                // updated when mCid is mutated.
-                int cid = mCid;
+                // updated when mCid or mCallbackTranslator are mutated.
+                final int cid = mCid;
+                final CallbackTranslator callbackTranslator = mCallbackTranslator;
                 mVSDeathRecipient =
-                        () -> handleStopped(cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
-                mVMDeathRecipient = () -> handleStopped(cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
+                        () ->
+                                callbackTranslator.onDied(
+                                        cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
+                mVMDeathRecipient =
+                        () ->
+                                callbackTranslator.onDied(
+                                        cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
                 mVirtualMachine.asBinder().linkToDeath(mVMDeathRecipient, /* flags= */ 0);
                 service.asBinder().linkToDeath(mVSDeathRecipient, /* flags= */ 0);
 
@@ -2591,66 +2602,95 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    /** Map the raw AIDL (& binder) callbacks to what the client expects.
+    /**
+     * Map the raw AIDL (& binder) callbacks to what the client expects.
      *
-     * Must to be static to avoid keeping an implicit strong reference on the
-     * parent VirtualMachine object, otherwise, because IVirtualizationService
-     * will have a cross-process reference, we can end up with a cross-process
-     * circular ref count, resulting in a leak.
+     * <p>Must to be static to avoid keeping an implicit strong reference on the parent
+     * VirtualMachine object, otherwise, because IVirtualizationService will have a cross-process
+     * reference, we can end up with a cross-process circular ref count, resulting in a leak.
      */
     private static class CallbackTranslator extends IVirtualMachineCallback.Stub {
         private final WeakReference<VirtualMachine> mVirtualMachine;
         private final WeakReference<IVirtualizationService> mService;
-        private final int mCid;
+
+        private final Object mLock = new Object();
+
+        /** The registered callback */
+        @GuardedBy("mLock")
+        @Nullable
+        private VirtualMachineCallback mCallback;
+
+        /** The executor on which the callback will be executed */
+        @GuardedBy("mLock")
+        @Nullable
+        private Executor mCallbackExecutor;
 
         public CallbackTranslator(
-                VirtualMachine virtualMachine, IVirtualizationService service, int cid)
+                VirtualMachine virtualMachine,
+                IVirtualizationService service,
+                VirtualMachineCallback callback,
+                Executor callbackExecutor)
                 throws RemoteException {
             this.mVirtualMachine = new WeakReference<>(virtualMachine);
             this.mService = new WeakReference<>(service);
-            this.mCid = cid;
+            this.mCallback = callback;
+            this.mCallbackExecutor = callbackExecutor;
+        }
+
+        @FunctionalInterface
+        interface CallbackFunc {
+            public void apply(VirtualMachineCallback cb, VirtualMachine vm);
+        }
+
+        /** Executes a callback on the callback executor. */
+        private void executeCallback(CallbackFunc fn) {
+            final VirtualMachineCallback callback;
+            final Executor executor;
+            synchronized (mLock) {
+                callback = mCallback;
+                executor = mCallbackExecutor;
+            }
+            VirtualMachine vm = mVirtualMachine.get();
+            if (callback == null || executor == null || vm == null) {
+                return;
+            }
+            final long restoreToken = Binder.clearCallingIdentity();
+            try {
+                executor.execute(() -> fn.apply(callback, vm));
+            } finally {
+                Binder.restoreCallingIdentity(restoreToken);
+            }
         }
 
         @Override
         public void onPayloadStarted(int cid) {
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onPayloadStarted(vm));
-            }
+            executeCallback((cb, vm) -> cb.onPayloadStarted(vm));
         }
 
         @Override
         public void onPayloadReady(int cid) {
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onPayloadReady(vm));
-            }
+            executeCallback((cb, vm) -> cb.onPayloadReady(vm));
         }
 
         @Override
         public void onPayloadFinished(int cid, int exitCode) {
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onPayloadFinished(vm, exitCode));
-            }
+            executeCallback((cb, vm) -> cb.onPayloadFinished(vm, exitCode));
         }
 
         @Override
         public void onError(int cid, int errorCode, String message) {
             int translatedError = getTranslatedError(errorCode);
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onError(vm, translatedError, message));
-            }
+            executeCallback((cb, vm) -> cb.onError(vm, translatedError, message));
         }
 
         @Override
         public void onDied(int cid, int reason) {
             int translatedReason = getTranslatedReason(reason);
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.handleStopped(cid, translatedReason);
-            }
+            executeCallback(
+                    (cb, vm) -> {
+                        vm.handleStopped(translatedReason, cid);
+                        cb.onStopped(vm, reason);
+                    });
         }
 
         @VirtualMachineCallback.ErrorCode
