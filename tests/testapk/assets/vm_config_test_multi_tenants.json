@@ -17,6 +17,16 @@
           "type": "microdroid_launcher",
           "command": "MicrodroidTestNativeLib.so"
       }
+    },
+    {
+      "package": "apex",
+      "name": "com.android.virt",
+      "min_version": 1,
+      "expected_authority": "",
+      "task": {
+          "type": "microdroid_launcher",
+          "command": "MicrodroidExitNativeLib.so"
+      }
     }
   ],
   "export_tombstones": true,
