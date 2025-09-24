@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"변경사항을 적용하려면 터미널 앱을 다시 시작하세요."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"소프트웨어 렌더기"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU 가속 렌더기"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"내부 오류로 인해 세션 연결이 해제되었습니다."</string>
 </resources>

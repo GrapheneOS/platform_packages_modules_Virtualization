@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ცვლილებისთვის გადატვირთეთ ტერმინალის აპი."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"პროგრამული უზრუნველყოფის რენდერი"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-თი დაჩქარებული რენდერი"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"სესია შეწყდა შიდა შეცდომის გამო."</string>
 </resources>

@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"សូមចាប់ផ្ដើមកម្មវិធីទែមីណាល់ឡើងវិញ ដើម្បីអនុវត្តការផ្លាស់ប្ដូរ។"</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ឧបករណ៍បំប្លែងកម្មវិធី"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"ឧបករណ៍បំប្លែងដែលបានពន្លឿន GPU"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"បាត់វគ្គ ដោយសារតែបញ្ហាខាងក្នុង។"</string>
 </resources>

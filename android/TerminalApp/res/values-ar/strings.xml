@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"يُرجى إعادة تشغيل تطبيق Terminal لإجراء التغييرات."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"عارض برمجي"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"عارض مسرَّع بواسطة وحدة معالجة الرسومات"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"تعذَّر الاتصال بالوحدة الطرفية بسبب خطأ داخلي."</string>
 </resources>

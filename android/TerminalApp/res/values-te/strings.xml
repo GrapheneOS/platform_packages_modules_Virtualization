@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"మార్పును వర్తింపజేయడానికి, దయచేసి Terminal యాప్‌ను రీస్టార్ట్ చేయండి."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"సాఫ్ట్‌వేర్ రెండరర్"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-యాక్సిలరేటెడ్ రెండరర్"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"అంతర్గత ఎర్రర్ కారణంగా సెషన్ కనెక్షన్‌ను కోల్పోయారు."</string>
 </resources>

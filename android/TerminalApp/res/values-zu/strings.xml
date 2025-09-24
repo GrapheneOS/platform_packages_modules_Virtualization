@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Sicela uqale kabusha i-app yetheminali ukuze usebenzise ushintsho."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Ukunikezela kwesofthiwe"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Ukunikezela okusheshisiwe kwe-GPU"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Iseshini ilahlekile ngenxa yephutha langaphakathi."</string>
 </resources>
