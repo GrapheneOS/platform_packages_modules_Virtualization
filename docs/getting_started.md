@@ -66,13 +66,13 @@ install your custom-built AVF APEX to it - because it is test-key signed.
 1. Build Cuttlefish:
    ```shell
    source build/envsetup.sh
-   lunch aosp_cf_x86_64_phone-userdebug
+   lunch aosp_cf_x86_64_phone-trunk_staging-userdebug
    m
    ```
 
 1. Run Cuttlefish:
    ```shell
-   cvd start
+   cvd create
    ```
 
 ## Step 3: Build AVF
