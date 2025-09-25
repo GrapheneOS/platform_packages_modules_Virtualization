@@ -25,10 +25,13 @@ type Result<T> = result::Result<T, RequestProcessingError>;
 /// Verifies the MAC of the given public key.
 pub fn validate_public_key(maced_public_key: &[u8], hmac_key: &[u8]) -> Result<CoseKey> {
     let cose_mac = CoseMac0::from_slice(maced_public_key)?;
-    let payload =
-        cose_mac.payload.as_ref().ok_or(RequestProcessingError::KeyToSignHasEmptyPayload)?;
-    cose_mac.verify_tag(&[], |tag, data| verify_tag(tag, data, hmac_key))?;
-    Ok(CoseKey::from_slice(payload)?)
+    cose_mac.verify_payload_tag(
+        &[],
+        || RequestProcessingError::KeyToSignHasEmptyPayload,
+        |tag, data| verify_tag(tag, data, hmac_key),
+    )?;
+    let payload = cose_mac.payload.ok_or(RequestProcessingError::KeyToSignHasEmptyPayload)?;
+    Ok(CoseKey::from_slice(&payload)?)
 }
 
 fn verify_tag(tag: &[u8], data: &[u8], hmac_key: &[u8]) -> Result<()> {
