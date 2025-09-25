@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Непоправљива грешка"</string>
     <string name="error_desc" msgid="4588252235686826721">"Опоравак од грешке није успео.\nПокушајте да рестартујете терминал или испробајте једну од опција за враћање.\nАко ниједан покушај не успе, обришите све податке тако што ћете укључити или искључити Linux терминал у опцијама за програмере."</string>
     <string name="error_code" msgid="3585291676855383649">"Кôд грешке: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Пријави грешку"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Прикупљају се евиденције"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Надоградите на новији терминал"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Linux терминал који користите је застарео. Надоградите да бисте наставили.\nРезервна копија података ће бити направљена на <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Надогради"</string>

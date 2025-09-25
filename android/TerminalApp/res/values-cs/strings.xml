@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Neopravitelná chyba"</string>
     <string name="error_desc" msgid="4588252235686826721">"Z chybového stavu se nepodařilo dostat.\nMůžete terminál zkusit restartovat, nebo vyzkoušet některou z možností obnovení.\nPokud všechny pokusy selžou, nevratně smažte všechna data tím, že v možnostech pro vývojáře zapnete/vypnete terminál Linux."</string>
     <string name="error_code" msgid="3585291676855383649">"Kód chyby: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Nahlásit chybu"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Shromažďování protokolů"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Upgradujte na novější terminál"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Používaný terminál Linux je zastaralý. Než budete pokračovat, upgradujte ho.\nData budou zálohována do <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Upgradovat"</string>

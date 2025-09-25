@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Непапраўная памылка"</string>
     <string name="error_desc" msgid="4588252235686826721">"Не ўдалося аднавіць праграму пасля памылкі.\nПеразапусціце тэрмінал ці паспрабуйце скарыстаць адзін з варыянтаў аднаўлення.\nКалі гэтыя спробы не дадуць вынікаў, ачысціце ўсе даныя, уключыўшы (выключыўшы) тэрмінал Linux у параметрах распрацоўшчыка."</string>
     <string name="error_code" msgid="3585291676855383649">"Код памылкі: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Паведаміць пра памылку"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Збіраюцца журналы"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Абнавіце версію тэрмінала"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Тэрмінал Linux, які вы выкарыстоўвалі, устарэў. Каб працягнуць, абнавіце яго.\nРэзервовая копія даных будзе захавана тут: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Абнавіць"</string>

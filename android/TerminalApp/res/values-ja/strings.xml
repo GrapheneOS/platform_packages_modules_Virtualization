@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"修復不可能なエラー"</string>
     <string name="error_desc" msgid="4588252235686826721">"エラーを修復できませんでした。\nターミナルを再起動するか、いずれかの復元オプションをお試しください。\nそれでも修復できない場合は、開発者向けオプションで Linux ターミナルをオン / オフにして、すべてのデータをワイプしてください。"</string>
     <string name="error_code" msgid="3585291676855383649">"エラーコード: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"バグを報告"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"ログの収集"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"新しいターミナルへのアップグレード"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"お使いの Linux ターミナルは最新ではありません。続行するにはアップグレードしてください。\nデータは <xliff:g id="PATH">/mnt/backup</xliff:g> にバックアップされます"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"アップグレード"</string>

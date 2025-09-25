@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"نا قابل بازیابی کی خرابی"</string>
     <string name="error_desc" msgid="4588252235686826721">"کسی خرابی سے بازیاب کرنے میں ناکام۔\nآپ ٹرمینل کو ری اسٹارٹ کرنے کی کوشش کر سکتے ہیں یا بازیابی کے اختیارات میں سے ایک اختیار آزما سکتے ہیں۔\nاگر تمام کوششیں ناکام ہوتی ہیں تو ڈویلپر کے اختیارات سے Linux ٹرمینل کو آن/آف کر کے تمام ڈیٹا صاف کریں۔"</string>
     <string name="error_code" msgid="3585291676855383649">"خرابی کا کوڈ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"بَگ کی اطلاع دیں"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"لاگز جمع کیے جا رہے ہیں"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"جدید تر ٹرمینل میں اپ گریڈ کریں"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"آپ جو Linux ٹرمینل استعمال کر رہے تھے وہ پرانا ہے۔ براہ کرم آگے بڑھنے کے لیے اپ گریڈ کریں۔\nڈیٹا کا بیک اپ <xliff:g id="PATH">/mnt/backup</xliff:g> پر لیا جائے گا"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"اپ گریڈ کریں"</string>

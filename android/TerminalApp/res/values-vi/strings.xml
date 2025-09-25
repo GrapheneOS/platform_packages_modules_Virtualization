@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Lỗi không thể khôi phục"</string>
     <string name="error_desc" msgid="4588252235686826721">"Không khôi phục được dữ liệu sau khi xảy ra lỗi.\nBạn có thể thử khởi động lại ứng dụng Terminal hoặc thử một trong các tuỳ chọn khôi phục.\nNếu tất cả các cách đều không hiệu quả, hãy xoá sạch mọi dữ liệu bằng cách bật/tắt ứng dụng Terminal trên Linux trong phần tuỳ chọn cho nhà phát triển."</string>
     <string name="error_code" msgid="3585291676855383649">"Mã lỗi: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Báo cáo lỗi"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Đang thu thập nhật ký"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Nâng cấp lên cửa sổ dòng lệnh mới hơn"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Cửa sổ dòng lệnh Linux mà bạn đang dùng đã lỗi thời. Hãy nâng cấp để tiếp tục.\nDữ liệu sẽ được sao lưu vào <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Nâng cấp"</string>
