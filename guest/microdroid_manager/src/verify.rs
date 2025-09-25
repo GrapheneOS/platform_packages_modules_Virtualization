@@ -25,7 +25,7 @@ use microdroid_metadata::{write_metadata, Metadata};
 use microdroid_payload_config::TenantConfig;
 use microdroid_payload_config::TenantConfiguration;
 use openssl::sha::sha512;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::path::Path;

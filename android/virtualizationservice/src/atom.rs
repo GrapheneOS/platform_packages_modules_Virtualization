@@ -22,7 +22,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 };
 use anyhow::Result;
 use log::{trace, warn};
-use rustutils::system_properties::PropertyWatcher;
+use rustutils::android::system_properties::PropertyWatcher;
 use statslog_virtualization_rust::{cgroup_memory_breach_reported, fsck_failed_reported, get_or_create_sk_secret_failed_reported,  psi_monitor_failed_reported, vm_booted, vm_creation_requested, vm_exited};
 
 pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {

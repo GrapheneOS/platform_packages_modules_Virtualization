@@ -42,27 +42,32 @@ pub mod fsverity {
 /// A wrapper for rstutils::system_properties.
 #[cfg_attr(test, mockall::automock)]
 pub mod system_properties {
-    /// Wraps rustutils::system_properties::write
-    pub fn write(name: &str, value: &str) -> rustutils::system_properties::error::Result<()> {
-        rustutils::system_properties::write(name, value)
+    /// Wraps rustutils::android::system_properties::write
+    pub fn write(
+        name: &str,
+        value: &str,
+    ) -> rustutils::android::system_properties::error::Result<()> {
+        rustutils::android::system_properties::write(name, value)
     }
-    /// Wraps rustutils::system_properties::read_bool
+    /// Wraps rustutils::android::system_properties::read_bool
     pub fn read_bool(
         name: &str,
         default_value: bool,
-    ) -> rustutils::system_properties::error::Result<bool> {
-        rustutils::system_properties::read_bool(name, default_value)
+    ) -> rustutils::android::system_properties::error::Result<bool> {
+        rustutils::android::system_properties::read_bool(name, default_value)
     }
-    /// Wraps rustutils::system_properties::read.
-    pub fn read(name: &str) -> rustutils::system_properties::error::Result<Option<String>> {
-        rustutils::system_properties::read(name)
+    /// Wraps rustutils::android::system_properties::read.
+    pub fn read(
+        name: &str,
+    ) -> rustutils::android::system_properties::error::Result<Option<String>> {
+        rustutils::android::system_properties::read(name)
     }
-    /// Wraps rustutils::system_properties::foreach.
-    pub fn foreach<'a, F>(f: F) -> rustutils::system_properties::error::Result<()>
+    /// Wraps rustutils::android::system_properties::foreach.
+    pub fn foreach<'a, F>(f: F) -> rustutils::android::system_properties::error::Result<()>
     where
         F: FnMut(&str, &str) + 'a,
     {
-        rustutils::system_properties::foreach(f)
+        rustutils::android::system_properties::foreach(f)
     }
 }
 

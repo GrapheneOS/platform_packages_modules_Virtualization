@@ -234,7 +234,7 @@ mod tests {
     use super::*;
     use crate::loopdevice::LoopConfigOptions;
     use crypt::{CipherType, DmCryptTargetBuilder};
-    use rustutils::system_properties;
+    use rustutils::android::system_properties;
     use std::fs::{read, File, OpenOptions};
     use std::io::Write;
 

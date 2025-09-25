@@ -17,7 +17,7 @@
 //! Detection for nested virtualization.
 
 use anyhow::Result;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 
 /// Return whether we will be running our VM in a VM, which causes the nested VM to run very slowly.
 pub fn is_nested_virtualization() -> Result<bool> {

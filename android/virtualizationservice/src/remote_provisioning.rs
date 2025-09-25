@@ -32,7 +32,7 @@ use binder::{
     Strong,
 };
 use hypervisor_props::is_protected_vm_supported;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use service_vm_comm::{RequestProcessingError, Response};
 
 /// Constructs a binder object that implements `IRemotelyProvisionedComponent`.

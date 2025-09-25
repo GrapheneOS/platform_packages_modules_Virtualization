@@ -227,7 +227,7 @@ fn vsr_api_level() -> Result<i32> {
 }
 
 fn get_sysprop_i32(prop: &str) -> Result<i32> {
-    let Some(val) = rustutils::system_properties::read(prop)? else {
+    let Some(val) = rustutils::android::system_properties::read(prop)? else {
         return Ok(-1);
     };
     val.parse::<i32>().with_context(|| format!("Failed to read {prop}"))

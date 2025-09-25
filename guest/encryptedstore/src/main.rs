@@ -29,7 +29,7 @@ use clap::arg;
 use dm::{crypt::CipherType, util};
 use log::{error, info, warn};
 use rpcbinder::RpcSession;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use std::fs::{self, create_dir_all, OpenOptions};
 use std::io::Write;
 use std::os::android::fs::MetadataExt;

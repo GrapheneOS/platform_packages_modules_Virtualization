@@ -46,7 +46,7 @@ use nix::unistd::{chown, pipe2, Uid};
 use openssl::x509::X509;
 use rand::Fill;
 use rkpd_client::get_rkpd_attestation_key;
-use rustutils::{
+use rustutils::android::{
     system_properties,
     users::{multiuser_get_app_id, multiuser_get_user_id},
 };

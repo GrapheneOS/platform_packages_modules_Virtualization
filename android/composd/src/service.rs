@@ -43,7 +43,7 @@ use compos_common_injection::{
     compos_client::CompOsType,
     odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR},
 };
-use rustutils::{users::AID_ROOT, users::AID_SYSTEM};
+use rustutils::android::{users::AID_ROOT, users::AID_SYSTEM};
 use std::sync::Arc;
 
 pub struct IsolatedCompilationService {
