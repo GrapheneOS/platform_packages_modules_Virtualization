@@ -46,8 +46,9 @@ VM instance.
 ## (Experimental) Use other desktop environment
 We recommend a user to use weston with kiosk mode for single-app experience.
 If you want to experiment with other desktop environment, please remove the line
-including `systemctl --user start weston` in `/usr/local/bin/enable_display` to
-avoid conflict with newly installed window manager with existing weston.
+including `systemctl --user start weston` in `/usr/local/bin/enable_display` and
+`usr/local/bin/enable_gfxstream` to avoid conflict with newly installed display
+manager with existing weston.
 
 ## Connect to host Android device with ADB
 To establish ADB connection from the VM at terminal app to the host Android
