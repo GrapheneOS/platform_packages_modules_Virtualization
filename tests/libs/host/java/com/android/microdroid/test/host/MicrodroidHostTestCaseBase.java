@@ -292,10 +292,6 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     }
 
     protected void assumeVmTypeSupported(String os, boolean protectedVm) throws Exception {
-        // TODO(b/376870129): remove this check
-        if (protectedVm) {
-            assumeFalse("pVMs with 16k kernel are not supported yet :(", os.endsWith("_16k"));
-        }
         assumeTrue(
                 "Microdroid is not supported for specific VM protection type",
                 getAndroidDevice().supportsMicrodroid(protectedVm));
