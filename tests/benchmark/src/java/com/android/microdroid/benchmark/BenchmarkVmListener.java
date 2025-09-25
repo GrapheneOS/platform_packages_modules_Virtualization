@@ -42,9 +42,11 @@ class BenchmarkVmListener extends VmEventListener {
     }
 
     private final InnerListener mListener;
+    private final boolean mIgnoreErrors;
 
-    private BenchmarkVmListener(InnerListener listener) {
+    private BenchmarkVmListener(InnerListener listener, boolean ignoreErrors) {
         mListener = listener;
+        mIgnoreErrors = ignoreErrors;
     }
 
     @Override
@@ -59,11 +61,17 @@ class BenchmarkVmListener extends VmEventListener {
             mListener.onPayloadReady(vm, benchmarkService);
         } catch (Exception e) {
             Log.e(TAG, "Error inside onPayloadReady():" + e);
+            if (!mIgnoreErrors) {
+                throw new RuntimeException(e);
+            }
         }
         try {
             forceStop(vm);
         } catch (Exception e) {
             Log.e(TAG, "Failed to forceStop:" + e);
+            if (!mIgnoreErrors) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -73,7 +81,11 @@ class BenchmarkVmListener extends VmEventListener {
     }
 
     static BenchmarkVmListener create(InnerListener listener) {
-        return new BenchmarkVmListener(listener);
+        return new BenchmarkVmListener(listener, false);
+    }
+
+    static BenchmarkVmListener createIgnoreErrors(InnerListener listener) {
+        return new BenchmarkVmListener(listener, true);
     }
 
     @Override

@@ -1150,7 +1150,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                         () -> {
                             try {
                                 List<Double> writeThroughput = new ArrayList<>();
-                                BenchmarkVmListener.create(
+                                BenchmarkVmListener.createIgnoreErrors(
                                                 new EncryptedstoreBenchmarkListener(
                                                         writeThroughput,
                                                         /* measureWrite */ true,
@@ -1169,7 +1169,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                         () -> {
                             try {
                                 List<Double> readThroughput = new ArrayList<>(1);
-                                BenchmarkVmListener.create(
+                                BenchmarkVmListener.createIgnoreErrors(
                                                 new EncryptedstoreBenchmarkListener(
                                                         readThroughput, /* measureWrite */ false))
                                         .runToFinish(TAG, vm);
