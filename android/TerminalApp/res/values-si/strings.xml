@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"ප්‍රතිසාධනය කළ නොහැකි දෝෂය"</string>
     <string name="error_desc" msgid="4588252235686826721">"දෝෂයකින් ප්‍රතිසාධනය කිරීමට අසමත් විය.\nඔබට ටර්මිනලය නැවත ආරම්භ කිරීමට උත්සාහ කළ හැක, නැතහොත් ප්‍රතිසාධන විකල්ප වලින් එකක් උත්සාහ කරන්න.\nසියලු උත්සාහයන් අසමත් වුවහොත්, සංවර්ධක විකල්ප වලින් Linux පර්යන්තය ක්‍රියාත්මක/ක්‍රියාවිරහිත කිරීමෙන් සියලු දත්ත පිස දමන්න."</string>
     <string name="error_code" msgid="3585291676855383649">"දෝෂ කේතය: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"දෝෂයක් වාර්තා කරන්න"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"ලොග් එකතු කිරීම"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"නවතම පර්යන්තයකට උත්ශ්‍රේණි කරන්න"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"ඔබ භාවිතා කළ Linux පර්යන්තය යල් පැන ගොස් ඇත. ඉදිරියට යාමට උත්ශ්‍රේණි කරන්න.\nදත්ත <xliff:g id="PATH">/mnt/backup</xliff:g> හි උපස්ථ කරනු ලැබේ"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"උත්ශ්‍රේණි කරන්න"</string>

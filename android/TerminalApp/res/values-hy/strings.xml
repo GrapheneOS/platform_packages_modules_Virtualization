@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Հնարավոր չէ վերականգնել"</string>
     <string name="error_desc" msgid="4588252235686826721">"Չհաջողվեց վերացնել սխալը։\nՎերագործարկեք տերմինալը կամ փորձեք վերականգնման տարբերակներից մեկը։\nԵթե բոլոր փորձերը ձախողվեն, մաքրեք բոլոր տվյալները՝ միացնելով/անջատելով Լինուքս տերմինալը մշակողի ընտրանքներից։"</string>
     <string name="error_code" msgid="3585291676855383649">"Սխալի կոդը՝ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Վրիպակ կա"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Մատյանների հավաքում"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Անցեք տերմինալի ավելի նոր տարբերակի"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Ձեր օգտագործած Լինուքս տերմինալը հնացած է։ Շարունակելու համար անցեք նոր տարբերակի։\nՏվյալները կպահուստավորվեն այստեղ՝ <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Նորացնել"</string>

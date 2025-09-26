@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Nicht behebbarer Fehler"</string>
     <string name="error_desc" msgid="4588252235686826721">"Fehler konnte nicht behoben werden.\nDu kannst versuchen, das Terminal neu zu starten, oder eine der Wiederherstellungsoptionen ausprobieren.\nWenn alle Versuche fehlschlagen, lösche sämtliche Daten, indem du das Linux-Terminal in den Entwickleroptionen aktivierst und wieder deaktivierst."</string>
     <string name="error_code" msgid="3585291676855383649">"Fehlercode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Fehler melden"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Protokolle werden erfasst"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Upgrade auf ein neueres Terminal"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Das von dir verwendete Linux-Terminal ist veraltet. Bitte führe ein Upgrade durch, um fortzufahren.\nDie Daten werden unter <xliff:g id="PATH">/mnt/backup</xliff:g> gesichert."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Upgrade"</string>

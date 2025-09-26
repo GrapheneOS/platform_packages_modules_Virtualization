@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Қалпына келтіруге жол бермейтін қате"</string>
     <string name="error_desc" msgid="4588252235686826721">"Қатеден кейін қалпына келтіру мүмкін болмады.\nТерминалды өшіріп қосып көріңіз немесе қалпына келтіру опцияларының бірін пайдаланып көріңіз.\nБарлық әрекет сәтсіз аяқталса, әзірлеуші опцияларынан Linux терминалын қосу/өшіру арқылы барлық деректі тазартыңыз."</string>
     <string name="error_code" msgid="3585291676855383649">"Қате коды: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Қатені хабарлау"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Журналдар жинау"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Жаңа терминал нұсқасын орнату"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Сіз пайдаланып жатқан Linux терминалы ескірген. Жалғастыру үшін жаңа нұсқасын орнатыңыз.\nДеректердің сақтық көшірмесі мына жерге жасалады: <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Жаңарту"</string>

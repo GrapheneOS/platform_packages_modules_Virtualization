@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Iphutha elingabuyiseki"</string>
     <string name="error_desc" msgid="4588252235686826721">"Kuhlulekile ukutholakala ngemva kwephutha. \nUngazama ukuqala kabusha itheminali noma uzame okunye kokungakhethwa kukho kokutakula. \nUma yonke imizamo ihluleka, sula yonke idatha ngokuvula/ngokuvala itheminali yeLinux kokungakhethwa kukho konjiniyela."</string>
     <string name="error_code" msgid="3585291676855383649">"Ikhodi yephutha: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Bika i-bug"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Iqoqa amalogu"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Thuthela kutheminali entsha"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Itheminali yeLinux obukade uyisebenzisa iphelelwe isikhathi. Sicela uthuthuke ukuze uqhubeke.\nIdatha izokwenziwa ikhophi ku-<xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Thuthukisa"</string>

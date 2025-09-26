@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"రికవరీని అసాధ్యం చేసే ఎర్రర్"</string>
     <string name="error_desc" msgid="4588252235686826721">"ఎర్రర్‌ను రికవర్ చేయడంలో విఫలమైంది.\nమీరు టెర్మినల్‌ను రీస్టార్ట్ చేసి ట్రై చేయవచ్చు లేదా రికవరీ ఆప్షన్‌లలో ఒకదాన్ని ట్రై చేయవచ్చు.\nఅన్ని ప్రయత్నాలు విఫలమైతే, డెవలపర్ ఆప్షన్‌ల నుండి Linux టెర్మినల్‌ను ఆన్/ఆఫ్ చేయడం ద్వారా మొత్తం డేటాను పూర్తిగా తొలగించండి."</string>
     <string name="error_code" msgid="3585291676855383649">"ఎర్రర్ కోడ్: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"బగ్‌ను రిపోర్ట్ చేయండి"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"లాగ్‌లను కలెక్ట్ చేస్తోంది"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"సరికొత్త టెర్మినల్‌కు అప్‌గ్రేడ్ చేయండి"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"మీరు ఉపయోగిస్తున్న Linux టెర్మినల్ గడువు ముగిసింది. కొనసాగించడానికి దయచేసి అప్‌గ్రేడ్ చేయండి.\n<xliff:g id="PATH">/mnt/backup</xliff:g>‌లో డేటా బ్యాకప్ చేయబడుతుంది"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"అప్‌గ్రేడ్"</string>

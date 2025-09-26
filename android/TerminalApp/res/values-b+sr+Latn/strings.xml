@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Nepopravljiva greška"</string>
     <string name="error_desc" msgid="4588252235686826721">"Oporavak od greške nije uspeo.\nPokušajte da restartujete terminal ili isprobajte jednu od opcija za vraćanje.\nAko nijedan pokušaj ne uspe, obrišite sve podatke tako što ćete uključiti ili isključiti Linux terminal u opcijama za programere."</string>
     <string name="error_code" msgid="3585291676855383649">"Kôd greške: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Prijavi grešku"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Prikupljaju se evidencije"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Nadogradite na noviji terminal"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Linux terminal koji koristite je zastareo. Nadogradite da biste nastavili.\nRezervna kopija podataka će biti napravljena na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Nadogradi"</string>

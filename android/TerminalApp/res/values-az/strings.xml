@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Düzəldilməyən xəta"</string>
     <string name="error_desc" msgid="4588252235686826721">"Xətanı bərpa edilmədi.\nTerminalı yenidən başlatmağa cəhd edə və ya bərpa seçimlərindən birini sınaya bilərsiniz.\nBütün cəhdlər uğursuz olarsa, Linux terminalını developer seçimlərindən yandırıb-söndürməklə bütün datanı silin."</string>
     <string name="error_code" msgid="3585291676855383649">"Xəta kodu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Baqı şikayət edin"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Loqlar toplanılır"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Daha yeni terminala təkmilləşdirin"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"İstifadə etdiyiniz Linux terminalı köhnəlib. Davam etmək üçün təkmilləşdirin.\nVerilənlər <xliff:g id="PATH">/mnt/backup</xliff:g> ünvanında yedəklənəcək"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Təkmilləşdirin"</string>
