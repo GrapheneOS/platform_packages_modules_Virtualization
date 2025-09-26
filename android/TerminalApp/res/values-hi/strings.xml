@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"बदलाव लागू करने के लिए, कृपया टर्मिनल ऐप्लिकेशन को रीस्टार्ट करें."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"सॉफ़्टवेयर रेंडरर"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"जीपीयू ऐक्सेलरेटेड रेंडरर"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"सिस्टम में गड़बड़ी की वजह से सेशन बंद हो गया."</string>
 </resources>

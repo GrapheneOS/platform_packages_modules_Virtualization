@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Каб прымяніць змяненні, перазапусціце праграму \"Тэрмінал\"."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Праграмны сродак візуалізацыі"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Сродак візуалізацыі з паскарэннем на базе графічнага працэсара"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Сеанс перарваны з-за ўнутранай памылкі."</string>
 </resources>

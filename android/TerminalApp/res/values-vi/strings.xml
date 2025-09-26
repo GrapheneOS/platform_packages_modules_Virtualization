@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Vui lòng khởi động lại ứng dụng Terminal để áp dụng thay đổi."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Trình kết xuất phần mềm"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Trình kết xuất tăng tốc bằng GPU"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Phiên bị mất kết nối do lỗi nội bộ."</string>
 </resources>

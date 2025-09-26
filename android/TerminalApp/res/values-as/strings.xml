@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"সালসলনিটো প্ৰয়োগ কৰিবলৈ অনুগ্ৰহ কৰি Terminal এপ্‌টো ৰিষ্টাৰ্ট কৰক।"</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ছফ্টৱেৰ ৰেণ্ডাৰাৰ"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-এক্সিলাৰে’টেড ৰেণ্ডাৰাৰ"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"এক অভ্যন্তৰীণ আসোঁৱাহৰ বাবে ছেশ্বনৰ সৈতে সংযোগ নোহোৱা হৈছে।"</string>
 </resources>

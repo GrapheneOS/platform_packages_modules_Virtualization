@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Dəyişikliyi tətbiq etmək üçün Terminal tətbiqini yenidən başladın."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Proqram təminatı vizuallaşdırıcısı"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU ilə sürətləndirilmiş vizuallaşdırıcı"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Daxili xəta səbəbindən sessiya itdi."</string>
 </resources>

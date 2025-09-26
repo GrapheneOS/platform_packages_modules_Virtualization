@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"تبدیلی کو لاگو کرنے کے لیے براہ کرم ٹرمینل ایپ کو دوبارہ شروع کریں۔"</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"سافٹ ویئر رینڈرر"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"‫GPU کے ذریعے تیز کردہ رینڈرر"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"داخلی خرابی کی وجہ سے سیشن ضائع ہو گیا ہے۔"</string>
 </resources>

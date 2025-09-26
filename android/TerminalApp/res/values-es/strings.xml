@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Reinicia la app Terminal para aplicar el cambio."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Renderizador de software"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Renderizador acelerado por GPU"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"La sesión se ha perdido debido a un error interno."</string>
 </resources>

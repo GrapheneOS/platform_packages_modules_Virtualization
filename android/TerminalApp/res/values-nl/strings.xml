@@ -103,6 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Start de Terminal-app opnieuw op om de wijziging door te voeren."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Softwareweergaveprogramma"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Door GPU versneld weergaveprogramma"</string>
-    <!-- no translation found for ttyd_connection_error (4574447133320977761) -->
-    <skip />
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Sessie is verloren gegaan vanwege een interne fout."</string>
 </resources>
