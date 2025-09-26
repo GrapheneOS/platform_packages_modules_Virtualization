@@ -90,6 +90,8 @@ const PARTITION_GRANULARITY_BYTES: u64 = 4096;
 
 const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 
+const VM_DEBUG_POLICY_OVERLAY_FILE_NAME: &str = "debug_policy.dtbo";
+
 static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
     Mutex::new(None);
 
@@ -617,6 +619,11 @@ impl VirtualizationService {
         }
 
         let debug_config = DebugConfig::new(config);
+        if let Some(dt_overlay) =
+            maybe_create_debug_policy_overlay(&debug_config, &temporary_directory)?
+        {
+            device_tree_overlays.push(dt_overlay);
+        }
 
         let (is_app_config, config) = match config {
             aidl::VirtualMachineConfig::RawConfig(config) => {
@@ -958,6 +965,25 @@ fn maybe_create_reference_dt_overlay(
         None
     };
     Ok(device_tree_overlay)
+}
+
+fn maybe_create_debug_policy_overlay(
+    config: &DebugConfig,
+    temporary_directory: &Path,
+) -> binder::Result<Option<File>> {
+    if let Some(fdt_overlay) = config.get_debug_policy_overlay() {
+        let dt_output = temporary_directory.join(VM_DEBUG_POLICY_OVERLAY_FILE_NAME);
+        fs::write(&dt_output, fdt_overlay.as_slice())
+            .map_err(|e| anyhow!("Failed to create DT overlay, {dt_output:?}, e={e:?}"))
+            .or_service_specific_exception(-1)?;
+        Ok(Some(
+            File::open(&dt_output)
+                .map_err(|e| anyhow!("Failed to open DT overlay, {dt_output:?}, e={e:?}"))
+                .or_service_specific_exception(-1)?,
+        ))
+    } else {
+        Ok(None)
+    }
 }
 
 fn format_as_android_vm_instance(part: &mut dyn Write) -> std::io::Result<()> {

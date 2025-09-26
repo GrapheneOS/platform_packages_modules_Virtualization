@@ -23,6 +23,23 @@ use std::path::Path;
 pub(crate) const VM_DT_OVERLAY_PATH: &str = "vm_dt_overlay.dtbo";
 pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 2000;
 
+/// Create an empty device tree overlay
+pub(crate) fn create_empty_device_tree_overlay(buffer: &mut [u8]) -> Result<&mut Fdt> {
+    let fdt =
+        Fdt::create_empty_tree(buffer).map_err(|e| anyhow!("Failed to create empty Fdt: {e:?}"))?;
+    let mut fragment = fdt
+        .root_mut()
+        .add_subnode(c"fragment@0")
+        .map_err(|e| anyhow!("Failed to add fragment node: {e:?}"))?;
+    fragment
+        .setprop(c"target-path", b"/\0")
+        .map_err(|e| anyhow!("Failed to set target-path property: {e:?}"))?;
+    let _ = fragment
+        .add_subnode(c"__overlay__")
+        .map_err(|e| anyhow!("Failed to add __overlay__ node: {e:?}"))?;
+    Ok(fdt)
+}
+
 /// Create a Device tree overlay containing the provided proc style device tree & properties!
 /// # Arguments
 /// * `dt_path` - (Optional) Path to (proc style) device tree to be included in the overlay.
