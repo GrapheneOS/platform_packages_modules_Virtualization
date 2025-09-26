@@ -15,7 +15,7 @@
  */
 package android.system.virtualmachineservice;
 
-/** {@hide} */
+/** @hide */
 interface IGuestAgent {
     /**
      * Starts a vsock server to dump the VM's state, and return a port number for the listening

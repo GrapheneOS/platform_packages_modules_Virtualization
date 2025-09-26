@@ -16,7 +16,7 @@
 
 package com.android.virt.accessor_demo.vm_service;
 
-/** {@hide} */
+/** @hide */
 // TODO(b/349578050): Add more methods that take or return another binder.
 interface IAccessorVmService {
     int add(int a, int b);

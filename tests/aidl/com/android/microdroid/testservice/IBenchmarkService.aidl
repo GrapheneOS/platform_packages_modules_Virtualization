@@ -16,7 +16,7 @@
 
 package com.android.microdroid.testservice;
 
-/** {@hide} */
+/** @hide */
 interface IBenchmarkService {
     const int PORT = 5677;
 

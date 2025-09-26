@@ -15,7 +15,7 @@
  */
 package android.system.virtualizationcommon;
 
-/** {@hide} */
+/** @hide */
 union Atom {
     CgroupMemoryBreachReported cgroupMemoryBreachReported;
     FsckFailedReported fsckFailedReported;

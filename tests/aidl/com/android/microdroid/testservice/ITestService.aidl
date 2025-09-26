@@ -19,7 +19,7 @@ import com.android.microdroid.testservice.IAppCallback;
 
 /**
  * This is the service exposed by the test payload, called by the test app.
- * {@hide}
+ * @hide
  */
 interface ITestService {
     const long PORT = 5678;

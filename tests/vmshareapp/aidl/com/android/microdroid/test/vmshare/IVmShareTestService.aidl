@@ -18,7 +18,7 @@ package com.android.microdroid.test.vmshare;
 import android.system.virtualmachine.VirtualMachineDescriptor;
 import com.android.microdroid.testservice.ITestService;
 
-/** {@hide} */
+/** @hide */
 interface IVmShareTestService {
     void importVm(in VirtualMachineDescriptor vmDesc);
 
