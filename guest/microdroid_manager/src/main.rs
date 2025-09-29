@@ -369,8 +369,8 @@ fn try_main() -> Result<()> {
             };
             if let Err(e) = post_payload_work() {
                 error!(
-                    "Failed to run post payload work. It is possible that certain tasks
-                    like syncing encrypted store might be incomplete. Error: {e:?}"
+                    "Failed to run post payload work. It is possible that certain tasks like \
+                     syncing encrypted store might be incomplete. Error: {e:?}"
                 );
             };
 

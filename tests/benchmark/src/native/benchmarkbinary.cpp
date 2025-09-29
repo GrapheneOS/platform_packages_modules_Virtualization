@@ -113,7 +113,7 @@ private:
     Result<double> measure_read_rate(const std::string& filename, bool is_rand) {
         struct stat file_stats;
         if (stat(filename.c_str(), &file_stats) == -1) {
-            return Error() << "failed to get file stats";
+            return ErrnoError() << "failed to get file stats";
         }
         const int64_t file_size_bytes = file_stats.st_size;
         const int64_t block_count = file_size_bytes / kBlockSizeBytes;
