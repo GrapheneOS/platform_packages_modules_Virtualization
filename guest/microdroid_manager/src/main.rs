@@ -80,7 +80,6 @@ use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
 use std::collections::HashSet;
 use std::env;
-use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
@@ -867,24 +866,14 @@ fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result
 fn post_payload_work() -> Result<()> {
     // Sync the encrypted storage filesystem (flushes the filesystem caches).
     if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        let mountpoint = CString::new(ENCRYPTEDSTORE_MOUNTPOINT).unwrap();
-
-        // SAFETY: `mountpoint` is a valid C string. `syncfs` and `close` are safe for any parameter
-        // values.
-        let ret = unsafe {
-            let dirfd = libc::open(
-                mountpoint.as_ptr(),
-                libc::O_DIRECTORY | libc::O_RDONLY | libc::O_CLOEXEC,
-            );
-            ensure!(dirfd >= 0, "Unable to open {:?}", mountpoint);
-            let ret = libc::syncfs(dirfd);
-            libc::close(dirfd);
-            ret
-        };
-        if ret != 0 {
-            error!("failed to sync encrypted storage.");
-            return Err(anyhow!(std::io::Error::last_os_error()));
-        }
+        use nix::fcntl::OFlag;
+        let dirfd = nix::fcntl::open(
+            ENCRYPTEDSTORE_MOUNTPOINT,
+            OFlag::O_DIRECTORY | OFlag::O_RDONLY | OFlag::O_CLOEXEC,
+            nix::sys::stat::Mode::empty(),
+        )
+        .with_context(|| "Unable to open {ENCRYPTEDSTORE_MOUNTPOINT}")?;
+        nix::unistd::syncfs(dirfd).context("failed to sync encrypted storage")?;
     }
     Ok(())
 }
