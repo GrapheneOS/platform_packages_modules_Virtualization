@@ -1,0 +1,6 @@
+{
+    "vm_partition": "system",
+    "is_vm_persistent": true,
+    "vm_primary_uuid": "07590497-b72d-4434-ab36-51442e130536",
+    "vm_secondary_uuid": "0bea1ffc-b036-4d3a-8268-a5a041ade6b8"
+}
