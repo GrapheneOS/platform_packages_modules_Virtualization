@@ -280,6 +280,10 @@ public abstract class MicrodroidDeviceTestBase {
         assume().withMessage("GSI with vendor API level < 202404 may not support AVF")
                 .that(isGsi && vendorApiLevel < 202404)
                 .isFalse();
+
+        assume().withMessage("AVF is not mandatory for API level < 35")
+                .that(Build.VERSION.SDK_INT >= 35)
+                .isTrue();
     }
 
     protected void assumeVsrCompliant() {
