@@ -7,7 +7,7 @@ rust_ffi_static {
     crate_name: "service_vm",
     srcs: ["src/main.rs"],
     defaults: ["vmbase_ffi_defaults"],
-    rustlibs: [
+    no_std_rlibs: [
         "libbssl_avf_nostd",
         "libciborium_io_nostd",
         "libciborium_nostd",

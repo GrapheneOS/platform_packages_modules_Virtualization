@@ -44,7 +44,7 @@ rust_defaults {
 rust_test {
     name: "libbssl_avf_nostd.test",
     defaults: ["libbssl_avf_test_defaults"],
-    rustlibs: [
+    no_std_rlibs: [
         "libbssl_avf_nostd",
         "libcoset_nostd",
         "libspki_nostd",
