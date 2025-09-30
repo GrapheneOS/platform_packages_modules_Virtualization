@@ -24,7 +24,6 @@ if [ $1 == "setup" ]; then
 elif [ $1 == "teardown" ]; then
 	pm clear --user ${user} ${package_name}
 	pm disable --user ${user} ${package_name}
-	rm -rf /data/media/${user}/linux
 else
 	echo Unsupported command: $1
 	exit 1
