@@ -21,6 +21,7 @@ import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.BufferedReader
 import java.io.FileReader
@@ -43,7 +44,8 @@ public class InstalledImage private constructor(val installDir: Path) {
     val buildId: String by lazy { readBuildId() }
 
     /** Tests if this InstalledImage is actually installed. */
-    fun isInstalled(): Boolean {
+    @VisibleForTesting
+    public fun isInstalled(): Boolean {
         return Files.exists(marker)
     }
 

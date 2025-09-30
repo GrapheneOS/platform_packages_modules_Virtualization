@@ -56,11 +56,15 @@ class ErrorActivity : BaseActivity() {
 
         setContentView(R.layout.activity_error)
 
+        val error = getError()
+        if (error != null) {
+            Log.e(TAG, "Unrecoverable error", error)
+            val cause = findViewById<TextView>(R.id.cause)
+            cause.text = getString(R.string.error_code, getStackTrace(error))
+        }
+
         val recovery = findViewById<View>(R.id.recovery)
         recovery.setOnClickListener(View.OnClickListener { _ -> launchRecoveryActivity() })
-
-        val cause = findViewById<TextView>(R.id.cause)
-        cause.text = getError()?.let { getString(R.string.error_code, getStackTrace(it)) }
 
         val report = findViewById<View>(R.id.bugreport)
         val reportIntent = Intent(BUGREPORT_ACTION)

@@ -65,9 +65,6 @@ public class MainActivity :
     BaseActivity(),
     VmLauncherServiceCallback,
     AccessibilityManager.AccessibilityStateChangeListener {
-    var displayMenu: Button? = null
-    var tabAddButton: Button? = null
-    val bootCompleted = ConditionVariable()
     lateinit var modifierKeysController: ModifierKeysController
     private lateinit var tabScrollView: HorizontalScrollView
     private lateinit var executorService: ExecutorService
@@ -79,7 +76,11 @@ public class MainActivity :
     private lateinit var terminalTabAdapter: TerminalTabAdapter
     private val terminalInfo = CompletableFuture<TerminalInfo>()
     private val terminalViewModel: TerminalViewModel by viewModels()
+    private var displayMenu: Button? = null
+    private var tabAddButton: Button? = null
+    private val bootCompleted = ConditionVariable()
     private var isVmRunning = false
+    private var isTtydConnected = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -288,6 +289,11 @@ public class MainActivity :
             startService(intent)
         }
         finishAndRemoveTask()
+
+        isVmRunning = false
+        isTtydConnected = false
+        bootCompleted.open()
+
         super.onDestroy()
     }
 
@@ -316,6 +322,16 @@ public class MainActivity :
         isVmRunning = false
         // TODO: error cause is too simple.
         ErrorActivity.start(this, Exception("onVmError"))
+    }
+
+    fun onTtydConnected() {
+        if (Flags.terminalGuiSupport()) {
+            displayMenu!!.visibility = View.VISIBLE
+            displayMenu!!.isEnabled = true
+        }
+        tabAddButton!!.isEnabled = true
+        isTtydConnected = true
+        bootCompleted.open()
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
@@ -418,9 +434,13 @@ public class MainActivity :
         }
     }
 
+    /** Returns true if boot is successfully completed within timeout. */
     @VisibleForTesting
     public fun waitForBootCompleted(timeoutMillis: Long): Boolean {
-        return bootCompleted.block(timeoutMillis)
+        if (bootCompleted.block(timeoutMillis)) {
+            return isVmRunning && isTtydConnected
+        }
+        return false
     }
 
     companion object {
