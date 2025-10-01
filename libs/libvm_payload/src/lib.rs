@@ -96,7 +96,7 @@ pub extern "C" fn AVmPayload_notifyPayloadReady() {
     if !ALREADY_NOTIFIED.swap(true, Ordering::Relaxed) {
         unwrap_or_abort(try_notify_payload_ready());
 
-        info!("Notified host payload ready successfully");
+        info!("Registered payload ready notification");
     }
 }
 
