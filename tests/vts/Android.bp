@@ -36,3 +36,28 @@ rust_test {
     compile_multilib: "first",
     vendor: true,
 }
+
+rust_test {
+    name: "vts_pkvm_tracing_test",
+    crate_name: "vts_pkvm_tracing_test",
+    srcs: ["src/vts_pkvm_tracing_test.rs"],
+    defaults: [
+        "rdroidtest.defaults",
+    ],
+    rustlibs: [
+        "libanyhow",
+        "libhypervisor_props",
+        "liblog_rust",
+        "libnix",
+        "libscopeguard",
+        "libwalkdir",
+    ],
+    test_suites: [
+        "general-tests",
+        "vts",
+    ],
+    data: [":vts_libavf_test_kernel"],
+    test_config: "AndroidTest_pkvm_tracing.xml",
+    compile_multilib: "first",
+    vendor: true,
+}
