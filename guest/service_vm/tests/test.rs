@@ -193,7 +193,7 @@ fn check_attestation_request(
 }
 
 fn check_vm_payload_components(
-    vm_payload_components: &asn1::SequenceOf<asn1::Any, 4>,
+    vm_payload_components: &asn1::SequenceOf<asn1::Any, /* max_limit */ 4>,
 ) -> Result<()> {
     let expected_components = fake_sub_components();
     assert_eq!(expected_components.len(), vm_payload_components.len());
@@ -203,7 +203,9 @@ fn check_vm_payload_components(
     Ok(())
 }
 
-fn check_vm_tenant_components(vm_tenant_components: &asn1::SequenceOf<asn1::Any, 1>) -> Result<()> {
+fn check_vm_tenant_components(
+    vm_tenant_components: &asn1::SequenceOf<asn1::Any, /* max_limit */ 10>,
+) -> Result<()> {
     let expected_components = fake_sub_components();
     assert_eq!(expected_components.len(), vm_tenant_components.len());
     for (i, expected_component) in expected_components.iter().enumerate() {
@@ -277,11 +279,17 @@ fn check_certificate_for_client_vm(
         !is_vm_secure,
         "The VM shouldn't be secure as the last payload added in the test is in Debug mode"
     );
-    let vm_payload_components =
-        attestation_ext.get(2).unwrap().decode_as::<asn1::SequenceOf<asn1::Any, 4>>().unwrap();
+    let vm_payload_components = attestation_ext
+        .get(2)
+        .unwrap()
+        .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 4>>()
+        .unwrap();
     check_vm_payload_components(&vm_payload_components)?;
-    let vm_tenant_components =
-        attestation_ext.get(3).unwrap().decode_as::<asn1::SequenceOf<asn1::Any, 1>>().unwrap();
+    let vm_tenant_components = attestation_ext
+        .get(3)
+        .unwrap()
+        .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 10>>()
+        .unwrap();
     check_vm_tenant_components(&vm_tenant_components)?;
 
     // Checks other fields on the certificate
