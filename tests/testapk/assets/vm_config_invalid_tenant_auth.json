@@ -5,7 +5,7 @@
   },
   "task": {
     "type": "microdroid_launcher",
-    "command": "MicrodroidIdleNativeLib.so"
+    "command": "MicrodroidTestNativeOnAlternatePortLib.so"
   },
   "tenants": [
     {

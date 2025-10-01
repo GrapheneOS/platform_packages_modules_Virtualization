@@ -50,6 +50,7 @@ java_defaults {
     jni_libs: [
         "MicrodroidTestNativeLib",
         "MicrodroidIdleNativeLib",
+        "MicrodroidTestNativeOnAlternatePortLib",
         "MicrodroidEmptyNativeLib",
         "MicrodroidExitNativeLib",
         "MicrodroidPrivateLinkingNativeLib",
@@ -277,6 +278,12 @@ cc_library_shared {
 cc_library_shared {
     name: "MicrodroidTestNativeLib",
     defaults: ["MicrodroidTestNativeLibDefaults"],
+}
+
+cc_library_shared {
+    name: "MicrodroidTestNativeOnAlternatePortLib",
+    defaults: ["MicrodroidTestNativeLibDefaults"],
+    cflags: ["-D__USE_ALTERNATE_PORT__"],
 }
 
 cc_library_shared {

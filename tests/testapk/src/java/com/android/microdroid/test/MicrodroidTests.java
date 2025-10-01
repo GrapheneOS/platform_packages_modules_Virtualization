@@ -1327,7 +1327,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
-    public void tenantPackages() throws Exception {
+    public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1340,11 +1340,55 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenants", config);
-        CompletableFuture<String> prop = readTenantPackagesMounted(vm);
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_services", config);
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String val =
+                                    tsOnAPort.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                            prop.complete(val);
+                            // Connect to the second service!
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            String valFromAnotherTenant =
+                                    tsOnAlternatePort.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                            assertWithMessage("Received different values from different tenants")
+                                    .that(valFromAnotherTenant)
+                                    .isEqualTo(val);
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_services's"
+                            + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
                 .that(prop.getNow(null))
                 .isEqualTo("PASS");
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
     }
 
     @Test
@@ -1403,6 +1447,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             throws Exception {
         CompletableFuture<String> prop = new CompletableFuture<>();
         CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
         VmEventListener listener =
                 new VmEventListener() {
                     @Override
@@ -1420,11 +1465,15 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         } catch (Exception e) {
                             exception.complete(e);
                         } finally {
-                            // TODO(b/440575189): The VM would not stop automatically, since one
-                            // payload is MicrodroidIdleNativeLib & does not exit.
-                            // Force close it for now.
+                            // There maybe instances of `ITestService` running in the VM.
+                            // Force stop the VM.
                             forceStop(vm);
                         }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
                     }
                 };
         listener.runToFinish(TAG, vm);
