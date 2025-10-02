@@ -103,5 +103,5 @@
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ပြောင်းလဲမှုသက်ရောက်ရန် ‘တာမီနယ်’ အက်ပ်ကို ပြန်စပါ။"</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ဆော့ဖ်ဝဲပုံဖော်စနစ်"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-လည်ပတ်နှုန်းမြှင့်သည့် ပုံဖော်စနစ်"</string>
-    <string name="ttyd_connection_error" msgid="4574447133320977761">"စနစ်အမှားကြောင့် စက်ရှင်ဆုံးရှုံးသွားသည်။"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"စနစ်အမှားကြောင့် စက်ရှင်ပြတ်တောက်သွားသည်။"</string>
 </resources>
