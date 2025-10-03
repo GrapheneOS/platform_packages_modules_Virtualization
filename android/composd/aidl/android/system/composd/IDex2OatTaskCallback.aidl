@@ -32,7 +32,7 @@ oneway interface IDex2OatTaskCallback {
         /**
          * We failed to enable fs-verity completely to the output artifacts.
          */
-        FailedToEnableFsverity,
+        FailedToEnableFsVerity,
         /**
          * Compilation could not be completed within specified timeout.
          */
@@ -56,6 +56,7 @@ oneway interface IDex2OatTaskCallback {
         String message;
     }
 
+    @RustDerive(PartialEq=true, Clone=true, Copy=true)
     parcelable Dex2OatMetrics {
         /**
          * The total amount of time the compilation took from the time
@@ -65,7 +66,7 @@ oneway interface IDex2OatTaskCallback {
         /**
          * The total amount of time dex2oat was actively compiling within the PVM.
          */
-        int cpu_time_millisecods;
+        int cpu_time_milliseconds;
     }
 
     /**
