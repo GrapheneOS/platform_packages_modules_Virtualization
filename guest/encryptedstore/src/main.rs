@@ -25,23 +25,69 @@ use android_system_virtualizationcommon::aidl::android::system::virtualizationco
 use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{IVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME};
 use anyhow::{anyhow, ensure, Context, Result};
 use binder::Strong;
-use clap::arg;
+use clap::Parser;
 use dm::{crypt::CipherType, util};
 use log::{error, info, warn};
 use rpcbinder::RpcSession;
 use rustutils::android::system_properties;
+use std::collections::HashSet;
 use std::fs::{self, create_dir_all, OpenOptions};
 use std::io::Write;
 use std::os::android::fs::MetadataExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 use std::sync::LazyLock;
 use encryptedstore_query::{needs_formatting, UNFORMATTED_STORAGE_MAGIC};
 
 const E2FSCK_BIN: &str = "/system/bin/e2fsck";
 const MK2FS_BIN: &str = "/system/bin/mke2fs";
 const RESIZE2FS_BIN: &str = "/system/bin/resize2fs";
+
+#[derive(Clone, Debug)]
+struct DirSpec {
+    name: String,
+    uid: u32,
+    gid: u32,
+}
+
+impl FromStr for DirSpec {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(':').collect();
+        if parts.len() != 3 {
+            anyhow::bail!("Invalid format for --config-dir. Expected name:uid:gid, got {}", s);
+        }
+        let name = parts[0].trim().to_string();
+        let uid: u32 = parts[1].trim().parse().context("Invalid UID in --config-dir")?;
+        let gid: u32 = parts[2].trim().parse().context("Invalid GID in --config-dir")?;
+        Ok(DirSpec { name, uid, gid })
+    }
+}
+
+#[derive(Parser, Debug)]
+#[command(name = "encryptedstore")]
+struct Cli {
+    #[arg(long, value_name = "FILE", help = "the block device backing the encrypted storage")]
+    blkdevice: PathBuf,
+
+    #[arg(long, value_name = "KEY", help = "key (in hex) equivalent to 32 bytes)")]
+    key: String,
+
+    #[arg(long, value_name = "MOUNTPOINT", help = "mount point for the storage")]
+    mountpoint: PathBuf,
+
+    #[arg(
+        long = "config-dir",
+        value_name = "DIR_SPECS",
+        help = "Configure directories as 'name:uid:gid', comma-separated.\
+        Creates specified directories with the specified owner and group.",
+        value_delimiter = ','
+    )]
+    config_dirs: Vec<DirSpec>,
+}
 
 static INTERNAL_CONNECTION: LazyLock<Strong<dyn IVmInternalService>> = LazyLock::new(|| {
     warn!("acquiring new connection to IVmInternalService");
@@ -80,24 +126,30 @@ fn main() {
 fn try_main() -> Result<()> {
     info!("Starting encryptedstore binary");
 
-    let matches = clap_command().get_matches();
+    let cli = Cli::parse();
 
-    let blkdevice = Path::new(matches.get_one::<String>("blkdevice").unwrap());
-    let key = matches.get_one::<String>("key").unwrap();
-    let mountpoint = Path::new(matches.get_one::<String>("mountpoint").unwrap());
+    let blkdevice = &cli.blkdevice;
+    let key = &cli.key;
+    let mountpoint = &cli.mountpoint;
+    let config_dir_specs = &cli.config_dirs;
+    validate_unique_dir_names(config_dir_specs)?;
+
     // Note this error context is used in MicrodroidTests.
     encryptedstore_init(blkdevice, key, mountpoint).with_context(|| {
         format!("Unable to initialize encryptedstore on {blkdevice:?} & mount at {mountpoint:?}")
     })?;
+    config_dirs(mountpoint, config_dir_specs)?;
     Ok(())
 }
 
-fn clap_command() -> clap::Command {
-    clap::Command::new("encryptedstore").args(&[
-        arg!(--blkdevice <FILE> "the block device backing the encrypted storage").required(true),
-        arg!(--key <KEY> "key (in hex) equivalent to 32 bytes)").required(true),
-        arg!(--mountpoint <MOUNTPOINT> "mount point for the storage").required(true),
-    ])
+fn validate_unique_dir_names(dir_specs: &[DirSpec]) -> Result<()> {
+    let mut seen_names = HashSet::with_capacity(dir_specs.len());
+    for spec in dir_specs {
+        if !seen_names.insert(&spec.name) {
+            return Err(anyhow!("Duplicate config-dir name found: {}", spec.name));
+        }
+    }
+    Ok(())
 }
 
 /// Gets the parent block device name from a partition name.
@@ -368,13 +420,67 @@ fn mount(source: &Path, mountpoint: &Path) -> Result<()> {
     Ok(())
 }
 
+fn config_dirs(mountpoint: &Path, dir_specs: &Vec<DirSpec>) -> Result<()> {
+    for dir_spec in dir_specs {
+        setup_dir(mountpoint, dir_spec)?;
+    }
+    // TODO(basantwani) - Cleanup the directories that aren't configured.
+    Ok(())
+}
+
+fn setup_dir(mountpoint: &Path, dir_spec: &DirSpec) -> Result<()> {
+    info!(
+        "Setting up directory: name={}, uid={}, gid={}",
+        dir_spec.name, dir_spec.uid, dir_spec.gid
+    );
+    let dir_path = mountpoint.join(&dir_spec.name);
+
+    if !dir_path.exists() {
+        fs::create_dir(&dir_path)
+            .with_context(|| format!("Failed to create directory {}", dir_path.display()))?;
+        fs::set_permissions(&dir_path, fs::Permissions::from_mode(0o700))
+            .with_context(|| format!("Failed to chmod directory {}", dir_path.display()))?;
+        nix::unistd::chown(
+            &dir_path,
+            Some(nix::unistd::Uid::from_raw(dir_spec.uid)),
+            Some(nix::unistd::Gid::from_raw(dir_spec.gid)),
+        )
+        .with_context(|| format!("Failed to chown directory {}", dir_path.display()))?;
+
+        info!(
+            "Created directory {} with uid {} and gid {}",
+            dir_path.display(),
+            dir_spec.uid,
+            dir_spec.gid
+        );
+    } else {
+        // The directory already exists, validate its owner.
+        let metadata = fs::metadata(&dir_path).with_context(|| {
+            format!("Failed to get metadata for existing directory {}", dir_path.display())
+        })?;
+        let current_uid = metadata.st_uid();
+        let current_gid = metadata.st_gid();
+        if current_uid != dir_spec.uid || current_gid != dir_spec.gid {
+            anyhow::bail!(
+                "Directory {} already exists with owner {:?}, which doesn't match \
+                with the requested owner {:?}",
+                dir_path.display(),
+                (current_uid, current_gid),
+                (dir_spec.uid, dir_spec.gid)
+            );
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Cli;
+    use clap::CommandFactory;
 
     #[test]
     fn verify_command() {
         // Check that the command parsing has been configured in a valid way.
-        clap_command().debug_assert();
+        Cli::command().debug_assert();
     }
 }

@@ -21,6 +21,7 @@ mod instance;
 mod ioutil;
 mod payload;
 mod swap;
+mod tenant;
 mod verify;
 mod vm_internal_service;
 mod vm_payload_service;
@@ -45,6 +46,7 @@ use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{ApexData, EncryptedStoreMode, InstanceDisk, MicrodroidData};
+use crate::tenant::{TenantAttribute, TenantManager};
 use crate::verify::{
     integrity_protect_tenant_apks, validate_tenant_apks_against_tenant_config, verify_payload,
 };
@@ -625,6 +627,9 @@ fn try_run_payload(
         VM_INTERNAL_SERVICE_SOCKET_NAME,
     )?;
 
+    let tenant_manager = TenantManager::initialize(&config.tenants)?;
+    let tenant_manager = Arc::new(tenant_manager);
+
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
@@ -633,12 +638,14 @@ fn try_run_payload(
             let service_clone = service.clone();
             let vm_secret_for_enc_store = vm_secret.clone();
             let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
+            let tenant_manager_for_enc_store = tenant_manager.clone();
             info!("Delaying preparation of encryptedstore as requested ...");
             std::thread::spawn(move || {
                 if let Err(e) = delayed_prepare_encryptedstore(
                     encrypted_store_mode,
                     service_clone,
                     vm_secret_for_enc_store,
+                    tenant_manager_for_enc_store,
                 ) {
                     // Ideally we'd communicate this back to the main thread and error out in a
                     // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
@@ -651,7 +658,7 @@ fn try_run_payload(
             info!("Preparing encryptedstore ...");
             let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
-            Some(prepare_encryptedstore(&key).context("encryptedstore run")?)
+            Some(prepare_encryptedstore(&key, &tenant_manager).context("encryptedstore run")?)
         }
     } else {
         None
@@ -747,29 +754,22 @@ fn try_run_payload(
     let mut tenant_processes: Vec<Child> = Vec::new();
     let mut tenant_index = 0;
     for tenant in config.tenants.iter() {
-        let tenant_command = match tenant {
-            TenantConfig::Apex(apex_conf) => {
-                if let Some(task) = &apex_conf.task {
-                    let command = get_task_command(&apex_conf.name, task, /* is_apex */ true)
-                        .context("Failed to find tenant in apex")?;
-                    Some(command)
-                } else {
-                    None
-                }
-            }
-            TenantConfig::Apk(apk_conf) => {
-                if let Some(task) = &apk_conf.task {
-                    let mnt_dir = format!("/mnt/tenant-apk/{tenant_index}");
-                    tenant_index += 1;
-                    let command = get_task_command(&mnt_dir, task, /* is_apex */ false)
-                        .context("Failed to find tenant in apk")?;
-                    Some(command)
-                } else {
-                    None
-                }
+        let (task, name, package_path, is_apex) = match tenant {
+            TenantConfig::Apex(c) => (c.task.as_ref(), &c.name, c.name.clone(), true),
+            TenantConfig::Apk(c) => {
+                let mnt_dir = format!("/mnt/tenant-apk/{tenant_index}");
+                tenant_index += 1;
+                (c.task.as_ref(), &c.name, mnt_dir, false)
             }
         };
-        if let Some(command) = tenant_command {
+
+        if let Some(task) = task {
+            let tenant_attribute = tenant_manager
+                .get_tenant_attribute(name)
+                .with_context(|| format!("Failed to get tenant attribute for '{name}'"))?;
+            let uid_gid = Some((tenant_attribute.uid(), TenantAttribute::gid()));
+            let command = build_payload_command(package_path.as_ref(), task, uid_gid, is_apex)
+                .context("Failed to build tenant {name} payload command")?;
             let tenant_process = exec_task(
                 command,
                 cgroup_config.as_ref(),
@@ -1099,26 +1099,38 @@ struct PayloadCommand {
     uid_gid: Option<(u32, u32)>,
 }
 
+fn build_command(package_name: &str, task: &Task, is_apex: bool) -> Result<Command> {
+    match task.type_ {
+        TaskType::Executable => Ok(Command::new(&task.command)),
+        TaskType::MicrodroidLauncher => {
+            let mut cmd = Command::new("/system/bin/microdroid_launcher");
+            cmd.arg(find_library_path(package_name, &task.command, is_apex)?);
+            Ok(cmd)
+        }
+    }
+}
+
+fn build_payload_command(
+    package_name: &str,
+    task: &Task,
+    uid_gid: Option<(u32, u32)>,
+    is_apex: bool,
+) -> Result<PayloadCommand> {
+    let command = build_command(package_name, task, is_apex)?;
+    Ok(PayloadCommand { command, uid_gid })
+}
+
 fn get_task_command(package_name: &str, task: &Task, is_apex: bool) -> Result<PayloadCommand> {
-    let (command, uid_gid) = match task.type_ {
+    let uid_gid = match task.type_ {
         TaskType::Executable => {
             // TODO(b/297501338): Figure out how to handle non-root for system payloads.
-            (Command::new(&task.command), None)
+            None
         }
         TaskType::MicrodroidLauncher => {
-            let mut command = Command::new("/system/bin/microdroid_launcher");
-            command.arg(find_library_path(package_name, &task.command, is_apex)?);
-            (
-                command,
-                Some((
-                    microdroid_uids::MICRODROID_PAYLOAD_UID,
-                    microdroid_uids::MICRODROID_PAYLOAD_GID,
-                )),
-            )
+            Some((microdroid_uids::MICRODROID_PAYLOAD_UID, microdroid_uids::MICRODROID_PAYLOAD_GID))
         }
     };
-
-    Ok(PayloadCommand { command, uid_gid })
+    build_payload_command(package_name, task, uid_gid, is_apex)
 }
 
 /// Executes the given task.
@@ -1216,15 +1228,30 @@ fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Resul
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(key: &[u8]) -> Result<Child> {
+fn format_tenant_dir_specs(tenant_manager: &TenantManager) -> String {
+    let gid = TenantAttribute::gid();
+    tenant_manager
+        .list_tenants_info()
+        .map(|(package_name, tenant_attribute)| {
+            format!("{}:{}:{}", package_name, tenant_attribute.uid(), gid)
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn prepare_encryptedstore(key: &[u8], tenant_manager: &TenantManager) -> Result<Child> {
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
         .arg(hex::encode(key))
-        .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
-        .spawn()
-        .context("encryptedstore failed")
+        .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT]);
+
+    let tenant_dir_specs = format_tenant_dir_specs(tenant_manager);
+    if !tenant_dir_specs.is_empty() {
+        cmd.args(["--config-dir", &tenant_dir_specs]);
+    }
+    cmd.spawn().context("encryptedstore failed")
 }
 
 /// Implementation of `IGuestAgent`
@@ -1281,6 +1308,7 @@ fn delayed_prepare_encryptedstore(
     encrypted_store_mode: EncryptedStoreMode,
     service: Strong<dyn IVirtualMachineService>,
     vm_secret: Arc<VmSecret>,
+    tenant_manager: Arc<TenantManager>,
 ) -> Result<()> {
     info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
     wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
@@ -1297,7 +1325,7 @@ fn delayed_prepare_encryptedstore(
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
         }
     }
-    prepare_encryptedstore(&key)?
+    prepare_encryptedstore(&key, &tenant_manager)?
         .wait()
         .context("failed waiting for encryptedstore binary to finish")?;
 

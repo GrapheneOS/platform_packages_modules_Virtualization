@@ -10,7 +10,8 @@ service microdroid_manager /system/bin/microdroid_manager
     #   before executing the payload
     # CAP_SYS_NICE is required for microdroid_manager to adjust priority of the payload
     # CAP_SYS_PTRACE is required for microdroid_manager to dump /proc/{pid}/maps
-    capabilities AUDIT_CONTROL SYS_ADMIN SYS_BOOT SETPCAP SETUID SETGID SYS_NICE SYS_PTRACE
+    # CHOWN is required for encryptedstore (child of microdroid_manager) to chown individual directories for each tenant
+    capabilities AUDIT_CONTROL SYS_ADMIN SYS_BOOT SETPCAP SETUID SETGID SYS_NICE SYS_PTRACE CHOWN
     user root
     # readproc to dump /proc/{pid}/maps
     group root readproc
