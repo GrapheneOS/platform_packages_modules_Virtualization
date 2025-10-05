@@ -52,6 +52,28 @@ pub enum MapError {
     PteUpdateFault(PageTableEntry),
 }
 
+impl From<MapError> for crate::mmu::MmuError {
+    fn from(e: MapError) -> Self {
+        match e {
+            MapError::AddressRange(a) => Self::BadAddress(a.as_u64() as usize),
+            MapError::RegionBackwards(r) => Self::BadRegion(
+                r.start.start_address().as_u64() as usize..r.end.start_address().as_u64() as usize,
+            ),
+            MapError::InvalidFlags(f) => Self::BadFlags(f.bits() as usize),
+            MapError::RegionAlreadyMapped(r) => Self::BadRegion(
+                r.start.start_address().as_u64() as usize..r.end.start_address().as_u64() as usize,
+            ),
+            MapError::RegionNotMapped(r) => Self::BadRegion(
+                r.start.start_address().as_u64() as usize..r.end.start_address().as_u64() as usize,
+            ),
+            MapError::PteUpdateFault(pte) => Self::UpdateFailed {
+                addr: pte.addr().as_u64() as usize,
+                flags: Some(pte.flags().bits() as usize),
+            },
+        }
+    }
+}
+
 // Identity mapping translation from Virtual to Physical address
 fn from_virt_addr(vaddr: VirtAddr) -> PhysAddr {
     PhysAddr::new(vaddr.as_u64())
