@@ -144,6 +144,11 @@ rust_library_rlib {
                 "cpu_feat_hafdbs",
             ],
         },
+        android_x86_64: {
+            rustlibs: [
+                "libx86_64_rust_nostd",
+            ],
+        },
     },
 }
 
