@@ -374,7 +374,7 @@ mod test {
                 .returning(|| to_binder_result::<Vec<u8>, Error>(Ok(DEFAULT_BCC.to_vec())));
 
             system_properties_for_each_ctx.expect().returning(
-                |mut closure: Box<(dyn for<'a, 'b> FnMut(&'a str, &'b str))>| {
+                |mut closure: Box<dyn for<'a, 'b> FnMut(&'a str, &'b str)>| {
                     // Properties that begin with allow listed prefixes.
                     ALLOWLISTED_PROPERTIES.iter().for_each(|(k, v)| closure(k, v));
                     // Properties that do not begin with allow listed prefixes.
