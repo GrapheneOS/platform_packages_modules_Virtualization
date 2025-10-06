@@ -75,7 +75,7 @@ pub struct V4Signature<R: Read + Seek> {
 }
 
 /// `HashingInfo` provides information about how the APK is hashed.
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub struct HashingInfo {
     /// Hash algorithm used when creating the merkle tree for the APK.
     pub hash_algorithm: HashAlgorithm,
