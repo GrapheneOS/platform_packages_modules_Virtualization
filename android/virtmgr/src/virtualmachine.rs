@@ -795,18 +795,39 @@ fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder:
 
     let instance = &to_local_object(vm).expect("not a local object").instance;
     let cid = instance.cid;
-    global_service().unwrap().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+    let gs = global_service().unwrap();
 
+    {
+        // If we are re-registering (from DeathRecipient below), make sure the VM is still alive,
+        // otherwise we could race with a unregisterVirtualMachine call (in monitor_vm_exit) and
+        // end up with a zombie reference in virtualizationservice.
+        let vm_state = instance.vm_state.lock().unwrap();
+        if matches!(&*vm_state, VmState::Dead | VmState::Failed) {
+            return Ok(());
+        }
+
+        gs.registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+
+        // Hold the lock until after `registerVirtualMachine` to ensure that an "alive -> dead"
+        // transition (and `unregisterVirtualMachine` call) can't occur until afterwards.
+    }
+
+    let gs_clone = gs.clone();
     let weak_vm = Strong::downgrade(vm);
     let mut dr = DeathRecipient::new(move || {
+        // Hold a strong ref to the global service in the callback, otherwise the first
+        // `DeathRecipient` that gets to run will cause the only strong ref (in `GLOBAL_SERVICE`)
+        // to be dropped and so other `DeathRecipient`s will be skipped when `link_to_death`'s weak
+        // ref fails to promote.
+        let _ = &gs_clone;
         // No need to re-register the VM if it's already dead
         if let Ok(vm) = weak_vm.upgrade() {
-            let _ = register_to_global_service(&vm).map_err(|e| {
-                error!("Failed to re-register VM ({cid}) to the global service: {e:?}")
-            });
+            if let Err(e) = register_to_global_service(&vm) {
+                error!("Failed to re-register VM (cid) to the global service: {e:?}");
+            }
         }
     });
-    global_service().unwrap().as_binder().link_to_death(&mut dr)?;
+    gs.as_binder().link_to_death(&mut dr)?;
 
     // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
     // automatically unlinked.
