@@ -33,3 +33,7 @@ pub const MICRODROID_PAYLOAD_GID: u32 = 6000;
 
 /// User ID for the initial payload user.
 pub const MICRODROID_PAYLOAD_UID: u32 = 6000;
+
+/// The UID of the first tenant. Tenant UIDs are allocated sequentially, starting
+/// from this value. This is analogous to `AID_APP_START` for Android apps.
+pub const MICRODROID_FIRST_TENANT_UID: u32 = 10000;
