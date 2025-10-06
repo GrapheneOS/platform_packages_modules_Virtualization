@@ -194,7 +194,7 @@ impl CrosvmCommand {
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
         #[cfg(target_arch = "aarch64")]
-        command.add_aarch64_specific_args();
+        command.add_aarch64_specific_args(context);
         command.add_memory_arg(context);
         command.add_balloon_arg(context);
         command.add_console_arg(context)?;
@@ -425,7 +425,7 @@ impl CrosvmCommand {
     }
 
     #[cfg(target_arch = "aarch64")]
-    fn add_aarch64_specific_args(&mut self) {
+    fn add_aarch64_specific_args(&mut self, context: &RunContext) {
         // Move the PCI MMIO regions to near the end of the low-MMIO space.
         // This is done to accommodate a limitation in a partner's hypervisor.
         self.args([
@@ -433,6 +433,13 @@ impl CrosvmCommand {
             "mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]",
         ]);
         self.arg("--no-pmu");
+
+        // Allow GIC ITS by default for unprotected VMs.
+        // TODO: Support protected VMs. It will require an opt-in for non-Microdroid pVMs because
+        // guests are likely to probe for and automatically use it even if they are missing the
+        // necessary driver changes to share the ITS tables with the host, resulting in failure.
+        let allow_vgic_its = !context.config.protectedVm;
+        self.arg(format!("--irqchip=kernel[allow-vgic-its={allow_vgic_its}]"));
     }
 
     fn add_memory_arg(&mut self, context: &RunContext) {
