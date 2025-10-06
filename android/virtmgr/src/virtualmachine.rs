@@ -144,10 +144,10 @@ fn create_or_update_idsig_file(
     let mut output = clone_file(idsig_fd)?;
 
     // Optimization. We don't have to update idsig file whenever a VM is started. Don't update it,
-    // if the idsig file already has the same APK digest.
+    // if the Merkle tree already describes the contents of the APK.
     if output.metadata()?.len() > 0 {
         if let Ok(out_sig) = V4Signature::from_idsig(&mut output) {
-            if out_sig.signing_info.apk_digest == sig.signing_info.apk_digest {
+            if out_sig.hashing_info == sig.hashing_info {
                 debug!("idsig {output:?} is up-to-date with apk {input:?}.");
                 return Ok(());
             }
