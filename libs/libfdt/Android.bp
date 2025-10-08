@@ -5,6 +5,10 @@ package {
 rust_bindgen {
     name: "liblibfdt_bindgen",
     defaults: ["liblibfdt_bindgen_defaults"],
+    no_stdlibs: true,
+    header_libs: [
+        "libc",
+    ],
     apex_available: ["com.android.virt"],
 }
 

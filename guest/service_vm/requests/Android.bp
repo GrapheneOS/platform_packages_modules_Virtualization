@@ -13,7 +13,7 @@ rust_defaults {
     stdlibs: [
         "libcore.rust_sysroot",
     ],
-    rustlibs: [
+    no_std_rlibs: [
         "libbssl_avf_error_nostd",
         "libbssl_avf_nostd",
         "libcbor_util_nostd",
