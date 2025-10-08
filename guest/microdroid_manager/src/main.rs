@@ -1325,9 +1325,10 @@ fn delayed_prepare_encryptedstore(
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
         }
     }
-    prepare_encryptedstore(&key, &tenant_manager)?
+    let exitcode = prepare_encryptedstore(&key, &tenant_manager)?
         .wait()
         .context("failed waiting for encryptedstore binary to finish")?;
+    ensure!(exitcode.success(), "Unable to prepare encrypted storage. Exitcode={}", exitcode);
 
     wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
         .context("wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
