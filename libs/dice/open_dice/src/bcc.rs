@@ -190,7 +190,7 @@ impl DiceArtifacts for BccHandover<'_> {
 
 /// This function parses the `handover` to extracts the DICE chain and CDIs.
 /// The lifetime of the returned `DiceAndroidHandover` is tied to the given `handover` slice.
-pub fn bcc_handover_parse(handover: &[u8]) -> Result<BccHandover> {
+pub fn bcc_handover_parse(handover: &[u8]) -> Result<BccHandover<'_>> {
     let mut cdi_attest: *const u8 = ptr::null();
     let mut cdi_seal: *const u8 = ptr::null();
     let mut chain: *const u8 = ptr::null();
