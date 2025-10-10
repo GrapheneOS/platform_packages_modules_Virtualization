@@ -125,7 +125,9 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         // Assert.
         X509Certificate[] certs =
                 X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
-        X509Utils.verifyAvfRelatedCerts(certs, challenge, TEST_APP_PACKAGE_NAME, new String[] {});
+        boolean isAdvMultiTenancyEnabled = isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
+        X509Utils.verifyAvfRelatedCerts(
+                certs, challenge, TEST_APP_PACKAGE_NAME, new String[] {}, isAdvMultiTenancyEnabled);
         X509Utils.verifySignature(certs[0], MESSAGE.getBytes(), signingResult.signature);
     }
 

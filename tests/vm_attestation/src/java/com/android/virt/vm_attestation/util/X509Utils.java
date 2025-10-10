@@ -77,13 +77,18 @@ public class X509Utils {
      * extension should be found in the leaf certificate.
      */
     public static void verifyAvfRelatedCerts(
-            X509Certificate[] certChain, byte[] challenge, String payloadApk, String[] tenants)
+            X509Certificate[] certChain,
+            byte[] challenge,
+            String payloadApk,
+            String[] tenants,
+            boolean isAdvMultiTenancyEnabled)
             throws Exception {
         assertThat(certChain.length).isGreaterThan(2);
         assertWithMessage("The first certificate should be generated in the RKP VM")
                 .that(certChain[0].getSubjectX500Principal().getName())
                 .isEqualTo("CN=Android Protected Virtual Machine Key");
-        verifyAvfAttestationExtension(certChain[0], challenge, payloadApk, tenants);
+        verifyAvfAttestationExtension(
+                certChain[0], challenge, payloadApk, tenants, isAdvMultiTenancyEnabled);
 
         assertWithMessage("The second certificate should contain AVF in the subject")
                 .that(certChain[1].getSubjectX500Principal().getName())
@@ -91,7 +96,11 @@ public class X509Utils {
     }
 
     private static void verifyAvfAttestationExtension(
-            X509Certificate cert, byte[] challenge, String payloadApk, String[] expectedTenants)
+            X509Certificate cert,
+            byte[] challenge,
+            String payloadApk,
+            String[] expectedTenants,
+            boolean isAdvMultiTenancyEnabled)
             throws Exception {
         byte[] extensionValue = cert.getExtensionValue(AVF_ATTESTATION_EXTENSION_OID);
         ASN1OctetString extString = ASN1OctetString.getInstance(extensionValue);
@@ -110,7 +119,7 @@ public class X509Utils {
         //     codeHash           OCTET STRING,
         //     authorityHash      OCTET STRING,
         //  }
-        assertThat(seq).hasSize(4);
+        assertThat(seq).hasSize(isAdvMultiTenancyEnabled ? 4 : 3);
 
         ASN1OctetString expectedChallenge = new DEROctetString(challenge);
         assertThat(seq.getObjectAt(0)).isEqualTo(expectedChallenge);
@@ -119,15 +128,17 @@ public class X509Utils {
                 .isEqualTo(ASN1Boolean.FALSE);
         ASN1Sequence vmComponents = ASN1Sequence.getInstance(seq.getObjectAt(2));
         assertExtensionContainsPayloadApk(vmComponents, payloadApk);
-        ASN1Sequence vmTenantComponents = ASN1Sequence.getInstance(seq.getObjectAt(3));
 
-        List<String> actualTenants = getTenantNames(vmTenantComponents);
-        List<String> expectedTenantsList = new ArrayList<>(Arrays.asList(expectedTenants));
-        Collections.sort(actualTenants);
-        Collections.sort(expectedTenantsList);
-        assertWithMessage("vmTenantComponents should contain the correct tenant APKs.")
-                .that(actualTenants)
-                .isEqualTo(expectedTenantsList);
+        if (isAdvMultiTenancyEnabled) {
+            ASN1Sequence vmTenantComponents = ASN1Sequence.getInstance(seq.getObjectAt(3));
+            List<String> actualTenants = getTenantNames(vmTenantComponents);
+            List<String> expectedTenantsList = new ArrayList<>(Arrays.asList(expectedTenants));
+            Collections.sort(actualTenants);
+            Collections.sort(expectedTenantsList);
+            assertWithMessage("vmTenantComponents should contain the correct tenant APKs.")
+                    .that(actualTenants)
+                    .isEqualTo(expectedTenantsList);
+        }
     }
 
     private static void assertExtensionContainsPayloadApk(

@@ -57,6 +57,7 @@ pub(crate) struct AttestationExtension<'a> {
     /// Indicates whether the VM is operating under a secure configuration.
     is_vm_secure: bool,
     vm_payload_components: Vec<VmComponent<'a>>,
+    #[cfg(advance_multitenancy)]
     vm_tenant_components: Vec<VmComponent<'a>>,
 }
 
@@ -65,6 +66,7 @@ impl AssociatedOid for AttestationExtension<'_> {
 }
 
 impl<'a> AttestationExtension<'a> {
+    #[cfg(advance_multitenancy)]
     pub(crate) fn new(
         attestation_challenge: &'a [u8],
         is_vm_secure: bool,
@@ -72,6 +74,15 @@ impl<'a> AttestationExtension<'a> {
         vm_tenant_components: Vec<VmComponent<'a>>,
     ) -> Self {
         Self { attestation_challenge, is_vm_secure, vm_payload_components, vm_tenant_components }
+    }
+
+    #[cfg(not(advance_multitenancy))]
+    pub(crate) fn new(
+        attestation_challenge: &'a [u8],
+        is_vm_secure: bool,
+        vm_payload_components: Vec<VmComponent<'a>>,
+    ) -> Self {
+        Self { attestation_challenge, is_vm_secure, vm_payload_components }
     }
 }
 

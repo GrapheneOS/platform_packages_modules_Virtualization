@@ -358,8 +358,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         if (signingResult.status == AttestationStatus.OK) {
             X509Certificate[] certs =
                     X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+            boolean isAdvMultiTenancyEnabled =
+                    isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
             X509Utils.verifyAvfRelatedCerts(
-                    certs, challenge, TEST_APP_PACKAGE_NAME, new String[] {});
+                    certs,
+                    challenge,
+                    TEST_APP_PACKAGE_NAME,
+                    new String[] {},
+                    isAdvMultiTenancyEnabled);
             X509Utils.verifySignature(
                     certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
         }
@@ -459,11 +465,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         if (signingResult.status == AttestationStatus.OK) {
             X509Certificate[] certs =
                     X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+            boolean isAdvMultiTenancyEnabled =
+                    isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
             X509Utils.verifyAvfRelatedCerts(
                     certs,
                     challenge,
                     TEST_APP_PACKAGE_NAME,
-                    new String[] {TEST_TENANT_APK_NAME});
+                    new String[] {TEST_TENANT_APK_NAME},
+                    isAdvMultiTenancyEnabled);
             X509Utils.verifySignature(
                     certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
         }

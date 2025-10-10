@@ -96,15 +96,28 @@ pub(super) fn request_attestation(
     }
 
     let vm_payload_components = to_vm_components(&vm_payload_components)?;
-    let vm_tenant_components = to_vm_components(&vm_tenant_components)?;
+    let _vm_tenant_components = to_vm_components(&vm_tenant_components)?;
 
     info!("The client VM DICE chain validation succeeded. Beginning to generate the certificate.");
-    let attestation_ext = cert::AttestationExtension::new(
-        &csr_payload.challenge,
-        client_vm_dice_chain.all_entries_are_secure(),
-        vm_payload_components,
-        vm_tenant_components,
-    )
+    let attestation_ext = {
+        #[cfg(advance_multitenancy)]
+        {
+            cert::AttestationExtension::new(
+                &csr_payload.challenge,
+                client_vm_dice_chain.all_entries_are_secure(),
+                vm_payload_components,
+                _vm_tenant_components,
+            )
+        }
+        #[cfg(not(advance_multitenancy))]
+        {
+            cert::AttestationExtension::new(
+                &csr_payload.challenge,
+                client_vm_dice_chain.all_entries_are_secure(),
+                vm_payload_components,
+            )
+        }
+    }
     .to_der()?;
     let tbs_cert = cert::build_tbs_certificate(
         &serial_number,
