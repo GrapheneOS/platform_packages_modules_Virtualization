@@ -104,6 +104,11 @@
       "name": "ComposBenchmarkApp"
     }
   ],
+  "presubmit": [
+    {
+      "name": "CtsAppSearchTestCases"
+    }
+  ],
   "postsubmit": [
     {
       "name": "CtsMicrodroidDisabledTestCases"
