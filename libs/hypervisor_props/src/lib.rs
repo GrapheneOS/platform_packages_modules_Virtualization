@@ -42,3 +42,8 @@ pub fn version() -> Result<Option<String>> {
 pub fn is_gunyah() -> Result<bool> {
     Ok(version()?.unwrap_or_default().starts_with("gunyah"))
 }
+
+/// Returns true if the hypervisor is pkvm
+pub fn is_pkvm() -> Result<bool> {
+    Ok(version()?.unwrap_or_default().starts_with("kvm.arm-protected"))
+}
