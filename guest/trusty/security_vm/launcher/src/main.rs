@@ -62,7 +62,7 @@ pub struct Args {
 
     /// Path to a JSON file defining the RPC services to register.
     #[arg(long, value_name = "FILE")]
-    rpc_services_config: Option<PathBuf>,
+    rpc_services_config: Vec<PathBuf>,
 
     /// CPU Topology exposed to the VM <one-cpu|match-host>
     #[arg(long, default_value = "one-cpu", value_parser = parse_cpu_topology)]
@@ -189,17 +189,24 @@ fn main() -> Result<()> {
     vm.start(None /* callback */).context("Failed to start VM")?;
     info!("started VM");
 
-    if let Some(config_path) = args.rpc_services_config {
-        let configs = parse_rpc_service_configs(&config_path)?;
-        ensure!(!configs.is_empty(), "RPC services config file at '{:?}' is empty", config_path);
-
+    if !args.rpc_services_config.is_empty() {
         ProcessState::start_thread_pool();
-        info!("Registering {} RPC service(s)...", configs.len());
-        for config in &configs {
-            register_accessor_service(&vm, config)?;
-        }
-        ProcessState::join_thread_pool();
 
+        for config_path in args.rpc_services_config {
+            let configs = parse_rpc_service_configs(&config_path)?;
+            ensure!(
+                !configs.is_empty(),
+                "RPC services config file at '{:?}' is empty",
+                config_path
+            );
+
+            info!("Registering {} RPC service(s) from {}...", configs.len(), config_path.display());
+            for config in &configs {
+                register_accessor_service(&vm, config)?;
+            }
+        }
+
+        ProcessState::join_thread_pool();
         bail!("Thread pool unexpectedly ended");
     } else {
         info!("No --rpc-services-config provided. Not registering any accessor services.");
