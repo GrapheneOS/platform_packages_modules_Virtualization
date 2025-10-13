@@ -18,6 +18,7 @@
     {
       "name": "MicrodroidTestApp"
     },
+    // Promoted to ensure AVF well with trunk stable
     {
       "name": "avf_backcompat_tests"
     }
