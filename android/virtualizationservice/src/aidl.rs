@@ -1187,6 +1187,7 @@ impl ShutdownMonitor {
                                 Ok(()) => {
                                     info!("SIGTERM received. Stopping VMs...");
                                     handler();
+                                    info!("All VMs stopped.");
                                     break;
                                 }
                                 Err(e) => {
@@ -1195,6 +1196,10 @@ impl ShutdownMonitor {
                             }
                         }
                         drop(writer);
+                        // In response to SIGTERM, we kill ourselves without waiting for init to
+                        // come to use with SIGKILL (which would take up to 3s after SIGTERM is
+                        // sent).
+                        std::process::exit(0);
                     })
                     .expect("Failed to create shutdown_monitor thread"),
             )
