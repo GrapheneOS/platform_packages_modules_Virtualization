@@ -119,6 +119,11 @@ impl MmuOps for PageTable {
         Ok(())
     }
 
+    fn unmap(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        self.idmap.unmap_range(&mut as_page_range(range))?;
+        Ok(())
+    }
+
     fn sync_dirty_state(&mut self) -> MmuResult<()> {
         // Memory barrier to ensure all hardware updates to the page table have been
         // observed before accessing PTE.

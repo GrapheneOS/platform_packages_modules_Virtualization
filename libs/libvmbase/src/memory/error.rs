@@ -35,6 +35,8 @@ pub enum MemoryTrackerError {
     OutOfRange,
     /// New region overlaps with tracked regions.
     Overlaps,
+    /// Region is not present in the tracked regions.
+    NotMapped,
     /// Region couldn't be mapped.
     FailedToMap,
     /// Region couldn't be unmapped.
@@ -67,6 +69,7 @@ impl fmt::Display for MemoryTrackerError {
             Self::Full => write!(f, "Reached limit number of tracked regions"),
             Self::OutOfRange => write!(f, "Region is out of the tracked memory address space"),
             Self::Overlaps => write!(f, "New region overlaps with tracked regions"),
+            Self::NotMapped => write!(f, "Region is not mapped"),
             Self::FailedToMap => write!(f, "Failed to map the new region"),
             Self::FailedToUnmap => write!(f, "Failed to unmap the new region"),
             Self::Hypervisor(e) => e.fmt(f),

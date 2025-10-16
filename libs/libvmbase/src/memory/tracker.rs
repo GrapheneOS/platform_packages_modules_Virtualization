@@ -179,6 +179,16 @@ pub unsafe fn map_rodata_outside_main_memory(addr: usize, size: NonZeroUsize) ->
     Ok(())
 }
 
+/// Unmap the provided memory range
+///
+/// Fails if the region is not mapped.
+pub fn unmap(addr: usize, size: NonZeroUsize) -> Result<()> {
+    let mut locked_tracker = try_lock_memory_tracker()?;
+    let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
+
+    tracker.unmap(addr, size)
+}
+
 /// Map the provided range as device memory.
 ///
 /// This fails if the range has already been (partially) mapped.
@@ -330,6 +340,22 @@ impl<Mmu: MmuOps> MemoryTracker<Mmu> {
             MemoryTrackerError::FailedToMap
         })?;
         self.add(region)
+    }
+
+    fn unmap(&mut self, base: usize, size: NonZeroUsize) -> Result<()> {
+        let range = base..(base + size.get());
+        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
+
+        if let Some(index) = self.regions.iter().position(|r| r.range == region.range) {
+            self.mmu.unmap(&region.range()).map_err(|e| {
+                error!("Error during range allocation: {e}");
+                MemoryTrackerError::FailedToUnmap
+            })?;
+            self.regions.remove(index);
+            Ok(())
+        } else {
+            Err(MemoryTrackerError::NotMapped)
+        }
     }
 
     /// Maps the image footer, with read-write permissions.
