@@ -388,11 +388,12 @@ fn try_main() -> Result<()> {
     }
 }
 
+// Verify the payload. Additionally compare it against instance.img partition (if existing)
+// OR create a new entry in the instance,img (returning a boolean to indicate is_new_instance).
 fn verify_payload_with_instance_img(
     metadata: &Metadata,
     dice: &DiceDriver,
-    state: &mut VmInstanceState,
-) -> Result<(MicrodroidData, Vec<ApexData>)> {
+) -> Result<(MicrodroidData, Vec<ApexData>, bool)> {
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
@@ -420,7 +421,7 @@ fn verify_payload_with_instance_img(
 
     // In case identity is ignored (by debug policy), we should reuse existing payload data, even
     // when the payload is changed. This is to keep the derived secret same as before.
-    let instance_data = if let Some(saved_data) = saved_data {
+    let (instance_data, newly_created) = if let Some(saved_data) = saved_data {
         if !is_verified_boot() {
             if saved_data != extracted_data {
                 info!("Detected an update of the payload, but continue (regarding debug policy)")
@@ -434,17 +435,15 @@ fn verify_payload_with_instance_img(
             );
             info!("Saved data is verified.");
         }
-        *state = VmInstanceState::PreviouslySeen;
-        saved_data
+        (saved_data, /* newly_created */ false)
     } else {
         info!("Saving verified data.");
         instance
             .write_microdroid_data(&extracted_data, dice)
             .context("Failed to write identity data")?;
-        *state = VmInstanceState::NewlyCreated;
-        extracted_data
+        (extracted_data, /* newly_created */ true)
     };
-    Ok((instance_data, tenant_apex_data))
+    Ok((instance_data, tenant_apex_data, newly_created))
 }
 
 // The VM instance run can be
@@ -479,14 +478,24 @@ fn try_run_payload(
             .context("Failed to load DICE from driver")?
     };
 
-    let mut state = VmInstanceState::Unknown;
     // Microdroid skips checking payload against instance image iff the device supports
     // secretkeeper. In that case Microdroid use VmSecret::V2, which provides instance state
     // and protection against rollback of boot images and packages.
-    let (instance_data, tenant_apex_data) = if should_defer_rollback_protection() {
-        verify_payload(&metadata, None)?
+    let (instance_data, tenant_apex_data, state) = if should_defer_rollback_protection() {
+        let (instance_data, tenant_apex_data) = verify_payload(&metadata, None)?;
+        (instance_data, tenant_apex_data, VmInstanceState::Unknown)
     } else {
-        verify_payload_with_instance_img(&metadata, &dice, &mut state)?
+        let (instance_data, tenant_apex_data, is_newly_created) =
+            verify_payload_with_instance_img(&metadata, &dice)?;
+        (
+            instance_data,
+            tenant_apex_data,
+            if is_newly_created {
+                VmInstanceState::NewlyCreated
+            } else {
+                VmInstanceState::PreviouslySeen
+            },
+        )
     };
 
     // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
@@ -529,19 +538,9 @@ fn try_run_payload(
         &tenant_apks_data_extracted_from_manifest,
         &tenant_apex_data,
     )?;
-    let vm_secret = Arc::new(
-        VmSecret::new(dice_artifacts, service, &mut state)
-            .context("Failed to create VM secrets")?,
-    );
-
-    let is_new_instance = match state {
-        VmInstanceState::NewlyCreated => true,
-        VmInstanceState::PreviouslySeen => false,
-        VmInstanceState::Unknown => {
-            bail!("Vm instance state is still unknown, this should not have happened");
-        }
-    };
-
+    let (vm_secret, is_new_instance) =
+        VmSecret::new(dice_artifacts, service, state).context("Failed to create VM secrets")?;
+    let vm_secret = Arc::new(vm_secret);
     if cfg!(dice_changes) {
         // Now that the DICE derivation is done, it's ok to allow payload code to run.
 

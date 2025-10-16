@@ -14,7 +14,7 @@
 
 //! Class for encapsulating & managing represent VM secrets.
 
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{anyhow, ensure, Context, bail, Result};
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::{
     Atom,
     GetOrCreateSkSecretFailedReported::GetOrCreateSkSecretFailedReported,
@@ -113,14 +113,22 @@ fn get_secretkeeper_identity() -> Result<CoseKey> {
 }
 
 impl VmSecret {
+    // Returns the VmSecret, along with a boolean indicating whether it was newly created.
     pub fn new(
         dice_artifacts: OwnedDiceArtifacts,
         vm_service: &Strong<dyn IVirtualMachineService>,
-        state: &mut VmInstanceState,
-    ) -> Result<Self> {
+        state: VmInstanceState,
+    ) -> Result<(Self, bool)> {
         ensure!(dice_artifacts.bcc().is_some(), "Dice chain missing");
         if !crate::should_defer_rollback_protection() {
-            return Ok(Self::V1 { dice_artifacts });
+            let is_new_instance = match state {
+                VmInstanceState::NewlyCreated => true,
+                VmInstanceState::PreviouslySeen => false,
+                VmInstanceState::Unknown => {
+                    bail!("Vm instance state is unknown, this should not have happened");
+                }
+            };
+            return Ok((Self::V1 { dice_artifacts }, is_new_instance));
         }
 
         let explicit_dice = OwnedDiceArtifactsWithExplicitKey::from_owned_artifacts(dice_artifacts)
@@ -132,8 +140,7 @@ impl VmSecret {
         let policy = sealing_policy(explicit_dice_chain)
             .map_err(|e| anyhow!("Failed to build a sealing_policy: {e}"))?;
         let session = SkVmSession::new(vm_service, &explicit_dice, policy)?;
-        let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
-        get_or_create_sk_secret(&session, id, &mut skp_secret, state).or_else(|e| {
+        let (skp_secret, newly_created) = get_or_create_sk_secret(&session, id).or_else(|e| {
             // TODO(b/399304956): Secretkeeper rejects requests when overloaded with
             // connections from multiple clients. Backoff & retry again, hoping it is
             // less busy then. Secretkeeper changes are required for more robust solutions.
@@ -151,7 +158,7 @@ impl VmSecret {
             let backoff = rng.gen_range(BACKOFF_SK_ACCESS_MS..2 * BACKOFF_SK_ACCESS_MS);
             thread::sleep(Duration::from_millis(backoff));
             session.refresh()?;
-            get_or_create_sk_secret(&session, id, &mut skp_secret, state).inspect_err(|_| {
+            get_or_create_sk_secret(&session, id).inspect_err(|_| {
                 if let Err(statsd_e) =
                     vm_service.forwardAtom(&Atom::GetOrCreateSkSecretFailedReported(
                         GetOrCreateSkSecretFailedReported { retryCount: 1 },
@@ -161,13 +168,16 @@ impl VmSecret {
                 }
             })
         })?;
-        Ok(Self::V2 {
-            instance_id: id,
-            dice_artifacts: explicit_dice,
-            skp_secret: ZVec::try_from(skp_secret.to_vec())?,
-            secretkeeper_session: session,
-            virtual_machine_service: vm_service.clone(),
-        })
+        Ok((
+            Self::V2 {
+                instance_id: id,
+                dice_artifacts: explicit_dice,
+                skp_secret: ZVec::try_from(skp_secret.to_vec())?,
+                secretkeeper_session: session,
+                virtual_machine_service: vm_service.clone(),
+            },
+            newly_created,
+        ))
     }
 
     pub fn dice_artifacts(&self) -> &dyn DiceArtifacts {
@@ -426,17 +436,16 @@ fn get_secretkeeper_service(
 fn get_or_create_sk_secret(
     session: &SkVmSession,
     id: [u8; ID_SIZE],
-    skp_secret: &mut Zeroizing<[u8; SECRET_SIZE]>,
-    state: &mut VmInstanceState,
-) -> Result<()> {
-    if let Some(secret) = session.get_secret(id)? {
-        **skp_secret = secret;
-        *state = VmInstanceState::PreviouslySeen;
+) -> Result<(Zeroizing<[u8; SECRET_SIZE]>, bool)> {
+    let mut skp_secret = Zeroizing::new([0u8; SECRET_SIZE]);
+    let newly_created = if let Some(secret) = session.get_secret(id)? {
+        *skp_secret = secret;
+        false
     } else {
         log::warn!("No entry found in Secretkeeper for this VM instance, creating new secret.");
-        **skp_secret = rand::random();
+        *skp_secret = rand::random();
         session.store_secret(id, skp_secret.clone())?;
-        *state = VmInstanceState::NewlyCreated;
-    }
-    Ok(())
+        true
+    };
+    Ok((skp_secret, newly_created))
 }
