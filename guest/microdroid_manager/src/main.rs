@@ -735,8 +735,13 @@ fn try_run_payload(
     let mut notified_payload_started = task.is_some();
     let mut payload_process = if let Some(task) = task {
         info!("boot completed, time to run payload");
-        let main_command = get_task_command(VM_APK_CONTENTS_PATH, task, /* is_apex */ false)
-            .context("Failed to find payload")?;
+        let main_command = get_task_command(
+            VM_APK_CONTENTS_PATH,
+            task,
+            /* is_apex */ false,
+            config.run_as_root,
+        )
+        .context("Failed to find payload")?;
         Some(
             exec_task(
                 main_command,
@@ -752,6 +757,10 @@ fn try_run_payload(
 
     let mut tenant_processes: Vec<Child> = Vec::new();
     let mut tenant_index = 0;
+    ensure!(
+        config.tenants.is_empty() || !config.run_as_root,
+        "Run as root not supported with tenants"
+    );
     for tenant in config.tenants.iter() {
         let (task, name, package_path, is_apex) = match tenant {
             TenantConfig::Apex(c) => (c.task.as_ref(), &c.name, c.name.clone(), true),
@@ -1050,15 +1059,11 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
             Ok(VmPayloadConfig {
                 os: OsConfig { name: "microdroid".to_owned() },
                 task: Some(task),
-                apexes: vec![],
                 extra_apks,
                 // Tenants are only supported through config.json files
                 tenants: vec![],
-                prefer_staged: false,
-                export_tombstones: None,
-                enable_authfs: false,
-                hugepages: false,
                 delay_encrypted_store_setup: payload_config.delay_encrypted_store_setup,
+                ..Default::default()
             })
         }
         _ => bail!("Failed to match config against a config type."),
@@ -1119,14 +1124,24 @@ fn build_payload_command(
     Ok(PayloadCommand { command, uid_gid })
 }
 
-fn get_task_command(package_name: &str, task: &Task, is_apex: bool) -> Result<PayloadCommand> {
-    let uid_gid = match task.type_ {
-        TaskType::Executable => {
-            // TODO(b/297501338): Figure out how to handle non-root for system payloads.
-            None
-        }
-        TaskType::MicrodroidLauncher => {
-            Some((microdroid_uids::MICRODROID_PAYLOAD_UID, microdroid_uids::MICRODROID_PAYLOAD_GID))
+fn get_task_command(
+    package_name: &str,
+    task: &Task,
+    is_apex: bool,
+    run_as_root: bool,
+) -> Result<PayloadCommand> {
+    let uid_gid = if run_as_root {
+        None
+    } else {
+        match task.type_ {
+            TaskType::Executable => {
+                // TODO(b/297501338): Figure out how to handle non-root for system payloads.
+                None
+            }
+            TaskType::MicrodroidLauncher => Some((
+                microdroid_uids::MICRODROID_PAYLOAD_UID,
+                microdroid_uids::MICRODROID_PAYLOAD_GID,
+            )),
         }
     };
     build_payload_command(package_name, task, uid_gid, is_apex)

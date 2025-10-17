@@ -65,6 +65,10 @@ pub struct VmPayloadConfig {
     /// wait for the payload to send a signal to do the setup.
     #[serde(default)]
     pub delay_encrypted_store_setup: bool,
+
+    /// Whether to run the payload as root or not.
+    #[serde(default)]
+    pub run_as_root: bool,
 }
 
 /// OS config

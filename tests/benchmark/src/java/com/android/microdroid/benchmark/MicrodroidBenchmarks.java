@@ -389,6 +389,10 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     }
 
     private void testVirtioBlkReadRate(boolean isRand) throws Exception {
+        assume().withMessage("VirtIO block devices benchmarks work only on debuggable builds")
+                .that(android.os.Build.isDebuggable())
+                .isTrue();
+
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig("assets/vm_config_io.json")
                         .setDebugLevel(DEBUG_LEVEL_NONE)
@@ -422,7 +426,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     }
 
     private static class VirtioBlkListener implements BenchmarkVmListener.InnerListener {
-        private static final String FILENAME = APEX_ETC_FS + "microdroid_super.img";
+        private static final String FILENAME = "/dev/block/by-name/super";
 
         private final List<Double> mReadRates;
         private final boolean mIsRand;
