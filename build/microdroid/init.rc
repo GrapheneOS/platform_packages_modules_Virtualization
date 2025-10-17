@@ -75,6 +75,8 @@ on property:microdroid_manager.init_done=1
 on init && property:ro.boot.microdroid.debuggable=1
     # Mount tracefs (with GID=AID_READTRACEFS)
     mount tracefs tracefs /sys/kernel/tracing gid=3012
+    # Always start traced_relay service on debuggable Microdroid VMs.
+    setprop persist.traced.enable 2
 
 on property:init_debug_policy.adbd.enabled=1
     start adbd
