@@ -750,7 +750,6 @@ impl VirtualizationService {
         let instance = Arc::new(
             VmInstance::new(
                 crosvm_config,
-                debug_config.debug_level == aidl::DebugLevel::FULL,
                 temporary_directory,
                 requester_uid,
                 requester_debug_pid,
