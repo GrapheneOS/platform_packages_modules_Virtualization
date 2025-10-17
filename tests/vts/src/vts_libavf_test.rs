@@ -16,9 +16,12 @@
 
 use anyhow::{bail, ensure, Context, Result};
 use log::info;
+use std::ffi::c_void;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::os::fd::IntoRawFd;
+use std::sync::mpsc::{self, Sender};
+use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
@@ -32,6 +35,13 @@ const LISTEN_TIMEOUT: Duration = Duration::from_secs(10);
 const READ_TIMEOUT: Duration = Duration::from_secs(10);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 const STOP_TIMEOUT: timespec = timespec { tv_sec: 10, tv_nsec: 0 };
+
+static ON_STOPPED_EVENT: LazyLock<Mutex<Sender<(usize, AVirtualMachineStopReason, u8)>>> =
+    LazyLock::new(|| {
+        // Returning stub here because `Receiver` isn't `Sync`.
+        let (tx, _) = mpsc::channel();
+        Mutex::new(tx)
+    });
 
 /// Processes the request in the service VM.
 fn process_request(vsock_stream: &mut VsockStream, request: Request) -> Result<Response> {
@@ -73,10 +83,30 @@ fn listen_from_guest(port: u32) -> Result<VsockStream> {
     }
 }
 
+unsafe extern "C" fn on_stopped(
+    vm: *mut AVirtualMachine,
+    reason: AVirtualMachineStopReason,
+    data: *mut c_void,
+) {
+    info!("on_stopped");
+
+    // SAFETY: `data` is a valid pointer passed by AVirtualMachine_start.
+    let data = unsafe { *(data as *const u8) };
+    ON_STOPPED_EVENT.lock().unwrap().send((vm as usize, reason, data)).unwrap();
+
+    // SAFETY: `vm` is a valid pointer created by AVirtualMachine_create().
+    unsafe {
+        AVirtualMachine_destroy(vm);
+    }
+}
+
 fn run_service_vm(protected_vm: bool) -> Result<()> {
     let kernel_file = File::open("/data/nativetest64/vendor/service_vm.bin")
         .context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
+
+    let (tx, rx) = mpsc::channel();
+    (*ON_STOPPED_EVENT.lock().unwrap()) = tx;
 
     // SAFETY: AVirtualMachineRawConfig_create() isn't unsafe but rust_bindgen forces it to be seen
     // as unsafe
@@ -124,21 +154,23 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
         "AVirtualMachine_createRaw failed"
     );
 
-    scopeguard::defer! {
-        // SAFETY: vm is a valid pointer to AVirtualMachine
-        unsafe { AVirtualMachine_destroy(vm); }
-    }
-
     info!("vm created");
 
     let vm_type = if protected_vm { VmType::ProtectedVm } else { VmType::NonProtectedVm };
 
     let listener_thread = std::thread::spawn(move || listen_from_guest(vm_type.port()));
 
+    let mut callback_data = 33_u8;
     // SAFETY: vm is the only reference to a valid object
     unsafe {
-        AVirtualMachine_start(vm);
+        AVirtualMachine_startWithCallback(
+            vm,
+            Some(on_stopped),
+            &mut callback_data as *mut _ as *mut c_void,
+        );
     }
+
+    let vm_ptr = vm as usize;
 
     info!("VM started");
 
@@ -172,6 +204,15 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
     );
 
     info!("stopped");
+
+    assert_eq!(AVirtualMachineStopReason::AVIRTUAL_MACHINE_SHUTDOWN, stop_reason);
+
+    let timeout = Duration::from_secs(STOP_TIMEOUT.tv_sec.try_into().unwrap());
+    let (stopped_vm_ptr, stopped_reason, stopped_callback_data) =
+        rx.recv_timeout(timeout).expect("Callback should have been called");
+    assert_eq!(stopped_vm_ptr, vm_ptr);
+    assert_eq!(stopped_reason, stop_reason);
+    assert_eq!(stopped_callback_data, callback_data);
 
     Ok(())
 }
