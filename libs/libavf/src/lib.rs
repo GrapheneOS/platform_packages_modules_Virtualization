@@ -14,12 +14,11 @@
 
 //! Stable C library for AVF.
 
-use std::ffi::{c_void, CStr};
+use std::ffi::CStr;
 use std::fs::File;
 use std::os::fd::{FromRawFd, IntoRawFd};
 use std::os::raw::{c_char, c_int};
 use std::ptr;
-use std::sync::{Arc, Weak};
 use std::time::Duration;
 
 use android_system_virtualizationservice::{
@@ -32,10 +31,10 @@ use android_system_virtualizationservice::{
     },
     binder::{ParcelFileDescriptor, Strong},
 };
-use avf_bindgen::{AVirtualMachineStopReason, AVirtualMachine_stopCallback};
+use avf_bindgen::AVirtualMachineStopReason;
 use libc::timespec;
 use log::error;
-use vmclient::{DeathReason, ErrorCode, VirtualizationService, VmCallback, VmInstance};
+use vmclient::{DeathReason, VirtualizationService, VmInstance};
 
 /// Create a new virtual machine config object with no properties.
 #[no_mangle]
@@ -361,56 +360,6 @@ pub unsafe extern "C" fn AVirtualizationService_destroy(
     }
 }
 
-struct OpaqueFfiPtr(*mut c_void);
-
-/// SAFETY: Synchronization of underlying data is handled outside.
-unsafe impl Send for OpaqueFfiPtr {}
-
-/// SAFETY: Synchronization of underlying data is handled outside.
-unsafe impl Sync for OpaqueFfiPtr {}
-
-struct LocalVmInstance {
-    vm: Weak<VmInstance>,
-    callback: AVirtualMachine_stopCallback,
-    data: OpaqueFfiPtr,
-}
-
-impl VmCallback for LocalVmInstance {
-    fn on_payload_started(&self, _cid: i32) {
-        // Microdroid only. no-op.
-    }
-
-    fn on_payload_ready(&self, _cid: i32) {
-        // Microdroid only. no-op.
-    }
-
-    fn on_payload_finished(&self, _cid: i32, _exit_code: i32) {
-        // Microdroid only. no-op.
-    }
-
-    fn on_error(&self, _cid: i32, _error_code: ErrorCode, _message: &str) {
-        // Microdroid only. no-op.
-    }
-
-    fn on_died(&self, _cid: i32, death_reason: DeathReason) {
-        let Some(callback) = self.callback else {
-            return;
-        };
-        let stop_reason = death_reason_to_stop_reason(death_reason);
-
-        // Note: VM launching app should hold strong reference of VmInstance.
-        //       The reference is managed internally by libavf and caller doesn't have direct
-        //       control.
-        let vm = self.vm.upgrade().unwrap();
-
-        // SAFETY: We trust the caller of `AVirtualMachine_start` to provide a valid `callback`.
-        //         The callback would be called only once, as `virtmgr` does so for `on_died()`.
-        unsafe {
-            callback(Arc::as_ptr(&vm) as *mut _, stop_reason, self.data.0);
-        }
-    }
-}
-
 /// Create a virtual machine with given `config`.
 ///
 /// # Safety
@@ -445,8 +394,9 @@ pub unsafe extern "C" fn AVirtualMachine_createRaw(
     match VmInstance::create(service.as_ref(), &config, console_out, console_in, log, None) {
         Ok(vm) => {
             // SAFETY: `vm_ptr` is assumed to be a valid, non-null pointer to a mutable raw pointer.
+            // `vm` is the only reference here and `vm_ptr` takes ownership.
             unsafe {
-                *vm_ptr = Arc::into_raw(Arc::new(vm)) as *mut _;
+                *vm_ptr = Box::into_raw(Box::new(vm));
             }
             0
         }
@@ -462,38 +412,11 @@ pub unsafe extern "C" fn AVirtualMachine_createRaw(
 /// # Safety
 /// `vm` must be a pointer returned by `AVirtualMachine_createRaw`.
 #[no_mangle]
-pub unsafe extern "C" fn AVirtualMachine_start(vm: *mut VmInstance) -> c_int {
-    // SAFETY: Fills default parameters and delegates to another function
-    // with the same safety requirement.
-    unsafe { AVirtualMachine_startWithCallback(vm, None, ptr::null_mut()) }
-}
-
-/// Start a virtual machine with callback
-///
-/// # Safety
-/// `vm` must be a pointer returned by `AVirtualMachine_createRaw`.
-#[no_mangle]
-pub unsafe extern "C" fn AVirtualMachine_startWithCallback(
-    vm: *mut VmInstance,
-    callback: AVirtualMachine_stopCallback,
-    data: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn AVirtualMachine_start(vm: *const VmInstance) -> c_int {
     // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
     // `AVirtualMachine_createRaw`. It's the only reference to the object.
-    let vm = unsafe {
-        Arc::increment_strong_count(vm);
-        Arc::from_raw(vm)
-    };
-    let callback = callback.map(|_| {
-        let cb: Box<dyn VmCallback + Send + Sync> = Box::new(LocalVmInstance {
-            vm: Arc::downgrade(&vm),
-            callback,
-            data: OpaqueFfiPtr(data),
-        });
-        cb
-    });
-
-    match vm.start(callback) {
+    let vm = unsafe { &*vm };
+    match vm.start(None) {
         Ok(_) => 0,
         Err(e) => {
             error!("AVirtualMachine_start failed: {e:?}");
@@ -507,7 +430,7 @@ pub unsafe extern "C" fn AVirtualMachine_startWithCallback(
 /// # Safety
 /// `vm` must be a pointer returned by `AVirtualMachine_create`.
 #[no_mangle]
-pub unsafe extern "C" fn AVirtualMachine_stop(vm: *mut VmInstance) -> c_int {
+pub unsafe extern "C" fn AVirtualMachine_stop(vm: *const VmInstance) -> c_int {
     // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
     // `AVirtualMachine_createRaw`. It's the only reference to the object.
     let vm = unsafe { &*vm };
@@ -525,7 +448,7 @@ pub unsafe extern "C" fn AVirtualMachine_stop(vm: *mut VmInstance) -> c_int {
 /// # Safety
 /// `vm` must be a pointer returned by `AVirtualMachine_create`.
 #[no_mangle]
-pub unsafe extern "C" fn AVirtualMachine_connectVsock(vm: *mut VmInstance, port: u32) -> c_int {
+pub unsafe extern "C" fn AVirtualMachine_connectVsock(vm: *const VmInstance, port: u32) -> c_int {
     // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
     // `AVirtualMachine_createRaw`. It's the only reference to the object.
     let vm = unsafe { &*vm };
@@ -571,7 +494,7 @@ fn death_reason_to_stop_reason(death_reason: DeathReason) -> AVirtualMachineStop
 /// AVirtualMachineStopReason object.
 #[no_mangle]
 pub unsafe extern "C" fn AVirtualMachine_waitForStop(
-    vm: *mut VmInstance,
+    vm: *const VmInstance,
     timeout: *const timespec,
     reason: *mut AVirtualMachineStopReason,
 ) -> bool {
@@ -609,7 +532,7 @@ pub unsafe extern "C" fn AVirtualMachine_destroy(vm: *mut VmInstance) {
         // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
         // AVirtualMachine_create. It's the only reference to the object.
         unsafe {
-            let _ = Arc::from_raw(vm);
+            let _ = Box::from_raw(vm);
         }
     }
 }
