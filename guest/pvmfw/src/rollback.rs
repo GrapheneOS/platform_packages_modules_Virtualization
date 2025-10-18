@@ -37,7 +37,7 @@ use vmbase::virtio::pci;
 enum FixedRollbackCriterion {
     #[cfg_attr(not(feature = "platform_has_desktop_trusty"), allow(dead_code))]
     /// Image must match the exact kernel hash.
-    KernelHash { digest: Digest },
+    KernelHash { digests: &'static [Digest] },
     /// Image must match the exact rollback index and have been signed with the given public key.
     RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
     #[cfg_attr(feature = "platform_has_desktop_trusty", allow(dead_code))]
@@ -100,13 +100,18 @@ fn get_fixed_rollback_protection(
         VerifiedBootData::DESKTOP_TRUSTY_VM_NAME => {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "platform_has_desktop_trusty")] {
-                    const DIGEST: &Digest = include_bytes!(
+                    const MAIN_DIGEST: &Digest = include_bytes!(
                         concat!(env!("OUT_DIR"), "/desktop_trusty.kernelhash")
                     );
+                    const ALT_DIGEST: &Digest = include_bytes!(
+                        concat!(env!("OUT_DIR"), "/desktop_trusty_ext_boot.kernelhash")
+                    );
+                    static ALLOWED_DIGESTS: &[Digest] = &[*MAIN_DIGEST, *ALT_DIGEST];
 
-                    static_assertions::const_assert!(DIGEST.len() == pvmfw_avb::DIGEST_LEN);
+                    static_assertions::const_assert!(MAIN_DIGEST.len() == pvmfw_avb::DIGEST_LEN);
+                    static_assertions::const_assert!(ALT_DIGEST.len() == pvmfw_avb::DIGEST_LEN);
 
-                    Some(FixedRollbackCriterion::KernelHash { digest: *DIGEST })
+                    Some(FixedRollbackCriterion::KernelHash { digests: ALLOWED_DIGESTS })
                 } else {
                     let name = VerifiedBootData::DESKTOP_TRUSTY_VM_NAME;
                     Some(FixedRollbackCriterion::Reserved { name })
@@ -139,10 +144,10 @@ fn perform_fixed_rollback_protection(
                 Ok(())
             }
         }
-        FixedRollbackCriterion::KernelHash { digest: expected_digest } => {
+        FixedRollbackCriterion::KernelHash { digests } => {
             let digest = verified_boot_data.kernel_digest;
-            if digest != expected_digest {
-                error!("Kernel hash mismatch: expected {expected_digest:x?}, found {digest:x?}");
+            if !digests.contains(&digest) {
+                error!("Kernel hash mismatch: expected one of {digests:x?}, found {digest:x?}");
                 Err(RebootReason::InvalidPayload)
             } else {
                 Ok(())
