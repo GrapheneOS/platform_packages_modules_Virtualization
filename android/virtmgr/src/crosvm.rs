@@ -307,9 +307,9 @@ impl CrosvmCommand {
             Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
         }
         if kernel_version().context("bad uname")? >= (5, 18) {
-            self.arg("--lock-guest-memory-dontneed");
+            self.arg("--lock-guest-memory");
         } else {
-            warn!("kernel is too old enable --lock-guest-memory-dontneed");
+            warn!("kernel is too old enable --lock-guest-memory");
         }
         Ok(())
     }
