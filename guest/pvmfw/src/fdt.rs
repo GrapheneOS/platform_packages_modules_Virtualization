@@ -487,7 +487,7 @@ fn get_nth_compatible<'a>(
 fn patch_cpus(
     fdt: &mut Fdt,
     cpus: &[CpuInfo],
-    topology: &Option<CpuTopology>,
+    topology: Option<&CpuTopology>,
 ) -> libfdt::Result<()> {
     const COMPAT: &CStr = c"arm,armv8";
     let mut cpu_phandles = Vec::new();
@@ -918,7 +918,7 @@ fn validate_wdt_info(wdt: &WdtInfo, num_cpus: usize) -> Result<(), RebootReason>
 
 fn patch_wdt_info(
     fdt: &mut Fdt,
-    wdt_info: &Option<WdtInfo>,
+    wdt_info: Option<&WdtInfo>,
     num_cpus: usize,
 ) -> libfdt::Result<()> {
     let Some(mut node) = fdt.root_mut().next_compatible(c"qemu,vcpu-stall-detector")? else {
@@ -1082,7 +1082,7 @@ struct VcpufreqInfo {
     size: u64,
 }
 
-fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: &Option<VcpufreqInfo>) -> libfdt::Result<()> {
+fn patch_vcpufreq(fdt: &mut Fdt, vcpufreq_info: Option<&VcpufreqInfo>) -> libfdt::Result<()> {
     if let Some(mut node) = fdt.node_mut(c"/cpufreq")? {
         if let Some(info) = vcpufreq_info {
             node.setprop_addrrange_inplace(c"reg", info.addr, info.size)?;
@@ -1395,11 +1395,11 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
             RebootReason::InvalidFdt
         })?;
     }
-    patch_cpus(fdt, &info.cpus, &info.cpu_topology).map_err(|e| {
+    patch_cpus(fdt, &info.cpus, info.cpu_topology.as_ref()).map_err(|e| {
         error!("Failed to patch cpus to DT: {e}");
         RebootReason::InvalidFdt
     })?;
-    patch_vcpufreq(fdt, &info.vcpufreq_info).map_err(|e| {
+    patch_vcpufreq(fdt, info.vcpufreq_info.as_ref()).map_err(|e| {
         error!("Failed to patch vcpufreq info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
@@ -1409,7 +1409,7 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
             RebootReason::InvalidFdt
         })?;
     }
-    patch_wdt_info(fdt, &info.wdt_info, info.cpus.len()).map_err(|e| {
+    patch_wdt_info(fdt, info.wdt_info.as_ref(), info.cpus.len()).map_err(|e| {
         error!("Failed to patch wdt info to DT: {e}");
         RebootReason::InvalidFdt
     })?;
@@ -1584,6 +1584,12 @@ fn has_common_debug_policy(fdt: &Fdt, debug_feature_name: &CStr) -> libfdt::Resu
     Ok(false) // if the policy doesn't exist or not 1, don't enable the debug feature
 }
 
+fn validate_hostname(hostname: &str) -> bool {
+    hostname
+        .strip_prefix("=")
+        .is_some_and(|s| s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+}
+
 fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Result<()> {
     let has_crashkernel = has_common_debug_policy(fdt, c"ramdump")?;
     let has_console = has_common_debug_policy(fdt, c"log")?;
@@ -1593,6 +1599,7 @@ fn filter_out_dangerous_bootargs(fdt: &mut Fdt, bootargs: &CStr) -> libfdt::Resu
         ("crashkernel", Box::new(|_| has_crashkernel)),
         ("console", Box::new(|_| has_console)),
         ("coherent_pool", Box::new(|_| true)),
+        ("hostname", Box::new(|v| if let Some(v) = v { validate_hostname(v) } else { false })),
     ];
 
     // parse and filter out unwanted

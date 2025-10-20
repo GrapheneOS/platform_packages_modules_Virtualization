@@ -19,6 +19,7 @@ rust_library_rlib {
         "libopen_dice_cbor_bindgen_nostd",
         "libzeroize_nostd",
     ],
+    no_stdlibs: true,
     features: [
         "multialg",
     ],

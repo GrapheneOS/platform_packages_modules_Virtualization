@@ -427,7 +427,7 @@ impl<'a> FdtNodeMut<'a> {
     }
 
     /// Returns immutable FdtNode of this node.
-    pub fn as_node(&self) -> FdtNode {
+    pub fn as_node(&self) -> FdtNode<'_> {
         FdtNode { fdt: self.fdt, offset: self.offset }
     }
 
@@ -691,7 +691,7 @@ impl Fdt {
     /// Throws an error when the "/memory" is not found in the device tree.
     ///
     /// NOTE: This does not support individual "/memory@XXXX" banks.
-    pub fn memory(&self) -> Result<MemRegIterator> {
+    pub fn memory(&self) -> Result<MemRegIterator<'_>> {
         let node = self.root().subnode(c"memory")?.ok_or(FdtError::NotFound)?;
         if node.device_type()? != Some(c"memory") {
             return Err(FdtError::BadValue);
@@ -705,32 +705,32 @@ impl Fdt {
     }
 
     /// Returns the standard /chosen node.
-    pub fn chosen(&self) -> Result<Option<FdtNode>> {
+    pub fn chosen(&self) -> Result<Option<FdtNode<'_>>> {
         self.root().subnode(c"chosen")
     }
 
     /// Returns the standard /chosen node as mutable.
-    pub fn chosen_mut(&mut self) -> Result<Option<FdtNodeMut>> {
+    pub fn chosen_mut(&mut self) -> Result<Option<FdtNodeMut<'_>>> {
         self.node_mut(c"/chosen")
     }
 
     /// Returns the root node of the tree.
-    pub fn root(&self) -> FdtNode {
+    pub fn root(&self) -> FdtNode<'_> {
         FdtNode { fdt: self, offset: NodeOffset::ROOT }
     }
 
     /// Returns the standard /__symbols__ node.
-    pub fn symbols(&self) -> Result<Option<FdtNode>> {
+    pub fn symbols(&self) -> Result<Option<FdtNode<'_>>> {
         self.root().subnode(c"__symbols__")
     }
 
     /// Returns the standard /__symbols__ node as mutable
-    pub fn symbols_mut(&mut self) -> Result<Option<FdtNodeMut>> {
+    pub fn symbols_mut(&mut self) -> Result<Option<FdtNodeMut<'_>>> {
         self.node_mut(c"/__symbols__")
     }
 
     /// Returns a tree node by its full path.
-    pub fn node(&self, path: &CStr) -> Result<Option<FdtNode>> {
+    pub fn node(&self, path: &CStr) -> Result<Option<FdtNode<'_>>> {
         let offset = self.path_offset_namelen(path.to_bytes())?;
 
         Ok(offset.map(|offset| FdtNode { fdt: self, offset }))
@@ -747,26 +747,26 @@ impl Fdt {
     }
 
     /// Returns a node with the phandle
-    pub fn node_with_phandle(&self, phandle: Phandle) -> Result<Option<FdtNode>> {
+    pub fn node_with_phandle(&self, phandle: Phandle) -> Result<Option<FdtNode<'_>>> {
         let offset = self.node_offset_by_phandle(phandle)?;
 
         Ok(offset.map(|offset| FdtNode { fdt: self, offset }))
     }
 
     /// Returns a mutable node with the phandle
-    pub fn node_mut_with_phandle(&mut self, phandle: Phandle) -> Result<Option<FdtNodeMut>> {
+    pub fn node_mut_with_phandle(&mut self, phandle: Phandle) -> Result<Option<FdtNodeMut<'_>>> {
         let offset = self.node_offset_by_phandle(phandle)?;
 
         Ok(offset.map(|offset| FdtNodeMut { fdt: self, offset }))
     }
 
     /// Returns the mutable root node of the tree.
-    pub fn root_mut(&mut self) -> FdtNodeMut {
+    pub fn root_mut(&mut self) -> FdtNodeMut<'_> {
         FdtNodeMut { fdt: self, offset: NodeOffset::ROOT }
     }
 
     /// Returns a mutable tree node by its full path.
-    pub fn node_mut(&mut self, path: &CStr) -> Result<Option<FdtNodeMut>> {
+    pub fn node_mut(&mut self, path: &CStr) -> Result<Option<FdtNodeMut<'_>>> {
         let offset = self.path_offset_namelen(path.to_bytes())?;
 
         Ok(offset.map(|offset| FdtNodeMut { fdt: self, offset }))

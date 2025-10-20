@@ -49,8 +49,6 @@ pub enum MemoryTrackerError {
     FooterAlreadyMapped,
     /// Invalid page table entry.
     InvalidPte,
-    /// Failed to flush memory region.
-    FlushRegionFailed,
     /// Failed to set PTE dirty state.
     SetPteDirtyFailed,
     /// Attempting to MMIO_GUARD_MAP more than once the same region.
@@ -76,7 +74,6 @@ impl fmt::Display for MemoryTrackerError {
             Self::SharedPoolSetFailure => write!(f, "Failed to set SHARED_POOL"),
             Self::FooterAlreadyMapped => write!(f, "Refused to map image footer again"),
             Self::InvalidPte => write!(f, "Page table entry is not valid"),
-            Self::FlushRegionFailed => write!(f, "Failed to flush memory region"),
             Self::SetPteDirtyFailed => write!(f, "Failed to set PTE dirty state"),
             Self::DuplicateMmioShare(addr) => {
                 write!(f, "Attempted to share the same MMIO region at {addr:#x} twice")

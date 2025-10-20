@@ -56,13 +56,14 @@ fn verify_single_apex(apex: &ApexPayload) -> ApexData {
 
 /// Loads (name, public_key, root_digest) from payload APEXes
 pub fn get_apex_data_from_payload(metadata: &Metadata) -> Result<Vec<ApexData>> {
-    let mut apex_data: Vec<ApexData> = metadata.apexes.iter().map(verify_single_apex).collect();
-    //TODO(b/433698158): Do not include tenant apex in DICE chain. For now, we are clubbing it
-    // with apex_data
-    let tenant_apex_data: Vec<ApexData> =
-        metadata.tenant_apexes.iter().map(verify_single_apex).collect();
-    apex_data.extend(tenant_apex_data);
+    let apex_data: Vec<ApexData> = metadata.apexes.iter().map(verify_single_apex).collect();
     Ok(apex_data)
+}
+
+/// Loads (name, public_key, root_digest) from tenant payload APEXes.
+pub fn get_tenant_apex_data_from_payload(metadata: &Metadata) -> Result<Vec<ApexData>> {
+    let tenant_apex_data = metadata.tenant_apexes.iter().map(verify_single_apex).collect();
+    Ok(tenant_apex_data)
 }
 
 /// Convert vector of ApexData into Metadata

@@ -31,6 +31,7 @@ import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 import com.android.virt.vm_attestation.util.X509Utils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -100,6 +101,11 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         setMaxPerformanceTaskProfile();
     }
 
+    @After
+    public void tearDown() {
+        deleteAllExistingVMsByApp();
+    }
+
     @Test
     public void usingProvisionedKeyForVmAttestationSucceeds() throws Exception {
         // Arrange.
@@ -119,7 +125,9 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         // Assert.
         X509Certificate[] certs =
                 X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
-        X509Utils.verifyAvfRelatedCerts(certs, challenge, TEST_APP_PACKAGE_NAME);
+        boolean isAdvMultiTenancyEnabled = isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
+        X509Utils.verifyAvfRelatedCerts(
+                certs, challenge, TEST_APP_PACKAGE_NAME, new String[] {}, isAdvMultiTenancyEnabled);
         X509Utils.verifySignature(certs[0], MESSAGE.getBytes(), signingResult.signature);
     }
 

@@ -24,6 +24,7 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -38,7 +39,6 @@ import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineCustomImageConfig.AudioConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.util.Log
-import android.widget.Toast
 import androidx.annotation.WorkerThread
 import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
@@ -247,8 +247,7 @@ class VmLauncherService : Service() {
             resultReceiver.send(if (success) RESULT_STOP else RESULT_ERROR, null)
             stopSelf()
         }
-        val logDir = getFileStreamPath(virtualMachine.name + ".log").toPath()
-        Logger.setup(virtualMachine, logDir, bgThreads)
+        Logger.setup(this, virtualMachine, bgThreads)
 
         resultReceiver.send(RESULT_START, null)
 
@@ -257,7 +256,9 @@ class VmLauncherService : Service() {
         getTerminalServiceInfo(timeout_secs)
             .thenAcceptAsync(
                 { info ->
-                    val ipAddress = info.hostAddresses[0].hostAddress
+                    // It must exist because it is checked in `getTerminalServiceInfo`
+                    val ipAddress =
+                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
                     val port = info.port
                     val bundle = Bundle()
                     bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
@@ -302,6 +303,13 @@ class VmLauncherService : Service() {
 
                 override fun onServiceUpdated(info: NsdServiceInfo) {
                     Log.i(TAG, "Service found: $info")
+                    val hasUsableAddress = info.hostAddresses.any { !it.isLinkLocalAddress }
+
+                    if (!hasUsableAddress) {
+                        Log.d(TAG, "Global ip addr isn't found, wait more: $info")
+                        return
+                    }
+
                     if (!found) {
                         found = true
                         nsdManager.unregisterServiceInfoCallback(this)
@@ -344,13 +352,25 @@ class VmLauncherService : Service() {
         handler!!.post(r)
     }
 
+    private fun isGfxstreamEnabled(): Boolean {
+        if (
+            Build.isDebuggable() &&
+                Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))
+        ) {
+            return true
+        }
+        return GraphicsManager.getInstance(this).accelerationType ==
+            GraphicsManager.AccelerationType.Gfxstream
+    }
+
     private fun overrideConfigIfNecessary(
         builder: VirtualMachineCustomImageConfig.Builder,
         displayInfo: DisplayInfo?,
     ): Boolean {
         var changed = false
         // TODO: use resources to check if gfxstream is supported.
-        if (Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))) {
+        if (isGfxstreamEnabled()) {
+            builder.addParam("gfxstream_enabled")
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
                     .setBackend("gfxstream")
@@ -363,7 +383,6 @@ class VmLauncherService : Service() {
                     .setRendererFeatures("VulkanDisableCoherentMemoryAndEmulate:enabled")
                     .build()
             )
-            runOnMainThread { Toast.makeText(this, "gfxstream", Toast.LENGTH_SHORT).show() }
             changed = true
         }
 

@@ -17,14 +17,13 @@
 set -e
 
 user=$(am get-current-user)
-package_name=$(pm list package virtualization.terminal | cut -d ':' -f 2)
+package_name="com.android.virtualization.terminal"
 
 if [ $1 == "setup" ]; then
 	pm enable --user ${user} ${package_name}
 elif [ $1 == "teardown" ]; then
 	pm clear --user ${user} ${package_name}
 	pm disable --user ${user} ${package_name}
-	rm -rf /data/media/${user}/linux
 else
 	echo Unsupported command: $1
 	exit 1

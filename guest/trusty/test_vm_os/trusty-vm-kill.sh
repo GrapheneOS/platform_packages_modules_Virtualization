@@ -16,4 +16,4 @@
 
 test_vm_pid=$(ps | grep trusty_test_vm_os_run | grep -v grep | awk '{print $2}')
 echo killing process trusty_test_vm_os_run = $(test_vm_pid)
-kill $test_vm_pid
+killall trusty_test_vm_os_run

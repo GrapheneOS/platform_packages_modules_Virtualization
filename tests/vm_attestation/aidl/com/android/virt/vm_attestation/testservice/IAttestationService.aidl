@@ -16,7 +16,7 @@
 
 package com.android.virt.vm_attestation.testservice;
 
-/** {@hide} */
+/** @hide */
 interface IAttestationService {
     const int PORT = 5679;
 

@@ -1,6 +1,14 @@
 #!/bin/bash
+# TODO(b/451076949): Add this to the config file when zero-copy is supported again.
+# MESA_LOADER_DRIVER_OVERRIDE=zink
+# VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/gfxstream_vk_icd.json
+cat << EOF > /home/droid/weston.env
+
+MESA_VK_WSI_DEBUG=sw,linear
+XWAYLAND_NO_GLAMOR=1
+EOF
 sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty7 sleep 1d
-systemctl --user start weston&
+(sleep 3s; systemctl --user start weston)& disown
 export DISPLAY=:0
 export MESA_LOADER_DRIVER_OVERRIDE=zink
 

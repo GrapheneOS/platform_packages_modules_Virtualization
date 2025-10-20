@@ -25,7 +25,7 @@ mod authfs;
 use anyhow::{bail, Result};
 use log::*;
 use rpcbinder::RpcServer;
-use rustutils::sockets::android_get_control_socket;
+use rustutils::android::sockets::android_get_control_socket;
 use std::ffi::OsString;
 use std::fs::{create_dir, read_dir, remove_dir_all, remove_file};
 use std::sync::atomic::{AtomicUsize, Ordering};

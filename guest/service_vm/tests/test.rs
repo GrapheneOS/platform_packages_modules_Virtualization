@@ -192,11 +192,24 @@ fn check_attestation_request(
     }
 }
 
-fn check_vm_components(vm_components: &asn1::SequenceOf<asn1::Any, 4>) -> Result<()> {
+fn check_vm_payload_components(
+    vm_payload_components: &asn1::SequenceOf<asn1::Any, /* max_limit */ 4>,
+) -> Result<()> {
     let expected_components = fake_sub_components();
-    assert_eq!(expected_components.len(), vm_components.len());
+    assert_eq!(expected_components.len(), vm_payload_components.len());
     for (i, expected_component) in expected_components.iter().enumerate() {
-        check_vm_component(vm_components.get(i).unwrap(), expected_component)?;
+        check_vm_component(vm_payload_components.get(i).unwrap(), expected_component)?;
+    }
+    Ok(())
+}
+
+fn check_vm_tenant_components(
+    vm_tenant_components: &asn1::SequenceOf<asn1::Any, /* max_limit */ 10>,
+) -> Result<()> {
+    let expected_components = fake_sub_components();
+    assert_eq!(expected_components.len(), vm_tenant_components.len());
+    for (i, expected_component) in expected_components.iter().enumerate() {
+        check_vm_component(vm_tenant_components.get(i).unwrap(), expected_component)?;
     }
     Ok(())
 }
@@ -257,8 +270,8 @@ fn check_certificate_for_client_vm(
     assert_eq!(ATTESTATION_EXTENSION_OID, extension.extn_id);
     assert!(!extension.critical);
     let attestation_ext =
-        asn1::SequenceOf::<asn1::Any, 3>::from_der(extension.extn_value.as_bytes()).unwrap();
-    assert_eq!(3, attestation_ext.len());
+        asn1::SequenceOf::<asn1::Any, 4>::from_der(extension.extn_value.as_bytes()).unwrap();
+    assert_eq!(4, attestation_ext.len());
     let challenge = attestation_ext.get(0).unwrap().decode_as::<asn1::OctetString>().unwrap();
     assert_eq!(csr_payload.challenge, challenge.as_bytes());
     let is_vm_secure = attestation_ext.get(1).unwrap().decode_as::<bool>().unwrap();
@@ -266,9 +279,18 @@ fn check_certificate_for_client_vm(
         !is_vm_secure,
         "The VM shouldn't be secure as the last payload added in the test is in Debug mode"
     );
-    let vm_components =
-        attestation_ext.get(2).unwrap().decode_as::<asn1::SequenceOf<asn1::Any, 4>>().unwrap();
-    check_vm_components(&vm_components)?;
+    let vm_payload_components = attestation_ext
+        .get(2)
+        .unwrap()
+        .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 4>>()
+        .unwrap();
+    check_vm_payload_components(&vm_payload_components)?;
+    let vm_tenant_components = attestation_ext
+        .get(3)
+        .unwrap()
+        .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 10>>()
+        .unwrap();
+    check_vm_tenant_components(&vm_tenant_components)?;
 
     // Checks other fields on the certificate
     assert_eq!(Version::V3, tbs_cert.version);
@@ -324,7 +346,7 @@ fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
     let mut instance_id = [0u8; 64];
     rand_bytes(&mut instance_id).unwrap();
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: format!("Non protected Service VM kernel ({memory_mib}MiB)"),
+        name: format!("non_protected_service_vm_{memory_mib}MiB"),
         kernel: Some(ParcelFileDescriptor::new(service_vm)),
         protectedVm: false,
         memoryMib: memory_mib,

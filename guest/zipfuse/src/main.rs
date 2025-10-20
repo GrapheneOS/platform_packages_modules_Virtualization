@@ -24,7 +24,7 @@ use anyhow::{Context as AnyhowContext, Result};
 use clap::{builder::ValueParser, Arg, ArgAction, Command};
 use fuse::filesystem::*;
 use fuse::mount::*;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};

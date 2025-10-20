@@ -45,13 +45,20 @@ following formula:
 CDI_Attest_pub, CDI_Attest_priv = KDF_ASYM(KDF(CDI_Attest))
 ```
 
-Where KDF = HKDF-SHA-512 (RFC 5869).
+#### Vendor Implementation Requirements
 
-Currently, KDF_ASYM = Ed25519, but EC p-384 and p-256 (RFC 6979) support is
-coming soon.
+To ensure compatibility, your implementation must precisely follow these specifications:
 
-Vendors must use a supported algorithm for the last DICE node to ensure
-compatibility and chain integrity.
+- KDF: You must use HKDF-SHA-512, as specified in RFC 5869.
+- KDF_ASYM: You must use one of the following supported algorithms to generate the key pair
+ from the KDF output:
+  * Ed25519
+  * ECDSA with NIST P-256 (RFC 6979)
+  * ECDSA with NIST P-384 (RFC 6979)
+
+Failure to adhere to both of these requirements will result in a key mismatch. This will
+break the certificate chain, causing critical pVM security features — such as pVM remote
+attestation, SecretKeeper, and Trusted HAL authentication — to fail.
 
 [pvmfw]: ../guest/pvmfw
 [pvm-dice-handover-img]: img/pvm-dice-handover.png

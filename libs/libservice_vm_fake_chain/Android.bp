@@ -52,5 +52,5 @@ rust_library_rlib {
         "libdiced_open_dice_nostd",
         "liblog_rust_nostd",
     ],
-
+    no_stdlibs: true,
 }

@@ -27,12 +27,28 @@ The `vm` command also has other subcommands for debugging; run
 
 # Terminal app
 ## Run GUI apps
-Execute `source enable_display` and then click Display button above to enable display feature.
+Click Display button above to enable display.
 And then, go back to the terminal, and run GUI apps.
 
+## Mouse passthrough
+There is a button for mouse passthrough in a display activity. With that, external
+mouse event is directly delivered to a VM instance.
+
 ## Hardware acceleration
-If the file `/sdcard/linux/virglrenderer` exists on the device, it enables VirGL for VM.
-This requires enabling ANGLE for the Terminal app. (https://chromium.googlesource.com/angle/angle.git/+/HEAD/doc/DevSetupAndroid.md)
+If a device supports gfxstream, a user can enable hardware acceleration in Terminal
+app's settings menu. If you want to test in the userdebug device, just create
+`/sdcard/linux/gfxstream` file, which enables gfxstream for VM.
+
+## Connect to console via ADB
+Run `adb shell vm console` which returns the command to attach console of an existing
+VM instance.
+
+## (Experimental) Use other desktop environment
+We recommend a user to use weston with kiosk mode for single-app experience.
+If you want to experiment with other desktop environment, please remove the line
+including `systemctl --user start weston` in `/usr/local/bin/enable_display` and
+`usr/local/bin/enable_gfxstream` to avoid conflict with newly installed display
+manager with existing weston.
 
 ## Connect to host Android device with ADB
 To establish ADB connection from the VM at terminal app to the host Android

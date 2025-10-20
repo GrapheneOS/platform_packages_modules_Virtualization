@@ -25,25 +25,69 @@ use android_system_virtualizationcommon::aidl::android::system::virtualizationco
 use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{IVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME};
 use anyhow::{anyhow, ensure, Context, Result};
 use binder::Strong;
-use clap::arg;
+use clap::Parser;
 use dm::{crypt::CipherType, util};
 use log::{error, info, warn};
 use rpcbinder::RpcSession;
-use rustutils::system_properties;
-use std::ffi::CString;
+use rustutils::android::system_properties;
+use std::collections::HashSet;
 use std::fs::{self, create_dir_all, OpenOptions};
-use std::io::{Error, Read, Write};
+use std::io::Write;
 use std::os::android::fs::MetadataExt;
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 use std::sync::LazyLock;
+use encryptedstore_query::{needs_formatting, UNFORMATTED_STORAGE_MAGIC};
 
 const E2FSCK_BIN: &str = "/system/bin/e2fsck";
 const MK2FS_BIN: &str = "/system/bin/mke2fs";
 const RESIZE2FS_BIN: &str = "/system/bin/resize2fs";
-const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
+
+#[derive(Clone, Debug)]
+struct DirSpec {
+    name: String,
+    uid: u32,
+    gid: u32,
+}
+
+impl FromStr for DirSpec {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(':').collect();
+        if parts.len() != 3 {
+            anyhow::bail!("Invalid format for --config-dir. Expected name:uid:gid, got {}", s);
+        }
+        let name = parts[0].trim().to_string();
+        let uid: u32 = parts[1].trim().parse().context("Invalid UID in --config-dir")?;
+        let gid: u32 = parts[2].trim().parse().context("Invalid GID in --config-dir")?;
+        Ok(DirSpec { name, uid, gid })
+    }
+}
+
+#[derive(Parser, Debug)]
+#[command(name = "encryptedstore")]
+struct Cli {
+    #[arg(long, value_name = "FILE", help = "the block device backing the encrypted storage")]
+    blkdevice: PathBuf,
+
+    #[arg(long, value_name = "KEY", help = "key (in hex) equivalent to 32 bytes)")]
+    key: String,
+
+    #[arg(long, value_name = "MOUNTPOINT", help = "mount point for the storage")]
+    mountpoint: PathBuf,
+
+    #[arg(
+        long = "config-dir",
+        value_name = "DIR_SPECS",
+        help = "Configure directories as 'name:uid:gid', comma-separated.\
+        Creates specified directories with the specified owner and group.",
+        value_delimiter = ','
+    )]
+    config_dirs: Vec<DirSpec>,
+}
 
 static INTERNAL_CONNECTION: LazyLock<Strong<dyn IVmInternalService>> = LazyLock::new(|| {
     warn!("acquiring new connection to IVmInternalService");
@@ -82,24 +126,30 @@ fn main() {
 fn try_main() -> Result<()> {
     info!("Starting encryptedstore binary");
 
-    let matches = clap_command().get_matches();
+    let cli = Cli::parse();
 
-    let blkdevice = Path::new(matches.get_one::<String>("blkdevice").unwrap());
-    let key = matches.get_one::<String>("key").unwrap();
-    let mountpoint = Path::new(matches.get_one::<String>("mountpoint").unwrap());
+    let blkdevice = &cli.blkdevice;
+    let key = &cli.key;
+    let mountpoint = &cli.mountpoint;
+    let config_dir_specs = &cli.config_dirs;
+    validate_unique_dir_names(config_dir_specs)?;
+
     // Note this error context is used in MicrodroidTests.
     encryptedstore_init(blkdevice, key, mountpoint).with_context(|| {
         format!("Unable to initialize encryptedstore on {blkdevice:?} & mount at {mountpoint:?}")
     })?;
+    config_dirs(mountpoint, config_dir_specs)?;
     Ok(())
 }
 
-fn clap_command() -> clap::Command {
-    clap::Command::new("encryptedstore").args(&[
-        arg!(--blkdevice <FILE> "the block device backing the encrypted storage").required(true),
-        arg!(--key <KEY> "key (in hex) equivalent to 32 bytes)").required(true),
-        arg!(--mountpoint <MOUNTPOINT> "mount point for the storage").required(true),
-    ])
+fn validate_unique_dir_names(dir_specs: &[DirSpec]) -> Result<()> {
+    let mut seen_names = HashSet::with_capacity(dir_specs.len());
+    for spec in dir_specs {
+        if !seen_names.insert(&spec.name) {
+            return Err(anyhow!("Duplicate config-dir name found: {}", spec.name));
+        }
+    }
+    Ok(())
 }
 
 /// Gets the parent block device name from a partition name.
@@ -167,8 +217,13 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     set_queue_tunable(blkdevice, "rq_affinity", "2")
         .context("Failed to set rq_affinity for virtio-blk device")?;
 
+    // The raw disk contains "UNFORMATTED_STORAGE_MAGIC" to indicate we need to format the crypt
+    // device. This is an indication that its setup has never been done. Zero it & set it up!
     let needs_formatting =
-        needs_formatting(blkdevice).context("Unable to check if formatting is required")?;
+        needs_formatting(blkdevice).context("Unable to check if data device is unformatted")?;
+    if needs_formatting {
+        zeroize_header(blkdevice).context("Zeroing the header")?;
+    }
     let crypt_device =
         enable_crypt(blkdevice, key, "cryptdev").context("Unable to map crypt device")?;
 
@@ -252,24 +307,14 @@ fn enable_crypt(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
     dm.create_crypt_device(name, &target).context("Failed to create dm-crypt device")
 }
 
-// The disk contains UNFORMATTED_STORAGE_MAGIC to indicate we need to format the crypt device.
-// This function looks for it, zeroing it, if present.
-fn needs_formatting(data_device: &Path) -> Result<bool> {
+fn zeroize_header(data_device: &Path) -> Result<()> {
     let mut file = OpenOptions::new()
-        .read(true)
         .write(true)
         .open(data_device)
         .with_context(|| format!("Failed to open {data_device:?}"))?;
 
-    let mut buf = [0; UNFORMATTED_STORAGE_MAGIC.len()];
-    file.read_exact(&mut buf)?;
-
-    if buf == UNFORMATTED_STORAGE_MAGIC.as_bytes() {
-        buf.fill(0);
-        file.write_all(&buf)?;
-        return Ok(true);
-    }
-    Ok(false)
+    file.write_all(&[0; UNFORMATTED_STORAGE_MAGIC.len()])?;
+    Ok(())
 }
 
 fn format_ext4(device: &Path) -> Result<()> {
@@ -364,40 +409,78 @@ fn resize_fs(device: &Path) -> Result<bool> {
 
 fn mount(source: &Path, mountpoint: &Path) -> Result<()> {
     create_dir_all(mountpoint).with_context(|| format!("Failed to create {:?}", &mountpoint))?;
-    let mount_options = CString::new(
-        "fscontext=u:object_r:encryptedstore_fs:s0,context=u:object_r:encryptedstore_file:s0,discard",
-    )
-    .unwrap();
-    let source = CString::new(source.as_os_str().as_bytes())?;
-    let mountpoint = CString::new(mountpoint.as_os_str().as_bytes())?;
-    let fstype = CString::new("ext4").unwrap();
+    use nix::mount::MsFlags;
+    nix::mount::mount(
+        Some(source),
+        mountpoint,
+        Some(c"ext4"),
+        MsFlags::MS_NOSUID | MsFlags::MS_NODEV | MsFlags::MS_NOEXEC,
+        Some(c"fscontext=u:object_r:encryptedstore_fs:s0,context=u:object_r:encryptedstore_file:s0,discard"),
+    )?;
+    Ok(())
+}
 
-    // SAFETY: The source, target and filesystemtype are valid C strings. For ext4, data is expected
-    // to be a C string as well, which it is. None of these pointers are retained after mount
-    // returns.
-    let ret = unsafe {
-        libc::mount(
-            source.as_ptr(),
-            mountpoint.as_ptr(),
-            fstype.as_ptr(),
-            libc::MS_NOSUID | libc::MS_NODEV | libc::MS_NOEXEC,
-            mount_options.as_ptr() as *const std::ffi::c_void,
-        )
-    };
-    if ret < 0 {
-        Err(Error::last_os_error()).context("mount failed")
-    } else {
-        Ok(())
+fn config_dirs(mountpoint: &Path, dir_specs: &Vec<DirSpec>) -> Result<()> {
+    for dir_spec in dir_specs {
+        setup_dir(mountpoint, dir_spec)?;
     }
+    // TODO(basantwani) - Cleanup the directories that aren't configured.
+    Ok(())
+}
+
+fn setup_dir(mountpoint: &Path, dir_spec: &DirSpec) -> Result<()> {
+    info!(
+        "Setting up directory: name={}, uid={}, gid={}",
+        dir_spec.name, dir_spec.uid, dir_spec.gid
+    );
+    let dir_path = mountpoint.join(&dir_spec.name);
+
+    if !dir_path.exists() {
+        fs::create_dir(&dir_path)
+            .with_context(|| format!("Failed to create directory {}", dir_path.display()))?;
+        fs::set_permissions(&dir_path, fs::Permissions::from_mode(0o700))
+            .with_context(|| format!("Failed to chmod directory {}", dir_path.display()))?;
+        nix::unistd::chown(
+            &dir_path,
+            Some(nix::unistd::Uid::from_raw(dir_spec.uid)),
+            Some(nix::unistd::Gid::from_raw(dir_spec.gid)),
+        )
+        .with_context(|| format!("Failed to chown directory {}", dir_path.display()))?;
+
+        info!(
+            "Created directory {} with uid {} and gid {}",
+            dir_path.display(),
+            dir_spec.uid,
+            dir_spec.gid
+        );
+    } else {
+        // The directory already exists, validate its owner.
+        let metadata = fs::metadata(&dir_path).with_context(|| {
+            format!("Failed to get metadata for existing directory {}", dir_path.display())
+        })?;
+        let current_uid = metadata.st_uid();
+        let current_gid = metadata.st_gid();
+        if current_uid != dir_spec.uid || current_gid != dir_spec.gid {
+            anyhow::bail!(
+                "Directory {} already exists with owner {:?}, which doesn't match \
+                with the requested owner {:?}",
+                dir_path.display(),
+                (current_uid, current_gid),
+                (dir_spec.uid, dir_spec.gid)
+            );
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Cli;
+    use clap::CommandFactory;
 
     #[test]
     fn verify_command() {
         // Check that the command parsing has been configured in a valid way.
-        clap_command().debug_assert();
+        Cli::command().debug_assert();
     }
 }

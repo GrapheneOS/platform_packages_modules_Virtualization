@@ -102,8 +102,9 @@ internal class InputForwarder(
                     event.scanCode.toShort(),
                     event.action != MotionEvent.ACTION_UP,
                 )
+            } else {
+                false
             }
-            false
         }
     }
 

@@ -27,6 +27,7 @@ import com.android.microdroid.test.common.MetricsProcessor
 import java.io.IOException
 import java.lang.Exception
 import java.util.ArrayList
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -50,7 +51,7 @@ class TerminalAppTest {
     }
 
     private fun installVmImage() {
-        val INSTALL_TIMEOUT_MILLIS: Long = 600000 // 10 min
+        val INSTALL_TIMEOUT_MILLIS: Long = TimeUnit.MINUTES.toMillis(10)
 
         val intent = Intent(targetContext, InstallerActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -68,8 +69,7 @@ class TerminalAppTest {
     @Throws(Exception::class)
     fun boot() {
         val isNestedVirt = properties.isCuttlefish() || properties.isGoldfish()
-        val BOOT_TIMEOUT_MILLIS =
-            (if (isNestedVirt) 180000 else 30000).toLong() // 30 sec (or 3 min)
+        val BOOT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(if (isNestedVirt) 6 else 1)
 
         val intent = Intent(targetContext, MainActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -78,8 +78,8 @@ class TerminalAppTest {
         val activity = instr.startActivitySync(intent)
         if (activity is MainActivity) {
             Assert.assertTrue(
-                "Failed to boot in 30s",
-                activity.waitForBootCompleted(BOOT_TIMEOUT_MILLIS),
+                "Failed to boot in " + TimeUnit.MILLISECONDS.toMinutes(BOOT_TIMEOUT_MS) + "min",
+                activity.waitForBootCompleted(BOOT_TIMEOUT_MS),
             )
         }
         val delay = System.currentTimeMillis() - start

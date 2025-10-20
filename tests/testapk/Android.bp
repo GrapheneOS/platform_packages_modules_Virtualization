@@ -43,7 +43,6 @@ java_defaults {
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "authfs_test_apk_assets",
-        "cbor-java",
         "truth",
         "compatibility-common-util-devicesidelib",
         "measure_io_as_jar",
@@ -51,6 +50,7 @@ java_defaults {
     jni_libs: [
         "MicrodroidTestNativeLib",
         "MicrodroidIdleNativeLib",
+        "MicrodroidTestNativeOnAlternatePortLib",
         "MicrodroidEmptyNativeLib",
         "MicrodroidExitNativeLib",
         "MicrodroidPrivateLinkingNativeLib",
@@ -281,6 +281,12 @@ cc_library_shared {
 }
 
 cc_library_shared {
+    name: "MicrodroidTestNativeOnAlternatePortLib",
+    defaults: ["MicrodroidTestNativeLibDefaults"],
+    cflags: ["-D__USE_ALTERNATE_PORT__"],
+}
+
+cc_library_shared {
     name: "MicrodroidTestNativeLibWithLibIcu",
     defaults: ["MicrodroidTestNativeLibDefaults"],
     shared_libs: [
@@ -321,6 +327,7 @@ cc_library_shared {
     srcs: ["src/native/exitbinary.cpp"],
     header_libs: ["vm_payload_headers"],
     stl: "libc++_static",
+    apex_available: ["com.android.virt"],
 }
 
 // A payload which tries to link against libselinux, one of private libraries

@@ -49,8 +49,10 @@
         android:layout_height="wrap_content"
         android:lineSpacingExtra="5sp"
         android:layout_marginTop="24dp"
+        android:layout_marginBottom="12dp"
         android:layout_marginHorizontal="60dp"
         android:layout_below="@id/desc"
+        android:layout_above="@id/recovery"
         android:textSize="14sp"
         android:scrollbars="vertical|horizontal"
         android:scrollHorizontally="true" />
@@ -64,5 +66,15 @@
         android:layout_marginBottom="32dp"
         android:layout_marginHorizontal="40dp"
         android:text="@string/settings_recovery_title" />
+
+    <Button
+        android:id="@+id/bugreport"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginBottom="32dp"
+        android:layout_marginHorizontal="40dp"
+        android:text="@string/error_button_report_bug" />
 
 </RelativeLayout>

@@ -35,12 +35,12 @@ use vmbase::virtio::pci;
 
 /// Criteria hard-coded into pvmfw, to perform fixed image verification.
 enum FixedRollbackCriterion {
-    #[cfg_attr(not(platform_has_desktop_trusty), allow(dead_code))]
-    /// Image must match the exact AVB digest (incl. image hash, rollback index, or public key).
-    AvbDigest { digest: Digest },
+    #[cfg_attr(not(feature = "platform_has_desktop_trusty"), allow(dead_code))]
+    /// Image must match the exact kernel hash.
+    KernelHash { digests: &'static [Digest] },
     /// Image must match the exact rollback index and have been signed with the given public key.
     RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
-    #[cfg_attr(platform_has_desktop_trusty, allow(dead_code))]
+    #[cfg_attr(feature = "platform_has_desktop_trusty", allow(dead_code))]
     /// Image identifier is reserved but not supported on this platform so must be rejected.
     Reserved { name: &'static str },
 }
@@ -99,11 +99,19 @@ fn get_fixed_rollback_protection(
         }),
         VerifiedBootData::DESKTOP_TRUSTY_VM_NAME => {
             cfg_if::cfg_if! {
-                if #[cfg(platform_has_desktop_trusty)] {
-                    let digest = include_bytes!(
-                        concat!(env!("OUT_DIR"), "/desktop_trusty.vbmetadigest")
-                    ).try_into().unwrap();
-                    Some(FixedRollbackCriterion::AvbDigest { digest })
+                if #[cfg(feature = "platform_has_desktop_trusty")] {
+                    const MAIN_DIGEST: &Digest = include_bytes!(
+                        concat!(env!("OUT_DIR"), "/desktop_trusty.kernelhash")
+                    );
+                    const ALT_DIGEST: &Digest = include_bytes!(
+                        concat!(env!("OUT_DIR"), "/desktop_trusty_ext_boot.kernelhash")
+                    );
+                    static ALLOWED_DIGESTS: &[Digest] = &[*MAIN_DIGEST, *ALT_DIGEST];
+
+                    static_assertions::const_assert!(MAIN_DIGEST.len() == pvmfw_avb::DIGEST_LEN);
+                    static_assertions::const_assert!(ALT_DIGEST.len() == pvmfw_avb::DIGEST_LEN);
+
+                    Some(FixedRollbackCriterion::KernelHash { digests: ALLOWED_DIGESTS })
                 } else {
                     let name = VerifiedBootData::DESKTOP_TRUSTY_VM_NAME;
                     Some(FixedRollbackCriterion::Reserved { name })
@@ -136,10 +144,10 @@ fn perform_fixed_rollback_protection(
                 Ok(())
             }
         }
-        FixedRollbackCriterion::AvbDigest { digest: expected_digest } => {
-            let digest = verified_boot_data.vbmeta_digest;
-            if digest != expected_digest {
-                error!("Digest mismatch: expected {expected_digest:x?}, found {digest:x?}");
+        FixedRollbackCriterion::KernelHash { digests } => {
+            let digest = verified_boot_data.kernel_digest;
+            if !digests.contains(&digest) {
+                error!("Kernel hash mismatch: expected one of {digests:x?}, found {digest:x?}");
                 Err(RebootReason::InvalidPayload)
             } else {
                 Ok(())
@@ -254,7 +262,7 @@ fn initialize_instance_img_device(
         error!("Failed to initialize PCI: {e}");
         RebootReason::InternalError
     })?;
-    init_shared_pool(swiotlb_range).map_err(|e| {
+    init_shared_pool(swiotlb_range.as_ref()).map_err(|e| {
         error!("Failed to initialize shared pool: {e}");
         RebootReason::InternalError
     })?;

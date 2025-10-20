@@ -160,6 +160,10 @@
     <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
     <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
     <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
+    <!-- Button at the error activity for bugreport [CHAR LIMIT=16] -->
+    <string name="error_button_report_bug">Report bug</string>
+    <!-- Snackbar to indicate collecting logs [CHAR LIMIT=none] -->
+    <string name="error_snackbar_report_bug">Collecting logs</string>
 
     <!-- Upgrade page's title. Tells users that you'll need to upgrade [CHAR LIMIT=none] -->
     <string name="upgrade_title">Upgrade to newer terminal</string>
@@ -195,4 +199,18 @@
 
     <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
     <string name="tab_default_title">Tab</string>
+
+    <!-- Settings menu title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_title">Graphics Acceleration</string>
+    <!-- Settings menu sub title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_subtitle">Change the renderer for graphics acceleration.</string>
+    <!-- Toast after selecting the graphics acceleration type [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_toast_reboot_required">Please restart Terminal app to apply the change.</string>
+    <!-- Software-based renderer [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_software_renderer">Software renderer</string>
+    <!-- Hardware-based renderer [CHAR LIMIT=none] -->
+    <string name="settings_graphics_acceleration_hardware_renderer">GPU-accelerated renderer</string>
+
+    <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
+    <string name="ttyd_connection_error">Session is lost due to an internal error.</string>
 </resources>

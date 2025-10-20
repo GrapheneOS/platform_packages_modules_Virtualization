@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Nicht behebbarer Fehler"</string>
     <string name="error_desc" msgid="4588252235686826721">"Fehler konnte nicht behoben werden.\nDu kannst versuchen, das Terminal neu zu starten, oder eine der Wiederherstellungsoptionen ausprobieren.\nWenn alle Versuche fehlschlagen, lösche sämtliche Daten, indem du das Linux-Terminal in den Entwickleroptionen aktivierst und wieder deaktivierst."</string>
     <string name="error_code" msgid="3585291676855383649">"Fehlercode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Fehler melden"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Protokolle werden erfasst"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Upgrade auf ein neueres Terminal"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Das von dir verwendete Linux-Terminal ist veraltet. Bitte führe ein Upgrade durch, um fortzufahren.\nDie Daten werden unter <xliff:g id="PATH">/mnt/backup</xliff:g> gesichert."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Upgrade"</string>
@@ -96,4 +98,10 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Aufgaben mit langer Ausführungszeit"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Systemereignisse"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Grafikbeschleunigung"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Renderer für die Grafikbeschleunigung ändern."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Starte die Terminal App neu, damit die Änderung wirksam wird."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Software-Renderer"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-beschleunigter Renderer"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Aufgrund eines internen Fehlers kann keine Verbindung mehr zur Sitzung hergestellt werden."</string>
 </resources>

@@ -20,13 +20,29 @@
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     IVirtualizationService::IVirtualizationService, PartitionType::PartitionType,
 };
-use anyhow::{anyhow, Context, Result};
-use binder::{LazyServiceGuard, ParcelFileDescriptor};
-use compos_common::compos_client::{CompOsService, CompOsType, ComposClient, VmParameters};
-use compos_common::{
+
+use crate::wrappers::compos_common_injection;
+#[cfg(not(test))]
+use {crate::wrappers::binder::LazyServiceGuard, compos_wrappers::paths};
+#[cfg(test)]
+use {
+    crate::wrappers::binder::MockLazyServiceGuard as LazyServiceGuard,
+    compos_wrappers_with_mocks::mock_paths as paths,
+};
+
+use compos_common_injection::{
+    compos_client::{CompOsService, CompOsType, VmParameters},
     COMPOS_DATA_ROOT, IDSIG_FILE, IDSIG_MANIFEST_APK_FILE, IDSIG_MANIFEST_EXT_APK_FILE,
     INSTANCE_ID_FILE, INSTANCE_IMAGE_FILE,
 };
+
+#[cfg(not(test))]
+use compos_common_injection::compos_client::ComposClient;
+#[cfg(test)]
+use compos_common_injection::compos_client::MockComposClient as ComposClient;
+
+use anyhow::{anyhow, Context, Result};
+use binder::ParcelFileDescriptor;
 use log::info;
 use std::fs;
 use std::path::PathBuf;
@@ -43,10 +59,21 @@ pub struct CompOsInstance {
 }
 
 impl CompOsInstance {
+    #[cfg(test)]
+    pub fn new_for_test(
+        vm_instance: ComposClient,
+        service: CompOsService,
+        lazy_service_guard: LazyServiceGuard,
+    ) -> Self {
+        Self { vm_instance, service, lazy_service_guard, instance_tracker: Default::default() }
+    }
     pub fn get_service(&self) -> CompOsService {
         self.service.clone()
     }
 
+    pub fn get_service_ref(&self) -> &CompOsService {
+        &self.service
+    }
     /// Returns an Arc that this instance holds a strong reference to as long as it exists. This
     /// can be used to determine when the instance has been dropped.
     pub fn get_instance_tracker(&self) -> &Arc<()> {
@@ -73,10 +100,10 @@ pub struct InstanceStarter {
     vm_parameters: VmParameters,
 }
 
+#[cfg_attr(test, mockall::automock, allow(dead_code))]
 impl InstanceStarter {
     pub fn new(instance_name: &str, vm_parameters: VmParameters) -> Self {
-        let root = crate::wrapper::paths::get_root();
-        let instance_root = root.as_path().join(COMPOS_DATA_ROOT).join(instance_name);
+        let instance_root = paths::root_rebase(COMPOS_DATA_ROOT).join(instance_name);
         let instance_root_path = instance_root.as_path();
         let instance_id_file = instance_root_path.join(INSTANCE_ID_FILE);
         let instance_image = instance_root_path.join(INSTANCE_IMAGE_FILE);
@@ -102,7 +129,6 @@ impl InstanceStarter {
         info!("Creating {} CompOs instance", self.instance_name);
 
         fs::create_dir_all(&self.instance_root)?;
-
         // Overwrite any existing instance - it's unlikely to be valid with the current set
         // of APEXes, and finding out it isn't is much more expensive than creating a new one.
         self.create_instance_image(virtualization_service)?;
@@ -119,7 +145,7 @@ impl InstanceStarter {
 
         // For VM's with an OdRefresh service retrieve the attestation chain as
         // a BCC and save it in the instance directory.
-        if let CompOsService::OdRefresh(ref s) = &instance.service {
+        if let CompOsService::OdRefresh(ref s) = instance.get_service_ref() {
             let bcc = s
                 .getAttestationChain()
                 .context("Getting attestation chain from CompOS OdRefresh")?;
@@ -166,7 +192,7 @@ impl InstanceStarter {
         Ok(CompOsInstance {
             vm_instance,
             service,
-            lazy_service_guard: Default::default(),
+            lazy_service_guard: LazyServiceGuard::new(),
             instance_tracker: Default::default(),
         })
     }
@@ -198,5 +224,117 @@ impl InstanceStarter {
         let id = virtualization_service.allocateInstanceId().context("Allocating Instance Id")?;
         fs::write(&self.instance_id_file, id)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::InstanceStarter;
+    use crate::{
+        test_util::{file, parcel},
+        wrappers,
+    };
+    use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
+        IVirtualizationService::MockIVirtualizationService, PartitionType::PartitionType,
+    };
+    use anyhow::Error;
+    use binder::{BinderFeatures, ParcelFileDescriptor as ParcelFd};
+    use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
+        BnCompOsService, MockICompOsService,
+    };
+    use compos_common_with_mocks::{
+        binder::to_binder_result,
+        compos_client::{CompOsService, CompOsType, MockComposClient, VmCpuTopology, VmParameters},
+    };
+    use compos_wrappers_with_mocks::mock_paths;
+    use mockall::predicate::{always as any, eq, function as func, gt};
+    use once_cell::sync::Lazy;
+    use std::fs;
+    use tempfile::{tempdir, TempDir};
+
+    #[test]
+    pub fn odrefresh_instance() {
+        static ROOT_DIR: Lazy<TempDir> = Lazy::new(|| tempdir().unwrap());
+        let root_rebase_ctx = mock_paths::root_rebase_context();
+        root_rebase_ctx
+            .expect()
+            .withf(|frag: &str| frag.starts_with("/"))
+            .returning(|frag: &str| ROOT_DIR.path().join(frag.strip_prefix("/").unwrap_or(frag)));
+
+        let expected_vm_params = VmParameters {
+            name: "test".to_string(),
+            base_os: "microdroid".to_string(),
+            cpu_topology: VmCpuTopology::MatchHost,
+            memory_mib: Some(600),
+            prefer_staged: false,
+            compos_type: CompOsType::OdRefresh,
+            debug_mode: false,
+        };
+        const INSTANCE_NAME: &str = "INSTANCE_NAME";
+        const IMAGE_CONTENT: &[u8] = b"ODREFRESH_INSTANCE_IMAGE";
+        const INSTANCE_ID: &[u8; 64] =
+            b"ODREFRESH_INSTANCE_ID???????????????????????????????????????????";
+        const DEFAULT_BCC: &[u8] = b"DEFAULT_BCC";
+
+        let virt_svc = {
+            let mut mock = MockIVirtualizationService::new();
+            mock.expect_initializeWritablePartition()
+                .with(
+                    /* imageFd :&ParcelFd */
+                    func(|image_fd: &ParcelFd| parcel::is_rw(image_fd)),
+                    /* sizeBytes */ gt(0),
+                    eq(PartitionType::ANDROID_VM_INSTANCE),
+                )
+                .return_once(|image_fd: &ParcelFd, _, _| {
+                    to_binder_result(parcel::write(image_fd, IMAGE_CONTENT))
+                });
+            mock.expect_allocateInstanceId().return_once(|| Ok(*INSTANCE_ID));
+            mock
+        };
+
+        let mut lazy_service_guard_mock = wrappers::binder::MockLazyServiceGuard::default();
+        let compos_client_mock = {
+            let compsvc_binder_mock = {
+                let mut mock = MockICompOsService::new();
+                mock.expect_getAttestationChain().returning(|| {
+                    to_binder_result::<std::vec::Vec<u8>, Error>(Ok(DEFAULT_BCC.to_vec()))
+                });
+                BnCompOsService::new_binder(mock, BinderFeatures::default())
+            };
+            let mut mock = MockComposClient::new();
+            mock.expect_connect_service().return_once(move || Ok(compsvc_binder_mock));
+            mock.expect_shutdown().withf(|s| matches!(s, CompOsService::OdRefresh(_))).return_once(
+                |s| {
+                    if let CompOsService::OdRefresh(od) = s {
+                        let _ = od.quit();
+                    }
+                },
+            );
+            lazy_service_guard_mock.expect_drop().times(1).return_const(());
+            mock
+        };
+
+        let lazy_service_guard_new_ctx = wrappers::binder::MockLazyServiceGuard::new_context();
+
+        let _compos_client_start_ctx = {
+            lazy_service_guard_new_ctx.expect().return_once(|| lazy_service_guard_mock);
+            let ctx = MockComposClient::start_context();
+            ctx.expect()
+                .with(
+                    /* service: &dyn IVirtualizationService */ any(),
+                    /* instance_id */ eq(INSTANCE_ID),
+                    /* instance_image: &File */
+                    func(|file: &fs::File| file::contents_equals(file, IMAGE_CONTENT)),
+                    /* idsig path: &Path */ any(),
+                    /* idsig_manifest_apk path: &Path */ any(),
+                    /* idsig_manifest_ext_apk: &Path */ any(),
+                    /* parameters: &VmParameters */
+                    eq(expected_vm_params.clone()),
+                )
+                .return_once(move |_, _, _, _, _, _, _| Ok(compos_client_mock));
+            ctx
+        };
+        let instance_starter = InstanceStarter::new(INSTANCE_NAME, expected_vm_params);
+        let _instance = instance_starter.start_new_instance(&virt_svc);
     }
 }

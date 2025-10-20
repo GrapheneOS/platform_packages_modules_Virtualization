@@ -16,7 +16,7 @@
 
 package android.system.virtualizationcommon;
 
-/** {@hide} */
+/** @hide */
 interface IEncryptedStoreKEK {
     /**
      * Returns a KEK used to set up the encrypted store, or {@code null} if encrypted store

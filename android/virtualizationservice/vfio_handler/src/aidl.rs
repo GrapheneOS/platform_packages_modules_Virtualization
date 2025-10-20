@@ -26,7 +26,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 use std::sync::LazyLock;
 use std::path::{Path, PathBuf};
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use zerocopy::{
     byteorder::{BigEndian, U32},
     FromBytes,

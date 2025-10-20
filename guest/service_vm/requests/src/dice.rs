@@ -44,7 +44,8 @@ const MODE: i64 = -4670551;
 const SUBJECT_PUBLIC_KEY: i64 = -4670552;
 
 const CONFIG_DESC_COMPONENT_NAME: i64 = -70002;
-const CONFIG_DESC_SUB_COMPONENTS: i64 = -71002;
+const CONFIG_DESC_PAYLOAD_DESCRIPTORS: i64 = -71002;
+const CONFIG_DESC_TENANT_DESCRIPTORS: i64 = -71004;
 
 const SUB_COMPONENT_NAME: i64 = 1;
 const SUB_COMPONENT_VERSION: i64 = 2;
@@ -163,7 +164,11 @@ impl ClientVmDiceChain {
     }
 
     pub(crate) fn microdroid_payload_components(&self) -> Result<Vec<SubComponent>> {
-        self.microdroid_payload().config_descriptor.sub_components()
+        self.microdroid_payload().config_descriptor.payload_sub_components()
+    }
+
+    pub(crate) fn microdroid_tenant_components(&self) -> Result<Vec<SubComponent>> {
+        self.microdroid_payload().config_descriptor.tenant_sub_components()
     }
 
     /// Returns true if all payloads in the DICE chain are in normal mode.
@@ -354,7 +359,8 @@ impl DiceChainEntryPayload {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ConfigDescriptor {
     component_name: Option<String>,
-    sub_components: Option<Value>,
+    payload_descriptors: Option<Value>,
+    tenant_descriptors: Option<Value>,
 }
 
 impl ConfigDescriptor {
@@ -375,12 +381,13 @@ impl ConfigDescriptor {
                     let name = value_to_text(value, "ConfigDescriptor component_name")?;
                     builder.component_name(name)?;
                 }
-                CONFIG_DESC_SUB_COMPONENTS => {
+                CONFIG_DESC_PAYLOAD_DESCRIPTORS => {
                     // If this is the Microdroid payload node then these are the subcomponents. But
                     // for any other node it could be anything - this isn't a reserved key. So defer
                     // decoding until we know which node is which.
-                    builder.sub_components(value)?
+                    builder.payload_sub_components(value)?
                 }
+                CONFIG_DESC_TENANT_DESCRIPTORS => builder.tenant_sub_components(value)?,
                 _ => {}
             }
         }
@@ -388,19 +395,31 @@ impl ConfigDescriptor {
     }
 
     /// Attempt to decode any Microdroid sub-components that were present in this config descriptor.
-    fn sub_components(&self) -> Result<Vec<SubComponent>> {
-        let Some(value) = &self.sub_components else {
+    fn payload_sub_components(&self) -> Result<Vec<SubComponent>> {
+        let Some(value) = &self.payload_descriptors else {
             return Ok(vec![]);
         };
-        let sub_components = value_to_array(value.clone(), "ConfigDescriptor sub_components")?;
+        let sub_components = value_to_array(value.clone(), "ConfigDescriptor payload_descriptors")?;
         sub_components.into_iter().map(SubComponent::try_from).collect()
+    }
+
+    /// Attempt to decode any Microdroid tenant sub-components that were present in this config
+    /// descriptor.
+    fn tenant_sub_components(&self) -> Result<Vec<SubComponent>> {
+        let Some(value) = &self.tenant_descriptors else {
+            return Ok(vec![]);
+        };
+        let tenant_sub_components =
+            value_to_array(value.clone(), "ConfigDescriptor tenant_descriptors")?;
+        tenant_sub_components.into_iter().map(SubComponent::try_from).collect()
     }
 }
 
 #[derive(Debug, Clone, Default)]
 struct ConfigDescriptorBuilder {
     component_name: OnceCell<String>,
-    sub_components: OnceCell<Value>,
+    payload_descriptors: OnceCell<Value>,
+    tenant_descriptors: OnceCell<Value>,
 }
 
 impl ConfigDescriptorBuilder {
@@ -408,14 +427,27 @@ impl ConfigDescriptorBuilder {
         set_once(&self.component_name, component_name, "ConfigDescriptor component_name")
     }
 
-    fn sub_components(&mut self, sub_components: Value) -> Result<()> {
-        set_once(&self.sub_components, sub_components, "ConfigDescriptor sub_components")
+    fn payload_sub_components(&mut self, payload_descriptors: Value) -> Result<()> {
+        set_once(
+            &self.payload_descriptors,
+            payload_descriptors,
+            "ConfigDescriptor payload_descriptors",
+        )
+    }
+
+    fn tenant_sub_components(&mut self, tenant_descriptors: Value) -> Result<()> {
+        set_once(
+            &self.tenant_descriptors,
+            tenant_descriptors,
+            "ConfigDescriptor tenant_descriptors",
+        )
     }
 
     fn build(mut self) -> Result<ConfigDescriptor> {
         let component_name = self.component_name.take();
-        let sub_components = self.sub_components.take();
-        Ok(ConfigDescriptor { component_name, sub_components })
+        let payload_descriptors = self.payload_descriptors.take();
+        let tenant_descriptors = self.tenant_descriptors.take();
+        Ok(ConfigDescriptor { component_name, payload_descriptors, tenant_descriptors })
     }
 }
 

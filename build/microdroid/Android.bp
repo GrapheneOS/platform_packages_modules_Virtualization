@@ -96,6 +96,7 @@ android_system_image {
         "traced",
         "traced_probes",
         "traced_perf",
+        "traced_relay",
         "perfetto",
         "heapprofd",
         "heapprofd_client",
@@ -167,6 +168,9 @@ prebuilt_etc {
     src: "init.rc",
     relative_install_path: "init/hw",
     no_full_install: true, // avoid collision with system partition's init.rc
+    required: [
+        "init-perfetto.rc",
+    ],
 }
 
 prebuilt_etc {

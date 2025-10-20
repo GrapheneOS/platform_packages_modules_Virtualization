@@ -65,6 +65,10 @@ pub struct VmPayloadConfig {
     /// wait for the payload to send a signal to do the setup.
     #[serde(default)]
     pub delay_encrypted_store_setup: bool,
+
+    /// Whether to run the payload as root or not.
+    #[serde(default)]
+    pub run_as_root: bool,
 }
 
 /// OS config
@@ -127,26 +131,45 @@ pub struct ApkConfig {
 pub enum TenantConfig {
     /// APEX Tenant
     #[serde(rename = "apex")]
-    Apex(TenantApexConfig),
+    Apex(TenantConfiguration),
     /// APK Tenant
     #[serde(rename = "apk")]
-    Apk(TenantApkConfig),
+    Apk(TenantConfiguration),
 }
 
-/// Tenant Apex config
+// TODO: More (optional) configuration need to be added for tenant
+// such as min_version, expected signer. Ensure as they are added, verification code matches these.
+/// Tenant config
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TenantApexConfig {
-    /// The path of Tenant APK
+pub struct TenantConfiguration {
+    /// Tenant package name
     pub name: String,
     /// Tenant task
-    pub task: Task,
+    #[serde(default)]
+    pub task: Option<Task>,
+    /// The minimum acceptable rollback_index (or version_code if rollback_index is missing) of the
+    /// tenant package.
+    #[serde(default)]
+    pub min_version: Option<u64>,
+    /// This is the expected authority
+    /// For APK: this is the hex encoding of the sha512 hash of the certificate.
+    /// For APEX: TODO(b/429639517) to be defined
+    #[serde(default)]
+    pub expected_authority: Option<String>,
 }
 
-/// Tenant Apk config
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TenantApkConfig {
-    /// The path of Tenant APK
-    pub path: String,
-    /// Tenant task
-    pub task: Task,
+impl TenantConfig {
+    /// Defines what constitutes a well-formed config.
+    pub fn is_wellformed(&self) -> bool {
+        match self {
+            TenantConfig::Apex(config) => {
+                // APEX configuration must have a minimum version, and an expected authority.
+                config.min_version.is_some() && config.expected_authority.is_some()
+            }
+            TenantConfig::Apk(_config) => {
+                // All APK configurations are considered valid.
+                true
+            }
+        }
+    }
 }

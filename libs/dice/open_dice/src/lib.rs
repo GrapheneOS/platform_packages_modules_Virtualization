@@ -33,29 +33,18 @@ pub use bcc::bcc_handover_main_flow;
 pub use bcc::{
     bcc_format_config_descriptor, bcc_handover_parse, bcc_main_flow, BccHandover, DiceConfigValues,
 };
-#[cfg(feature = "multialg")]
-pub use dice::DiceContext;
 pub use dice::{
     derive_cdi_certificate_id, derive_cdi_private_key_seed, dice_main_flow, Cdi, CdiValues, Config,
-    DiceArtifacts, DiceMode, Hash, Hidden, InlineConfig, InputValues, KeyAlgorithm, PrivateKey,
-    PrivateKeySeed, CDI_SIZE, HASH_SIZE, HIDDEN_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
+    DiceArtifacts, DiceContext, DiceMode, Hash, Hidden, InlineConfig, InputValues, KeyAlgorithm,
+    PrivateKey, PrivateKeySeed, CDI_SIZE, HASH_SIZE, HIDDEN_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
     VM_KEY_ALGORITHM,
 };
 pub use error::{DiceError, Result};
 pub use ops::{
     derive_cdi_leaf_priv, generate_certificate, hash, kdf, keypair_from_seed, sign, verify,
 };
-#[cfg(feature = "multialg")]
-pub use ops::{
-    derive_cdi_leaf_priv_multialg, keypair_from_seed_multialg, sign_cose_sign1_multialg,
-    sign_cose_sign1_with_cdi_leaf_priv_multialg, verify_multialg,
-};
 pub use retry::{
     retry_bcc_format_config_descriptor, retry_bcc_main_flow, retry_dice_main_flow,
     retry_generate_certificate, retry_sign_cose_sign1, retry_sign_cose_sign1_with_cdi_leaf_priv,
     OwnedDiceArtifacts,
-};
-#[cfg(feature = "multialg")]
-pub use retry::{
-    retry_sign_cose_sign1_multialg, retry_sign_cose_sign1_with_cdi_leaf_priv_multialg,
 };

@@ -59,14 +59,22 @@ Java_android_system_virtualmachine_VirtualMachine_nativeBinderFromPreconnectedCl
         JNIEnv *mEnv;
         jobject mProvider;
         jmethodID mMid;
+        bool fail;
     };
 
-    auto state = std::make_unique<State>(env, provider, mid);
+    auto state = std::make_unique<State>(env, provider, mid, false);
 
     using RequestFun = int (*)(void *);
     RequestFun requestFunc = [](void *param) -> int {
         State *state = static_cast<State *>(param);
+        if (state->fail) {
+            return -1;
+        }
         int ownedFd = state->mEnv->CallIntMethod(state->mProvider, state->mMid);
+        if (state->mEnv->ExceptionCheck()) {
+            state->fail = true;
+            return -1;
+        }
         // FD is owned by PFD in Java layer, need to dupe it so that
         // ARpcSession_setupPreconnectedClient can take ownership when it calls unique_fd internally
         return fcntl(ownedFd, F_DUPFD_CLOEXEC, 0);

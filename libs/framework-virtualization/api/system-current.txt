@@ -100,6 +100,16 @@ package android.system.virtualmachine {
   }
 
   public class VirtualMachineException extends java.lang.Exception {
+    method @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public int getCode();
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_CONFIG_FILE_CORRUPTED = 7; // 0x7
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_CONFIG_INCOMPATIBLE = 8; // 0x8
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_FEATURE_DISABLED = 9; // 0x9
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_INTERNAL = 1; // 0x1
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_NAME_ALREADY_EXISTS = 5; // 0x5
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_PAYLOAD_CONFIG_MALFORMED = 6; // 0x6
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_VIRTUAL_MACHINE_DELETED = 2; // 0x2
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_VIRTUAL_MACHINE_RUNNING = 4; // 0x4
+    field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_VIRTUAL_MACHINE_STOPPED = 3; // 0x3
   }
 
   public class VirtualMachineManager {

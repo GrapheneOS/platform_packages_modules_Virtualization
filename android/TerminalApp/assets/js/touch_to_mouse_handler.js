@@ -18,7 +18,47 @@
 // TODO(b/375326606): consider contribution on
 // upstream(https://github.com/xtermjs/xterm.js/issues/3727)
 let convertTouchToMouse = false;
+let lastTouchX = null; // For two-finger scroll
+let lastTouchY = null; // For two-finger scroll
 function touchHandler(event) {
+  // Two-finger scroll
+  if (event.touches && event.touches.length === 2) {
+    const touch1 = event.touches[0];
+    const touch2 = event.touches[1];
+    const currentX = (touch1.clientX + touch2.clientX) / 2;
+    const currentY = (touch1.clientY + touch2.clientY) / 2;
+
+    switch (event.type) {
+      case 'touchstart':
+        lastTouchX = currentX;
+        lastTouchY = currentY;
+        break;
+      case 'touchmove':
+        if (lastTouchY !== null) {
+          const deltaX = lastTouchX - currentX;
+          const deltaY = lastTouchY - currentY;
+          lastTouchX = currentX;
+          lastTouchY = currentY;
+
+          const wheelEvent = new WheelEvent('wheel', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            deltaX: deltaX,
+            deltaY: deltaY,
+          });
+          // Dispatch on the element under the first touch
+          touch1.target.dispatchEvent(wheelEvent);
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        break;
+    }
+    return;
+  } else if (lastTouchX != null || lastTouchY !== null) {
+    lastTouchX = null;
+    lastTouchY = null;
+  }
   const contextmenuByTouch =
       event.type === 'contextmenu' && event.pointerType === 'touch';
   // Only proceed for long touches (contextmenu) or when converting touch to

@@ -17,14 +17,27 @@
 //! Manages running instances of the CompOS VM. At most one instance should be running at
 //! a time, started on demand.
 
-use crate::instance_starter::{CompOsInstance, InstanceStarter};
+use crate::wrappers::compos_common_injection;
+
+#[cfg(not(test))]
+use {crate::instance_starter::InstanceStarter, compos_wrappers::system_properties};
+#[cfg(test)]
+use {
+    crate::instance_starter::MockInstanceStarter as InstanceStarter,
+    compos_wrappers_with_mocks::mock_system_properties as system_properties,
+};
+
+use crate::instance_starter::CompOsInstance;
 use android_system_virtualizationservice::aidl::android::system::virtualizationservice;
 use anyhow::{anyhow, bail, Context, Result};
 use binder::Strong;
-use compos_common::compos_client::{CompOsType, VmCpuTopology, VmParameters};
-use compos_common::{CURRENT_INSTANCE_DIR, TEST_INSTANCE_DIR};
+
+use compos_common_injection::{
+    compos_client::{CompOsType, VmCpuTopology, VmParameters},
+    CURRENT_INSTANCE_DIR, TEST_INSTANCE_DIR,
+};
+
 use log::info;
-use rustutils::system_properties;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 use virtualizationservice::IVirtualizationService::IVirtualizationService;
@@ -186,5 +199,81 @@ impl State {
         self.is_starting = false;
         self.instance_tracker = Some(Arc::downgrade(instance_tracker));
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::InstanceManager;
+    use crate::{
+        instance_starter::{CompOsInstance, MockInstanceStarter},
+        wrappers::binder::MockLazyServiceGuard,
+    };
+    use compos_common_with_mocks::{
+        compos_client::{CompOsService, CompOsType, MockComposClient, VmCpuTopology, VmParameters},
+        CURRENT_INSTANCE_DIR,
+    };
+    use compos_wrappers_with_mocks::mock_system_properties;
+    use mockall::predicate::{always as any, eq};
+    use binder::BinderFeatures;
+    use android_system_virtualizationservice::aidl::android::system::virtualizationservice::
+        IVirtualizationService::{BnVirtualizationService, MockIVirtualizationService} ;
+    use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
+        BnCompOsService, MockICompOsService,
+    };
+
+    const BASE_OS: &str = "microdroid";
+    const ART_MEMORY_PROPERTY: &str = "composd.vm.art.memory_mib.config";
+    const VENDOR_MEMORY_PROPERTY: &str = "composd.vm.vendor.memory_mib.config";
+
+    #[test]
+    pub fn instance_manager_odrefresh_vm_start_success() {
+        let expected_vm_param = VmParameters {
+            name: "VerifiedOdRefresh".to_owned(),
+            base_os: BASE_OS.to_owned(),
+            debug_mode: false,
+            cpu_topology: VmCpuTopology::MatchHost,
+            memory_mib: Some(600),
+            prefer_staged: true,
+            compos_type: CompOsType::OdRefresh,
+        };
+
+        let virt_svc_binder = {
+            let mock_virt_svc = MockIVirtualizationService::new();
+            BnVirtualizationService::new_binder(mock_virt_svc, BinderFeatures::default())
+        };
+        let system_properties_read_ctx = mock_system_properties::read_context();
+
+        system_properties_read_ctx.expect().with(eq(ART_MEMORY_PROPERTY)).return_once(|_| Ok(None)); // No default override by ART.
+
+        system_properties_read_ctx
+            .expect()
+            .with(eq(VENDOR_MEMORY_PROPERTY))
+            .return_once(|_| Ok(None)); // No memory adjustment.
+
+        let _mock_instance_starter_new_ctx = {
+            let mut instance_starter_mock = MockInstanceStarter::default();
+            instance_starter_mock.expect_start_new_instance().with(any()).return_once(|_| {
+                let vm_instance = MockComposClient::default();
+                let mock_compos_service = MockICompOsService::default();
+                let mock_compos_service_binder =
+                    BnCompOsService::new_binder(mock_compos_service, BinderFeatures::default());
+                let service = CompOsService::OdRefresh(mock_compos_service_binder);
+                let mut lazy_service_guard = MockLazyServiceGuard::default();
+                lazy_service_guard.expect_drop().times(1).return_const(());
+
+                let compos_instance =
+                    CompOsInstance::new_for_test(vm_instance, service, lazy_service_guard);
+                Ok(compos_instance)
+            });
+            let ctx = MockInstanceStarter::new_context();
+            ctx.expect()
+                .with(eq(CURRENT_INSTANCE_DIR), eq(expected_vm_param))
+                .return_once(|_, _| instance_starter_mock);
+            ctx
+        };
+        let instance_manager = InstanceManager::new(virt_svc_binder);
+        let result = instance_manager.start_current_instance(CompOsType::OdRefresh, BASE_OS);
+        assert!(result.is_ok());
     }
 }

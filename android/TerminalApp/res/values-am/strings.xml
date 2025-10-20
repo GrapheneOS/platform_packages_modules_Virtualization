@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"ሊመለስ የማይችል ስሕተት"</string>
     <string name="error_desc" msgid="4588252235686826721">"ከስሕተት መልሶ ማግኘት አልተሳካም።\nተርሚናልን እንደገና ማስጀመርን መሞከር ወይም ከመልሶ ማግኛ አማራጮች አንዱን መሞከር ይችላሉ።\nሁሉም ሙከራዎች ካልተሳኩ Linux ተርሚናልን ከገንቢ አማራጮች ላይ በማብራት/ማጥፋት ሁሉንም ውሂብ ይጥረጉ።"</string>
     <string name="error_code" msgid="3585291676855383649">"የስሕተት ኮድ፦ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"ስህተት ሪፖርት አድርግ"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"ምዝግብ ማስታወሻዎችን በመሰብሰብ ላይ"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"ወደ አዲሱ ተርሚናል ያሻሽሉ"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"እርስዎ እየተጠቀሙበት የነበረው የLinux ተርሚናል ጊዜው ያለፈበት ነው። ለመቀጠል እባክዎን ያሻሽሉ።\nውሂቡ <xliff:g id="PATH">/mnt/backup</xliff:g> ላይ ምትኬ ይቀመጥለታል"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"አሻሽል"</string>
@@ -96,4 +98,10 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ረዥም የሚያሄዱ ተግባሮች"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"የሥርዓት ክስተቶች"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ትር"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"ግራፊክስ ማፋጠን"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ለግራፊክስ ማፋጠን ምስል ሠሪውን ይለውጡ።"</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"እባክዎ ለውጡን ለመተግበር ተርሚናል መተግበሪያውን እንደገና ያስጀምሩ።"</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"ሶፍትዌር ምስል ሠሪ"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"በጂፒዩ-የተፋጠነ ምስል ሠሪ"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"በውስጣዊ ስሕተት ምክንያት ክፍለ ጊዜ ጠፍቷል።"</string>
 </resources>

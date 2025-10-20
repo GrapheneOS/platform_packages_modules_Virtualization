@@ -32,6 +32,10 @@ tabba@google.com
 vdonnefort@google.com
 victorhsieh@google.com
 
+# Test owners
+per-file {**/,}TEST_MAPPING=set noparent
+per-file {**/,}TEST_MAPPING=jiyong@google.com,jaewan@google.com,ioffe@google.com,smoreland@google.com
+
 # Ferrochrome
 per-file android/TerminalApp/**=jiyong@google.com,jeongik@google.com
 per-file build/debian/**=jiyong@google.com,jeongik@google.com

@@ -25,7 +25,11 @@ type Result<T> = result::Result<T, RequestProcessingError>;
 /// Verifies the MAC of the given public key.
 pub fn validate_public_key(maced_public_key: &[u8], hmac_key: &[u8]) -> Result<CoseKey> {
     let cose_mac = CoseMac0::from_slice(maced_public_key)?;
-    cose_mac.verify_tag(&[], |tag, data| verify_tag(tag, data, hmac_key))?;
+    cose_mac.verify_payload_tag(
+        &[],
+        || RequestProcessingError::KeyToSignHasEmptyPayload,
+        |tag, data| verify_tag(tag, data, hmac_key),
+    )?;
     let payload = cose_mac.payload.ok_or(RequestProcessingError::KeyToSignHasEmptyPayload)?;
     Ok(CoseKey::from_slice(&payload)?)
 }
@@ -51,4 +55,22 @@ pub fn build_maced_public_key(public_key: CoseKey, hmac_key: &[u8]) -> Result<Ve
         .try_create_tag(external_aad, |data| hmac_sha256(hmac_key, data).map(|v| v.to_vec()))?
         .build();
     Ok(cose_mac.to_vec()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec;
+
+    #[test]
+    fn test_public_key_no_payload() {
+        let mac = coset::CoseMac0Builder::new()
+            .protected(coset::HeaderBuilder::new().key_id(b"11".to_vec()).build())
+            .tag(vec![1, 2, 3])
+            .build();
+        let mac_data = mac.to_vec().unwrap();
+
+        let result = validate_public_key(&mac_data, &[]);
+        assert_eq!(result, Err(RequestProcessingError::KeyToSignHasEmptyPayload));
+    }
 }

@@ -20,11 +20,22 @@ package {
 rust_library {
     name: "liblinux",
     crate_name: "linux",
+    host_supported: true,
     prefer_rlib: false,
     srcs: ["src/lib.rs"],
     edition: "2021",
     rustlibs: [
         "libanyhow",
+        "libglob",
     ],
     visibility: ["//packages/modules/Virtualization/guest/__subpackages__"],
+}
+
+rust_test_host {
+    name: "liblinux_tests",
+    srcs: ["src/lib.rs"],
+    rustlibs: [
+        "libanyhow",
+        "libglob",
+    ],
 }

@@ -105,7 +105,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
             error!("Service VM failed when access swiotlb");
         })?
         .and_then(|info| info.fixed_range());
-    init_shared_pool(swiotlb_range).inspect_err(|_| {
+    init_shared_pool(swiotlb_range.as_ref()).inspect_err(|_| {
         error!("Failed to initialize shared pool.");
     })?;
 

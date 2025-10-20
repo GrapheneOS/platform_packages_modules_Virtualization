@@ -1,0 +1,23 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_defaults {
+    name: "libencryptedstore_query.defaults",
+    crate_name: "encryptedstore_query",
+    defaults: ["avf_build_flags_rust"],
+    srcs: ["src/lib.rs"],
+    edition: "2021",
+    rustlibs: [
+        "libanyhow",
+    ],
+}
+
+rust_library {
+    name: "libencryptedstore_query",
+    defaults: ["libencryptedstore_query.defaults"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+}

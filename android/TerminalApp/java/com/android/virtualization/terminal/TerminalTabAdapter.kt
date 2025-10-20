@@ -52,10 +52,14 @@ class TerminalTabAdapter(fragmentActivity: FragmentActivity) :
         return id
     }
 
-    fun deleteTab(position: Int) {
-        if (position in 0 until tabs.size) {
-            tabs.removeAt(position)
-            notifyItemRemoved(position)
+    fun deleteTab(id: String): Boolean {
+        for (i in 0 until tabs.size) {
+            if (tabs[i].id == id) {
+                tabs.removeAt(i)
+                notifyItemRemoved(i)
+                return true
+            }
         }
+        return false
     }
 }

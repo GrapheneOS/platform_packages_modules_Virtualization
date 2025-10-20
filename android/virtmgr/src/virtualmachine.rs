@@ -47,7 +47,7 @@ use rpc_servicemanager_aidl::aidl::android::os::IRpcProvider::{
     BnRpcProvider, IRpcProvider, ServiceConnectionInfo::ServiceConnectionInfo, Vsock::Vsock,
 };
 use rpcbinder::RpcServer;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
@@ -144,10 +144,10 @@ fn create_or_update_idsig_file(
     let mut output = clone_file(idsig_fd)?;
 
     // Optimization. We don't have to update idsig file whenever a VM is started. Don't update it,
-    // if the idsig file already has the same APK digest.
+    // if the Merkle tree already describes the contents of the APK.
     if output.metadata()?.len() > 0 {
         if let Ok(out_sig) = V4Signature::from_idsig(&mut output) {
-            if out_sig.signing_info.apk_digest == sig.signing_info.apk_digest {
+            if out_sig.hashing_info == sig.hashing_info {
                 debug!("idsig {output:?} is up-to-date with apk {input:?}.");
                 return Ok(());
             }
@@ -673,8 +673,8 @@ impl VirtualizationService {
             .with_log()
             .or_binder_exception(ExceptionCode::SECURITY)?;
         }
-        let kernel = maybe_clone_file(&config.kernel)?;
-        let initrd = maybe_clone_file(&config.initrd)?;
+        let kernel = maybe_clone_file(config.kernel.as_ref())?;
+        let initrd = maybe_clone_file(config.initrd.as_ref())?;
 
         if config.protectedVm {
             // Fail fast with a meaningful error message in case device doesn't support pVMs.
@@ -682,7 +682,7 @@ impl VirtualizationService {
 
             // In a protected VM, we require custom kernels to come from a trusted source
             // (b/237054515).
-            check_label_for_kernel_files(&kernel, &initrd, calling_partition)
+            check_label_for_kernel_files(kernel.as_ref(), initrd.as_ref(), calling_partition)
                 .or_service_specific_exception(-1)?;
 
             // Check if partition images are labeled incorrectly. This is to prevent random images
@@ -720,6 +720,9 @@ impl VirtualizationService {
         let gdb_port = NonZeroU16::new(config.gdbPort as u16);
         let detect_hangup = is_app_config && gdb_port.is_none();
 
+        // TODO(ioffe): query the sysprop here to enable VM boot tracing.
+        // TODO(ioffe): also provide a way to configure what trace events should be enabled during
+        //  kernel init.
         let context = RunContext {
             config,
             debug_config: &debug_config,
@@ -791,18 +794,39 @@ fn register_to_global_service(vm: &Strong<dyn aidl::IVirtualMachine>) -> binder:
 
     let instance = &to_local_object(vm).expect("not a local object").instance;
     let cid = instance.cid;
-    global_service().unwrap().registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+    let gs = global_service().unwrap();
 
+    {
+        // If we are re-registering (from DeathRecipient below), make sure the VM is still alive,
+        // otherwise we could race with a unregisterVirtualMachine call (in monitor_vm_exit) and
+        // end up with a zombie reference in virtualizationservice.
+        let vm_state = instance.vm_state.lock().unwrap();
+        if matches!(&*vm_state, VmState::Dead | VmState::Failed) {
+            return Ok(());
+        }
+
+        gs.registerVirtualMachine(cid.try_into().unwrap(), vm)?;
+
+        // Hold the lock until after `registerVirtualMachine` to ensure that an "alive -> dead"
+        // transition (and `unregisterVirtualMachine` call) can't occur until afterwards.
+    }
+
+    let gs_clone = gs.clone();
     let weak_vm = Strong::downgrade(vm);
     let mut dr = DeathRecipient::new(move || {
+        // Hold a strong ref to the global service in the callback, otherwise the first
+        // `DeathRecipient` that gets to run will cause the only strong ref (in `GLOBAL_SERVICE`)
+        // to be dropped and so other `DeathRecipient`s will be skipped when `link_to_death`'s weak
+        // ref fails to promote.
+        let _ = &gs_clone;
         // No need to re-register the VM if it's already dead
         if let Ok(vm) = weak_vm.upgrade() {
-            let _ = register_to_global_service(&vm).map_err(|e| {
-                error!("Failed to re-register VM ({cid}) to the global service: {e:?}")
-            });
+            if let Err(e) = register_to_global_service(&vm) {
+                error!("Failed to re-register VM (cid) to the global service: {e:?}");
+            }
         }
     });
-    global_service().unwrap().as_binder().link_to_death(&mut dr)?;
+    gs.as_binder().link_to_death(&mut dr)?;
 
     // Hold DeathRecipient in VmInstance. We need this because if DeathRecipient is dropped, it is
     // automatically unlinked.
@@ -979,7 +1003,7 @@ fn assemble_shared_paths(
                     .join(&path.socketPath)
                     .to_string_lossy()
                     .to_string(),
-                socket_fd: maybe_clone_file(&path.socketFd)?,
+                socket_fd: maybe_clone_file(path.socketFd.as_ref())?,
                 app_domain: path.appDomain,
             })
         })
@@ -1325,8 +1349,8 @@ fn check_label_for_partition(
 }
 
 fn check_label_for_kernel_files(
-    kernel: &Option<File>,
-    initrd: &Option<File>,
+    kernel: Option<&File>,
+    initrd: Option<&File>,
     calling_partition: CallingPartition,
 ) -> Result<()> {
     if let Some(f) = kernel {
@@ -1727,9 +1751,9 @@ pub fn clone_file(file: &ParcelFileDescriptor) -> binder::Result<File> {
         .map(File::from)
 }
 
-/// Converts an `&Option<ParcelFileDescriptor>` to an `Option<File>` by cloning the file.
-fn maybe_clone_file(file: &Option<ParcelFileDescriptor>) -> binder::Result<Option<File>> {
-    file.as_ref().map(clone_file).transpose()
+/// Converts an `Option<&ParcelFileDescriptor>` to an `Option<File>` by cloning the file.
+fn maybe_clone_file(file: Option<&ParcelFileDescriptor>) -> binder::Result<Option<File>> {
+    file.map(clone_file).transpose()
 }
 
 /// Converts a `VsockStream` to a `ParcelFileDescriptor`.
@@ -2038,9 +2062,7 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         guest_agent: &Strong<dyn aidl::IGuestAgent>,
     ) -> binder::Result<()> {
         let vm = &self.vm_instance;
-        let cid = vm.cid;
-        *vm.guest_agent.lock().unwrap() = Some(guest_agent.clone());
-        info!("VM with CID {cid} has registered a guest agent");
+        vm.set_guest_agent(guest_agent);
         Ok(())
     }
 

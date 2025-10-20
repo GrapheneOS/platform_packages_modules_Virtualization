@@ -75,6 +75,8 @@ on property:microdroid_manager.init_done=1
 on init && property:ro.boot.microdroid.debuggable=1
     # Mount tracefs (with GID=AID_READTRACEFS)
     mount tracefs tracefs /sys/kernel/tracing gid=3012
+    # Always start traced_relay service on debuggable Microdroid VMs.
+    setprop persist.traced.enable 2
 
 on property:init_debug_policy.adbd.enabled=1
     start adbd
@@ -96,6 +98,10 @@ on late-init
     # With /system mounted and properties form /system + /factory available,
     # some services can be started.
     trigger late-fs
+
+    # Microdroid doesn't have bpf programs. This is just to trigger init-perfetto.rc so that
+    # stack tracing is possible when selinux is not enforced (i.e. a rooted VM)
+    trigger load-bpf-programs
 
     # Wait for microdroid_manager to finish setting up sysprops from the payload config.
     # Some further actions in the boot sequence might depend on the sysprops from the payloag,

@@ -15,69 +15,91 @@
  */
 package com.android.virtualization.terminal
 
+import android.content.Context
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineConfig
 import android.util.Log
+import androidx.annotation.WorkerThread
 import java.io.BufferedOutputStream
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
-import java.lang.RuntimeException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.LocalDateTime
 import java.util.concurrent.ExecutorService
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import libcore.io.Streams
 
 /**
  * Forwards VM's console output to a file on the Android side, and VM's log output to Android logd.
  */
 internal object Logger {
-    fun setup(vm: VirtualMachine, dir: Path, executor: ExecutorService) {
+    fun setup(context: Context, vm: VirtualMachine, executor: ExecutorService) {
         val tag = vm.name
+        val dir = context.getFileStreamPath(vm.name + ".log").toPath()
 
         if (vm.config.debugLevel != VirtualMachineConfig.DEBUG_LEVEL_FULL) {
             Log.i(tag, "Logs are not captured. Non-debuggable VM.")
             return
         }
 
-        try {
-            if (Files.isRegularFile(dir)) {
-                Log.i(tag, "Removed legacy log file: $dir")
-                Files.delete(dir)
+        if (Files.isRegularFile(dir)) {
+            Log.i(tag, "Removed legacy log file: $dir")
+            Files.delete(dir)
+        }
+        Files.createDirectories(dir)
+        deleteOldLogs(dir, 10)
+        val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
+        val console = vm.getConsoleOutput()
+        val file = Files.newOutputStream(logPath, StandardOpenOption.CREATE)
+        executor.execute({
+            try {
+                console.use { console ->
+                    LineBufferedOutputStream(file).use { fileOutput ->
+                        Streams.copy(console, fileOutput)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(tag, "Failed to log console output. VM may be shutting down", e)
             }
-            Files.createDirectories(dir)
-            deleteOldLogs(dir, 10)
-            val logPath = dir.resolve(LocalDateTime.now().toString() + ".txt")
-            val console = vm.getConsoleOutput()
-            val file = Files.newOutputStream(logPath, StandardOpenOption.CREATE)
-            executor.execute({
-                try {
-                    console.use { console ->
-                        LineBufferedOutputStream(file).use { fileOutput ->
-                            Streams.copy(console, fileOutput)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w(tag, "Failed to log console output. VM may be shutting down", e)
-                }
-            })
+        })
 
-            val log = vm.getLogOutput()
-            executor.execute({
-                log.use {
-                    try {
-                        writeToLogd(it, tag)
-                    } catch (e: Exception) {
-                        Log.w(tag, "Failed to log VM log output. VM may be shutting down", e)
+        val log = vm.getLogOutput()
+        executor.execute({
+            log.use {
+                try {
+                    writeToLogd(it, tag)
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to log VM log output. VM may be shutting down", e)
+                }
+            }
+        })
+    }
+
+    // Called by ErrorActivity in another process.
+    @WorkerThread
+    public fun zipLogs(context: Context, logZipFilePath: Path) {
+        Files.newOutputStream(logZipFilePath, StandardOpenOption.CREATE).use { fos ->
+            ZipOutputStream(fos).use { zos ->
+                val logDirs =
+                    context.filesDir.listFiles { it.isDirectory() && it.name.endsWith(".log") }
+                for (dir in logDirs) {
+                    val logFiles = dir.listFiles { it.isFile() && it.name.endsWith(".txt") }
+                    for (file in logFiles) {
+                        // To prevent absolute paths in the zip
+                        val entryName = file.toRelativeString(context.filesDir)
+
+                        zos.putNextEntry(ZipEntry(entryName))
+                        Files.copy(file.toPath(), zos)
+                        zos.closeEntry()
                     }
                 }
-            })
-        } catch (e: Exception) {
-            throw RuntimeException(e)
+            }
         }
     }
 

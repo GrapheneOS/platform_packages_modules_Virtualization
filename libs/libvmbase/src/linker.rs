@@ -14,43 +14,44 @@
 
 //! Linker-defined symbols.
 
+#[allow(improper_ctypes)]
 extern "C" {
     /// Stack canary value
     pub static __stack_chk_guard: u64;
     /// First byte beyond the pre-loaded binary.
-    pub static bin_end: u8;
+    pub static bin_end: ();
     /// First byte of the `.bss` section.
-    pub static bss_begin: u8;
+    pub static bss_begin: ();
     /// First byte beyond the `.bss` section.
-    pub static bss_end: u8;
+    pub static bss_end: ();
     /// First byte of the (loaded) `.data` section.
-    pub static data_begin: u8;
+    pub static data_begin: ();
     /// First byte beyond the (loaded) `.data` section.
-    pub static data_end: u8;
+    pub static data_end: ();
     /// First byte of the pre-loaded `.data` section.
-    pub static data_lma: u8;
+    pub static data_lma: ();
     /// First byte of the `.dtb` section.
-    pub static dtb_begin: u8;
+    pub static dtb_begin: ();
     /// First byte beyond the `.dtb` section.
-    pub static dtb_end: u8;
+    pub static dtb_end: ();
     /// First byte of the region available for the exception handler stack.
-    pub static eh_stack_limit: u8;
+    pub static eh_stack_limit: ();
     /// First byte of the `.image_footer` section.
-    pub static image_footer_begin: u8;
+    pub static image_footer_begin: ();
     /// First byte beyond the `.image_footer` section.
-    pub static image_footer_end: u8;
+    pub static image_footer_end: ();
     /// First byte past the region available for the exception handler stack.
-    pub static init_eh_stack_pointer: u8;
+    pub static init_eh_stack_pointer: ();
     /// First byte past the region available for the stack.
-    pub static init_stack_pointer: u8;
+    pub static init_stack_pointer: ();
     /// First byte of the `.rodata` section.
-    pub static rodata_begin: u8;
+    pub static rodata_begin: ();
     /// First byte beyond the `.rodata` section.
-    pub static rodata_end: u8;
+    pub static rodata_end: ();
     /// First byte of the region available for the stack.
-    pub static stack_limit: u8;
+    pub static stack_limit: ();
     /// First byte of the `.text` section.
-    pub static text_begin: u8;
+    pub static text_begin: ();
     /// First byte beyond the `.text` section.
-    pub static text_end: u8;
+    pub static text_end: ();
 }

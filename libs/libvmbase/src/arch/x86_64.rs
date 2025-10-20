@@ -15,10 +15,8 @@
 //! x86_64 platform dependent code module
 
 pub mod bionic;
-pub mod dbm;
 pub mod layout;
 pub mod page_table;
-pub mod paging;
 pub mod platform;
 pub mod port;
 pub mod rand;

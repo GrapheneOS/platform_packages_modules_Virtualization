@@ -17,24 +17,33 @@
 //! Implementation of IIsolatedCompilationService, called from system server when compilation is
 //! desired.
 
-use crate::instance_manager::InstanceManager;
-use crate::odrefresh_task::OdrefreshTask;
+use crate::{instance_manager::InstanceManager, odrefresh_task::OdrefreshTask};
 use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::{BnCompilationTask, ICompilationTask},
     ICompilationTaskCallback::ICompilationTaskCallback,
+    IDex2OatTaskCallback::IDex2OatTaskCallback,
     IIsolatedCompilationService::{
-        ApexSource::ApexSource, BnIsolatedCompilationService, IIsolatedCompilationService,
+        ApexSource::ApexSource, BnIsolatedCompilationService, Dex2OatArg::Dex2OatArg,
+        IIsolatedCompilationService,
     },
 };
 use anyhow::{Context, Result};
-use binder::{self, BinderFeatures, ExceptionCode, Interface, Status, Strong, ThreadState};
+use binder::{
+    self, BinderFeatures, ExceptionCode, Interface, ParcelFileDescriptor, Status, Strong,
+    ThreadState,
+};
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::CompilationMode::CompilationMode;
-use compos_common::{
+#[cfg(not(test))]
+use compos_common as compos_common_injection;
+#[cfg(test)]
+use compos_common_with_mocks as compos_common_injection;
+
+use compos_common_injection::{
     binder::to_binder_result,
     compos_client::CompOsType,
     odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR},
 };
-use rustutils::{users::AID_ROOT, users::AID_SYSTEM};
+use rustutils::android::{users::AID_ROOT, users::AID_SYSTEM};
 use std::sync::Arc;
 
 pub struct IsolatedCompilationService {
@@ -74,6 +83,24 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         };
         to_binder_result(self.do_start_test_compile(prefer_staged, callback, base_os))
     }
+
+    fn startVerifiedDex2Oat(
+        &self,
+        dex2oat_args: &[Dex2OatArg],
+        signed_manifest_fd: &ParcelFileDescriptor,
+        results_callback: &Strong<dyn IDex2OatTaskCallback>,
+        timeout_seconds: i32,
+    ) -> binder::Result<Strong<dyn ICompilationTask>> {
+        if !aconfig_compos_flags_rust::verified_dex2oat() {
+            return Err(Status::new_exception(ExceptionCode::UNSUPPORTED_OPERATION, None));
+        }
+        to_binder_result(self.do_start_verified_dex2oat(
+            dex2oat_args,
+            signed_manifest_fd,
+            results_callback,
+            timeout_seconds,
+        ))
+    }
 }
 
 impl IsolatedCompilationService {
@@ -85,7 +112,7 @@ impl IsolatedCompilationService {
         let comp_os = self
             .instance_manager
             .start_current_instance(CompOsType::OdRefresh, base_os)
-            .context("Starting CompOS")?;
+            .context("Starting CompOS for staged APEXes")?;
 
         let target_dir_name = PENDING_ARTIFACTS_SUBDIR.to_owned();
         let task = OdrefreshTask::start(
@@ -107,7 +134,7 @@ impl IsolatedCompilationService {
         let comp_os = self
             .instance_manager
             .start_test_instance(CompOsType::OdRefresh, prefer_staged, base_os)
-            .context("Starting CompOS")?;
+            .context("Starting CompOS for test compile")?;
 
         let target_dir_name = TEST_ARTIFACTS_SUBDIR.to_owned();
         let task = OdrefreshTask::start(
@@ -118,6 +145,17 @@ impl IsolatedCompilationService {
         )?;
 
         Ok(BnCompilationTask::new_binder(task, BinderFeatures::default()))
+    }
+
+    #[allow(unused_variables)]
+    fn do_start_verified_dex2oat(
+        &self,
+        dex2oat_args: &[Dex2OatArg],
+        signed_manifest_fd: &ParcelFileDescriptor,
+        callback: &Strong<dyn IDex2OatTaskCallback>,
+        timeout_seconds: i32,
+    ) -> Result<Strong<dyn ICompilationTask>> {
+        todo!("b415850856 : Not implemented");
     }
 }
 

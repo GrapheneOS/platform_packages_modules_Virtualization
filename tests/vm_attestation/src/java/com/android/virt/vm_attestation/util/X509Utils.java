@@ -33,6 +33,8 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -75,12 +77,18 @@ public class X509Utils {
      * extension should be found in the leaf certificate.
      */
     public static void verifyAvfRelatedCerts(
-            X509Certificate[] certChain, byte[] challenge, String payloadApk) throws Exception {
+            X509Certificate[] certChain,
+            byte[] challenge,
+            String payloadApk,
+            String[] tenants,
+            boolean isAdvMultiTenancyEnabled)
+            throws Exception {
         assertThat(certChain.length).isGreaterThan(2);
         assertWithMessage("The first certificate should be generated in the RKP VM")
                 .that(certChain[0].getSubjectX500Principal().getName())
                 .isEqualTo("CN=Android Protected Virtual Machine Key");
-        verifyAvfAttestationExtension(certChain[0], challenge, payloadApk);
+        verifyAvfAttestationExtension(
+                certChain[0], challenge, payloadApk, tenants, isAdvMultiTenancyEnabled);
 
         assertWithMessage("The second certificate should contain AVF in the subject")
                 .that(certChain[1].getSubjectX500Principal().getName())
@@ -88,16 +96,22 @@ public class X509Utils {
     }
 
     private static void verifyAvfAttestationExtension(
-            X509Certificate cert, byte[] challenge, String payloadApk) throws Exception {
+            X509Certificate cert,
+            byte[] challenge,
+            String payloadApk,
+            String[] expectedTenants,
+            boolean isAdvMultiTenancyEnabled)
+            throws Exception {
         byte[] extensionValue = cert.getExtensionValue(AVF_ATTESTATION_EXTENSION_OID);
         ASN1OctetString extString = ASN1OctetString.getInstance(extensionValue);
         ASN1Sequence seq = ASN1Sequence.getInstance(extString.getOctets());
-        // AVF attestation extension should contain 3 elements in the following format:
+        // AVF attestation extension should contain 4 elements in the following format:
         //
         //  AttestationExtension ::= SEQUENCE {
         //     attestationChallenge       OCTET_STRING,
         //     isVmSecure                 BOOLEAN,
-        //     vmComponents               SEQUENCE OF VmComponent,
+        //     vmPayloadComponents        SEQUENCE OF VmComponent,
+        //     vmTenantComponents         SEQUENCE OF VmComponent,
         //  }
         //   VmComponent ::= SEQUENCE {
         //     name               UTF8String,
@@ -105,7 +119,7 @@ public class X509Utils {
         //     codeHash           OCTET STRING,
         //     authorityHash      OCTET STRING,
         //  }
-        assertThat(seq).hasSize(3);
+        assertThat(seq).hasSize(isAdvMultiTenancyEnabled ? 4 : 3);
 
         ASN1OctetString expectedChallenge = new DEROctetString(challenge);
         assertThat(seq.getObjectAt(0)).isEqualTo(expectedChallenge);
@@ -114,6 +128,17 @@ public class X509Utils {
                 .isEqualTo(ASN1Boolean.FALSE);
         ASN1Sequence vmComponents = ASN1Sequence.getInstance(seq.getObjectAt(2));
         assertExtensionContainsPayloadApk(vmComponents, payloadApk);
+
+        if (isAdvMultiTenancyEnabled) {
+            ASN1Sequence vmTenantComponents = ASN1Sequence.getInstance(seq.getObjectAt(3));
+            List<String> actualTenants = getTenantNames(vmTenantComponents);
+            List<String> expectedTenantsList = new ArrayList<>(Arrays.asList(expectedTenants));
+            Collections.sort(actualTenants);
+            Collections.sort(expectedTenantsList);
+            assertWithMessage("vmTenantComponents should contain the correct tenant APKs.")
+                    .that(actualTenants)
+                    .isEqualTo(expectedTenantsList);
+        }
     }
 
     private static void assertExtensionContainsPayloadApk(
@@ -129,6 +154,17 @@ public class X509Utils {
             }
         }
         assertWithMessage("vmComponents should contain the payload APK.").that(found).isTrue();
+    }
+
+    private static List<String> getTenantNames(ASN1Sequence vmTenantComponents) {
+        List<String> tenantNames = new ArrayList<>();
+        for (ASN1Encodable encodable : vmTenantComponents) {
+            ASN1Sequence vmTenantComponent = ASN1Sequence.getInstance(encodable);
+            assertThat(vmTenantComponent).hasSize(4);
+            DERUTF8String tenantName = (DERUTF8String) vmTenantComponent.getObjectAt(0);
+            tenantNames.add(tenantName.getString());
+        }
+        return tenantNames;
     }
 
     /** Verifies the given signature using the public key from the given certificate. */

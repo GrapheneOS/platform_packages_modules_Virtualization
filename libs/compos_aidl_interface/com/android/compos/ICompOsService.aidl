@@ -16,7 +16,7 @@
 
 package com.android.compos;
 
-/** {@hide} */
+/** @hide */
 @SuppressWarnings(value={"mixed-oneway"})
 interface ICompOsService {
     /**

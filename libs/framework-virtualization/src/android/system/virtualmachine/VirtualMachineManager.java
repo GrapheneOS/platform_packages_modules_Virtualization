@@ -81,6 +81,22 @@ public class VirtualMachineManager {
     @GuardedBy("sCreateLock")
     private final Map<String, WeakReference<VirtualMachine>> mVmsByName = new ArrayMap<>();
 
+    // TODO(b/442597104): Remove this API once the cache is gone.
+    /**
+     * Clear internal cache of `VirtualMachine`s.
+     *
+     * <p>The cache makes it difficult to test some cases without a device restart or careful GC
+     * manipulation.
+     *
+     * @hide
+     */
+    @TestApi
+    public void testOnlyClearCache() {
+        synchronized (sCreateLock) {
+            mVmsByName.clear();
+        }
+    }
+
     /**
      * Capabilities of the virtual machine implementation.
      *
@@ -220,7 +236,8 @@ public class VirtualMachineManager {
         VirtualMachine vm = getVmByName(name);
         if (vm != null) {
             throw new VirtualMachineException(
-                    "Failed to create VirtualMachine with name " + name + ". Already exist");
+                    "Failed to create VirtualMachine with name " + name + ". Already exist",
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS);
         }
         vm = VirtualMachine.create(mContext, name, config);
         mVmsByName.put(name, new WeakReference<>(vm));
@@ -288,7 +305,8 @@ public class VirtualMachineManager {
             vm = getVmByName(name);
             if (vm != null) {
                 throw new VirtualMachineException(
-                        "Failed to import VirtualMachine with name " + name + ". Already exist");
+                        "Failed to import VirtualMachine with name " + name + ". Already exist",
+                        VirtualMachineException.CODE_NAME_ALREADY_EXISTS);
             }
             vm = VirtualMachine.fromDescriptor(mContext, name, vmDescriptor);
             mVmsByName.put(name, new WeakReference<>(vm));

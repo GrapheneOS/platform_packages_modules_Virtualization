@@ -14,10 +14,8 @@
 
 //! Page table management.
 
-use crate::arch::x86_64::paging::{Descriptor, MapError, MemoryRegion};
-use core::result;
-
-type Result<T> = result::Result<T, MapError>;
+use crate::mmu::{MmuOps, MmuResult};
+use core::ops::Range;
 
 /// High-level API for managing MMU mappings.
 #[derive(Default)]
@@ -29,67 +27,48 @@ impl Drop for PageTable {
     }
 }
 
-impl PageTable {
-    /// Activates the page table.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure that the PageTable instance has valid and identical mappings for the
-    /// code being currently executed. Otherwise, the Rust execution model (on which the borrow
-    /// checker relies) would be violated.
-    pub unsafe fn activate(&mut self) {}
+impl MmuOps for PageTable {
+    unsafe fn activate(&mut self) {}
 
-    /// Maps the given range of virtual addresses to the physical addresses as lazily mapped
-    /// nGnRE device memory.
-    pub fn map_device_lazy(&mut self, _range: &MemoryRegion) -> Result<()> {
+    fn mark_as_lazy_device(&mut self, _range: &Range<usize>) -> MmuResult<()> {
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as valid device
-    /// nGnRE device memory.
-    pub fn map_device(&mut self, _range: &MemoryRegion) -> Result<()> {
+    fn map_device(&mut self, _range: &Range<usize>) -> MmuResult<()> {
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable
-    /// and writable normal memory.
-    pub fn map_data(&mut self, _range: &MemoryRegion) -> Result<()> {
+    fn map_device_expect_lazy(&mut self, _range: &Range<usize>) -> MmuResult<()> {
+        // TODO(b/362733888): Provide the implementation for x86_64
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable,
-    /// read-only and writable-clean normal memory.
-    pub fn map_data_dbm(&mut self, _range: &MemoryRegion) -> Result<()> {
+    fn map_data(&mut self, _range: &Range<usize>) -> MmuResult<()> {
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as read-only
-    /// normal memory.
-    pub fn map_code(&mut self, _range: &MemoryRegion) -> Result<()> {
+    fn map_data_track_dirty_state(&mut self, _range: &Range<usize>) -> MmuResult<()> {
         Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable
-    /// and read-only normal memory.
-    pub fn map_rodata(&mut self, _range: &MemoryRegion) -> Result<()> {
+    fn map_code(&mut self, _range: &Range<usize>) -> MmuResult<()> {
         Ok(())
     }
 
-    /// Applies the provided updater function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn modify_range<F>(&mut self, _range: &MemoryRegion, _f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &mut Descriptor, usize) -> result::Result<(), ()>,
-    {
+    fn map_rodata(&mut self, _range: &Range<usize>) -> MmuResult<()> {
         Ok(())
     }
 
-    /// Applies the provided callback function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn walk_range<F>(&self, _range: &MemoryRegion, _f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &Descriptor, usize) -> result::Result<(), ()>,
-    {
+    fn mark_data_dirty(&mut self, _range: &Range<usize>) -> MmuResult<()> {
+        Ok(())
+    }
+
+    fn sync_dirty_state(&mut self) -> MmuResult<()> {
+        Ok(())
+    }
+
+    fn flush_dirty_pages(&mut self, _range: &Range<usize>) -> MmuResult<()> {
+        // TODO(b/362733888): Provide the implementation for x86_64
         Ok(())
     }
 }

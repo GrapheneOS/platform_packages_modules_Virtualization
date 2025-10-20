@@ -5,19 +5,17 @@ package {
 rust_defaults {
     name: "composd_defaults",
     edition: "2021",
-    prefer_rlib: true,
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/composd_main.rs"],
     rustlibs: [
         "android.system.composd-rust",
         "android.system.virtualizationservice-rust",
         "compos_aidl_interface-rust",
+        "libaconfig_compos_flags_rust",
         "libandroid_logger",
         "libanyhow",
         "libbinder_rs",
-        "libcompos_common",
         "libcomposd_native_rust",
-        "libfsverity_rs",
         "libminijail_rust",
         "libnix",
         "liblibc",
@@ -33,8 +31,13 @@ rust_defaults {
 rust_binary {
     name: "composd",
     defaults: ["composd_defaults"],
+    prefer_rlib: true,
     apex_available: [
         "com.android.compos",
+    ],
+    rustlibs: [
+        "libcompos_wrappers",
+        "libcompos_common",
     ],
 }
 
@@ -43,8 +46,16 @@ rust_test {
     defaults: ["composd_defaults"],
     test_suites: ["general-tests"],
     auto_gen_config: true,
+    test_options: {
+        unit_test: true,
+    },
     rustlibs: [
+        "libnix",
+        "libonce_cell",
         "libmockall",
         "libtempfile",
+        "libcompos_wrappers_with_mocks",
+        "libcompos_common_with_mocks",
     ],
+    flags: ["-A dead_code"],
 }

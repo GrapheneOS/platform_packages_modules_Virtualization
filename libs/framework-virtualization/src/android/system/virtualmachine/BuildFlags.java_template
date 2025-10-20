@@ -33,6 +33,11 @@ public final class BuildFlags {
      */
     public static boolean SUPPORT_LONG_RUNNING_VMS_ENABLED = @support_long_running_vms_placeholder;
 
+    /**
+     * Value of the {@code RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY} build flag.
+     */
+    public static boolean SUPPORT_AVF_ADVANCE_MULTITENANCY = @support_advance_multitenancy;
+
     private BuildFlags() {};
 }
 

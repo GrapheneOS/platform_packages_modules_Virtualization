@@ -36,7 +36,7 @@ use nix::{
 use psi_rs::{init_psi_monitor, parse_psi_line, register_psi_monitor, PsiResource, PsiStallType};
 use regex::{Captures, Regex};
 use rpcbinder::RpcServer;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
 use semver::{Version, VersionReq};
 use shared_child::SharedChild;
 use std::borrow::Cow;
@@ -193,7 +193,7 @@ impl CrosvmCommand {
         command.add_kernel_arg(context)?;
         command.add_cpu_arg(context)?;
         #[cfg(target_arch = "aarch64")]
-        command.add_aarch64_specific_args();
+        command.add_aarch64_specific_args(context);
         command.add_memory_arg(context);
         command.add_balloon_arg(context);
         command.add_console_arg(context)?;
@@ -337,6 +337,14 @@ impl CrosvmCommand {
             self.args(["--params", params]);
         }
 
+        if !config.name.is_empty() {
+            if !is_valid_vm_name(&config.name) {
+                bail!("Invalid VM name \"{}\"", config.name);
+            }
+            let hostname_param = format!("hostname={}", config.name);
+            self.args(["--params", &hostname_param]);
+        }
+
         if let Some(initrd) = &config.initrd {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
@@ -416,7 +424,7 @@ impl CrosvmCommand {
     }
 
     #[cfg(target_arch = "aarch64")]
-    fn add_aarch64_specific_args(&mut self) {
+    fn add_aarch64_specific_args(&mut self, context: &RunContext) {
         // Move the PCI MMIO regions to near the end of the low-MMIO space.
         // This is done to accommodate a limitation in a partner's hypervisor.
         self.args([
@@ -424,6 +432,13 @@ impl CrosvmCommand {
             "mem=[start=0x2c000000,size=0x2000000],cam=[start=0x2e000000,size=0x1000000]",
         ]);
         self.arg("--no-pmu");
+
+        // Allow GIC ITS by default for unprotected VMs.
+        // TODO: Support protected VMs. It will require an opt-in for non-Microdroid pVMs because
+        // guests are likely to probe for and automatically use it even if they are missing the
+        // necessary driver changes to share the ITS tables with the host, resulting in failure.
+        let allow_vgic_its = !context.config.protectedVm;
+        self.arg(format!("--irqchip=kernel[allow-vgic-its={allow_vgic_its}]"));
     }
 
     fn add_memory_arg(&mut self, context: &RunContext) {
@@ -1387,8 +1402,8 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
 pub struct VmInstance {
     /// The current state of the VM.
     pub vm_state: Mutex<VmState>,
-    /// Condvar that is notified when `vm_state` becomes `Dead`.
-    vm_dead_convar: Condvar,
+    /// Condvar that is notified when `vm_state` changes.
+    vm_state_changed_condvar: Condvar,
     /// Whether this VmInstance requires VirtualMachineService
     pub requires_vm_service: bool,
     /// Hold the reference to RpcServer running VirtualMachineService
@@ -1469,7 +1484,7 @@ impl VmInstance {
             .map_or_else(|| format!("{requester_uid}"), |u| u.name);
         let instance = VmInstance {
             vm_state: Mutex::new(VmState::NotStarted { config: Box::new(config) }),
-            vm_dead_convar: Condvar::new(),
+            vm_state_changed_condvar: Condvar::new(),
             requires_vm_service,
             vm_service: Mutex::new(None),
             cid,
@@ -1597,7 +1612,7 @@ impl VmInstance {
         let failure_reason = cleaner_context.failure_reason.lock().unwrap();
 
         *self.vm_state.lock().unwrap() = VmState::Dead;
-        self.vm_dead_convar.notify_all();
+        self.vm_state_changed_condvar.notify_all();
 
         info!("{} exited", &self);
 
@@ -1763,7 +1778,7 @@ impl VmInstance {
                 // or killed, the state is set to Dead. See monitor_vm_exit_thread.
                 let shutdown_timeout = Duration::from_secs(5);
                 let result = self
-                    .vm_dead_convar
+                    .vm_state_changed_condvar
                     .wait_timeout_while(self.vm_state.lock().unwrap(), shutdown_timeout, |state| {
                         matches!(state, VmState::ShuttingDown { .. })
                     })
@@ -1938,6 +1953,13 @@ impl VmInstance {
             bail!("Failed to resume VM");
         }
         Ok(())
+    }
+
+    /// Sets the guest agent for this VM.
+    pub fn set_guest_agent(&self, guest_agent: &Strong<dyn aidl::IGuestAgent>) {
+        *self.guest_agent.lock().unwrap() = Some(guest_agent.clone());
+        self.vm_state_changed_condvar.notify_all();
+        info!("VM with CID {} has registered a guest agent", self.cid);
     }
 }
 
@@ -2249,6 +2271,12 @@ fn path_to_cstring(path: &Path) -> CString {
     panic!("bad path: {path:?}");
 }
 
+// This is a duplicate of the check done by pvmfw.
+// We do it in virtmgr just to fail fast without even trying to boot a VM with invalid name.
+fn is_valid_vm_name(name: &str) -> bool {
+    name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 struct SwiotlbEstimateInputs {
     guest_page_size: u32,
     block_count: u32,
@@ -2355,5 +2383,12 @@ mod tests {
             }),
             10
         );
+    }
+
+    #[test]
+    fn test_is_valid_vm_name() {
+        assert!(is_valid_vm_name("val_id-na42me"));
+        assert!(!is_valid_vm_name("\\invalid_%name%"));
+        assert!(!is_valid_vm_name("a_🐸_in_vm_name"));
     }
 }

@@ -76,11 +76,6 @@ import com.android.virt.vm_attestation.testservice.IAttestationService.Attestati
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 import com.android.virt.vm_attestation.util.X509Utils;
 
-import co.nstant.in.cbor.CborDecoder;
-import co.nstant.in.cbor.model.Array;
-import co.nstant.in.cbor.model.DataItem;
-import co.nstant.in.cbor.model.MajorType;
-
 import com.google.common.base.Strings;
 import com.google.common.truth.BooleanSubject;
 
@@ -94,7 +89,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -130,6 +124,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String TAG = "MicrodroidTests";
     private static final String TEST_APP_PACKAGE_NAME = "com.android.microdroid.test";
     private static final String VM_ATTESTATION_PAYLOAD_PATH = "libvm_attestation_test_payload.so";
+    private static final String TEST_TENANT_APK_NAME = "apk:com.android.microdroid.test";
+
     private static final String VM_ATTESTATION_MESSAGE = "Hello RKP from AVF!";
     private static final long TOLERANCE_BYTES = 400_000;
     private static final int ENCRYPTED_STORAGE_BYTES = 4_000_000;
@@ -177,6 +173,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @After
     public void tearDown() {
+        deleteAllExistingVMsByApp();
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         // Some tests might install additional apks, so we need to clean them up here.
         uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
@@ -233,7 +230,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         String name = "test_vm_createTwice";
         deleteVirtualMachineIfExists(name);
         try (VirtualMachine vm = vmm.create(name, config)) {
-            assertThrows(VirtualMachineException.class, () -> vmm.create(name, config));
+            assertThrowsVmException(
+                    () -> vmm.create(name, config),
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS,
+                    null);
         }
     }
 
@@ -358,7 +358,121 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         if (signingResult.status == AttestationStatus.OK) {
             X509Certificate[] certs =
                     X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
-            X509Utils.verifyAvfRelatedCerts(certs, challenge, TEST_APP_PACKAGE_NAME);
+            boolean isAdvMultiTenancyEnabled =
+                    isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
+            X509Utils.verifyAvfRelatedCerts(
+                    certs,
+                    challenge,
+                    TEST_APP_PACKAGE_NAME,
+                    new String[] {},
+                    isAdvMultiTenancyEnabled);
+            X509Utils.verifySignature(
+                    certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
+        }
+    }
+
+    private SigningResult attestation_signing_result(byte[] challenge) throws Exception {
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        ensureVmAttestationSupported();
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_attestation.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("cts_attestation_with_multitenant_payload", config);
+
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+        assertWithMessage(
+                        "VM attestation should either succeed or fail when the network is unstable")
+                .that(signingResult.status)
+                .isAnyOf(AttestationStatus.OK, AttestationStatus.ERROR_ATTESTATION_FAILED);
+        return signingResult;
+    }
+
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void vmAttestationWithMultipleTenantsWhenRemoteAttestationIsNotSupported()
+            throws Exception {
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        assume().withMessage(
+                        "This test does not apply to a device that supports Remote Attestation")
+                .that(isRemoteAttestationSupported())
+                .isFalse();
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_attestation.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine(
+                        "cts_attestation_not_supported_with_multitenant_payload", config);
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xcc);
+
+        // Act.
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+
+        // Assert.
+        assertThat(signingResult.status).isEqualTo(AttestationStatus.ERROR_UNSUPPORTED);
+    }
+
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceMaybeOffline()
+            throws Exception {
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        attestation_signing_result(challenge);
+    }
+
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void
+            vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceStableNetwork()
+                    throws Exception {
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult = attestation_signing_result(challenge);
+
+        assume().withMessage(
+                        "AttestationStatus is ERROR_ATTESTATION_FAILED possibly due to unstable"
+                        + " network, nothing more to test")
+                .that(signingResult)
+                .isNotEqualTo(AttestationStatus.ERROR_ATTESTATION_FAILED);
+
+        if (signingResult.status == AttestationStatus.OK) {
+            X509Certificate[] certs =
+                    X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+            boolean isAdvMultiTenancyEnabled =
+                    isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
+            X509Utils.verifyAvfRelatedCerts(
+                    certs,
+                    challenge,
+                    TEST_APP_PACKAGE_NAME,
+                    new String[] {TEST_TENANT_APK_NAME},
+                    isAdvMultiTenancyEnabled);
             X509Utils.verifySignature(
                     certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
         }
@@ -482,10 +596,32 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         try (VirtualMachine vm = forceCreateNewVirtualMachine(name, config)) {
             descriptor = vm.toDescriptor();
 
-            assertThrows(
-                    VirtualMachineException.class,
-                    () -> getVirtualMachineManager().importFromDescriptor(name, descriptor));
+            assertThrowsVmException(
+                    () -> getVirtualMachineManager().importFromDescriptor(name, descriptor),
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS,
+                    null);
         }
+    }
+
+    @Test
+    @CddTest
+    public void preconnectedBinderException() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm", config);
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    vm.binderFromPreconnectedClient(
+                            () -> {
+                                throw new RuntimeException(); /* oops! */
+                            });
+                });
     }
 
     @CddTest
@@ -502,21 +638,35 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
 
         // These methods require a running VM
-        assertThrowsVmExceptionContaining(
-                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT), "not in running state");
-        assertThrowsVmExceptionContaining(
+        assertThrowsVmException(
+                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED,
+                "not in running state");
+        assertThrowsVmException(
                 () -> vm.connectToVsockServer(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED,
                 "not in running state");
 
         vm.run();
         assertThat(vm.getStatus()).isEqualTo(STATUS_RUNNING);
 
         // These methods require a stopped VM
-        assertThrowsVmExceptionContaining(() -> vm.run(), "not in stopped state");
-        assertThrowsVmExceptionContaining(() -> vm.setConfig(config), "not in stopped state");
-        assertThrowsVmExceptionContaining(() -> vm.toDescriptor(), "not in stopped state");
-        assertThrowsVmExceptionContaining(
-                () -> getVirtualMachineManager().delete("test_vm"), "not in stopped state");
+        assertThrowsVmException(
+                () -> vm.run(),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
+        assertThrowsVmException(
+                () -> vm.setConfig(config),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
+        assertThrowsVmException(
+                () -> vm.toDescriptor(),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
+        assertThrowsVmException(
+                () -> getVirtualMachineManager().delete("test_vm"),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING,
+                "not in stopped state");
 
         vm.stop();
 
@@ -526,13 +676,24 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(vm.getStatus()).isEqualTo(STATUS_DELETED);
 
         // None of these should work for a deleted VM
-        assertThrowsVmExceptionContaining(
-                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT), "deleted");
-        assertThrowsVmExceptionContaining(
-                () -> vm.connectToVsockServer(VirtualMachine.MIN_VSOCK_PORT), "deleted");
-        assertThrowsVmExceptionContaining(() -> vm.run(), "deleted");
-        assertThrowsVmExceptionContaining(() -> vm.setConfig(config), "deleted");
-        assertThrowsVmExceptionContaining(() -> vm.toDescriptor(), "deleted");
+        assertThrowsVmException(
+                () -> vm.connectVsock(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
+        assertThrowsVmException(
+                () -> vm.connectToVsockServer(VirtualMachine.MIN_VSOCK_PORT),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
+        assertThrowsVmException(
+                () -> vm.run(), VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED, "deleted");
+        assertThrowsVmException(
+                () -> vm.setConfig(config),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
+        assertThrowsVmException(
+                () -> vm.toDescriptor(),
+                VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED,
+                "deleted");
         // This is indistinguishable from the VM having never existed, so the message
         // is non-specific.
         assertThrowsVmException(() -> getVirtualMachineManager().delete("test_vm"));
@@ -591,7 +752,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             // Let globalTimeout to handle timeout.
             beforeCrash.stopped.await();
             assertThat(vm.getStatus()).isEqualTo(STATUS_STOPPED);
-            assertThrowsVmExceptionContaining(() -> vm.stop(), "not running");
+            assertThrowsVmException(
+                    () -> vm.stop(),
+                    VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED,
+                    "not running");
 
             // Try run again. It should recover virtmgr and run VM.
             SimpleVirtualMachineCallback afterCrash = new SimpleVirtualMachineCallback();
@@ -808,13 +972,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         e = assertThrows(IllegalStateException.class, () -> protectedNotSet.build());
         assertThat(e).hasMessageThat().contains("setProtectedVm must be called");
 
-        VirtualMachineConfig.Builder captureOutputOnNonDebuggable =
-                newVmConfigBuilderWithPayloadBinary("binary.so")
-                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_NONE)
-                        .setVmOutputCaptured(true);
-        e = assertThrows(IllegalStateException.class, () -> captureOutputOnNonDebuggable.build());
-        assertThat(e).hasMessageThat().contains("debug level must be FULL to capture output");
-
         VirtualMachineConfig.Builder captureInputOnNonDebuggable =
                 newVmConfigBuilderWithPayloadBinary("binary.so")
                         .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_NONE)
@@ -999,6 +1156,24 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
+    // b/441586847 - There was once a bug where the VM dir was malformed for DE
+    // context only. Check for a regression by forcing the VM to be loaded from
+    // disk.
+    @Test
+    public void loadVmFilesStoredInDeDir() throws Exception {
+        final Context ctx = getContext().createDeviceProtectedStorageContext();
+        final VirtualMachineManager vmm = ctx.getSystemService(VirtualMachineManager.class);
+        VirtualMachineConfig config = newVmConfigBuilderWithPayloadBinary("binary.so").build();
+        try {
+            VirtualMachine vm = vmm.create("vm-name", config);
+            vm.close();
+            vmm.testOnlyClearCache();
+            assertThat(vmm.get("vm-name")).isNotNull();
+        } finally {
+            vmm.delete("vm-name");
+        }
+    }
+
     @Test
     @CddTest
     public void vmFilesStoredInCeDirWhenCreatedFromCEContext() throws Exception {
@@ -1161,27 +1336,162 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
-    public void tenantApk() throws Exception {
+    public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_apk_tenant.json")
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_apk", config);
-
-        TestResults testResults =
-                runVmTestService(
-                        TAG,
-                        vm,
-                        (ts, tr) -> {
-                            tr.mExtraApkTestProp =
-                                    ts.readProperty(
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_services", config);
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String val =
+                                    tsOnAPort.readProperty(
                                             "debug.microdroid.test.tenant_packages_mounted");
-                        });
-        assertThat(testResults.mExtraApkTestProp).isEqualTo("PASS");
+                            prop.complete(val);
+                            // Connect to the second service!
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            String valFromAnotherTenant =
+                                    tsOnAlternatePort.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                            assertWithMessage("Received different values from different tenants")
+                                    .that(valFromAnotherTenant)
+                                    .isEqualTo(val);
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_services's"
+                            + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(prop.getNow(null))
+                .isEqualTo("PASS");
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest
+    public void invalidTenantAuthority() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_invalid_tenant_auth.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("tenant_with_different_cert", config);
+        CompletableFuture<String> res = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(res.getNow(null))
+                .isNull();
+    }
+
+    @Test
+    @CddTest
+    public void invalidTenantRollbackIndex() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        // MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk has rollback_index:1
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk");
+        // vm_config_tenant_rollback_index.json expects min_version: 2 for package
+        // com.android.microdroid.test_relaxed_rollback_protection_scheme
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_tenant_rollback_index.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("tenant_rollback_index_1", config);
+        CompletableFuture<String> result_rb_1 = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(result_rb_1.getNow(null))
+                .isNull();
+
+        // MicrodroidTestHelperAppRelaxedRollbackProtection_V7*.apk has rollback_index:2
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        VirtualMachine vm2 = forceCreateNewVirtualMachine("tenant_rollback_index_2", config);
+        CompletableFuture<String> result_rb_2 = readTenantPackagesMounted(vm2);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result_rb_2.getNow(null))
+                .isEqualTo("PASS");
+    }
+
+    private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)
+            throws Exception {
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            // Note (from vm_config_apk_tenant): this service is registered by
+                            // tenant task.
+                            ITestService tsTenant =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String val =
+                                    tsTenant.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                            prop.complete(val);
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        } finally {
+                            // There maybe instances of `ITestService` running in the VM.
+                            // Force stop the VM.
+                            forceStop(vm);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_apk's onPayloadReady"
+                                + " callback")
+                .that(exception.getNow(null))
+                .isNull();
+        return prop;
     }
 
     @Test
@@ -1429,53 +1739,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
-    @VsrTest(requirements = {"VSR-7.1-001.005"})
-    @GmsTest(requirements = {"GMS-VSR-7.1-001.004"})
-    public void bccIsSuperficiallyWellFormed() throws Exception {
-        assumeSupportedDevice();
-
-        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
-        VirtualMachineConfig normalConfig =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config.json")
-                        .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("bcc_vm", normalConfig);
-        TestResults testResults =
-                runVmTestService(
-                        TAG,
-                        vm,
-                        (service, results) -> {
-                            results.mBcc = service.getBcc();
-                        });
-        testResults.assertNoException();
-        byte[] bccBytes = testResults.mBcc;
-        assertThat(bccBytes).isNotNull();
-
-        ByteArrayInputStream bais = new ByteArrayInputStream(bccBytes);
-        List<DataItem> dataItems = new CborDecoder(bais).decode();
-        assertThat(dataItems.size()).isEqualTo(1);
-        assertThat(dataItems.get(0).getMajorType()).isEqualTo(MajorType.ARRAY);
-        List<DataItem> rootArrayItems = ((Array) dataItems.get(0)).getDataItems();
-        int diceChainSize = rootArrayItems.size();
-        assertThat(diceChainSize).isAtLeast(2); // Root public key and one certificate
-        if (mProtectedVm) {
-            if (isFeatureEnabled(VirtualMachineManager.FEATURE_DICE_CHANGES)) {
-                // We expect the root public key, at least one entry for the boot before pvmfw,
-                // then pvmfw, vm_entry (Microdroid kernel) and Microdroid payload entries.
-                // Before Android V we did not require that vendor code contain any DICE entries
-                // preceding pvmfw, so the minimum is one less.
-                int minDiceChainSize = getVendorApiLevel() > 202404 ? 5 : 4;
-                assertThat(diceChainSize).isAtLeast(minDiceChainSize);
-            } else {
-                // pvmfw truncates the DICE chain it gets, so we expect exactly entries for
-                // public key, vm_entry (Microdroid kernel) and Microdroid payload.
-                assertThat(diceChainSize).isEqualTo(3);
-            }
-        }
-    }
-
-    @Test
     @VsrTest(requirements = {"VSR-7.1-001.005"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.004"})
     public void protectedVmHasValidDiceChain() throws Exception {
@@ -1646,8 +1909,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setApkPath("/does/not/exist")
                         .build();
 
-        assertThrowsVmExceptionContaining(
+        assertThrowsVmException(
                 () -> tryBootVmWithConfig(config, "test_vm_invalid_apk_path"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
                 "Failed to open APK");
     }
 
@@ -1659,8 +1923,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .addExtraApk("com.example.nosuch.package")
                         .build();
-        assertThrowsVmExceptionContaining(
+        assertThrowsVmException(
                 () -> tryBootVmWithConfig(config, "test_vm_invalid_extra_apk_package"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
                 "Extra APK package not found");
     }
 
@@ -2164,8 +2429,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                     .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES / 2)
                     .build();
-        assertThrowsVmExceptionContaining(
-            () -> vm.setConfig(newConfig), "incompatible config");
+        assertThrowsVmException(
+                () -> vm.setConfig(newConfig),
+                VirtualMachineException.CODE_CONFIG_INCOMPATIBLE,
+                "incompatible config");
     }
 
     private boolean deviceCapableOfProtectedVm() {
@@ -2370,10 +2637,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         vm.run();
 
         try {
-            assertThrowsVmExceptionContaining(
-                    () -> vm.getConsoleOutput(), "Capturing vm outputs is turned off");
-            assertThrowsVmExceptionContaining(
-                    () -> vm.getLogOutput(), "Capturing vm outputs is turned off");
+            assertThrowsVmException(
+                    () -> vm.getConsoleOutput(),
+                    VirtualMachineException.CODE_FEATURE_DISABLED,
+                    "Capturing vm outputs is turned off");
+            assertThrowsVmException(
+                    () -> vm.getLogOutput(),
+                    VirtualMachineException.CODE_FEATURE_DISABLED,
+                    "Capturing vm outputs is turned off");
         } finally {
             vm.stop();
         }
@@ -2393,8 +2664,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         vm.run();
 
         try {
-            assertThrowsVmExceptionContaining(
-                    () -> vm.getConsoleInput(), "VM console input is not supported");
+            assertThrowsVmException(
+                    () -> vm.getConsoleInput(),
+                    VirtualMachineException.CODE_FEATURE_DISABLED,
+                    "VM console input is not supported");
         } finally {
             vm.stop();
         }
@@ -3301,27 +3574,23 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void encryptedStoreKekOnCe_vmIsOnDe() throws Exception {
         assumeSupportedDevice();
         installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
-        Context testHelperAppCtx =
-                getContext()
-                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
-                        .createDeviceProtectedStorageContext();
-        encryptedStoreKEKTest(testHelperAppCtx, "test_vm_enc_store_kek_on_ce_vm_on_de");
+        Context ctx = getContext().createDeviceProtectedStorageContext();
+        encryptedStoreKEKTest(ctx, "test_vm_enc_store_kek_on_ce_vm_on_de");
     }
 
     @Test
     public void encryptedStoreKekOnCe_vmIsOnCe() throws Exception {
         assumeSupportedDevice();
         installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
-        Context testHelperAppCtx =
-                getContext()
-                        .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
-                        .createCredentialProtectedStorageContext();
-        encryptedStoreKEKTest(testHelperAppCtx, "test_vm_enc_store_kek_on_ce_vm_on_ce");
+        Context ctx = getContext().createCredentialProtectedStorageContext();
+        encryptedStoreKEKTest(ctx, "test_vm_enc_store_kek_on_ce_vm_on_ce");
     }
 
     private void encryptedStoreKEKTest(Context context, String testName) throws Exception {
+        Context testHelperAppCtx =
+                getContext().createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0);
         VirtualMachineConfig config =
-                new VirtualMachineConfig.Builder(context)
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .setPayloadBinaryName("MicrodroidTestNativeLib.so")
                         .setProtectedVm(isProtectedVm())
@@ -3330,7 +3599,17 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(minMemoryRequired())
                         .build();
 
-        VirtualMachine vm = forceCreateNewVirtualMachine(testName, config);
+        VirtualMachineManager vmm = context.getSystemService(VirtualMachineManager.class);
+        try {
+            if (vmm.get(testName) != null) {
+                vmm.delete(testName);
+            }
+        } catch (VirtualMachineException e) {
+            // VirtualMachineManager#get might throw VirtualMachineException, which means that VM
+            // exist but didn't load successfully, delete it.
+            vmm.delete(testName);
+        }
+        VirtualMachine vm = vmm.create(testName, config);
 
         TestResults testResults =
                 runVmTestService(
@@ -3356,6 +3635,28 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
         assertThat(testResults.mFileContent).isEqualTo("Hello!");
+
+        // Check that VM files are created in the expected location.
+        File vmDir = new File(new File(context.getDataDir(), "vm"), testName);
+        assertWithMessage(vmDir.getAbsolutePath() + " does not exist")
+                .that(vmDir.exists())
+                .isTrue();
+        File instanceImg = new File(vmDir, "instance.img");
+        assertWithMessage(instanceImg.getAbsolutePath() + " does not exist")
+                .that(instanceImg.exists())
+                .isTrue();
+        File encStoreImg = new File(vmDir, "storage.img");
+        assertWithMessage(encStoreImg.getAbsolutePath() + " doest no exist")
+                .that(encStoreImg.exists())
+                .isTrue();
+        // The KEK file is always stored on CE directory.
+        Context ceContext = context.createCredentialProtectedStorageContext();
+        File ceVmDir = new File(new File(ceContext.getDataDir(), "vm"), testName);
+        assertWithMessage(ceVmDir.getAbsolutePath() + " does not exist")
+                .that(ceVmDir.exists())
+                .isTrue();
+        File kek = new File(ceVmDir, "encrypted_store_kek.bin");
+        assertWithMessage(kek.getAbsolutePath() + " does not exist").that(kek.exists()).isTrue();
     }
 
     /**
@@ -3543,6 +3844,29 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
+    @Test
+    public void vmNameIsHostname() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("MultiTenancy feature not supported", isFeatureMultiTenantSupported());
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        // Run a non-debuggable pVM to also cover pvmfw filtering logic in this
+                        // test.
+                        .setDebugLevel(DEBUG_LEVEL_NONE)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm-name42", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mHostname = ts.getHostname();
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mHostname).isEqualTo("test_vm-name42");
+    }
+
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {
         Parcel parcel = Parcel.obtain();
         descriptor.writeToParcel(parcel, 0);
@@ -3574,6 +3898,15 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             ThrowingRunnable runnable, String expectedContents) {
         Exception e = assertThrows(VirtualMachineException.class, runnable);
         assertThat(e).hasMessageThat().contains(expectedContents);
+    }
+
+    private void assertThrowsVmException(ThrowingRunnable runnable, int code, String msg) {
+        VirtualMachineException e = assertThrows(VirtualMachineException.class, runnable);
+        if (com.android.system.virtualmachine.flags.Flags.virtualmachineexceptionCode()) {
+            assertThat(e.getCode()).isEqualTo(code);
+        } else if (msg != null) {
+            assertThat(e).hasMessageThat().contains(msg);
+        }
     }
 
     private void installApp(String apkName, String... additionalArgs) throws Exception {

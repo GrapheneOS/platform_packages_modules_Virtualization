@@ -52,15 +52,30 @@ fn try_main() -> Result<()> {
     let res = vm_payload::request_attestation(challenge).context("Unexpected attestation error")?;
 
     let cert_chain: Vec<_> = res.certificate_chain().collect();
-    info!("Attestation result certificateChain = {cert_chain:?}");
+    info!("Attestation result certificateChain: ");
+    for cert in &cert_chain {
+        let cert_hex = to_hex(cert);
+        info!("Certificate: {cert_hex:?}");
+    }
 
     let private_key = res.private_key();
-    info!("Attestation result privateKey = {private_key:?}");
+    let key_hex = to_hex(&private_key);
+    info!("Attestation result privateKey = {key_hex:?}");
 
     let message = b"Hello from Service VM client";
-    info!("Signing message: {message:?}");
+    let mess_str = String::from_utf8(message.to_vec()).expect("valid UTF-8");
+    info!("Signing message: {mess_str:?}");
     let signature = res.sign_message(message);
-    info!("Signature: {signature:?}");
+    let sign_hex = to_hex(&signature);
+    info!("Signature: {sign_hex:?}");
 
     Ok(())
+}
+
+fn to_hex(blob: &[u8]) -> String {
+    let mut hex_str = String::with_capacity(blob.len() * 2);
+    for b in blob {
+        hex_str.push_str(&format!("{:02X?}", b));
+    }
+    hex_str
 }

@@ -66,6 +66,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -332,7 +333,10 @@ public final class VirtualMachineConfig {
         } catch (IOException e) {
             // Please don't change this error message unless b/437160991 is fixed. Clients depend on
             // this error message as a temporary fix for b/433697078.
-            throw new VirtualMachineException("Failed to read VM config from file", e);
+            throw new VirtualMachineException(
+                    "Failed to read VM config from file",
+                    e,
+                    VirtualMachineException.CODE_CONFIG_FILE_CORRUPTED);
         }
     }
 
@@ -343,7 +347,10 @@ public final class VirtualMachineConfig {
         try (AutoCloseInputStream input = new AutoCloseInputStream(fd)) {
             return fromInputStream(input);
         } catch (IOException e) {
-            throw new VirtualMachineException("failed to read VM config from file descriptor", e);
+            throw new VirtualMachineException(
+                    "failed to read VM config from file descriptor",
+                    e,
+                    VirtualMachineException.CODE_CONFIG_FILE_CORRUPTED);
         }
     }
 
@@ -357,7 +364,10 @@ public final class VirtualMachineConfig {
         } catch (NullPointerException | IllegalArgumentException | IllegalStateException e) {
             // Please don't change this error message unless b/437160991 is fixed. Clients depend on
             // this error message as a temporary fix for b/433697078.
-            throw new VirtualMachineException("Persisted VM config is invalid", e);
+            throw new VirtualMachineException(
+                    "Persisted VM config is invalid",
+                    e,
+                    VirtualMachineException.CODE_CONFIG_FILE_CORRUPTED);
         }
     }
 
@@ -436,10 +446,23 @@ public final class VirtualMachineConfig {
 
     /** Persists this config to a file. */
     void serialize(@NonNull File file) throws VirtualMachineException {
-        try (FileOutputStream output = new FileOutputStream(file)) {
+        // To prevent serialization failure from leaving the config file in an invalid state,
+        // serialize it to a temp file, and then rename it to the requrested file when the
+        // serialization is done successfully.
+        File tempFile = null;
+        try {
+            // Must be in the same filesystem as the target path, otherwise the move will fail.
+            tempFile = File.createTempFile("vm_config", null, file.getParentFile());
+        } catch (IOException e) {
+            throw new VirtualMachineException("failed to create temporary VM config file", e);
+        }
+        try (FileOutputStream output = new FileOutputStream(tempFile)) {
             serializeOutputStream(output);
+            Files.move(tempFile.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             throw new VirtualMachineException("failed to write VM config", e);
+        } finally {
+            tempFile.delete();
         }
     }
 
@@ -920,7 +943,8 @@ public final class VirtualMachineConfig {
         try {
             vsConfig.apk = ParcelFileDescriptor.open(new File(apkPath), MODE_READ_ONLY);
         } catch (FileNotFoundException e) {
-            throw new VirtualMachineException("Failed to open APK", e);
+            throw new VirtualMachineException(
+                    "Failed to open APK", e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
         if (mPayloadBinaryName != null) {
             VirtualMachinePayloadConfig payloadConfig = new VirtualMachinePayloadConfig();
@@ -964,7 +988,8 @@ public final class VirtualMachineConfig {
             } catch (FileNotFoundException e) {
                 throw new VirtualMachineException(
                         "Failed to open vendor disk image " + mVendorDiskImage.getAbsolutePath(),
-                        e);
+                        e,
+                        VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
             }
             vsConfig.customConfig = customConfig;
         }
@@ -989,7 +1014,8 @@ public final class VirtualMachineConfig {
                     packageManager.getApplicationInfo(
                             mPackageName, PackageManager.ApplicationInfoFlags.of(0));
         } catch (PackageManager.NameNotFoundException e) {
-            throw new VirtualMachineException("Package not found", e);
+            throw new VirtualMachineException(
+                    "Package not found", e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
 
         String[] splitApkPaths = appInfo.splitSourceDirs;
@@ -1128,7 +1154,7 @@ public final class VirtualMachineConfig {
             }
 
             if (mVmOutputCaptured && mDebugLevel != DEBUG_LEVEL_FULL) {
-                throw new IllegalStateException("debug level must be FULL to capture output");
+                Log.w(TAG, "debug level must be FULL to capture output unless debug policy is set");
             }
 
             if (mVmConsoleInputSupported && mDebugLevel != DEBUG_LEVEL_FULL) {

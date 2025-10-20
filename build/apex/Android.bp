@@ -55,7 +55,10 @@ apex_defaults {
     jni_libs: [
         "libvirtualizationservice_jni",
         "libvirtualmachine_jni",
-    ],
+    ] + select(release_flag("RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY"), {
+        true: ["MicrodroidExitNativeLib"],
+        default: [],
+    }),
     native_shared_libs: ["libavf"],
     // TODO(b/295593640) Unfortunately these are added to the apex even though they are unused.
     // Once the build system is fixed, remove this.

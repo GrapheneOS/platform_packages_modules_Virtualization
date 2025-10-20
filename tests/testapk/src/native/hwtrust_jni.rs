@@ -65,6 +65,11 @@ fn validate_dice_chain(
             ..Default::default()
         },
     };
-    let _chain = dice::Chain::from_cbor(&session, &dice_chain)?;
+    let chain = dice::Chain::from_cbor(&session, &dice_chain)?;
+    assert!(
+        chain.payloads().len() >= 3,
+        "VM DICE chain requires at least 3 payloads (pvmfw, kernel, payload); found {}",
+        chain.payloads().len()
+    );
     Ok(())
 }

@@ -1,11 +1,13 @@
 // When adding or removing tests here, don't forget to amend _all_modules list in
 // wireless/android/busytown/ath_config/configs/prod/avf/tests.gcl
 {
-  // Tests would be run by treehugger to validate pending CLs on AVF repo. These
-  // would run on limited target on git_main, and possibly with filtering.
-  // This MUST be finished within 30min, so keep this as simple as possible.
-  // Do not extend this test group outside of the Virtualization repo. It may
-  // introduce unexpected test growth, so tests maybe demoted to postsubmit.
+  // Tests would be run by treehugger to validate pending CLs on AVF repo.
+  // IMPORTANT NOTE: Prefer not adding new test here. avf-presubmit MUST finish
+  // within 30min, and pass rate should be 75% or above. Otherwise it would be
+  // demoted and we'll lose presubmit. (see: go/treehugger-slo-guide)
+  // We're already close to the limit, so please avoid adding new tests here.
+  // Instead, add your test case to existing test instead or consult with one of
+  // TEST_MAPPING file owners.
   "avf-presubmit": [
     {
       "name": "MicrodroidHostTestCases"
@@ -16,6 +18,7 @@
     {
       "name": "MicrodroidTestApp"
     },
+    // Promoted to ensure AVF well with trunk stable
     {
       "name": "avf_backcompat_tests"
     }
@@ -48,6 +51,9 @@
     },
     {
       "name": "art_standalone_dexpreopt_tests"
+    },
+    {
+      "name": "composd_test"
     },
     {
       "name": "composd_cmd.test"
@@ -97,6 +103,11 @@
     },
     {
       "name": "ComposBenchmarkApp"
+    }
+  ],
+  "presubmit": [
+    {
+      "name": "CtsAppSearchTestCases"
     }
   ],
   "postsubmit": [

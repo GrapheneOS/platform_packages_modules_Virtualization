@@ -7,7 +7,7 @@ rust_ffi_static {
     crate_name: "service_vm",
     srcs: ["src/main.rs"],
     defaults: ["vmbase_ffi_defaults"],
-    rustlibs: [
+    no_std_rlibs: [
         "libbssl_avf_nostd",
         "libciborium_io_nostd",
         "libciborium_nostd",
@@ -27,17 +27,10 @@ rust_ffi_static {
 cc_binary {
     name: "service_vm_elf",
     stem: "service_vm",
-    defaults: ["vmbase_elf_defaults"],
-    srcs: [
-        "idmap.S",
-    ],
+    defaults: ["vmbase_elf_0x80000000_defaults"],
     static_libs: [
         "libservice_vm",
         "libvmbase_dice_clear_memory",
-    ],
-    linker_scripts: [
-        "image.ld",
-        ":vmbase_sections",
     ],
 }
 

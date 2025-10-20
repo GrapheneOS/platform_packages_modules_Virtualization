@@ -23,7 +23,7 @@ package com.android.virt.fs;
  * When a binder error is returned and it is a service specific error, the error code is an errno
  * value which is an int.
  *
- * {@hide}
+ * @hide
  */
 interface IVirtFdService {
     /** Maximum content size that the service allows the client to request. */

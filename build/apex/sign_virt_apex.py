@@ -246,6 +246,10 @@ def check_resigned_image_avb_info(image_path, original_info, original_descriptor
             f" {check_resigned_image_avb_info.new_public_key}, actual public key (sha1): " \
             f"{updated_public_key}, Path: {image_path}"
     original_info.pop("Public key (sha1)")
+    if args.do_not_validate_avb_version:
+        original_info.pop("Release String")
+        updated_info.pop("Release String")
+
     assert original_info == updated_info, \
         f"Original info and updated info should be the same for {image_path}. " \
         f"Original info: {original_info}, updated info: {updated_info}"

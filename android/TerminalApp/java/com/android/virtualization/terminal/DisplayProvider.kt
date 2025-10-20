@@ -42,11 +42,13 @@ internal class DisplayProvider(
     private val width: Int,
     private val height: Int,
 ) {
-    private val virtService: IVirtualizationServiceInternal by lazy {
-        val b = ServiceManager.waitForService("android.system.virtualizationservice")
-        IVirtualizationServiceInternal.Stub.asInterface(b)
-    }
     private var cursorHandler: CursorHandler? = null
+    private val displayService: ICrosvmAndroidDisplayService by lazy {
+        val b = ServiceManager.waitForService("android.system.virtualizationservice")
+        val virtService = IVirtualizationServiceInternal.Stub.asInterface(b)
+        val b2 = virtService.waitDisplayService()
+        ICrosvmAndroidDisplayService.Stub.asInterface(b2)
+    }
 
     init {
         mainView.setSurfaceLifecycle(SurfaceView.SURFACE_LIFECYCLE_FOLLOWS_ATTACHMENT)
@@ -56,27 +58,6 @@ internal class DisplayProvider(
         cursorView.holder.setFormat(PixelFormat.RGBA_8888)
         // TODO: do we need this z-order?
         cursorView.setZOrderMediaOverlay(true)
-    }
-
-    fun notifyDisplayIsGoingToInvisible() {
-        // When the display is going to be invisible (by putting in the background), save the frame
-        // of the main surface so that we can re-draw it next time the display becomes visible. This
-        // is to save the duration of time where nothing is drawn by VM.
-        try {
-            getDisplayService().saveFrameForSurface(false /* forCursor */)
-        } catch (e: RemoteException) {
-            throw RuntimeException("Failed to save frame for the main surface", e)
-        }
-    }
-
-    @Synchronized
-    private fun getDisplayService(): ICrosvmAndroidDisplayService {
-        try {
-            val b = virtService.waitDisplayService()
-            return ICrosvmAndroidDisplayService.Stub.asInterface(b)
-        } catch (e: Exception) {
-            throw RuntimeException("Error while getting display service", e)
-        }
     }
 
     enum class SurfaceKind {
@@ -94,7 +75,7 @@ internal class DisplayProvider(
                 holder.setFixedSize(width, height)
             }
             try {
-                getDisplayService().setSurface(holder.getSurface(), isForCursor())
+                displayService.setSurface(holder.getSurface(), isForCursor())
             } catch (e: Exception) {
                 // TODO: don't consume this exception silently. For some unknown reason, setSurface
                 // call above throws IllegalArgumentException and that fails the surface
@@ -102,12 +83,9 @@ internal class DisplayProvider(
                 Log.e(TAG, "Failed to present surface $surfaceKind to VM", e)
             }
             try {
-                when (surfaceKind) {
-                    SurfaceKind.MAIN -> getDisplayService().drawSavedFrameForSurface(isForCursor())
-                    SurfaceKind.CURSOR -> {
-                        val stream = createNewCursorStream()
-                        getDisplayService().setCursorStream(stream)
-                    }
+                if (surfaceKind == SurfaceKind.CURSOR) {
+                    val stream = createNewCursorStream()
+                    displayService.setCursorStream(stream)
                 }
             } catch (e: Exception) {
                 // TODO: don't consume exceptions here too
@@ -122,7 +100,7 @@ internal class DisplayProvider(
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
             try {
-                getDisplayService().removeSurface(isForCursor())
+                displayService.removeSurface(isForCursor())
             } catch (e: DeadObjectException) {
                 Log.w(TAG, "The display service is already dead", e)
             } catch (e: RemoteException) {

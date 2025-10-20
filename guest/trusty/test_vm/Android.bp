@@ -92,10 +92,21 @@ sh_test {
         "trusty-vm-kill.sh",
         "trusty-wait-ready.sh",
         ":trusty-ut-ctrl.system",
+        ":trusty_test_vm_instance_id",
     ],
     test_config_template: "AndroidTest.xml",
     test_suites: [
         "general-tests",
         "vts",
     ],
+}
+
+genrule {
+    name: "trusty_test_vm_instance_id",
+    srcs: ["test_vm_instance_id_config.json"],
+    out: ["trusty_test_vm_instance_id"],
+    tools: [
+        "gen_instance_id_for_vm_with_trusted_hal",
+    ],
+    cmd: "$(location gen_instance_id_for_vm_with_trusted_hal) -i $(in) -o $(out)",
 }

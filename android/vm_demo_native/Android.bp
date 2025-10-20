@@ -16,5 +16,10 @@ cc_binary {
         "libbinder_ndk",
         "libbinder_rpc_unstable",
         "liblog",
+        "libbinder",
+        "libandroidfw",
+        "libjsoncpp",
+        "libutils",
+        "packagemanager_aidl-cpp",
     ],
 }

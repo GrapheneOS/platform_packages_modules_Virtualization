@@ -25,3 +25,11 @@ flag {
   description: "Flag for storage ballooning support in terminal"
   bug: "382174138"
 }
+
+flag {
+  name: "virtualmachineexception_code"
+  is_exported: true
+  namespace: "virtualization"
+  description: "Flag used in @FlaggedApi annotation for VirtualMachineException.CODE_*"
+  bug: "438324609"
+}

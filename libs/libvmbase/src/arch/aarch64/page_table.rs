@@ -14,13 +14,19 @@
 
 //! Page table management.
 
+use crate::arch::aarch64::id_aa64mmfr1_el1_hafdbs;
+use crate::arch::aarch64::set_tcr_el1_ha_hd;
+use crate::arch::flush_region;
+use crate::dsb;
+use crate::isb;
+use crate::mmu::{MmuOps, MmuResult};
 use crate::read_sysreg;
+use crate::tlbi;
 use aarch64_paging::idmap::IdMap;
 use aarch64_paging::paging::{
-    Attributes, Constraints, Descriptor, MemoryRegion, TranslationRegime,
+    Attributes, Constraints, Descriptor, MemoryRegion, TranslationRegime, VirtualAddress,
 };
-use aarch64_paging::MapError;
-use core::result;
+use core::ops::Range;
 
 /// Software bit used to indicate a device that should be lazily mapped.
 pub const MMIO_LAZY_MAP_FLAG: Attributes = Attributes::SWFLAG_0;
@@ -42,16 +48,15 @@ const DATA: Attributes = MEMORY.union(Attributes::UXN);
 const RODATA: Attributes = DATA.union(Attributes::READ_ONLY);
 const DATA_DBM: Attributes = RODATA.union(Attributes::DBM);
 
-type Result<T> = result::Result<T, MapError>;
-
 /// High-level API for managing MMU mappings.
 pub struct PageTable {
     idmap: IdMap,
+    uses_hafdbs: bool,
 }
 
 impl From<IdMap> for PageTable {
     fn from(idmap: IdMap) -> Self {
-        Self { idmap }
+        Self { idmap, uses_hafdbs: false }
     }
 }
 
@@ -80,80 +85,127 @@ impl PageTable {
 
     /// Level of the underlying page table's root page.
     const ROOT_LEVEL: usize = 1;
+}
 
-    /// Activates the page table.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure that the PageTable instance has valid and identical mappings for the
-    /// code being currently executed. Otherwise, the Rust execution model (on which the borrow
-    /// checker relies) would be violated.
-    pub unsafe fn activate(&mut self) {
+impl MmuOps for PageTable {
+    unsafe fn activate(&mut self) {
+        self.uses_hafdbs = cfg!(feature = "cpu_feat_hafdbs") && id_aa64mmfr1_el1_hafdbs();
+        // Activate dirty state management first, otherwise we may get permission faults
+        // immediately after activating the new page table. This has no effect before the new page
+        // table is activated because none of the entries in the initial idmap have the DBM flag.
+        set_tcr_el1_ha_hd(self.uses_hafdbs);
         // SAFETY: the caller of this unsafe function asserts that switching to a different
         // translation is safe
         unsafe { self.idmap.activate() }
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as lazily mapped
-    /// nGnRE device memory.
-    pub fn map_device_lazy(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, DEVICE_LAZY)
+    fn mark_as_lazy_device(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        self.idmap.map_range(&as_memory_region(range), DEVICE_LAZY)?;
+        Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as valid device
-    /// nGnRE device memory.
-    pub fn map_device(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, DEVICE)
+    fn map_device(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        self.idmap.map_range(&as_memory_region(range), DEVICE)?;
+        Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable
-    /// and writable normal memory.
-    pub fn map_data(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, DATA)
+    fn map_device_expect_lazy(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        let region = as_memory_region(range);
+        // This must be safe and free from break-before-make (BBM) violations, given that the
+        // initial lazy mapping has the valid bit cleared, and each newly created valid descriptor
+        // created inside the mapping has the same size and alignment.
+        self.idmap.modify_range(&region, &|_: &MemoryRegion, d: &mut Descriptor, _: usize| {
+            let flags = d.flags().expect("Unsupported PTE flags set");
+            if !flags.contains(MMIO_LAZY_MAP_FLAG) || flags.contains(Attributes::VALID) {
+                return Err(());
+            }
+            d.modify_flags(Attributes::VALID, Attributes::empty());
+            Ok(())
+        })?;
+        Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable,
-    /// read-only and writable-clean normal memory.
-    pub fn map_data_dbm(&mut self, range: &MemoryRegion) -> Result<()> {
+    fn map_data(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        self.idmap.map_range(&as_memory_region(range), DATA)?;
+        Ok(())
+    }
+
+    fn map_data_track_dirty_state(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        let region = as_memory_region(range);
         // Map the region down to pages to minimize the size of the regions that will be marked
         // dirty once a store hits them, but also to ensure that we can clear the read-only
         // attribute while the mapping is live without causing break-before-make (BBM) violations.
         // The latter implies that we must avoid the use of the contiguous hint as well.
         self.idmap.map_range_with_constraints(
-            range,
+            &region,
             DATA_DBM,
             Constraints::NO_BLOCK_MAPPINGS | Constraints::NO_CONTIGUOUS_HINT,
-        )
+        )?;
+        Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as read-only
-    /// normal memory.
-    pub fn map_code(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, CODE)
+    fn map_code(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        self.idmap.map_range(&as_memory_region(range), CODE)?;
+        Ok(())
     }
 
-    /// Maps the given range of virtual addresses to the physical addresses as non-executable
-    /// and read-only normal memory.
-    pub fn map_rodata(&mut self, range: &MemoryRegion) -> Result<()> {
-        self.idmap.map_range(range, RODATA)
+    fn map_rodata(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        self.idmap.map_range(&as_memory_region(range), RODATA)?;
+        Ok(())
     }
 
-    /// Applies the provided updater function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn modify_range<F>(&mut self, range: &MemoryRegion, f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &mut Descriptor, usize) -> result::Result<(), ()>,
-    {
-        self.idmap.modify_range(range, f)
+    fn mark_data_dirty(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        let region = as_memory_region(range);
+        self.idmap.modify_range(&region, &|r: &MemoryRegion, d: &mut Descriptor, _: usize| {
+            let flags = d.flags().ok_or(())?;
+            assert!(flags.contains(Attributes::READ_ONLY), "unexpected PTE writable state");
+            if !flags.contains(Attributes::DBM) {
+                return Err(());
+            }
+            d.modify_flags(Attributes::empty(), Attributes::READ_ONLY);
+            // Updating the read-only bit of a PTE requires TLB invalidation.
+            tlbi!("vale1", Self::ASID, r.start().0);
+            // A TLB maintenance instruction is only guaranteed to be complete after a DSB
+            // instruction.
+            dsb!("ish");
+            // An ISB instruction is required to ensure the effects of completed TLB maintenance
+            // instructions are visible to instructions fetched afterwards.
+            // See ARM ARM E2.3.10, and G5.9.
+            isb!();
+            Ok(())
+        })?;
+        Ok(())
     }
 
-    /// Applies the provided callback function to a number of PTEs corresponding to a given memory
-    /// range.
-    pub fn walk_range<F>(&self, range: &MemoryRegion, f: &F) -> Result<()>
-    where
-        F: Fn(&MemoryRegion, &Descriptor, usize) -> result::Result<(), ()>,
-    {
-        let mut callback = |mr: &MemoryRegion, d: &Descriptor, l: usize| f(mr, d, l);
-        self.idmap.walk_range(range, &mut callback)
+    fn sync_dirty_state(&mut self) -> MmuResult<()> {
+        // Execute a barrier instruction to ensure all hardware updates to the page table have been
+        // observed before reading PTE flags to determine dirty state.
+        dsb!("ish");
+        Ok(())
     }
+
+    fn flush_dirty_pages(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        let region = as_memory_region(range);
+        self.idmap.walk_range(&region, &mut |r: &MemoryRegion, d: &Descriptor, _: usize| {
+            let flags = d.flags().ok_or(())?;
+            if !flags.contains(Attributes::READ_ONLY) {
+                flush_region(r.start().0, r.len());
+            }
+            Ok(())
+        })?;
+        Ok(())
+    }
+}
+
+impl Drop for PageTable {
+    fn drop(&mut self) {
+        if self.uses_hafdbs {
+            set_tcr_el1_ha_hd(false);
+        }
+        // Dropping self.idmap sets TTBR_EL0 back to the static PTs.
+    }
+}
+
+fn as_memory_region(range: &Range<usize>) -> MemoryRegion {
+    (VirtualAddress(range.start)..VirtualAddress(range.end)).into()
 }

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "os": {
+    "name": "microdroid"
+  },
+  "task": {
+    "type": "microdroid_launcher",
+    "command": "MicrodroidTestNativeOnAlternatePortLib.so"
+  },
+  "tenants": [
+    {
+      "package": "apk",
+      "name": "com.android.microdroid.test",
+      "min_version": 36,
+      "expected_authority": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime",
+      "task": {
+          "type": "microdroid_launcher",
+          "command": "MicrodroidTestNativeLib.so"
+      }
+    }
+  ],
+  "export_tombstones": true,
+  "enable_authfs": false,
+  "hugepages": false
+}

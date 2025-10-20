@@ -16,18 +16,14 @@
 
 #[cfg(test)]
 mod tests {
+    use coset::{CborSerializable, CoseSign1};
     use diced_open_dice::{
         derive_cdi_certificate_id, derive_cdi_private_key_seed, hash, kdf, keypair_from_seed,
         retry_sign_cose_sign1, retry_sign_cose_sign1_with_cdi_leaf_priv, sign, verify,
         DiceArtifacts, PrivateKey, CDI_SIZE, HASH_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
     };
     #[cfg(feature = "multialg")]
-    use diced_open_dice::{
-        keypair_from_seed_multialg, retry_sign_cose_sign1_multialg,
-        retry_sign_cose_sign1_with_cdi_leaf_priv_multialg, verify_multialg, KeyAlgorithm,
-    };
-
-    use coset::{CborSerializable, CoseSign1};
+    use diced_open_dice::{DiceContext, KeyAlgorithm};
 
     // This test initialization is only required for the trusty test harness.
     #[cfg(feature = "trusty")]
@@ -127,17 +123,18 @@ mod tests {
 
         let mut signature = sign(b"MyMessage", priv_key.as_array()).unwrap();
         assert_eq!(&signature, EXPECTED_SIGNATURE);
-        assert!(verify(b"MyMessage", &signature, &pub_key).is_ok());
-        assert!(verify(b"MyMessage_fail", &signature, &pub_key).is_err());
+        assert!(verify(None, b"MyMessage", &signature, &pub_key).is_ok());
+        assert!(verify(None, b"MyMessage_fail", &signature, &pub_key).is_err());
         signature[0] += 1;
-        assert!(verify(b"MyMessage", &signature, &pub_key).is_err());
+        assert!(verify(None, b"MyMessage", &signature, &pub_key).is_err());
     }
 
     #[test]
     fn sign_cose_sign1_verify() {
         let (pub_key, priv_key) = get_test_key_pair();
 
-        let signature_res = retry_sign_cose_sign1(b"MyMessage", b"MyAad", priv_key.as_array());
+        let signature_res =
+            retry_sign_cose_sign1(None, b"MyMessage", b"MyAad", priv_key.as_array());
         assert!(signature_res.is_ok());
         let signature = signature_res.unwrap();
         let cose_sign1_res = CoseSign1::from_slice(&signature);
@@ -145,31 +142,31 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result =
-            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(data, sign, &pub_key));
+            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(None, data, sign, &pub_key));
         assert!(verify_result.is_ok());
 
         verify_result =
-            cose_sign1.verify_signature(b"BadAad", |sign, data| verify(data, sign, &pub_key));
+            cose_sign1.verify_signature(b"BadAad", |sign, data| verify(None, data, sign, &pub_key));
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result =
-            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(data, sign, &pub_key));
+            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(None, data, sign, &pub_key));
         assert!(verify_result.is_err());
     }
 
     #[cfg(feature = "multialg")]
     #[test]
     fn sign_cose_sign1_verify_multialg() {
+        let dice_context = DiceContext {
+            authority_algorithm: KeyAlgorithm::EcdsaP256,
+            subject_algorithm: KeyAlgorithm::EcdsaP256,
+        };
         let (pub_key, priv_key) = get_test_key_pair_ec_p256();
 
-        let signature_res = retry_sign_cose_sign1_multialg(
-            b"MyMessage",
-            b"MyAad",
-            priv_key.as_array(),
-            KeyAlgorithm::EcdsaP256,
-        );
+        let signature_res =
+            retry_sign_cose_sign1(Some(dice_context), b"MyMessage", b"MyAad", priv_key.as_array());
         assert!(signature_res.is_ok());
         let signature = signature_res.unwrap();
         let cose_sign1_res = CoseSign1::from_slice(&signature);
@@ -177,19 +174,19 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
-            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, &pub_key)
         });
         assert!(verify_result.is_ok());
 
         verify_result = cose_sign1.verify_signature(b"BadAad", |sign, data| {
-            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, &pub_key)
         });
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
-            verify_multialg(data, sign, &pub_key, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, &pub_key)
         });
         assert!(verify_result.is_err());
     }
@@ -214,7 +211,8 @@ mod tests {
     fn sign_cose_sign1_with_cdi_leaf_priv_verify() {
         let dice = TestArtifactsForSigning {};
 
-        let signature_res = retry_sign_cose_sign1_with_cdi_leaf_priv(b"MyMessage", b"MyAad", &dice);
+        let signature_res =
+            retry_sign_cose_sign1_with_cdi_leaf_priv(None, b"MyMessage", b"MyAad", &dice);
         assert!(signature_res.is_ok());
         let signature = signature_res.unwrap();
         let cose_sign1_res = CoseSign1::from_slice(&signature);
@@ -222,17 +220,17 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result = cose_sign1
-            .verify_signature(b"MyAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+            .verify_signature(b"MyAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
         assert!(verify_result.is_ok());
 
         verify_result = cose_sign1
-            .verify_signature(b"BadAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+            .verify_signature(b"BadAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result = cose_sign1
-            .verify_signature(b"MyAad", |sign, data| verify(data, sign, EXPECTED_PUB_KEY));
+            .verify_signature(b"MyAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
         assert!(verify_result.is_err());
     }
 
@@ -240,12 +238,16 @@ mod tests {
     #[test]
     fn sign_cose_sign1_with_cdi_leaf_priv_verify_multialg() {
         let dice = TestArtifactsForSigning {};
+        let dice_context = DiceContext {
+            authority_algorithm: KeyAlgorithm::EcdsaP256,
+            subject_algorithm: KeyAlgorithm::EcdsaP256,
+        };
 
-        let signature_res = retry_sign_cose_sign1_with_cdi_leaf_priv_multialg(
+        let signature_res = retry_sign_cose_sign1_with_cdi_leaf_priv(
+            Some(dice_context),
             b"MyMessage",
             b"MyAad",
             &dice,
-            KeyAlgorithm::EcdsaP256,
         );
         assert!(signature_res.is_ok());
         let signature = signature_res.unwrap();
@@ -254,19 +256,19 @@ mod tests {
         let mut cose_sign1 = cose_sign1_res.unwrap();
 
         let mut verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
-            verify_multialg(data, sign, EXPECTED_EC_P256_PUB_KEY, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, EXPECTED_EC_P256_PUB_KEY)
         });
         assert!(verify_result.is_ok());
 
         verify_result = cose_sign1.verify_signature(b"BadAad", |sign, data| {
-            verify_multialg(data, sign, EXPECTED_EC_P256_PUB_KEY, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, EXPECTED_EC_P256_PUB_KEY)
         });
         assert!(verify_result.is_err());
 
         // if we modify the signature, the payload should no longer verify
         cose_sign1.signature.push(0xAA);
         verify_result = cose_sign1.verify_signature(b"MyAad", |sign, data| {
-            verify_multialg(data, sign, EXPECTED_EC_P256_PUB_KEY, KeyAlgorithm::EcdsaP256)
+            verify(Some(dice_context), data, sign, EXPECTED_EC_P256_PUB_KEY)
         });
         assert!(verify_result.is_err());
     }
@@ -279,7 +281,7 @@ mod tests {
         let cdi_private_key_seed =
             derive_cdi_private_key_seed(cdi_attest.try_into().unwrap()).unwrap();
         assert_eq!(cdi_private_key_seed.as_array(), EXPECTED_CDI_PRIVATE_KEY_SEED);
-        let (pub_key, priv_key) = keypair_from_seed(cdi_private_key_seed.as_array()).unwrap();
+        let (pub_key, priv_key) = keypair_from_seed(None, cdi_private_key_seed.as_array()).unwrap();
         assert_eq!(&pub_key, EXPECTED_PUB_KEY);
         assert_eq!(priv_key.as_array(), EXPECTED_PRIV_KEY);
 
@@ -295,9 +297,14 @@ mod tests {
         let cdi_private_key_seed =
             derive_cdi_private_key_seed(cdi_attest.try_into().unwrap()).unwrap();
         assert_eq!(cdi_private_key_seed.as_array(), EXPECTED_CDI_PRIVATE_KEY_SEED);
-        let (pub_key, priv_key) =
-            keypair_from_seed_multialg(cdi_private_key_seed.as_array(), KeyAlgorithm::EcdsaP256)
-                .unwrap();
+        let (pub_key, priv_key) = keypair_from_seed(
+            Some(DiceContext {
+                authority_algorithm: KeyAlgorithm::EcdsaP256,
+                subject_algorithm: KeyAlgorithm::EcdsaP256,
+            }),
+            cdi_private_key_seed.as_array(),
+        )
+        .unwrap();
 
         assert_eq!(&pub_key, EXPECTED_EC_P256_PUB_KEY);
         assert_eq!(priv_key.as_array(), EXPECTED_EC_P256_PRIV_KEY);

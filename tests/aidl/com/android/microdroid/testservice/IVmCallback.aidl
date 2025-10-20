@@ -18,7 +18,7 @@ package com.android.microdroid.testservice;
 /**
  * An interface exposed by the VM for callbacks from the app.
  *
- * {@hide}
+ * @hide
  */
 interface IVmCallback {
     /** Requests the VM to asynchronously call the app's onEchoRequestReceived() callback. */

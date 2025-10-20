@@ -21,6 +21,7 @@
 #include <android-base/strings.h>
 #include <android-base/unique_fd.h>
 #include <fcntl.h>
+#include <linux/fs.h>
 #include <linux/vm_sockets.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -54,6 +55,30 @@ static ndk::ScopedAStatus resultStatus(const T& result) {
                                                                 error.str().c_str());
     }
     return ndk::ScopedAStatus::ok();
+}
+
+Result<int64_t> get_file_size_bytes(const std::string& filename) {
+    struct stat file_stats;
+    if (stat(filename.c_str(), &file_stats) != -1) {
+        if (file_stats.st_size > 0) {
+            return file_stats.st_size;
+        }
+    }
+
+    // Fallback to ioctl(BLKGETSIZE64) for block devices
+    unique_fd fd(TEMP_FAILURE_RETRY(open(filename.c_str(), O_RDONLY | O_CLOEXEC)));
+    if (fd.get() == -1) {
+        return ErrnoError() << "Failed to open " << filename << " for size check";
+    }
+
+    int64_t file_size_bytes = 0;
+    if (ioctl(fd.get(), BLKGETSIZE64, &file_size_bytes) != -1) {
+        if (file_size_bytes > 0) {
+            return file_size_bytes;
+        }
+    }
+
+    return Error() << "Failed to get the size of " << filename;
 }
 
 class IOBenchmarkService : public aidl::com::android::microdroid::testservice::BnBenchmarkService {
@@ -111,11 +136,13 @@ private:
      * @return The read rate in MB/s.
      */
     Result<double> measure_read_rate(const std::string& filename, bool is_rand) {
-        struct stat file_stats;
-        if (stat(filename.c_str(), &file_stats) == -1) {
-            return Error() << "failed to get file stats";
+        int64_t file_size_bytes;
+        if (auto res = get_file_size_bytes(filename); res.ok()) {
+            file_size_bytes = *res;
+        } else {
+            return res.error();
         }
-        const int64_t file_size_bytes = file_stats.st_size;
+
         const int64_t block_count = file_size_bytes / kBlockSizeBytes;
         std::vector<uint64_t> offsets(block_count);
         for (auto i = 0; i < block_count; ++i) {

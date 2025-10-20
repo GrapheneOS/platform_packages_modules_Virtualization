@@ -174,11 +174,6 @@ class DisplayActivity : BaseActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        displayProvider.notifyDisplayIsGoingToInvisible()
-    }
-
     private fun showSoftKeyboard() {
         mainView.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager

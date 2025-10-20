@@ -21,6 +21,7 @@ mod instance;
 mod ioutil;
 mod payload;
 mod swap;
+mod tenant;
 mod verify;
 mod vm_internal_service;
 mod vm_payload_service;
@@ -44,13 +45,17 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
-use crate::instance::{EncryptedStoreMode, InstanceDisk, MicrodroidData};
-use crate::verify::{integrity_protect_tenant_apks, verify_payload};
+use crate::instance::{ApexData, EncryptedStoreMode, InstanceDisk, MicrodroidData};
+use crate::tenant::{TenantAttribute, TenantManager};
+use crate::verify::{
+    integrity_protect_tenant_apks, validate_tenant_apks_against_tenant_config, verify_payload,
+};
 use crate::vm_internal_service::VmInternalService;
 use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binder::{self, BinderFeatures, Interface, IntoBinderResult, SpIBinder, Strong};
+use binder::{self, BinderFeatures, ExceptionCode, Interface, IntoBinderResult, SpIBinder, Strong};
 use dice_driver::DiceDriver;
+use encryptedstore_query::needs_formatting;
 use glob::glob;
 use keystore2_crypto::ZVec;
 use libc::{VMADDR_CID_HOST, VMADDR_PORT_ANY};
@@ -60,21 +65,23 @@ use microdroid_payload_config::{
     ApkConfig, OsConfig, Task, TaskType, TenantConfig, VmPayloadConfig,
 };
 use nix::mount::{umount2, MntFlags};
-use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
-use nix::sys::wait::{waitid, waitpid, Id, WaitPidFlag, WaitStatus};
+use nix::sys::signal::{
+    pthread_sigmask, sigaction, SaFlags, SigAction, SigHandler, SigSet, SigmaskHow, Signal,
+};
+use nix::sys::signalfd::{SfdFlags, SignalFd};
+use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
 use nix::unistd::Pid;
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
 use rpcbinder::{RpcServer, RpcSession};
-use rustutils::sockets::android_get_control_socket;
-use rustutils::system_properties;
-use rustutils::system_properties::PropertyWatcher;
+use rustutils::android::sockets::android_get_control_socket;
+use rustutils::android::system_properties;
+use rustutils::android::system_properties::PropertyWatcher;
 use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
-use std::ffi::CString;
 use std::fs::{self, create_dir, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
@@ -83,10 +90,9 @@ use std::os::raw::c_char;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::OwnedFd;
 use std::os::unix::process::CommandExt;
-use std::os::unix::process::ExitStatusExt;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
 use std::sync::Arc;
@@ -319,7 +325,16 @@ fn try_main() -> Result<()> {
             .with_tag("microdroid_manager")
             .with_max_level(log::LevelFilter::Info),
     );
+
+    // Manually log the panic message because we don't get tombstones for microdroid_manager
+    // (crashdump isn't given permission to in the SELinux policy).
+    std::panic::set_hook(Box::new(|panic_info| error!("{panic_info}")));
+
     info!("started.");
+
+    let mut mask = SigSet::empty();
+    mask.add(Signal::SIGCHLD);
+    pthread_sigmask(SigmaskHow::SIG_BLOCK, Some(&mask), None)?;
 
     load_crashkernel_if_supported().context("Failed to load crashkernel")?;
 
@@ -355,8 +370,8 @@ fn try_main() -> Result<()> {
             };
             if let Err(e) = post_payload_work() {
                 error!(
-                    "Failed to run post payload work. It is possible that certain tasks
-                    like syncing encrypted store might be incomplete. Error: {e:?}"
+                    "Failed to run post payload work. It is possible that certain tasks like \
+                     syncing encrypted store might be incomplete. Error: {e:?}"
                 );
             };
 
@@ -373,11 +388,12 @@ fn try_main() -> Result<()> {
     }
 }
 
+// Verify the payload. Additionally compare it against instance.img partition (if existing)
+// OR create a new entry in the instance,img (returning a boolean to indicate is_new_instance).
 fn verify_payload_with_instance_img(
     metadata: &Metadata,
     dice: &DiceDriver,
-    state: &mut VmInstanceState,
-) -> Result<MicrodroidData> {
+) -> Result<(MicrodroidData, Vec<ApexData>, bool)> {
     let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
@@ -399,13 +415,13 @@ fn verify_payload_with_instance_img(
     }
 
     // Verify the payload before using it.
-    let extracted_data = verify_payload(metadata, saved_data.as_ref())
+    let (extracted_data, tenant_apex_data) = verify_payload(metadata, saved_data.as_ref())
         .context("Payload verification failed")
         .map_err(|e| MicrodroidError::PayloadVerificationFailed(format!("{e:?}")))?;
 
     // In case identity is ignored (by debug policy), we should reuse existing payload data, even
     // when the payload is changed. This is to keep the derived secret same as before.
-    let instance_data = if let Some(saved_data) = saved_data {
+    let (instance_data, newly_created) = if let Some(saved_data) = saved_data {
         if !is_verified_boot() {
             if saved_data != extracted_data {
                 info!("Detected an update of the payload, but continue (regarding debug policy)")
@@ -419,17 +435,15 @@ fn verify_payload_with_instance_img(
             );
             info!("Saved data is verified.");
         }
-        *state = VmInstanceState::PreviouslySeen;
-        saved_data
+        (saved_data, /* newly_created */ false)
     } else {
         info!("Saving verified data.");
         instance
             .write_microdroid_data(&extracted_data, dice)
             .context("Failed to write identity data")?;
-        *state = VmInstanceState::NewlyCreated;
-        extracted_data
+        (extracted_data, /* newly_created */ true)
     };
-    Ok(instance_data)
+    Ok((instance_data, tenant_apex_data, newly_created))
 }
 
 // The VM instance run can be
@@ -464,14 +478,24 @@ fn try_run_payload(
             .context("Failed to load DICE from driver")?
     };
 
-    let mut state = VmInstanceState::Unknown;
     // Microdroid skips checking payload against instance image iff the device supports
     // secretkeeper. In that case Microdroid use VmSecret::V2, which provides instance state
     // and protection against rollback of boot images and packages.
-    let instance_data = if should_defer_rollback_protection() {
-        verify_payload(&metadata, None)?
+    let (instance_data, tenant_apex_data, state) = if should_defer_rollback_protection() {
+        let (instance_data, tenant_apex_data) = verify_payload(&metadata, None)?;
+        (instance_data, tenant_apex_data, VmInstanceState::Unknown)
     } else {
-        verify_payload_with_instance_img(&metadata, &dice, &mut state)?
+        let (instance_data, tenant_apex_data, is_newly_created) =
+            verify_payload_with_instance_img(&metadata, &dice)?;
+        (
+            instance_data,
+            tenant_apex_data,
+            if is_newly_created {
+                VmInstanceState::NewlyCreated
+            } else {
+                VmInstanceState::PreviouslySeen
+            },
+        )
     };
 
     // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
@@ -503,22 +527,20 @@ fn try_run_payload(
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
     })?;
 
+    let tenant_apks_data_extracted_from_manifest = integrity_protect_tenant_apks()?;
+
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
-    let dice_artifacts = dice_derivation(dice, &instance_data, &payload_metadata)?;
-    let vm_secret = Arc::new(
-        VmSecret::new(dice_artifacts, service, &mut state)
-            .context("Failed to create VM secrets")?,
-    );
-
-    let is_new_instance = match state {
-        VmInstanceState::NewlyCreated => true,
-        VmInstanceState::PreviouslySeen => false,
-        VmInstanceState::Unknown => {
-            bail!("Vm instance state is still unknown, this should not have happened");
-        }
-    };
-
+    let dice_artifacts = dice_derivation(
+        dice,
+        &instance_data,
+        &payload_metadata,
+        &tenant_apks_data_extracted_from_manifest,
+        &tenant_apex_data,
+    )?;
+    let (vm_secret, is_new_instance) =
+        VmSecret::new(dice_artifacts, service, state).context("Failed to create VM secrets")?;
+    let vm_secret = Arc::new(vm_secret);
     if cfg!(dice_changes) {
         // Now that the DICE derivation is done, it's ok to allow payload code to run.
 
@@ -550,10 +572,24 @@ fn try_run_payload(
 
     let config = load_config(payload_metadata).context("Failed to load payload metadata")?;
 
-    let task = config
-        .task
-        .as_ref()
-        .ok_or_else(|| MicrodroidError::PayloadInvalidConfig("No task in VM config".to_string()))?;
+    // TODO(b/429639517): Add a CI test to ensure ill-formed tenantConfig check robust
+    if let Some(invalid_tenant) = config.tenants.iter().find(|tenant| !tenant.is_wellformed()) {
+        bail!(MicrodroidError::PayloadInvalidConfig(format!(
+            "Invalid tenant configuration {invalid_tenant:?}"
+        )));
+    }
+    let task = config.task.as_ref();
+    if task.is_none() {
+        let has_tenant_with_task = config.tenants.iter().any(|t| match t {
+            TenantConfig::Apex(c) => c.task.is_some(),
+            TenantConfig::Apk(c) => c.task.is_some(),
+        });
+        if !has_tenant_with_task {
+            bail!(MicrodroidError::PayloadInvalidConfig(
+                "No task in VM config and no tenants with a task".to_string()
+            ));
+        }
+    }
 
     ensure!(
         config.extra_apks.len() == instance_data.extra_apks_data.len(),
@@ -565,7 +601,12 @@ fn try_run_payload(
         .context("Failed to mount extra apks")?;
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
-    integrity_protect_tenant_apks()?;
+    validate_tenant_apks_against_tenant_config(
+        &tenant_apks_data_extracted_from_manifest,
+        &config.tenants,
+    )?;
+
+    // TODO(b/429639517): Validate tenant apex against tenant_config
     let tenant_apk_count =
         config.tenants.iter().filter(|t| matches!(t, TenantConfig::Apk(_))).count();
     mount_additional_apks(&mut zipfuse, tenant_apk_count, AdditionalApkType::TenantApk)
@@ -573,15 +614,6 @@ fn try_run_payload(
 
     // Wait until apex config is done. (e.g. linker configuration for apexes)
     wait_for_property_true(APEX_CONFIG_DONE_PROP).context("Failed waiting for apex config done")?;
-
-    let std_redirect = if is_debuggable() {
-        // If the VM is debuggable, let stdout/stderr go outside via /dev/kmsg to ease the debugging
-        Arc::new(Some(rustutils::inherited_fd::take_fd_ownership(
-            env::var("ANDROID_FILE__dev_kmsg").unwrap().parse::<i32>().unwrap(),
-        )?))
-    } else {
-        Arc::new(None)
-    };
 
     let vm_internal_binder = BnVmInternalService::new_binder(
         VmInternalService::new(service.clone()),
@@ -594,26 +626,30 @@ fn try_run_payload(
         VM_INTERNAL_SERVICE_SOCKET_NAME,
     )?;
 
+    let tenant_manager = TenantManager::initialize(&config.tenants)?;
+    let tenant_manager = Arc::new(tenant_manager);
+
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        let std_redirect_for_enc_store = std_redirect.clone();
         if config.delay_encrypted_store_setup {
             let service_clone = service.clone();
             let vm_secret_for_enc_store = vm_secret.clone();
             let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
+            let tenant_manager_for_enc_store = tenant_manager.clone();
             info!("Delaying preparation of encryptedstore as requested ...");
             std::thread::spawn(move || {
-                // Should we violently crash here? Or should we just log the error and let payload
-                // decide what to do?
                 if let Err(e) = delayed_prepare_encryptedstore(
                     encrypted_store_mode,
                     service_clone,
                     vm_secret_for_enc_store,
-                    std_redirect_for_enc_store,
+                    tenant_manager_for_enc_store,
                 ) {
-                    error!("delayed prepare encrypted store failed: {e:#?}");
+                    // Ideally we'd communicate this back to the main thread and error out in a
+                    // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
+                    // keep it simple and just SIGABRT.
+                    panic!("delayed prepare encrypted store failed: {e:#?}");
                 }
             });
             None
@@ -621,14 +657,21 @@ fn try_run_payload(
             info!("Preparing encryptedstore ...");
             let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
-            Some(
-                prepare_encryptedstore(&key, &std_redirect_for_enc_store)
-                    .context("encryptedstore run")?,
-            )
+            Some(prepare_encryptedstore(&key, &tenant_manager).context("encryptedstore run")?)
         }
     } else {
         None
     };
+
+    let total_tasks = config.task.is_some() as usize
+        + config
+            .tenants
+            .iter()
+            .filter(|t| match t {
+                TenantConfig::Apex(c) => c.task.is_some(),
+                TenantConfig::Apk(c) => c.task.is_some(),
+            })
+            .count();
 
     let vm_payload_binder = BnVmPayloadService::new_binder(
         VmPayloadService::new(
@@ -636,6 +679,7 @@ fn try_run_payload(
             service.clone(),
             vm_secret.clone(),
             is_new_instance,
+            total_tasks,
         ),
         BinderFeatures::default(),
     );
@@ -687,38 +731,65 @@ fn try_run_payload(
             .context("set microdroid_manager.init_done")?;
     }
 
-    info!("boot completed, time to run payload");
-    let main_command = get_task_command(VM_APK_CONTENTS_PATH, task, /* is_apex */ false)
+    // TODO(b/434925716): Remove notified_payload_started once we handle per tenant notifications
+    let mut notified_payload_started = task.is_some();
+    let mut payload_process = if let Some(task) = task {
+        info!("boot completed, time to run payload");
+        let main_command = get_task_command(
+            VM_APK_CONTENTS_PATH,
+            task,
+            /* is_apex */ false,
+            config.run_as_root,
+        )
         .context("Failed to find payload")?;
-    let payload_process = exec_task(
-        main_command,
-        cgroup_config.as_ref(),
-        service,
-        &std_redirect,
-        /* notify_payload_started */ true,
-    )
-    .context("Failed to run payload")?;
+        Some(
+            exec_task(
+                main_command,
+                cgroup_config.as_ref(),
+                service,
+                /* notify_payload_started */ true,
+            )
+            .context("Failed to run payload")?,
+        )
+    } else {
+        None
+    };
 
     let mut tenant_processes: Vec<Child> = Vec::new();
+    let mut tenant_index = 0;
+    ensure!(
+        config.tenants.is_empty() || !config.run_as_root,
+        "Run as root not supported with tenants"
+    );
     for tenant in config.tenants.iter() {
-        match tenant {
-            // For now, we only support APEX
-            TenantConfig::Apex(apex_conf) => {
-                let tenant_command =
-                    get_task_command(&apex_conf.name, &apex_conf.task, /* is_apex */ true)
-                        .context("Failed to find tenant")?;
-                let tenant_process = exec_task(
-                    tenant_command,
-                    cgroup_config.as_ref(),
-                    service,
-                    &std_redirect,
-                    /* notify_payload_started */ false,
-                )
-                .context("Failed to run tenant")?;
-                tenant_processes.push(tenant_process);
+        let (task, name, package_path, is_apex) = match tenant {
+            TenantConfig::Apex(c) => (c.task.as_ref(), &c.name, c.name.clone(), true),
+            TenantConfig::Apk(c) => {
+                let mnt_dir = format!("/mnt/tenant-apk/{tenant_index}");
+                tenant_index += 1;
+                (c.task.as_ref(), &c.name, mnt_dir, false)
             }
-            TenantConfig::Apk(apk_conf) => {
-                warn!("APK tenants are not supported, skipping: {:?}", apk_conf.path);
+        };
+
+        if let Some(task) = task {
+            let tenant_attribute = tenant_manager
+                .get_tenant_attribute(name)
+                .with_context(|| format!("Failed to get tenant attribute for '{name}'"))?;
+            let uid_gid = Some((tenant_attribute.uid(), TenantAttribute::gid()));
+            let command = build_payload_command(package_path.as_ref(), task, uid_gid, is_apex)
+                .context("Failed to build tenant {name} payload command")?;
+            let tenant_process = exec_task(
+                command,
+                cgroup_config.as_ref(),
+                service,
+                /* notify_payload_started */ !notified_payload_started,
+            )
+            .context("Failed to run tenant")?;
+            notified_payload_started = true;
+            if payload_process.is_none() {
+                payload_process = Some(tenant_process);
+            } else {
+                tenant_processes.push(tenant_process);
             }
         }
     }
@@ -728,7 +799,8 @@ fn try_run_payload(
     // We need to wait for processes to finish asynchronously, to avoid zombies.
     let mut pids_to_reap: HashSet<Pid> =
         tenant_processes.iter().map(|p| Pid::from_raw(p.id() as i32)).collect();
-    let payload_pid = Pid::from_raw(payload_process.id() as i32);
+    let payload_pid =
+        Pid::from_raw(payload_process.as_ref().expect("payload process not set").id() as i32);
     pids_to_reap.insert(payload_pid);
 
     let exit_status = wait_for_all_processes(&mut pids_to_reap, payload_pid)?;
@@ -737,61 +809,45 @@ fn try_run_payload(
 
 // TODO(b/434925716): Report exit status of all the tenants back to the host
 /// Wait for all processes in `pids_to_reap` to exit.
-/// It returns the `ExitStatus` of the main payload process.
-fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<ExitStatus> {
-    let mut payload_exit_status: Option<ExitStatus> = None;
-    let mut ignored_pids_count = HashMap::new();
-    const IGNORE_THRESHOLD: u32 = 4;
+/// It returns the `WaitStatus` of the main payload process.
+/// If there is no main payload, it returns the exit status of the first tenant
+fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<WaitStatus> {
+    let mut payload_exit_status: Option<WaitStatus> = None;
+
+    let mut mask = SigSet::empty();
+    mask.add(Signal::SIGCHLD);
+    let sfd = SignalFd::with_flags(&mask, SfdFlags::SFD_CLOEXEC)?;
 
     while !pids_to_reap.is_empty() {
-        // Wait for any child process to change state, without reaping it. This avoids a race
-        // condition where we might reap a child that another thread is waiting for.
-        let wait_status = match waitid(Id::All, WaitPidFlag::WEXITED | WaitPidFlag::WNOWAIT) {
-            Ok(status) => status,
-            Err(nix::errno::Errno::ECHILD) => {
-                // No more children to wait for.
-                if !pids_to_reap.is_empty() {
-                    warn!("No more child processes to wait for, but expected {pids_to_reap:?}");
+        // Wait for a SIGCHLD signal
+        sfd.read_signal()?;
+
+        // Linux's signal handling mechanism coalesces multiple signals of the same type into
+        // a single event, if they occur in quick succession. So there can be instances when
+        // more than 1 SIGCHLD event occurs but read_signal only receives 1.
+        // Thus, iteratively check for pids that we manage and reap the ones that have exited
+        for pid in pids_to_reap.clone().into_iter() {
+            match waitpid(pid, Some(WaitPidFlag::WNOHANG)) {
+                Ok(wait_status) => match wait_status {
+                    WaitStatus::Exited(..) | WaitStatus::Signaled(..) => {
+                        info!("Process {pid} exited with {wait_status:?}");
+                        pids_to_reap.remove(&pid);
+                        if pid == payload_pid {
+                            payload_exit_status = Some(wait_status);
+                        }
+                    }
+                    // StillAlive, Stopped, Continued, etc. are ignored
+                    _ => continue,
+                },
+                Err(nix::errno::Errno::ECHILD) => {
+                    // This can happen if another thread reaps the process
+                    warn!("Tracked process {pid} was already reaped.");
+                    pids_to_reap.remove(&pid);
                 }
-                break;
-            }
-            Err(e) => bail!("Failed to wait for child process with waitid: {:?}", e),
-        };
-
-        let Some(pid) = wait_status.pid() else { bail!("Invalid wait status") };
-
-        if pids_to_reap.contains(&pid) {
-            // This is a process we are responsible for. We have its status, so now we reap it.
-            let exit_status = match wait_status {
-                WaitStatus::Exited(_, exit_code) => ExitStatusExt::from_raw(exit_code << 8),
-                WaitStatus::Signaled(_, signal, _) => ExitStatusExt::from_raw(signal as i32),
-                _ => {
-                    // Should be unreachable as we've filtered for Exited and Signaled above
-                    warn!("Process {pid} had unexpected status {wait_status:?}");
-                    continue;
+                Err(e) => {
+                    return Err(e)
+                        .with_context(|| format!("Failed to wait for child process {pid}"));
                 }
-            };
-            waitpid(pid, None)?;
-            pids_to_reap.remove(&pid);
-            info!("Process {pid} exited with {exit_status}");
-            if pid == payload_pid {
-                payload_exit_status = Some(exit_status);
-            }
-        } else {
-            let count = ignored_pids_count.entry(pid).or_insert(0);
-            *count += 1;
-
-            if *count >= IGNORE_THRESHOLD {
-                info!("Reaping ignored pid {pid} that was not handled by its owner after {count} attempts");
-                waitpid(pid, None)?;
-                ignored_pids_count.remove(&pid);
-            } else {
-                // Not a process we are tracking. Yield to avoid a busy-loop,
-                // giving the other thread a chance to reap it.
-                info!(
-                    "Ignoring exit of pid {pid} (attempt {count}), another thread should reap it"
-                );
-                std::thread::yield_now();
             }
         }
     }
@@ -799,24 +855,19 @@ fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> 
     payload_exit_status.ok_or_else(|| anyhow!("Payload process hasn't exited or status not saved"))
 }
 
-fn get_payload_exit_code(exit_status: ExitStatus) -> Result<i32> {
-    if let Some(exit_code) = exit_status.code() {
-        return Ok(exit_code);
-    }
-
-    if let Some(signal) = exit_status.signal() {
-        if signal == Signal::SIGTERM as i32 {
-            info!("payload exited with SIGTERM");
-            return Ok(0);
+fn get_payload_exit_code(wait_status: WaitStatus) -> Result<i32> {
+    match wait_status {
+        WaitStatus::Exited(_, exit_code) => Ok(exit_code),
+        WaitStatus::Signaled(_, signal, _) => {
+            if signal == Signal::SIGTERM {
+                info!("payload exited with SIGTERM");
+                Ok(0)
+            } else {
+                Err(anyhow!("Payload exited due to signal: {} ({})", signal as i32, signal))
+            }
         }
-        return Err(anyhow!(
-            "Payload exited due to signal: {} ({})",
-            signal,
-            Signal::try_from(signal).map_or("unknown", |s| s.as_str())
-        ));
+        _ => Err(anyhow!("Payload has neither exit code nor signal")),
     }
-
-    Err(anyhow!("Payload has neither exit code nor signal"))
 }
 
 fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result<()> {
@@ -834,24 +885,14 @@ fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result
 fn post_payload_work() -> Result<()> {
     // Sync the encrypted storage filesystem (flushes the filesystem caches).
     if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
-        let mountpoint = CString::new(ENCRYPTEDSTORE_MOUNTPOINT).unwrap();
-
-        // SAFETY: `mountpoint` is a valid C string. `syncfs` and `close` are safe for any parameter
-        // values.
-        let ret = unsafe {
-            let dirfd = libc::open(
-                mountpoint.as_ptr(),
-                libc::O_DIRECTORY | libc::O_RDONLY | libc::O_CLOEXEC,
-            );
-            ensure!(dirfd >= 0, "Unable to open {:?}", mountpoint);
-            let ret = libc::syncfs(dirfd);
-            libc::close(dirfd);
-            ret
-        };
-        if ret != 0 {
-            error!("failed to sync encrypted storage.");
-            return Err(anyhow!(std::io::Error::last_os_error()));
-        }
+        use nix::fcntl::OFlag;
+        let dirfd = nix::fcntl::open(
+            ENCRYPTEDSTORE_MOUNTPOINT,
+            OFlag::O_DIRECTORY | OFlag::O_RDONLY | OFlag::O_CLOEXEC,
+            nix::sys::stat::Mode::empty(),
+        )
+        .with_context(|| "Unable to open {ENCRYPTEDSTORE_MOUNTPOINT}")?;
+        nix::unistd::syncfs(dirfd).context("failed to sync encrypted storage")?;
     }
     Ok(())
 }
@@ -1018,15 +1059,11 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
             Ok(VmPayloadConfig {
                 os: OsConfig { name: "microdroid".to_owned() },
                 task: Some(task),
-                apexes: vec![],
                 extra_apks,
                 // Tenants are only supported through config.json files
                 tenants: vec![],
-                prefer_staged: false,
-                export_tombstones: None,
-                enable_authfs: false,
-                hugepages: false,
                 delay_encrypted_store_setup: payload_config.delay_encrypted_store_setup,
+                ..Default::default()
             })
         }
         _ => bail!("Failed to match config against a config type."),
@@ -1037,23 +1074,26 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
 /// The VM should be loaded with `crashkernel=' parameter in the cmdline to allocate memory
 /// for crashkernel.
 fn load_crashkernel_if_supported() -> Result<()> {
-    let supported = std::fs::read_to_string("/proc/cmdline")?.contains(" crashkernel=");
-    info!("ramdump supported: {supported}");
-
-    if !supported {
+    let allocated = std::fs::read_to_string("/proc/cmdline")?.contains(" crashkernel=");
+    if !allocated {
+        info!("memory for crashkernel is not allocated");
         return Ok(());
     }
 
-    let debuggable = is_debuggable();
-    let ramdump = get_debug_policy_bool(AVF_DEBUG_POLICY_RAMDUMP);
-    let requested = debuggable | ramdump;
+    let requested = is_debuggable();
+    let forced = get_debug_policy_bool(AVF_DEBUG_POLICY_RAMDUMP);
+    if !(requested || forced) {
+        info!("memory for crashkernel is allocated but ramdump is not required");
+        return Ok(());
+    }
 
-    if requested {
-        let status = Command::new("/system/bin/kexec_load").status()?;
-        if !status.success() {
-            return Err(anyhow!("Failed to load crashkernel: {status}"));
-        }
-        info!("ramdump is loaded: debuggable={debuggable}, ramdump={ramdump}");
+    let status = Command::new("/system/bin/kexec_load").status()?;
+    if status.success() {
+        info!("crashkernel for ramdump is loaded: requested={requested}, forced={forced}");
+    } else if status.code() == Some(libc::ENOSYS) {
+        warn!("crashkernel for ramdump is not supported");
+    } else {
+        return Err(anyhow!("crashkernel for ramdump failed to load: {status}"));
     }
     Ok(())
 }
@@ -1063,26 +1103,48 @@ struct PayloadCommand {
     uid_gid: Option<(u32, u32)>,
 }
 
-fn get_task_command(package_name: &str, task: &Task, is_apex: bool) -> Result<PayloadCommand> {
-    let (command, uid_gid) = match task.type_ {
-        TaskType::Executable => {
-            // TODO(b/297501338): Figure out how to handle non-root for system payloads.
-            (Command::new(&task.command), None)
-        }
+fn build_command(package_name: &str, task: &Task, is_apex: bool) -> Result<Command> {
+    match task.type_ {
+        TaskType::Executable => Ok(Command::new(&task.command)),
         TaskType::MicrodroidLauncher => {
-            let mut command = Command::new("/system/bin/microdroid_launcher");
-            command.arg(find_library_path(package_name, &task.command, is_apex)?);
-            (
-                command,
-                Some((
-                    microdroid_uids::MICRODROID_PAYLOAD_UID,
-                    microdroid_uids::MICRODROID_PAYLOAD_GID,
-                )),
-            )
+            let mut cmd = Command::new("/system/bin/microdroid_launcher");
+            cmd.arg(find_library_path(package_name, &task.command, is_apex)?);
+            Ok(cmd)
+        }
+    }
+}
+
+fn build_payload_command(
+    package_name: &str,
+    task: &Task,
+    uid_gid: Option<(u32, u32)>,
+    is_apex: bool,
+) -> Result<PayloadCommand> {
+    let command = build_command(package_name, task, is_apex)?;
+    Ok(PayloadCommand { command, uid_gid })
+}
+
+fn get_task_command(
+    package_name: &str,
+    task: &Task,
+    is_apex: bool,
+    run_as_root: bool,
+) -> Result<PayloadCommand> {
+    let uid_gid = if run_as_root {
+        None
+    } else {
+        match task.type_ {
+            TaskType::Executable => {
+                // TODO(b/297501338): Figure out how to handle non-root for system payloads.
+                None
+            }
+            TaskType::MicrodroidLauncher => Some((
+                microdroid_uids::MICRODROID_PAYLOAD_UID,
+                microdroid_uids::MICRODROID_PAYLOAD_GID,
+            )),
         }
     };
-
-    Ok(PayloadCommand { command, uid_gid })
+    build_payload_command(package_name, task, uid_gid, is_apex)
 }
 
 /// Executes the given task.
@@ -1090,7 +1152,6 @@ fn exec_task(
     payload_cmd: PayloadCommand,
     cgroup_config: Option<&CgroupConfig>,
     service: &Strong<dyn IVirtualMachineService>,
-    std_redirect: &Option<OwnedFd>,
     notify_payload_started: bool,
 ) -> Result<Child> {
     info!("executing main task {:?}...", payload_cmd.command);
@@ -1130,14 +1191,6 @@ fn exec_task(
 
     // Never accept input from outside
     command.stdin(Stdio::null());
-
-    let (stdout, stderr) = if let Some(fd) = std_redirect {
-        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
-    } else {
-        (Stdio::null(), Stdio::null())
-    };
-    command.stdout(stdout);
-    command.stderr(stderr);
 
     if notify_payload_started {
         info!("notifying payload started");
@@ -1189,22 +1242,30 @@ fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Resul
     bail!("None of the specified paths are valid files: {:?}", paths);
 }
 
-fn prepare_encryptedstore(key: &[u8], std_redirect: &Option<OwnedFd>) -> Result<Child> {
-    let (stdout, stderr) = if let Some(fd) = std_redirect {
-        (Stdio::from(fd.try_clone()?), Stdio::from(fd.try_clone()?))
-    } else {
-        (Stdio::null(), Stdio::null())
-    };
+fn format_tenant_dir_specs(tenant_manager: &TenantManager) -> String {
+    let gid = TenantAttribute::gid();
+    tenant_manager
+        .list_tenants_info()
+        .map(|(package_name, tenant_attribute)| {
+            format!("{}:{}:{}", package_name, tenant_attribute.uid(), gid)
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn prepare_encryptedstore(key: &[u8], tenant_manager: &TenantManager) -> Result<Child> {
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
         .arg("--key")
         .arg(hex::encode(key))
-        .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT])
-        .stdout(stdout)
-        .stderr(stderr)
-        .spawn()
-        .context("encryptedstore failed")
+        .args(["--mountpoint", ENCRYPTEDSTORE_MOUNTPOINT]);
+
+    let tenant_dir_specs = format_tenant_dir_specs(tenant_manager);
+    if !tenant_dir_specs.is_empty() {
+        cmd.args(["--config-dir", &tenant_dir_specs]);
+    }
+    cmd.spawn().context("encryptedstore failed")
 }
 
 /// Implementation of `IGuestAgent`
@@ -1217,6 +1278,22 @@ impl IGuestAgent for GuestAgent {
     fn startDumpVsockServer(&self, args: &[String]) -> binder::Result<i32> {
         info!("Default dump handler with args: {args:?}");
         start_dump_service().or_service_specific_exception(-1)
+    }
+
+    fn startOrStopTracedRelayService(&self, start: bool) -> binder::Result<()> {
+        if start {
+            info!("Requested to start traced_relay service");
+        } else {
+            info!("Requested to stop traced_relay service");
+        }
+        if !is_debuggable() {
+            return Err(anyhow!("traced_relay is only supported for debuggable VMs"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        let value = if start { "2" } else { "0" };
+        system_properties::write("persist.traced.enable", value)
+            .context("failed to start traced_relay service")
+            .or_service_specific_exception(-1)
     }
 
     fn shutdownAsync(&self) -> binder::Result<()> {
@@ -1245,7 +1322,7 @@ fn delayed_prepare_encryptedstore(
     encrypted_store_mode: EncryptedStoreMode,
     service: Strong<dyn IVirtualMachineService>,
     vm_secret: Arc<VmSecret>,
-    std_redirect: Arc<Option<OwnedFd>>,
+    tenant_manager: Arc<TenantManager>,
 ) -> Result<()> {
     info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
     wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
@@ -1255,16 +1332,17 @@ fn delayed_prepare_encryptedstore(
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     match encrypted_store_mode {
         EncryptedStoreMode::KEKsStoredOnHost => {
-            get_encrypted_store_key(&service, &vm_secret, &mut key)
-                .context("get encrypted store key")?;
+            encrypted_store_key(&service, &vm_secret, &mut key)
+                .context("KEK based encrypted store key setup failed")?;
         }
         EncryptedStoreMode::DefaultKey => {
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
         }
     }
-    prepare_encryptedstore(&key, &std_redirect)?
+    let exitcode = prepare_encryptedstore(&key, &tenant_manager)?
         .wait()
         .context("failed waiting for encryptedstore binary to finish")?;
+    ensure!(exitcode.success(), "Unable to prepare encrypted storage. Exitcode={}", exitcode);
 
     wait_for_property(ENCRYPTED_STORE_STATUS_PROP, "ready")
         .context("wait for {ENCRYPTED_STORE_STATUS_PROP}")?;
@@ -1274,16 +1352,17 @@ fn delayed_prepare_encryptedstore(
         .context("set microdroid_manager.init_done")
 }
 
-fn get_encrypted_store_key(
+fn encrypted_store_key(
     service: &Strong<dyn IVirtualMachineService>,
     vm_secret: &VmSecret,
     key: &mut [u8],
 ) -> Result<()> {
-    let kek_wrapper = service.getEncryptedStoreKEK().context("failed to get KEK")?;
+    let kek_wrapper =
+        service.getEncryptedStoreKEK().context("failed to get host-side KEK handler")?;
     let kek_wrapper = if let Some(kek_wrapper) = kek_wrapper {
         kek_wrapper
     } else {
-        bail!("expected encrypted store KEK from host but got nothing");
+        bail!("expected encrypted store KEK handler from host but got nothing");
     };
 
     // This key is used to encrypt the key used for encrypted store setup.
@@ -1291,16 +1370,21 @@ fn get_encrypted_store_key(
     vm_secret
         .derive_encryptedstore_key_encryption_key(&mut encryption_key)
         .context("failed to derive encryptedstore_key encryption key")?;
-    let kek = kek_wrapper.getKEK().context("failed to get KEK")?;
-    if let Some(kek) = kek {
-        let decrypted_key = decrypt_kek(&kek, &encryption_key).context("failed to decrypt KEK")?;
-        key.copy_from_slice(&decrypted_key);
-    } else {
+    if needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
+        .context("failed to check if device formatted")?
+    {
+        // Encrytedstore disk has never been setup - force provision a new KEK!
+        info!("Creating new KEK blob");
         vm_secret.derive_random_key(key).context("derive random key")?;
         let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;
-        kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK to host")?;
+        kek_wrapper.onKEKCreated(&encrypted_kek).context("failed to send KEK blob to host")?;
+    } else {
+        let kek = kek_wrapper.getKEK().context("failed to get KEK blob")?;
+        let kek = kek.ok_or(anyhow!("Missing KEK blob"))?;
+        let decrypted_key =
+            decrypt_kek(&kek, &encryption_key).context("failed to decrypt KEK blob")?;
+        key.copy_from_slice(&decrypted_key);
     }
-
     Ok(())
 }
 

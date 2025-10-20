@@ -27,8 +27,11 @@ use core::str;
 // We use this for the rollback_index field if SlotVerifyData has empty rollback_indexes
 const DEFAULT_ROLLBACK_INDEX: u64 = 0;
 
+/// SHA256 digest length
+pub const DIGEST_LEN: usize = 32;
+
 /// SHA256 digest type for kernel and initrd.
-pub type Digest = [u8; 32];
+pub type Digest = [u8; DIGEST_LEN];
 
 /// Verified data returned when the payload verification succeeds.
 #[derive(Debug, PartialEq, Eq)]

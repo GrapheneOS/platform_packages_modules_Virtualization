@@ -454,13 +454,30 @@ Result<void> start_test_service() {
             return ScopedAStatus::ok();
         }
 
+        ScopedAStatus getHostname(std::string* out) override {
+            char hostname[64];
+            if (gethostname(hostname, 64) != 0) {
+                std::string msg = "gethostname failed (" + std::to_string(errno) + ")";
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   msg.c_str());
+            }
+            *out = std::string(hostname);
+            return ScopedAStatus::ok();
+        }
+
         ScopedAStatus quit() override { exit(0); }
     };
     auto testService = ndk::SharedRefBase::make<TestService>();
 
     auto callback = []([[maybe_unused]] void* param) { AVmPayload_notifyPayloadReady(); };
-    AVmPayload_runVsockRpcServer(testService->asBinder().get(), testService->PORT, callback,
-                                 nullptr);
+    int port;
+#ifdef __USE_ALTERNATE_PORT__
+    port = testService->ALTERNATE_PORT;
+#else
+    port = testService->PORT;
+#endif
+
+    AVmPayload_runVsockRpcServer(testService->asBinder().get(), port, callback, nullptr);
 
     return {};
 }

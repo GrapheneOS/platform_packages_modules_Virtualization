@@ -1,0 +1,50 @@
+rust_defaults {
+    name: "libcomposd_c_common_defaults",
+    edition: "2021",
+    srcs: ["verified_dex2oat.rs"],
+    prefer_rlib: true,
+    rustlibs: [
+        "libanyhow",
+        "android.system.composd-rust",
+        "libbinder_rs",
+        "libcompos_bindgen",
+        "liblibc",
+        "libparking_lot",
+    ],
+}
+
+rust_ffi {
+    name: "libcom_android_compos_ffi_c",
+    crate_name: "com_android_compos_ffi_c",
+    defaults: ["libcomposd_c_common_defaults"],
+    export_include_dirs: ["include"],
+    apex_available: [
+        "com.android.compos",
+    ],
+}
+
+rust_bindgen {
+    name: "libcompos_bindgen",
+    crate_name: "compos_bindgen",
+    wrapper_src: "include/verified_dex2oat.h",
+    source_stem: "c_bindings",
+    bindgen_flags: [
+        "--verbose",
+        "--with-derive-partialeq",
+        "--with-derive-eq",
+    ],
+    apex_available: [
+        "com.android.compos",
+    ],
+}
+
+rust_test {
+    name: "libcom_android_compos_ffi_c_test",
+    auto_gen_config: true,
+    defaults: ["libcomposd_c_common_defaults"],
+    rustlibs: [
+        "libmockall",
+        "libtempfile",
+    ],
+    flags: ["-A dead_code"],
+}

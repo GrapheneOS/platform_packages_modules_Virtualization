@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"ભૂલને કારણે રિકવર કરવો અશક્ય"</string>
     <string name="error_desc" msgid="4588252235686826721">"કોઈ ભૂલમાંથી રિકવર કરવામાં નિષ્ફળ રહ્યાં.\nતમે ટર્મિનલને ફરી શરૂ કરવાનો પ્રયાસ કરી શકો છો અથવા રિકવરીના વિકલ્પોમાંનો કોઈ એક વિકલ્પ અજમાવી શકો છો.\nજો બધા પ્રયાસો નિષ્ફળ જાય, તો ડેવલપરના વિકલ્પોમાંથી Linux ટર્મિનલને ચાલુ/બંધ કરીને બધો ડેટા વાઇપ કરો."</string>
     <string name="error_code" msgid="3585291676855383649">"ભૂલનો કોડ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"બગની જાણ કરો"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"લૉગ એકત્રિત કરી રહ્યાં છીએ"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"નવા ટર્મિનલ પર અપગ્રેડ કરો"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"તમે જે Linux ટર્મિનલનો ઉપયોગ કરતા હતા, તે જૂનું થઈ ગયું છે. આગળ વધવા માટે કૃપા કરીને અપગ્રેડ કરો.\n<xliff:g id="PATH">/mnt/backup</xliff:g> પર ડેટાનું બૅકઅપ લેવામાં આવશે"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"અપગ્રેડ કરો"</string>
@@ -96,4 +98,10 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"લાંબો સમય ચાલનારા કાર્યો"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"સિસ્ટમ ઇવેન્ટ"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ટૅબ"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"ગ્રાફિક ઍક્સલરેશન"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ગ્રાફિક ઍક્સલરેશન માટે રેન્ડરર બદલો."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"ફેરફાર લાગુ કરવા માટે કૃપા કરીને Terminal ઍપ ફરી શરૂ કરો."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"સૉફ્ટવેર રેન્ડરર"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU-ઍક્સલરેટેડ રેન્ડરર"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"કોઈ આંતરિક ભૂલને કારણે સત્ર ગુમાવ્યું છે."</string>
 </resources>

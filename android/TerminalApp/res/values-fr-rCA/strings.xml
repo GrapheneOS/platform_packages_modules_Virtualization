@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Erreur irrécupérable"</string>
     <string name="error_desc" msgid="4588252235686826721">"Échec de la récupération suite à une erreur.\nVous pouvez essayer de redémarrer le terminal ou essayer l\'une des options de récupération.\nSi toutes les tentatives échouent, effacez toutes les données en activant/désactivant le terminal Linux à partir des options pour les développeurs."</string>
     <string name="error_code" msgid="3585291676855383649">"Code d\'erreur : <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Signaler un bogue"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Collecte des journaux en cours…"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Effectuez une mise à niveau vers un terminal plus récent"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Le terminal Linux que vous utilisiez est obsolète. Veuillez effectuer une mise à niveau pour continuer.\nLes données seront sauvegardées dans <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Mettre à niveau"</string>
@@ -96,4 +98,10 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tâches de longue durée"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Événements système"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Onglet"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Accélération graphique"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Modifiez le rendu pour l\'accélération graphique."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Veuillez redémarrer l\'appli Terminal pour appliquer la modification."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Rendu logiciel"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Rendu accéléré par le processeur graphique"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"La session a été perdue en raison d\'une erreur interne."</string>
 </resources>

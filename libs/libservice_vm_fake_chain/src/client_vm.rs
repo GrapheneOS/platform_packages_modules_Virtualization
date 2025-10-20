@@ -154,6 +154,9 @@ fn fake_microdroid_payload_config_descriptor() -> CborResult<Vec<u8>> {
     let components =
         fake_sub_components().iter().map(|c| c.to_value()).collect::<CborResult<_>>()?;
     map.push((cbor!(-71002)?, Value::Array(components)));
+    let tenant_components: Vec<_> =
+        fake_sub_components().iter().map(|c| c.to_value()).collect::<CborResult<_>>()?;
+    map.push((cbor!(-71004)?, Value::Array(tenant_components)));
     Ok(Value::Map(map).to_vec().unwrap())
 }
 

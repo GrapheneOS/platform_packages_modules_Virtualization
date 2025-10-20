@@ -99,14 +99,31 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(co
             KeyEvent.KEYCODE_DPAD_LEFT -> 0x69 // EV_KEY_LEFT
             KeyEvent.KEYCODE_DPAD_RIGHT -> 0x6A // EV_KEY_RIGHT
 
+            // There is no direct mapping for these keys, so we use the SHIFT + key
+            KeyEvent.KEYCODE_STAR -> 0x09 // EV_KEY_8 + SHIFT
+            KeyEvent.KEYCODE_POUND -> 0x04 // EV_KEY_3 + SHIFT
+            KeyEvent.KEYCODE_AT -> 0x03 // EV_KEY_2 + SHIFT
+            KeyEvent.KEYCODE_PLUS -> 0x0D // EV_KEY_EQUAL + SHIFT
             // Default case for unmapped keys
             else -> -1
         }
     }
 
+    fun shouldSyntheticallyPressShift(event: KeyEvent): Boolean {
+        // KeyCodes that require a synthetic SHIFT press to be sent to the VM.
+        val keysRequiringShiftOverride =
+            setOf(
+                KeyEvent.KEYCODE_AT,
+                KeyEvent.KEYCODE_POUND,
+                KeyEvent.KEYCODE_STAR,
+                KeyEvent.KEYCODE_PLUS,
+            )
+        return event.keyCode in keysRequiringShiftOverride
+    }
+
     inner class InputConnection : BaseInputConnection(this, false) {
         override fun sendKeyEvent(event: KeyEvent): Boolean {
-            if (event.isShiftPressed) {
+            if (event.isShiftPressed || shouldSyntheticallyPressShift(event)) {
                 virtualMachine.sendKeyEvent(HARDWARE_KEYCODE_SHIFT, true)
             }
             val result =
@@ -114,7 +131,7 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(co
                     convertAndroidKeyCodeToEvdevScanCode(event.keyCode),
                     event.action != MotionEvent.ACTION_UP,
                 )
-            if (event.isShiftPressed) {
+            if (event.isShiftPressed || shouldSyntheticallyPressShift(event)) {
                 virtualMachine.sendKeyEvent(HARDWARE_KEYCODE_SHIFT, false)
             }
             return result

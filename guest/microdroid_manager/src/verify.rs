@@ -13,17 +13,20 @@
 // limitations under the License.
 
 use crate::instance::{ApexData, ApkData, EncryptedStoreMode, MicrodroidData};
-use crate::payload::{get_apex_data_from_payload, to_metadata};
+use crate::payload::{get_apex_data_from_payload, get_tenant_apex_data_from_payload, to_metadata};
 use crate::MicrodroidError;
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkmanifest::{get_manifest_info, ApkManifestInfo};
 use apkverify::{extract_signed_data, verify, V4Signature};
 use glob::glob;
 use itertools::sorted;
 use log::{info, warn};
 use microdroid_metadata::{write_metadata, Metadata};
+use microdroid_payload_config::TenantConfig;
+use microdroid_payload_config::TenantConfiguration;
 use openssl::sha::sha512;
-use rustutils::system_properties;
+use rustutils::android::system_properties;
+use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::path::Path;
 use std::process::{Child, Command};
@@ -49,7 +52,7 @@ const APKDMVERITY_BIN: &str = "/system/bin/apkdmverity";
 pub fn verify_payload(
     metadata: &Metadata,
     saved_data: Option<&MicrodroidData>,
-) -> Result<MicrodroidData> {
+) -> Result<(MicrodroidData, Vec<ApexData>)> {
     let start_time = SystemTime::now();
 
     // Verify main APK
@@ -130,18 +133,36 @@ pub fn verify_payload(
     // APEX payload.
     let apex_data_from_payload = get_apex_data_from_payload(metadata)?;
 
+    let tenant_apex_data_from_payload = get_tenant_apex_data_from_payload(metadata)?;
+
     // To prevent a TOCTOU attack, we need to make sure that when apexd verifies & mounts the
     // APEXes it sees the same ones that we just read - so we write the metadata we just collected
     // to a file (that the host can't access) that apexd will then verify against. See b/199371341.
-    write_apex_payload_data(saved_data, &apex_data_from_payload)?;
+    if let Some(saved) = saved_data {
+        // We don't support APEX updates. (assuming that update will change root digest)
+        ensure!(
+            saved.apex_data == apex_data_from_payload,
+            MicrodroidError::PayloadChanged(String::from(
+                "APEXes have changed, have you considered
+                including apex as an updatable Tenant?"
+            ))
+        );
+    }
+    let mut all_apex_data = Vec::new();
+    all_apex_data.extend_from_slice(&apex_data_from_payload);
+    all_apex_data.extend_from_slice(&tenant_apex_data_from_payload);
+
+    // Pass metadata(with public keys and root digests) to apexd so that it uses the passed
+    // metadata instead of the default one (/dev/block/by-name/payload-metadata)
+    write_apex_payload_data(&all_apex_data)?;
 
     if cfg!(not(dice_changes)) {
         // Start apexd to activate APEXes
         system_properties::write("ctl.start", "apexd-vm")?;
     }
 
-    // TODO(inseob): add timeout
-    apkdmverity_child.wait()?;
+    let exitcode = apkdmverity_child.wait()?;
+    ensure!(exitcode.success(), "apkdmverity failed with {:?}", exitcode);
 
     // Do the full verification if the root_hash is un-trustful. This requires the full scanning of
     // the APK file and therefore can be very slow if the APK is large. Note that this step is
@@ -167,15 +188,17 @@ pub fn verify_payload(
     // because we have fully verified the APK signature (and apkdmverity checks all the data we
     // verified is consistent with the root hash) or because we have the saved APK data which will
     // be checked as identical to the data we have verified.
-
-    Ok(MicrodroidData {
-        apk_data: main_apk_data,
-        extra_apks_data,
-        apex_data: apex_data_from_payload,
-    })
+    Ok((
+        MicrodroidData {
+            apk_data: main_apk_data,
+            extra_apks_data,
+            apex_data: apex_data_from_payload,
+        },
+        tenant_apex_data_from_payload,
+    ))
 }
 
-pub fn integrity_protect_tenant_apks() -> Result<()> {
+pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
     // sort globbed paths to match apks (tenant-{idx}) and idsigs (tenant-{idx})
     // e.g. "tenant-0" corresponds to "tenant-idsig-0"
     let tenant_apks =
@@ -188,8 +211,17 @@ pub fn integrity_protect_tenant_apks() -> Result<()> {
         tenant_apks.len(),
         tenant_idsigs.len()
     );
+    if tenant_apks.is_empty() {
+        return Ok(vec![]);
+    }
+    let tenant_hashes_from_idsig: Vec<_> = tenant_idsigs
+        .iter()
+        .map(|idsig| {
+            get_apk_root_hash_from_idsig(idsig).expect("Can't find root hash from tenant idsig")
+        })
+        .collect();
 
-    let tenant_apk_names: Vec<_> =
+    let tenant_apk_block_dev: Vec<_> =
         (0..tenant_apks.len()).map(|i| format!("tenant-apk-{}", i)).collect();
     let mut apkdmverity_arguments: Vec<ApkDmverityArgument> = vec![];
     for (i, tenant_apk) in tenant_apks.iter().enumerate() {
@@ -197,7 +229,7 @@ pub fn integrity_protect_tenant_apks() -> Result<()> {
             ApkDmverityArgument {
                 apk: tenant_apk.to_str().unwrap(),
                 idsig: tenant_idsigs[i].to_str().unwrap(),
-                name: &tenant_apk_names[i],
+                name: &tenant_apk_block_dev[i],
                 saved_root_hash: None,
             }
         });
@@ -205,7 +237,72 @@ pub fn integrity_protect_tenant_apks() -> Result<()> {
     // Start apkdmverity and wait for the dm-verify block
     let mut apkdmverity_child = run_apkdmverity(&apkdmverity_arguments)?;
 
-    apkdmverity_child.wait()?;
+    let exitcode = apkdmverity_child.wait()?;
+    ensure!(exitcode.success(), "apkdmverity failed with {:?}", exitcode);
+
+    let tenant_apks_data = tenant_hashes_from_idsig
+        .into_iter()
+        .enumerate()
+        .map(|(i, root_hash)| {
+            let mount_path = format!("/dev/block/mapper/{}", &tenant_apk_block_dev[i]);
+            get_data_from_apk(&mount_path, root_hash, false)
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(tenant_apks_data)
+}
+
+// Validation logic includes:
+// 1. The tenant_apk a subset of apks described in tenant_config (comparison is by package name)
+// 2. The order of description in tenant_config is irrelevant.
+// 3. The rollback_index (or version_code if rollback_index is missing) >=  min_version in
+//    tenant_config
+// 4. The cert_hash of tenant apk == expected_authority in tenant_config
+pub(crate) fn validate_tenant_apks_against_tenant_config(
+    tenant_apk: &[ApkData], // data extracted from the apk passed from host
+    tenant_config: &[TenantConfig],
+) -> Result<()> {
+    let config_map: HashMap<&String, &TenantConfiguration> = tenant_config
+        .iter()
+        .filter_map(|config| {
+            if let TenantConfig::Apk(config) = config {
+                Some((&config.name, config))
+            } else {
+                None
+            }
+        })
+        .collect();
+    for apk_data in tenant_apk {
+        let Some(config) = config_map.get(&apk_data.package_name) else {
+            bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                "APK ({}) found without a corresponding TenantConfig ({:?})",
+                apk_data.package_name, tenant_config
+            )));
+        };
+        // Version check!
+        if let Some(min_version) = config.min_version {
+            // Check rollback_index (or version_code if rollback_index is missing)  against
+            // min_version
+            let version = apk_data.rollback_index.map_or(apk_data.version_code, u64::from);
+            if version < min_version {
+                bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                    "APK ('{}') version ({}) is less than min_version ({})",
+                    apk_data.package_name, version, min_version
+                )));
+            }
+        }
+        // Expected authority check!
+        if let Some(expected_auth) = &config.expected_authority {
+            // Check version_code against min_version
+            let cert_hash = hex::encode(&apk_data.cert_hash);
+            if *expected_auth != cert_hash {
+                bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                    "APK ('{}') cert_hash ('{}') mismatches expected authority ({})",
+                    apk_data.package_name, cert_hash, expected_auth
+                )));
+            }
+        }
+    }
     Ok(())
 }
 
@@ -243,18 +340,8 @@ fn get_data_from_apk(
     })
 }
 
-fn write_apex_payload_data(
-    saved_data: Option<&MicrodroidData>,
-    apex_data_from_payload: &[ApexData],
-) -> Result<()> {
-    if let Some(saved_apex_data) = saved_data.map(|d| &d.apex_data) {
-        // We don't support APEX updates. (assuming that update will change root digest)
-        ensure!(
-            saved_apex_data == apex_data_from_payload,
-            MicrodroidError::PayloadChanged(String::from("APEXes have changed."))
-        );
-    }
-    let apex_metadata = to_metadata(apex_data_from_payload);
+fn write_apex_payload_data(data: &[ApexData]) -> Result<()> {
+    let apex_metadata = to_metadata(data);
     // Pass metadata(with public keys and root digests) to apexd so that it uses the passed
     // metadata instead of the default one (/dev/block/by-name/payload-metadata)
     OpenOptions::new()

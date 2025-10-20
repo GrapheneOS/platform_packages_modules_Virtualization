@@ -8,5 +8,6 @@
       "name": "com.android.virt"
     }
   ],
-  "export_tombstones": true
+  "export_tombstones": true,
+  "run_as_root": true
 }

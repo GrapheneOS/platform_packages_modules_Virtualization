@@ -330,18 +330,23 @@ fn make_payload_disk(
     let pm = PackageManager::new()?;
     let apex_list = pm.get_apex_list(vm_payload_config.prefer_staged)?;
 
-    let mut tenant_apex_configs: Vec<ApexConfig> = Vec::new();
-    let mut tenant_apk_configs: Vec<microdroid_payload_config::TenantApkConfig> = Vec::new();
-    for tenant in vm_payload_config.tenants.iter() {
-        match tenant {
-            TenantConfig::Apex(apex_conf) => {
-                tenant_apex_configs.push(ApexConfig { name: apex_conf.name.clone() });
+    let payload_config_tenant_apk_cnt = vm_payload_config
+        .tenants
+        .iter()
+        .filter(|&tenant| matches!(tenant, TenantConfig::Apk(_)))
+        .count();
+
+    let tenant_apex_configs = vm_payload_config
+        .tenants
+        .iter()
+        .filter_map(|tenant| {
+            if let TenantConfig::Apex(apex) = tenant {
+                Some(ApexConfig { name: apex.name.clone() })
+            } else {
+                None
             }
-            TenantConfig::Apk(apk_conf) => {
-                tenant_apk_configs.push(apk_conf.clone());
-            }
-        }
-    }
+        })
+        .collect::<Vec<_>>();
 
     let (mut apex_infos, mut tenant_apex_infos) = collect_apex_infos(
         &apex_list,
@@ -413,38 +418,35 @@ fn make_payload_disk(
         });
     }
 
-    let tenant_files: Vec<_> = tenant_apk_configs
-        .iter()
-        .enumerate()
-        .map(|(i, apk)| {
-            // TODO(b/416315992): Get package manager to find the path in case package name is
-            // mentioned.
-            File::open(PathBuf::from(&apk.path))
-                .with_context(|| format!("Failed to open tenant apk #{i} {}", apk.path))
-        })
-        .collect::<Result<_>>()?;
-
-    if tenant_files.len() != app_config.tenantIdsigs.len() {
+    if payload_config_tenant_apk_cnt != app_config.tenantApks.len()
+        || app_config.tenantApks.len() != app_config.tenantIdsigs.len()
+    {
         bail!(
-            "payload config has {} tenant apks, but app config has {} idsigs",
-            tenant_files.len(),
+            "Mismatched tenant apk/idsig. Payload config has {} tenant apks, app config has \
+            {} apks & {} idsigs",
+            payload_config_tenant_apk_cnt,
+            app_config.tenantApks.len(),
             app_config.tenantIdsigs.len()
         );
     }
 
-    for (i, (tenant_file, tenant_idsig)) in
-        tenant_files.into_iter().zip(app_config.tenantIdsigs.iter()).enumerate()
+    for (i, (apk, idsig)) in
+        app_config.tenantApks.iter().zip(app_config.tenantIdsigs.iter()).enumerate()
     {
         partitions.push(aidl::Partition {
             label: format!("tenant-apk-{i}"),
-            image: Some(ParcelFileDescriptor::new(tenant_file)),
+            image: Some(ParcelFileDescriptor::new(
+                apk.as_ref()
+                    .try_clone()
+                    .with_context(|| format!("Failed to clone the tenant idsig #{i}"))?,
+            )),
             writable: false,
             guid: None,
         });
         partitions.push(aidl::Partition {
             label: format!("tenant-idsig-{i}"),
             image: Some(ParcelFileDescriptor::new(
-                tenant_idsig
+                idsig
                     .as_ref()
                     .try_clone()
                     .with_context(|| format!("Failed to clone the tenant idsig #{i}"))?,

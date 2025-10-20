@@ -21,7 +21,6 @@ mod tracker;
 mod util;
 
 pub use error::MemoryTrackerError;
-pub use shared::MemoryRange;
 pub use tracker::{
     deactivate_dynamic_page_tables, init_shared_pool, map_data, map_data_noflush, map_device,
     map_image_footer, map_rodata, map_rodata_outside_main_memory, resize_available_memory,
@@ -40,5 +39,7 @@ pub use util::{
 
 pub(crate) use shared::{alloc_shared, dealloc_shared};
 pub(crate) use stack::max_stack_size;
-pub(crate) use tracker::{switch_to_dynamic_page_tables, MEMORY};
+pub(crate) use tracker::{
+    handle_lazy_mmio_fault, handle_read_only_fault, switch_to_dynamic_page_tables,
+};
 pub(crate) use util::{phys_to_virt, virt_to_phys};

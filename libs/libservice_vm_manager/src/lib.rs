@@ -240,7 +240,7 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
     let instance_id_file = Path::new(VIRT_DATA_DIR).join(INSTANCE_ID_FILENAME);
     let instance_id = get_or_allocate_instance_id(service.as_ref(), instance_id_file)?;
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: String::from("Service VM"),
+        name: String::from("service_vm"),
         kernel: Some(ParcelFileDescriptor::new(service_vm)),
         disks: vec![DiskImage { image: None, partitions: writable_partitions, writable: true }],
         instanceId: instance_id,

@@ -2,9 +2,8 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-rust_library {
-    name: "libcompos_common",
-    crate_name: "compos_common",
+rust_defaults {
+    name: "libcompos_common_defaults",
     defaults: ["avf_build_flags_rust"],
     srcs: ["lib.rs"],
     edition: "2021",
@@ -18,11 +17,57 @@ rust_library {
         "libnested_virt",
         "libnum_traits",
         "librustutils",
+        "libminijail_rust",
         "libvmclient",
         "libplatformproperties_rust",
     ],
     proc_macros: ["libnum_derive"],
+}
+
+rust_library {
+    name: "libcompos_common",
+    crate_name: "compos_common",
+    defaults: ["libcompos_common_defaults"],
     apex_available: [
         "com.android.compos",
+    ],
+}
+
+rust_library {
+    name: "libcompos_common_with_mocks",
+    crate_name: "compos_common_with_mocks",
+    defaults: ["libcompos_common_defaults"],
+    cfgs: ["test"],
+    rustlibs: ["libmockall"],
+}
+
+rust_defaults {
+    name: "libcompos_wrappers_defaults",
+    edition: "2021",
+    srcs: ["libwrappers.rs"],
+    rustlibs: [
+        "libfsverity_rs",
+        "liblibc",
+        "libminijail_rust",
+        "librustutils",
+    ],
+}
+
+rust_library {
+    name: "libcompos_wrappers",
+    crate_name: "compos_wrappers",
+    defaults: ["libcompos_wrappers_defaults"],
+    apex_available: [
+        "com.android.compos",
+    ],
+}
+
+rust_library {
+    name: "libcompos_wrappers_with_mocks",
+    crate_name: "compos_wrappers_with_mocks",
+    defaults: ["libcompos_wrappers_defaults"],
+    cfgs: ["test"],
+    rustlibs: [
+        "libmockall",
     ],
 }

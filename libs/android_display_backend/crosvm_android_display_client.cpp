@@ -444,8 +444,6 @@ extern "C" AndroidDisplaySurface* create_android_surface(struct AndroidDisplayCo
                     ret.error().message().c_str());
     }
 
-    surface.waitForNativeSurface(); // this can block
-
     // TODO(b/332785161): if we know that surface can get destroyed dynamically while VM is running,
     // consider calling ANativeWindow_acquire here and _release in destroy_android_surface, so that
     // crosvm doesn't hold a dangling pointer.

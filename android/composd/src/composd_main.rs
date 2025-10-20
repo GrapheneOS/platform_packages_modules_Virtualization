@@ -23,8 +23,10 @@ mod instance_manager;
 mod instance_starter;
 mod odrefresh_task;
 mod service;
-mod wrapper;
-
+#[cfg(test)]
+mod test_util;
+mod verified_dex2oat_task;
+mod wrappers;
 use crate::instance_manager::InstanceManager;
 use anyhow::{Context, Result};
 use binder::{register_lazy_service, ProcessState};

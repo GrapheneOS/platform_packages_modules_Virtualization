@@ -20,7 +20,7 @@ import com.android.microdroid.testservice.IVmCallback;
 /**
  * An interface exposed by the app for callbacks from the VM.
  *
- * {@hide}
+ * @hide
  */
 interface IAppCallback {
     /** Invites the app to call vmCallback#echoMessage() */

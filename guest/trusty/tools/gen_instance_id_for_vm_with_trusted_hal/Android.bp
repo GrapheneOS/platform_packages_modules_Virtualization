@@ -1,0 +1,8 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+python_binary_host {
+    name: "gen_instance_id_for_vm_with_trusted_hal",
+    srcs: ["gen_instance_id_for_vm_with_trusted_hal.py"],
+}

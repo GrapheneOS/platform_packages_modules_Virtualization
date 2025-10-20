@@ -27,6 +27,7 @@ import android.system.virtualmachine.VirtualMachineConfig;
 import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 import com.android.virt.vm_attestation.testservice.IAttestationService;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -61,6 +62,11 @@ public class VmAttestationTests extends MicrodroidDeviceTestBase {
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         prepareTestSetup(true /* protectedVm */, mOs);
         setMaxPerformanceTaskProfile();
+    }
+
+    @After
+    public void tearDown() {
+        deleteAllExistingVMsByApp();
     }
 
     @Test

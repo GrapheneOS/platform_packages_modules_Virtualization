@@ -23,7 +23,7 @@ import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationcommon.IEncryptedStoreKEK;
 import android.system.virtualmachineservice.IGuestAgent;
 
-/** {@hide} */
+/** @hide */
 interface IVirtualMachineService {
     /**
      * Port number that VirtualMachineService listens on connections from the guest VMs for the

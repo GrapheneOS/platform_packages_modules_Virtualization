@@ -58,6 +58,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -213,6 +217,32 @@ public abstract class MicrodroidDeviceTestBase {
         }
     }
 
+    protected void deleteAllExistingVMsByApp() {
+        Context context = getContext();
+        Path vmDir = Paths.get(context.getDataDir().getPath(), "vm");
+
+        if (!Files.exists(vmDir)) {
+            Log.w(
+                    TAG,
+                    "Deletion of all existing Vms requested, but VM directory does not exist"
+                            + vmDir);
+        }
+        VirtualMachineManager vmm = getVirtualMachineManager();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(vmDir)) {
+            // Iterate over all the VM directories to find names of the VM
+            for (Path entry : stream) {
+                if (Files.isDirectory(entry)) {
+                    // subdirectoryName is the vm name!
+                    String name = entry.getFileName().toString();
+                    vmm.delete(name);
+                    Log.i(TAG, "Deletion an existing VM " + name);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Deletion of existing VMs by the app failed " + e);
+        }
+    }
+
     public void prepareTestSetup(boolean protectedVm, String os) {
         assumeFeatureVirtualizationFramework();
 
@@ -224,10 +254,6 @@ public abstract class MicrodroidDeviceTestBase {
             assume().withMessage("Skip where protected VMs aren't supported")
                     .that(capabilities & VirtualMachineManager.CAPABILITY_PROTECTED_VM)
                     .isNotEqualTo(0);
-            // TODO(b/376870129): remove this
-            assume().withMessage("pVMs with 16k kernel are not supported yet :(")
-                    .that(mOs)
-                    .doesNotContain("_16k");
         } else {
             assume().withMessage("Skip where VMs aren't supported")
                     .that(capabilities & VirtualMachineManager.CAPABILITY_NON_PROTECTED_VM)
@@ -254,6 +280,10 @@ public abstract class MicrodroidDeviceTestBase {
         assume().withMessage("GSI with vendor API level < 202404 may not support AVF")
                 .that(isGsi && vendorApiLevel < 202404)
                 .isFalse();
+
+        assume().withMessage("AVF is not mandatory for API level < 35")
+                .that(Build.VERSION.SDK_INT >= 35)
+                .isTrue();
     }
 
     protected void assumeVsrCompliant() {
@@ -694,6 +724,7 @@ public abstract class MicrodroidDeviceTestBase {
         public int mPageSize;
         public byte[] mPayloadRpData;
         public boolean mIsNewInstance;
+        public String mHostname;
 
         public void assertNoException() {
             if (mException != null) {

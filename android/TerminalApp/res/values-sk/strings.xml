@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"Neopraviteľná chyba"</string>
     <string name="error_desc" msgid="4588252235686826721">"Nepodarilo sa obnoviť z chybového stavu.\nSkúste terminál reštartovať alebo vyskúšajte jednu z možností obnovenia.\nAk všetky pokusy zlyhajú, trvale vymažte všetky údaje tým, že v sekcii Pre vývojárov zapnete alebo vypnete terminál Linux."</string>
     <string name="error_code" msgid="3585291676855383649">"Kód chyby: <xliff:g id="ERROR_CODE">%s</xliff:g>."</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"Nahlásiť chybu"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Zhromažďujú sa denníky"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Inovujte na novší terminál"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Terminál systému Linux, ktorý ste používali, je zastaraný. Ak chcete pokračovať, inovujte ho.\nÚdaje budú zálohované v umiestnení <xliff:g id="PATH">/mnt/backup</xliff:g>."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Inovovať"</string>
@@ -96,4 +98,10 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Dlho spustené úlohy"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Systémové udalosti"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Grafická akcelerácia"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Zmeňte vykresľovací modul pre akceleráciu grafiky."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Ak chcete zmenu použiť, reštartujte aplikáciu Terminál."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Softvérový vykresľovací modul"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Vykresľovací modul s grafickou akceleráciou"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"Relácia sa stratila pre internú chybu."</string>
 </resources>

@@ -17,8 +17,13 @@
 //! A helper library to start a fd_server.
 
 use anyhow::{Context, Result};
+#[cfg(not(test))]
+use compos_wrappers::minijail::Minijail;
+#[cfg_attr(test, allow(unused_imports))]
 use log::{debug, warn};
-use minijail::Minijail;
+#[cfg(test)]
+use {compos_wrappers_with_mocks::minijail::MockMinijail as Minijail, mockall::mock};
+
 use nix::fcntl::OFlag;
 use nix::unistd::pipe2;
 use std::fs::File;
@@ -29,7 +34,7 @@ use std::path::Path;
 const FD_SERVER_BIN: &str = "/apex/com.android.virt/bin/fd_server";
 
 /// Config for starting a `FdServer`
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct FdServerConfig {
     /// List of file FDs exposed for read-only operations.
     pub ro_file_fds: Vec<OwnedFd>,
@@ -41,60 +46,19 @@ pub struct FdServerConfig {
     pub rw_dir_fds: Vec<OwnedFd>,
 }
 
-impl FdServerConfig {
-    /// Creates a `FdServer` based on the current config.
-    pub fn into_fd_server(self) -> Result<FdServer> {
-        let (ready_read_fd, ready_write_fd) = create_pipe()?;
-        let fd_server_jail = self.do_spawn_fd_server(ready_write_fd)?;
-        wait_for_fd_server_ready(ready_read_fd)?;
-        Ok(FdServer { jailed_process: fd_server_jail })
-    }
-
-    fn do_spawn_fd_server(self, ready_file: File) -> Result<Minijail> {
-        let mut inheritable_fds = Vec::new();
-        let mut args = vec![FD_SERVER_BIN.to_string()];
-        for fd in &self.ro_file_fds {
-            let raw_fd = fd.as_raw_fd();
-            args.push("--ro-fds".to_string());
-            args.push(raw_fd.to_string());
-            inheritable_fds.push(raw_fd);
-        }
-        for fd in &self.rw_file_fds {
-            let raw_fd = fd.as_raw_fd();
-            args.push("--rw-fds".to_string());
-            args.push(raw_fd.to_string());
-            inheritable_fds.push(raw_fd);
-        }
-        for fd in &self.ro_dir_fds {
-            let raw_fd = fd.as_raw_fd();
-            args.push("--ro-dirs".to_string());
-            args.push(raw_fd.to_string());
-            inheritable_fds.push(raw_fd);
-        }
-        for fd in &self.rw_dir_fds {
-            let raw_fd = fd.as_raw_fd();
-            args.push("--rw-dirs".to_string());
-            args.push(raw_fd.to_string());
-            inheritable_fds.push(raw_fd);
-        }
-        let ready_fd = ready_file.as_raw_fd();
-        args.push("--ready-fd".to_string());
-        args.push(ready_fd.to_string());
-        inheritable_fds.push(ready_fd);
-
-        debug!("Spawn fd_server {args:?} (inheriting FDs: {inheritable_fds:?})");
-        let jail = Minijail::new()?;
-        let _pid = jail.run(Path::new(FD_SERVER_BIN), &inheritable_fds, &args)?;
-        Ok(jail)
-    }
-}
-
 /// `FdServer` represents a running `fd_server` process. The process lifetime is associated with
 /// the instance lifetime.
 pub struct FdServer {
     jailed_process: Minijail,
 }
-
+impl FdServer {
+    pub fn build_from_config(config: FdServerConfig) -> Result<Self> {
+        let (ready_read_fd, ready_write_fd) = create_pipe()?;
+        let fd_server_jail = do_spawn_fd_server(config, ready_write_fd)?;
+        wait_for_fd_server_ready(ready_read_fd)?;
+        Ok(FdServer { jailed_process: fd_server_jail })
+    }
+}
 impl Drop for FdServer {
     fn drop(&mut self) {
         if let Err(e) = self.jailed_process.kill() {
@@ -103,6 +67,53 @@ impl Drop for FdServer {
             }
         }
     }
+}
+#[cfg(test)]
+mock! {
+    pub FdServer{
+        pub fn build_from_config(config: FdServerConfig) -> Result<Self>;
+    }
+    impl Drop for FdServer{
+        fn drop(&mut self);
+    }
+}
+
+fn do_spawn_fd_server(config: FdServerConfig, ready_file: File) -> Result<Minijail> {
+    let mut inheritable_fds = Vec::new();
+    let mut args = vec![FD_SERVER_BIN.to_string()];
+    for fd in &config.ro_file_fds {
+        let raw_fd = fd.as_raw_fd();
+        args.push("--ro-fds".to_string());
+        args.push(raw_fd.to_string());
+        inheritable_fds.push(raw_fd);
+    }
+    for fd in &config.rw_file_fds {
+        let raw_fd = fd.as_raw_fd();
+        args.push("--rw-fds".to_string());
+        args.push(raw_fd.to_string());
+        inheritable_fds.push(raw_fd);
+    }
+    for fd in &config.ro_dir_fds {
+        let raw_fd = fd.as_raw_fd();
+        args.push("--ro-dirs".to_string());
+        args.push(raw_fd.to_string());
+        inheritable_fds.push(raw_fd);
+    }
+    for fd in &config.rw_dir_fds {
+        let raw_fd = fd.as_raw_fd();
+        args.push("--rw-dirs".to_string());
+        args.push(raw_fd.to_string());
+        inheritable_fds.push(raw_fd);
+    }
+    let ready_fd = ready_file.as_raw_fd();
+    args.push("--ready-fd".to_string());
+    args.push(ready_fd.to_string());
+    inheritable_fds.push(ready_fd);
+
+    debug!("Spawn fd_server {:?} (inheriting FDs: {:?})", args, inheritable_fds);
+    let jail = Minijail::new()?;
+    let _pid = jail.run(Path::new(FD_SERVER_BIN), &inheritable_fds, &args)?;
+    Ok(jail)
 }
 
 fn create_pipe() -> Result<(File, File)> {

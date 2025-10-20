@@ -118,7 +118,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
 import java.util.zip.ZipFile;
 
 /**
@@ -246,8 +245,8 @@ public class VirtualMachine implements AutoCloseable {
     private static final String ENCRYPTED_STORE_KEK_FILE = "encrypted_store_kek.bin";
 
     // Both binders are for virtmgr, and not virtualizationservice
-    @NonNull private final IBinder.DeathRecipient mVSDeathRecipient;
-    @NonNull private final IBinder.DeathRecipient mVMDeathRecipient;
+    private IBinder.DeathRecipient mVSDeathRecipient;
+    private IBinder.DeathRecipient mVMDeathRecipient;
 
     /** The package which owns this VM. */
     @NonNull private final String mPackageName;
@@ -331,14 +330,11 @@ public class VirtualMachine implements AutoCloseable {
 
     // A note on lock ordering:
     // You can take mLock while holding VirtualMachineManager.sCreateLock, but not vice versa.
-    // We never take any other lock while holding mCallbackLock; therefore you can
-    // take mCallbackLock while holding any other lock.
+    // We never take any other lock while holding CallbackTranslator.mLock; therefore you can
+    // take CallbackTranslator.mLock while holding any other lock.
 
     /** Lock protecting our mutable state (other than callbacks). */
     private final Object mLock = new Object();
-
-    /** Lock protecting callbacks. */
-    private final Object mCallbackLock = new Object();
 
     private final boolean mVmOutputCaptured;
 
@@ -364,6 +360,10 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("mLock")
     @Nullable
     private IVirtualMachine mVirtualMachine;
+
+    /** CID of the "running" VM. */
+    @GuardedBy("mLock")
+    private int mCid = -1;
 
     @GuardedBy("mLock")
     @Nullable
@@ -415,15 +415,28 @@ public class VirtualMachine implements AutoCloseable {
     @GuardedBy("mLock")
     private boolean mStopHandled = false;
 
-    /** The registered callback */
-    @GuardedBy("mCallbackLock")
+    /**
+     * The registered callback.
+     *
+     * <p>Don't use directly for callbacks! Only for creating CallbackTranslator.
+     */
+    @GuardedBy("mLock")
     @Nullable
-    private VirtualMachineCallback mCallback;
+    private VirtualMachineCallback mConfiguredCallback;
 
-    /** The executor on which the callback will be executed */
-    @GuardedBy("mCallbackLock")
+    /**
+     * The executor on which the callback will be executed.
+     *
+     * <p>Don't use directly for callbacks! Only for creating CallbackTranslator.
+     */
+    @GuardedBy("mLock")
     @Nullable
-    private Executor mCallbackExecutor;
+    private Executor mConfiguredCallbackExecutor;
+
+    /** The actual callback binder object registered for the current VM. */
+    @GuardedBy("mLock")
+    @Nullable
+    private CallbackTranslator mCallbackTranslator;
 
     private static class ApkSpec {
         public final File apk;
@@ -491,9 +504,6 @@ public class VirtualMachine implements AutoCloseable {
         } else {
             mMemoryManagementCallbacks = null;
         }
-
-        mVSDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
-        mVMDeathRecipient = () -> handleStopped(STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
     }
 
     /**
@@ -570,7 +580,6 @@ public class VirtualMachine implements AutoCloseable {
         try {
             VirtualizationService virtualizationService = VirtualizationService.getInstance();
             VirtualMachine vm = new VirtualMachine(context, name, config, virtualizationService);
-            config.serialize(vm.mConfigFilePath);
             try {
                 vm.mInstanceFilePath.createNewFile();
             } catch (IOException e) {
@@ -633,6 +642,8 @@ public class VirtualMachine implements AutoCloseable {
                             "failed to create encrypted storage partition", e);
                 }
             }
+            // persist the config only after we pass all the checks above.
+            config.serialize(vm.mConfigFilePath);
             return vm;
         } catch (VirtualMachineException | RuntimeException e) {
             // If anything goes wrong, delete any files created so far and the VM's directory
@@ -743,7 +754,10 @@ public class VirtualMachine implements AutoCloseable {
             // already created), FileAlreadyExistsException is thrown.
             Files.createDirectory(vmDir.toPath());
         } catch (FileAlreadyExistsException e) {
-            throw new VirtualMachineException("virtual machine already exists", e);
+            throw new VirtualMachineException(
+                    "virtual machine already exists",
+                    e,
+                    VirtualMachineException.CODE_NAME_ALREADY_EXISTS);
         } catch (IOException e) {
             throw new VirtualMachineException("failed to create directory for VM", e);
         }
@@ -852,21 +866,28 @@ public class VirtualMachine implements AutoCloseable {
                 // no-op
                 return;
             case STATUS_RUNNING:
-                throw new VirtualMachineException("VM is not in stopped state");
+                throw new VirtualMachineException(
+                        "VM is not in stopped state",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_RUNNING);
             case STATUS_DELETED:
-                throw new VirtualMachineException("VM has been deleted");
+                throw new VirtualMachineException(
+                        "VM has been deleted",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED);
         }
     }
 
-    private void handleStopped(@VirtualMachineCallback.StopReason int reason) {
+    private void handleStopped(int cid, @VirtualMachineCallback.StopReason int reason) {
         synchronized (mLock) {
-            if (mStopHandled) {
-                return;
+            // Since we just took the lock, we can't assume the stopped
+            // notification is for the current VM.
+            if (mCid == cid) {
+                if (mStopHandled) {
+                    return;
+                }
+                mStopHandled = true;
+                dropVm();
             }
-            mStopHandled = true;
-            dropVm();
         }
-        executeCallback((cb) -> cb.onStopped(VirtualMachine.this, reason));
     }
 
 
@@ -891,6 +912,7 @@ public class VirtualMachine implements AutoCloseable {
                 Log.w(TAG, "Ignore exception unlinkToDeath() for IVirtualMachine, exception=" + e);
             }
             mVirtualMachine = null;
+            mCid = -1;
         }
         if (mVirtualizationService != null) {
             try {
@@ -906,6 +928,7 @@ public class VirtualMachine implements AutoCloseable {
             }
             mVirtualizationService = null;
         }
+        mCallbackTranslator = null;
     }
 
     /** If we have an IVirtualMachine in the running state return it, otherwise throw. */
@@ -913,11 +936,15 @@ public class VirtualMachine implements AutoCloseable {
     private IVirtualMachine getRunningVm() throws VirtualMachineException {
         switch (getStatus()) {
             case STATUS_STOPPED:
-                throw new VirtualMachineException("VM is not in running state");
+                throw new VirtualMachineException(
+                        "VM is not in running state",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
             case STATUS_RUNNING:
                 return mVirtualMachine;
             case STATUS_DELETED:
-                throw new VirtualMachineException("VM has been deleted");
+                throw new VirtualMachineException(
+                        "VM has been deleted",
+                        VirtualMachineException.CODE_VIRTUAL_MACHINE_DELETED);
             default:
                 // unreachable code. Just make compiler happy.
                 return null;
@@ -934,9 +961,15 @@ public class VirtualMachine implements AutoCloseable {
     public void setCallback(
             @NonNull @CallbackExecutor Executor executor,
             @NonNull VirtualMachineCallback callback) {
-        synchronized (mCallbackLock) {
-            mCallback = callback;
-            mCallbackExecutor = executor;
+        synchronized (mLock) {
+            mConfiguredCallback = callback;
+            mConfiguredCallbackExecutor = executor;
+            if (mCallbackTranslator != null) {
+                synchronized (mCallbackTranslator.mLock) {
+                    mCallbackTranslator.mCallback = callback;
+                    mCallbackTranslator.mCallbackExecutor = executor;
+                }
+            }
         }
     }
 
@@ -947,28 +980,15 @@ public class VirtualMachine implements AutoCloseable {
      */
     @SystemApi
     public void clearCallback() {
-        synchronized (mCallbackLock) {
-            mCallback = null;
-            mCallbackExecutor = null;
-        }
-    }
-
-    /** Executes a callback on the callback executor. */
-    private void executeCallback(Consumer<VirtualMachineCallback> fn) {
-        final VirtualMachineCallback callback;
-        final Executor executor;
-        synchronized (mCallbackLock) {
-            callback = mCallback;
-            executor = mCallbackExecutor;
-        }
-        if (callback == null || executor == null) {
-            return;
-        }
-        final long restoreToken = Binder.clearCallingIdentity();
-        try {
-            executor.execute(() -> fn.accept(callback));
-        } finally {
-            Binder.restoreCallingIdentity(restoreToken);
+        synchronized (mLock) {
+            mConfiguredCallback = null;
+            mConfiguredCallbackExecutor = null;
+            if (mCallbackTranslator != null) {
+                synchronized (mCallbackTranslator.mLock) {
+                    mCallbackTranslator.mCallback = null;
+                    mCallbackTranslator.mCallbackExecutor = null;
+                }
+            }
         }
     }
 
@@ -1536,7 +1556,10 @@ public class VirtualMachine implements AutoCloseable {
                 try {
                     extraApkFiles.add(ParcelFileDescriptor.open(extraApk.apk, MODE_READ_ONLY));
                 } catch (FileNotFoundException e) {
-                    throw new VirtualMachineException("Failed to open extra APK", e);
+                    throw new VirtualMachineException(
+                            "Failed to open extra APK",
+                            e,
+                            VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
                 }
             }
             appConfig.payload.getPayloadConfig().extraApks = extraApkFiles;
@@ -1676,10 +1699,27 @@ public class VirtualMachine implements AutoCloseable {
                 mVirtualMachine =
                         service.createVm(
                                 vmConfigParcel, consoleOutFd, consoleInFd, mLogWriter, null);
-                int cid = mVirtualMachine.getCid();
-                mVirtualMachine.registerCallback(new CallbackTranslator(this, service, cid));
+                mCid = mVirtualMachine.getCid();
+                mCallbackTranslator =
+                        new CallbackTranslator(
+                                this, service, mConfiguredCallback, mConfiguredCallbackExecutor);
+                mVirtualMachine.registerCallback(mCallbackTranslator);
+
+                // Copy to a local variable so that the lambdas below are not
+                // updated when mCid or mCallbackTranslator are mutated.
+                final int cid = mCid;
+                final CallbackTranslator callbackTranslator = mCallbackTranslator;
+                mVSDeathRecipient =
+                        () ->
+                                callbackTranslator.onDied(
+                                        cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
+                mVMDeathRecipient =
+                        () ->
+                                callbackTranslator.onDied(
+                                        cid, STOP_REASON_VIRTUALIZATION_SERVICE_DIED);
                 mVirtualMachine.asBinder().linkToDeath(mVMDeathRecipient, /* flags= */ 0);
                 service.asBinder().linkToDeath(mVSDeathRecipient, /* flags= */ 0);
+
                 if (mMemoryManagementCallbacks != null) {
                     mContext.registerComponentCallbacks(mMemoryManagementCallbacks);
                 }
@@ -1721,14 +1761,17 @@ public class VirtualMachine implements AutoCloseable {
         }
         appConfig.extraIdsigs = extraIdsigs;
 
+        List<ParcelFileDescriptor> tenantApks = new ArrayList<>();
         List<ParcelFileDescriptor> tenantIdsigs = new ArrayList<>();
         for (ApkSpec apk : mTenantApks) {
             service.createOrUpdateIdsigFile(
                     ParcelFileDescriptor.open(apk.apk, MODE_READ_ONLY),
                     ParcelFileDescriptor.open(apk.idsig, MODE_READ_WRITE));
             // Re-open idsig files in read-only mode
+            tenantApks.add(ParcelFileDescriptor.open(apk.apk, MODE_READ_ONLY));
             tenantIdsigs.add(ParcelFileDescriptor.open(apk.idsig, MODE_READ_ONLY));
         }
+        appConfig.tenantApks = tenantApks;
         appConfig.tenantIdsigs = tenantIdsigs;
     }
 
@@ -1822,7 +1865,8 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     private String getHostConsoleName() throws VirtualMachineException {
         if (!mConnectVmConsole) {
-            throw new VirtualMachineException("Host console is not enabled");
+            throw new VirtualMachineException(
+                    "Host console is not enabled", VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createPtyConsole();
@@ -1849,7 +1893,9 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     public InputStream getConsoleOutput() throws VirtualMachineException {
         if (!mVmOutputCaptured) {
-            throw new VirtualMachineException("Capturing vm outputs is turned off");
+            throw new VirtualMachineException(
+                    "Capturing vm outputs is turned off",
+                    VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createVmOutputPipes();
@@ -1873,7 +1919,9 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     public OutputStream getConsoleInput() throws VirtualMachineException {
         if (!mVmConsoleInputSupported) {
-            throw new VirtualMachineException("VM console input is not supported");
+            throw new VirtualMachineException(
+                    "VM console input is not supported",
+                    VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createVmInputPipes();
@@ -1900,7 +1948,9 @@ public class VirtualMachine implements AutoCloseable {
     @NonNull
     public InputStream getLogOutput() throws VirtualMachineException {
         if (!mVmOutputCaptured) {
-            throw new VirtualMachineException("Capturing vm outputs is turned off");
+            throw new VirtualMachineException(
+                    "Capturing vm outputs is turned off",
+                    VirtualMachineException.CODE_FEATURE_DISABLED);
         }
         synchronized (mLock) {
             createVmOutputPipes();
@@ -1941,14 +1991,16 @@ public class VirtualMachine implements AutoCloseable {
                 }
             }
         }
-        throw new VirtualMachineException("VM is not running");
+        throw new VirtualMachineException(
+                "VM is not running", VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
     }
 
     /** @hide */
     public void suspend() throws VirtualMachineException {
         synchronized (mLock) {
             if (mVirtualMachine == null) {
-                throw new VirtualMachineException("VM is not running");
+                throw new VirtualMachineException(
+                        "VM is not running", VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
             }
             try {
                 mVirtualMachine.suspend();
@@ -1964,7 +2016,8 @@ public class VirtualMachine implements AutoCloseable {
     public void resume() throws VirtualMachineException {
         synchronized (mLock) {
             if (mVirtualMachine == null) {
-                throw new VirtualMachineException("VM is not running");
+                throw new VirtualMachineException(
+                        "VM is not running", VirtualMachineException.CODE_VIRTUAL_MACHINE_STOPPED);
             }
             try {
                 mVirtualMachine.resume();
@@ -1991,10 +2044,12 @@ public class VirtualMachine implements AutoCloseable {
         try {
             stop();
 
-            mVirtualizationService
-                    .getBinder()
-                    .asBinder()
-                    .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+            if (mVirtualizationService != null) {
+                mVirtualizationService
+                        .getBinder()
+                        .asBinder()
+                        .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+            }
         } catch (Exception e) {
             // Deliberately ignored; this almost certainly means the VM exited just as
             // we tried to stop it.
@@ -2037,6 +2092,7 @@ public class VirtualMachine implements AutoCloseable {
      *
      * <p>NOTE: Modification of the encrypted storage size is restricted to expansion only and is an
      * irreversible operation.
+     *
      * <p>NOTE: This method may block and should not be called on the main thread.
      *
      * @return the old config
@@ -2054,14 +2110,16 @@ public class VirtualMachine implements AutoCloseable {
             if (!oldConfig.isCompatibleWith(newConfig)
                     || oldConfig.getEncryptedStorageBytes()
                             > newConfig.getEncryptedStorageBytes()) {
-                throw new VirtualMachineException("incompatible config");
+                throw new VirtualMachineException(
+                        "incompatible config", VirtualMachineException.CODE_CONFIG_INCOMPATIBLE);
             }
             checkStopped();
 
             if (oldConfig != newConfig) {
-                // Delete any existing file before recreating; that ensures any
-                // VirtualMachineDescriptor that refers to the old file does not see the new config.
-                mConfigFilePath.delete();
+                // Note that VirtualMachineConfig.serialize replaces the old config atomically.
+                // This ensures that errors while writing the new config won't leave the config on
+                // disk in a broken state and also that any VirtualMachineDescriptor that refers to
+                // the old file does not see the new config.
                 newConfig.serialize(mConfigFilePath);
                 mConfig = newConfig;
             }
@@ -2280,6 +2338,11 @@ public class VirtualMachine implements AutoCloseable {
     public VirtualMachineDescriptor toDescriptor() throws VirtualMachineException {
         synchronized (mLock) {
             checkStopped();
+            if (mEncryptedStoreKEK != null) {
+                throw new VirtualMachineException(
+                        "`toDescriptor` is disabled for VMs with encryptedstore keyblob in CE",
+                        VirtualMachineException.CODE_FEATURE_DISABLED);
+            }
             try {
                 return new VirtualMachineDescriptor(
                         ParcelFileDescriptor.open(mConfigFilePath, MODE_READ_ONLY),
@@ -2345,22 +2408,38 @@ public class VirtualMachine implements AutoCloseable {
 
     private static List<ApkSpec> setupTenantApksFromConfigFile(
             Context context, File vmDir, String configPath) throws VirtualMachineException {
+        List<String> apkList;
         try (ZipFile zipFile = new ZipFile(context.getPackageCodePath())) {
             InputStream inputStream = zipFile.getInputStream(zipFile.getEntry(configPath));
-            List<String> apkList =
+            apkList =
                     parseTenantApkListFromPayloadConfig(
                             new JsonReader(new InputStreamReader(inputStream)));
-            List<ApkSpec> apks = new ArrayList<>(apkList.size());
-            for (int i = 0; i < apkList.size(); ++i) {
-                apks.add(
-                        new ApkSpec(
-                                new File(apkList.get(i)),
-                                new File(vmDir, TENANT_IDSIG_FILE_PREFIX + i)));
-            }
-            return apks;
         } catch (IOException e) {
-            throw new VirtualMachineException("Couldn't parse tenant apks from the vm config", e);
+            throw new VirtualMachineException(
+                    "Couldn't parse tenant apks from the vm config",
+                    e,
+                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
+
+        List<ApkSpec> apks = new ArrayList<>(apkList.size());
+        for (int i = 0; i < apkList.size(); ++i) {
+            String packageName = apkList.get(i);
+            ApplicationInfo appInfo;
+            try {
+                appInfo =
+                        context.getPackageManager()
+                                .getApplicationInfo(
+                                        packageName, PackageManager.ApplicationInfoFlags.of(0));
+            } catch (PackageManager.NameNotFoundException e) {
+                throw new VirtualMachineException(
+                        "Tenant apk package " + packageName + " not found", e);
+            }
+            apks.add(
+                    new ApkSpec(
+                            new File(appInfo.sourceDir),
+                            new File(vmDir, TENANT_IDSIG_FILE_PREFIX + i)));
+        }
+        return apks;
     }
 
     private static List<String> parseExtraApkListFromPayloadConfig(JsonReader reader)
@@ -2395,7 +2474,8 @@ public class VirtualMachine implements AutoCloseable {
             reader.endObject();
             return apks;
         } catch (IOException e) {
-            throw new VirtualMachineException(e);
+            throw new VirtualMachineException(
+                    e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
     }
 
@@ -2410,13 +2490,13 @@ public class VirtualMachine implements AutoCloseable {
                     while (reader.hasNext()) {
                         reader.beginObject(); // Start of a tenant object
                         String pkg = "";
-                        String path = "";
+                        String name = "";
                         while (reader.hasNext()) {
                             String tenantName = reader.nextName();
                             if (tenantName.equals("package")) {
                                 pkg = reader.nextString();
-                            } else if (tenantName.equals("path")) {
-                                path = reader.nextString();
+                            } else if (tenantName.equals("name")) {
+                                name = reader.nextString();
                             } else {
                                 reader.skipValue(); // Skip other fields
                             }
@@ -2424,7 +2504,7 @@ public class VirtualMachine implements AutoCloseable {
                         reader.endObject(); // End of a tenant object
 
                         if ("apk".equals(pkg)) {
-                            apks.add(path);
+                            apks.add(name);
                         }
                     }
                     reader.endArray(); // End of the tenants array
@@ -2435,7 +2515,8 @@ public class VirtualMachine implements AutoCloseable {
             reader.endObject(); // End of the main JSON object
             return apks;
         } catch (IOException e) {
-            throw new VirtualMachineException(e);
+            throw new VirtualMachineException(
+                    e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
     }
 
@@ -2457,7 +2538,10 @@ public class VirtualMachine implements AutoCloseable {
 
             return extraApks;
         } catch (IOException e) {
-            throw new VirtualMachineException("Couldn't parse extra apks from the vm config", e);
+            throw new VirtualMachineException(
+                    "Couldn't parse extra apks from the vm config",
+                    e,
+                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }
     }
 
@@ -2474,7 +2558,10 @@ public class VirtualMachine implements AutoCloseable {
                                 .getApplicationInfo(
                                         packageName, PackageManager.ApplicationInfoFlags.of(0));
             } catch (PackageManager.NameNotFoundException e) {
-                throw new VirtualMachineException("Extra APK package not found", e);
+                throw new VirtualMachineException(
+                        "Extra APK package not found",
+                        e,
+                        VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
             }
 
             extraApks.add(
@@ -2515,66 +2602,95 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
-    /** Map the raw AIDL (& binder) callbacks to what the client expects.
+    /**
+     * Map the raw AIDL (& binder) callbacks to what the client expects.
      *
-     * Must to be static to avoid keeping an implicit strong reference on the
-     * parent VirtualMachine object, otherwise, because IVirtualizationService
-     * will have a cross-process reference, we can end up with a cross-process
-     * circular ref count, resulting in a leak.
+     * <p>Must to be static to avoid keeping an implicit strong reference on the parent
+     * VirtualMachine object, otherwise, because IVirtualizationService will have a cross-process
+     * reference, we can end up with a cross-process circular ref count, resulting in a leak.
      */
     private static class CallbackTranslator extends IVirtualMachineCallback.Stub {
         private final WeakReference<VirtualMachine> mVirtualMachine;
         private final WeakReference<IVirtualizationService> mService;
-        private final int mCid;
+
+        private final Object mLock = new Object();
+
+        /** The registered callback */
+        @GuardedBy("mLock")
+        @Nullable
+        private VirtualMachineCallback mCallback;
+
+        /** The executor on which the callback will be executed */
+        @GuardedBy("mLock")
+        @Nullable
+        private Executor mCallbackExecutor;
 
         public CallbackTranslator(
-                VirtualMachine virtualMachine, IVirtualizationService service, int cid)
+                VirtualMachine virtualMachine,
+                IVirtualizationService service,
+                VirtualMachineCallback callback,
+                Executor callbackExecutor)
                 throws RemoteException {
             this.mVirtualMachine = new WeakReference<>(virtualMachine);
             this.mService = new WeakReference<>(service);
-            this.mCid = cid;
+            this.mCallback = callback;
+            this.mCallbackExecutor = callbackExecutor;
+        }
+
+        @FunctionalInterface
+        interface CallbackFunc {
+            public void apply(VirtualMachineCallback cb, VirtualMachine vm);
+        }
+
+        /** Executes a callback on the callback executor. */
+        private void executeCallback(CallbackFunc fn) {
+            final VirtualMachineCallback callback;
+            final Executor executor;
+            synchronized (mLock) {
+                callback = mCallback;
+                executor = mCallbackExecutor;
+            }
+            VirtualMachine vm = mVirtualMachine.get();
+            if (callback == null || executor == null || vm == null) {
+                return;
+            }
+            final long restoreToken = Binder.clearCallingIdentity();
+            try {
+                executor.execute(() -> fn.apply(callback, vm));
+            } finally {
+                Binder.restoreCallingIdentity(restoreToken);
+            }
         }
 
         @Override
         public void onPayloadStarted(int cid) {
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onPayloadStarted(vm));
-            }
+            executeCallback((cb, vm) -> cb.onPayloadStarted(vm));
         }
 
         @Override
         public void onPayloadReady(int cid) {
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onPayloadReady(vm));
-            }
+            executeCallback((cb, vm) -> cb.onPayloadReady(vm));
         }
 
         @Override
         public void onPayloadFinished(int cid, int exitCode) {
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onPayloadFinished(vm, exitCode));
-            }
+            executeCallback((cb, vm) -> cb.onPayloadFinished(vm, exitCode));
         }
 
         @Override
         public void onError(int cid, int errorCode, String message) {
             int translatedError = getTranslatedError(errorCode);
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.executeCallback((cb) -> cb.onError(vm, translatedError, message));
-            }
+            executeCallback((cb, vm) -> cb.onError(vm, translatedError, message));
         }
 
         @Override
         public void onDied(int cid, int reason) {
             int translatedReason = getTranslatedReason(reason);
-            VirtualMachine vm = mVirtualMachine.get();
-            if (vm != null && mCid == cid) {
-                vm.handleStopped(translatedReason);
-            }
+            executeCallback(
+                    (cb, vm) -> {
+                        vm.handleStopped(translatedReason, cid);
+                        cb.onStopped(vm, reason);
+                    });
         }
 
         @VirtualMachineCallback.ErrorCode
@@ -2709,6 +2825,10 @@ public class VirtualMachine implements AutoCloseable {
         @Override
         public void onKEKCreated(byte[] kekBlob) {
             try {
+                if (mKEKFile.exists()) {
+                    Log.w(TAG, "KEK existed, overwriting..." + mKEKFile.getAbsolutePath());
+                    mKEKFile.delete();
+                }
                 mKEKFile.getParentFile().mkdirs();
                 mKEKFile.createNewFile();
             } catch (IOException e) {
@@ -2716,6 +2836,7 @@ public class VirtualMachine implements AutoCloseable {
             }
             try (FileOutputStream fos = new FileOutputStream(mKEKFile.getAbsolutePath())) {
                 fos.write(kekBlob);
+                fos.getFD().sync();
             } catch (IOException e) {
                 throw new RuntimeException("Failed to write to " + mKEKFile.getAbsolutePath(), e);
             }

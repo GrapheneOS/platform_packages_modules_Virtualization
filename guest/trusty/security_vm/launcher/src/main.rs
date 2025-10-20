@@ -30,11 +30,14 @@ use log::{error, info, trace, warn, LevelFilter};
 use nix::fcntl::OFlag;
 use serde::Deserialize;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use vmclient::VmInstance;
 
-#[derive(Parser)]
+const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
+const INSTANCE_ID_SIZE: usize = 64;
+
+#[derive(Parser, Debug)]
 /// Collection of CLI for trusty_security_vm_launcher
 pub struct Args {
     /// Path to the trusty kernel image.
@@ -59,7 +62,7 @@ pub struct Args {
 
     /// Path to a JSON file defining the RPC services to register.
     #[arg(long, value_name = "FILE")]
-    rpc_services_config: Option<PathBuf>,
+    rpc_services_config: Vec<PathBuf>,
 
     /// CPU Topology exposed to the VM <one-cpu|match-host>
     #[arg(long, default_value = "one-cpu", value_parser = parse_cpu_topology)]
@@ -68,6 +71,16 @@ pub struct Args {
     /// Custom VM firmware to use (test & development only).
     #[arg(long)]
     custom_pvmfw: Option<PathBuf>,
+
+    /// If enabled, allow this VM to access FF-A. The launching process must
+    /// have CAP_IPC_OWNER and be configured by selinux to use guest_ffa_tee_service.
+    /// This is only settable on a protected vm (enforced by virtmgr).
+    #[arg(long)]
+    allow_ffa: bool,
+
+    /// Path to a file containing the VM instance ID.
+    #[arg(long, value_name = "FILE")]
+    vm_instance_id: Option<PathBuf>,
 }
 
 fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
@@ -131,6 +144,19 @@ fn main() -> Result<()> {
         None
     };
 
+    let tee_services = match args.allow_ffa {
+        true => vec![GUEST_FFA_TEE_SERVICE.to_owned()],
+        false => Vec::new(),
+    };
+
+    let instance_id = if let Some(path) = args.vm_instance_id.as_ref() {
+        info!("Loading VM Instance ID from file: {path:?}");
+        load_instance_id(path)?
+    } else {
+        warn!("No VM Instance ID file provided. Using default instance ID.");
+        [0u8; INSTANCE_ID_SIZE]
+    };
+
     let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: args.name.to_owned(),
         kernel,
@@ -140,14 +166,16 @@ fn main() -> Result<()> {
         memoryMib: args.memory_size_mib,
         cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
         platformVersion: "~1.0".to_owned(),
-        // TODO: add instanceId
+        teeServices: tee_services,
+        instanceId: instance_id,
         ..Default::default()
     });
 
-    info!("creating VM");
+    info!("creating VM with config {:?}", &vm_config);
     let console_out = create_log_writer(&args.name)?;
     // Creates only one pipe and one thread for efficiency.
     let log_out = console_out.try_clone().context("Failed to clone console_out fd for log_out")?;
+
     let vm = VmInstance::create(
         service.as_ref(),
         &vm_config,
@@ -161,17 +189,24 @@ fn main() -> Result<()> {
     vm.start(None /* callback */).context("Failed to start VM")?;
     info!("started VM");
 
-    if let Some(config_path) = args.rpc_services_config {
-        let configs = parse_rpc_service_configs(&config_path)?;
-        ensure!(!configs.is_empty(), "RPC services config file at '{:?}' is empty", config_path);
-
+    if !args.rpc_services_config.is_empty() {
         ProcessState::start_thread_pool();
-        info!("Registering {} RPC service(s)...", configs.len());
-        for config in &configs {
-            register_accessor_service(&vm, config)?;
-        }
-        ProcessState::join_thread_pool();
 
+        for config_path in args.rpc_services_config {
+            let configs = parse_rpc_service_configs(&config_path)?;
+            ensure!(
+                !configs.is_empty(),
+                "RPC services config file at '{:?}' is empty",
+                config_path
+            );
+
+            info!("Registering {} RPC service(s) from {}...", configs.len(), config_path.display());
+            for config in &configs {
+                register_accessor_service(&vm, config)?;
+            }
+        }
+
+        ProcessState::join_thread_pool();
         bail!("Thread pool unexpectedly ended");
     } else {
         info!("No --rpc-services-config provided. Not registering any accessor services.");
@@ -179,6 +214,28 @@ fn main() -> Result<()> {
         error!("VM ended: {death_reason:?}");
         Ok(())
     }
+}
+
+fn load_instance_id(path: &Path) -> Result<[u8; INSTANCE_ID_SIZE]> {
+    let mut file =
+        File::open(path).with_context(|| format!("open VM Instance ID file: {:?}", path))?;
+
+    let metadata = file
+        .metadata()
+        .with_context(|| format!("get metadata for VM Instance ID file: {:?}", path))?;
+
+    ensure!(
+        metadata.len() == INSTANCE_ID_SIZE as u64,
+        "VM Instance ID file {:?} has incorrect size. Expected {}, Got {}",
+        path,
+        INSTANCE_ID_SIZE,
+        metadata.len()
+    );
+
+    let mut buffer = [0u8; INSTANCE_ID_SIZE];
+    file.read_exact(&mut buffer)
+        .with_context(|| format!("read VM Instance ID file: {:?}", path))?;
+    Ok(buffer)
 }
 
 /// Defines the structure of a single RPC service configuration in the JSON file.

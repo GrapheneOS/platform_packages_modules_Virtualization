@@ -71,6 +71,7 @@ public class ComposBenchmark extends MicrodroidDeviceTestBase {
 
     @After
     public void tearDown() {
+        deleteAllExistingVMsByApp();
         mInstrumentation.getUiAutomation().dropShellPermissionIdentity();
     }
 

@@ -82,6 +82,8 @@
     <string name="error_title" msgid="405150657301906598">"சரிசெய்ய முடியாத பிழை"</string>
     <string name="error_desc" msgid="4588252235686826721">"பிழையில் இருந்து மீட்டெடுக்க முடியவில்லை.\nநீங்கள் டெர்மினலை மீண்டும் தொடங்கியோ மீட்டெடுப்பு விருப்பங்களில் ஒன்றைப் பயன்படுத்தியோ பார்க்கலாம்.\nஅனைத்து முயற்சிகளும் தோல்வி அடைந்தால் டெவெலப்பர் விருப்பங்களில் Linux டெர்மினலை ஆன்/ஆஃப் செய்து அனைத்துத் தரவையும் அழிக்கவும்."</string>
     <string name="error_code" msgid="3585291676855383649">"பிழைக் குறியீடு: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_button_report_bug" msgid="5559616952618650716">"பிழையைப் புகாரளி"</string>
+    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"பதிவுகளைச் சேகரிக்கிறது"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"புதிய டெர்மினலுக்கு மேம்படுத்துங்கள்"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"நீங்கள் பயன்படுத்தும் Linux டெர்மினல் சமீபத்தியதாக இல்லை. தொடர்வதற்கு மேம்படுத்துங்கள்.\n<xliff:g id="PATH">/mnt/backup</xliff:g> இல் தரவு காப்புப் பிரதி எடுக்கப்படும்."</string>
     <string name="upgrade_button" msgid="2118716848859611704">"மேம்படுத்து"</string>
@@ -96,4 +98,10 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"நீண்ட நேரம் இயங்கும் பணிகள்"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"சிஸ்டம் நிகழ்வுகள்"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"பிரிவு"</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"கிராஃபிக்ஸ் துரிதப்படுத்துதல்"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"ரென்டரரை கிராஃபிக்ஸ் துரிதப்படுத்தலுக்கு மாற்றலாம்."</string>
+    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"மாற்றத்தைப் பயன்படுத்த டெர்மினல் ஆப்ஸை மீண்டும் தொடங்கவும்."</string>
+    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"மென்பொருள் ரென்டரர்"</string>
+    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"GPU துரிதப்படுத்திய ரென்டரர்"</string>
+    <string name="ttyd_connection_error" msgid="4574447133320977761">"உள் பிழையின் காரணமாக அமர்வு முடிந்தது."</string>
 </resources>
