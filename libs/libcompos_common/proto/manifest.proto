@@ -1,0 +1,58 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package com.android.compos.proto;
+
+message Signature {
+    message SignedManifest {
+        message SecureCompileManifest {
+            message CompilerArgument {
+                message FileDetails {
+                    // The fs-verity digest of the file.
+                    optional string verity_digest = 1;
+                }
+
+                /*
+                 * When there is file(s) present there is an escapable '!' that is used as a
+                 * placeholder that will be replaced with a file descriptor.
+                 * Example: "--class-loader-context-fds=!,!"
+                 * Example 2: "--boot-image=\!"
+                 */
+                optional string compiler_flag = 1;
+
+                // Present iff the compiler_flag value references files.
+                repeated FileDetails file_info = 2;
+            }
+            repeated CompilerArgument compiler_arguments = 1;
+        }
+        optional SecureCompileManifest manifest = 1;
+        // The signature of the 'manifest' field.
+        optional bytes signature = 2;
+
+        // The algorithm used to generate the signature field.
+        optional SignatureAlgorithm algorithm = 3;
+    }
+
+    oneof signature {
+        SignedManifest compos_signed_manifest = 1;
+    }
+}
+
+enum SignatureAlgorithm {
+    ED25519 = 0;
+}

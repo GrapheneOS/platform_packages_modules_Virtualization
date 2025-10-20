@@ -71,3 +71,13 @@ rust_library {
         "libmockall",
     ],
 }
+
+rust_protobuf {
+    name: "libcompos_manifest_proto",
+    crate_name: "compos_manifest_proto",
+    protos: ["proto/manifest.proto"],
+    source_stem: "compos_manifest",
+    apex_available: [
+        "com.android.compos",
+    ],
+}
