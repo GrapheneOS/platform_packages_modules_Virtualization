@@ -447,6 +447,10 @@ impl CrosvmCommand {
         memory_mib = memory_mib.saturating_add(Self::get_ramdump_mib(context));
         self.args(["--mem", &memory_mib.get().to_string()]);
 
+        // b/316956218: Some pKVM versions incorrectly advertise KVM_CAP_READONLY_MEM, even for
+        // non-protected VMs, so force it off.
+        self.arg("--force-disable-readonly-mem");
+
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
         }
