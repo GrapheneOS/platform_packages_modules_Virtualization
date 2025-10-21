@@ -16,15 +16,16 @@
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
     IVmPayloadService, AttestationResult::AttestationResult,
-    STATUS_FAILED_TO_PREPARE_CSR_AND_KEY
+    STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use anyhow::{anyhow, Context};
 use avflog::LogResult;
-use binder::{Interface, ExceptionCode, Strong, IntoBinderResult, Status};
+use binder::{ExceptionCode, Interface, IntoBinderResult, Status, Strong};
 use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
-use log::{error, info};
+use crate::encrypted_assets::{mount_encrypted_assets, MountError};
 use crate::vm_secret::VmSecret;
+use log::{error, info};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -133,6 +134,39 @@ impl IVmPayloadService for VmPayloadService {
 
     fn isNewInstance(&self) -> binder::Result<bool> {
         Ok(self.is_new_instance)
+    }
+
+    fn mountEncryptedAssets(
+        &self,
+        image_path: &str,
+        fs_type: &str,
+        cipher: &str,
+        key: &[u8],
+        sector_size: i32,
+    ) -> binder::Result<String> {
+        if self.total_tasks > 1 {
+            // TODO(b/425553329): Add a test for this scenario.
+            return Err(anyhow!(
+                "Mounting encrypted assets is not supported in multi-tenant payloads"
+            ))
+            .or_service_specific_exception(-1);
+        }
+        mount_encrypted_assets(image_path, fs_type, cipher, key, sector_size)
+            .context("Failed to mount encrypted assets")
+            .with_log()
+            .map_err(|e| match e.downcast_ref::<MountError>() {
+                Some(MountError::BadImage)
+                | Some(MountError::BadFsType)
+                | Some(MountError::BadCipher)
+                | Some(MountError::BadKeySize)
+                | Some(MountError::BadSectorSize) => Status::new_exception_str(
+                    ExceptionCode::ILLEGAL_ARGUMENT,
+                    Some(format!("{e:?}")),
+                ),
+                Some(MountError::Other) | None => {
+                    Status::new_service_specific_error_str(-1, Some(format!("{e:?}")))
+                }
+            })
     }
 }
 

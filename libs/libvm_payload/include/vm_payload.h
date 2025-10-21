@@ -68,6 +68,32 @@ typedef enum AVmAccessRollbackProtectedSecretStatus : int32_t {
 } AVmAccessRollbackProtectedSecretStatus;
 
 /**
+ * Introduced in API 37.
+ * Status codes for AVmPayload_mountEncryptedAssets.
+ */
+typedef enum AVmMountEncryptedAssetsStatus : int32_t {
+    /** The operation completed successfully. */
+    AVMMOUNTENCRYPTEDASSETSSTATUS_OK = 0,
+
+    /**
+     * An invalid argument was provided. This includes but is not limited to:
+     * - Invalid image_path (e.g., not under APK assets, not found).
+     * - Unsupported fs_type or cipher.
+     * - Invalid sector_size (e.g., not a power of two, out of range).
+     * - Invalid key_size for the chosen cipher.
+     * - mount_point buffer being too small.
+     */
+    AVMMOUNTENCRYPTEDASSETSSTATUS_ILLEGAL_ARGUMENT = -1,
+
+    /**
+     * An internal error occurred during the setup or mount process.
+     * This can indicate issues with loop device setup, dm-crypt mapping, or the mount system call
+     * itself.
+     */
+    AVMMOUNTENCRYPTEDASSETSSTATUS_INTERNAL_ERROR = -2,
+} AVmMountEncryptedAssetsStatus;
+
+/**
  * Notifies the host that the payload is ready.
  *
  * If the host app has set a `VirtualMachineCallback` for the VM, its
@@ -316,5 +342,37 @@ int32_t AVmPayload_readRollbackProtectedSecret(void* _Nullable buf, size_t n) __
  *  \return true if this is the first run of an instance, false otherwise.
  */
 bool AVmPayload_isNewInstance(void) __INTRODUCED_IN(36);
+
+/**
+ * Creates a dm-crypt mapping over an encrypted image file and mounts the contained filesystem.
+ *
+ * This function allows a payload to mount a read-only filesystem image that is encrypted.
+ * The image must be located within the APK's assets directory.
+ * The filesystem is mounted read-only and executable.
+ *
+ * See also https://docs.kernel.org/admin-guide/device-mapper/dm-crypt.html for detailed information
+ * about the related parameters.
+ *
+ * \param image_path Absolute path to the encrypted filesystem image file, UTF-8 encoded.
+ *                   Must be under the APK assets directory.
+ * \param fs_type The filesystem type of the image, UTF-8 encoded.
+ *                Currently only "erofs" is supported.
+ * \param cipher The encryption cipher to use for dm-crypt, UTF-8 encoded.
+ *               Supported values are "aes-xts-plain64" and "aes-hctr2-plain64".
+ * \param key Pointer to the raw encryption key bytes.
+ * \param key_size Size of the encryption key in bytes.
+ * \param sector_size The logical sector size of the block device in bytes.
+ *                    Must be a power of two between 512 and 4096.
+ * \param mount_point Output buffer to write the null-terminated absolute path of the mount point.
+ * \param mount_point_size Size of the mount_point buffer, should be at least `PATH_MAX`.
+ *
+ * \return AVMMOUNTENCRYPTEDASSETSSTATUS_OK on success,
+ *         or a negative error code in AVmMountEncryptedAssetsStatus on failure.
+ */
+int32_t AVmPayload_mountEncryptedAssets(const char* _Nonnull image_path,
+                                        const char* _Nonnull fs_type, const char* _Nonnull cipher,
+                                        const void* _Nonnull key, size_t key_size,
+                                        int32_t sector_size, char* _Nonnull mount_point,
+                                        size_t mount_point_size) __INTRODUCED_IN(37);
 
 __END_DECLS

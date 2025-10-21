@@ -53,7 +53,7 @@ impl CipherType {
         }
     }
 
-    fn get_required_key_size(&self) -> usize {
+    pub fn get_required_key_size(&self) -> usize {
         match *self {
             // AES-256-HCTR2 takes a 32-byte key
             CipherType::AES256HCTR2 => 32,
