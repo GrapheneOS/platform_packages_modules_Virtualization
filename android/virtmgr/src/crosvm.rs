@@ -298,19 +298,8 @@ impl CrosvmCommand {
         self.arg("--unmap-guest-memory-on-fork");
 
         // Lock the guest memory to improve memory accounting. More context in b/407786138
-        //
-        // Note that this uses MLOCK_ONFAULT underneath, so we still only pay for memory as it is
-        // used. Also depends on MADV_DONTNEED_LOCKED, which requires Linux v5.18+.
-        fn kernel_version() -> Option<(u32, u32)> {
-            let release = nix::sys::utsname::uname().ok()?.release().to_string_lossy().into_owned();
-            let mut release_iter = release.splitn(3, ".");
-            Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
-        }
-        if kernel_version().context("bad uname")? >= (5, 18) {
-            self.arg("--lock-guest-memory");
-        } else {
-            warn!("kernel is too old enable --lock-guest-memory");
-        }
+        self.arg("--lock-guest-memory");
+
         Ok(())
     }
 
