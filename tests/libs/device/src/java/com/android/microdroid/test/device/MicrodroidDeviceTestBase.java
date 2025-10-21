@@ -725,6 +725,7 @@ public abstract class MicrodroidDeviceTestBase {
         public byte[] mPayloadRpData;
         public boolean mIsNewInstance;
         public String mHostname;
+        public String mEncryptedAssetsPath;
 
         public void assertNoException() {
             if (mException != null) {

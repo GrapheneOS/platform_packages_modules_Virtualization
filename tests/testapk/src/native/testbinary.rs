@@ -148,6 +148,9 @@ impl ITestService for TestService {
     fn getHostname(&self) -> BinderResult<String> {
         unimplemented()
     }
+    fn mountEncryptedAssets(&self, _: &str) -> BinderResult<String> {
+        unimplemented()
+    }
 }
 
 fn unimplemented<T>() -> BinderResult<T> {

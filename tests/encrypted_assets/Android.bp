@@ -1,0 +1,50 @@
+// Generates an EROFS image with test data.
+genrule {
+    name: "encrypted_assets_test_image",
+    out: ["test.img"],
+    tools: ["mkfs.erofs"],
+    srcs: [
+        "testdata/file.txt",
+    ],
+    // Set file owner to root:system_payload (uid 0, gid 6000).
+    // The uid and gid are defined in libs/microdroid_uids/src/lib.rs.
+    cmd: "mkdir -p $(genDir)/root" +
+        " && cp $(location testdata/file.txt) $(genDir)/root" +
+        " && $(location mkfs.erofs) --force-uid=0 --force-gid=6000 $(out) $(genDir)/root",
+}
+
+// Host tool to encrypt the filesystem image using a provided key.
+cc_binary_host {
+    name: "encrypt_assets_main",
+    defaults: ["avf_build_flags_cc"],
+    srcs: ["encrypt_assets_main.cc"],
+    shared_libs: [
+        "libbase",
+        "libcrypto",
+    ],
+}
+
+// Encrypts the image using aes-xts-plain64 with the test key.
+genrule {
+    name: "encrypted_assets_test_blob",
+    out: ["test.bin"],
+    tools: ["encrypt_assets_main"],
+    srcs: [
+        "test.key",
+        ":encrypted_assets_test_image",
+    ],
+    cmd: "$(location encrypt_assets_main)" +
+        " $(location test.key) $(location :encrypted_assets_test_image) $(out)",
+}
+
+// Packages the encrypted blob into a JAR file for APK assets.
+// APKs can include this in static_libs to bundle assets/encrypted_assets.bin.
+java_genrule {
+    name: "encrypted_assets_test_apk_assets",
+    out: ["encrypted_assets_test_apk_assets.jar"],
+    tools: ["soong_zip"],
+    srcs: [":encrypted_assets_test_blob"],
+    cmd: "mkdir -p $(genDir)/assets" +
+        " && cp $(location :encrypted_assets_test_blob) $(genDir)/assets/encrypted_assets.bin" +
+        " && $(location soong_zip) -jar -o $(out) -C $(genDir) -D $(genDir)/assets",
+}
