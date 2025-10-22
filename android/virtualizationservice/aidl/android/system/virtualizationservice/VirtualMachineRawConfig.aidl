@@ -123,6 +123,13 @@ parcelable VirtualMachineRawConfig {
 
     boolean balloon;
 
+    /**
+     * Requires an opt-in for pVMs because guests are likely to probe for and
+     * automatically use it even if they are missing the necessary driver
+     * changes to share the ITS tables with the host, resulting in failure.
+     */
+    boolean allowVgicItsInPvm;
+
     /** Enable or disable USB passthrough support */
     @nullable UsbConfig usbConfig;
 

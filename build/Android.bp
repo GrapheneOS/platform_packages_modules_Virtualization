@@ -93,6 +93,13 @@ aconfig_declarations {
     ],
 }
 
+rust_aconfig_library {
+    name: "libavf_aconfig_flags_rust",
+    crate_name: "avf_aconfig",
+    aconfig_declarations: "avf_aconfig_flags",
+    apex_available: ["com.android.virt"],
+}
+
 java_aconfig_library {
     name: "avf_aconfig_flags_java",
     aconfig_declarations: "avf_aconfig_flags",

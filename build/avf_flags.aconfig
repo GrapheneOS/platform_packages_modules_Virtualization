@@ -33,3 +33,10 @@ flag {
   description: "Flag used in @FlaggedApi annotation for VirtualMachineException.CODE_*"
   bug: "438324609"
 }
+
+flag {
+  name: "microdroid_pvm_gic_its"
+  namespace: "virtualization"
+  description: "Flag used to allow microdroid pVMs to use vGIC ITS"
+  bug: "401031659"
+}
