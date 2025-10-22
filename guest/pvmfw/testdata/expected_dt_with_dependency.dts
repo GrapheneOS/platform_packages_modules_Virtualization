@@ -6,7 +6,7 @@
 
 / {
     node_a: node_a {
-        phandle = <0x2E>;
+        phandle = <0x2F>;
         val = <0x6>;
         dep = <&node_a_dep &common>;
         reg = <0x0 0xFF000 0x0 0x1>;
@@ -14,7 +14,7 @@
     };
 
     node_a_dep: node_a_dep {
-        phandle = <0x31>;
+        phandle = <0x32>;
         val = <0xFF>;
         dep = <&node_aa_nested_dep>;
     };
@@ -23,13 +23,13 @@
         should_be_preserved = <0xFF>;
 
         node_aa_nested_dep: node_aa_nested_dep {
-            phandle = <0x33>;
+            phandle = <0x34>;
             tag = <0x9>;
         };
     };
 
     common: common {
-        phandle = <0x32>;
+        phandle = <0x33>;
         id = <0x9>;
     };
 

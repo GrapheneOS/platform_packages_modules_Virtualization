@@ -4,14 +4,14 @@
 
 / {
     node_c: node_c {
-        phandle = <0x30>;
+        phandle = <0x31>;
         loop_dep = <&node_c_loop>;
         reg = <0x0 0xFF200 0x0 0x1>;
         interrupts = <0x0 0xF 0x4>;
     };
 
     node_c_loop: node_c_loop {
-        phandle = <0x36>;
+        phandle = <0x37>;
         loop_dep = <&node_c>;
     };
 
