@@ -221,7 +221,7 @@ typedef void (*AVerifiedDex2Oat_OnFailureCallback)(
  *  `AVERIFIED_DEX2OAT_BAD_ARGS` when `out_failure_code` is a null pointer.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getReason(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
         AVerifiedDex2Oat_FailureReason* _Nonnull out_failure_reason) __INTRODUCED_IN(37);
 
 /**
@@ -239,7 +239,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getReason(
  *  `AVERIFIED_DEX2OAT_BAD_ARGS` when `exit_code` is a null pointer.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getExitCode(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
         int32_t* _Nonnull out_exit_code) __INTRODUCED_IN(37);
 
 /**
@@ -259,7 +259,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getExitCode(
  *   `AVERIFIED_DEX2OAT_BAD_ARGS` when `out_cpu_time_ms` is null.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getCpuClockTimeMs(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
         int32_t* _Nonnull out_cpu_time_ms) __INTRODUCED_IN(37);
 
 /**
@@ -279,7 +279,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getCpuClockTimeMs(
  *   `AVERIFIED_DEX2OAT_BAD_ARGS` when `wall_time_ms` is null.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getWallClockTimeMs(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
         int32_t* _Nonnull out_wall_time_ms) __INTRODUCED_IN(37);
 
 /**
@@ -299,7 +299,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getWallClockTimeMs(
  *  `AVERIFIED_DEX2OAT_BAD_ARGS` when `message` is a null pointer.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getMessage(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
         const char* _Nonnull* _Nullable message) __INTRODUCED_IN(37);
 
 /**
