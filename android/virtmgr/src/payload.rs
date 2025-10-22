@@ -31,6 +31,7 @@ use serde_xml_rs::from_reader;
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::{metadata, File, OpenOptions};
+use std::os::unix::fs::FileTypeExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
@@ -163,6 +164,13 @@ impl ApexInfo {
         Ok(std::fs::metadata(&self.path)
             .context(format!("Failed to get the size of APEX {} @ {:?}", &self.name, &self.path))?
             .len())
+    }
+
+    fn backed_by_block_device(&self) -> Result<bool> {
+        Ok(std::fs::metadata(&self.path)
+            .context(format!("Failed to get file metadata for {:?}", &self.path))?
+            .file_type()
+            .is_block_device())
     }
 }
 
@@ -507,6 +515,11 @@ fn check_apexes_are_from_allowed_partitions(requested_apexes: &Vec<&ApexInfo>) -
 
 fn check_apexes_are_aligned(requested_apexes: &Vec<&ApexInfo>) -> Result<()> {
     for apex in requested_apexes {
+        // Skip the check if it's already backed by a block device.
+        if apex.backed_by_block_device()? {
+            continue;
+        }
+
         let size = apex.size()?;
         if (size % 4096) != 0 {
             bail!("APEX {} ({} bytes) is not aligned to 4K", apex.name, size);
