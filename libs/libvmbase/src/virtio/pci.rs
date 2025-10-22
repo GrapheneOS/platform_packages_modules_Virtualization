@@ -22,12 +22,15 @@ use core::ops::Range;
 use log::debug;
 use once_cell::race::OnceBox;
 #[cfg(target_arch = "x86_64")]
-use virtio_drivers::transport::x86_64::HypCam;
+use virtio_drivers::transport::x86_64::{HypCam, HypPciTransport};
 use virtio_drivers::{
     device::{blk, socket},
-    transport::pci::{
-        bus::{BusDeviceIterator, Cam, ConfigurationAccess, MmioCam, PciRoot},
-        virtio_device_type, PciTransport,
+    transport::{
+        pci::{
+            bus::{BusDeviceIterator, Cam, ConfigurationAccess, DeviceFunction, MmioCam, PciRoot},
+            virtio_device_type, PciTransport, VirtioPciError,
+        },
+        SomeTransport,
     },
     Hal,
 };
@@ -179,12 +182,12 @@ pub fn initialize(
 }
 
 /// Virtio Block device.
-pub type VirtIOBlk<T> = blk::VirtIOBlk<T, PciTransport>;
+pub type VirtIOBlk<'a, T> = blk::VirtIOBlk<T, SomeTransport<'a>>;
 
 /// Virtio Socket device.
 ///
 /// Spec: https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html 5.10
-pub type VirtIOSocket<T> = socket::VirtIOSocket<T, PciTransport>;
+pub type VirtIOSocket<'a, T> = socket::VirtIOSocket<T, SomeTransport<'a>>;
 
 /// An iterator that iterates over the PCI transport for each device.
 pub struct PciTransportIterator<'a, T: Hal, C: ConfigurationAccess> {
@@ -199,10 +202,26 @@ impl<'a, T: Hal, C: ConfigurationAccess> PciTransportIterator<'a, T, C> {
         let bus = pci_root.enumerate_bus(0);
         Self { pci_root, bus, _hal: PhantomData }
     }
+
+    #[cfg(target_arch = "aarch64")]
+    fn pci_transport(
+        &mut self,
+        device_function: DeviceFunction,
+    ) -> Result<SomeTransport<'a>, VirtioPciError> {
+        PciTransport::new::<T, C>(self.pci_root, device_function).map(SomeTransport::Pci)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn pci_transport(
+        &mut self,
+        device_function: DeviceFunction,
+    ) -> Result<SomeTransport<'a>, VirtioPciError> {
+        HypPciTransport::new::<C>(self.pci_root, device_function).map(SomeTransport::HypPci)
+    }
 }
 
-impl<T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'_, T, C> {
-    type Item = PciTransport;
+impl<'a, T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'a, T, C> {
+    type Item = SomeTransport<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -217,7 +236,7 @@ impl<T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'_, T, C>
             };
             debug!("  VirtIO {virtio_type:?}");
 
-            return PciTransport::new::<T, C>(self.pci_root, device_function).ok();
+            return self.pci_transport(device_function).ok();
         }
     }
 }

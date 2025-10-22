@@ -20,11 +20,8 @@ use log::{debug, info};
 use virtio_drivers::{
     device::console::VirtIOConsole,
     transport::{
-        pci::{
-            bus::{ConfigurationAccess, PciRoot},
-            PciTransport,
-        },
-        DeviceType, Transport,
+        pci::bus::{ConfigurationAccess, PciRoot},
+        DeviceType, SomeTransport, Transport,
     },
     BufferDirection, Error, Hal, PhysAddr, PAGE_SIZE,
 };
@@ -71,7 +68,7 @@ pub fn check_pci(pci_root: &mut PciRoot<impl ConfigurationAccess>) {
 }
 
 /// Checks the given VirtIO block device.
-fn check_virtio_block_device(transport: PciTransport, index: usize) {
+fn check_virtio_block_device(transport: SomeTransport, index: usize) {
     let mut blk = pci::VirtIOBlk::<HalImpl>::new(transport).expect("failed to create blk driver");
     info!("Found {} KiB block device.", blk.capacity() * SECTOR_SIZE_BYTES as u64 / 1024);
     match index {
@@ -97,15 +94,15 @@ fn check_virtio_block_device(transport: PciTransport, index: usize) {
 }
 
 /// Checks the given VirtIO socket device.
-fn check_virtio_socket_device(transport: PciTransport) {
+fn check_virtio_socket_device(transport: SomeTransport) {
     let socket = pci::VirtIOSocket::<HalImpl>::new(transport)
         .expect("Failed to create VirtIO socket driver");
     info!("Found socket device: guest_cid={}", socket.guest_cid());
 }
 
 /// Checks the given VirtIO console device.
-fn check_virtio_console_device(transport: PciTransport) {
-    let mut console = VirtIOConsole::<HalImpl, PciTransport>::new(transport)
+fn check_virtio_console_device(transport: SomeTransport) {
+    let mut console = VirtIOConsole::<HalImpl, _>::new(transport)
         .expect("Failed to create VirtIO console driver");
     info!(
         "Found console device with size {:?}",
