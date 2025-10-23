@@ -565,6 +565,73 @@ pub unsafe extern "C" fn AVirtualMachine_connectVsock(vm: *mut VmInstance, port:
     }
 }
 
+fn add_accessor(
+    vm: &VmInstance,
+    rpc_service_name: &str,
+    accessor_name: &str,
+    port: i32,
+) -> Result<(), c_int> {
+    let accessor = vm.vm.createAccessorBinder(rpc_service_name, port).map_err(|e| {
+        error!("AVirtualMachine_addAccessor: createAccessorBinder failed: {e:?}");
+        libc::EIO
+    })?;
+    let accessor_delegator =
+        binder::delegate_accessor(rpc_service_name, accessor).map_err(|e| {
+            error!("AVirtualMachine_addAccessor: delegate_accessor failed: {e:?}");
+            libc::EIO
+        })?;
+    binder::add_service(accessor_name, accessor_delegator).map_err(|e| {
+        error!("AVirtualMachine_addAccessor: add_service failed: {e:?}");
+        libc::EIO
+    })?;
+    Ok(())
+}
+
+/// Registers an accessor for an RPC service within the virtual machine.
+///
+/// # Safety
+///
+/// * `vm` must be a pointer returned by `AVirtualMachine_create`.
+/// * `rpc_service_name` and `accessor_name` must be valid, null-terminated C strings pointing to
+///   readable memory.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachine_addAccessor(
+    vm: *mut VmInstance,
+    rpc_service_name: *const c_char,
+    accessor_name: *const c_char,
+    port: i32,
+) -> c_int {
+    if vm.is_null() {
+        return -libc::EINVAL;
+    }
+    // SAFETY: We verified `vm` is not null. The caller guarantees the memory is valid
+    // and properly initialized.
+    let vm = unsafe { &mut *vm };
+
+    if rpc_service_name.is_null() || accessor_name.is_null() {
+        return -libc::EINVAL;
+    }
+
+    // SAFETY: The caller guarantees `rpc_service_name` is a valid C string.
+    let rpc_service_cstr = unsafe { CStr::from_ptr(rpc_service_name) };
+    let Ok(rpc_service_str) = rpc_service_cstr.to_str() else {
+        error!("AVirtualMachine_addAccessor: rpc_service_name is not valid UTF-8");
+        return -libc::EINVAL;
+    };
+
+    // SAFETY: The caller guarantees `accessor_name` is a valid C string.
+    let accessor_cstr = unsafe { CStr::from_ptr(accessor_name) };
+    let Ok(accessor_str) = accessor_cstr.to_str() else {
+        error!("AVirtualMachine_addAccessor: accessor_name is not valid UTF-8");
+        return -libc::EINVAL;
+    };
+
+    match add_accessor(vm, rpc_service_str, accessor_str, port) {
+        Ok(_) => 0,
+        Err(err) => -err,
+    }
+}
+
 fn death_reason_to_stop_reason(death_reason: DeathReason) -> AVirtualMachineStopReason {
     match death_reason {
         DeathReason::VirtualizationServiceDied => {
