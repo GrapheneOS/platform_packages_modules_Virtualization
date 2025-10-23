@@ -28,6 +28,7 @@ filegroup {
         "trusty_vm_sections.ld",
     ],
     visibility: [
+        "//device/generic/trusty/custom_vm/memshare_vm",
         "//packages/modules/Virtualization/guest/trusty/test_vm/vm",
         "//packages/modules/Virtualization/guest/trusty/test_vm_os/vm",
         "//vendor:__subpackages__",
