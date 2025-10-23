@@ -1143,6 +1143,8 @@ fn load_app_config(
     vm_config.osName = config.osName.clone();
     vm_config.instanceId = config.instanceId;
 
+    vm_config.allowVgicItsInPvm = avf_aconfig::microdroid_pvm_gic_its();
+
     // Microdroid takes additional init ramdisk & (optionally) storage image
     add_microdroid_system_images(config, instance_file, storage_image, os_name, &mut vm_config)?;
 

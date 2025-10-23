@@ -30,6 +30,7 @@ rust_defaults {
         "android.system.virtualizationservice_internal-rust",
         "android.system.virtualmachineservice-rust",
         "android.os.permissions_aidl-rust",
+        "libavf_aconfig_flags_rust",
         "libandroid_logger",
         "libanyhow",
         "libapkverify",

@@ -422,11 +422,7 @@ impl CrosvmCommand {
         ]);
         self.arg("--no-pmu");
 
-        // Allow GIC ITS by default for unprotected VMs.
-        // TODO: Support protected VMs. It will require an opt-in for non-Microdroid pVMs because
-        // guests are likely to probe for and automatically use it even if they are missing the
-        // necessary driver changes to share the ITS tables with the host, resulting in failure.
-        let allow_vgic_its = !context.config.protectedVm;
+        let allow_vgic_its = !context.config.protectedVm || context.config.allowVgicItsInPvm;
         self.arg(format!("--irqchip=kernel[allow-vgic-its={allow_vgic_its}]"));
     }
 
