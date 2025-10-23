@@ -51,18 +51,16 @@ class TerminalAppTest {
     }
 
     private fun installVmImage() {
-        val INSTALL_TIMEOUT_MILLIS: Long = TimeUnit.MINUTES.toMillis(10)
+        val INSTALL_TIMEOUT_MS: Long = TimeUnit.MINUTES.toMillis(10)
 
         val intent = Intent(targetContext, InstallerActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.putExtra(AUTO_INSTALL_EXTRA, true)
-        val activity = instr.startActivitySync(intent)
-        if (activity is InstallerActivity) {
-            Assert.assertTrue(
-                "Failed to install VM image",
-                activity.waitForInstallCompleted(INSTALL_TIMEOUT_MILLIS),
-            )
-        }
+        val activity = instr.startActivitySync(intent) as InstallerActivity
+        Assert.assertTrue(
+            "Failed to install in " + TimeUnit.MILLISECONDS.toMinutes(INSTALL_TIMEOUT_MS) + "min",
+            activity.waitForInstallCompleted(INSTALL_TIMEOUT_MS),
+        )
     }
 
     @Test
@@ -75,13 +73,12 @@ class TerminalAppTest {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         val start = System.currentTimeMillis()
-        val activity = instr.startActivitySync(intent)
-        if (activity is MainActivity) {
-            Assert.assertTrue(
-                "Failed to boot in " + TimeUnit.MILLISECONDS.toMinutes(BOOT_TIMEOUT_MS) + "min",
-                activity.waitForBootCompleted(BOOT_TIMEOUT_MS),
-            )
-        }
+        val activity = instr.startActivitySync(intent) as MainActivity
+        Assert.assertTrue(
+            "Failed to boot in " + TimeUnit.MILLISECONDS.toMinutes(BOOT_TIMEOUT_MS) + "min",
+            activity.waitForBootCompleted(BOOT_TIMEOUT_MS),
+        )
+
         val delay = System.currentTimeMillis() - start
 
         // TODO: measure multiple times?

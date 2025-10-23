@@ -132,9 +132,13 @@ public class InstallerActivity : BaseActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
+    /** Returns true if installation is successfully completed within timeout. */
     @VisibleForTesting
     public fun waitForInstallCompleted(timeoutMillis: Long): Boolean {
-        return installCompleted.block(timeoutMillis)
+        if (installCompleted.block(timeoutMillis)) {
+            return InstalledImage.getDefault(this).isInstalled()
+        }
+        return false
     }
 
     private fun showSnackBar(message: String, length: Int) {
@@ -155,9 +159,7 @@ public class InstallerActivity : BaseActivity() {
     }
 
     private fun finishWithResult(resultCode: Int) {
-        if (resultCode == RESULT_OK) {
-            installCompleted.open()
-        }
+        installCompleted.open()
         setResult(resultCode)
         finish()
     }
@@ -220,6 +222,10 @@ public class InstallerActivity : BaseActivity() {
     private fun handleInstallError(displayText: String) {
         showSnackBar(displayText, Snackbar.LENGTH_LONG)
         setInstallEnabled(true)
+
+        if (autoInstall) {
+            finishWithResult(RESULT_CANCELED)
+        }
     }
 
     private class InstallProgressListener(activity: InstallerActivity) :
