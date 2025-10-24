@@ -13,22 +13,6 @@ rust_defaults {
     ],
 }
 
-rust_library_rlib {
-    name: "libcbor_util_nostd",
-    defaults: ["libcbor_util_defaults"],
-    no_stdlibs: true,
-    stdlibs: [
-        "libcompiler_builtins.rust_sysroot",
-        "libcore.rust_sysroot",
-    ],
-    rustlibs: [
-        "libciborium_nostd",
-        "libcoset_nostd",
-        "liblog_rust_nostd",
-        "libserde_nostd",
-    ],
-}
-
 rust_library {
     name: "libcbor_util",
     defaults: ["libcbor_util_defaults"],
@@ -43,4 +27,8 @@ rust_library {
         "libserde",
     ],
     vendor_available: true,
+    no_std: {
+        features: [],
+        enabled: true,
+    },
 }

@@ -222,7 +222,6 @@ impl From<ciborium::value::Error> for RequestProcessingError {
     }
 }
 
-#[cfg(not(feature = "std"))]
 impl From<der::Error> for RequestProcessingError {
     fn from(e: der::Error) -> Self {
         error!("DER encoding/decoding error: {e}");

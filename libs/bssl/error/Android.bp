@@ -12,21 +12,6 @@ rust_defaults {
     ],
 }
 
-rust_library_rlib {
-    name: "libbssl_avf_error_nostd",
-    defaults: ["libbssl_avf_error_defaults"],
-    no_stdlibs: true,
-    stdlibs: [
-        "libcompiler_builtins.rust_sysroot",
-        "libcore.rust_sysroot",
-    ],
-    rustlibs: [
-        "libcoset_nostd",
-        "liblog_rust_nostd",
-        "libserde_nostd",
-    ],
-}
-
 rust_library {
     name: "libbssl_avf_error",
     defaults: ["libbssl_avf_error_defaults"],
@@ -39,4 +24,8 @@ rust_library {
         "libserde",
     ],
     vendor_available: true,
+    no_std: {
+        features: [],
+        enabled: true,
+    },
 }
