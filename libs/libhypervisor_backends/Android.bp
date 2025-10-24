@@ -19,17 +19,17 @@ rust_library_rlib {
     target: {
         android_arm64: {
             rustlibs: [
-                "libonce_cell_nostd",
+                "libonce_cell",
                 "libsmccc",
-                "libthiserror_nostd",
-                "libuuid_nostd",
+                "libthiserror",
+                "libuuid",
             ],
             enabled: true,
         },
         android_x86_64: {
             rustlibs: [
-                "libonce_cell_nostd",
-                "libthiserror_nostd",
+                "libonce_cell",
+                "libthiserror",
             ],
             enabled: true,
         },

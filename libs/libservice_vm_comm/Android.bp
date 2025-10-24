@@ -13,24 +13,6 @@ rust_defaults {
     ],
 }
 
-rust_library_rlib {
-    name: "libservice_vm_comm_nostd",
-    defaults: ["libservice_vm_comm_defaults"],
-    no_stdlibs: true,
-    stdlibs: [
-        "libcore.rust_sysroot",
-    ],
-    rustlibs: [
-        "libbssl_avf_error_nostd",
-        "libciborium_nostd",
-        "libcbor_util_nostd",
-        "libcoset_nostd",
-        "libder_nostd",
-        "liblog_rust_nostd",
-        "libserde_nostd",
-    ],
-}
-
 rust_library {
     name: "libservice_vm_comm",
     defaults: ["libservice_vm_comm_defaults"],
@@ -47,6 +29,10 @@ rust_library {
         "std",
     ],
     vendor_available: true,
+    no_std: {
+        features: [],
+        enabled: true,
+    },
 }
 
 rust_defaults {

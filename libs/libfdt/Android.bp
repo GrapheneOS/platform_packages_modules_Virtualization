@@ -80,19 +80,12 @@ rust_library_rlib {
         "libfdt",
     ],
     apex_available: ["com.android.virt"],
-}
-
-rust_library_rlib {
-    name: "liblibfdt_nostd",
-    defaults: ["liblibfdt_defaults"],
-    no_stdlibs: true,
-    prefer_rlib: true,
-    stdlibs: [
-        "libcore.rust_sysroot",
-    ],
-    whole_static_libs: [
-        "libfdt_baremetal",
-    ],
+    no_std: {
+        whole_static_libs: [
+            "libfdt_baremetal",
+        ],
+        enabled: true,
+    },
 }
 
 rust_test {
