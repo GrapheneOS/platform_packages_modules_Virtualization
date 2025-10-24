@@ -39,6 +39,7 @@ rust_library {
         "libciborium",
         "libcbor_util",
         "libcoset",
+        "libder",
         "liblog_rust",
         "libserde",
     ],
