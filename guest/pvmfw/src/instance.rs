@@ -18,7 +18,8 @@ use crate::dice::PartialInputs;
 use crate::gpt;
 use crate::gpt::Partition;
 use crate::gpt::Partitions;
-use bssl_avf::{self, hkdf, Aead, AeadContext, Digester};
+use bssl_crypto::aead::{Aead, Aes256Gcm};
+use bssl_crypto::hkdf::{self, HkdfSha512};
 use core::fmt;
 use core::mem::size_of;
 use diced_open_dice::DiceMode;
@@ -59,8 +60,8 @@ pub enum Error {
     UnsupportedEntrySize(usize),
     /// Failed to create VirtIO Block device.
     VirtIOBlkCreationFailed(virtio_drivers::Error),
-    /// An error happened during the interaction with BoringSSL.
-    BoringSslFailed(bssl_avf::Error),
+    /// The instance.img entry could not be decrypted.
+    DecryptionFailed,
 }
 
 impl fmt::Display for Error {
@@ -78,24 +79,25 @@ impl fmt::Display for Error {
             Self::VirtIOBlkCreationFailed(e) => {
                 write!(f, "Failed to create VirtIO Block device: {e}")
             }
-            Self::BoringSslFailed(e) => {
-                write!(f, "An error happened during the interaction with BoringSSL: {e}")
-            }
+            Self::DecryptionFailed => write!(f, "Failed to decrypt entry"),
         }
-    }
-}
-
-impl From<bssl_avf::Error> for Error {
-    fn from(e: bssl_avf::Error) -> Self {
-        Self::BoringSslFailed(e)
     }
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-fn aead_ctx_from_secret(secret: &[u8]) -> Result<AeadContext> {
-    let key = hkdf::<32>(secret, /* salt= */ &[], b"vm-instance", Digester::sha512())?;
-    Ok(AeadContext::new(Aead::aes_256_gcm_randnonce(), key.as_slice(), /* tag_len */ None)?)
+fn aead_from_secret(secret: &[u8]) -> Aes256Gcm {
+    let key = HkdfSha512::derive(secret, hkdf::Salt::None, b"vm-instance");
+    Aes256Gcm::new(&key)
+}
+
+fn split_blk(
+    blk: &mut [u8; BLK_SIZE],
+) -> (&mut [u8; size_of::<EntryBody>()], &mut [u8; 16], &mut [u8; 12]) {
+    let (body, tag_and_nonce) = blk.split_first_chunk_mut::<{ size_of::<EntryBody>() }>().unwrap();
+    let (tag, nonce) = tag_and_nonce.split_first_chunk_mut::<16>().unwrap();
+    let nonce = nonce.first_chunk_mut::<12>().unwrap();
+    (body, tag, nonce)
 }
 
 /// Get the entry from instance.img. This method additionally returns Partition corresponding to
@@ -112,22 +114,20 @@ pub(crate) fn get_recorded_entry<'a>(
 
     match entry {
         PvmfwEntry::Existing { header_index, payload_size } => {
-            let aead_ctx = aead_ctx_from_secret(secret)?;
+            // We currently only support single-blk entries.
             let mut blk = [0; BLK_SIZE];
-            if payload_size > blk.len() {
-                // We currently only support single-blk entries.
-                return Err(Error::UnsupportedEntrySize(payload_size));
-            }
             let payload_index = header_index + 1;
             instance_img.read_block(payload_index, &mut blk).map_err(Error::FailedIo)?;
 
-            let payload = &blk[..payload_size];
-            let mut entry = [0; size_of::<EntryBody>()];
-            // The nonce is generated internally for `aes_256_gcm_randnonce`, so no additional
-            // nonce is required.
-            let decrypted =
-                aead_ctx.open(payload, /* nonce */ &[], /* ad */ &[], &mut entry)?;
-            let body = EntryBody::read_from(decrypted).unwrap();
+            let (body, tag, nonce) = split_blk(&mut blk);
+            let expected_payload_size = body.len() + tag.len() + nonce.len();
+            if payload_size != expected_payload_size {
+                return Err(Error::UnsupportedEntrySize(payload_size));
+            }
+            aead_from_secret(secret)
+                .open_in_place(nonce, body, tag, &[])
+                .map_err(|_| Error::DecryptionFailed)?;
+            let body = EntryBody::read_from_bytes(body).unwrap();
             Ok((Some(body), instance_img, header_index))
         }
         PvmfwEntry::New { header_index } => Ok((None, instance_img, header_index)),
@@ -135,18 +135,18 @@ pub(crate) fn get_recorded_entry<'a>(
 }
 
 pub(crate) fn record_instance_entry(
-    body: &EntryBody,
+    entry_body: &EntryBody,
     secret: &[u8],
     instance_img: &mut Partition,
     header_index: usize,
 ) -> Result<()> {
     // We currently only support single-blk entries.
     let mut blk = [0; BLK_SIZE];
-    let plaintext = body.as_bytes();
-    let aead_ctx = aead_ctx_from_secret(secret)?;
-    assert!(plaintext.len() + aead_ctx.aead().max_overhead() < blk.len());
-    let encrypted = aead_ctx.seal(plaintext, /* nonce */ &[], /* ad */ &[], &mut blk)?;
-    let payload_size = encrypted.len();
+    let (body, tag, nonce) = split_blk(&mut blk);
+    body.copy_from_slice(entry_body.as_bytes());
+    *nonce = bssl_crypto::rand_array();
+    *tag = aead_from_secret(secret).seal_in_place(nonce, body, &[]);
+    let payload_size = body.len() + tag.len() + nonce.len();
     let payload_index = header_index + 1;
     instance_img.write_block(payload_index, &blk).map_err(Error::FailedIo)?;
 
