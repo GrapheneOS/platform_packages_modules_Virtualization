@@ -17,7 +17,10 @@
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use bssl_avf::{ed25519_verify, Digester, EcKey};
+use bssl_crypto::{
+    ec::{P256, P384},
+    ecdsa, ed25519,
+};
 use cbor_util::{
     cbor_value_type, get_label_value, get_label_value_as_bytes, value_to_array, value_to_bytes,
     value_to_map, value_to_num, value_to_text,
@@ -222,21 +225,37 @@ impl PublicKey {
     pub(crate) fn verify(&self, signature: &[u8], message: &[u8]) -> Result<()> {
         match &self.0.kty {
             KeyType::Assigned(iana::KeyType::EC2) => {
-                let public_key = EcKey::from_cose_public_key(&self.0)?;
                 let Some(Algorithm::Assigned(alg)) = self.0.alg else {
                     error!("Invalid algorithm in COSE key {:?}", self.0.alg);
                     return Err(RequestProcessingError::InvalidDiceChain);
                 };
-                let digester = match alg {
-                    iana::Algorithm::ES256 => Digester::sha256(),
-                    iana::Algorithm::ES384 => Digester::sha384(),
-                    _ => {
-                        error!("Unsupported algorithm in EC2 key: {alg:?}");
-                        return Err(RequestProcessingError::InvalidDiceChain);
-                    }
-                };
-                let digest = digester.digest(message)?;
-                Ok(public_key.ecdsa_verify_cose(signature, &digest)?)
+                let crv =
+                    get_label_value(&self.0, Label::Int(iana::Ec2KeyParameter::Crv.to_i64()))?;
+                let sec1 = self.0.to_sec1_octet_string()?;
+                if alg == iana::Algorithm::ES256
+                    && crv == &Value::from(iana::EllipticCurve::P_256.to_i64())
+                {
+                    ecdsa::PublicKey::<P256>::from_x962_uncompressed(&sec1)
+                        .ok_or(RequestProcessingError::InvalidDiceChain)?
+                        .verify_p1363(message, signature)
+                        .map_err(|_| {
+                            error!("P256 signature verification failed");
+                            RequestProcessingError::InvalidDiceChain
+                        })
+                } else if alg == iana::Algorithm::ES384
+                    && crv == &Value::from(iana::EllipticCurve::P_384.to_i64())
+                {
+                    ecdsa::PublicKey::<P384>::from_x962_uncompressed(&sec1)
+                        .ok_or(RequestProcessingError::InvalidDiceChain)?
+                        .verify_p1363(message, signature)
+                        .map_err(|_| {
+                            error!("P384 signature verification failed");
+                            RequestProcessingError::InvalidDiceChain
+                        })
+                } else {
+                    error!("Unsupported algorithm or curve in EC2 key: {alg:?} {crv:?}");
+                    Err(RequestProcessingError::InvalidDiceChain)
+                }
             }
             KeyType::Assigned(iana::KeyType::OKP) => {
                 let curve_type =
@@ -257,7 +276,12 @@ impl PublicKey {
                     error!("Invalid ED25519 signature size: {}", signature.len());
                     RequestProcessingError::InvalidDiceChain
                 })?;
-                Ok(ed25519_verify(message, signature, public_key)?)
+                ed25519::PublicKey::from_bytes(public_key).verify(message, signature).map_err(
+                    |_| {
+                        error!("ED25519 signature verification failed");
+                        RequestProcessingError::InvalidDiceChain
+                    },
+                )
             }
             kty => {
                 error!("Unsupported key type in COSE key: {kty:?}");

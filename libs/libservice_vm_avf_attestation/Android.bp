@@ -18,7 +18,7 @@ rust_defaults {
         "libcbor_util_nostd",
         "libciborium_nostd",
         "libcoset_nostd",
-        "libbssl_avf_nostd",
+        "libbssl_crypto",
         "libder_nostd",
         "libdiced_open_dice_nostd",
         "liblog_rust_nostd",

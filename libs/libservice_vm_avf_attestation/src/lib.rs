@@ -23,7 +23,7 @@ use avf_attestation::{
     AttestationOps, ClientVmDiceChain, DiceChainEntryPayload, InMemoryKeyDerivationOps,
     KeyDerivationOps,
 };
-use bssl_avf::Digester;
+use bssl_crypto::digest::Sha512;
 use ciborium::value::Value;
 use coset::{CborSerializable, CoseSign1};
 use diced_open_dice::{retry_sign_cose_sign1_with_cdi_leaf_priv, DiceArtifacts};
@@ -61,7 +61,7 @@ impl<'a> Ops<'a> {
             );
             return Err(RequestProcessingError::NoVendorHashTreeRootDigestInDT);
         };
-        if Digester::sha512().digest(expected_root_digest)? == vendor_module_cert.code_hash {
+        if vendor_module_cert.code_hash == Sha512::hash(expected_root_digest) {
             Ok(())
         } else {
             error!(

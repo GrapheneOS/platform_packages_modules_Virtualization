@@ -15,11 +15,11 @@
 //! Handles the encryption and decryption of the key blob.
 
 use crate::ops::KeyDerivationOps;
-use alloc::vec;
 use alloc::vec::Vec;
-use bssl_avf::{hkdf, rand_bytes, Aead, AeadContext, Digester, AES_GCM_NONCE_LENGTH};
+use bssl_crypto::aead::{Aead, Aes256Gcm};
+use bssl_crypto::hkdf::{self, HkdfSha512};
 use serde::{Deserialize, Serialize};
-use service_vm_comm::Result;
+use service_vm_comm::{RequestProcessingError, Result};
 use zeroize::Zeroizing;
 
 /// The KEK (Key Encryption Key) info is used as information to derive the KEK using HKDF.
@@ -29,7 +29,7 @@ const KEK_INFO: &[u8] = b"rialto keyblob kek";
 /// undergoes encryption using a distinct KEK, which is derived from a secret and a random
 /// salt. Since the uniqueness of the IV/key combination is already guaranteed by the uniqueness
 /// of the KEK, there is no need for an additional random nonce.
-const PRIVATE_KEY_NONCE: &[u8; AES_GCM_NONCE_LENGTH] = &[0; AES_GCM_NONCE_LENGTH];
+const PRIVATE_KEY_NONCE: &[u8; 12] = &[0; 12];
 
 /// Since Service VM functions as both the sender and receiver of the message, no additional data
 /// is needed.
@@ -48,7 +48,7 @@ impl From<Zeroizing<Vec<u8>>> for InMemoryKeyDerivationOps {
 
 impl KeyDerivationOps for InMemoryKeyDerivationOps {
     fn derive_kek(&self, salt: &[u8], info: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
-        Ok(hkdf::<32>(&self.secret, salt, info, Digester::sha512())?)
+        Ok(HkdfSha512::derive(&self.secret, hkdf::Salt::NonEmpty(salt), info).into())
     }
 }
 
@@ -86,30 +86,18 @@ impl EncryptedKeyBlob {
 
 impl EncryptedKeyBlobV1 {
     fn new(private_key: &[u8], ops: &impl KeyDerivationOps) -> Result<Self> {
-        let mut kek_salt = [0u8; 32];
-        rand_bytes(&mut kek_salt)?;
+        let kek_salt: [u8; 32] = bssl_crypto::rand_array();
         let kek = ops.derive_kek(&kek_salt, KEK_INFO)?;
-
-        let tag_len = None;
-        let aead_ctx = AeadContext::new(Aead::aes_256_gcm(), kek.as_slice(), tag_len)?;
-        let mut out = vec![0u8; private_key.len() + aead_ctx.aead().max_overhead()];
-        let ciphertext = aead_ctx.seal(private_key, PRIVATE_KEY_NONCE, PRIVATE_KEY_AD, &mut out)?;
-
-        Ok(Self { kek_salt, encrypted_private_key: ciphertext.to_vec() })
+        let ciphertext = Aes256Gcm::new(&kek).seal(PRIVATE_KEY_NONCE, private_key, PRIVATE_KEY_AD);
+        Ok(Self { kek_salt, encrypted_private_key: ciphertext })
     }
 
     fn decrypt_private_key(&self, ops: &impl KeyDerivationOps) -> Result<Zeroizing<Vec<u8>>> {
         let kek = ops.derive_kek(&self.kek_salt, KEK_INFO)?;
-        let mut out = Zeroizing::new(vec![0u8; self.encrypted_private_key.len()]);
-        let tag_len = None;
-        let aead_ctx = AeadContext::new(Aead::aes_256_gcm(), kek.as_slice(), tag_len)?;
-        let plaintext = aead_ctx.open(
-            &self.encrypted_private_key,
-            PRIVATE_KEY_NONCE,
-            PRIVATE_KEY_AD,
-            &mut out,
-        )?;
-        Ok(Zeroizing::new(plaintext.to_vec()))
+        let private_key = Aes256Gcm::new(&kek)
+            .open(PRIVATE_KEY_NONCE, &self.encrypted_private_key, PRIVATE_KEY_AD)
+            .ok_or(RequestProcessingError::FailedToDecryptKeyBlob)?;
+        Ok(Zeroizing::new(private_key))
     }
 }
 
@@ -125,7 +113,6 @@ pub(crate) fn decrypt_private_key(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bssl_avf::{ApiName, CipherError, Error};
     use service_vm_comm::RequestProcessingError;
 
     /// The test data are generated randomly with /dev/urandom.
@@ -162,9 +149,7 @@ mod tests {
         let encrypted_key_blob = cbor_util::serialize(&EncryptedKeyBlob::new(&TEST_KEY, &ops1)?)?;
         let err = decrypt_private_key(&encrypted_key_blob, &ops2).unwrap_err();
 
-        let expected_err: RequestProcessingError =
-            Error::CallFailed(ApiName::EVP_AEAD_CTX_open, CipherError::BadDecrypt.into()).into();
-        assert_eq!(expected_err, err);
+        assert_eq!(RequestProcessingError::FailedToDecryptKeyBlob, err);
         Ok(())
     }
 }
