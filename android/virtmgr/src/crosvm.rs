@@ -298,19 +298,8 @@ impl CrosvmCommand {
         self.arg("--unmap-guest-memory-on-fork");
 
         // Lock the guest memory to improve memory accounting. More context in b/407786138
-        //
-        // Note that this uses MLOCK_ONFAULT underneath, so we still only pay for memory as it is
-        // used. Also depends on MADV_DONTNEED_LOCKED, which requires Linux v5.18+.
-        fn kernel_version() -> Option<(u32, u32)> {
-            let release = nix::sys::utsname::uname().ok()?.release().to_string_lossy().into_owned();
-            let mut release_iter = release.splitn(3, ".");
-            Some((release_iter.next()?.parse().ok()?, release_iter.next()?.parse().ok()?))
-        }
-        if kernel_version().context("bad uname")? >= (5, 18) {
-            self.arg("--lock-guest-memory-dontneed");
-        } else {
-            warn!("kernel is too old enable --lock-guest-memory-dontneed");
-        }
+        self.arg("--lock-guest-memory");
+
         Ok(())
     }
 
@@ -433,11 +422,7 @@ impl CrosvmCommand {
         ]);
         self.arg("--no-pmu");
 
-        // Allow GIC ITS by default for unprotected VMs.
-        // TODO: Support protected VMs. It will require an opt-in for non-Microdroid pVMs because
-        // guests are likely to probe for and automatically use it even if they are missing the
-        // necessary driver changes to share the ITS tables with the host, resulting in failure.
-        let allow_vgic_its = !context.config.protectedVm;
+        let allow_vgic_its = !context.config.protectedVm || context.config.allowVgicItsInPvm;
         self.arg(format!("--irqchip=kernel[allow-vgic-its={allow_vgic_its}]"));
     }
 
@@ -457,6 +442,10 @@ impl CrosvmCommand {
         // For consistent "usable" memory across debuggable and non-debuggable VMs.
         memory_mib = memory_mib.saturating_add(Self::get_ramdump_mib(context));
         self.args(["--mem", &memory_mib.get().to_string()]);
+
+        // b/316956218: Some pKVM versions incorrectly advertise KVM_CAP_READONLY_MEM, even for
+        // non-protected VMs, so force it off.
+        self.arg("--force-disable-readonly-mem");
 
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);

@@ -523,12 +523,13 @@ public class VirtualMachine implements AutoCloseable {
             @NonNull String name,
             @NonNull VirtualMachineDescriptor vmDescriptor)
             throws VirtualMachineException {
+        VirtualizationService service = VirtualizationService.getInstance();
         File vmDir = createVmDir(context, name);
+
         try {
             VirtualMachine vm;
             try (vmDescriptor) {
                 VirtualMachineConfig config = VirtualMachineConfig.from(vmDescriptor.getConfigFd());
-                VirtualizationService service = VirtualizationService.getInstance();
                 vm = new VirtualMachine(context, name, config, service);
                 config.serialize(vm.mConfigFilePath);
                 try {
@@ -557,7 +558,7 @@ public class VirtualMachine implements AutoCloseable {
         } catch (VirtualMachineException | RuntimeException e) {
             // If anything goes wrong, delete any files created so far and the VM's directory
             try {
-                deleteRecursively(vmDir);
+                vmInstanceCleanup(context, name);
             } catch (Exception innerException) {
                 e.addSuppressed(innerException);
             }
@@ -575,10 +576,10 @@ public class VirtualMachine implements AutoCloseable {
     static VirtualMachine create(
             @NonNull Context context, @NonNull String name, @NonNull VirtualMachineConfig config)
             throws VirtualMachineException {
+        VirtualizationService virtualizationService = VirtualizationService.getInstance();
         File vmDir = createVmDir(context, name);
 
         try {
-            VirtualizationService virtualizationService = VirtualizationService.getInstance();
             VirtualMachine vm = new VirtualMachine(context, name, config, virtualizationService);
             try {
                 vm.mInstanceFilePath.createNewFile();

@@ -54,7 +54,7 @@ use serde::Deserialize;
 use service_vm_comm::Response;
 use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
-use std::fs::{self, create_dir, remove_dir_all, remove_file, set_permissions, File, Permissions};
+use std::fs::{self, create_dir, remove_dir_all, set_permissions, File, Permissions};
 use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::uid_t;
@@ -953,16 +953,11 @@ impl GlobalState {
 
     fn get_dtbo_file(&mut self) -> Result<File> {
         let path = get_or_create_common_dir()?.join("vm.dtbo");
-        if path.exists() {
-            // All temporary files are deleted when the service is started.
-            // If the file exists but the FD is not cached, the file is
-            // likely corrupted.
-            remove_file(&path).context("Failed to clone cached VM DTBO file descriptor")?;
+        if !path.exists() {
+            // Open a write-only file descriptor for vfio_handler.
+            let write_fd = File::create(&path).context("Failed to create VM DTBO file")?;
+            VFIO_SERVICE.writeVmDtbo(&ParcelFileDescriptor::new(write_fd))?;
         }
-
-        // Open a write-only file descriptor for vfio_handler.
-        let write_fd = File::create(&path).context("Failed to create VM DTBO file")?;
-        VFIO_SERVICE.writeVmDtbo(&ParcelFileDescriptor::new(write_fd))?;
 
         // Open read-only. This FD will be cached and returned to clients.
         let read_fd = File::open(&path).context("Failed to open VM DTBO file")?;

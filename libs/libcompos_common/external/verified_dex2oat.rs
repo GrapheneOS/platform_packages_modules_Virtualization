@@ -30,6 +30,7 @@ use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::ICompilationTask,
     IDex2OatTaskCallback::{
         BnDex2OatTaskCallback, Dex2OatMetrics::Dex2OatMetrics,
+        FailureDetails::FailureDetails as Dex2OatFailureDetails,
         FailureReason::FailureReason as Dex2OatFailureReason, IDex2OatTaskCallback,
     },
     IIsolatedCompilationService::{
@@ -68,7 +69,7 @@ use parking_lot::{Condvar, Mutex};
 use std::{
     ffi::{c_char, c_int, CStr, CString},
     marker::{Send, Sync},
-    os::fd::{FromRawFd, OwnedFd},
+    os::fd::BorrowedFd,
     slice,
     sync::Arc,
     thread,
@@ -195,7 +196,7 @@ impl IDex2OatTaskCallback for Dex2OatCallback {
         Ok(())
     }
 
-    fn onFailure(&self, failure_reason: Dex2OatFailureReason, message: &str) -> binder::Result<()> {
+    fn onFailure(&self, details: &Dex2OatFailureDetails) -> binder::Result<()> {
         if self.on_failure_c_cb.is_none() {
             return Ok(());
         }
@@ -213,9 +214,13 @@ impl IDex2OatTaskCallback for Dex2OatCallback {
                 Some(c"Compilation was likely already canceled"),
             ));
         }
-        let failure_code: FFIFailureReason = from_dex2oat_failure_reason(failure_reason);
-        let cstr_message = CString::new(message).unwrap();
-        let failure_result_ctx = FailureResultContext { failure_code, message: cstr_message };
+        let failure_result_ctx = FailureResultContext {
+            reason: from_dex2oat_failure_reason(details.reason),
+            exit_code: details.exit_code,
+            cpu_time: details.cpu_time_milliseconds,
+            wall_time: details.wallclock_time_milliseconds,
+            message: CString::new(details.message.clone()).unwrap(),
+        };
         let result_ctx =
             (&failure_result_ctx as *const FailureResultContext) as *const FFIFailureResultContext;
 
@@ -273,8 +278,8 @@ struct CompilationContext {
 ///  changed to point at an opaque context blob.
 ///
 ///  - `recorded_compiler_args_fd` must be a valid file descriptor to a file opened for read/write.
-///    Ownership is transferred to `out_ctx` at function exit at which point the caller should
-///    abstain from performing any more file operations on the descriptor.
+///    This fd will be duplicated, the owner should refrain from writing to the fd until compilation
+///    is finished.
 
 #[no_mangle]
 pub unsafe extern "C" fn AVerifiedDex2Oat_createCompilationContext(
@@ -316,16 +321,17 @@ pub unsafe extern "C" fn AVerifiedDex2Oat_createCompilationContext(
     let dex2oat_callback =
         BnDex2OatTaskCallback::new_binder(callback, binder::BinderFeatures::default());
     // SAFETY: `recorded_compiler_args_fd` is provided by the C caller, it is the caller's
-    // responsibility to ensure that the file descriptor is valid. Ownership of the file
-    // descriptor is transferred to the compilation context.
-    let owned_recorded_compiler_args_fd =
-        unsafe { OwnedFd::from_raw_fd(recorded_compiler_args_fd) };
+    // responsibility to ensure that the file descriptor is valid.
+    let borrowed_args_fd = unsafe { BorrowedFd::borrow_raw(recorded_compiler_args_fd) };
     let boxed_context = Box::new(CompilationContext {
         args: Vec::new(),
         dex2oat_callback,
         cancellation_callback: None,
         service,
-        recorded_compiler_args_fd: ParcelFileDescriptor::new(owned_recorded_compiler_args_fd),
+        // Duplicate the fd and turn it into a parcel fd.
+        recorded_compiler_args_fd: ParcelFileDescriptor::new(
+            borrowed_args_fd.try_clone_to_owned().unwrap(),
+        ),
         state,
     });
     // SAFETY: `out_ctx` a non null pointer to a compilation context where `ctx` is null.
@@ -368,10 +374,10 @@ pub unsafe extern "C" fn AVerifiedDex2Oat_addArgToCompilationContext(
         if unsafe { libc::fcntl(*fd, libc::F_GETFD) == -1 } {
             return FFIStatus_BAD_ARGS;
         }
-        // SAFETY: The caller guarantees that `fd` is a valid and owned file descriptor.
-        // This function takes ownership of it.
-        let owned_fd = unsafe { OwnedFd::from_raw_fd(*fd) };
-        inner_fds.push(ParcelFileDescriptor::new(owned_fd));
+        // SAFETY: The caller guarantees that `fd` is a valid and open file descriptor.
+        let borrowed_fd = unsafe { BorrowedFd::borrow_raw(*fd) };
+        // Duplicate the file descriptor and turn the new duplicate fd into a parcel fd.
+        inner_fds.push(ParcelFileDescriptor::new(borrowed_fd.try_clone_to_owned().unwrap()));
     }
 
     if compilation_ctx.is_null() || format_string.is_null() {
@@ -469,7 +475,10 @@ pub unsafe extern "C" fn AVerifiedDex2Oat_CompilationStats_getCpuClockTimeMs(
 }
 
 struct FailureResultContext {
-    failure_code: FFIFailureReason,
+    reason: FFIFailureReason,
+    exit_code: i32,
+    cpu_time: i32,
+    wall_time: i32,
     message: CString,
 }
 
@@ -480,21 +489,93 @@ struct FailureResultContext {
 ///
 /// # Safety
 ///   - `result_ctx` when non-null must point to a ResultContext type.
-///   - `out_failure_code` must point to a `AVerifiedDex2Oat_FailureReason``.
+///   - `out_failure_reason` must point to a `AVerifiedDex2Oat_FailureReason``.
 #[no_mangle]
-pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getFailureCode(
+pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getReason(
     failure_result_ctx: *const FFIFailureResultContext,
-    out_failure_code: *mut FFIFailureReason,
+    out_failure_reason: *mut FFIFailureReason,
 ) -> FFIStatus {
-    if failure_result_ctx.is_null() || out_failure_code.is_null() {
+    if failure_result_ctx.is_null() || out_failure_reason.is_null() {
         return FFIStatus_BAD_ARGS;
     }
     // SAFETY: The caller guarantees that `failure_result_ctx` is the `failure_result_ctx`
     // passed into `AVerifiedDex2Oat_OnFailureCallback`, which is guaranteed to be valid.
-    let failure_result = unsafe { &*(failure_result_ctx as *const FailureResultContext) };
+    let failure_details = unsafe { &*(failure_result_ctx as *const FailureResultContext) };
     // SAFETY: The caller should guarantee that out_failure_code does point to a
     // `AVerifiedDex2Oat_FailureReason`
-    unsafe { *out_failure_code = failure_result.failure_code };
+    unsafe { *out_failure_reason = failure_details.reason };
+    FFIStatus_SUCCESS
+}
+
+/// Extracts the failure exit code from the opaque results context passed
+/// into a `AVerifiedDex2Oat_OnFailureCallback`.
+///
+/// Refer to the public C API header for full documentation.
+///
+/// # Safety
+///   - `result_ctx` when non-null must point to a ResultContext type.
+///   - `out_failure_exit_code` must point to an `i32`.
+#[no_mangle]
+pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getExitCode(
+    failure_result_ctx: *const FFIFailureResultContext,
+    out_failure_exit_code: *mut i32,
+) -> FFIStatus {
+    if failure_result_ctx.is_null() || out_failure_exit_code.is_null() {
+        return FFIStatus_BAD_ARGS;
+    }
+    // SAFETY: The caller guarantees that `failure_result_ctx` is the `failure_result_ctx`
+    // passed into `AVerifiedDex2Oat_OnFailureCallback`, which is guaranteed to be valid.
+    let failure_details = unsafe { &*(failure_result_ctx as *const FailureResultContext) };
+    // SAFETY: The caller should guarantee that out_failure_code does point to an `i32`
+    unsafe { *out_failure_exit_code = failure_details.exit_code };
+    FFIStatus_SUCCESS
+}
+
+/// Extracts the amount of CPU time spent on compilation before the failure occurred
+/// from the opaque results context passed into a `AVerifiedDex2Oat_OnFailureCallback`.
+///
+/// Refer to the public C API header for full documentation.
+///
+/// # Safety
+///   - `result_ctx` when non-null must point to a ResultContext type.
+///   - `out_failure_cpu_time` must point to an `i32`.
+#[no_mangle]
+pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getCpuClockTimeMs(
+    failure_result_ctx: *const FFIFailureResultContext,
+    out_failure_cpu_time: *mut i32,
+) -> FFIStatus {
+    if failure_result_ctx.is_null() || out_failure_cpu_time.is_null() {
+        return FFIStatus_BAD_ARGS;
+    }
+    // SAFETY: The caller guarantees that `failure_result_ctx` is the `failure_result_ctx`
+    // passed into `AVerifiedDex2Oat_OnFailureCallback`, which is guaranteed to be valid.
+    let failure_details = unsafe { &*(failure_result_ctx as *const FailureResultContext) };
+    // SAFETY: The caller should guarantee that out_failure_cpu_time points to an `i32`
+    unsafe { *out_failure_cpu_time = failure_details.cpu_time };
+    FFIStatus_SUCCESS
+}
+
+/// Extracts the wallclock time spent on compilation before a failure occurred
+/// from the opaque results context passed into a `AVerifiedDex2Oat_OnFailureCallback`.
+///
+/// Refer to the public C API header for full documentation.
+///
+/// # Safety
+///   - `result_ctx` when non-null must point to a ResultContext type.
+///   - `out_failure_wall_time` must point to an `i32`.
+#[no_mangle]
+pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getWallClockTimeMs(
+    failure_result_ctx: *const FFIFailureResultContext,
+    out_failure_wall_time: *mut i32,
+) -> FFIStatus {
+    if failure_result_ctx.is_null() || out_failure_wall_time.is_null() {
+        return FFIStatus_BAD_ARGS;
+    }
+    // SAFETY: The caller guarantees that `failure_result_ctx` is the `failure_result_ctx`
+    // passed into `AVerifiedDex2Oat_OnFailureCallback`, which is guaranteed to be valid.
+    let failure_details = unsafe { &*(failure_result_ctx as *const FailureResultContext) };
+    // SAFETY: The caller should guarantee that out_failure_wall_time points to an `i32`
+    unsafe { *out_failure_wall_time = failure_details.wall_time };
     FFIStatus_SUCCESS
 }
 
@@ -507,7 +588,7 @@ pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getFailureCode(
 ///   - `result_ctx` when non-null must point to a ResultContext type.
 ///   - `out_failure_message_ptr_ptr` must point to a c-string pointer.
 #[no_mangle]
-pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getFailureMessage(
+pub unsafe extern "C" fn AVerifiedDex2Oat_FailureInfo_getMessage(
     failure_result_ctx: *const FFIFailureResultContext,
     out_failure_message_ptr_ptr: *mut *const c_char,
 ) -> FFIStatus {
@@ -718,17 +799,12 @@ mod test {
         },
     };
     use mockall::predicate::{always as any, eq};
-    use std::{ffi::CStr, fs::File, os::fd::AsRawFd};
+    use std::{
+        ffi::CStr,
+        fs::File,
+        os::fd::{AsRawFd, OwnedFd},
+    };
     use tempfile::tempfile;
-
-    /// A mockable trait used to verify that the C-style callbacks (`on_success` and `on_failure`)
-    /// are invoked with the correct arguments from within the Rust FFI layer.
-    #[mockall::automock]
-    trait ResultCallBackVerifierInterface {
-        fn on_success(&self, cpu_time_ms: i32, wall_time_ms: i32);
-        fn on_failure(&self, failure_reason: FFIFailureReason, message: &CStr);
-    }
-
     fn build_comp_ctx() -> CompilationContext {
         CompilationContext {
             dex2oat_callback: BnDex2OatTaskCallback::new_binder(
@@ -818,6 +894,21 @@ mod test {
         }
     }
 
+    /// A mockable trait used to verify that the C-style callbacks (`on_success` and `on_failure`)
+    /// are invoked with the correct arguments from within the Rust FFI layer.
+    #[mockall::automock]
+    trait ResultCallBackVerifierInterface {
+        fn on_success(&self, cpu_time_ms: i32, wall_time_ms: i32);
+        fn on_failure(
+            &self,
+            failure_reason: FFIFailureReason,
+            exit_code: i32,
+            cpu_time_ms: i32,
+            wall_time_ms: i32,
+            message: &CStr,
+        );
+    }
+
     /// C-style function pointer that acts as a bridge to the `on_success` method of the
     /// `MockResultCallBackVerifierInterface`.
     ///
@@ -866,22 +957,37 @@ mod test {
         let mut failure_code: FFIFailureReason = FFIFailureReason_UNKNOWN;
         let dummy_string: CString = CString::new("hello").unwrap();
         let mut c_char_ptr: *const c_char = dummy_string.as_ptr();
+        let mut cpu_time: i32 = 0;
+        let mut wall_time: i32 = 0;
+        let mut exit_code: i32 = 0;
         // SAFETY: result_ctx is guaranteed to be backed by a FailureResultContext
         // failure_code and c_char_ptr are valid, see previous lines of code.
         unsafe {
             assert_eq!(
-                AVerifiedDex2Oat_FailureInfo_getFailureCode(result_ctx, &mut failure_code,),
+                AVerifiedDex2Oat_FailureInfo_getReason(result_ctx, &mut failure_code,),
                 FFIStatus_SUCCESS
             );
             assert_eq!(
-                AVerifiedDex2Oat_FailureInfo_getFailureMessage(result_ctx, &mut c_char_ptr,),
+                AVerifiedDex2Oat_FailureInfo_getExitCode(result_ctx, &mut exit_code,),
+                FFIStatus_SUCCESS
+            );
+            assert_eq!(
+                AVerifiedDex2Oat_FailureInfo_getCpuClockTimeMs(result_ctx, &mut cpu_time),
+                FFIStatus_SUCCESS
+            );
+            assert_eq!(
+                AVerifiedDex2Oat_FailureInfo_getWallClockTimeMs(result_ctx, &mut wall_time),
+                FFIStatus_SUCCESS
+            );
+            assert_eq!(
+                AVerifiedDex2Oat_FailureInfo_getMessage(result_ctx, &mut c_char_ptr,),
                 FFIStatus_SUCCESS
             );
         };
         // SAFETY: c_char_ptr is set to point to a valid C string by
         // `AVerifiedDex2Oat_extractFailureCodeAndMessageFromResultContext`
         let message: &CStr = unsafe { CStr::from_ptr(c_char_ptr) };
-        mock.on_failure(failure_code, message);
+        mock.on_failure(failure_code, exit_code, cpu_time, wall_time, message);
     }
 
     /// Tests the successful creation and destruction of a `CompilationContext`.
@@ -909,8 +1015,14 @@ mod test {
 
         let metrics =
             Dex2OatMetrics { wallclock_time_milliseconds: 123, cpu_time_milliseconds: 321 };
-        let expected_failure_message = "failure_message";
-        let expected_failure_reason = FFIFailureReason_COMPILATION_SETUP_FAILED;
+
+        let expected_failure_details: Dex2OatFailureDetails = Dex2OatFailureDetails {
+            reason: Dex2OatFailureReason::CompilationSetupFailed,
+            exit_code: -2,
+            cpu_time_milliseconds: 456,
+            wallclock_time_milliseconds: 654,
+            message: "failure_message".to_string(),
+        };
 
         let mut opaque_comp_ctx: *mut FFICompilationContext = std::ptr::null_mut();
         let mut mock_cb_verifier = MockResultCallBackVerifierInterface::new();
@@ -923,8 +1035,14 @@ mod test {
             .return_once(|_, _| ());
         mock_cb_verifier
             .expect_on_failure()
-            .with(eq(expected_failure_reason), any())
-            .return_once(|_, _| ());
+            .with(
+                eq(from_dex2oat_failure_reason(expected_failure_details.reason)),
+                eq(expected_failure_details.exit_code),
+                eq(expected_failure_details.cpu_time_milliseconds),
+                eq(expected_failure_details.wallclock_time_milliseconds),
+                any(),
+            )
+            .return_once(|_, _, _, _, _| ());
         let recorded_args_file = tempfile().unwrap();
         let result = create_compilation_context(
             &mut opaque_comp_ctx,
@@ -940,15 +1058,16 @@ mod test {
         // AVerifiedDex2Oat_createCompilationContext.
         let comp_ctx = unsafe { &*(opaque_comp_ctx as *const CompilationContext) };
         assert_eq!(comp_ctx.cancellation_callback, None);
-        assert_eq!(comp_ctx.recorded_compiler_args_fd.as_raw_fd(), recorded_args_file.as_raw_fd());
         let dex2oat_cb = &comp_ctx.dex2oat_callback;
+        assert!(fds_are_equivalent(
+            comp_ctx.recorded_compiler_args_fd.as_raw_fd(),
+            recorded_args_file.as_raw_fd()
+        ));
 
         *(comp_ctx.state.lock()) = CompilationState::Started;
         assert!(dex2oat_cb.onSuccess(&metrics).is_ok());
         *(comp_ctx.state.lock()) = CompilationState::Started;
-        assert!(dex2oat_cb
-            .onFailure(Dex2OatFailureReason::CompilationSetupFailed, expected_failure_message)
-            .is_ok());
+        assert!(dex2oat_cb.onFailure(&expected_failure_details).is_ok());
 
         // Clean up the created context.
         // SAFETY: `opaque_comp_ctx` was initialized by `AVerifiedDex2Oat_createCompilationContext`,
@@ -970,6 +1089,20 @@ mod test {
             1,
         );
         assert_eq!(result, FFIStatus_BAD_ARGS);
+    }
+
+    fn fds_are_equivalent(fd1: i32, fd2: i32) -> bool {
+        // SAFETY: stat1 isn't used until filled by libc::stat.
+        let mut stat1: libc::stat = unsafe { std::mem::zeroed() };
+        // SAFETY: stat2 isn't used until filled by libc::stat.
+        let mut stat2: libc::stat = unsafe { std::mem::zeroed() };
+        // SAFETY: stat1 is a valid libc::stat variable.
+        let mut result = unsafe { libc::fstat(fd1, &mut stat1 as *mut libc::stat) };
+        assert_eq!(result, 0);
+        // SAFETY: stat2 is a valid libc::stat variable.
+        result = unsafe { libc::fstat(fd2, &mut stat2 as *mut libc::stat) };
+        assert_eq!(result, 0);
+        stat1.st_dev == stat2.st_dev && stat1.st_ino == stat2.st_ino
     }
 
     #[test]
@@ -1001,7 +1134,7 @@ mod test {
                 .fds
                 .iter()
                 .zip(expected.1.iter())
-                .all(|(parcel_fd, fd)| parcel_fd.as_raw_fd() == *fd);
+                .all(|(parcel_fd, fd)| fds_are_equivalent(parcel_fd.as_raw_fd(), *fd));
             format_str_match && fds_match
         });
         assert!(args_match);
@@ -1086,15 +1219,21 @@ mod test {
             .collect();
         let metrics =
             Dex2OatMetrics { wallclock_time_milliseconds: 123, cpu_time_milliseconds: 321 };
-        let expected_failure_reason = Dex2OatFailureReason::Timeout;
-
+        let expected_failure_details: Dex2OatFailureDetails = Dex2OatFailureDetails {
+            reason: Dex2OatFailureReason::Timeout,
+            exit_code: -2,
+            cpu_time_milliseconds: 456,
+            wallclock_time_milliseconds: 654,
+            message: "failure_message".to_string(),
+        };
         let mut mock_dex_cb = MockIDex2OatTaskCallback::new();
         mock_dex_cb.expect_onSuccess().with(eq(metrics)).once().return_once(|_| Ok(()));
+        let details_clone = expected_failure_details.clone();
         mock_dex_cb
             .expect_onFailure()
-            .with(eq(expected_failure_reason), any())
+            .withf(move |in_details| *in_details == details_clone)
             .times(1)
-            .return_once(|_, _| Ok(()));
+            .return_once(|_| Ok(()));
         let mut mock_dex2oat_svc = MockIIsolatedCompilationService::new();
         let recorded_compiler_args_file =
             ParcelFileDescriptor::new(OwnedFd::from(tempfile().unwrap()));
@@ -1118,7 +1257,7 @@ mod test {
                 // Invoke the callbacks to make sure they are the same callbacks provided in the
                 // compilation context.
                 let _ = result_cbs.onSuccess(&metrics);
-                let _ = result_cbs.onFailure(expected_failure_reason, "Hello world");
+                let _ = result_cbs.onFailure(&expected_failure_details);
                 Ok(BnCompilationTask::new_binder(mock_cancel_cb, binder::BinderFeatures::default()))
             });
         let mut comp_ctx = CompilationContext {

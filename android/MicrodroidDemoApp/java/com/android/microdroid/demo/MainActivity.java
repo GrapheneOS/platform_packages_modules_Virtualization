@@ -41,7 +41,6 @@ import androidx.lifecycle.ViewModelProvider;
 import com.android.microdroid.testservice.ITestService;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
@@ -135,8 +134,8 @@ public class MainActivity extends AppCompatActivity {
                 while ((line = reader.readLine()) != null && !Thread.interrupted()) {
                     mOutput.postValue(line);
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Exception while posting " + mName + " output: " + e.getMessage());
+            } catch (Exception e) {
+                Log.e(TAG, "Exception while posting " + mName, e);
             }
         }
     }
@@ -244,11 +243,13 @@ public class MainActivity extends AppCompatActivity {
                         new VirtualMachineConfig.Builder(getApplication());
                 builder.setPayloadBinaryName("MicrodroidTestNativeLib.so");
                 builder.setProtectedVm(protectedVm);
+                // This may be allowed even with non-debuggable VM if debug policy is set.
+                builder.setVmOutputCaptured(true);
 
                 if (debug) {
                     builder.setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL);
-                    builder.setVmOutputCaptured(true);
                 }
+
                 VirtualMachineConfig config = builder.build();
                 VirtualMachineManager vmm =
                         getApplication().getSystemService(VirtualMachineManager.class);
@@ -263,10 +264,12 @@ public class MainActivity extends AppCompatActivity {
                 mVirtualMachine.setCallback(Executors.newSingleThreadExecutor(), callback);
                 mStatus.postValue(mVirtualMachine.getStatus());
 
-                if (debug) {
-                    InputStream console = mVirtualMachine.getConsoleOutput();
-                    InputStream log = mVirtualMachine.getLogOutput();
+                InputStream console = mVirtualMachine.getConsoleOutput();
+                if (console != null) {
                     mExecutorService.execute(new Reader("console", mConsoleOutput, console));
+                }
+                InputStream log = mVirtualMachine.getLogOutput();
+                if (log != null) {
                     mExecutorService.execute(new Reader("log", mLogOutput, log));
                 }
             } catch (VirtualMachineException e) {

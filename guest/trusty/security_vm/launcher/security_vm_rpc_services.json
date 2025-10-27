@@ -7,6 +7,6 @@
   {
     "port": 13,
     "accessor_name": "android.os.IAccessor/IGatekeeper/security_vm_gatekeeper",
-    "internal_rpc_service_name": "android.hardware.gatekeeper.IGateKeeper/default"
+    "internal_rpc_service_name": "android.hardware.gatekeeper.IGatekeeper/default"
   }
 ]

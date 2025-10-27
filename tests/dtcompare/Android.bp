@@ -10,8 +10,8 @@ rust_binary {
     rustlibs: [
         "libanyhow",
         "libclap",
-        "libhex_nostd",
-        "liblibfdt_nostd",
+        "libhex",
+        "liblibfdt",
         "liblog_rust",
     ],
     visibility: ["//packages/modules/Virtualization:__subpackages__"],

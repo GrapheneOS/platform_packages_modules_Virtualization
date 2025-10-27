@@ -38,7 +38,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.android.system.virtualmachine.flags.Flags.terminalGuiSupport
 import com.android.virtualization.terminal.CertificateUtils.createOrGetKey
 import com.android.virtualization.terminal.CertificateUtils.writeCertificateToFile
 import java.security.PrivateKey
@@ -249,7 +248,7 @@ class TerminalTabFragment() : Fragment() {
                             terminalView.visibility = View.VISIBLE
                             terminalView.mapTouchToMouseEvent()
                             terminalView.applyTerminalDisconnectCallback()
-                            updateMainActivity()
+                            (activity as MainActivity).onTtydConnected()
                             updateFocus()
                         }
                     }
@@ -273,16 +272,6 @@ class TerminalTabFragment() : Fragment() {
             // ttyd uses self-signed certificate
             handler.proceed()
         }
-    }
-
-    private fun updateMainActivity() {
-        val mainActivity = activity as? MainActivity ?: return
-        if (terminalGuiSupport()) {
-            mainActivity.displayMenu!!.visibility = View.VISIBLE
-            mainActivity.displayMenu!!.isEnabled = true
-        }
-        mainActivity.tabAddButton!!.isEnabled = true
-        mainActivity.bootCompleted.open()
     }
 
     private fun readClientCertificate() {

@@ -207,22 +207,80 @@ typedef void (*AVerifiedDex2Oat_OnFailureCallback)(
         const AVerifiedDex2Oat_FailureResultContext* _Nonnull results_ctx);
 
 /**
- * Extracts the failure code and message from the opaque results context passed
+ * Extracts the failure reason from the opaque results context passed
  * into a `AVerifiedDex2Oat_OnFailureCallback`.
  *
  * This should only be called from within the `AVerifiedDex2Oat_OnFailureCallback`.
  *
  * @param failure_result_ctx This is the opaque results context that is passed into the
  * `AVerifiedDex2Oat_OnFailureCallback`.
- * @param out_failure_code If the return code is `AVERIFIED_DEX2OAT_SUCCESS`
- * this is set to a `AVerifiedDex2Oat_Failure` code.
+ * @param out_failure_reason If the return code is `AVERIFIED_DEX2OAT_SUCCESS`
+ * this is set to a `AVerifiedDex2Oat_Failure` reason.
  *
  * @return `AVERIFIED_DEX2OAT_SUCCESS` on success
  *  `AVERIFIED_DEX2OAT_BAD_ARGS` when `out_failure_code` is a null pointer.
  */
-AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getFailureCode(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
-        AVerifiedDex2Oat_FailureReason* _Nonnull out_failure_code) __INTRODUCED_IN(37);
+AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getReason(
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        AVerifiedDex2Oat_FailureReason* _Nonnull out_failure_reason) __INTRODUCED_IN(37);
+
+/**
+ * Extracts the exit code from the opaque results context passed
+ * into a `AVerifiedDex2Oat_OnFailureCallback`.
+ *
+ * This should only be called from within the `AVerifiedDex2Oat_OnFailureCallback`.
+ *
+ * @param failure_result_ctx This is the opaque results context that is passed into the
+ * `AVerifiedDex2Oat_OnFailureCallback`.
+ * @param out_exit_code If the return code is `AVERIFIED_DEX2OAT_SUCCESS`
+ * this is set to the exit code of `dex2oat`
+ *
+ * @return `AVERIFIED_DEX2OAT_SUCCESS` on success
+ *  `AVERIFIED_DEX2OAT_BAD_ARGS` when `exit_code` is a null pointer.
+ */
+AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getExitCode(
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        int32_t* _Nonnull out_exit_code) __INTRODUCED_IN(37);
+
+/**
+ * Gets the cpu time, in milliseconds, from an opaque result context.
+ *
+ * The CPU time retrieved is the amount of time spent on compilation
+ * before a failure occurred. This should only be used by the
+ * `AVerifiedDex2Oat_OnFailureCallback` has been called after a
+ * `AVerifiedDex2Oat_start` operation.
+ *
+ * @param failure_result_ctx This is the opaque results context that is passed into the
+ * `AVerifiedDex2Oat_OnFailureCallback`.
+ * @param out_cpu_time_ms The integer this points to will be set to the CPU
+ * time, in milliseconds.
+ *
+ * @return  `AVERIFIED_DEX2OAT_SUCCESS` on success
+ *   `AVERIFIED_DEX2OAT_BAD_ARGS` when `out_cpu_time_ms` is null.
+ */
+AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getCpuClockTimeMs(
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        int32_t* _Nonnull out_cpu_time_ms) __INTRODUCED_IN(37);
+
+/**
+ * Gets the wall time, in milliseconds, from an opaque result context.
+ *
+ * The wall clock time retrieved is the amount of time spent on compilation
+ * before a failure occurred. This should only be used by the
+ * `AVerifiedDex2Oat_OnFailureCallback` has been called after a
+ * `AVerifiedDex2Oat_start` operation.
+ *
+ * @param failure_result_ctx This is the opaque results context that is passed into the
+ * `AVerifiedDex2Oat_OnFailureCallback`.
+ * @param out_wall_time_ms The integer this points to will be set to the
+ * wall clock time, in milliseconds.
+ *
+ * @return  `AVERIFIED_DEX2OAT_SUCCESS` on success
+ *   `AVERIFIED_DEX2OAT_BAD_ARGS` when `wall_time_ms` is null.
+ */
+AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getWallClockTimeMs(
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        int32_t* _Nonnull out_wall_time_ms) __INTRODUCED_IN(37);
 
 /**
  * Extracts the message from the opaque results context passed
@@ -241,8 +299,8 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getFailureCode(
  *  `AVERIFIED_DEX2OAT_BAD_ARGS` when `message` is a null pointer.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getMessage(
-        AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
-        const char** _Nonnull message) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureResultContext* _Nonnull failure_result_ctx,
+        const char* _Nonnull* _Nullable message) __INTRODUCED_IN(37);
 
 /**
  * Create an opaque compilation context needed for starting a dex2oat operation.
@@ -273,11 +331,11 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_FailureInfo_getMessage(
  *     compilation context.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_createCompilationContext(
-        AVerifiedDex2Oat_CompilationContext** _Nonnull out_ctx,
+        AVerifiedDex2Oat_CompilationContext* _Nonnull* _Nullable out_ctx,
         AVerifiedDex2Oat_OnSuccessCallback _Nonnull on_success_cb,
-        AVerifiedDex2Oat_SuccessCallbackContext* success_ctx,
+        AVerifiedDex2Oat_SuccessCallbackContext* _Nullable success_ctx,
         AVerifiedDex2Oat_OnFailureCallback _Nonnull on_failure_cb,
-        AVerifiedDex2Oat_FailureCallbackContext* failure_ctx, int32_t recorded_args_fd,
+        AVerifiedDex2Oat_FailureCallbackContext* _Nullable failure_ctx, int32_t recorded_args_fd,
         uint64_t timeout_seconds) __INTRODUCED_IN(37);
 
 /**
@@ -293,11 +351,10 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_createCompilationContext(
  *   Each file descriptor should:
  *   - Be opened and be `rw` if the file is meant to be written and `ro` if the
  *     file is meant to be read by the compilation operation.
- *   - Have its ownership relinquished.
  *   - Be ordered in the intended `format_string` substitution order, for example the first `!`
  *     in `format_string` will be substituted by `fd[0]`.
- *   The file descriptors will be closed when `AVerifiedDex2Oat_destroyCompilationContext`
- *   is called on `compilation_ctx`.
+ *   Each file descriptor provided is duplicated and the caller will retain
+ *   ownership of the original file descriptor.
  * @param fd_count the number of file descriptors in `fd`.
  *
  * @return
@@ -313,7 +370,8 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_createCompilationContext(
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_addArgToCompilationContext(
         AVerifiedDex2Oat_CompilationContext* _Nonnull compilation_ctx,
-        const char* _Nonnull format_string, const int* fds, uint32_t fd_count) __INTRODUCED_IN(37);
+        const char* _Nonnull format_string, const int* _Nullable fds, uint32_t fd_count)
+        __INTRODUCED_IN(37);
 
 /**
  * Destroys an opaque compilation context created by AVerifiedDex2Oat_createCompilationContext.
@@ -335,7 +393,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_addArgToCompilationContext(
  * - `AVERIFIED_DEX2OAT_SUCCESS` when the context has successfully been destroyed.
  * - `AVERIFIED_DEX2OAT_ERROR_TIMED_OUT` timed out while destroying context.
  */
-void AVerifiedDex2Oat_destroyCompilationContext(
+AVerifiedDex2Oat_Status AVerifiedDex2Oat_destroyCompilationContext(
         AVerifiedDex2Oat_CompilationContext* _Nonnull compilation_ctx) __INTRODUCED_IN(37);
 
 /**
@@ -346,6 +404,9 @@ void AVerifiedDex2Oat_destroyCompilationContext(
  *
  * The result of the compilation is communicated asynchronously
  * via the success and failure callbacks provided when the context was created.
+ * Once this is called the caller should refrain from writing to any of the file
+ * descriptors provided during compilation context creation or any file descriptors
+ * added as arguments to the context.
  *
  * @param compilation_ctx A compilation context created by
  *    `AVerifiedDex2Oat_createCompilationContext` and

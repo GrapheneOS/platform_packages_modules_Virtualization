@@ -41,6 +41,7 @@ oneway interface IDex2OatTaskCallback {
     /**
      * The details of why a startVerifiedDex2Oat failed.
      */
+    @RustDerive(PartialEq=true, Clone=true)
     parcelable FailureDetails {
         /**
          * The reason why the compilation failed.
@@ -49,7 +50,17 @@ oneway interface IDex2OatTaskCallback {
         /**
          * The exit code of dex2oat, only meaningful when reason=Dex2OatFailed.
          */
-        int code;
+        int exit_code;
+        /**
+         * The total amount of time between dex2oat is invoked within the PVM
+         * until the compilation failed.
+         */
+        int wallclock_time_milliseconds;
+        /**
+         * The total amount of time dex2oat was actively compiling within the PVM
+         * before failure.
+         */
+        int cpu_time_milliseconds;
         /**
          * Additional description of the failure.
          */
@@ -77,5 +88,5 @@ oneway interface IDex2OatTaskCallback {
     /**
      * Called if a compilation task has ended unsuccessfully.
      */
-    void onFailure(FailureReason reason, String message);
+    void onFailure(in FailureDetails failure_details);
 }

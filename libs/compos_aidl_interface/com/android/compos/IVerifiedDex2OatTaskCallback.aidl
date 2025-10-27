@@ -37,5 +37,5 @@ oneway interface IVerifiedDex2OatTaskCallback {
      *
      * exitCode is the exit code of the dex2oat ran within the pVM.
      */
-    void onFailure(String message, byte exitCode);
+    void onFailure(String message, byte exitCode, int cpuTimeMs, int WallTimeMs);
 }
