@@ -19,6 +19,7 @@ android_test {
     test_suites: [
         "general-tests",
         "cts",
+        "dts",
     ],
     srcs: ["src/java/**/*.java"],
     defaults: ["MicrodroidTestAppsDefaults"],
