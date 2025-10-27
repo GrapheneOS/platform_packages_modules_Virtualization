@@ -551,5 +551,5 @@ fn open_into(fdt: *const u8, dest: &mut [u8]) -> Result<()> {
 
 // TODO(stable_feature(pointer_is_aligned)): p.is_aligned()
 fn is_aligned<T>(p: *const T) -> bool {
-    (p as usize) % mem::align_of::<T>() == 0
+    (p as usize).is_multiple_of(mem::align_of::<T>())
 }
