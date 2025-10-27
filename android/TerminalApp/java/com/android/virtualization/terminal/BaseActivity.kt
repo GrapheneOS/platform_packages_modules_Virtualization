@@ -18,6 +18,7 @@ package com.android.virtualization.terminal
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.permission.flags.Flags
 import androidx.appcompat.app.AppCompatActivity
 
 abstract class BaseActivity : AppCompatActivity() {
@@ -31,18 +32,33 @@ abstract class BaseActivity : AppCompatActivity() {
             }
         }
 
+        val permissionsToRequest = mutableListOf<String>()
+
+        // Check for POST_NOTIFICATIONS permission
         if (
             applicationContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissions(
-                arrayOf<String>(Manifest.permission.POST_NOTIFICATIONS),
-                POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE,
-            )
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        // Check for ACCESS_LOCAL_NETWORK permission if the flag is enabled
+        if (Flags.accessLocalNetworkPermissionEnabled()) {
+            if (
+                applicationContext.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) !=
+                    PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsToRequest.add(Manifest.permission.ACCESS_LOCAL_NETWORK)
+            }
+        }
+
+        // Request all needed permissions at once
+        if (permissionsToRequest.isNotEmpty()) {
+            requestPermissions(permissionsToRequest.toTypedArray(), APP_PERMISSIONS_REQUEST_CODE)
         }
     }
 
     companion object {
-        private const val POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 101
+        private const val APP_PERMISSIONS_REQUEST_CODE = 101
     }
 }
