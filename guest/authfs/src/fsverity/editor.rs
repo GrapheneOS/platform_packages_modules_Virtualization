@@ -257,7 +257,7 @@ impl<F: ReadByChunk + RandomWrite> RandomWrite for VerifiedFileEditor<F> {
         // The same thing does not need to happen when the size is growing. Since the new extended
         // data is always 0, we can just resize the `MerkleLeaves`, where a new hash is always
         // calculated from 4096 zeros.
-        if size < merkle_tree.file_size() && size % CHUNK_SIZE > 0 {
+        if size < merkle_tree.file_size() && !size.is_multiple_of(CHUNK_SIZE) {
             let new_tail_size = (size % CHUNK_SIZE) as usize;
             let chunk_index = size / CHUNK_SIZE;
             if new_tail_size > 0 {

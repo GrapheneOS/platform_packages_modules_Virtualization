@@ -207,7 +207,7 @@ impl InstanceDisk {
     /// Read header at `header_offset` and parse it into a `PartitionHeader`.
     fn read_header_at(&mut self, header_offset: u64) -> Result<PartitionHeader> {
         assert!(
-            header_offset % PARTITION_HEADER_SIZE == 0,
+            header_offset.is_multiple_of(PARTITION_HEADER_SIZE),
             "header offset {header_offset} is not aligned to 512 bytes"
         );
 
