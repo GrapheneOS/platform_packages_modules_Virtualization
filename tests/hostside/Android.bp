@@ -73,7 +73,10 @@ java_test_host {
     name: "MicrodroidHostTestCases.CTS",
     defaults: ["MicrodroidHostTestCases.default"],
     test_config_template: "AndroidTestTemplate.xml",
-    test_suites: ["cts"],
+    test_suites: [
+        "cts",
+        "dts",
+    ],
     auto_gen_config: true,
     test_options: {
         tradefed_options: [
