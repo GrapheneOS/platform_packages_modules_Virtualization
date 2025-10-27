@@ -650,7 +650,7 @@ impl DeviceReg {
     }
 
     pub fn is_aligned(&self, granule: u64) -> bool {
-        self.addr % granule == 0 && self.size % granule == 0
+        self.addr.is_multiple_of(granule) && self.size.is_multiple_of(granule)
     }
 }
 

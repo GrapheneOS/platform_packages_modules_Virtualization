@@ -960,7 +960,7 @@ fn validate_swiotlb_info(
     let size = swiotlb_info.size;
     let align = swiotlb_info.align;
 
-    if size == 0 || (size % alignment) != 0 {
+    if size == 0 || !size.is_multiple_of(alignment) {
         error!("Invalid swiotlb size {size:#x}");
         return Err(RebootReason::InvalidFdt);
     }
