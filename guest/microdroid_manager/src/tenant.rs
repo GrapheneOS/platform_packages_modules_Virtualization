@@ -15,12 +15,20 @@
 //! Tenant Manager
 //! Manages the tenants and their attributes running inside Microdroid.
 
+use super::instance::{ApexData, ApkData};
 use anyhow::{bail, Result};
 use log::{info, warn};
 use microdroid_payload_config::TenantConfig;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TenantPackageInfo {
+    ApkData(ApkData),
+    ApexData(ApexData),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub(crate) struct TenantAttribute {
     uid: u32,
 }
@@ -90,4 +98,11 @@ impl TenantManager {
     pub fn list_tenants_info(&self) -> impl Iterator<Item = (&String, &TenantAttribute)> {
         self.tenants.iter()
     }
+}
+
+// TODO(rkrohit): Update the TenancySpec to keep the fields that are required for replay protection
+// for tenants before releasing the multi-tenancy feature.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TenancySpec {
+    pub tenants: HashMap<String, (TenantPackageInfo, TenantAttribute)>,
 }
