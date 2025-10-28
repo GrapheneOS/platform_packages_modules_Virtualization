@@ -3,7 +3,7 @@ package {
 }
 
 microdroid_filesystem_images = [
-    "microdroid_super",
+    "microdroid",
     "microdroid_vbmeta",
 ]
 

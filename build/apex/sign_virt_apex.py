@@ -508,6 +508,7 @@ gki_versions = ['android15-6.6', 'android16-6.12']
 virt_apex_non_gki_files = {
     'kernel': 'etc/fs/microdroid_kernel',
     'vbmeta.img': 'etc/fs/microdroid_vbmeta.img',
+    'system.img': 'etc/fs/microdroid.img',
     'super.img': 'etc/fs/microdroid_super.img',
     'initrd_normal.img': 'etc/microdroid_initrd_normal.img',
     'initrd_debuggable.img': 'etc/microdroid_initrd_debuggable.img',
@@ -546,29 +547,26 @@ def SignVirtApex(args):
     input_dir = args.input_dir
     files = TargetFiles(input_dir)
 
-    # unpacked files (will be unpacked from super.img below)
-    system_a_img = os.path.join(unpack_dir.name, 'system_a.img')
-    vendor_a_img = os.path.join(unpack_dir.name, 'vendor_a.img')
+    # Legacy microdroid instances use a super partition.
+    if os.path.exists(files['system.img']):
+        system_a_f = Async(AddHashTreeFooter, args, key, files['system.img'])
+        images = [files['system.img']]
+        images_f = [system_a_f]
+    else:
+        system_a_img = os.path.join(unpack_dir.name, 'system_a.img')
 
-    # re-sign super.img
-    # 1. unpack super.img
-    # 2. resign system and vendor (if exists)
-    # 3. repack super.img out of resigned system and vendor (if exists)
-    UnpackSuperImg(args, files['super.img'], unpack_dir.name)
-    system_a_f = Async(AddHashTreeFooter, args, key, system_a_img)
-    partitions = {"system_a": system_a_img}
-    images = [system_a_img]
-    images_f = [system_a_f]
+        # re-sign super.img
+        # 1. unpack super.img
+        # 2. resign system and vendor (if exists)
+        # 3. repack super.img out of resigned system and vendor (if exists)
+        UnpackSuperImg(args, files['super.img'], unpack_dir.name)
+        system_a_f = Async(AddHashTreeFooter, args, key, system_a_img)
+        partitions = {"system_a": system_a_img}
+        images = [system_a_img]
+        images_f = [system_a_f]
 
-    # if vendor_a.img exists, resign it
-    if os.path.exists(vendor_a_img):
-        partitions.update({'vendor_a': vendor_a_img})
-        images.append(vendor_a_img)
-        vendor_a_f = Async(AddHashTreeFooter, args, key, vendor_a_img)
-        images_f.append(vendor_a_f)
-
-    Async(MakeSuperImage, args, partitions,
-          files['super.img'], wait=images_f)
+        Async(MakeSuperImage, args, partitions,
+              files['super.img'], wait=images_f)
 
     # re-generate vbmeta from re-signed system_a.img
     vbmeta_f = Async(MakeVbmetaImage, args, key, files['vbmeta.img'],
@@ -742,9 +740,12 @@ def VerifyVirtApex(args):
     input_dir = args.input_dir
     files = TargetFiles(input_dir)
 
-    # unpacked files
-    UnpackSuperImg(args, files['super.img'], unpack_dir.name)
-    system_a_img = os.path.join(unpack_dir.name, 'system_a.img')
+    # unpacked super.img if used.
+    if os.path.exists(files['super.img']):
+        UnpackSuperImg(args, files['super.img'], unpack_dir.name)
+        system_a_img = os.path.join(unpack_dir.name, 'system_a.img')
+    else:
+        system_a_img = files['system.img']
 
     # Read pubkey digest from the input key
     with tempfile.NamedTemporaryFile() as pubkey_file:
