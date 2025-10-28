@@ -59,7 +59,7 @@ pub(crate) fn flush_region(start: usize, size: usize) {
             let end = start + size;
             let start = crate::util::unchecked_align_down(start, line_size);
             for line in (start..end).step_by(line_size) {
-                crate::dc!("cvau", line);
+                crate::dc!("cvac", line);
             }
         } else if #[cfg(target_arch = "x86_64")] {
             // TODO(b/362733888): implement for x86
