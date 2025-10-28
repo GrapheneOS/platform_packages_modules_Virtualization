@@ -21,6 +21,7 @@ package_name="com.android.virtualization.terminal"
 
 if [ $1 == "setup" ]; then
 	pm enable --user ${user} ${package_name}
+	pm grant --user ${user} ${package_name} android.permission.POST_NOTIFICATIONS
 elif [ $1 == "teardown" ]; then
 	pm clear --user ${user} ${package_name}
 	pm disable --user ${user} ${package_name}
