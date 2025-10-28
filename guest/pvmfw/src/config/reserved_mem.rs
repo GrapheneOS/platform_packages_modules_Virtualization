@@ -217,7 +217,7 @@ mod tests {
     fn dealign_vec_data(data: &mut Vec<u8>) -> &[u8] {
         assert!(data.len() >= 4);
         data.reserve(1);
-        let out = if data.as_ptr() as usize % 2 == 0 {
+        let out = if (data.as_ptr() as usize).is_multiple_of(2) {
             data.insert(0, 0);
             &data.as_slice()[1..]
         } else {

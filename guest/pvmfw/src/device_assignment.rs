@@ -492,7 +492,7 @@ impl VmDtbo {
                     )
                     .try_into()
                     .or(Err(DeviceAssignmentError::InvalidDtbo))?;
-                    if phandle_offset % CELL_SIZE != 0 {
+                    if !phandle_offset.is_multiple_of(CELL_SIZE) {
                         return Err(DeviceAssignmentError::InvalidDtbo);
                     }
                     let phandle_value = target_prop
