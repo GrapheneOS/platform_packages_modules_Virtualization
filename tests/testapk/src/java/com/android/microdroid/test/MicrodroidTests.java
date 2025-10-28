@@ -1452,6 +1452,56 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isEqualTo("PASS");
     }
 
+    @Test
+    @CddTest
+    public void multiTenantInstanceSpecRollbackTest() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        // MicrodroidTestHelperAppRelaxedRollbackProtection_V7*.apk has rollback_index:2
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_rollback_index_instance_spec.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+
+        // First boot - InstanceSpec should be created
+        VirtualMachine vm1 =
+                forceCreateNewVirtualMachine("multi_tenant_instance_spec_rollback", config);
+        CompletableFuture<String> result_v2_boot1 = readTenantPackagesMounted(vm1);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result_v2_boot1.getNow(null))
+                .isEqualTo("PASS");
+
+        // Second boot - InstanceSpec should be read and verified
+        VirtualMachine vm2 = getVirtualMachineManager().get("multi_tenant_instance_spec_rollback");
+        CompletableFuture<String> result_v2_boot2 = readTenantPackagesMounted(vm2);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result_v2_boot2.getNow(null))
+                .isEqualTo("PASS");
+
+        // Install lower version - MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk has
+        // rollback_index:1
+        uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
+
+        getVirtualMachineManager().testOnlyClearCache();
+
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk", "-d");
+
+        VirtualMachine vm3 = getVirtualMachineManager().get("multi_tenant_instance_spec_rollback");
+        BootResult bootResult = tryBootVm(TAG, vm3);
+        assertThat(bootResult.payloadStarted).isFalse();
+        assertThat(bootResult.deathReason)
+                .isEqualTo(
+                        VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_VERIFICATION_FAILED);
+    }
+
     private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)
             throws Exception {
         CompletableFuture<String> prop = new CompletableFuture<>();
