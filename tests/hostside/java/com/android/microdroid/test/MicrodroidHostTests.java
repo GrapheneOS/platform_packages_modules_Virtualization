@@ -1575,6 +1575,44 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         }
     }
 
+    @Test
+    @Parameters(method = "params")
+    @TestCaseName("{method}_protectedVm_{0}_os_{1}")
+    public void testMicrodroidFailsOnShutdownHint(boolean protectedVm, String os) throws Exception {
+        // Preconditions
+        assumeKernelSupported(os);
+        assumeVmTypeSupported(os, protectedVm);
+
+        final String configPath = "assets/vm_config.json"; // path inside the APK
+        MicrodroidBuilder microdroidBuilder =
+                MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
+                        .debugLevel(DEBUG_LEVEL_FULL)
+                        .memoryMib(minMemorySize())
+                        .cpuTopology("match_host")
+                        .protectedVm(protectedVm)
+                        .name("test_microdroid_fail_boot_on_shutdown_hint");
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+        ITestDevice device = getDevice();
+        device.enableAdbRoot();
+        device.setProperty("sys.shutdown.requested", "1");
+        try {
+            testMicrodroidBootsWithBuilder(microdroidBuilder);
+            throw new IllegalStateException(
+                    "Boot successful when shutting down. This is unsupported");
+        } catch (Exception e) {
+            if (e.toString().contains("Boot successful when shutting down")) {
+                throw e;
+            }
+            // Do nothing, this is expected!
+        } finally {
+            device.disableAdbRoot();
+            // reboot device to avoid bad state if services shutdown on hint.
+            device.reboot();
+        }
+    }
+
     @Before
     public void setUp() throws Exception {
         assumeDeviceIsCapable(getDevice());

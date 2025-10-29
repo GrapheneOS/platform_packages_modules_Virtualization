@@ -226,6 +226,16 @@ impl Interface for VirtualizationService {
         Ok(())
     }
 }
+
+fn is_shutting_down() -> binder::Result<bool> {
+    let shutdown_sysprop =
+        system_properties::read("sys.shutdown.requested").or_service_specific_exception(-1)?;
+    if shutdown_sysprop.is_none() {
+        return Ok(false);
+    }
+    Ok(!shutdown_sysprop.unwrap().is_empty())
+}
+
 impl aidl::IVirtualizationService for VirtualizationService {
     /// Creates (but does not start) a new VM with the given configuration, assigning it the next
     /// available CID.
@@ -1610,6 +1620,15 @@ impl aidl::IVirtualMachine for VirtualMachine {
     }
 
     fn start(&self) -> binder::Result<()> {
+        if is_shutting_down()? {
+            self.instance
+                .callbacks
+                .callback_on_died(self.instance.cid, aidl::DeathReason::HOST_SHUTDOWN);
+            return Err(Status::new_service_specific_error_str(
+                aidl::ERROR_UNEXPECTED,
+                Some("Device is shutting down"),
+            ));
+        }
         if self.instance.requires_vm_service {
             let cid = self.instance.cid;
             // Start VM service listening for connections from the new CID on port=CID.
