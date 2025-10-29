@@ -358,7 +358,7 @@ impl MicrodroidData {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[repr(u8)]
 pub enum EncryptedStoreMode {
     DefaultKey = 0,
