@@ -6,7 +6,8 @@ rust_defaults {
     name: "authfs_defaults",
     crate_name: "authfs",
     edition: "2021",
-    srcs: [":authfs_src"],
+    crate_root: ":authfs_entry_src",
+    srcs: [":authfs_sources"],
     rustlibs: [
         "authfs_aidl_interface-rust",
         "libandroid_logger",
@@ -34,12 +35,34 @@ rust_defaults {
     defaults: [
         "avf_build_flags_rust",
     ],
+    use_expansive_default_srcs: false,
 }
 
 filegroup {
-    name: "authfs_src",
+    name: "authfs_entry_src",
     srcs: [
         "src/main.rs",
+    ],
+}
+
+filegroup {
+    name: "authfs_sources",
+    srcs: [
+        "src/common.rs",
+        "src/file.rs",
+        "src/file/attr.rs",
+        "src/file/dir.rs",
+        "src/file/remote_file.rs",
+        "src/fsstat.rs",
+        "src/fsverity.rs",
+        "src/fsverity/builder.rs",
+        "src/fsverity/common.rs",
+        "src/fsverity/editor.rs",
+        "src/fsverity/sys.rs",
+        "src/fsverity/verifier.rs",
+        "src/fusefs.rs",
+        "src/fusefs/file.rs",
+        "src/fusefs/mount.rs",
     ],
 }
 

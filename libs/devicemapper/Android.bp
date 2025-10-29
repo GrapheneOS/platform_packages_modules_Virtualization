@@ -6,7 +6,7 @@ rust_defaults {
     name: "libdm_rust.defaults",
     crate_name: "dm",
     defaults: ["avf_build_flags_rust"],
-    srcs: ["src/lib.rs"],
+    crate_root: "src/lib.rs",
     edition: "2021",
     rustlibs: [
         "libanyhow",
@@ -30,6 +30,7 @@ rust_test {
     defaults: [
         "libdm_rust.defaults",
     ],
+    srcs: ["testdata/rand8k"],
     test_suites: ["general-tests"],
     rustlibs: [
         "librustutils",

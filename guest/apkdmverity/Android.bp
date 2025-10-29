@@ -6,7 +6,7 @@ rust_defaults {
     name: "apkdmverity.defaults",
     crate_name: "apkdmverity",
     defaults: ["avf_build_flags_rust"],
-    srcs: ["src/main.rs"],
+    crate_root: "src/main.rs",
     edition: "2021",
     prefer_rlib: true,
     rustlibs: [
@@ -41,6 +41,10 @@ rust_test {
     name: "apkdmverity.test",
     defaults: [
         "apkdmverity.defaults",
+    ],
+    srcs: [
+        "testdata/test.apk",
+        "testdata/test.apk.idsig",
     ],
     test_suites: ["general-tests"],
     compile_multilib: "first",
