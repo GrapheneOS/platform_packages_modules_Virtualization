@@ -253,7 +253,7 @@ pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
 }
 
 // Validation logic includes:
-// 1. The tenant_apk exactly matches apks described in tenant_config (comparison is by package name)
+// 1. The tenant_apk a subset of apks described in tenant_config (comparison is by package name)
 // 2. The order of description in tenant_config is irrelevant.
 // 3. The rollback_index (or version_code if rollback_index is missing) >=  min_version in
 //    tenant_config
@@ -262,36 +262,23 @@ pub(crate) fn validate_tenant_apks_against_tenant_config(
     tenant_apk: &[ApkData], // data extracted from the apk passed from host
     tenant_config: &[TenantConfig],
 ) -> Result<()> {
-    let apk_configs: Vec<&TenantConfiguration> = tenant_config
+    let config_map: HashMap<&String, &TenantConfiguration> = tenant_config
         .iter()
-        .filter_map(
-            |config| {
-                if let TenantConfig::Apk(config) = config {
-                    Some(config)
-                } else {
-                    None
-                }
-            },
-        )
+        .filter_map(|config| {
+            if let TenantConfig::Apk(config) = config {
+                Some((&config.name, config))
+            } else {
+                None
+            }
+        })
         .collect();
-    let config_map: HashMap<&String, &TenantConfiguration> =
-        apk_configs.iter().map(|&c| (&c.name, c)).collect();
-
-    let apk_map: HashMap<&String, &ApkData> =
-        tenant_apk.iter().map(|apk| (&apk.package_name, apk)).collect();
-
-    // Since the following loop verifies that every provided APK is defined in the configuration,
-    // this length check is sufficient to guarantee that the set of provided APKs is exactly what
-    // the configuration specifies.
-    if apk_map.len() != config_map.len() {
-        bail!(MicrodroidError::PayloadVerificationFailed(
-            "Provided tenant APKs do not match the configuration".to_string()
-        ));
-    }
-
-    for (package_name, apk_data) in &apk_map {
-        // This unwrap is safe because we've checked that the key sets of both maps are identical.
-        let config = config_map.get(*package_name).unwrap();
+    for apk_data in tenant_apk {
+        let Some(config) = config_map.get(&apk_data.package_name) else {
+            bail!(MicrodroidError::PayloadVerificationFailed(format!(
+                "APK ({}) found without a corresponding TenantConfig ({:?})",
+                apk_data.package_name, tenant_config
+            )));
+        };
         // Version check!
         if let Some(min_version) = config.min_version {
             // Check rollback_index (or version_code if rollback_index is missing)  against
@@ -300,7 +287,7 @@ pub(crate) fn validate_tenant_apks_against_tenant_config(
             if version < min_version {
                 bail!(MicrodroidError::PayloadVerificationFailed(format!(
                     "APK ('{}') version ({}) is less than min_version ({})",
-                    package_name, version, min_version
+                    apk_data.package_name, version, min_version
                 )));
             }
         }
@@ -311,12 +298,11 @@ pub(crate) fn validate_tenant_apks_against_tenant_config(
             if *expected_auth != cert_hash {
                 bail!(MicrodroidError::PayloadVerificationFailed(format!(
                     "APK ('{}') cert_hash ('{}') mismatches expected authority ({})",
-                    package_name, cert_hash, expected_auth
+                    apk_data.package_name, cert_hash, expected_auth
                 )));
             }
         }
     }
-
     Ok(())
 }
 
