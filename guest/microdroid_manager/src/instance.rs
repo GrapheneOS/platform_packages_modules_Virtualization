@@ -35,11 +35,10 @@
 
 use crate::ioutil;
 
-use crate::tenant::TenancySpec;
 use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use dice_driver::DiceDriver;
-use log::{info, warn};
+use log::warn;
 use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
@@ -64,9 +63,6 @@ const PARTITION_HEADER_SIZE: u64 = 512;
 
 /// UUID of the partition that microdroid manager uses
 const MICRODROID_PARTITION_UUID: &str = "cf9afe9a-0662-11ec-a329-c32663a09d75";
-
-/// UUID of the partition that instance spec uses
-const INSTANCE_SPEC_PARTITION_UUID: &str = "a0b1c2d3-e4f5-a6b7-c8d9-e0f1a2b3c4d5";
 
 /// Size of the AES256-GCM tag
 const AES_256_GCM_TAG_LENGTH: usize = 16;
@@ -119,7 +115,7 @@ impl InstanceDisk {
     /// plaintext, although it is stored encrypted. In case when the partition for microdroid
     /// manager doesn't exist, which can happen if it's the first boot, `Ok(None)` is returned.
     pub fn read_microdroid_data(&mut self, dice: &DiceDriver) -> Result<Option<MicrodroidData>> {
-        let (header, offset) = self.locate_partition_header(MICRODROID_PARTITION_UUID)?;
+        let (header, offset) = self.locate_microdroid_header()?;
         if header.is_none() {
             return Ok(None);
         }
@@ -162,7 +158,7 @@ impl InstanceDisk {
         microdroid_data: &MicrodroidData,
         dice: &DiceDriver,
     ) -> Result<()> {
-        let (header, offset) = self.locate_partition_header(MICRODROID_PARTITION_UUID)?;
+        let (header, offset) = self.locate_microdroid_header()?;
 
         let mut data = Vec::new();
         ciborium::into_writer(microdroid_data, &mut data)?;
@@ -208,103 +204,6 @@ impl InstanceDisk {
         Ok(())
     }
 
-    fn write_partition_data(&mut self, data: &[u8], offset: u64) -> Result<()> {
-        self.file.seek(SeekFrom::Start(offset))?;
-        self.file.write_all(data)?;
-        Ok(())
-    }
-
-    fn read_partition_data(&mut self, data: &mut [u8], offset: u64) -> Result<()> {
-        self.file.seek(SeekFrom::Start(offset))?;
-        self.file.read_exact(data)?;
-        Ok(())
-    }
-
-    /// Reads the instance spec data. The returned data is plaintext.
-    /// In case when the partition doesn't exist, `Ok(None)` is returned.
-    pub fn read_instance_spec(&mut self) -> Result<Option<InstanceSpec>> {
-        let (header, offset) = self.locate_partition_header(INSTANCE_SPEC_PARTITION_UUID)?;
-        let Some(header) = header else {
-            return Ok(None);
-        };
-        let payload_offset = offset + PARTITION_HEADER_SIZE;
-
-        let mut data = vec![0; header.payload_size as usize];
-        self.read_partition_data(&mut data, payload_offset)?;
-
-        let instance_spec = ciborium::from_reader(data.as_slice())?;
-        Ok(Some(instance_spec))
-    }
-
-    // TODO(b/447276387): Check for sufficient disk space before writing instance_spec
-    // TODO(rkrohit): Add a README file explaining the layout of the instance image  it is being
-    // assumed that the instance spec partition is the last partition in the instance image.
-    /// Write or update the instance spec data to the partition. The partition is appended
-    /// if it doesn't exist. The data is stored in plaintext.
-    pub fn write_instance_spec(&mut self, instance_spec: &InstanceSpec) -> Result<()> {
-        let (header, offset) = self.locate_partition_header(INSTANCE_SPEC_PARTITION_UUID)?;
-
-        let mut data = Vec::new();
-        ciborium::into_writer(instance_spec, &mut data)?;
-        let payload_size = data.len() as u64;
-
-        if let Some(header) = header {
-            if header.payload_size != payload_size {
-                // Size changed, update the header
-                info!(
-                    "InstanceSpec payload size changed from {} to {}",
-                    header.payload_size, payload_size
-                );
-                self.write_header_at(
-                    offset,
-                    &Uuid::parse_str(INSTANCE_SPEC_PARTITION_UUID)?,
-                    payload_size,
-                )?;
-            }
-        } else {
-            // Partition doesn't exist, create new header
-            let uuid = Uuid::parse_str(INSTANCE_SPEC_PARTITION_UUID)?;
-            self.write_header_at(offset, &uuid, payload_size)?;
-        }
-
-        self.write_partition_data(&data, offset + PARTITION_HEADER_SIZE)?;
-        ioutil::blkflsbuf(&mut self.file)?;
-
-        Ok(())
-    }
-
-    /// Locate the header of the partition for the given UUID. A pair of `PartitionHeader` and
-    /// the offset of the partition in the disk is returned. If the partition is not found,
-    /// `PartitionHeader` is `None` and the offset points to the empty partition that can be used
-    /// for the partition.
-    fn locate_partition_header(
-        &mut self,
-        uuid_str: &str,
-    ) -> Result<(Option<PartitionHeader>, PartitionOffset)> {
-        let uuid = Uuid::parse_str(uuid_str)?;
-
-        // the first partition header is located just after the disk header
-        let mut header_offset = DISK_HEADER_SIZE;
-        loop {
-            let header = self.read_header_at(header_offset)?;
-            if header.uuid == uuid {
-                // found a matching header
-                return Ok((Some(header), header_offset));
-            } else if header.uuid == Uuid::nil() {
-                // found an empty space
-                return Ok((None, header_offset));
-            }
-            // Move to the next partition. Be careful about overflow.
-            let payload_size = round_to_multiple(header.payload_size, PARTITION_HEADER_SIZE)?;
-            let part_size = payload_size
-                .checked_add(PARTITION_HEADER_SIZE)
-                .ok_or_else(|| anyhow!("partition too large"))?;
-            header_offset = header_offset
-                .checked_add(part_size)
-                .ok_or_else(|| anyhow!("next partition at invalid offset"))?;
-        }
-    }
-
     /// Read header at `header_offset` and parse it into a `PartitionHeader`.
     fn read_header_at(&mut self, header_offset: u64) -> Result<PartitionHeader> {
         assert!(
@@ -332,6 +231,35 @@ impl InstanceDisk {
         self.file.write_all(uuid.as_bytes())?;
         self.file.write_u64::<LittleEndian>(payload_size)?;
         Ok(())
+    }
+
+    /// Locate the header of the partition for microdroid manager. A pair of `PartitionHeader` and
+    /// the offset of the partition in the disk is returned. If the partition is not found,
+    /// `PartitionHeader` is `None` and the offset points to the empty partition that can be used
+    /// for the partition.
+    fn locate_microdroid_header(&mut self) -> Result<(Option<PartitionHeader>, PartitionOffset)> {
+        let microdroid_uuid = Uuid::parse_str(MICRODROID_PARTITION_UUID)?;
+
+        // the first partition header is located just after the disk header
+        let mut header_offset = DISK_HEADER_SIZE;
+        loop {
+            let header = self.read_header_at(header_offset)?;
+            if header.uuid == microdroid_uuid {
+                // found a matching header
+                return Ok((Some(header), header_offset));
+            } else if header.uuid == Uuid::nil() {
+                // found an empty space
+                return Ok((None, header_offset));
+            }
+            // Move to the next partition. Be careful about overflow.
+            let payload_size = round_to_multiple(header.payload_size, PARTITION_HEADER_SIZE)?;
+            let part_size = payload_size
+                .checked_add(PARTITION_HEADER_SIZE)
+                .ok_or_else(|| anyhow!("partition too large"))?;
+            header_offset = header_offset
+                .checked_add(part_size)
+                .ok_or_else(|| anyhow!("next partition at invalid offset"))?;
+        }
     }
 }
 
@@ -409,10 +337,4 @@ pub struct ApexData {
     pub root_digest: Vec<u8>,
     pub last_update_seconds: u64,
     pub is_factory: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct InstanceSpec {
-    pub tenancy_spec: TenancySpec,
-    // TODO: Define other fields for InstanceSpec
 }
