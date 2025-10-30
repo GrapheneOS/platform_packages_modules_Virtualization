@@ -166,6 +166,8 @@ fn run_test(protected: bool, golden_dt: &str) -> Result<()> {
         .arg("/chosen/linux,initrd-start")
         .arg("--ignore-path-value")
         .arg("/chosen/linux,initrd-end")
+        .arg("--ignore-path-value")
+        .arg("/reserved-memory/restricted_dma_reserved/alignment")
         .arg("--ignore-path")
         .arg("/avf/name");
     // Check if Secretkeeper is advertised. If not, check the vendor API level. Secretkeeper is
