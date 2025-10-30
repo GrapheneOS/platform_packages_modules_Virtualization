@@ -75,7 +75,9 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
             Map.ofEntries(
                     Map.entry("microdroid", "microdroid"),
                     Map.entry("microdroid_16k", "microdroid_16k"),
-                    Map.entry("android15_66", "microdroid_gki-android15-6.6"));
+                    Map.entry("android15_66", "microdroid_gki-android15-6.6"),
+                    // TODO: b/402758258 - remove this os when GKI supports PKVM-IA
+                    Map.entry("android16_612_desktop", "microdroid_gki-android16-6.12-desktop"));
 
     /* Keep this sync with AssignableDevice.aidl */
     public static final class AssignableDevice {
