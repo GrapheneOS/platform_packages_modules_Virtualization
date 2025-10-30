@@ -51,6 +51,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.BetterBugLauncher.Companion.launchBetterBugActivity
 import com.android.virtualization.terminal.ErrorActivity.Companion.start
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
 import com.google.android.material.tabs.TabLayout
@@ -128,6 +129,16 @@ public class MainActivity :
         tabScrollView = findViewById<HorizontalScrollView>(R.id.tab_scrollview)
         val modifierKeysContainerView =
             findViewById<RelativeLayout>(R.id.modifier_keys_container) as ViewGroup
+
+        val betterBugButton = findViewById<Button>(R.id.better_bug_button)
+        if (BetterBugLauncher.isBetterBugEnabled(this)) {
+            betterBugButton.setOnClickListener { _ ->
+                launchBetterBugActivity(this, /* error= */ null)
+            }
+            betterBugButton.visibility = View.VISIBLE
+        } else {
+            betterBugButton.visibility = View.GONE
+        }
 
         findViewById<Button>(R.id.settings_button).setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)
