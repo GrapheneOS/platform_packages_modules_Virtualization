@@ -113,6 +113,7 @@ rust_library_rlib {
     crate_name: "vmbase",
     srcs: ["src/lib.rs"],
     rustlibs: [
+        "libacpi",
         "libbuddy_system_allocator",
         "libcfg_if",
         "libhypervisor_backends",

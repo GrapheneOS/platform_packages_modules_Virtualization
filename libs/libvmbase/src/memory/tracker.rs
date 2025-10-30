@@ -238,7 +238,7 @@ impl TrackedRegion {
 struct MemoryTracker<Mmu: MmuOps> {
     total: Range<usize>,
     mmu: Mmu,
-    regions: ArrayVec<[TrackedRegion; 5]>,
+    regions: ArrayVec<[TrackedRegion; 40]>,
     mmio_regions: ArrayVec<[Range<usize>; 5]>,
     mmio_range: Range<usize>,
     image_footer: Option<Range<usize>>,
