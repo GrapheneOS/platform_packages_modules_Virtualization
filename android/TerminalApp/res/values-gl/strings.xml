@@ -98,8 +98,8 @@
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tarefas de longa duración"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Eventos do sistema"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Pestana"</string>
-    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Aceleración dos gráficos"</string>
-    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Cambia o renderizador para a aceleración dos gráficos."</string>
+    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Aceleración de gráficos"</string>
+    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Cambia o renderizador para a aceleración de gráficos."</string>
     <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Reinicia a aplicación Terminal para aplicar o cambio."</string>
     <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Renderizador de software"</string>
     <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Renderizador acelerado pola GPU"</string>
