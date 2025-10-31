@@ -23,6 +23,10 @@ rust_library {
     name: "libdm_rust",
     defaults: ["libdm_rust.defaults"],
     host_supported: true,
+    apex_available: [
+        "com.android.virt",
+        "//apex_available:platform",
+    ],
 }
 
 rust_test {
