@@ -151,7 +151,6 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "mov x27, xzr",
             "mov x28, xzr",
             "mov x29, xzr",
-            "msr ttbr0_el1, xzr",
             // Ensure that CMOs have completed before entering payload.
             "dsb nsh",
             "br x30",
