@@ -5,6 +5,7 @@ package {
 rust_defaults {
     name: "virtualizationmanager_defaults",
     crate_name: "virtualizationmanager",
+    crate_root: "src/main.rs",
     defaults: [
         "avf_build_flags_rust",
         "secretkeeper_use_latest_hal_aidl_rust",
@@ -83,12 +84,12 @@ rust_defaults {
     shared_libs: [
         "libselinux",
     ],
+    srcs: [":security_vm_instance_id"],
 }
 
 rust_binary {
     name: "virtmgr",
     defaults: ["virtualizationmanager_defaults"],
-    srcs: ["src/main.rs"],
     apex_available: ["com.android.virt"],
 }
 

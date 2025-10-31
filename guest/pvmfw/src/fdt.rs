@@ -1156,6 +1156,7 @@ pub struct DeviceTreeInfo {
     device_assignment: Option<DeviceAssignmentInfo>,
     untrusted_props: BTreeMap<CString, Vec<u8>>,
     avf_props: BTreeMap<CString, Vec<u8>>,
+    android_fw_props: BTreeMap<CString, Vec<u8>>,
     vcpufreq_info: Option<VcpufreqInfo>,
     wdt_info: Option<WdtInfo>,
     psci: Option<PsciInfo>,
@@ -1364,6 +1365,19 @@ fn parse_device_tree(
         Default::default()
     };
 
+    let android_fw_props = if let Some(vm_ref_dt) = vm_ref_dt {
+        let props = extract_node_props(fdt, c"/firmware/android", false).map_err(|e| {
+            error!("Failed to read /firmware/android properties: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        prune_props_based_on_node(props, vm_ref_dt, c"/firmware/android").map_err(|e| {
+            error!("Failed to validate /firmware/android properties: {e}");
+            RebootReason::InvalidFdt
+        })?
+    } else {
+        Default::default()
+    };
+
     Ok(DeviceTreeInfo {
         initrd_range,
         memory_range,
@@ -1376,6 +1390,7 @@ fn parse_device_tree(
         device_assignment,
         untrusted_props,
         avf_props,
+        android_fw_props,
         vcpufreq_info,
         wdt_info,
         psci,
@@ -1475,6 +1490,17 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         })?;
         populate_node(&mut node, &info.avf_props).map_err(|e| {
             error!("Failed to populate /avf: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
+
+    if !info.android_fw_props.is_empty() {
+        let mut node = fdt.find_or_add_node_mut(c"/firmware/android").map_err(|e| {
+            error!("Failed to create node /firmware/android: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        populate_node(&mut node, &info.android_fw_props).map_err(|e| {
+            error!("Failed to populate /firmware/android: {e}");
             RebootReason::InvalidFdt
         })?;
     }
