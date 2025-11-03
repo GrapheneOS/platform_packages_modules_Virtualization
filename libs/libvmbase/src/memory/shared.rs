@@ -15,7 +15,6 @@
 //! Shared memory management.
 
 use super::error::MemoryTrackerError;
-use super::util::virt_to_phys;
 use crate::layout;
 use crate::memory::PAGE_SIZE;
 use crate::util::unchecked_align_down;
@@ -185,10 +184,12 @@ impl MemorySharer {
         let end = base.checked_add(layout.size()).unwrap();
 
         if let Some(mem_sharer) = get_mem_sharer() {
+            // TODO(ptosi): Make MemSharingHypervisor take usize instead of u64:
+            let base = u64::try_from(base).unwrap();
+            let end = u64::try_from(end).unwrap();
             trace!("Sharing memory region {:#x?}", base..end);
-            for vaddr in (base..end).step_by(self.granule) {
-                let vaddr = NonNull::new(vaddr as *mut _).unwrap();
-                mem_sharer.share(virt_to_phys(vaddr).try_into().unwrap()).unwrap();
+            for addr in (base..end).step_by(self.granule) {
+                mem_sharer.share(addr).unwrap();
             }
         }
 
@@ -203,9 +204,11 @@ impl Drop for MemorySharer {
             if let Some(mem_sharer) = get_mem_sharer() {
                 let end = base.checked_add(layout.size()).unwrap();
                 trace!("Unsharing memory region {:#x?}", base..end);
-                for vaddr in (base..end).step_by(self.granule) {
-                    let vaddr = NonNull::new(vaddr as *mut _).unwrap();
-                    mem_sharer.unshare(virt_to_phys(vaddr).try_into().unwrap()).unwrap();
+                // TODO(ptosi): Make MemSharingHypervisor take usize instead of u64:
+                let base = u64::try_from(base).unwrap();
+                let end = u64::try_from(end).unwrap();
+                for addr in (base..end).step_by(self.granule) {
+                    mem_sharer.unshare(addr).unwrap();
                 }
             }
 
