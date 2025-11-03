@@ -157,20 +157,18 @@ class TerminalTabFragment() : Fragment() {
         @JavascriptInterface
         fun closeTab() {
             if (terminalViewModel.terminalTabs.containsKey(id)) {
-                if (activity != null) {
-                    activity?.runOnUiThread {
-                        val mainActivity = (activity as MainActivity)
-                        mainActivity.closeTab(id)
-                    }
+                activity?.runOnUiThread {
+                    val mainActivity = (activity as MainActivity)
+                    mainActivity?.closeTab(id)
                 }
             }
         }
 
         @JavascriptInterface
         fun showError() {
-            if (activity != null) {
-                activity?.runOnUiThread {
-                    Toast.makeText(activity, R.string.ttyd_connection_error, Toast.LENGTH_SHORT)
+            activity?.runOnUiThread {
+                if (activity != null) {
+                    Toast.makeText(activity!!, R.string.ttyd_connection_error, Toast.LENGTH_SHORT)
                         .show()
                 }
             }

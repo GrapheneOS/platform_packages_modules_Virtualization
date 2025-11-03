@@ -31,7 +31,7 @@
     ],
     "kernel": "$PAYLOAD_DIR/vmlinuz",
     "initrd": "$PAYLOAD_DIR/initrd.img",
-    "params": "root=/dev/vda1 ds=nocloud",
+    "params": "root=/dev/vda1 ds=nocloud arm64.nompam",
     "protected": false,
     "cpu_topology": "match_host",
     "platform_version": "~1.0",

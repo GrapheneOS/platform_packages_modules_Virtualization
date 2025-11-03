@@ -72,6 +72,7 @@ impl Drop for SuppressGuard {
 /// Initialize vmbase logger with a given max logging level.
 pub(crate) fn init() -> Result<(), SetLoggerError> {
     log::set_logger(&LOGGER)?;
+    log::set_max_level(log::LevelFilter::Trace);
     Ok(())
 }
 

@@ -24,7 +24,11 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/updatable_apex.mk)
 
 PRODUCT_PACKAGES += \
     com.android.compos \
-    features_com.android.virt.xml
+    features_com.android.virt.xml \
+    default-permissions-virtualization.xml \
+
+PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST := \
+    system/etc/default-permissions/default-permissions-virtualization.xml \
 
 ifneq (true, $(RELEASE_INSTALL_APEX_SYSTEMSERVER_DEXPREOPT_SAME_PARTITION))
 PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST := \

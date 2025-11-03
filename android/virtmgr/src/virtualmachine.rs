@@ -1331,6 +1331,7 @@ fn check_label_is_allowed(context: &SeContext, calling_partition: CallingPartiti
         | "apk_data_file" // APKs of an installed app
         | "shell_data_file" // test files created via adb shell
         | "staging_data_file" // updated/staged APEX images
+        | "apex_dm_device" // updated APEX images when mount_before_data is enabled
         | "system_file" // immutable dm-verity protected partition
         | "virtualizationservice_data_file" // files created by VS / VirtMgr
         | "vendor_microdroid_file" // immutable dm-verity protected partition (/vendor/etc/avf/microdroid/.*)

@@ -69,6 +69,14 @@ pub fn blkgetsize64(p: &Path) -> Result<u64> {
     if !f.metadata()?.file_type().is_block_device() {
         bail!("{:?} is not a block device", p);
     }
+    blkgetsize64_from_file(&f)
+}
+
+/// Gets the size of a block device from a `File` object.
+pub fn blkgetsize64_from_file(f: &File) -> Result<u64> {
+    if !f.metadata()?.file_type().is_block_device() {
+        bail!("not a block device");
+    }
     let mut size: usize = 0;
     // SAFETY: kernel copies the return value out to `size`. The file is kept open until the end of
     // this function.

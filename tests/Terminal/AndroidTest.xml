@@ -18,6 +18,11 @@
     <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
     <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
 
+    <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
+        <option name="screen-always-on" value="on" />
+        <option name="screen-saver" value="off"/>
+    </target_preparer>
+
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
         <option name="test-file-name" value="TerminalAppTests.apk" />
     </target_preparer>

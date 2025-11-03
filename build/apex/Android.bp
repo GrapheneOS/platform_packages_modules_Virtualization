@@ -149,6 +149,13 @@ apex_defaults {
             "microdroid_gki-android16-6.12_kernel",
             "microdroid_gki-android16-6.12.json",
         ],
+        // TODO: b/402758258 - remove this variant when GKI supports PKVM-IA
+        "android16_612-desktop-experimental": [
+            "microdroid_gki-android16-6.12-desktop_initrd_debuggable",
+            "microdroid_gki-android16-6.12-desktop_initrd_normal",
+            "microdroid_gki-android16-6.12-desktop_kernel",
+            "microdroid_gki-android16-6.12-desktop.json",
+        ],
         // Internal option used by pkvm team while developing new features.
         // Should not be used on production kernels.
         "pkvm_experimental": [

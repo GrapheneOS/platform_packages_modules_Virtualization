@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     let matches = clap_command().get_matches();
 
     let apks = matches.get_many::<String>("apk").unwrap();
-    assert!(apks.len() % 4 == 0);
+    assert!(apks.len().is_multiple_of(4));
 
     let verbose = matches.get_flag("verbose");
 

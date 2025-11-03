@@ -17,9 +17,10 @@
 use crate::aidl;
 use anyhow::{bail, Context, Error};
 use disk::{create_composite_disk, ImagePartitionType, PartitionInfo};
+use dm::util::blkgetsize64_from_file;
 use std::fs::{File, OpenOptions};
 use std::io::ErrorKind;
-use std::os::unix::fs::FileExt;
+use std::os::unix::fs::{FileExt, FileTypeExt};
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 use zerocopy::FromBytes;
@@ -134,7 +135,14 @@ fn fd_path_for_file(file: &File) -> PathBuf {
 /// This will work for raw and Android sparse images. QCOW2 and composite images aren't supported.
 fn get_partition_size(file: &File) -> Result<u64, Error> {
     match detect_image_type(file).context("failed to detect partition image type")? {
-        ImageType::Raw => Ok(file.metadata().context("failed to get metadata")?.len()),
+        ImageType::Raw => {
+            let metadata = file.metadata().context("failed to get metadata")?;
+            if metadata.file_type().is_block_device() {
+                Ok(blkgetsize64_from_file(file)?)
+            } else {
+                Ok(metadata.len())
+            }
+        }
         ImageType::AndroidSparse => {
             // Source: system/core/libsparse/sparse_format.h
             #[repr(C)]
