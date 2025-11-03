@@ -393,8 +393,8 @@ fn try_main() -> Result<()> {
 fn verify_payload_with_instance_img(
     metadata: &Metadata,
     dice: &DiceDriver,
+    instance: &mut InstanceDisk,
 ) -> Result<(MicrodroidData, Vec<ApexData>, bool)> {
-    let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
     if is_strict_boot() {
@@ -478,6 +478,8 @@ fn try_run_payload(
             .context("Failed to load DICE from driver")?
     };
 
+    let mut instance_disk = InstanceDisk::new().context("Failed to load instance.img")?;
+
     // Microdroid skips checking payload against instance image iff the device supports
     // secretkeeper. In that case Microdroid use VmSecret::V2, which provides instance state
     // and protection against rollback of boot images and packages.
@@ -486,7 +488,7 @@ fn try_run_payload(
         (instance_data, tenant_apex_data, VmInstanceState::Unknown)
     } else {
         let (instance_data, tenant_apex_data, is_newly_created) =
-            verify_payload_with_instance_img(&metadata, &dice)?;
+            verify_payload_with_instance_img(&metadata, &dice, &mut instance_disk)?;
         (
             instance_data,
             tenant_apex_data,
@@ -527,17 +529,12 @@ fn try_run_payload(
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
     })?;
 
-    let tenant_apks_data_extracted_from_manifest = integrity_protect_tenant_apks()?;
+    let tenant_apks = integrity_protect_tenant_apks()?;
 
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
-    let dice_artifacts = dice_derivation(
-        dice,
-        &instance_data,
-        &payload_metadata,
-        &tenant_apks_data_extracted_from_manifest,
-        &tenant_apex_data,
-    )?;
+    let dice_artifacts =
+        dice_derivation(dice, &instance_data, &payload_metadata, &tenant_apks, &tenant_apex_data)?;
     let (vm_secret, is_new_instance) =
         VmSecret::new(dice_artifacts, service, state).context("Failed to create VM secrets")?;
     let vm_secret = Arc::new(vm_secret);
@@ -601,10 +598,19 @@ fn try_run_payload(
         .context("Failed to mount extra apks")?;
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
-    validate_tenant_apks_against_tenant_config(
-        &tenant_apks_data_extracted_from_manifest,
-        &config.tenants,
-    )?;
+    validate_tenant_apks_against_tenant_config(&tenant_apks, &config.tenants)?;
+    let tenant_manager = TenantManager::initialize(&config.tenants)?;
+    let tenant_manager = Arc::new(tenant_manager);
+
+    if !config.tenants.is_empty() {
+        tenant::validate_tenants_against_existing_spec_update_spec(
+            is_new_instance,
+            &mut instance_disk,
+            &tenant_manager,
+            tenant_apks,
+            tenant_apex_data,
+        )?;
+    }
 
     // TODO(b/429639517): Validate tenant apex against tenant_config
     let tenant_apk_count =
@@ -625,9 +631,6 @@ fn try_run_payload(
         vm_internal_service_fd,
         VM_INTERNAL_SERVICE_SOCKET_NAME,
     )?;
-
-    let tenant_manager = TenantManager::initialize(&config.tenants)?;
-    let tenant_manager = Arc::new(tenant_manager);
 
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
