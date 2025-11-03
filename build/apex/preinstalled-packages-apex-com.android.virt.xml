@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2025 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<config>
+    <!-- AVF resource (android.system.virtualmachine.res) This defines permissions for AVF. Should
+    be available to all types of users -->
+    <install-in-user-type package="com.android.virtualmachine.res">
+        <install-in user-type="FULL" />
+        <install-in user-type="android.os.usertype.profile.MANAGED" />
+    </install-in-user-type>
+
+    <!-- AVF resource (android.system.virtualmachine.res) This defines permissions for AVF. Should
+    be available to all types of users -->
+    <install-in-user-type package="com.google.android.virtualmachine.res">
+        <install-in user-type="FULL" />
+        <install-in user-type="android.os.usertype.profile.MANAGED" />
+    </install-in-user-type>
+
+    <!-- Terminal (VmTerminalApp) This app is installe to all human users and managed profiles.
+    However, it doesn't mean that this app is displayed by default when such a new user is created.
+    Instead, the app's main activity is explicitly enabled if the user turns the "Linux Development"
+    feature on in the development options menu in the Settings app. -->
+    <install-in-user-type package="com.android.virtualization.terminal">
+        <install-in user-type="FULL" />
+        <install-in user-type="android.os.usertype.profile.MANAGED" />
+    </install-in-user-type>
+
+    <!-- EmptyPayloadApp (EmptyPayloadApp) This is for compliance tests only. It's not shown in
+    the app launcher. -->
+    <install-in-user-type package="com.android.microdroid.empty_payload">
+        <install-in user-type="SYSTEM" />
+    </install-in-user-type>
+
+    <!-- EmptyPayloadAppGoogle (EmptyPayloadAppGoogle) This is for compliance tests only. It's not
+    shown in the app launcher. -->
+    <install-in-user-type package="com.google.android.microdroid.empty_payload">
+        <install-in user-type="SYSTEM" />
+    </install-in-user-type>
+
+    <!-- ComposPayloadApp (ComposPayloadApp) This isn't shown in the app launcher. -->
+    <install-in-user-type package="com.android.compos.payload">
+        <install-in user-type="SYSTEM" />
+    </install-in-user-type>
+
+    <!-- ComposPayloadAppGoogle (ComposPayloadAppGoogle) This isn't shown in the app launcher. -->
+    <install-in-user-type package="com.google.android.compos.payload">
+        <install-in user-type="SYSTEM" />
+    </install-in-user-type>
+</config>

@@ -136,6 +136,7 @@ apex_defaults {
         "microdroid.json",
         "microdroid_kernel",
         "com.android.virt.init.rc",
+        "preinstalled-packages-apex-com.android.virt.xml",
     ] + select(soong_config_variable("ANDROID", "avf_microdroid_guest_gki_version"), {
         "android15_66": [
             "microdroid_gki-android15-6.6_initrd_debuggable",
@@ -248,6 +249,12 @@ prebuilt_etc {
     src: "vmnic.rc",
     filename: "vmnic.rc",
     no_full_install: true,
+}
+
+prebuilt_etc {
+    name: "preinstalled-packages-apex-com.android.virt.xml",
+    src: "preinstalled-packages-apex-com.android.virt.xml",
+    sub_dir: "sysconfig",
 }
 
 // Virt apex needs a custom signer for its payload
