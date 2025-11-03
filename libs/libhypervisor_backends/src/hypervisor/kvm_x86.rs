@@ -139,7 +139,7 @@ macro_rules! cpuid {
 }
 
 impl MemSharingHypervisor for ProtectedKvmHypervisor {
-    fn share(&self, base_ipa: u64) -> Result<()> {
+    fn share(&self, base_ipa: usize) -> Result<()> {
         let ret: u32 = vmcall!(PKVM_GHC_SHARE_MEM, base_ipa, SIZE_4KB);
 
         if ret != 0 {
@@ -149,7 +149,7 @@ impl MemSharingHypervisor for ProtectedKvmHypervisor {
         Ok(())
     }
 
-    fn unshare(&self, base_ipa: u64) -> Result<()> {
+    fn unshare(&self, base_ipa: usize) -> Result<()> {
         let ret: u32 = vmcall!(PKVM_GHC_UNSHARE_MEM, base_ipa, SIZE_4KB);
         if ret != 0 {
             return Err(Error::KvmError(KvmError::from(ret as i32), PKVM_GHC_UNSHARE_MEM));
