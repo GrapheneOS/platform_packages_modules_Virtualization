@@ -208,8 +208,19 @@ impl<'a> FdtNode<'a> {
     }
 
     /// Returns the value of a given <string> property.
-    pub fn getprop_str(&self, name: &CStr) -> Result<Option<&CStr>> {
-        if let Some(bytes) = self.getprop(name)? {
+    pub fn getprop_str<T>(&self, name: &T) -> Result<Option<&CStr>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.getprop_str_raw(name.as_ref().to_bytes())
+    }
+
+    /// Same as `getprop_str`, with `name` as a slice of C characters, without nul terminator.
+    pub fn getprop_str_raw<T>(&self, name: &T) -> Result<Option<&CStr>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        if let Some(bytes) = self.getprop_raw(name)? {
             Ok(Some(CStr::from_bytes_with_nul(bytes).map_err(|_| FdtError::BadValue)?))
         } else {
             Ok(None)
@@ -217,8 +228,19 @@ impl<'a> FdtNode<'a> {
     }
 
     /// Returns the value of a given property as an array of cells.
-    pub fn getprop_cells(&self, name: &CStr) -> Result<Option<CellIterator<'a>>> {
-        if let Some(cells) = self.getprop(name)? {
+    pub fn getprop_cells<T>(&self, name: &T) -> Result<Option<CellIterator<'a>>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.getprop_cells_raw(name.as_ref().to_bytes())
+    }
+
+    /// Same as `getprop_cells`, with `name` as a slice of C characters, without nul terminator.
+    pub fn getprop_cells_raw<T>(&self, name: &T) -> Result<Option<CellIterator<'a>>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        if let Some(cells) = self.getprop_raw(name)? {
             Ok(Some(CellIterator::new(cells)))
         } else {
             Ok(None)
@@ -226,8 +248,19 @@ impl<'a> FdtNode<'a> {
     }
 
     /// Returns the value of a given <u32> property.
-    pub fn getprop_u32(&self, name: &CStr) -> Result<Option<u32>> {
-        if let Some(bytes) = self.getprop(name)? {
+    pub fn getprop_u32<T>(&self, name: &T) -> Result<Option<u32>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.getprop_u32_raw(name.as_ref().to_bytes())
+    }
+
+    /// Same as `getprop_u32`, with `name` as a slice of C characters, without nul terminator.
+    pub fn getprop_u32_raw<T>(&self, name: &T) -> Result<Option<u32>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        if let Some(bytes) = self.getprop_raw(name)? {
             Ok(Some(u32::from_be_bytes(bytes.try_into().map_err(|_| FdtError::BadValue)?)))
         } else {
             Ok(None)
@@ -235,8 +268,19 @@ impl<'a> FdtNode<'a> {
     }
 
     /// Returns the value of a given <u64> property.
-    pub fn getprop_u64(&self, name: &CStr) -> Result<Option<u64>> {
-        if let Some(bytes) = self.getprop(name)? {
+    pub fn getprop_u64<T>(&self, name: &T) -> Result<Option<u64>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.getprop_u64_raw(name.as_ref().to_bytes())
+    }
+
+    /// Same as `getprop_u64`, with `name` as a slice of C characters, without nul terminator.
+    pub fn getprop_u64_raw<T>(&self, name: &T) -> Result<Option<u64>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        if let Some(bytes) = self.getprop_raw(name)? {
             Ok(Some(u64::from_be_bytes(bytes.try_into().map_err(|_| FdtError::BadValue)?)))
         } else {
             Ok(None)
@@ -244,8 +288,19 @@ impl<'a> FdtNode<'a> {
     }
 
     /// Returns the value of a given property.
-    pub fn getprop(&self, name: &CStr) -> Result<Option<&'a [u8]>> {
-        self.fdt.getprop_namelen(self.offset, name.to_bytes())
+    pub fn getprop<T>(&self, name: &T) -> Result<Option<&'a [u8]>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.getprop_raw(name.as_ref().to_bytes())
+    }
+
+    /// Same as `getprop`, with `name` as a slice of C characters, without nul terminator.
+    pub fn getprop_raw<T>(&self, name: &T) -> Result<Option<&'a [u8]>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        self.fdt.getprop_namelen(self.offset, name.as_ref())
     }
 
     /// Returns reference to the containing device tree.
@@ -328,19 +383,28 @@ impl<'a> FdtNode<'a> {
         }
     }
 
-    /// Returns the subnode of the given name. The name doesn't need to be nul-terminated.
-    pub fn subnode(&self, name: &CStr) -> Result<Option<Self>> {
-        let name = name.to_bytes();
-        let offset = self.fdt.subnode_offset_namelen(self.offset, name)?;
-
-        Ok(offset.map(|offset| Self { fdt: self.fdt, offset }))
+    /// Returns the subnode of the given name.
+    pub fn subnode<T>(&self, name: &T) -> Result<Option<Self>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.subnode_raw(name.as_ref().to_bytes())
     }
 
-    /// Returns the subnode of the given name bytes
-    pub fn subnode_with_name_bytes(&self, name: &[u8]) -> Result<Option<Self>> {
-        let offset = self.fdt.subnode_offset_namelen(self.offset, name)?;
+    /// Same as `subnode`, with `name` as a slice of C characters, without nul terminator.
+    pub fn subnode_raw<T>(&self, name: &T) -> Result<Option<Self>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        Ok(self.subnode_offset(name)?.map(|offset| Self { fdt: self.fdt, offset }))
+    }
 
-        Ok(offset.map(|offset| Self { fdt: self.fdt, offset }))
+    /// Returns the offset of the subnode of the given name.
+    fn subnode_offset<T>(&self, name: &T) -> Result<Option<NodeOffset>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        self.fdt.subnode_offset_namelen(self.offset, name.as_ref())
     }
 }
 
@@ -432,28 +496,35 @@ impl<'a> FdtNodeMut<'a> {
     }
 
     /// Adds new subnodes to the given node.
-    pub fn add_subnodes(self, names: &[&CStr]) -> Result<()> {
+    pub fn add_subnodes(mut self, names: &[&CStr]) -> Result<()> {
         for name in names {
-            self.fdt.add_subnode_namelen(self.offset, name.to_bytes())?;
+            let _ = self.add_subnode_offset(name.to_bytes())?;
         }
         Ok(())
     }
 
     /// Adds a new subnode to the given node and return it as a FdtNodeMut on success.
-    pub fn add_subnode(self, name: &CStr) -> Result<Self> {
-        let name = name.to_bytes();
-        let offset = self.fdt.add_subnode_namelen(self.offset, name)?;
+    pub fn add_subnode<T>(self, name: &T) -> Result<Self>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.add_subnode_raw(name.as_ref().to_bytes())
+    }
 
+    /// Same as `add_subnode`, with `name` as a slice of C characters, without nul terminator.
+    pub fn add_subnode_raw<T>(mut self, name: &T) -> Result<Self>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        let offset = self.add_subnode_offset(name)?;
         Ok(Self { fdt: self.fdt, offset })
     }
 
-    /// Adds a new subnode to the given node with name and namelen, and returns it as a FdtNodeMut
-    /// on success.
-    pub fn add_subnode_with_namelen(self, name: &CStr, namelen: usize) -> Result<Self> {
-        let name = &name.to_bytes()[..namelen];
-        let offset = self.fdt.add_subnode_namelen(self.offset, name)?;
-
-        Ok(Self { fdt: self.fdt, offset })
+    fn add_subnode_offset<T>(&mut self, name: &T) -> Result<NodeOffset>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        self.fdt.add_subnode_namelen(self.offset, name.as_ref())
     }
 
     /// Returns the first subnode of this
@@ -730,10 +801,19 @@ impl Fdt {
     }
 
     /// Returns a tree node by its full path.
-    pub fn node(&self, path: &CStr) -> Result<Option<FdtNode<'_>>> {
-        let offset = self.path_offset_namelen(path.to_bytes())?;
+    pub fn node<T>(&self, path: &T) -> Result<Option<FdtNode<'_>>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.node_raw(path.as_ref().to_bytes())
+    }
 
-        Ok(offset.map(|offset| FdtNode { fdt: self, offset }))
+    /// Same as `node`, with `path` as a slice of C characters, without nul terminator.
+    pub fn node_raw<T>(&self, path: &T) -> Result<Option<FdtNode<'_>>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        Ok(self.node_offset(path)?.map(|offset| FdtNode { fdt: self, offset }))
     }
 
     /// Iterate over nodes with a given compatible string.
@@ -766,10 +846,26 @@ impl Fdt {
     }
 
     /// Returns a mutable tree node by its full path.
-    pub fn node_mut(&mut self, path: &CStr) -> Result<Option<FdtNodeMut<'_>>> {
-        let offset = self.path_offset_namelen(path.to_bytes())?;
+    pub fn node_mut<T>(&mut self, path: &T) -> Result<Option<FdtNodeMut<'_>>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.node_mut_raw(path.as_ref().to_bytes())
+    }
 
-        Ok(offset.map(|offset| FdtNodeMut { fdt: self, offset }))
+    /// Same as `node_mut`, with `path` as a slice of C characters, without nul terminator.
+    pub fn node_mut_raw<T>(&mut self, path: &T) -> Result<Option<FdtNodeMut<'_>>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        Ok(self.node_offset(path)?.map(|offset| FdtNodeMut { fdt: self, offset }))
+    }
+
+    fn node_offset<T>(&self, path: &T) -> Result<Option<NodeOffset>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        self.path_offset_namelen(path.as_ref())
     }
 
     fn next_node_skip_subnodes(
