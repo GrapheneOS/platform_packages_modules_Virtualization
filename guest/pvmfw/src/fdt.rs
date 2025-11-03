@@ -1066,15 +1066,7 @@ fn patch_untrusted_props(fdt: &mut Fdt, props: &BTreeMap<CString, Vec<u8>>) -> l
     if props.is_empty() {
         return Ok(());
     }
-    let avf_node = if let Some(node) = fdt.node_mut(c"/avf")? {
-        node
-    } else {
-        fdt.root_mut().add_subnode(c"avf")?
-    };
-
-    // The node shouldn't already be present; if it is, return the error.
-    let mut node = avf_node.add_subnode(c"untrusted")?;
-
+    let mut node = fdt.find_or_add_node_mut(c"/avf/untrusted")?;
     for (name, value) in props {
         node.setprop(name, value)?;
     }
