@@ -1219,7 +1219,7 @@ fn exec_task(
 fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Result<String> {
     let paths = if !is_apex {
         let mut watcher = PropertyWatcher::new("ro.product.cpu.abilist")?;
-        let value = watcher.read(|_name, value| Ok(value.trim().to_string()))?;
+        let value = watcher.read(|_name, value| value.trim().to_string())?;
         let abi = value.split(',').next().ok_or_else(|| anyhow!("no abilist"))?;
         [
             format!("{package_name}/lib/{abi}/{lib_name}"),
