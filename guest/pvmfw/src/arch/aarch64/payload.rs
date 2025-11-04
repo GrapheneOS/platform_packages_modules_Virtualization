@@ -91,7 +91,7 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "b.lo 0b",
 
             // Flush d-cache over .data & .bss (including skipped region).
-            "0: dc cvau, {cache_line}",
+            "0: dc cvac, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {scratch_end}",
             "b.lo 0b",
@@ -103,7 +103,7 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "b.lo 0b",
 
             // Flush d-cache over stack region.
-            "0: dc cvau, {cache_line}",
+            "0: dc cvac, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {stack_end}",
             "b.lo 0b",
@@ -115,7 +115,7 @@ pub fn jump_to_payload(entrypoint: usize, slices: &MemorySlices) -> ! {
             "b.lo 0b",
 
             // Flush d-cache over EH stack region.
-            "0: dc cvau, {cache_line}",
+            "0: dc cvac, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {eh_stack_end}",
             "b.lo 0b",
