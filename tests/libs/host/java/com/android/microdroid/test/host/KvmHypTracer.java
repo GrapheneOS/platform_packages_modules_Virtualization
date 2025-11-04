@@ -37,6 +37,11 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -119,6 +124,7 @@ class KvmHypDurationStats {
 /** This class provides utilities to interact with the hyp tracing subsystem */
 public final class KvmHypTracer {
 
+    private static final long DEFAULT_TIMEOUT = 10 * 60 * 1000;
     private static final int DEFAULT_BUF_SIZE_KB = 4 * 1024;
 
     private final String mHypTracingRoot;
@@ -189,7 +195,8 @@ public final class KvmHypTracer {
         mRunner.run("echo '" + val + "' > " + mHypTracingRoot + node);
     }
 
-    public String run(String payload_cmd, String[] notrace, int buffer_size) throws Exception {
+    public String run(Callable payload, String[] notrace, int buffer_size, long timeout)
+            throws Exception {
         mTraces.clear();
 
         setNode("tracing_on", 0);
@@ -211,63 +218,88 @@ public final class KvmHypTracer {
         setNode("trace", 0);
 
         /* Cat each per-cpu trace_pipe in its own tmp file in the background */
-        String cmd = "cd " + mHypTracingRoot + ";";
-        String trace_pipes[] = new String[mNrCpus];
+        String tracePipeFiles[] = new String[mNrCpus];
+        ExecutorService tracePipeExec = Executors.newFixedThreadPool(mNrCpus);
         for (int i = 0; i < mNrCpus; i++) {
             /* Toybox's mktemp does not support suffix */
-            trace_pipes[i] =
+            tracePipeFiles[i] =
                     mRunner.run(
                             "FILE=$(mktemp -t trace_pipe.cpu"
                                     + i
                                     + ".XXXXXXXXXX) && mv $FILE{,.gz} && echo $FILE.gz");
-            cmd += "cat per_cpu/cpu" + i + "/trace_pipe | gzip -c > " + trace_pipes[i] + " &";
-            cmd += "CPU" + i + "_TRACE_PIPE_PID=$(lsof /proc/$!/fd/0 -t | head -n 1);";
+
+            final int cpu = i;
+            tracePipeExec.execute(
+                    () -> {
+                        try {
+                            mRunner.runWithTimeout(
+                                    timeout,
+                                    "cat "
+                                            + mHypTracingRoot
+                                            + "per_cpu/cpu"
+                                            + cpu
+                                            + "/trace_pipe | gzip -c > "
+                                            + tracePipeFiles[cpu]
+                                            + " &PID=$(lsof /proc/$!/fd/0 -t | head -n 1); echo"
+                                            + " $PID > "
+                                            + tracePipeFiles[cpu]
+                                            + ".pid; wait $PID || true");
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
         }
 
-        String cmd_script = mRunner.run("mktemp -t cmd_script.XXXXXXXXXX");
-        mRunner.run("echo '" + payload_cmd + "' > " + cmd_script);
+        setNode("tracing_on", 1);
 
-        /* Run the payload with tracing enabled */
-        cmd += "echo 1 > tracing_on;";
-        String cmd_stdout = mRunner.run("mktemp -t cmd_stdout.XXXXXXXXXX");
-        cmd += "sh " + cmd_script + " > " + cmd_stdout + ";";
-        cmd += "echo 0 > tracing_on;";
+        String res;
 
-        /* Wait for cat to finish reading the pipe interface before killing it */
-        for (int i = 0; i < mNrCpus; i++) {
-            cmd +=
-                    "while $(test '$(ps -o S -p $CPU"
-                            + i
-                            + "_TRACE_PIPE_PID | tail -n 1)' = 'R'); do sleep 1; done;";
-            cmd += "kill -2 $CPU" + i + "_TRACE_PIPE_PID;";
+        try {
+            Future<String> future = Executors.newSingleThreadExecutor().submit(payload);
+            res = future.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            setNode("tracing_on", 0);
+            /* Wait for cat to finish reading the pipe interface before killing it */
+            for (String p : tracePipeFiles) {
+                String pidFile = p + ".pid";
+                mRunner.run(
+                        "while $(test '$(ps -o S -p $(cat "
+                                + pidFile
+                                + ") | tail -n 1)' = 'R'); do sleep 1; done; kill -2 $(cat "
+                                + pidFile
+                                + ")");
+                mRunner.run("rm -f " + pidFile);
+            }
+
+            /*
+             * As tracing is disabled, the buffer will be unloaded once all
+             * events have been read and the readers are done. It is therefore a good
+             * synchronization point.
+             */
+            mRunner.runWithTimeout(
+                    timeout,
+                    "while grep -q '(loaded)' "
+                            + mHypTracingRoot
+                            + "/buffer_size_kb; do sleep 1; done");
+
+            tracePipeExec.shutdown();
+            tracePipeExec.awaitTermination(60, TimeUnit.SECONDS);
         }
-        cmd += "wait";
 
-        /*
-         * The whole thing runs in a single command for simplicity as `adb
-         * shell` doesn't play well with subprocesses outliving their parent,
-         * and cat-ing a trace_pipe is blocking, so doing so from separate Java
-         * threads wouldn't be much easier as we would need to actively kill
-         * them too.
-         */
-        mRunner.run(cmd);
-
-        mRunner.run("rm -f " + cmd_script);
-
-        for (String t : trace_pipes) {
+        for (String t : tracePipeFiles) {
             File trace = mDevice.pullFile(t);
             assertNotNull(trace);
             mTraces.add(trace);
             mRunner.run("rm -f " + t);
         }
 
-        String res = mRunner.run("cat " + cmd_stdout);
-        mRunner.run("rm -f " + cmd_stdout);
         return res;
     }
 
-    public String run(String payload_cmd) throws Exception {
-        return run(payload_cmd, new String[0], DEFAULT_BUF_SIZE_KB);
+    public String run(Callable payload) throws Exception {
+        return run(payload, new String[0], DEFAULT_BUF_SIZE_KB, DEFAULT_TIMEOUT);
     }
 
     private boolean hasEvent(String event) {
