@@ -25,9 +25,10 @@ mod odrefresh_task;
 mod service;
 #[cfg(test)]
 mod test_util;
+mod util;
 mod verified_dex2oat_task;
 mod wrappers;
-use crate::instance_manager::InstanceManager;
+use crate::{instance_manager::InstanceManager, verified_dex2oat_task::VerifiedDex2OatTaskQueue};
 use anyhow::{Context, Result};
 use binder::{register_lazy_service, ProcessState};
 use log::{error, info};
@@ -48,8 +49,10 @@ fn try_main() -> Result<()> {
     let virtualization_service =
         virtmgr.connect().context("Failed to connect to VirtualizationService")?;
 
-    let instance_manager = Arc::new(InstanceManager::new(virtualization_service));
-    let composd_service = service::new_binder(instance_manager);
+    let instance_manager = Arc::new(InstanceManager::new(virtualization_service.clone()));
+    let dex2oat_job_queue = VerifiedDex2OatTaskQueue::new();
+    VerifiedDex2OatTaskQueue::start_job_dispatcher(&dex2oat_job_queue, instance_manager.clone());
+    let composd_service = service::new_binder(instance_manager, dex2oat_job_queue);
     register_lazy_service("android.system.composd", composd_service.as_binder())
         .context("Registering composd service")?;
 

@@ -17,7 +17,10 @@
 //! Implementation of IIsolatedCompilationService, called from system server when compilation is
 //! desired.
 
-use crate::{instance_manager::InstanceManager, odrefresh_task::OdrefreshTask};
+use crate::{
+    instance_manager::IInstanceManager, odrefresh_task::OdrefreshTask,
+    verified_dex2oat_task::VerifiedDex2OatTaskQueue,
+};
 use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::{BnCompilationTask, ICompilationTask},
     ICompilationTaskCallback::ICompilationTaskCallback,
@@ -37,6 +40,7 @@ use compos_aidl_interface::aidl::com::android::compos::ICompOsService::Compilati
 use compos_common as compos_common_injection;
 #[cfg(test)]
 use compos_common_with_mocks as compos_common_injection;
+use std::time::Duration;
 
 use compos_common_injection::{
     binder::to_binder_result,
@@ -47,17 +51,25 @@ use rustutils::android::{users::AID_ROOT, users::AID_SYSTEM};
 use std::sync::Arc;
 
 pub struct IsolatedCompilationService {
-    instance_manager: Arc<InstanceManager>,
+    instance_manager: Arc<dyn IInstanceManager>,
+    dex2oat_queue: Arc<VerifiedDex2OatTaskQueue>,
 }
 
 pub fn new_binder(
-    instance_manager: Arc<InstanceManager>,
+    instance_manager: Arc<dyn IInstanceManager>,
+    dex2oat_queue: Arc<VerifiedDex2OatTaskQueue>,
 ) -> Strong<dyn IIsolatedCompilationService> {
-    let service = IsolatedCompilationService { instance_manager };
+    let service = IsolatedCompilationService { instance_manager, dex2oat_queue };
     BnIsolatedCompilationService::new_binder(service, BinderFeatures::default())
 }
 
 impl Interface for IsolatedCompilationService {}
+
+impl Drop for IsolatedCompilationService {
+    fn drop(&mut self) {
+        self.dex2oat_queue.quit();
+    }
+}
 
 impl IIsolatedCompilationService for IsolatedCompilationService {
     fn startStagedApexCompile(
@@ -147,7 +159,6 @@ impl IsolatedCompilationService {
         Ok(BnCompilationTask::new_binder(task, BinderFeatures::default()))
     }
 
-    #[allow(unused_variables)]
     fn do_start_verified_dex2oat(
         &self,
         dex2oat_args: &[Dex2OatArg],
@@ -155,7 +166,15 @@ impl IsolatedCompilationService {
         callback: &Strong<dyn IDex2OatTaskCallback>,
         timeout_seconds: i32,
     ) -> Result<Strong<dyn ICompilationTask>> {
-        todo!("b415850856 : Not implemented");
+        let u_timeout: u64 = timeout_seconds
+            .try_into()
+            .context("Unable to convert timeout_seconds from i32 to u64")?;
+        self.dex2oat_queue.enqueue_job(
+            dex2oat_args,
+            signed_manifest_fd,
+            Duration::from_secs(u_timeout),
+            callback,
+        )
     }
 }
 

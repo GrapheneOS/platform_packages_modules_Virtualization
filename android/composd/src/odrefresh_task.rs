@@ -35,6 +35,7 @@ use {
 
 use crate::fd_server_helper::FdServerConfig;
 use crate::instance_starter::CompOsInstance;
+use crate::util;
 use crate::wrappers::compos_common_injection;
 use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::ICompilationTask,
@@ -48,18 +49,16 @@ use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
 use compos_common_injection::{
     compos_client::CompOsService,
     odrefresh::{
-        is_system_property_interesting, ExitCode, CURRENT_ARTIFACTS_SUBDIR,
-        ODREFRESH_OUTPUT_ROOT_DIR, PENDING_ARTIFACTS_SUBDIR,
+        ExitCode, CURRENT_ARTIFACTS_SUBDIR, ODREFRESH_OUTPUT_ROOT_DIR, PENDING_ARTIFACTS_SUBDIR,
     },
     BUILD_MANIFEST_SYSTEM_EXT_APK_PATH,
 };
 use log::{error, info, warn};
 use odsign_proto::odsign_info::OdsignInfo;
 use protobuf::Message;
-use std::fs::{remove_dir_all, File, OpenOptions};
+use std::fs::{remove_dir_all, File};
 use std::os::fd::AsFd;
-use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::io::{AsRawFd, OwnedFd};
+use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -167,17 +166,6 @@ impl OdrefreshTask {
     }
 }
 
-/// Returns an `OwnedFD` of the directory.
-fn open_dir(path: &Path) -> Result<OwnedFd> {
-    Ok(OwnedFd::from(
-        OpenOptions::new()
-            .custom_flags(libc::O_DIRECTORY)
-            .read(true) // O_DIRECTORY can only be opened with read
-            .open(path)
-            .with_context(|| format!("Failed to open {path:?} directory as path fd"))?,
-    ))
-}
-
 #[cfg_attr(test, mockall::automock, allow(dead_code))]
 mod helper {
     use super::*;
@@ -186,17 +174,11 @@ mod helper {
         compilation_mode: CompilationMode,
         target_dir_name: &str,
     ) -> Result<ExitCode> {
-        let mut names = Vec::new();
-        let mut values = Vec::new();
-        system_properties::foreach(|name, value| {
-            if is_system_property_interesting(name) {
-                names.push(name.to_owned());
-                values.push(value.to_owned());
-            }
+        util::set_system_properties(|names, values| {
+            service
+                .initializeSystemProperties(&names, &values)
+                .context("initialize system properties")
         })?;
-        service
-            .initializeSystemProperties(&names, &values)
-            .context("initialize system properties")?;
 
         let output_root = paths::root_rebase(ODREFRESH_OUTPUT_ROOT_DIR);
 
@@ -210,9 +192,9 @@ mod helper {
         }
 
         let staging_dir_fd =
-            open_dir(composd_native::palette_create_odrefresh_staging_directory()?)?;
-        let system_dir_fd = open_dir(&paths::root_rebase("/system"))?;
-        let output_dir_fd = open_dir(&output_root)?;
+            util::open_dir(composd_native::palette_create_odrefresh_staging_directory()?)?;
+        let system_dir_fd = util::open_dir(&paths::root_rebase("/system"))?;
+        let output_dir_fd = util::open_dir(&output_root)?;
 
         // Get the raw FD before passing the ownership, since borrowing will violate the borrow
         // check.
@@ -229,7 +211,7 @@ mod helper {
         // as it is a request to the VM.
         let need_system_ext = paths::root_rebase(BUILD_MANIFEST_SYSTEM_EXT_APK_PATH).exists();
         let (system_ext_dir_raw_fd, ro_dir_fds) = if need_system_ext {
-            let system_ext_dir_fd = open_dir(paths::root_rebase("/system_ext").as_path())?;
+            let system_ext_dir_fd = util::open_dir(paths::root_rebase("/system_ext").as_path())?;
             (system_ext_dir_fd.as_raw_fd(), vec![system_dir_fd, system_ext_dir_fd])
         } else {
             (-1, vec![system_dir_fd])
