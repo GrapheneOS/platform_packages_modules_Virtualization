@@ -124,16 +124,16 @@ impl MmioGuardedHypervisor for GeniezoneHypervisor {
 }
 
 impl MemSharingHypervisor for GeniezoneHypervisor {
-    fn share(&self, base_ipa: u64) -> Result<()> {
+    fn share(&self, base_ipa: usize) -> Result<()> {
         let mut args = [0u64; 17];
-        args[0] = base_ipa;
+        args[0] = base_ipa.try_into().unwrap();
 
         checked_hvc64_expect_zero(ARM_SMCCC_GZVM_FUNC_MEM_SHARE, args)
     }
 
-    fn unshare(&self, base_ipa: u64) -> Result<()> {
+    fn unshare(&self, base_ipa: usize) -> Result<()> {
         let mut args = [0u64; 17];
-        args[0] = base_ipa;
+        args[0] = base_ipa.try_into().unwrap();
 
         checked_hvc64_expect_zero(ARM_SMCCC_GZVM_FUNC_MEM_UNSHARE, args)
     }

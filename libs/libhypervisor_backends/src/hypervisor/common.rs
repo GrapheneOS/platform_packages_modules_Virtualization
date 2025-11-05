@@ -62,12 +62,12 @@ pub trait MemSharingHypervisor {
     /// Shares a region of memory with host, granting it read, write and execute permissions.
     /// The size of the region is equal to the memory protection granule returned by
     /// [`hyp_meminfo`].
-    fn share(&self, base_ipa: u64) -> Result<()>;
+    fn share(&self, base_ipa: usize) -> Result<()>;
 
     /// Revokes access permission from host to a memory region previously shared with
     /// [`mem_share`]. The size of the region is equal to the memory protection granule returned by
     /// [`hyp_meminfo`].
-    fn unshare(&self, base_ipa: u64) -> Result<()>;
+    fn unshare(&self, base_ipa: usize) -> Result<()>;
 
     /// Returns the memory protection granule size in bytes.
     fn granule(&self) -> Result<usize>;
