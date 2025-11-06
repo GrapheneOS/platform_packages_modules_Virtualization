@@ -1951,6 +1951,25 @@ impl VmInstance {
         self.vm_state_changed_condvar.notify_all();
         info!("VM with CID {} has registered a guest agent", self.cid);
     }
+
+    /// Adds memory to the guest VM.
+    pub fn add_memory(
+        &self,
+        _fd: OwnedFd,
+        _offset: u64,
+        _range_start: u64,
+        _range_end: u64,
+        _cacheable: bool,
+    ) -> Result<i32> {
+        // TODO(b/457714108): implement once crosvm patch is merged.
+        bail!("unsupported")
+    }
+
+    /// Removes memory from the guest VM.
+    pub fn remove_memory(&self, _memory_id: i32) -> Result<()> {
+        // TODO(b/457714108): implement once crosvm patch is merged.
+        bail!("unimplemented")
+    }
 }
 
 // Get Cpus_allowed mask

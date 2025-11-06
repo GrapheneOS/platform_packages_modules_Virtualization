@@ -1720,6 +1720,40 @@ impl aidl::IVirtualMachine for VirtualMachine {
             hostConsoleName: self.instance.host_console_name.lock().unwrap().clone(),
         })
     }
+
+    fn addMemoryToGuest(
+        &self,
+        fd: &ParcelFileDescriptor,
+        offset: i64,
+        range_start: i64,
+        range_end: i64,
+        cacheable: bool,
+    ) -> binder::Result<i32> {
+        info!("addMemoryToGuest called");
+        if !cfg!(dynamic_memshare_with_guest) {
+            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        let fd = clone_file(fd)?;
+        self.instance
+            .add_memory(fd.into(), offset as u64, range_start as u64, range_end as u64, cacheable)
+            .with_context(|| format!("add memory failed. CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn removeMemoryFromGuest(&self, memory_id: i32) -> binder::Result<()> {
+        info!("removeMemoryFromGuest called");
+        if !cfg!(dynamic_memshare_with_guest) {
+            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        self.instance
+            .remove_memory(memory_id)
+            .with_context(|| format!("remove memory failed. CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
 }
 
 impl Drop for VirtualMachine {
