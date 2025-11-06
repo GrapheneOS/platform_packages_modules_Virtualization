@@ -1734,6 +1734,7 @@ impl aidl::IVirtualMachine for VirtualMachine {
             return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
+        check_memory_share_supported()?;
         let fd = clone_file(fd)?;
         self.instance
             .add_memory(fd.into(), offset as u64, range_start as u64, range_end as u64, cacheable)
@@ -1748,6 +1749,7 @@ impl aidl::IVirtualMachine for VirtualMachine {
             return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
+        check_memory_share_supported()?;
         self.instance
             .remove_memory(memory_id)
             .with_context(|| format!("remove memory failed. CID {}", self.instance.cid))
@@ -2014,6 +2016,15 @@ fn check_config_allowed_for_early_vms(config: &aidl::VirtualMachineConfig) -> bi
     check_no_devices(config)?;
 
     Ok(())
+}
+
+fn check_memory_share_supported() -> binder::Result<()> {
+    if !system_properties::read_bool("hypervisor.memory_share.supported", false).unwrap_or(false) {
+        Err(anyhow!("hypervisor doesn't support dynamic memory sharing with guest"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+    } else {
+        Ok(())
+    }
 }
 
 /// Simple utility for referencing Borrowed or Owned. Similar to std::borrow::Cow, but
