@@ -587,6 +587,9 @@ fn validate_vm_ref_dt(
     vm_ref_dt: &Fdt,
     props_info: &BTreeMap<CString, Vec<u8>>,
 ) -> libfdt::Result<()> {
+    if props_info.is_empty() {
+        return Ok(());
+    }
     let root_vm_dt = vm_dt.root_mut();
     let mut avf_vm_dt = root_vm_dt.add_subnode(c"avf")?;
     // TODO(b/318431677): Validate nodes beyond /avf.
@@ -1060,6 +1063,9 @@ fn patch_timer(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
 }
 
 fn patch_untrusted_props(fdt: &mut Fdt, props: &BTreeMap<CString, Vec<u8>>) -> libfdt::Result<()> {
+    if props.is_empty() {
+        return Ok(());
+    }
     let avf_node = if let Some(node) = fdt.node_mut(c"/avf")? {
         node
     } else {
