@@ -60,6 +60,9 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY"), {
         true: ["advance_multitenancy"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_ENABLE_DYNAMIC_MEMSHARE_WITH_GUEST"), {
+        true: ["dynamic_memshare_with_guest"],
+        default: [],
     }),
 }
 
