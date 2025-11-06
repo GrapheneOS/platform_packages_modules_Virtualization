@@ -29,6 +29,7 @@ rust_fuzz {
         fuzz_on_haiku_device: true,
         fuzz_on_haiku_host: true,
     },
+    native_coverage: false,
 }
 
 rust_fuzz {
@@ -45,4 +46,5 @@ rust_fuzz {
         fuzz_on_haiku_device: true,
         fuzz_on_haiku_host: true,
     },
+    native_coverage: false,
 }
