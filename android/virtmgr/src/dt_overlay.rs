@@ -16,7 +16,7 @@
 
 use anyhow::{anyhow, Result};
 use fsfdt::FsFdt;
-use libfdt::Fdt;
+use libfdt::{Fdt, FdtNodeMut};
 use std::ffi::CStr;
 use std::path::Path;
 
@@ -74,14 +74,10 @@ pub(crate) fn create_device_tree_overlay<'a>(
         overlay.add_subnode(AVF_NODE_NAME).map_err(|e| anyhow!("Failed to add avf node: {e:?}"))?;
 
     if !untrusted_props.is_empty() {
-        let mut untrusted = avf
+        let mut node = avf
             .add_subnode(UNTRUSTED_NODE_NAME)
             .map_err(|e| anyhow!("Failed to add untrusted node: {e:?}"))?;
-        for (name, value) in untrusted_props {
-            untrusted
-                .setprop(name, value)
-                .map_err(|e| anyhow!("Failed to set untrusted property: {e:?}"))?;
-        }
+        add_props_to_node(untrusted_props, &mut node)?;
     }
 
     // Read dt_path from host DT and overlay onto fdt.
@@ -90,19 +86,26 @@ pub(crate) fn create_device_tree_overlay<'a>(
     }
 
     if !trusted_props.is_empty() {
-        let mut avf = fdt
+        let mut node = fdt
             .node_mut(c"/fragment@0/__overlay__/avf")
             .map_err(|e| anyhow!("Failed to search avf node: {e:?}"))?
             .ok_or(anyhow!("Failed to get avf node"))?;
-        for (name, value) in trusted_props {
-            avf.setprop(name, value)
-                .map_err(|e| anyhow!("Failed to set trusted property: {e:?}"))?;
-        }
+        add_props_to_node(trusted_props, &mut node)?;
     }
 
     fdt.pack().map_err(|e| anyhow!("Failed to pack DT overlay, {e:?}"))?;
 
     Ok(fdt)
+}
+
+fn add_props_to_node<'a>(props: &[(&'a CStr, &'a [u8])], node: &mut FdtNodeMut) -> Result<()> {
+    for (name, value) in props {
+        node.setprop(name, value).map_err(|e| {
+            let node_name = node.as_node().name();
+            anyhow!("Failed to set '{node_name:?}' property '{name:?}': {e:?}")
+        })?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
