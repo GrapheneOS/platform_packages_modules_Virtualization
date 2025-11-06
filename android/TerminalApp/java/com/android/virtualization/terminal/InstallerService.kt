@@ -121,7 +121,8 @@ class InstallerService : Service() {
                 Log.i(TAG, "already installing..")
                 return
             } else {
-                Log.i(TAG, "installing..")
+                val network = connectivityManager.boundNetworkForProcess
+                Log.i(TAG, "installing over network, network=${network}")
                 isInstalling = true
             }
         }
@@ -328,6 +329,14 @@ class InstallerService : Service() {
             synchronized(lock) {
                 hasWifi = capability.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
             }
+        }
+
+        override fun onAvailable(network: Network) {
+            Log.w(TAG, "Network available, network=${network}")
+        }
+
+        override fun onLost(network: Network) {
+            Log.w(TAG, "Network lost, network=${network}")
         }
     }
 
