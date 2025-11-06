@@ -502,7 +502,8 @@ def GenVbmetaImage(args, image, output, partition_name, salt):
     RunCommand(args, cmd)
 
 
-gki_versions = ['android15-6.6', 'android16-6.12']
+# TODO: b/402758258 - remove android16-6.12-desktop when GKI supports PKVM-IA
+gki_versions = ['android15-6.6', 'android16-6.12', 'android16-6.12-desktop']
 
 # dict of (key, file) for re-sign/verification. keys are un-versioned for readability.
 virt_apex_non_gki_files = {
