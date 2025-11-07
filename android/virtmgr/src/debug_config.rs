@@ -292,14 +292,9 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_sysprop_disables_debug_policy() -> Result<()> {
-        let debug_policy =
-            DebugPolicy::from_overlay("/a/does/not/exist/path.dtbo".as_ref()).unwrap();
-
-        assert!(!debug_policy.log);
-        assert!(!debug_policy.ramdump);
-        assert!(!debug_policy.adb);
-
+    fn test_invalid_sysprop_returns_error() -> Result<()> {
+        let res = DebugPolicy::from_overlay("/a/does/not/exist/path.dtbo".as_ref());
+        assert!(res.is_err());
         Ok(())
     }
 
