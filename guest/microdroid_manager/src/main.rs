@@ -16,6 +16,7 @@
 
 mod cgroup_monitor;
 mod dice;
+mod encrypted_assets;
 mod encrypted_store_kek;
 mod instance;
 mod ioutil;

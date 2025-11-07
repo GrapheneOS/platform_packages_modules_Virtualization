@@ -3790,6 +3790,37 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(config1.isCompatibleWith(config2)).isFalse();
     }
 
+    /**
+     * Tests the end-to-end flow of mounting encrypted assets within the VM.
+     *
+     * <p>This test verifies that the payload can request to mount an encrypted image bundled in the
+     * APK assets, and that the content of the decrypted filesystem is accessible at the expected
+     * mount point.
+     */
+    @Test
+    public void mountEncryptedAssets() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so").build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_encrypted_asset", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedAssetsPath =
+                                    ts.mountEncryptedAssets("/mnt/apk/assets/encrypted_assets.bin");
+                            tr.mFileContent =
+                                    ts.readFromFile(tr.mEncryptedAssetsPath + "/file.txt");
+                        });
+        testResults.assertNoException();
+
+        assertThat(testResults.mEncryptedAssetsPath).isEqualTo("/mnt/encrypted_assets");
+        assertThat(testResults.mFileContent).isEqualTo("Top secret in encrypted assets!\n");
+    }
+
     private static class VmShareServiceConnection implements ServiceConnection {
 
         private final CountDownLatch mLatch = new CountDownLatch(1);

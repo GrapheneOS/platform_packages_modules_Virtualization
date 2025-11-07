@@ -125,4 +125,15 @@ interface ITestService {
      * Returns the hostname of the VM.
      */
     String getHostname();
+
+    /**
+     * Tests the AVmPayload_mountEncryptedAssets API.
+     *
+     * This method calls the underlying C API to mount an encrypted asset image
+     * located at the given path within the APK's assets.
+     *
+     * @param path The relative path to the encrypted image file within the APK assets.
+     * @return The mount point path on success.
+     */
+    String mountEncryptedAssets(String path);
 }

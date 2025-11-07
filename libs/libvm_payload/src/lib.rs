@@ -27,7 +27,7 @@ use log::{error, info, LevelFilter, debug};
 use rpcbinder::{RpcServer, RpcSession};
 use openssl::{ec::EcKey, sha::sha256, ecdsa::EcdsaSig};
 use std::convert::Infallible;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fmt::Debug;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;
@@ -39,6 +39,12 @@ use std::sync::{
 };
 use vm_payload_status_bindgen::AVmAttestationStatus;
 use vm_payload_status_bindgen::AVmAccessRollbackProtectedSecretStatus::{AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ENTRY_NOT_FOUND, AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_ACCESS_FAILED, AVMACCESSROLLBACKPROTECTEDSECRETSTATUS_BAD_SIZE};
+use vm_payload_status_bindgen::AVmMountEncryptedAssetsStatus::{
+    self,
+    AVMMOUNTENCRYPTEDASSETSSTATUS_OK,
+    AVMMOUNTENCRYPTEDASSETSSTATUS_ILLEGAL_ARGUMENT,
+    AVMMOUNTENCRYPTEDASSETSSTATUS_INTERNAL_ERROR,
+};
 use std::cmp::min;
 
 /// Maximum size of an ECDSA signature for EC P-256 key is 72 bytes.
@@ -658,4 +664,105 @@ pub extern "C" fn AVmPayload_isNewInstance() -> bool {
 
 fn try_is_new_instance() -> Result<bool> {
     get_vm_payload_service()?.isNewInstance().context("Cannot determine if the instance is new")
+}
+
+/// Mounts an encrypted partition from the given image path with the specified parameters.
+///
+/// On success, the absolute path of the mount point is written to `mount_point_out`.
+/// Returns the status of the mount operation.
+///
+/// # Safety
+///
+/// Behavior is undefined if any of the following conditions are violated:
+///
+/// * `image_path`, `fs_type`, and `cipher` must be valid, null-terminated C strings.
+/// * `key` must be valid for reads of `key_size` bytes.
+/// * `mount_point_out` must be valid for writes of `mount_point_out_size` bytes.
+/// * The memory regions for `key` and `mount_point_out` must not overlap with each other or with
+///   the strings pointed to by `image_path`, `fs_type`, and `cipher`.
+#[no_mangle]
+pub unsafe extern "C" fn AVmPayload_mountEncryptedAssets(
+    image_path: *const c_char,
+    fs_type: *const c_char,
+    cipher: *const c_char,
+    key: *const u8,
+    key_size: usize,
+    sector_size: i32,
+    mount_point_out: *mut c_char,
+    mount_point_out_size: usize,
+) -> AVmMountEncryptedAssetsStatus {
+    initialize_logging();
+
+    // SAFETY: The caller guarantees that `image_path` is a valid C string.
+    let image_path = unwrap_or_abort(unsafe { CStr::from_ptr(image_path).to_str() });
+
+    // SAFETY: The caller guarantees that `fs_type` is a valid C string.
+    let fs_type = unwrap_or_abort(unsafe { CStr::from_ptr(fs_type).to_str() });
+
+    // SAFETY: The caller guarantees that `cipher` is a valid C string.
+    let cipher = unwrap_or_abort(unsafe { CStr::from_ptr(cipher).to_str() });
+
+    // SAFETY: The caller guarantees that `key` is valid for reads of `key_size` bytes.
+    let key = unsafe { std::slice::from_raw_parts(key, key_size) };
+
+    info!(
+        "Mounting encrypted assets: \
+            image_path={:?}, fs_type={:?}, cipher={:?}, key_size={:?}, sector_size={:?}",
+        image_path, fs_type, cipher, key_size, sector_size
+    );
+
+    let service = match get_vm_payload_service() {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Failed to connect VM payload service: {:?}", e);
+            return AVMMOUNTENCRYPTEDASSETSSTATUS_INTERNAL_ERROR;
+        }
+    };
+
+    match service.mountEncryptedAssets(image_path, fs_type, cipher, key, sector_size) {
+        Ok(mount_point) => {
+            info!("Mounted encrypted partition at: {:?}", mount_point);
+
+            let mount_point_c = match CString::new(mount_point) {
+                Ok(cstr) => cstr,
+                Err(e) => {
+                    error!("Failed to convert mount point to C string: {:?}", e);
+                    return AVMMOUNTENCRYPTEDASSETSSTATUS_INTERNAL_ERROR;
+                }
+            };
+
+            let mount_point_bytes = mount_point_c.as_bytes_with_nul();
+            if mount_point_bytes.len() > mount_point_out_size {
+                error!(
+                    "Mount point output buffer is too short: need {} bytes, got {} bytes",
+                    mount_point_bytes.len(),
+                    mount_point_out_size
+                );
+                return AVMMOUNTENCRYPTEDASSETSSTATUS_ILLEGAL_ARGUMENT;
+            }
+
+            // SAFETY: The caller guarantees that `mount_point_out` is valid for writes of
+            // `mount_point_bytes.len()` bytes, and we just checked it is large enough above.
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    mount_point_bytes.as_ptr().cast::<c_char>(),
+                    mount_point_out,
+                    mount_point_bytes.len(),
+                );
+            }
+        }
+        Err(e) => {
+            error!("Failed to mount encrypted partition: {:?}", e);
+            return match e.exception_code() {
+                ExceptionCode::ILLEGAL_ARGUMENT => AVMMOUNTENCRYPTEDASSETSSTATUS_ILLEGAL_ARGUMENT,
+                ExceptionCode::SERVICE_SPECIFIC => AVMMOUNTENCRYPTEDASSETSSTATUS_INTERNAL_ERROR,
+                _ => {
+                    error!("Unexpected exception code: {:?}", e.exception_code());
+                    AVMMOUNTENCRYPTEDASSETSSTATUS_INTERNAL_ERROR
+                }
+            };
+        }
+    }
+
+    AVMMOUNTENCRYPTEDASSETSSTATUS_OK
 }

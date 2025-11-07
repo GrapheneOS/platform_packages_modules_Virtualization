@@ -311,5 +311,10 @@ public class VmShareServiceImpl extends Service {
         public String getHostname() {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public String mountEncryptedAssets(String path) {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }
