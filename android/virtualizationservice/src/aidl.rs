@@ -17,7 +17,8 @@
 use crate::atom::{
     forward_cgroup_memory_breach_reported_atom, forward_fsck_failed_reported_atom,
     forward_get_or_create_sk_secret_failed_reported_atom, forward_psi_monitor_failed_reported_atom,
-    forward_vm_booted_atom, forward_vm_creation_atom, forward_vm_exited_atom,
+    forward_stale_encryptedstore_detected, forward_vm_booted_atom, forward_vm_creation_atom,
+    forward_vm_exited_atom,
 };
 use crate::maintenance;
 use crate::remote_provisioning;
@@ -487,6 +488,9 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
                     vm_requester_uid,
                     vm_identifier,
                 );
+            }
+            Atom::StaleEncryptedstoreDetected(_) => {
+                forward_stale_encryptedstore_detected(vm_requester_uid, vm_identifier);
             }
         }
         Ok(())

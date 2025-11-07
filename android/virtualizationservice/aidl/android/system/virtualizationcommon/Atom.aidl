@@ -21,6 +21,7 @@ union Atom {
     FsckFailedReported fsckFailedReported;
     GetOrCreateSkSecretFailedReported getOrCreateSkSecretFailedReported;
     PsiMonitorFailedReported psiMonitorFailedReported;
+    StaleEncryptedstoreDetected staleEncryptedstoreDetected;
 
     parcelable CgroupMemoryBreachReported {
         long highBreachCount;
@@ -38,4 +39,6 @@ union Atom {
     parcelable PsiMonitorFailedReported {
         long exponentialBackoffSeconds;
     }
+
+    parcelable StaleEncryptedstoreDetected {}
 }

@@ -23,7 +23,7 @@ use android_system_virtualizationservice_internal::aidl::android::system::virtua
 use anyhow::Result;
 use log::{trace, warn};
 use rustutils::android::system_properties::PropertyWatcher;
-use statslog_virtualization_rust::{cgroup_memory_breach_reported, fsck_failed_reported, get_or_create_sk_secret_failed_reported,  psi_monitor_failed_reported, vm_booted, vm_creation_requested, vm_exited};
+use statslog_virtualization_rust::{cgroup_memory_breach_reported, fsck_failed_reported, get_or_create_sk_secret_failed_reported,  psi_monitor_failed_reported, stale_encryptedstore_detected, vm_booted, vm_creation_requested, vm_exited};
 
 pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {
     let config_type = match atom.configType {
@@ -190,6 +190,20 @@ pub fn forward_psi_monitor_failed_reported_atom(
 
     wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
     match psi_monitor_failed_reported.stats_write() {
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
+        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+    }
+}
+
+pub fn forward_stale_encryptedstore_detected(vm_requester_uid: i32, vm_identifier: &str) {
+    let stale_encryptedstore_detected =
+        stale_encryptedstore_detected::StaleEncryptedstoreDetected {
+            vm_requester_uid,
+            vm_identifier,
+        };
+
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+    match stale_encryptedstore_detected.stats_write() {
         Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
