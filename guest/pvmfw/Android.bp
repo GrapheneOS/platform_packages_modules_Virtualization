@@ -562,6 +562,7 @@ rust_ffi_static {
     // This enables pvmfw_desktop to be built with a different set of features.
     features: [
         "platform_has_desktop_trusty",
+        "instance-img",
     ],
 }
 

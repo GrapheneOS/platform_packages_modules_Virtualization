@@ -29,9 +29,7 @@ use libfdt::Fdt;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use spin::mutex::SpinMutex;
 use vmbase::{
-    bionic, configure_heap,
-    fdt::pci::PciInfo,
-    generate_image_header,
+    bionic, configure_heap, generate_image_header,
     layout::crosvm::FDT_MAX_SIZE,
     linker, logger, main,
     memory::{deactivate_dynamic_page_tables, map_data, SIZE_64KB},
@@ -65,17 +63,13 @@ pub fn main(argv: &[usize]) {
     let fdt = Fdt::from_mut_slice(fdt).unwrap();
     info!("FDT passed verification.");
     check_fdt(fdt);
-
-    let pci_info = PciInfo::from_fdt(fdt).unwrap();
-    debug!("Found PCI CAM at {:#x}-{:#x}", pci_info.cam_range.start, pci_info.cam_range.end);
-
     modify_fdt(fdt);
 
     check_alloc();
     check_data();
     check_dice();
 
-    let mut pci_root = vmbase::virtio::pci::initialize(pci_info).unwrap();
+    let mut pci_root = vmbase::fdt::pci::initialize_from_fdt(fdt).unwrap();
     check_pci(&mut pci_root);
 
     emit_suppressed_log();

@@ -14,7 +14,7 @@
 
 //! HAL for the virtio_drivers crate.
 
-use super::pci::PCI_INFO;
+use super::pci::PCI_INFO_TYPE;
 use crate::memory::{alloc_shared, dealloc_shared, phys_to_virt, virt_to_phys};
 use crate::util::RangeExt as _;
 use core::alloc::Layout;
@@ -66,10 +66,18 @@ unsafe impl Hal for HalImpl {
     /// range. It can't alias any other allocations because we previously validated in
     /// `map_mmio_range` that the PCI MMIO range didn't overlap with any other memory ranges.
     unsafe fn mmio_phys_to_virt(paddr: PhysAddr, size: usize) -> NonNull<u8> {
-        let pci_info = PCI_INFO.get().expect("VirtIO HAL used before PCI_INFO was initialized");
+        let pci_info_type =
+            PCI_INFO_TYPE.get().expect("VirtIO HAL used before PCI_INFO was initialized");
+
+        // HypPciTransport doesn't use  mmio_phys_to_virt as it uses
+        // hypercalls to access mmio space.
+        // It's a bug if it gets called for PciInfoType::HypPciInfo
+        let pci_info = pci_info_type.mmio_pci_info().unwrap();
+
         let bar_range = {
-            let start = pci_info.bar_range.start.try_into().unwrap();
-            let end = pci_info.bar_range.end.try_into().unwrap();
+            let range = pci_info.bar_range.as_ref().unwrap();
+            let start = range.start.try_into().unwrap();
+            let end = range.end.try_into().unwrap();
 
             start..end
         };

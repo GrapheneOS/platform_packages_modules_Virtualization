@@ -124,6 +124,9 @@ pub(crate) trait MmuOps: Default {
     /// Marks the "data" `range` as dirty if properly mapped for tracking, otherwise fails.
     fn mark_data_dirty(&mut self, range: &Range<usize>) -> MmuResult<()>;
 
+    /// Unmaps the given range of memory.
+    fn unmap(&mut self, range: &Range<usize>) -> MmuResult<()>;
+
     /// Acts as a barrier, ensuring that the dirty state is properly updated on return.
     fn sync_dirty_state(&mut self) -> MmuResult<()>;
 

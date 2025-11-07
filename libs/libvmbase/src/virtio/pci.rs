@@ -14,25 +14,108 @@
 
 //! Functions to scan the PCI bus for VirtIO devices.
 
-use crate::{
-    fdt::pci::PciInfo,
-    memory::{map_device, MemoryTrackerError},
-};
+use crate::memory::{init_shared_pool, map_device, MemoryTrackerError};
 use alloc::boxed::Box;
 use core::fmt;
 use core::marker::PhantomData;
+use core::ops::Range;
 use log::debug;
 use once_cell::race::OnceBox;
+#[cfg(target_arch = "x86_64")]
+use virtio_drivers::transport::x86_64::{HypCam, HypPciTransport};
 use virtio_drivers::{
     device::{blk, socket},
-    transport::pci::{
-        bus::{BusDeviceIterator, ConfigurationAccess, PciRoot},
-        virtio_device_type, PciTransport,
+    transport::{
+        pci::{
+            bus::{BusDeviceIterator, Cam, ConfigurationAccess, DeviceFunction, MmioCam, PciRoot},
+            virtio_device_type, PciTransport, VirtioPciError,
+        },
+        SomeTransport,
     },
     Hal,
 };
 
-pub(super) static PCI_INFO: OnceBox<PciInfo> = OnceBox::new();
+/// Information about the PCI bus for use by the virtio driver
+#[derive(Clone, Debug)]
+pub struct PciInfo {
+    /// The MMIO range used by the memory-mapped PCI CAM.
+    pub cam_range: Range<usize>,
+    /// The MMIO range from which 32-bit PCI BARs should be allocated.
+    /// Used for validating the address by Hal. Not needed if mmio is
+    /// accessed through hypercalls(pkvm).
+    pub bar_range: Option<Range<u32>>,
+}
+
+impl PciInfo {
+    // Returns the `PciRoot` for the memory-mapped CAM. The CAM should be mapped
+    // before this is called, by calling [`PciInfo::map`].
+    //
+    // # Safety
+    //
+    // To prevent concurrent access, only one `PciRoot` should exist in the program. Thus this
+    // method must only be called once, and there must be no other `PciRoot` constructed using the
+    // same CAM.
+    #[cfg(target_arch = "aarch64")]
+    unsafe fn make_pci_root(&self) -> PciRoot<impl ConfigurationAccess> {
+        // SAFETY: We trust that the FDT gave us a valid MMIO base address for the CAM. The caller
+        // guarantees to only call us once, so there are no other references to it.
+        PciRoot::new(unsafe { MmioCam::new(self.cam_range.start as *mut u8, Cam::MmioCam) })
+    }
+
+    // Returns the `PciRoot` for the memory-mapped CAM. The CAM should be mapped
+    // before this is called, by calling [`PciInfo::map`].
+    //
+    // # Safety
+    //
+    // To prevent concurrent access, only one `PciRoot` should exist in the program. Thus this
+    // method must only be called once, and there must be no other `PciRoot` constructed using the
+    // same CAM.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn make_pci_root(&self) -> PciRoot<impl ConfigurationAccess> {
+        PciRoot::new(HypCam::new(self.cam_range.start, Cam::Ecam))
+    }
+}
+
+/// PciInfo types
+#[derive(Clone, Debug)]
+pub enum PciInfoType {
+    /// PciInfo for default MMIO access
+    MmioPciInfo(PciInfo),
+    /// PciInfo for MMIO access through hypercalls(x86_64 pkvm)
+    HypPciInfo(PciInfo),
+}
+
+impl PciInfoType {
+    /// Returns Some reference to contained PciInfo, if MmioPciInfo
+    /// else None
+    pub fn mmio_pci_info(&self) -> Option<&PciInfo> {
+        if let PciInfoType::MmioPciInfo(pci_info) = self {
+            Some(pci_info)
+        } else {
+            None
+        }
+    }
+
+    /// Returns Some reference to contained PciInfo, if HypPciInfo
+    /// else None
+    pub fn hyp_pci_info(&self) -> Option<&PciInfo> {
+        if let PciInfoType::HypPciInfo(pci_info) = self {
+            Some(pci_info)
+        } else {
+            None
+        }
+    }
+
+    /// Returns reference to contained PciInfo
+    pub fn pci_info(&self) -> &PciInfo {
+        match self {
+            PciInfoType::MmioPciInfo(pci_info) => pci_info,
+            PciInfoType::HypPciInfo(pci_info) => pci_info,
+        }
+    }
+}
+
+pub(super) static PCI_INFO_TYPE: OnceBox<PciInfoType> = OnceBox::new();
 
 /// PCI errors.
 #[derive(Debug, Clone)]
@@ -43,6 +126,8 @@ pub enum PciError {
     CamMapFailed(MemoryTrackerError),
     /// Failed to map PCI BAR.
     BarMapFailed(MemoryTrackerError),
+    /// Failed to initialize shared pool
+    SharedPoolInitFailed(MemoryTrackerError),
 }
 
 impl fmt::Display for PciError {
@@ -53,6 +138,7 @@ impl fmt::Display for PciError {
             }
             Self::CamMapFailed(e) => write!(f, "Failed to map PCI CAM: {e}"),
             Self::BarMapFailed(e) => write!(f, "Failed to map PCI BAR: {e}"),
+            Self::SharedPoolInitFailed(e) => write!(f, "Failed to initialize shared pool: {e}"),
         }
     }
 }
@@ -66,28 +152,42 @@ impl fmt::Display for PciError {
 /// 3. Creates and returns a `PciRoot`.
 ///
 /// This must only be called once and after having switched to the dynamic page tables.
-pub fn initialize(pci_info: PciInfo) -> Result<PciRoot<impl ConfigurationAccess>, PciError> {
-    PCI_INFO.set(Box::new(pci_info.clone())).map_err(|_| PciError::DuplicateInitialization)?;
+pub fn initialize(
+    pci_info_type: PciInfoType,
+    swiotlb_range: Option<&Range<usize>>,
+) -> Result<PciRoot<impl ConfigurationAccess>, PciError> {
+    PCI_INFO_TYPE
+        .set(Box::new(pci_info_type.clone()))
+        .map_err(|_| PciError::DuplicateInitialization)?;
 
-    let cam_start = pci_info.cam_range.start;
-    let cam_size = pci_info.cam_range.len().try_into().unwrap();
-    map_device(cam_start, cam_size).map_err(PciError::CamMapFailed)?;
+    let pci_info_type = PCI_INFO_TYPE.get().unwrap();
 
-    let bar_start = pci_info.bar_range.start.try_into().unwrap();
-    let bar_size = pci_info.bar_range.len().try_into().unwrap();
-    map_device(bar_start, bar_size).map_err(PciError::BarMapFailed)?;
+    // Map the cam and bar ranges if mmio space is accessed directly.
+    // Not needed for hypercall based mmio access.
+    if let PciInfoType::MmioPciInfo(pci_info) = pci_info_type {
+        let cam_start = pci_info.cam_range.start;
+        let cam_size = pci_info.cam_range.len().try_into().unwrap();
+        map_device(cam_start, cam_size).map_err(PciError::CamMapFailed)?;
 
-    // SAFETY: This is the only place where we call make_pci_root, validated by `PCI_INFO.set`.
-    Ok(unsafe { pci_info.make_pci_root() })
+        let bar_range = pci_info.bar_range.as_ref().unwrap();
+        let bar_start = bar_range.start.try_into().unwrap();
+        let bar_size = bar_range.len().try_into().unwrap();
+        map_device(bar_start, bar_size).map_err(PciError::BarMapFailed)?;
+    }
+
+    init_shared_pool(swiotlb_range).map_err(PciError::SharedPoolInitFailed)?;
+
+    // SAFETY: This is the only place where we call make_pci_root, validated by `PCI_INFO_TYPE.set`.
+    Ok(unsafe { pci_info_type.pci_info().make_pci_root() })
 }
 
 /// Virtio Block device.
-pub type VirtIOBlk<T> = blk::VirtIOBlk<T, PciTransport>;
+pub type VirtIOBlk<'a, T> = blk::VirtIOBlk<T, SomeTransport<'a>>;
 
 /// Virtio Socket device.
 ///
 /// Spec: https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html 5.10
-pub type VirtIOSocket<T> = socket::VirtIOSocket<T, PciTransport>;
+pub type VirtIOSocket<'a, T> = socket::VirtIOSocket<T, SomeTransport<'a>>;
 
 /// An iterator that iterates over the PCI transport for each device.
 pub struct PciTransportIterator<'a, T: Hal, C: ConfigurationAccess> {
@@ -102,10 +202,26 @@ impl<'a, T: Hal, C: ConfigurationAccess> PciTransportIterator<'a, T, C> {
         let bus = pci_root.enumerate_bus(0);
         Self { pci_root, bus, _hal: PhantomData }
     }
+
+    #[cfg(target_arch = "aarch64")]
+    fn pci_transport(
+        &mut self,
+        device_function: DeviceFunction,
+    ) -> Result<SomeTransport<'a>, VirtioPciError> {
+        PciTransport::new::<T, C>(self.pci_root, device_function).map(SomeTransport::Pci)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn pci_transport(
+        &mut self,
+        device_function: DeviceFunction,
+    ) -> Result<SomeTransport<'a>, VirtioPciError> {
+        HypPciTransport::new::<C>(self.pci_root, device_function).map(SomeTransport::HypPci)
+    }
 }
 
-impl<T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'_, T, C> {
-    type Item = PciTransport;
+impl<'a, T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'a, T, C> {
+    type Item = SomeTransport<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -120,7 +236,7 @@ impl<T: Hal, C: ConfigurationAccess> Iterator for PciTransportIterator<'_, T, C>
             };
             debug!("  VirtIO {virtio_type:?}");
 
-            return PciTransport::new::<T, C>(self.pci_root, device_function).ok();
+            return self.pci_transport(device_function).ok();
         }
     }
 }

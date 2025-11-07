@@ -28,10 +28,11 @@ use pvmfw_avb::Capability;
 use pvmfw_avb::Digest;
 use pvmfw_avb::VerifiedBootData;
 use virtio_drivers::transport::pci::bus::{ConfigurationAccess, PciRoot};
-use vmbase::fdt::{pci::PciInfo, SwiotlbInfo};
-use vmbase::memory::init_shared_pool;
+#[cfg(target_arch = "x86_64")]
+use vmbase::acpi::pci::initialize_from_acpi;
+#[cfg(target_arch = "aarch64")]
+use vmbase::fdt::pci::initialize_from_fdt;
 use vmbase::rand;
-use vmbase::virtio::pci;
 
 /// Criteria hard-coded into pvmfw, to perform fixed image verification.
 enum FixedRollbackCriterion {
@@ -69,7 +70,16 @@ pub fn perform_rollback_protection(
         perform_deferred_rollback_protection(verified_boot_data)?;
         Ok((false, instance_hash.unwrap(), true))
     } else if cfg!(feature = "instance-img") {
-        perform_legacy_rollback_protection(fdt, dice_inputs, cdi_seal, instance_hash)
+        #[cfg(target_arch = "aarch64")]
+        let pci_root = initialize_from_fdt(fdt);
+        #[cfg(target_arch = "x86_64")]
+        let pci_root = initialize_from_acpi();
+
+        let pci_root = pci_root.map_err(|e| {
+            error!("Failed to initialize PCI: {:?}", e);
+            RebootReason::InternalError
+        })?;
+        perform_legacy_rollback_protection(pci_root, dice_inputs, cdi_seal, instance_hash)
     } else {
         force_new_instance()
     }
@@ -162,13 +172,12 @@ fn perform_fixed_rollback_protection(
 
 /// Performs RBP using instance.img where updates require clearing old entries, causing new CDIs.
 fn perform_legacy_rollback_protection(
-    fdt: &Fdt,
+    mut pci_root: PciRoot<impl ConfigurationAccess>,
     dice_inputs: &PartialInputs,
     cdi_seal: &[u8],
     instance_hash: Option<Hidden>,
 ) -> Result<(bool, Hidden, bool), RebootReason> {
     info!("Fallback to instance.img based rollback checks");
-    let mut pci_root = initialize_instance_img_device(fdt)?;
     let (recorded_entry, mut instance_img, header_index) =
         get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
             error!("Failed to get entry from instance.img: {e}");
@@ -241,31 +250,4 @@ fn should_defer_rollback_protection(fdt: &Fdt) -> Result<bool, RebootReason> {
         RebootReason::InvalidFdt
     })?;
     Ok(defer_rbp.is_some())
-}
-
-/// Set up PCI bus and VirtIO-blk device containing the instance.img partition.
-fn initialize_instance_img_device(
-    fdt: &Fdt,
-) -> Result<PciRoot<impl ConfigurationAccess>, RebootReason> {
-    let pci_info = PciInfo::from_fdt(fdt).map_err(|e| {
-        error!("Failed to detect PCI from DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
-    let swiotlb_range = SwiotlbInfo::new_from_fdt(fdt)
-        .map_err(|e| {
-            error!("Failed to detect swiotlb from DT: {e}");
-            RebootReason::InvalidFdt
-        })?
-        .and_then(|info| info.fixed_range());
-
-    let pci_root = pci::initialize(pci_info).map_err(|e| {
-        error!("Failed to initialize PCI: {e}");
-        RebootReason::InternalError
-    })?;
-    init_shared_pool(swiotlb_range.as_ref()).map_err(|e| {
-        error!("Failed to initialize shared pool: {e}");
-        RebootReason::InternalError
-    })?;
-
-    Ok(pci_root)
 }

@@ -46,8 +46,7 @@ use virtio_drivers::{
 };
 use vmbase::{
     configure_heap,
-    fdt::pci::PciInfo,
-    fdt::SwiotlbInfo,
+    fdt::{pci::initialize_from_fdt, SwiotlbInfo},
     generate_image_header,
     layout::crosvm,
     main,
@@ -57,7 +56,7 @@ use vmbase::{
     },
     power::reboot,
     virtio::{
-        pci::{self, PciTransportIterator, VirtIOSocket},
+        pci::{PciTransportIterator, VirtIOSocket},
         HalImpl,
     },
 };
@@ -130,9 +129,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
         VmType::NonProtectedVm => Box::new(service_vm::fake_service_vm_dice_artifacts()?),
     };
 
-    let pci_info = PciInfo::from_fdt(fdt)?;
-    debug!("PCI: {pci_info:#x?}");
-    let mut pci_root = pci::initialize(pci_info).map_err(Error::PciInitializationFailed)?;
+    let mut pci_root = initialize_from_fdt(fdt).map_err(Error::PciInitializationFailed)?;
     let socket_device = find_socket_device::<HalImpl>(&mut pci_root)?;
     debug!("Found socket device: guest cid = {:?}", socket_device.guest_cid());
     let vendor_hashtree_root_digest = read_vendor_hashtree_root_digest(fdt)?;

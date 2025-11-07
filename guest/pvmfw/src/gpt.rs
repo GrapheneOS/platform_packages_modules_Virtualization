@@ -27,7 +27,7 @@ use vmbase::util::ceiling_div;
 use vmbase::virtio::{pci, HalImpl};
 use zerocopy::FromBytes;
 
-type VirtIOBlk = pci::VirtIOBlk<HalImpl>;
+type VirtIOBlk<'a> = pci::VirtIOBlk<'a, HalImpl>;
 
 pub enum Error {
     /// VirtIO error during read operation.
@@ -53,17 +53,17 @@ impl fmt::Display for Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-pub struct Partition {
-    partitions: Partitions,
+pub struct Partition<'a> {
+    partitions: Partitions<'a>,
     indices: RangeInclusive<usize>,
 }
 
-impl Partition {
-    pub fn get_by_name(device: VirtIOBlk, name: &str) -> Result<Option<Self>> {
+impl<'a> Partition<'a> {
+    pub fn get_by_name(device: VirtIOBlk<'a>, name: &'a str) -> Result<Option<Self>> {
         Partitions::new(device)?.get_partition_by_name(name)
     }
 
-    fn new(partitions: Partitions, entry: &Entry) -> Self {
+    fn new(partitions: Partitions<'a>, entry: &Entry) -> Self {
         let first = entry.first_lba().try_into().unwrap();
         let last = entry.last_lba().try_into().unwrap();
 
@@ -93,15 +93,15 @@ impl Partition {
     }
 }
 
-pub struct Partitions {
-    device: VirtIOBlk,
+pub struct Partitions<'a> {
+    device: VirtIOBlk<'a>,
     entries_count: usize,
 }
 
-impl Partitions {
+impl<'a> Partitions<'a> {
     pub const LBA_SIZE: usize = SECTOR_SIZE;
 
-    fn new(mut device: VirtIOBlk) -> Result<Self> {
+    fn new(mut device: VirtIOBlk<'a>) -> Result<Self> {
         let mut blk = [0; Self::LBA_SIZE];
         device.read_blocks(Header::LBA, &mut blk).map_err(Error::FailedRead)?;
         let header = Header::read_from_prefix(blk.as_slice()).unwrap().0;
@@ -113,7 +113,7 @@ impl Partitions {
         Ok(Self { device, entries_count })
     }
 
-    fn get_partition_by_name(mut self, name: &str) -> Result<Option<Partition>> {
+    fn get_partition_by_name(mut self, name: &'a str) -> Result<Option<Partition<'a>>> {
         const_assert_eq!(Partitions::LBA_SIZE.rem_euclid(size_of::<Entry>()), 0);
         let entries_per_blk = Partitions::LBA_SIZE.checked_div(size_of::<Entry>()).unwrap();
 
