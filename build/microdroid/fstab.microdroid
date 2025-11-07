@@ -1,4 +1,4 @@
-system /system ext4 noatime,ro,errors=panic wait,slotselect,avb=vbmeta,first_stage_mount,logical
+/dev/block/by-name/system /system ext4 noatime,ro,errors=panic wait,slotselect,avb=vbmeta,first_stage_mount
 # This is a temporary solution to unblock other devs that depend on /vendor partition in Microdroid
 # The /vendor partition will only be mounted if the kernel cmdline contains
 # androidboot.microdroid.mount_vendor=1.

@@ -279,42 +279,6 @@ android_filesystem {
     uuid: "156d40d7-8d8e-5c99-8913-ec82de549a70",
 }
 
-soong_config_module_type {
-    name: "flag_aware_microdroid_super_partition",
-    module_type: "logical_partition",
-    config_namespace: "ANDROID",
-    bool_variables: [
-        "release_avf_enable_vendor_modules",
-    ],
-    properties: [
-        "default_group",
-    ],
-}
-
-flag_aware_microdroid_super_partition {
-    name: "microdroid_super",
-    sparse: true,
-    size: "auto",
-    default_group: [
-        {
-            name: "system_a",
-            filesystem: ":microdroid",
-        },
-    ],
-    soong_config_variables: {
-        release_avf_enable_vendor_modules: {
-            conditions_default: {
-                default_group: [
-                    {
-                        name: "vendor_a",
-                        filesystem: ":microdroid_vendor",
-                    },
-                ],
-            },
-        },
-    },
-}
-
 android_filesystem {
     name: "microdroid_ramdisk",
     deps: [

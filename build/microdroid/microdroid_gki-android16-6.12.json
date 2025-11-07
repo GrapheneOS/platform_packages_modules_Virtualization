@@ -8,8 +8,8 @@
           "path": "/apex/com.android.virt/etc/fs/microdroid_vbmeta.img"
         },
         {
-          "label": "super",
-          "path": "/apex/com.android.virt/etc/fs/microdroid_super.img"
+          "label": "system_a",
+          "path": "/apex/com.android.virt/etc/fs/microdroid.img"
         }
       ],
       "writable": false
