@@ -92,6 +92,20 @@ Then you can repeat building and installing AVF to the device as follows:
    adb reboot; adb wait-for-device
    ```
 
+Similarly, for a non-AOSP Pixel target:
+
+1. Build the AVF APEX for the non-AOSP Pixel target:
+   ```sh
+   lunch <target>
+   m com.google.android.virt
+   ```
+
+1. Install the APEX to the non-AOSP Pixel target:
+   ```sh
+   adb install ${ANDROID_PRODUCT_OUT}/system/apex/com.google.android.virt.apex
+   adb reboot; adb wait-for-device
+   ```
+
 ## Step 4: Run a Microdroid VM
 
 [Microdroid](../../build/microdroid/README.md) is a lightweight version of Android
