@@ -88,8 +88,8 @@ rust_library_rlib {
     },
 }
 
-rust_test {
-    name: "liblibfdt.integration_test",
+rust_defaults {
+    name: "liblibfdt.integration_test.defaults",
     crate_name: "libfdt_test",
     defaults: ["avf_build_flags_rust"],
     srcs: ["tests/api_test.rs"],
@@ -105,6 +105,16 @@ rust_test {
     rustlibs: [
         "liblibfdt",
     ],
+}
+
+rust_test {
+    name: "liblibfdt.integration_test",
+    defaults: ["liblibfdt.integration_test.defaults"],
+}
+
+rust_test_host {
+    name: "liblibfdt.integration_test_host",
+    defaults: ["liblibfdt.integration_test.defaults"],
 }
 
 genrule {
