@@ -643,6 +643,16 @@ fn try_run_payload(
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
+        let disk_is_new = needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
+            .context("failed to check if device formatted")?;
+        if is_new_instance && !disk_is_new {
+            bail!(MicrodroidError::PayloadInvalidConfig(
+                "InvalidKey: Unable to prepare encrypted storage.\
+                    Detected stale encryptedstore whilst VM is new (with new keys)."
+                    .to_string()
+            ));
+        }
+
         if config.delay_encrypted_store_setup {
             let service_clone = service.clone();
             let vm_secret_for_enc_store = vm_secret.clone();
@@ -655,6 +665,8 @@ fn try_run_payload(
                     service_clone,
                     vm_secret_for_enc_store,
                     tenant_manager_for_enc_store,
+                    // Encrytedstore disk has never been setup - force provision a new KEK!
+                    disk_is_new, // provision_new_key
                 ) {
                     // Ideally we'd communicate this back to the main thread and error out in a
                     // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
@@ -1333,6 +1345,7 @@ fn delayed_prepare_encryptedstore(
     service: Strong<dyn IVirtualMachineService>,
     vm_secret: Arc<VmSecret>,
     tenant_manager: Arc<TenantManager>,
+    provision_new_key: bool,
 ) -> Result<()> {
     info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
     wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
@@ -1342,7 +1355,7 @@ fn delayed_prepare_encryptedstore(
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     match encrypted_store_mode {
         EncryptedStoreMode::KEKsStoredOnHost => {
-            encrypted_store_key(&service, &vm_secret, &mut key)
+            encrypted_store_key(&service, &vm_secret, provision_new_key, &mut key)
                 .context("KEK based encrypted store key setup failed")?;
         }
         EncryptedStoreMode::DefaultKey => {
@@ -1365,6 +1378,7 @@ fn delayed_prepare_encryptedstore(
 fn encrypted_store_key(
     service: &Strong<dyn IVirtualMachineService>,
     vm_secret: &VmSecret,
+    provision_new_key: bool,
     key: &mut [u8],
 ) -> Result<()> {
     let kek_wrapper =
@@ -1380,10 +1394,7 @@ fn encrypted_store_key(
     vm_secret
         .derive_encryptedstore_key_encryption_key(&mut encryption_key)
         .context("failed to derive encryptedstore_key encryption key")?;
-    if needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
-        .context("failed to check if device formatted")?
-    {
-        // Encrytedstore disk has never been setup - force provision a new KEK!
+    if provision_new_key {
         info!("Creating new KEK blob");
         vm_secret.derive_random_key(key).context("derive random key")?;
         let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;

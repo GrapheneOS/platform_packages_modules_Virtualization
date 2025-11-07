@@ -3982,6 +3982,64 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mHostname).isEqualTo("test_vm-name42");
     }
 
+    // Verify Microdroid fails to boot immediately when presented with a stale disk image
+    @Test
+    public void staleEncryptedstoreDetection() throws Exception {
+        assumeSupportedDevice();
+
+        // Create and run misc_vm.
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine misc_vm = forceCreateNewVirtualMachine("misc_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        misc_vm,
+                        (ts, tr) -> {
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ "/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+
+        // Create vm_under_test
+        VirtualMachine vm_under_test = forceCreateNewVirtualMachine("vm_under_test", config);
+        // Plug the disk of `misc_vm` into the newly created `vm_under_test`
+        Files.copy(
+                getVmFile("misc_vm", "storage.img").toPath(),
+                getVmFile("vm_under_test", "storage.img").toPath(),
+                REPLACE_EXISTING);
+
+        // Rerun `vm_under_test` with stale disk
+        var onPayloadReadyExecuted = new CompletableFuture<Boolean>();
+        var onErrorExecuted = new CompletableFuture<Boolean>();
+        var errorMessage = new CompletableFuture<String>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        onPayloadReadyExecuted.complete(true);
+                        super.onPayloadReady(vm);
+                    }
+
+                    @Override
+                    public void onError(VirtualMachine vm, int errorCode, String message) {
+                        onErrorExecuted.complete(true);
+                        errorMessage.complete(message);
+                        super.onError(vm, errorCode, message);
+                    }
+                };
+        listener.runToFinish(TAG, vm_under_test);
+
+        assertThat(onPayloadReadyExecuted.getNow(false)).isFalse();
+        assertThat(onErrorExecuted.getNow(false)).isTrue();
+        assertThat(errorMessage.getNow("")).contains("Detected stale encryptedstore");
+    }
+
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {
         Parcel parcel = Parcel.obtain();
         descriptor.writeToParcel(parcel, 0);
