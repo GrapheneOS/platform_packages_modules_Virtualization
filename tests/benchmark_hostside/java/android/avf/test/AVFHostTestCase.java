@@ -690,12 +690,19 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
                 String artApexPath = m.group(1);
 
-                CommandResult result = android.runForResult("pm install --apex " + artApexPath);
-                assertWithMessage("Failed to install APEX. Reason: " + result)
-                        .that(result.getExitCode())
-                        .isEqualTo(0);
+                // Copy the backing APEX file to a temp file first
+                String tmpApexPath = "/data/local/tmp/art.apex";
+                android.run("cp " + artApexPath + " " + tmpApexPath);
+                try {
+                    CommandResult result = android.runForResult("pm install --apex " + tmpApexPath);
+                    assertWithMessage("Failed to install APEX. Reason: " + result)
+                            .that(result.getExitCode())
+                            .isEqualTo(0);
+                } finally {
+                    android.run("rm -f " + tmpApexPath);
+                }
 
-                CLog.i("Success to install APEX. Result: " + result);
+                CLog.i("Success to install APEX");
 
                 break;
             } catch (AssertionError e) {
