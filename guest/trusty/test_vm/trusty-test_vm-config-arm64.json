@@ -4,6 +4,6 @@
     "platform_version": "1.0",
     "cpu_topology": "one_cpu",
     "memory_mib": 112,
-    "instanceId": "/data/local/tmp/trusty_test_vm/trusty_test_vm_instance_id",
+    "instance_id": "/data/local/tmp/trusty_test_vm/trusty_test_vm_instance_id",
     "protected": true
 }
