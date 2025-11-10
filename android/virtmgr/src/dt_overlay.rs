@@ -20,8 +20,6 @@ use libfdt::{Fdt, FdtNodeMut};
 use std::ffi::CStr;
 use std::path::Path;
 
-pub(crate) const AVF_NODE_NAME: &CStr = c"avf";
-pub(crate) const UNTRUSTED_NODE_NAME: &CStr = c"untrusted";
 pub(crate) const VM_DT_OVERLAY_PATH: &str = "vm_dt_overlay.dtbo";
 pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 2000;
 
@@ -60,23 +58,12 @@ pub(crate) fn create_device_tree_overlay<'a>(
 
     let fdt =
         Fdt::create_empty_tree(buffer).map_err(|e| anyhow!("Failed to create empty Fdt: {e:?}"))?;
-    let mut fragment = fdt
-        .root_mut()
-        .add_subnode(c"fragment@0")
-        .map_err(|e| anyhow!("Failed to add fragment node: {e:?}"))?;
-    fragment
-        .setprop(c"target-path", b"/\0")
-        .map_err(|e| anyhow!("Failed to set target-path property: {e:?}"))?;
-    let overlay = fragment
-        .add_subnode(c"__overlay__")
-        .map_err(|e| anyhow!("Failed to add __overlay__ node: {e:?}"))?;
-    let avf =
-        overlay.add_subnode(AVF_NODE_NAME).map_err(|e| anyhow!("Failed to add avf node: {e:?}"))?;
 
     if !untrusted_props.is_empty() {
-        let mut node = avf
-            .add_subnode(UNTRUSTED_NODE_NAME)
-            .map_err(|e| anyhow!("Failed to add untrusted node: {e:?}"))?;
+        let path = c"/fragment@0/__overlay__/avf/untrusted";
+        let mut node = fdt
+            .find_or_add_node_mut(path)
+            .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
         add_props_to_node(untrusted_props, &mut node)?;
     }
 
@@ -86,11 +73,16 @@ pub(crate) fn create_device_tree_overlay<'a>(
     }
 
     if !trusted_props.is_empty() {
+        let path = c"/fragment@0/__overlay__/avf";
         let mut node = fdt
-            .node_mut(c"/fragment@0/__overlay__/avf")
-            .map_err(|e| anyhow!("Failed to search avf node: {e:?}"))?
-            .ok_or(anyhow!("Failed to get avf node"))?;
+            .find_or_add_node_mut(path)
+            .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
         add_props_to_node(trusted_props, &mut node)?;
+    }
+
+    if let Some(mut node) = fdt.node_mut(c"/fragment@0")? {
+        node.setprop(c"target-path", b"/\0")
+            .map_err(|e| anyhow!("Failed to set target-path property: {e:?}"))?;
     }
 
     fdt.pack().map_err(|e| anyhow!("Failed to pack DT overlay, {e:?}"))?;
