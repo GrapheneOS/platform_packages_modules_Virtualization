@@ -32,6 +32,7 @@ use rpcbinder::RpcSession;
 use rustutils::android::system_properties;
 use std::collections::HashSet;
 use std::fs::{self, create_dir_all, OpenOptions};
+use std::io::Read;
 use std::io::Write;
 use std::os::android::fs::MetadataExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
@@ -344,20 +345,34 @@ fn format_ext4(device: &Path) -> Result<()> {
     Ok(())
 }
 
+// Run `cmd` with both stdout and stderr set to the same pipe to get a combined output.
+fn execute_with_combined_output(mut cmd: Command) -> Result<(std::process::ExitStatus, Vec<u8>)> {
+    let (mut r, w) = std::io::pipe().context("failed to create pipe")?;
+    let mut child = cmd.stdout(w.try_clone()?).stderr(w).spawn().context("failed to spawn")?;
+    // Make sure write end of pipe is dropped by this process.
+    std::mem::drop(cmd);
+    let mut output = Vec::new();
+    r.read_to_end(&mut output).context("failed to read from pipe")?;
+    let status = child.wait().context("failed to wait")?;
+    Ok((status, output))
+}
+
 fn e2fsck(device: &Path) -> Result<()> {
     info!("Running e2fsck");
-    let status = Command::new(E2FSCK_BIN)
-        .arg("-fvy")
-        .arg(device)
-        .status()
-        .context("failed to execute e2fsck")?;
+    let (status, output) = execute_with_combined_output({
+        let mut cmd = Command::new(E2FSCK_BIN);
+        cmd.arg("-fvy").arg(device);
+        cmd
+    })
+    .context("failed to execute e2fsck")?;
+    let output_string = String::from_utf8_lossy(&output[..]);
 
     if status.success() {
-        info!("e2fsck was successful");
+        info!("e2fsck was successful. stdout/stderr:\n\n{output_string}");
         return Ok(());
     }
 
-    info!("e2fsck wasn't successful");
+    error!("e2fsck wasn't successful ({status}). stdout/stderr:\n\n{output_string}");
     let mut exit_code = i32::MAX;
     let result = match status.code() {
         Some(code) => {
@@ -365,7 +380,6 @@ fn e2fsck(device: &Path) -> Result<()> {
             if code & (FsckExitCode::ErrorsLeftUncorrected as i32) != 0 {
                 Err(anyhow!("File system errors left uncorrected: {code}"))
             } else {
-                warn!("e2fsck exited with exitCode: {code}");
                 Ok(())
             }
         }
