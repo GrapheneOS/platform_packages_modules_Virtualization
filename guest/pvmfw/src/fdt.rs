@@ -19,6 +19,7 @@ use crate::config::reserved_mem::{ResMemEntryInfo, NO_MAP};
 use crate::device_assignment::{self, DeviceAssignmentInfo, VmDtbo};
 use crate::Box;
 use crate::RebootReason;
+use alloc::borrow::ToOwned;
 use alloc::collections::BTreeMap;
 use alloc::ffi::CString;
 use alloc::format;
@@ -534,18 +535,20 @@ fn patch_cpus(
     Ok(())
 }
 
-/// Reads the /avf/untrusted DT node, which the host can use to pass properties (no subnodes) to
-/// the guest that don't require being validated by pvmfw.
-fn parse_untrusted_props(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
+fn extract_node_props(
+    fdt: &Fdt,
+    path: &CStr,
+    warn_if_subnode: bool,
+) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
     let mut props = BTreeMap::new();
-    if let Some(node) = fdt.node(c"/avf/untrusted")? {
+    if let Some(node) = fdt.node(path)? {
         for property in node.properties()? {
-            let name = property.name()?;
-            let value = property.value()?;
-            props.insert(CString::from(name), value.to_vec());
+            props.insert(property.name()?.to_owned(), property.value()?.to_vec());
         }
-        if node.subnodes()?.next().is_some() {
-            warn!("Discarding unexpected /avf/untrusted subnodes.");
+        if warn_if_subnode {
+            if let Some(subnode) = node.subnodes()?.next() {
+                warn!("Ignoring all subnodes of '{path:?}': '{:?}' found", subnode.name());
+            }
         }
     }
 
@@ -568,7 +571,9 @@ fn parse_vm_ref_dt(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
     Ok(property_map)
 }
 
-fn validate_untrusted_props(props: &BTreeMap<CString, Vec<u8>>) -> Result<(), FdtValidationError> {
+fn reject_forbidden_untrusted_props(
+    props: &BTreeMap<CString, Vec<u8>>,
+) -> Result<(), FdtValidationError> {
     const FORBIDDEN_PROPS: &[&CStr] = &[c"compatible", c"linux,phandle", c"phandle"];
 
     for name in FORBIDDEN_PROPS {
@@ -1062,11 +1067,10 @@ fn patch_timer(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
     node.setprop_inplace(c"interrupts", value.as_bytes())
 }
 
-fn patch_untrusted_props(fdt: &mut Fdt, props: &BTreeMap<CString, Vec<u8>>) -> libfdt::Result<()> {
-    if props.is_empty() {
-        return Ok(());
-    }
-    let mut node = fdt.find_or_add_node_mut(c"/avf/untrusted")?;
+fn populate_node<'a>(
+    node: &mut FdtNodeMut<'a>,
+    props: &BTreeMap<CString, Vec<u8>>,
+) -> libfdt::Result<()> {
     for (name, value) in props {
         node.setprop(name, value)?;
     }
@@ -1344,12 +1348,12 @@ fn parse_device_tree(
         None
     };
 
-    let untrusted_props = parse_untrusted_props(fdt).map_err(|e| {
-        error!("Failed to read untrusted properties: {e}");
+    let untrusted_props = extract_node_props(fdt, c"/avf/untrusted", true).map_err(|e| {
+        error!("Failed to read /avf/untrusted properties: {e}");
         RebootReason::InvalidFdt
     })?;
-    validate_untrusted_props(&untrusted_props).map_err(|e| {
-        error!("Failed to validate untrusted properties: {e}");
+    reject_forbidden_untrusted_props(&untrusted_props).map_err(|e| {
+        error!("Failed to prune /avf/untrusted properties: {e}");
         RebootReason::InvalidFdt
     })?;
 
@@ -1450,10 +1454,17 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
             RebootReason::InvalidFdt
         })?;
     }
-    patch_untrusted_props(fdt, &info.untrusted_props).map_err(|e| {
-        error!("Failed to patch untrusted properties: {e}");
-        RebootReason::InvalidFdt
-    })?;
+
+    if !info.untrusted_props.is_empty() {
+        let mut node = fdt.find_or_add_node_mut(c"/avf/untrusted").map_err(|e| {
+            error!("Failed to create node /avf/untrusted: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        populate_node(&mut node, &info.untrusted_props).map_err(|e| {
+            error!("Failed to populate /avf/untrusted: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
 
     Ok(())
 }
