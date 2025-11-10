@@ -46,14 +46,11 @@ use virtio_drivers::{
 };
 use vmbase::{
     configure_heap,
-    fdt::{pci::initialize_from_fdt, SwiotlbInfo},
+    fdt::pci::initialize_from_fdt,
     generate_image_header,
     layout::crosvm,
     main,
-    memory::{
-        init_shared_pool, map_rodata, map_rodata_outside_main_memory, resize_available_memory,
-        SIZE_128KB,
-    },
+    memory::{map_rodata, map_rodata_outside_main_memory, resize_available_memory, SIZE_128KB},
     power::reboot,
     virtio::{
         pci::{PciTransportIterator, VirtIOSocket},
@@ -97,15 +94,6 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     }
     resize_available_memory(&memory_range).inspect_err(|_| {
         error!("Failed to use memory range value from DT: {memory_range:#x?}");
-    })?;
-
-    let swiotlb_range = SwiotlbInfo::new_from_fdt(fdt)
-        .inspect_err(|_| {
-            error!("Service VM failed when access swiotlb");
-        })?
-        .and_then(|info| info.fixed_range());
-    init_shared_pool(swiotlb_range.as_ref()).inspect_err(|_| {
-        error!("Failed to initialize shared pool.");
     })?;
 
     let bcc_handover: Box<dyn DiceArtifacts> = match vm_type(fdt)? {
