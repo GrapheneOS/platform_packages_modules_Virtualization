@@ -6,7 +6,7 @@ rust_defaults {
     name: "zipfuse.defaults",
     crate_name: "zipfuse",
     defaults: ["avf_build_flags_rust"],
-    srcs: ["src/main.rs"],
+    crate_root: "src/main.rs",
     edition: "2021",
     prefer_rlib: true,
     rustlibs: [
@@ -39,6 +39,11 @@ rust_test {
     defaults: ["zipfuse.defaults"],
     test_suites: ["general-tests"],
     compile_multilib: "first",
+    srcs: [
+        "testdata/dir/file1",
+        "testdata/dir/file2",
+        "testdata/test.zip",
+    ],
     rustlibs: [
         "libnix",
         "libtempfile",
