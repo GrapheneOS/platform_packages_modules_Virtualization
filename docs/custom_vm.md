@@ -36,8 +36,10 @@ mouse event is directly delivered to a VM instance.
 
 ## Hardware acceleration
 If a device supports gfxstream, a user can enable hardware acceleration in Terminal
-app's settings menu. If you want to test in the userdebug device, just create
-`/sdcard/linux/gfxstream` file, which enables gfxstream for VM.
+app's settings menu. If you want to test in the userdebug device, create
+`/sdcard/linux/gfxstream` file, which enables gfxstream for VM. Note: on HSUM
+(Headless System User Mode) devices like some tablets and laptops, use the path
+`/mnt/user/10/emulated/10/linux/gfxstream` instead.
 
 ## Connect to console via ADB
 Run `adb shell vm console` which returns the command to attach console of an existing
