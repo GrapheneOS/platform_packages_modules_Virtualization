@@ -19,7 +19,7 @@ use diced_open_dice::DiceError;
 use hypervisor_backends::Error as HypervisorError;
 use libfdt::FdtError;
 use service_vm_comm::RequestProcessingError;
-use vmbase::{fdt::pci::PciError, memory::MemoryTrackerError, virtio::pci};
+use vmbase::{fdt::pci::PciError, memory::MemoryTrackerError};
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -37,7 +37,7 @@ pub enum Error {
     /// Failed memory operation.
     MemoryOperationFailed(MemoryTrackerError),
     /// Failed to initialize PCI.
-    PciInitializationFailed(pci::PciError),
+    PciInitializationFailed(PciError),
     /// Failed to create VirtIO Socket device.
     VirtIOSocketCreationFailed(virtio_drivers::Error),
     /// Missing socket device.

@@ -29,7 +29,6 @@ use vmconfig::get_debug_level;
 const CUSTOM_DEBUG_POLICY_OVERLAY_SYSPROP: &str =
     "hypervisor.virtualizationmanager.debug_policy.path";
 const DUMP_DT_SYSPROP: &str = "hypervisor.virtualizationmanager.dump_device_tree";
-const DEVICE_TREE_EMPTY_TREE_SIZE_BYTES: usize = 100; // rough estimation.
 
 struct DPPath {
     node_path: CString,
@@ -52,6 +51,14 @@ impl DPPath {
             ]
             .concat(),
         )
+    }
+
+    /// Returns path as &str instead of &Path, because we don't want OsStr.
+    fn to_fdt_overlay_path(&self) -> CString {
+        // Safe to expect() because both two shouldn't have NUL in the middle.
+        // Compiler checks C String literal, and ctor of CString checks when it's instantiated.
+        CString::new([c"/fragment/__overlay__".to_bytes(), self.node_path.to_bytes()].concat())
+            .expect("Concatenating two strings without NUL in the middle")
     }
 }
 
@@ -80,10 +87,9 @@ fn get_debug_policy_bool(path: &Path) -> Result<bool> {
 }
 
 /// Get property value in bool. It's true iff the value is explicitly set to <1>.
-/// It takes path as &str instead of &Path, because we don't want OsStr.
-fn get_fdt_prop_bool(fdt: &Fdt, path: &DPPath) -> Result<bool> {
-    let (node_path, prop_name) = (&path.node_path, &path.prop_name);
-    let node = match fdt.node(node_path) {
+fn get_fdt_prop_bool(fdt_overlay: &Fdt, path: &DPPath) -> Result<bool> {
+    let (node_path, prop_name) = (&path.to_fdt_overlay_path(), &path.prop_name);
+    let node = match fdt_overlay.node(node_path) {
         Ok(Some(node)) => node,
         Err(error) if error != FdtError::NotFound => {
             Err(Error::msg(error)).with_context(|| format!("Failed to get node {node_path:?}"))?
@@ -108,37 +114,13 @@ struct OwnedFdt {
 }
 
 impl OwnedFdt {
-    fn from_overlay_onto_new_fdt(overlay_file_path: &Path) -> Result<Self> {
-        let mut overlay_buf = match fs::read(overlay_file_path) {
-            Ok(fdt) => fdt,
-            Err(error) if error.kind() == ErrorKind::NotFound => Default::default(),
-            Err(error) => {
-                Err(error).with_context(|| format!("Failed to read {overlay_file_path:?}"))?
-            }
-        };
+    fn try_load(path: &Path) -> Result<Self> {
+        let buffer = fs::read(path).with_context(|| format!("Failed to read {path:?}"))?;
 
-        let overlay_buf_size = overlay_buf.len();
+        // Check validity.
+        let _ = Fdt::from_slice(&buffer)?;
 
-        let fdt_estimated_size = overlay_buf_size + DEVICE_TREE_EMPTY_TREE_SIZE_BYTES;
-        let mut fdt_buf = vec![0_u8; fdt_estimated_size];
-        let fdt = Fdt::create_empty_tree(fdt_buf.as_mut_slice())
-            .map_err(Error::msg)
-            .context("Failed to create an empty device tree")?;
-
-        if !overlay_buf.is_empty() {
-            let overlay_fdt = Fdt::from_mut_slice(overlay_buf.as_mut_slice())
-                .map_err(Error::msg)
-                .with_context(|| "Malformed {overlay_file_path:?}")?;
-
-            // SAFETY: Return immediately if error happens. Damaged fdt_buf and fdt are discarded.
-            unsafe {
-                fdt.apply_overlay(overlay_fdt).map_err(Error::msg).with_context(|| {
-                    "Failed to overlay {overlay_file_path:?} onto empty device tree"
-                })?;
-            }
-        }
-
-        Ok(Self { buffer: fdt_buf })
+        Ok(OwnedFdt { buffer })
     }
 
     fn as_fdt(&self) -> &Fdt {
@@ -158,7 +140,7 @@ pub struct DebugPolicy {
 impl DebugPolicy {
     /// Build from the passed DTBO path.
     pub fn from_overlay(path: &Path) -> Result<Self> {
-        let owned_fdt = OwnedFdt::from_overlay_onto_new_fdt(path)?;
+        let owned_fdt = OwnedFdt::try_load(path)?;
         let fdt = owned_fdt.as_fdt();
 
         Ok(Self {
@@ -189,10 +171,16 @@ pub struct DebugConfig {
 impl DebugConfig {
     pub fn new(config: &aidl::VirtualMachineConfig) -> Self {
         let debug_level = get_debug_level(config).unwrap_or(aidl::DebugLevel::NONE);
-        let debug_policy = Self::get_debug_policy(config).unwrap_or_else(|| {
-            info!("Debug policy is disabled");
+        let debug_policy = if matches!(config, aidl::VirtualMachineConfig::RawConfig(_)) {
+            info!("Debug policy ignored for non-Microdroid VM");
             Default::default()
-        });
+        } else {
+            Self::try_load_debug_policy().unwrap_or_else(|_| {
+                info!("Debug policy is ignored");
+                Default::default()
+            })
+        };
+
         let dump_dt_sysprop = system_properties::read_bool(DUMP_DT_SYSPROP, false);
         let dump_device_tree = dump_dt_sysprop.unwrap_or_else(|e| {
             warn!("Failed to read sysprop {DUMP_DT_SYSPROP}: {e}");
@@ -202,38 +190,29 @@ impl DebugConfig {
         Self { debug_level, debug_policy, dump_device_tree }
     }
 
-    fn get_debug_policy(config: &aidl::VirtualMachineConfig) -> Option<DebugPolicy> {
-        if matches!(config, aidl::VirtualMachineConfig::RawConfig(_)) {
-            info!("Debug policy ignored for non-Microdroid VM");
-            return None;
-        }
+    fn try_load_debug_policy() -> Result<DebugPolicy> {
         let dp_sysprop = system_properties::read(CUSTOM_DEBUG_POLICY_OVERLAY_SYSPROP);
-        let custom_dp = dp_sysprop.unwrap_or_else(|e| {
-            warn!("Failed to read sysprop {CUSTOM_DEBUG_POLICY_OVERLAY_SYSPROP}: {e}");
-            Default::default()
-        });
+        let custom_dp = dp_sysprop.unwrap_or_default();
 
         match custom_dp {
-            Some(path) if !path.is_empty() => match DebugPolicy::from_overlay(Path::new(&path)) {
-                Ok(dp) => {
-                    info!("Loaded custom debug policy overlay {path}: {dp:?}");
-                    Some(dp)
-                }
-                Err(err) => {
-                    warn!("Failed to load custom debug policy overlay {path}: {err:?}");
-                    None
-                }
-            },
-            _ => match DebugPolicy::from_host() {
-                Ok(dp) => {
-                    info!("Loaded debug policy from host OS: {dp:?}");
-                    Some(dp)
-                }
-                Err(err) => {
-                    warn!("Failed to load debug policy from host OS: {err:?}");
-                    None
-                }
-            },
+            Some(path) if !path.is_empty() => {
+                let dp = DebugPolicy::from_overlay(Path::new(&path));
+                match dp {
+                    Ok(ref dp) => info!("Loaded custom debug policy overlay {path}: {dp:?}"),
+                    Err(ref err) => {
+                        warn!("Failed to load custom debug policy overlay {path}: {err:?}")
+                    }
+                };
+                dp
+            }
+            _ => {
+                let dp = DebugPolicy::from_host();
+                match dp {
+                    Ok(ref dp) => info!("Loaded debug policy from host OS: {dp:?}"),
+                    Err(ref err) => warn!("Failed to load debug policy from host OS: {err:?}"),
+                };
+                dp
+            }
         }
     }
 
@@ -313,14 +292,9 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_sysprop_disables_debug_policy() -> Result<()> {
-        let debug_policy =
-            DebugPolicy::from_overlay("/a/does/not/exist/path.dtbo".as_ref()).unwrap();
-
-        assert!(!debug_policy.log);
-        assert!(!debug_policy.ramdump);
-        assert!(!debug_policy.adb);
-
+    fn test_invalid_sysprop_returns_error() -> Result<()> {
+        let res = DebugPolicy::from_overlay("/a/does/not/exist/path.dtbo".as_ref());
+        assert!(res.is_err());
         Ok(())
     }
 

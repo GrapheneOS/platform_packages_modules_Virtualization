@@ -2481,7 +2481,7 @@ mod tests {
         }
 
         // fake files not related to configs
-        std::fs::write(tmp_dir_path.join("microdroid_super.img"), b"")?;
+        std::fs::write(tmp_dir_path.join("microdroid.img"), b"")?;
         std::fs::write(tmp_dir_path.join("microdroid_foobar.apk"), b"")?;
 
         let glob_pattern = match tmp_dir_path.join("microdroid*.json").to_str() {

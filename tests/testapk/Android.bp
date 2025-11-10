@@ -43,6 +43,7 @@ java_defaults {
         "androidx.test.runner",
         "androidx.test.ext.junit",
         "authfs_test_apk_assets",
+        "encrypted_assets_test_apk_assets",
         "truth",
         "compatibility-common-util-devicesidelib",
         "measure_io_as_jar",
@@ -168,7 +169,10 @@ android_test {
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifest.xml",
     test_config_template: "AndroidTestTemplate.xml",
-    test_suites: ["cts"],
+    test_suites: [
+        "cts",
+        "dts",
+    ],
     auto_gen_config: true,
     test_options: {
         tradefed_options: [
@@ -190,7 +194,10 @@ android_test {
     defaults: ["MicrodroidVersionsTestAppDefaults"],
     manifest: "AndroidManifest.xml",
     test_config_template: "AndroidTestTemplate.xml",
-    test_suites: ["vts"],
+    test_suites: [
+        "vts",
+        "dts",
+    ],
     auto_gen_config: true,
     test_options: {
         tradefed_options: [

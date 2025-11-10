@@ -425,7 +425,7 @@ impl VmDtbo {
     fn node(&self, path: &DtPathTokens) -> Result<Option<FdtNode>> {
         let mut node = self.as_ref().root();
         for token in &path.tokens {
-            let Some(subnode) = node.subnode_with_name_bytes(token)? else {
+            let Some(subnode) = node.subnode_raw(token)? else {
                 return Ok(None);
             };
             node = subnode;

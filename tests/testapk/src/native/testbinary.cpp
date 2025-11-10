@@ -237,7 +237,7 @@ Result<void> start_test_service() {
             return ScopedAStatus::ok();
         }
 
-        ScopedAStatus getEncryptedStorageSize(int64_t *out) override {
+        ScopedAStatus getEncryptedStorageSize(int64_t* out) override {
             const char* path_c = AVmPayload_getEncryptedStoragePath();
             if (path_c == nullptr) {
                 *out = 0;
@@ -245,12 +245,12 @@ Result<void> start_test_service() {
             }
             struct statvfs buffer;
             if (statvfs(path_c, &buffer) != 0) {
-                std::string msg = "statvfs " + std::string(path_c) + " failed :  " +
-                    std::strerror(errno);
+                std::string msg =
+                        "statvfs " + std::string(path_c) + " failed :  " + std::strerror(errno);
                 return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
                                                                    msg.c_str());
             }
-            *out= buffer.f_blocks * buffer.f_frsize;
+            *out = buffer.f_blocks * buffer.f_frsize;
             return ScopedAStatus::ok();
         }
 
@@ -295,7 +295,7 @@ Result<void> start_test_service() {
         ScopedAStatus writeToFile(const std::string& content, const std::string& path) override {
             if (!android::base::WriteStringToFile(content, path)) {
                 std::string msg = "Failed to write " + content + " to file " + path +
-                        ". Errono: " + std::to_string(errno);
+                        ". Errno: " + std::to_string(errno);
                 return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
                                                                    msg.c_str());
             }
@@ -305,7 +305,7 @@ Result<void> start_test_service() {
         ScopedAStatus readFromFile(const std::string& path, std::string* out) override {
             if (!android::base::ReadFileToString(path, out)) {
                 std::string msg =
-                        "Failed to read " + path + " to string. Errono: " + std::to_string(errno);
+                        "Failed to read " + path + " to string. Errno: " + std::to_string(errno);
                 return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
                                                                    msg.c_str());
             }
@@ -463,6 +463,40 @@ Result<void> start_test_service() {
             }
             *out = std::string(hostname);
             return ScopedAStatus::ok();
+        }
+
+        ScopedAStatus mountEncryptedAssets(const std::string& path,
+                                           std::string* out_mount_point) override {
+            if (__builtin_available(android 37, *)) {
+                // Created by `xxd -i tests/encrypted_assets/test.key`.
+                constexpr unsigned char kTestKey[64] = {0xfe, 0xed, 0xc0, 0xde, 0x54, 0xaf, 0x81,
+                                                        0x86, 0xf3, 0x17, 0xb3, 0x9c, 0x17, 0x0c,
+                                                        0xdc, 0xe2, 0xe5, 0xda, 0x0e, 0xca, 0x91,
+                                                        0x19, 0x14, 0xdd, 0xaa, 0xd7, 0x26, 0x41,
+                                                        0x02, 0x34, 0x53, 0xb7, 0x6d, 0x90, 0xa7,
+                                                        0x7c, 0xfe, 0x4c, 0xfe, 0xfb, 0xa0, 0xb9,
+                                                        0xd6, 0xb6, 0x4e, 0xd4, 0x45, 0xc0, 0x38,
+                                                        0xce, 0x4d, 0xfc, 0xe1, 0xd5, 0x2d, 0xad,
+                                                        0x53, 0xed, 0x24, 0x9c, 0x1f, 0xf1, 0x00,
+                                                        0x94};
+                constexpr int kSectorSize = 512;
+
+                char mount_point[PATH_MAX] = {};
+                int status =
+                        AVmPayload_mountEncryptedAssets(path.c_str(), "erofs", "aes-xts-plain64",
+                                                        kTestKey, sizeof(kTestKey), kSectorSize,
+                                                        mount_point, sizeof(mount_point));
+                if (status != 0) {
+                    return ScopedAStatus::
+                            fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                         "Failed to mount encrypted asset");
+                }
+                *out_mount_point = mount_point;
+                return ScopedAStatus::ok();
+            } else {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "not available before SDK 36");
+            }
         }
 
         ScopedAStatus quit() override { exit(0); }

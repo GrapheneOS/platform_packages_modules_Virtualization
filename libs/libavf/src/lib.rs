@@ -465,15 +465,15 @@ pub unsafe extern "C" fn AVirtualMachine_createRaw(
 pub unsafe extern "C" fn AVirtualMachine_start(vm: *mut VmInstance) -> c_int {
     // SAFETY: Fills default parameters and delegates to another function
     // with the same safety requirement.
-    unsafe { AVirtualMachine_startWithCallback(vm, None, ptr::null_mut()) }
+    unsafe { AVirtualMachine_startWithStopCallback(vm, None, ptr::null_mut()) }
 }
 
-/// Start a virtual machine with callback
+/// Start a virtual machine with stop callback
 ///
 /// # Safety
 /// `vm` must be a pointer returned by `AVirtualMachine_createRaw`.
 #[no_mangle]
-pub unsafe extern "C" fn AVirtualMachine_startWithCallback(
+pub unsafe extern "C" fn AVirtualMachine_startWithStopCallback(
     vm: *mut VmInstance,
     callback: AVirtualMachine_stopCallback,
     data: *mut c_void,

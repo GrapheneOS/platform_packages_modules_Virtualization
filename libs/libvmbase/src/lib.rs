@@ -20,6 +20,7 @@
 
 extern crate alloc;
 
+pub mod acpi;
 pub mod arch;
 pub mod bionic;
 pub mod bzimage;

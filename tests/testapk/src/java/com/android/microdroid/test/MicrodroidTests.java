@@ -371,9 +371,11 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
-    private SigningResult attestation_signing_result(byte[] challenge) throws Exception {
+    private SigningResult attestation_signing_result_multitenant(byte[] challenge)
+            throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         ensureVmAttestationSupported();
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -410,6 +412,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         "This test does not apply to a device that supports Remote Attestation")
                 .that(isRemoteAttestationSupported())
                 .isFalse();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
@@ -442,7 +445,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
-        attestation_signing_result(challenge);
+        attestation_signing_result_multitenant(challenge);
     }
 
     @Test
@@ -454,7 +457,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                     throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
-        SigningResult signingResult = attestation_signing_result(challenge);
+        SigningResult signingResult = attestation_signing_result_multitenant(challenge);
 
         assume().withMessage(
                         "AttestationStatus is ERROR_ATTESTATION_FAILED possibly due to unstable"
@@ -1338,6 +1341,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
@@ -1404,6 +1408,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void invalidTenantAuthority() throws Exception {
         assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -1424,6 +1429,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void invalidTenantRollbackIndex() throws Exception {
         assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -1450,6 +1456,84 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
                 .that(result_rb_2.getNow(null))
                 .isEqualTo("PASS");
+    }
+
+    @Test
+    @CddTest
+    public void multiTenantInstanceSpecRollbackTest() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        // MicrodroidTestHelperAppRelaxedRollbackProtection_V7*.apk has rollback_index:2
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_rollback_index_instance_spec.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+
+        // First boot - InstanceSpec should be created
+        VirtualMachine vm1 =
+                forceCreateNewVirtualMachine("multi_tenant_instance_spec_rollback", config);
+        CompletableFuture<String> result_v2_boot1 = readTenantPackagesMounted(vm1);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result_v2_boot1.getNow(null))
+                .isEqualTo("PASS");
+
+        // Second boot - InstanceSpec should be read and verified
+        VirtualMachine vm2 = getVirtualMachineManager().get("multi_tenant_instance_spec_rollback");
+        CompletableFuture<String> result_v2_boot2 = readTenantPackagesMounted(vm2);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result_v2_boot2.getNow(null))
+                .isEqualTo("PASS");
+
+        // Install lower version - MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk has
+        // rollback_index:1
+        uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
+
+        getVirtualMachineManager().testOnlyClearCache();
+
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk", "-d");
+
+        VirtualMachine vm3 = getVirtualMachineManager().get("multi_tenant_instance_spec_rollback");
+        BootResult bootResult = tryBootVm(TAG, vm3);
+        assertThat(bootResult.payloadStarted).isFalse();
+        assertThat(bootResult.deathReason)
+                .isEqualTo(
+                        VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_VERIFICATION_FAILED);
+    }
+
+    @Test
+    @CddTest
+    public void multiTenantBootFailsWithoutSecretkeeper() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeFalse(
+                "This test runs only when Secretkeeper is not supported", isUpdatableVmSupported());
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_tenant_rollback_index_instance_spec.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+
+        VirtualMachine vm = forceCreateNewVirtualMachine("multi_tenant_no_sk_should_fail", config);
+        BootResult bootResult = tryBootVm(TAG, vm);
+        assertThat(bootResult.payloadStarted).isFalse();
+        assertThat(bootResult.deathReason)
+                .isEqualTo(VirtualMachineCallback.STOP_REASON_MICRODROID_INVALID_PAYLOAD_CONFIG);
     }
 
     private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)
@@ -3706,6 +3790,37 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(config1.isCompatibleWith(config2)).isFalse();
     }
 
+    /**
+     * Tests the end-to-end flow of mounting encrypted assets within the VM.
+     *
+     * <p>This test verifies that the payload can request to mount an encrypted image bundled in the
+     * APK assets, and that the content of the decrypted filesystem is accessible at the expected
+     * mount point.
+     */
+    @Test
+    public void mountEncryptedAssets() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so").build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_encrypted_asset", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mEncryptedAssetsPath =
+                                    ts.mountEncryptedAssets("/mnt/apk/assets/encrypted_assets.bin");
+                            tr.mFileContent =
+                                    ts.readFromFile(tr.mEncryptedAssetsPath + "/file.txt");
+                        });
+        testResults.assertNoException();
+
+        assertThat(testResults.mEncryptedAssetsPath).isEqualTo("/mnt/encrypted_assets");
+        assertThat(testResults.mFileContent).isEqualTo("Top secret in encrypted assets!\n");
+    }
+
     private static class VmShareServiceConnection implements ServiceConnection {
 
         private final CountDownLatch mLatch = new CountDownLatch(1);
@@ -3865,6 +3980,64 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
         assertThat(testResults.mHostname).isEqualTo("test_vm-name42");
+    }
+
+    // Verify Microdroid fails to boot immediately when presented with a stale disk image
+    @Test
+    public void staleEncryptedstoreDetection() throws Exception {
+        assumeSupportedDevice();
+
+        // Create and run misc_vm.
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine misc_vm = forceCreateNewVirtualMachine("misc_vm", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        misc_vm,
+                        (ts, tr) -> {
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ "/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+
+        // Create vm_under_test
+        VirtualMachine vm_under_test = forceCreateNewVirtualMachine("vm_under_test", config);
+        // Plug the disk of `misc_vm` into the newly created `vm_under_test`
+        Files.copy(
+                getVmFile("misc_vm", "storage.img").toPath(),
+                getVmFile("vm_under_test", "storage.img").toPath(),
+                REPLACE_EXISTING);
+
+        // Rerun `vm_under_test` with stale disk
+        var onPayloadReadyExecuted = new CompletableFuture<Boolean>();
+        var onErrorExecuted = new CompletableFuture<Boolean>();
+        var errorMessage = new CompletableFuture<String>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        onPayloadReadyExecuted.complete(true);
+                        super.onPayloadReady(vm);
+                    }
+
+                    @Override
+                    public void onError(VirtualMachine vm, int errorCode, String message) {
+                        onErrorExecuted.complete(true);
+                        errorMessage.complete(message);
+                        super.onError(vm, errorCode, message);
+                    }
+                };
+        listener.runToFinish(TAG, vm_under_test);
+
+        assertThat(onPayloadReadyExecuted.getNow(false)).isFalse();
+        assertThat(onErrorExecuted.getNow(false)).isTrue();
+        assertThat(errorMessage.getNow("")).contains("Detected stale encryptedstore");
     }
 
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {

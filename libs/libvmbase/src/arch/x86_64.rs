@@ -21,3 +21,5 @@ pub mod platform;
 pub mod port;
 pub mod rand;
 pub mod uart;
+
+mod idmap;

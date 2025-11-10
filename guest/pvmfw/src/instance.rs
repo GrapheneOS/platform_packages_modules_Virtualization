@@ -101,10 +101,10 @@ fn aead_ctx_from_secret(secret: &[u8]) -> Result<AeadContext> {
 /// Get the entry from instance.img. This method additionally returns Partition corresponding to
 /// pvmfw in the instance.img as well as index corresponding to empty header which can be used to
 /// record instance data with `record_instance_entry`.
-pub(crate) fn get_recorded_entry(
-    pci_root: &mut PciRoot<impl ConfigurationAccess>,
+pub(crate) fn get_recorded_entry<'a>(
+    pci_root: &'a mut PciRoot<impl ConfigurationAccess>,
     secret: &[u8],
-) -> Result<(Option<EntryBody>, Partition, usize)> {
+) -> Result<(Option<EntryBody>, Partition<'a>, usize)> {
     let mut instance_img = find_instance_img(pci_root)?;
 
     let entry = locate_entry(&mut instance_img)?;

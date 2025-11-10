@@ -19,7 +19,7 @@ use crate::arch::aarch64::set_tcr_el1_ha_hd;
 use crate::arch::flush_region;
 use crate::dsb;
 use crate::isb;
-use crate::mmu::{MmuOps, MmuResult};
+use crate::mmu::{MmuError, MmuOps, MmuResult};
 use crate::read_sysreg;
 use crate::tlbi;
 use aarch64_paging::idmap::IdMap;
@@ -175,6 +175,11 @@ impl MmuOps for PageTable {
             Ok(())
         })?;
         Ok(())
+    }
+
+    // aarch64 doesn't support unmap for now.
+    fn unmap(&mut self, range: &Range<usize>) -> MmuResult<()> {
+        Err(MmuError::RegionLocked(range.clone()))
     }
 
     fn sync_dirty_state(&mut self) -> MmuResult<()> {

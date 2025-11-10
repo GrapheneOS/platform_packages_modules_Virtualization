@@ -67,12 +67,10 @@ cc_genrule {
         },
     },
     out: ["test_vm_os.S"],
-    cmd: "(" +
-        "    echo '.section .vm_payload_signed.bin';" +
-        "    echo '.globl vm_payload_signed';" +
-        "    echo 'vm_payload_signed:';" +
-        "    echo '.incbin \"'$(in)'\"';" +
-        ") > $(out)",
+    tools: [
+        "gen_signed_vm_assembly_file",
+    ],
+    cmd: "$(location gen_signed_vm_assembly_file) $(in) $(out)",
     visibility: ["//visibility:private"],
 }
 

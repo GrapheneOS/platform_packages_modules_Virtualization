@@ -16,6 +16,7 @@
 
 mod cgroup_monitor;
 mod dice;
+mod encrypted_assets;
 mod encrypted_store_kek;
 mod instance;
 mod ioutil;
@@ -393,8 +394,8 @@ fn try_main() -> Result<()> {
 fn verify_payload_with_instance_img(
     metadata: &Metadata,
     dice: &DiceDriver,
+    instance: &mut InstanceDisk,
 ) -> Result<(MicrodroidData, Vec<ApexData>, bool)> {
-    let mut instance = InstanceDisk::new().context("Failed to load instance.img")?;
     let saved_data = instance.read_microdroid_data(dice).context("Failed to read identity data")?;
 
     if is_strict_boot() {
@@ -478,6 +479,8 @@ fn try_run_payload(
             .context("Failed to load DICE from driver")?
     };
 
+    let mut instance_disk = InstanceDisk::new().context("Failed to load instance.img")?;
+
     // Microdroid skips checking payload against instance image iff the device supports
     // secretkeeper. In that case Microdroid use VmSecret::V2, which provides instance state
     // and protection against rollback of boot images and packages.
@@ -486,7 +489,7 @@ fn try_run_payload(
         (instance_data, tenant_apex_data, VmInstanceState::Unknown)
     } else {
         let (instance_data, tenant_apex_data, is_newly_created) =
-            verify_payload_with_instance_img(&metadata, &dice)?;
+            verify_payload_with_instance_img(&metadata, &dice, &mut instance_disk)?;
         (
             instance_data,
             tenant_apex_data,
@@ -527,17 +530,12 @@ fn try_run_payload(
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
     })?;
 
-    let tenant_apks_data_extracted_from_manifest = integrity_protect_tenant_apks()?;
+    let tenant_apks = integrity_protect_tenant_apks()?;
 
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
-    let dice_artifacts = dice_derivation(
-        dice,
-        &instance_data,
-        &payload_metadata,
-        &tenant_apks_data_extracted_from_manifest,
-        &tenant_apex_data,
-    )?;
+    let dice_artifacts =
+        dice_derivation(dice, &instance_data, &payload_metadata, &tenant_apks, &tenant_apex_data)?;
     let (vm_secret, is_new_instance) =
         VmSecret::new(dice_artifacts, service, state).context("Failed to create VM secrets")?;
     let vm_secret = Arc::new(vm_secret);
@@ -601,10 +599,25 @@ fn try_run_payload(
         .context("Failed to mount extra apks")?;
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
-    validate_tenant_apks_against_tenant_config(
-        &tenant_apks_data_extracted_from_manifest,
-        &config.tenants,
-    )?;
+    validate_tenant_apks_against_tenant_config(&tenant_apks, &config.tenants)?;
+    let tenant_manager = TenantManager::initialize(&config.tenants)?;
+    let tenant_manager = Arc::new(tenant_manager);
+
+    if !config.tenants.is_empty() && matches!(*vm_secret, VmSecret::V1 { .. }) {
+        bail!(MicrodroidError::PayloadInvalidConfig(
+            "Tenants are not supported with V1 secrets.".to_string()
+        ));
+    }
+
+    if !config.tenants.is_empty() {
+        tenant::validate_tenants_against_existing_spec_update_spec(
+            is_new_instance,
+            &mut instance_disk,
+            &tenant_manager,
+            tenant_apks,
+            tenant_apex_data,
+        )?;
+    }
 
     // TODO(b/429639517): Validate tenant apex against tenant_config
     let tenant_apk_count =
@@ -626,13 +639,20 @@ fn try_run_payload(
         VM_INTERNAL_SERVICE_SOCKET_NAME,
     )?;
 
-    let tenant_manager = TenantManager::initialize(&config.tenants)?;
-    let tenant_manager = Arc::new(tenant_manager);
-
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
     let encryptedstore_child = if Path::new(ENCRYPTEDSTORE_BACKING_DEVICE).exists() {
+        let disk_is_new = needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
+            .context("failed to check if device formatted")?;
+        if is_new_instance && !disk_is_new {
+            bail!(MicrodroidError::PayloadInvalidConfig(
+                "InvalidKey: Unable to prepare encrypted storage.\
+                    Detected stale encryptedstore whilst VM is new (with new keys)."
+                    .to_string()
+            ));
+        }
+
         if config.delay_encrypted_store_setup {
             let service_clone = service.clone();
             let vm_secret_for_enc_store = vm_secret.clone();
@@ -645,6 +665,8 @@ fn try_run_payload(
                     service_clone,
                     vm_secret_for_enc_store,
                     tenant_manager_for_enc_store,
+                    // Encrytedstore disk has never been setup - force provision a new KEK!
+                    disk_is_new, // provision_new_key
                 ) {
                     // Ideally we'd communicate this back to the main thread and error out in a
                     // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
@@ -1216,7 +1238,7 @@ fn exec_task(
 fn find_library_path(package_name: &str, lib_name: &str, is_apex: bool) -> Result<String> {
     let paths = if !is_apex {
         let mut watcher = PropertyWatcher::new("ro.product.cpu.abilist")?;
-        let value = watcher.read(|_name, value| Ok(value.trim().to_string()))?;
+        let value = watcher.read(|_name, value| value.trim().to_string())?;
         let abi = value.split(',').next().ok_or_else(|| anyhow!("no abilist"))?;
         [
             format!("{package_name}/lib/{abi}/{lib_name}"),
@@ -1323,6 +1345,7 @@ fn delayed_prepare_encryptedstore(
     service: Strong<dyn IVirtualMachineService>,
     vm_secret: Arc<VmSecret>,
     tenant_manager: Arc<TenantManager>,
+    provision_new_key: bool,
 ) -> Result<()> {
     info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
     wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
@@ -1332,7 +1355,7 @@ fn delayed_prepare_encryptedstore(
     let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
     match encrypted_store_mode {
         EncryptedStoreMode::KEKsStoredOnHost => {
-            encrypted_store_key(&service, &vm_secret, &mut key)
+            encrypted_store_key(&service, &vm_secret, provision_new_key, &mut key)
                 .context("KEK based encrypted store key setup failed")?;
         }
         EncryptedStoreMode::DefaultKey => {
@@ -1355,6 +1378,7 @@ fn delayed_prepare_encryptedstore(
 fn encrypted_store_key(
     service: &Strong<dyn IVirtualMachineService>,
     vm_secret: &VmSecret,
+    provision_new_key: bool,
     key: &mut [u8],
 ) -> Result<()> {
     let kek_wrapper =
@@ -1370,10 +1394,7 @@ fn encrypted_store_key(
     vm_secret
         .derive_encryptedstore_key_encryption_key(&mut encryption_key)
         .context("failed to derive encryptedstore_key encryption key")?;
-    if needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
-        .context("failed to check if device formatted")?
-    {
-        // Encrytedstore disk has never been setup - force provision a new KEK!
+    if provision_new_key {
         info!("Creating new KEK blob");
         vm_secret.derive_random_key(key).context("derive random key")?;
         let encrypted_kek = encrypt_kek(key, &encryption_key).context("failed to encrypt KEK")?;

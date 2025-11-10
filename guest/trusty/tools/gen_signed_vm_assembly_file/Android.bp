@@ -1,0 +1,8 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+sh_binary_host {
+    name: "gen_signed_vm_assembly_file",
+    src: "gen_signed_vm_assembly_file.sh",
+}

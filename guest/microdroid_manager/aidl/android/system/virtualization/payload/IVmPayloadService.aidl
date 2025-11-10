@@ -139,4 +139,29 @@ interface IVmPayloadService {
      * @return true on the first boot of the instance & false on subsequent boot.
      */
     boolean isNewInstance();
+
+    /**
+     * Creates a dm-crypt mapping over an encrypted image file and mounts the contained filesystem.
+     *
+     * This function allows a payload to mount a read-only filesystem image that is encrypted.
+     * The image must be located within the APK's assets directory.
+     * The filesystem is mounted read-only and executable.
+     *
+     * @param imagePath Absolute path to the encrypted filesystem image file.
+     *                  Must be under the APK assets directory.
+     * @param fsType The filesystem type of the image (e.g., "erofs").
+     * @param cipher The encryption cipher to use for dm-crypt.
+     *               Supported values are "aes-xts-plain64" and "aes-hctr2-plain64".
+     * @param key Raw encryption key bytes.
+     * @param sectorSize The logical sector size of the block device in bytes.
+     *                   Must be a power of two between 512 and 4096.
+     *
+     * @return The absolute path to the mount point on success.
+     * @throws IllegalArgumentException if any of the arguments are invalid (e.g., bad path,
+     *                                  unsupported fsType or cipher, invalid sectorSize).
+     * @throws ServiceSpecificException for any other internal failures during the mount process.
+     */
+    @utf8InCpp String mountEncryptedAssets(in @utf8InCpp String imagePath,
+            in @utf8InCpp String fsType, in @utf8InCpp String cipher, in byte[] key,
+            in int sectorSize);
 }

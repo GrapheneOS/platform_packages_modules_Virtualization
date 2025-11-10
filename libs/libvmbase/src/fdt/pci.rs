@@ -14,11 +14,13 @@
 
 //! Library for working with (VirtIO) PCI devices discovered from a device tree.
 
+use super::SwiotlbInfo;
+use crate::virtio::pci::{self, PciInfo, PciInfoType};
 use core::ops::Range;
 use libfdt::{AddressRange, Fdt, FdtError, FdtNode};
-use log::debug;
+use log::{debug, error};
 use thiserror::Error;
-use virtio_drivers::transport::pci::bus::{Cam, ConfigurationAccess, MmioCam, PciRoot};
+use virtio_drivers::transport::pci::bus::{ConfigurationAccess, PciRoot};
 
 /// PCI MMIO configuration region size.
 const PCI_CFG_SIZE: usize = 0x100_0000;
@@ -29,6 +31,9 @@ pub enum PciError {
     /// Error getting PCI node from FDT.
     #[error("Error getting PCI node from FDT: {0}")]
     FdtErrorPci(FdtError),
+    /// Error getting swiotlb info from FDT.
+    #[error("Error getting swiotlb info from FDT: {0}")]
+    FdtErrorSwiotlb(FdtError),
     /// Failed to find PCI bus in FDT.
     #[error("Failed to find PCI bus in FDT.")]
     FdtNoPci,
@@ -64,41 +69,27 @@ pub enum PciError {
     /// No suitable PCI memory range found.
     #[error("No suitable PCI memory range found.")]
     NoSuitableRange,
+    /// Error constructing PciRoot from cam and bar range.
+    #[error("Error initializing PciRoot")]
+    VirtioPciError,
 }
 
-/// Information about the PCI bus parsed from the device tree.
-#[derive(Clone, Debug)]
-pub struct PciInfo {
-    /// The MMIO range used by the memory-mapped PCI CAM.
-    pub cam_range: Range<usize>,
-    /// The MMIO range from which 32-bit PCI BARs should be allocated.
-    pub bar_range: Range<u32>,
-}
+/// Finds the PCI node in the FDT, parses the cam and bar ranges and constructs PciRoot
+pub fn initialize_from_fdt(fdt: &Fdt) -> Result<PciRoot<impl ConfigurationAccess>, PciError> {
+    let swiotlb_range = SwiotlbInfo::new_from_fdt(fdt)
+        .map_err(PciError::FdtErrorSwiotlb)?
+        .and_then(|info| info.fixed_range());
 
-impl PciInfo {
-    /// Finds the PCI node in the FDT, parses its properties and validates it.
-    pub fn from_fdt(fdt: &Fdt) -> Result<Self, PciError> {
-        let pci_node = pci_node(fdt)?;
-
-        let cam_range = parse_cam_range(&pci_node)?;
-        let bar_range = parse_ranges(&pci_node)?;
-
-        Ok(Self { cam_range, bar_range })
-    }
-
-    /// Returns the `PciRoot` for the memory-mapped CAM found in the FDT. The CAM should be mapped
-    /// before this is called, by calling [`PciInfo::map`].
-    ///
-    /// # Safety
-    ///
-    /// To prevent concurrent access, only one `PciRoot` should exist in the program. Thus this
-    /// method must only be called once, and there must be no other `PciRoot` constructed using the
-    /// same CAM.
-    pub unsafe fn make_pci_root(&self) -> PciRoot<impl ConfigurationAccess> {
-        // SAFETY: We trust that the FDT gave us a valid MMIO base address for the CAM. The caller
-        // guarantees to only call us once, so there are no other references to it.
-        PciRoot::new(unsafe { MmioCam::new(self.cam_range.start as *mut u8, Cam::MmioCam) })
-    }
+    let pci_node = pci_node(fdt)?;
+    let pci_info = PciInfo {
+        cam_range: parse_cam_range(&pci_node)?,
+        bar_range: Some(parse_ranges(&pci_node)?),
+    };
+    debug!("PCI: {pci_info:#x?}");
+    pci::initialize(PciInfoType::MmioPciInfo(pci_info), swiotlb_range.as_ref()).map_err(|e| {
+        error!("Failed to initialize PCI: {e}");
+        PciError::VirtioPciError
+    })
 }
 
 /// Finds an FDT node with compatible=pci-host-cam-generic.

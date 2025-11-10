@@ -348,7 +348,7 @@ int AVirtualMachine_createRaw(const AVirtualizationService* _Nonnull service,
  * \param vm a handle on a stopped virtual machine
  * \param reason the reason why the virtual machine stopped
  * \param data an optional callback data passed to
- * AVirtualMachine_startWithCallback
+ * AVirtualMachine_startWithStopCallback
  */
 typedef void (*AVirtualMachine_stopCallback)(AVirtualMachine* _Nonnull vm,
                                              enum AVirtualMachineStopReason reason,
@@ -367,10 +367,12 @@ typedef void (*AVirtualMachine_stopCallback)(AVirtualMachine* _Nonnull vm,
 int AVirtualMachine_start(AVirtualMachine* _Nonnull vm) __INTRODUCED_IN(36);
 
 /**
- * Start a virtual machine. `AVirtualMachine_startWithCallback` is synchronous and blocks until
+ * Start a virtual machine. `AVirtualMachine_startWithStopCallback` is synchronous and blocks until
  * the virtual machine is initialized and free to start executing code, or until an error happens.
  *
  * A stopped virtual machine cannot be re-started.
+ *
+ * The callback would be called on an arbitrary thread, so synchronize if necessary.
  *
  * \param vm a handle on a virtual machine.
  * \param callback an optional callback to be called when VM stops. It would be called only once.
@@ -378,9 +380,9 @@ int AVirtualMachine_start(AVirtualMachine* _Nonnull vm) __INTRODUCED_IN(36);
  *
  * \return If successful, it returns 0. Otherwise, it returns `-EIO`.
  */
-int AVirtualMachine_startWithCallback(AVirtualMachine* _Nonnull vm,
-                                      const AVirtualMachine_stopCallback _Nullable callback,
-                                      void* _Null_unspecified data) __INTRODUCED_IN(37);
+int AVirtualMachine_startWithStopCallback(AVirtualMachine* _Nonnull vm,
+                                          const AVirtualMachine_stopCallback _Nullable callback,
+                                          void* _Null_unspecified data) __INTRODUCED_IN(37);
 
 /**
  * Stop a virtual machine. Stopping a virtual machine is like pulling the plug on a real computer;

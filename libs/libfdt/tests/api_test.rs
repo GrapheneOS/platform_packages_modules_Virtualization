@@ -251,7 +251,7 @@ fn node_nop() {
 }
 
 #[test]
-fn node_add_subnode_with_namelen() {
+fn node_add_subnode_raw() {
     let mut data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
     data.resize(data.len() * 2, 0_u8);
 
@@ -264,13 +264,13 @@ fn node_add_subnode_with_namelen() {
     for len in 0..subnode_name.to_bytes().len() {
         let name = &subnode_name.to_bytes()[0..len];
         let node = fdt.node(node_path).unwrap().unwrap();
-        assert_eq!(Ok(None), node.subnode_with_name_bytes(name));
+        assert_eq!(Ok(None), node.subnode_raw(name));
 
         let node = fdt.node_mut(node_path).unwrap().unwrap();
-        let _ = node.add_subnode_with_namelen(subnode_name, len).unwrap();
+        let _ = node.add_subnode_raw(name).unwrap();
 
         let node = fdt.node(node_path).unwrap().unwrap();
-        assert_ne!(Ok(None), node.subnode_with_name_bytes(name));
+        assert_ne!(Ok(None), node.subnode_raw(name));
     }
 
     let node_path = node_path.to_str().unwrap();
@@ -304,7 +304,7 @@ fn node_subnode_with_name_bytes() {
 
     let name = b"node_aaaaa";
     let root = fdt.root();
-    let node = root.subnode_with_name_bytes(&name[0..6]).unwrap();
+    let node = root.subnode_raw(&name[0..6]).unwrap();
     assert_ne!(None, node);
     let node = node.unwrap();
 
