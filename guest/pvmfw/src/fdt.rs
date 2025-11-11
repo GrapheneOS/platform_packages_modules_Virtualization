@@ -555,22 +555,6 @@ fn extract_node_props(
     Ok(props)
 }
 
-/// Read candidate properties' names from DT which could be overlaid
-fn parse_vm_ref_dt(fdt: &Fdt) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
-    let mut property_map = BTreeMap::new();
-    if let Some(avf_node) = fdt.node(c"/avf")? {
-        for property in avf_node.properties()? {
-            let name = property.name()?;
-            let value = property.value()?;
-            property_map.insert(
-                CString::new(name.to_bytes()).map_err(|_| FdtError::BadValue)?,
-                value.to_vec(),
-            );
-        }
-    }
-    Ok(property_map)
-}
-
 fn reject_forbidden_untrusted_props(
     props: &BTreeMap<CString, Vec<u8>>,
 ) -> Result<(), FdtValidationError> {
@@ -585,33 +569,44 @@ fn reject_forbidden_untrusted_props(
     Ok(())
 }
 
-/// Overlay VM reference DT into VM DT based on the props_info. Property is overlaid in vm_dt only
-/// when it exists both in vm_ref_dt and props_info. If the values mismatch, it returns error.
-fn validate_vm_ref_dt(
-    vm_dt: &mut Fdt,
-    vm_ref_dt: &Fdt,
-    props_info: &BTreeMap<CString, Vec<u8>>,
-) -> libfdt::Result<()> {
-    if props_info.is_empty() {
-        return Ok(());
+/// Prunes properties missing from the node or with a different value. Warns when pruning.
+fn prune_props_based_on_node(
+    mut props: BTreeMap<CString, Vec<u8>>,
+    fdt: &Fdt,
+    path: &CStr,
+) -> libfdt::Result<BTreeMap<CString, Vec<u8>>> {
+    if props.is_empty() {
+        return Ok(props); // No pruning required.
     }
-    let root_vm_dt = vm_dt.root_mut();
-    let mut avf_vm_dt = root_vm_dt.add_subnode(c"avf")?;
-    // TODO(b/318431677): Validate nodes beyond /avf.
-    let avf_node = vm_ref_dt.node(c"/avf")?.ok_or(FdtError::NotFound)?;
-    for (name, value) in props_info.iter() {
-        if let Some(ref_value) = avf_node.getprop(name)? {
-            if value != ref_value {
-                error!(
-                    "Property mismatches while applying overlay VM reference DT. \
-                    Name:{name:?}, Value from host as hex:{value:x?}, Value from VM reference DT as hex:{ref_value:x?}"
-                );
-                return Err(FdtError::BadValue);
-            }
-            avf_vm_dt.setprop(name, ref_value)?;
+
+    let node = fdt.node(path)?.ok_or_else(|| {
+        for name in props.keys() {
+            error!("Rejecting '{path:?}' property '{name:?}': reference node missing");
+        }
+        FdtError::BadValue
+    })?;
+
+    let mut pruned = Vec::new();
+    for (name, value) in props.iter() {
+        let Some(expected_value) = node.getprop(name).inspect_err(|&e| {
+            error!("Failed to read reference DT '{path:?}' property '{name:?}': {e}");
+        })?
+        else {
+            warn!("Pruning '{path:?}' of property '{name:?}': reference property not found");
+            pruned.push(name.to_owned());
+            continue; // TODO(ptosi): Turn this into a hard error.
+        };
+        if value != expected_value {
+            error!("Rejecting '{path:?}' of property '{name:?}': invalid value");
+            error!("\t'{name:?}' expected value: {expected_value:x?}");
+            error!("\t'{name:?}' actual value: {value:x?}");
+            return Err(FdtError::BadValue);
         }
     }
-    Ok(())
+    for name in pruned {
+        let _ = props.remove(&name);
+    }
+    Ok(props)
 }
 
 #[derive(Debug)]
@@ -1160,7 +1155,7 @@ pub struct DeviceTreeInfo {
     pub swiotlb_info: Option<SwiotlbInfo>,
     device_assignment: Option<DeviceAssignmentInfo>,
     untrusted_props: BTreeMap<CString, Vec<u8>>,
-    vm_ref_dt_props_info: BTreeMap<CString, Vec<u8>>,
+    avf_props: BTreeMap<CString, Vec<u8>>,
     vcpufreq_info: Option<VcpufreqInfo>,
     wdt_info: Option<WdtInfo>,
     psci: Option<PsciInfo>,
@@ -1183,15 +1178,25 @@ pub fn sanitize_device_tree<'a>(
     guest_page_size: usize,
     hyp_page_size: Option<usize>,
 ) -> Result<&'a mut Fdt, RebootReason> {
-    let vm_dtbo = match vm_dtbo {
-        Some(vm_dtbo) => Some(VmDtbo::from_mut_slice(vm_dtbo).map_err(|e| {
+    let vm_ref_dt = if let Some(buffer) = vm_ref_dt {
+        Some(Fdt::from_slice(buffer).map_err(|e| {
+            error!("Failed to load VM reference DT: {e}");
+            RebootReason::InvalidFdt
+        })?)
+    } else {
+        None
+    };
+    let vm_dtbo = if let Some(buffer) = vm_dtbo {
+        Some(VmDtbo::from_mut_slice(buffer).map_err(|e| {
             error!("Failed to load VM DTBO: {e}");
             RebootReason::InvalidFdt
-        })?),
-        None => None,
+        })?)
+    } else {
+        None
     };
 
-    let info = parse_device_tree(fdt, vm_dtbo.as_deref(), guest_page_size, hyp_page_size)?;
+    let info =
+        parse_device_tree(fdt, vm_dtbo.as_deref(), vm_ref_dt, guest_page_size, hyp_page_size)?;
 
     fdt.clone_from(FDT_TEMPLATE).map_err(|e| {
         error!("Failed to instantiate FDT from the template DT: {e}");
@@ -1220,18 +1225,6 @@ pub fn sanitize_device_tree<'a>(
         }
     }
 
-    if let Some(vm_ref_dt) = vm_ref_dt {
-        let vm_ref_dt = Fdt::from_slice(vm_ref_dt).map_err(|e| {
-            error!("Failed to load VM reference DT: {e}");
-            RebootReason::InvalidFdt
-        })?;
-
-        validate_vm_ref_dt(fdt, vm_ref_dt, &info.vm_ref_dt_props_info).map_err(|e| {
-            error!("Failed to apply VM reference DT: {e}");
-            RebootReason::InvalidFdt
-        })?;
-    }
-
     patch_device_tree(fdt, &info)?;
 
     // TODO(b/317201360): Ensure no overlapping in <reg> among devices
@@ -1247,6 +1240,7 @@ pub fn sanitize_device_tree<'a>(
 fn parse_device_tree(
     fdt: &Fdt,
     vm_dtbo: Option<&VmDtbo>,
+    vm_ref_dt: Option<&Fdt>,
     guest_page_size: usize,
     hyp_page_size: Option<usize>,
 ) -> Result<DeviceTreeInfo, RebootReason> {
@@ -1357,10 +1351,18 @@ fn parse_device_tree(
         RebootReason::InvalidFdt
     })?;
 
-    let vm_ref_dt_props_info = parse_vm_ref_dt(fdt).map_err(|e| {
-        error!("Failed to read names of properties under /avf from DT: {e}");
-        RebootReason::InvalidFdt
-    })?;
+    let avf_props = if let Some(vm_ref_dt) = vm_ref_dt {
+        let props = extract_node_props(fdt, c"/avf", false).map_err(|e| {
+            error!("Failed to read /avf properties: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        prune_props_based_on_node(props, vm_ref_dt, c"/avf").map_err(|e| {
+            error!("Failed to validate /avf properties: {e}");
+            RebootReason::InvalidFdt
+        })?
+    } else {
+        Default::default()
+    };
 
     Ok(DeviceTreeInfo {
         initrd_range,
@@ -1373,7 +1375,7 @@ fn parse_device_tree(
         swiotlb_info,
         device_assignment,
         untrusted_props,
-        vm_ref_dt_props_info,
+        avf_props,
         vcpufreq_info,
         wdt_info,
         psci,
@@ -1462,6 +1464,17 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         })?;
         populate_node(&mut node, &info.untrusted_props).map_err(|e| {
             error!("Failed to populate /avf/untrusted: {e}");
+            RebootReason::InvalidFdt
+        })?;
+    }
+
+    if !info.avf_props.is_empty() {
+        let mut node = fdt.find_or_add_node_mut(c"/avf").map_err(|e| {
+            error!("Failed to create node /avf: {e}");
+            RebootReason::InvalidFdt
+        })?;
+        populate_node(&mut node, &info.avf_props).map_err(|e| {
+            error!("Failed to populate /avf: {e}");
             RebootReason::InvalidFdt
         })?;
     }
