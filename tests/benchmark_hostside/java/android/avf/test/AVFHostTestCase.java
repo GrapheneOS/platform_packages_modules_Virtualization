@@ -37,10 +37,13 @@ import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.device.TestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
-import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
+import com.android.tradefed.testtype.junit4.DeviceParameterizedRunner;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.Pair;
 import com.android.tradefed.util.SimpleStats;
+
+import junitparams.Parameters;
+import junitparams.naming.TestCaseName;
 
 import org.junit.After;
 import org.junit.Before;
@@ -58,7 +61,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @RootPermissionTest
-@RunWith(DeviceJUnit4ClassRunner.class)
+@RunWith(DeviceParameterizedRunner.class)
 public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
     private static final String COMPOSD_CMD_BIN = "/apex/com.android.compos/bin/composd_cmd";
@@ -136,36 +139,6 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    public void testNoLongHypSections() throws Exception {
-        noLongHypSectionsHelper("microdroid");
-    }
-
-    @Test
-    public void testNoLongHypSections_os_android15_66() throws Exception {
-        noLongHypSectionsHelper("android15_66");
-    }
-
-    @Test
-    public void testNoLongHypSections_os_microdroid_16k() throws Exception {
-        noLongHypSectionsHelper("microdroid_16k");
-    }
-
-    @Test
-    public void testPsciMemProtect() throws Exception {
-        psciMemProtectHelper("microdroid");
-    }
-
-    @Test
-    public void testPsciMemProtect_os_android15_66() throws Exception {
-        psciMemProtectHelper("android15_66");
-    }
-
-    @Test
-    public void testPsciMemProtect_os_microdroid_16k() throws Exception {
-        psciMemProtectHelper("microdroid_16k");
-    }
-
-    @Test
     public void testCameraAppStartupTime() throws Exception {
         String[] launchIntentPackages = {
             "com.android.camera2",
@@ -184,7 +157,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         appStartupHelper(launchIntentPackage);
     }
 
-    Callable<String> getSimpleMicrodroidPayload(String os, String name, long timeout)
+    Callable<String> getSimpleMicrodroidPayload(String os, String name, long timeout, boolean hugePages)
             throws Exception {
         final int MIN_MEM_ARM64 = 170;
         final String configPath = "assets/vm_config_apex.json"; // path inside the APK
@@ -195,29 +168,44 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                         .cpuTopology("match_host")
                         .protectedVm(true)
                         .os(os)
+                        .hugePages(hugePages)
                         .name(name);
 
         TestDevice testDevice = (TestDevice) getDevice();
 
+        CommandRunner r = new CommandRunner(getDevice());
+        final String SHMEM_ENABLED_PATH = "/sys/kernel/mm/transparent_hugepage/shmem_enabled";
+        Matcher m = Pattern.compile("\\[(\\S+)\\]").matcher(r.run("cat " + SHMEM_ENABLED_PATH));
+        m.find();
+        final String prevShmem = m.group(1);
+
         Callable<String> callable =
                 () -> {
-                    ITestDevice microdroid = microdroidBuilder.build(testDevice);
-                    microdroid.waitForBootComplete(timeout);
-
                     CommandRunner runner = new CommandRunner(getDevice());
-                    String pid = runner.run("pidof crosvm_" + name + " | cut -f1 -d' '");
-                    testDevice.shutdownMicrodroid(microdroid);
 
-                    /*
-                     * shutdownMicrodroid will kill the ADB connection. However
-                     * it doesn't guarantee crosvm is done i.e. the VM teardown
-                     * is complete and that all interesting events for testing
-                     * have been emitted.
-                     *
-                     * TODO(b/459708534): Use a wait method not relying on the
-                     * crosvm_ naming scheme.
-                     */
-                    runner.run("while ps -p " + pid + " 2>/dev/null; do sleep 1; done");
+                    String pid;
+
+                    try {
+                        if (hugePages) runner.run("echo advise > " + SHMEM_ENABLED_PATH);
+                        ITestDevice microdroid = microdroidBuilder.build(testDevice);
+                        microdroid.waitForBootComplete(timeout);
+
+                        pid = runner.run("pidof crosvm_" + name + " | cut -f1 -d' '");
+                        testDevice.shutdownMicrodroid(microdroid);
+
+                        /*
+                         * shutdownMicrodroid will kill the ADB connection. However
+                         * it doesn't guarantee crosvm is done i.e. the VM teardown
+                         * is complete and that all interesting events for testing
+                         * have been emitted.
+                         *
+                         * TODO(b/459708534): Use a wait method not relying on the
+                         * crosvm_ naming scheme.
+                         */
+                        runner.run("while ps -p " + pid + " 2>/dev/null; do sleep 1; done");
+                    } finally {
+                        runner.run("echo " + prevShmem + " > " + SHMEM_ENABLED_PATH);
+                    }
 
                     return pid;
                 };
@@ -225,12 +213,12 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         return callable;
     }
 
-    private void noLongHypSectionsHelper(String osKey) throws Exception {
+    @Test
+    @Parameters({"true", "false"})
+    @TestCaseName("{method}_hugepages_{0}")
+    public void noLongHypSections(boolean hugePages) throws Exception {
         final long timeout = 60 * 10 * 1000;
-
-        assumeKernelSupported(osKey);
-        assumeVmTypeSupported(osKey, true);
-        String os = SUPPORTED_OSES.get(osKey);
+        final String os = "microdroid";
 
         String[] hypEvents = {"hyp_enter", "hyp_exit"};
         assumeTrue(
@@ -263,7 +251,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hasFunc ? hypEventFuncs : hypEvents);
 
         try {
-            Callable payload = getSimpleMicrodroidPayload(os, "no_long_hyp_sections", timeout);
+            Callable payload =
+                    getSimpleMicrodroidPayload(os, "no_long_hyp_sections", timeout, hugePages);
             if (hasFunc) {
                 tracer.run(payload, NO_TRACE, 128 << 10, timeout);
             } else {
@@ -306,12 +295,12 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         CLog.i("Hypervisor traces parsed successfully.");
     }
 
-    public void psciMemProtectHelper(String osKey) throws Exception {
+    @Test
+    @Parameters({"true", "false"})
+    @TestCaseName("{method}_hugepages_{0}")
+    public void psciMemProtect(boolean hugePages) throws Exception {
         final long timeout = 60 * 10 * 1000;
-
-        assumeKernelSupported(osKey);
-        assumeVmTypeSupported(osKey, true);
-        String os = SUPPORTED_OSES.get(osKey);
+        final String os = "microdroid";
 
         String[] hypEvents = {"psci_mem_protect"};
 
@@ -324,7 +313,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         boolean vm_contention = android.run("/apex/com.android.virt/bin/vm list").contains("cid:");
 
         try {
-            tracer.run(getSimpleMicrodroidPayload(os, "psci_mem_protect_test", timeout));
+            tracer.run(getSimpleMicrodroidPayload(os, "psci_mem_protect_test", timeout, hugePages));
         } catch (Exception e) {
             throw new AssertionError("Failed to run payload (" + e.getMessage() + ")");
         }
