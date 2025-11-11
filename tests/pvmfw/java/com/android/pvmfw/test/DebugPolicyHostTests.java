@@ -21,6 +21,9 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import static org.junit.Assert.assertThrows;
 
+import android.cts.host.utils.DeviceJUnit4ClassRunnerWithParameters;
+import android.cts.host.utils.DeviceJUnit4Parameterized;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -29,7 +32,6 @@ import com.android.pvmfw.test.host.Pvmfw;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.DeviceRuntimeException;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
 
@@ -37,14 +39,25 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-/** Tests debug policy */
-@RunWith(DeviceJUnit4ClassRunner.class)
+/**
+ * Tests debug policy.
+ *
+ * <p>Strictly speaking, custom pvmfw isn't necessary for non-protected VM, but having all debug
+ * policy tests in one place is much convenient.
+ */
+@RunWith(DeviceJUnit4Parameterized.class)
+@UseParametersRunnerFactory(DeviceJUnit4ClassRunnerWithParameters.RunnerFactory.class)
 public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     @NonNull private static final String CUSTOM_DEBUG_POLICY_FILE_NAME = "debug_policy.dtb";
 
@@ -75,6 +88,14 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
 
     @Nullable private File mCustomDebugPolicyFileOnHost;
 
+    @Parameter(0)
+    public boolean mProtectedVm;
+
+    @Parameters(name = "protectedVm={0}")
+    public static Collection<Object[]> params() {
+        return Arrays.asList(new Object[][] {{false}, {true}});
+    }
+
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -95,7 +116,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     public void testAdbInDebugPolicy_withDebugLevelNone_bootWithAdbConnection() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_with_adb.dtbo");
 
-        launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
+        launchVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
     }
 
     @Test
@@ -103,7 +124,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
         prepareCustomDebugPolicy("avf_debug_policy_without_adb.dtbo");
 
         // VM would boot, but cannot verify directly because of no adbd in the VM.
-        CommandResult result = tryLaunchProtectedNonDebuggableVm();
+        CommandResult result = tryLaunchNonDebuggableVm();
         assertThat(result.getStatus()).isEqualTo(CommandStatus.TIMED_OUT);
         assertWithMessage("Microdroid should have booted")
                 .that(result.getStderr())
@@ -118,7 +139,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
                 "Microdroid shouldn't be recognized because of missing adb connection",
                 DeviceRuntimeException.class,
                 () ->
-                        launchProtectedVmAndWaitForBootCompleted(
+                        launchVmAndWaitForBootCompleted(
                                 MICRODROID_DEBUG_NONE, BOOT_FAILURE_WAIT_TIME_MS));
     }
 
@@ -126,13 +147,13 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     public void testNoAdbInDebugPolicy_withDebugLevelFull_bootWithAdbConnection() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_without_adb.dtbo");
 
-        launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_FULL);
+        launchVmAndWaitForBootCompleted(MICRODROID_DEBUG_FULL);
     }
 
     @Test
     public void testRamdumpInDebugPolicy_withDebugLevelNone_hasRamdumpArgs() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_with_ramdump.dtbo");
-        ITestDevice device = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
+        ITestDevice device = launchVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
 
         assertThat(readFileAsString(device, MICRODROID_CMDLINE_PATH)).contains("crashkernel=");
         assertThat(readFileAsString(device, MICRODROID_DT_BOOTARGS_PATH)).contains("crashkernel=");
@@ -143,7 +164,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     @Test
     public void testNoRamdumpInDebugPolicy_withDebugLevelNone_noRamdumpArgs() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_without_ramdump.dtbo");
-        ITestDevice device = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
+        ITestDevice device = launchVmAndWaitForBootCompleted(MICRODROID_DEBUG_NONE);
 
         assertThat(readFileAsString(device, MICRODROID_CMDLINE_PATH))
                 .doesNotContain("crashkernel=");
@@ -156,7 +177,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     @Test
     public void testNoRamdumpInDebugPolicy_withDebugLevelFull_hasRamdumpArgs() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_without_ramdump.dtbo");
-        ITestDevice device = launchProtectedVmAndWaitForBootCompleted(MICRODROID_DEBUG_FULL);
+        ITestDevice device = launchVmAndWaitForBootCompleted(MICRODROID_DEBUG_FULL);
 
         assertThat(readFileAsString(device, MICRODROID_CMDLINE_PATH)).contains("crashkernel=");
         assertThat(readFileAsString(device, MICRODROID_DT_BOOTARGS_PATH)).contains("crashkernel=");
@@ -168,7 +189,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     public void testLog_consoleOutput() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_with_log.dtbo");
 
-        CommandResult result = tryLaunchProtectedNonDebuggableVm();
+        CommandResult result = tryLaunchNonDebuggableVm();
 
         assertWithMessage("Microdroid's console message should have been enabled")
                 .that(hasConsoleOutput(result))
@@ -179,7 +200,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     public void testLog_logcat() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_with_log.dtbo");
 
-        tryLaunchProtectedNonDebuggableVm();
+        tryLaunchNonDebuggableVm();
 
         assertWithMessage("Microdroid's logcat should have been enabled")
                 .that(hasMicrodroidLogcatOutput())
@@ -190,7 +211,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
     public void testNoLog_noConsoleOutput() throws Exception {
         prepareCustomDebugPolicy("avf_debug_policy_without_log.dtbo");
 
-        CommandResult result = tryLaunchProtectedNonDebuggableVm();
+        CommandResult result = tryLaunchNonDebuggableVm();
 
         assertWithMessage("Microdroid's console message shouldn't have been disabled, " + result)
                 .that(hasConsoleOutput(result))
@@ -205,7 +226,7 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
                 "Microdroid shouldn't be recognized because of missing adb connection",
                 DeviceRuntimeException.class,
                 () ->
-                        launchProtectedVmAndWaitForBootCompleted(
+                        launchVmAndWaitForBootCompleted(
                                 MICRODROID_DEBUG_NONE, BOOT_FAILURE_WAIT_TIME_MS));
         assertThat(hasMicrodroidLogcatOutput()).isFalse();
     }
@@ -257,27 +278,29 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
 
     private boolean hasMicrodroidLogcatOutput() throws DeviceNotAvailableException {
         CommandResult result =
-                new CommandRunner(getDevice()).runForResult("test", "-s", MICRODROID_LOG_PATH);
+                new CommandRunner(getDevice())
+                        .runForResultWithTimeout(
+                                LOG_OUTPUT_TIMEOUT_MS, "test", "-s", MICRODROID_LOG_PATH);
         return result.getExitCode() == 0;
     }
 
-    public ITestDevice launchProtectedVmAndWaitForBootCompleted(String debugLevel)
+    public ITestDevice launchVmAndWaitForBootCompleted(String debugLevel)
             throws DeviceNotAvailableException {
-        return launchProtectedVmAndWaitForBootCompleted(debugLevel, BOOT_COMPLETE_TIMEOUT_MS);
+        return launchVmAndWaitForBootCompleted(debugLevel, BOOT_COMPLETE_TIMEOUT_MS);
     }
 
-    public ITestDevice launchProtectedVmAndWaitForBootCompleted(
-            String debugLevel, long adbTimeoutMs) throws DeviceNotAvailableException {
+    public ITestDevice launchVmAndWaitForBootCompleted(String debugLevel, long adbTimeoutMs)
+            throws DeviceNotAvailableException {
         Map<String, File> bootFiles =
                 Collections.singletonMap(
                         CUSTOM_DEBUG_POLICY_FILE_NAME, mCustomDebugPolicyFileOnHost);
 
-        return launchProtectedVmAndWaitForBootCompleted(debugLevel, adbTimeoutMs, bootFiles);
+        return launchVmAndWaitForBootCompleted(mProtectedVm, debugLevel, adbTimeoutMs, bootFiles);
     }
 
     // Try to launch protected non-debuggable VM for a while and quit.
     // Non-debuggable VM might not enable adb, so there's no ITestDevice instance of it.
-    private CommandResult tryLaunchProtectedNonDebuggableVm() throws Exception {
+    private CommandResult tryLaunchNonDebuggableVm() throws Exception {
         // Can't use MicrodroidBuilder because it expects adb connection
         // but non-debuggable VM may not enable adb.
         CommandRunner runner = new CommandRunner(getDevice());
@@ -296,19 +319,21 @@ public class DebugPolicyHostTests extends CustomPvmfwHostTestCaseBase {
                         "none",
                         "--log",
                         MICRODROID_LOG_PATH,
-                        "--protected",
                         getPathForPackage(PACKAGE_NAME),
                         TEST_ROOT + "idsig",
                         TEST_ROOT + "instance.img",
                         "--config-path",
                         MICRODROID_CONFIG_PATH);
+        if (mProtectedVm) {
+            command = String.join(" ", command, "--protected");
+        }
         if (isFeatureEnabled("com.android.kvm.LLPVM_CHANGES")) {
             command = String.join(" ", command, "--instance-id-file", TEST_ROOT + "instance_id");
         }
         return getDevice()
                 .executeShellV2Command(
                         command,
-                        CONSOLE_OUTPUT_WAIT_MS,
+                        CONSOLE_OUTPUT_TIMEOUT_MS,
                         TimeUnit.MILLISECONDS,
                         /* retryAttempts= */ 0);
     }

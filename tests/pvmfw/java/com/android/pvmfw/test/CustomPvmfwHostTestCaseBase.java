@@ -55,7 +55,8 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     @NonNull public static final String MICRODROID_CONSOLE_PATH = TEST_ROOT + "console.txt";
     public static final int BOOT_COMPLETE_TIMEOUT_MS = 30000; // 30 seconds
     public static final int BOOT_FAILURE_WAIT_TIME_MS = 10000; // 10 seconds
-    public static final int CONSOLE_OUTPUT_WAIT_MS = 5000; // 5 seconds
+    public static final int CONSOLE_OUTPUT_TIMEOUT_MS = 15000; // 15 seconds
+    public static final int LOG_OUTPUT_TIMEOUT_MS = 20000; // 20 seconds
 
     @NonNull public static final String CUSTOM_PVMFW_FILE_PREFIX = "pvmfw";
     @NonNull public static final String CUSTOM_PVMFW_FILE_SUFFIX = ".bin";
@@ -174,11 +175,25 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     public ITestDevice launchProtectedVmAndWaitForBootCompleted(
             String debugLevel, long adbTimeoutMs, @NonNull Map<String, File> bootFiles)
             throws DeviceNotAvailableException {
+        return launchVmAndWaitForBootCompleted(
+                /* protectedVm= */ true, debugLevel, adbTimeoutMs, bootFiles);
+    }
+
+    /**
+     * Launches VM and wait for boot completed. Custom pvmfw can be created by ({@link
+     * #getCustomPvmfwFile}) and passed in {@code bootFiles}. Throws exception when boot failed.
+     */
+    public ITestDevice launchVmAndWaitForBootCompleted(
+            boolean protectedVm,
+            String debugLevel,
+            long adbTimeoutMs,
+            @NonNull Map<String, File> bootFiles)
+            throws DeviceNotAvailableException {
         MicrodroidBuilder builder =
                 MicrodroidBuilder.fromDevicePath(
                                 getPathForPackage(PACKAGE_NAME), MICRODROID_CONFIG_PATH)
                         .debugLevel(debugLevel)
-                        .protectedVm(/* protectedVm= */ true)
+                        .protectedVm(protectedVm)
                         .addBootFile(mCustomPvmfwFileOnHost, PVMFW_FILE_NAME)
                         .setAdbConnectTimeoutMs(adbTimeoutMs);
         for (String name : bootFiles.keySet()) {
