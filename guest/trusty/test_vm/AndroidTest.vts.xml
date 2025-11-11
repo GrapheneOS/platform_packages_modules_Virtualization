@@ -50,7 +50,7 @@
         <option name="test-command-line" key="com.android.trusty.rust.authmgr_be_lib.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.authmgr_be_lib.test"/>
         <!--option name="test-command-line" key="com.android.trusty.rust.devicestate_test.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.devicestate_test.test"/-->
         <option name="test-command-line" key="com.android.trusty.rust.hwcryptokey_test.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.hwcryptokey_test.test"/>
-        <option name="test-command-line" key="com.android.trusty.rust.storage_unittest_aidl.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.storage_unittest_aidl.test"/>
+        <option name="test-command-line" key="com.android.trusty.rust.storage_unittest_aidl_ns.test" value="/data/local/tmp/trusty_test_vm/trusty-ut-ctrl.sh com.android.trusty.rust.storage_unittest_aidl_ns.test"/>
     </test>
     <metrics_collector class="com.android.tradefed.device.metric.FilePullerLogCollector">
         <option name="directory-keys" value="/data/local/tmp/trusty_test_vm/logs" />
