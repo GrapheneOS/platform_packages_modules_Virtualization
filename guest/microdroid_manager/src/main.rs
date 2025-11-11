@@ -28,7 +28,11 @@ mod vm_internal_service;
 mod vm_payload_service;
 mod vm_secret;
 
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::ErrorCode::ErrorCode;
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
+    ErrorCode::ErrorCode,
+    Atom::Atom,
+    Atom::StaleEncryptedstoreDetected::StaleEncryptedstoreDetected,
+};
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{
     BnVmInternalService, VM_INTERNAL_SERVICE_SOCKET_NAME,
@@ -646,6 +650,11 @@ fn try_run_payload(
         let disk_is_new = needs_formatting(Path::new(ENCRYPTEDSTORE_BACKING_DEVICE))
             .context("failed to check if device formatted")?;
         if is_new_instance && !disk_is_new {
+            if let Err(statsd_e) = service
+                .forwardAtom(&Atom::StaleEncryptedstoreDetected(StaleEncryptedstoreDetected {}))
+            {
+                error!("Failed to report StaleEncryptedstore: {statsd_e}");
+            }
             bail!(MicrodroidError::PayloadInvalidConfig(
                 "InvalidKey: Unable to prepare encrypted storage.\
                     Detected stale encryptedstore whilst VM is new (with new keys)."
