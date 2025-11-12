@@ -1156,6 +1156,11 @@ fn load_app_config(
         vm_config.gdbPort = custom_config.gdbPort;
     }
 
+    // Workaround until we can unconditionally start traced_relay services for debuggable VMs.
+    if system_properties::read_bool("microdroid.start_traced_relay", false).unwrap_or(false) {
+        append_kernel_param("androidboot.microdroid.start_traced_relay=1", &mut vm_config);
+    }
+
     if config.memoryMib > 0 {
         vm_config.memoryMib = config.memoryMib;
     }
