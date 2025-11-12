@@ -748,11 +748,15 @@ public final class VirtualMachineConfig {
             int guest_gid,
             String tagName,
             int mask,
-            String socketPath)
+            String socketPath,
+            boolean protectedVm)
             throws IOException {
         String ugidMapValue =
                 String.format("%d %d %d %d %d /", guest_uid, guest_gid, host_uid, host_uid, mask);
         String cfgArg = String.format("ugid_map='%s'", ugidMapValue);
+        if (protectedVm) {
+            cfgArg += ",unmap_guest_memory_on_fork=true";
+        }
         ProcessBuilder pb =
                 new ProcessBuilder(
                         "/apex/com.android.virt/bin/crosvm",
@@ -842,6 +846,7 @@ public final class VirtualMachineConfig {
             config.disks[i].partitions = partitions.toArray(new Partition[0]);
         }
 
+        config.protectedVm = this.mProtectedVm;
         config.sharedPaths =
                 new SharedPath
                         [Optional.ofNullable(customImageConfig.getSharedPaths())
@@ -859,7 +864,8 @@ public final class VirtualMachineConfig {
                             config.sharedPaths[i].guestGid,
                             config.sharedPaths[i].tag,
                             config.sharedPaths[i].mask,
-                            socketPath);
+                            socketPath,
+                            config.protectedVm);
                     long startTime = System.currentTimeMillis();
                     long deadline = startTime + 5000;
                     // TODO: use socketpair instead of crosvm creating the named sockets.
@@ -891,7 +897,6 @@ public final class VirtualMachineConfig {
                 Optional.ofNullable(customImageConfig.getGpuConfig())
                         .map(dc -> dc.toParcelable())
                         .orElse(null);
-        config.protectedVm = this.mProtectedVm;
         config.memoryMib = bytesToMebiBytes(mMemoryBytes);
         switch (this.mCpuTopology) {
             case CPU_TOPOLOGY_MATCH_HOST:

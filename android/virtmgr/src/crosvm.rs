@@ -2101,7 +2101,10 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
             0o777,
         );
 
-        let cfg_arg = format!("ugid_map='{ugid_map_value}'");
+        let mut cfg_arg = format!("ugid_map='{ugid_map_value}'");
+        if config.protected {
+            cfg_arg.push_str(",unmap_guest_memory_on_fork=true");
+        }
 
         let mut command = Command::new(CROSVM_PATH);
         command
