@@ -200,6 +200,7 @@ pub fn map_device(addr: usize, size: NonZeroUsize) -> Result<()> {
 }
 
 /// Handles a permission fault for a write to a data region, mapped as RO to track the dirty state.
+#[cfg_attr(target_arch = "x86_64", allow(dead_code))]
 pub(crate) fn handle_read_only_fault(addr: usize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
@@ -208,6 +209,7 @@ pub(crate) fn handle_read_only_fault(addr: usize) -> Result<()> {
 }
 
 /// Handler for faults triggered by accesses to MMIO, previously marked as lazy MMIO.
+#[cfg_attr(target_arch = "x86_64", allow(dead_code))]
 pub(crate) fn handle_lazy_mmio_fault(addr: usize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;

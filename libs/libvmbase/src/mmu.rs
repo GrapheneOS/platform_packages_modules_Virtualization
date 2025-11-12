@@ -33,6 +33,7 @@ pub(crate) enum MmuError {
     /// An update operation failed.
     UpdateFailed { addr: usize, flags: Option<usize> },
     /// The region can't be updated.
+    #[cfg(not(target_arch = "x86_64"))]
     RegionLocked(Range<usize>),
 }
 
@@ -45,6 +46,7 @@ impl fmt::Display for MmuError {
             Self::UpdateFailed { addr, flags } => {
                 write!(f, "Update operation failed at {addr:#x} (flags={flags:#x?})")
             }
+            #[cfg(not(target_arch = "x86_64"))]
             Self::RegionLocked(r) => write!(f, "Region {r:#x?} is locked"),
         }
     }
