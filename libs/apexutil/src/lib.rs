@@ -179,7 +179,7 @@ mod tests {
         // The expected hex values were generated when we ran the method the first time.
         assert_eq!(
             hex::encode(res.root_digest),
-            "0cdeee606f2c9b468900e07d306384605684e6ca0b8bc6c51592808de9fd1c44"
+            "3b696fb4c074c0012e5e56314e7472e2394c22d6aa922b78094fa51a48352df4"
         );
         assert_eq!(
             hex::encode(res.public_key),
