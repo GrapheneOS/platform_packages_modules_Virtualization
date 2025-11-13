@@ -26,6 +26,7 @@
         <option name="run-command" value="mkdir -p /data/local/tmp/cts/microdroid" />
         <option name="teardown-command" value="rm -rf /data/local/tmp/cts/microdroid" />
     </target_preparer>
+    <target_preparer class="com.android.microdroid.test.preparer.MicrodroidCanaryTest" />
     <target_preparer class="com.android.compatibility.common.tradefed.targetprep.FilePusher">
         <option name="cleanup" value="true" />
         <option name="push" value="test_microdroid_vendor_image.img->/data/local/tmp/cts/microdroid/test_microdroid_vendor_image.img" />
