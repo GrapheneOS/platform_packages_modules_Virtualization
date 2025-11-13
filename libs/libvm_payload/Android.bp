@@ -86,7 +86,10 @@ rust_library_rlib {
         "libstatic_assertions",
         "libvm_payload_bindgen",
     ],
-    apex_available: ["com.android.compos"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.compos",
+    ],
     visibility: ["//visibility:public"],
 }
 
