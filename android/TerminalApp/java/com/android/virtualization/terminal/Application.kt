@@ -19,10 +19,17 @@ import android.app.Application as AndroidApplication
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.new2.core.Installer
+import com.android.virtualization.terminal.new2.core.VmController
 
 public class Application : AndroidApplication() {
     override fun onCreate() {
         super.onCreate()
+        if (Flags.terminalNewuiJetpack()) {
+            Installer.initialize(this)
+            VmController.initialize(this)
+        }
         setupNotificationChannels()
     }
 

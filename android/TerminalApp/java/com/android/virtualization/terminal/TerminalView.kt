@@ -34,10 +34,13 @@ import android.webkit.WebView
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
 
-class TerminalView(context: Context, attrs: AttributeSet?) :
-    WebView(context, attrs),
+open class TerminalView
+@JvmOverloads
+constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) :
+    WebView(context, attrs, defStyleAttr),
     AccessibilityManager.AccessibilityStateChangeListener,
     AccessibilityManager.TouchExplorationStateChangeListener {
+
     private val ctrlKeyHandler: String = readAssetAsString(context, "js/ctrl_key_handler.js")
     private val enableCtrlKey: String = readAssetAsString(context, "js/enable_ctrl_key.js")
     private val disableCtrlKey: String = readAssetAsString(context, "js/disable_ctrl_key.js")
