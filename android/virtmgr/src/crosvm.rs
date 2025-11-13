@@ -1721,10 +1721,11 @@ impl VmInstance {
     fn try_shutdown(&self) -> bool {
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
-            return guest_agent
-                .shutdownAsync()
-                .map_err(|e| error!("Failed to ask shut down: {e:?}"))
-                .is_ok();
+            // If a guest agent was registered, the VM is assumed to support graceful shutdown.
+            // Return true to give it more time to shutdown.
+            let _ =
+                guest_agent.shutdownAsync().map_err(|e| error!("Failed to ask shut down: {e:?}"));
+            return true;
         }
         false
     }
