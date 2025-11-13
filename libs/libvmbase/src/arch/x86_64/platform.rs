@@ -19,7 +19,6 @@ use crate::arch::x86_64::{
     port,
     uart::Uart,
 };
-use core::mem::MaybeUninit;
 use spin::{mutex::SpinMutex, once::Once};
 
 // Arbitrary limit on the number of consoles that can be registered.

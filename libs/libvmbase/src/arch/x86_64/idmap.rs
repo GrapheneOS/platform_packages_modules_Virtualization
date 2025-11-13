@@ -22,7 +22,7 @@ use x86_64::structures::paging::page::PageRangeInclusive;
 use x86_64::structures::paging::page_table::{
     PageTable, PageTableEntry, PageTableIndex, PageTableLevel,
 };
-use x86_64::structures::paging::{Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
+use x86_64::structures::paging::{Page, PageTableFlags, PhysFrame, Size4KiB};
 use x86_64::{PhysAddr, VirtAddr};
 
 const INVALID_FLAGS: PageTableFlags =

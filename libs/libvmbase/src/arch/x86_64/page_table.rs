@@ -15,17 +15,14 @@
 //! Page table management.
 
 use super::idmap::{IdMap, MapError};
-use crate::heap::aligned_boxed_slice;
-use crate::memory::{SIZE_128KB, SIZE_4KB};
 use crate::mmu::{MmuOps, MmuResult};
-use core::arch::asm;
 use core::arch::x86_64::_mm_mfence;
 use core::ops::Range;
 use x86_64::addr::VirtAddr;
 use x86_64::registers::model_specific::{Efer, EferFlags};
 use x86_64::structures::paging::page::PageRangeInclusive;
 use x86_64::structures::paging::page_table::{PageTableEntry, PageTableFlags};
-use x86_64::structures::paging::{Page, PageSize, Size4KiB};
+use x86_64::structures::paging::{Page, Size4KiB};
 
 /// Software bit used to indicate a device that should be lazily mapped.
 const MMIO_LAZY_MAP_FLAG: PageTableFlags = PageTableFlags::BIT_9;

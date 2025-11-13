@@ -21,14 +21,16 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use log::debug;
 use once_cell::race::OnceBox;
+#[cfg(not(target_arch = "x86_64"))]
+use virtio_drivers::transport::pci::{bus::MmioCam, PciTransport};
 #[cfg(target_arch = "x86_64")]
 use virtio_drivers::transport::x86_64::{HypCam, HypPciTransport};
 use virtio_drivers::{
     device::{blk, socket},
     transport::{
         pci::{
-            bus::{BusDeviceIterator, Cam, ConfigurationAccess, DeviceFunction, MmioCam, PciRoot},
-            virtio_device_type, PciTransport, VirtioPciError,
+            bus::{BusDeviceIterator, Cam, ConfigurationAccess, DeviceFunction, PciRoot},
+            virtio_device_type, VirtioPciError,
         },
         SomeTransport,
     },
