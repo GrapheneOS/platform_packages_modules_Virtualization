@@ -250,20 +250,22 @@ def check_resigned_image_avb_info(image_path, original_info, original_descriptor
         original_info.pop("Release String")
         updated_info.pop("Release String")
 
-    assert original_info == updated_info, \
-        f"Original info and updated info should be the same for {image_path}. " \
-        f"Original info: {original_info}, updated info: {updated_info}"
-
     # Verify the descriptors of the original and updated images.
     assert len(original_descriptors) == len(updated_descriptors), \
         f"Number of descriptors should be the same for {image_path}. " \
         f"Original descriptors: {original_descriptors}, updated descriptors: {updated_descriptors}"
+
+    # Verify the property descriptors
     original_prop_descriptors = sorted(find_all_values_by_key(original_descriptors, "Prop"))
     updated_prop_descriptors = sorted(find_all_values_by_key(updated_descriptors, "Prop"))
     assert original_prop_descriptors == updated_prop_descriptors, \
         f"Prop descriptors should be the same for {image_path}. " \
         f"Original prop descriptors: {original_prop_descriptors}, " \
         f"updated prop descriptors: {updated_prop_descriptors}"
+
+    assert original_info == updated_info, \
+        f"Original info and updated info should be the same for {image_path}. " \
+        f"Original info: {original_info}, updated info: {updated_info}"
 
     # Remove digest from hash descriptors before comparing, since some digests should change.
     original_hash_descriptors = extract_hash_descriptors(original_descriptors, drop_digest)
