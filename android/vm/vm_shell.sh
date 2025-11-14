@@ -152,11 +152,25 @@ function handle_start_microdroid_cmd() {
         shift
     done
     if [[ "${auto_connect}" == true ]]; then
-        adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args[@]}" &
-        # shellcheck disable=SC2064 # expands `$!` now intentionally
-        trap "kill $! && adb disconnect localhost:8000" EXIT
-        sleep 2
-        handle_connect_cmd
+        temp_file=$(mktemp)
+        ( adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args[@]}" |& tee "${temp_file}" ) &
+        last_pid="$!"
+
+        trap "pkill -P ${last_pid} && rm ${temp_file} && adb disconnect localhost:8000" EXIT
+
+        # Wait for the VM to be fully booted
+        while true; do
+          sleep 1
+          grep "${temp_file}" -e 'payload is ready' && break
+        done
+
+        cid=$(sed -n 's/^Created.*with\ CID\ \([0-9]*\),.*$/\1/p' "${temp_file}")
+
+        if [[ -n "${cid}" ]]; then
+          echo "Fail to find CID of launched VM" >&2
+          exit 1
+        fi
+        connect_vm "${cid}"
     else
         adb shell /apex/com.android.virt/bin/vm run-microdroid "${passthrough_args[@]}"
     fi
