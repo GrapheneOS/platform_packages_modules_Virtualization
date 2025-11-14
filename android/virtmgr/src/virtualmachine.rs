@@ -51,7 +51,7 @@ use rustutils::android::system_properties;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::fs;
 use std::fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File};
 use std::io::{Error, ErrorKind, Seek, SeekFrom, Write};
@@ -91,6 +91,19 @@ const PARTITION_GRANULARITY_BYTES: u64 = 4096;
 const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
 
 const VM_DEBUG_POLICY_OVERLAY_FILE_NAME: &str = "debug_policy.dtbo";
+
+const ROOT_OF_TRUST_PROPS: [&str; 4] = [
+    "ro.boot.vbmeta.device_state",
+    "ro.boot.vbmeta.digest",
+    "ro.boot.vbmeta.public_key_digest",
+    "ro.boot.verifiedbootstate",
+];
+
+const ROOT_OF_TRUST_PROP_PREFIX: &str = "ro.boot.";
+const ROOT_OF_TRUST_PROP_HOST_PREFIX: &str = "host.";
+
+const SECURITY_VM_INSTANCE_ID: &[u8; 64] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/security_vm_instance_id"));
 
 static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
     Mutex::new(None);
@@ -949,16 +962,43 @@ fn maybe_create_reference_dt_overlay(
         }
     }
 
+    let mut android_firmware_props_owned = Vec::new();
+
+    // Populate the root of trust properties for Keymint.
+    if cfg!(forward_rot) && extract_instance_id(config) == *SECURITY_VM_INSTANCE_ID {
+        for prop_name in ROOT_OF_TRUST_PROPS {
+            if let Some(prop_value) = system_properties::read(prop_name)
+                .map_err(|e| anyhow!("Failed to read system property, {e:?}"))
+                .or_service_specific_exception(-1)?
+            {
+                let prop_name = prop_name.strip_prefix(ROOT_OF_TRUST_PROP_PREFIX).unwrap();
+                let prop_name = format!("{ROOT_OF_TRUST_PROP_HOST_PREFIX}{prop_name}");
+                android_firmware_props_owned
+                    .push((CString::new(prop_name).unwrap(), CString::new(prop_value).unwrap()));
+            }
+        }
+    }
+
     let device_tree_overlay = if host_ref_dt.is_some()
         || !untrusted_props.is_empty()
         || !trusted_props.is_empty()
+        || !android_firmware_props_owned.is_empty()
     {
         let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
         let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let fdt =
-            create_device_tree_overlay(&mut data, host_ref_dt, &untrusted_props, &trusted_props)
-                .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
-                .or_service_specific_exception(-1)?;
+        let android_firmware_props = android_firmware_props_owned
+            .iter()
+            .map(|(n, v)| (n.as_c_str(), v.as_bytes_with_nul()))
+            .collect::<Vec<_>>();
+        let fdt = create_device_tree_overlay(
+            &mut data,
+            host_ref_dt,
+            &untrusted_props,
+            &trusted_props,
+            &android_firmware_props,
+        )
+        .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
+        .or_service_specific_exception(-1)?;
         fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
         Some(File::open(dt_output).or_service_specific_exception(-1)?)
     } else {

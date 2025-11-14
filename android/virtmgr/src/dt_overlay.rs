@@ -21,7 +21,7 @@ use std::ffi::CStr;
 use std::path::Path;
 
 pub(crate) const VM_DT_OVERLAY_PATH: &str = "vm_dt_overlay.dtbo";
-pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 2000;
+pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 5000;
 
 /// Create an empty device tree overlay
 pub(crate) fn create_empty_device_tree_overlay(buffer: &mut [u8]) -> Result<&mut Fdt> {
@@ -68,8 +68,13 @@ pub(crate) fn create_device_tree_overlay<'a>(
     dt_path: Option<&'a Path>,
     untrusted_props: &[(&'a CStr, &'a [u8])],
     trusted_props: &[(&'a CStr, &'a [u8])],
+    android_firmware_props: &[(&'a CStr, &'a [u8])],
 ) -> Result<&'a mut Fdt> {
-    if dt_path.is_none() && untrusted_props.is_empty() && trusted_props.is_empty() {
+    if dt_path.is_none()
+        && untrusted_props.is_empty()
+        && trusted_props.is_empty()
+        && android_firmware_props.is_empty()
+    {
         return Err(anyhow!("Expected at least one device tree addition"));
     }
 
@@ -95,6 +100,16 @@ pub(crate) fn create_device_tree_overlay<'a>(
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
         add_props_to_node(trusted_props, &mut node)?;
+    }
+
+    if !android_firmware_props.is_empty() {
+        let path = c"/fragment@0/__overlay__/firmware/android";
+        let mut node = fdt
+            .find_or_add_node_mut(path)
+            .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
+        add_props_to_node(android_firmware_props, &mut node)?;
+        node.setprop(c"compatible", b"android,firmware\0")
+            .map_err(|e| anyhow!("Failed to set compatible property: {e:?}"))?;
     }
 
     if let Some(mut node) = fdt.node_mut(c"/fragment@0")? {
@@ -124,7 +139,7 @@ mod tests {
     #[test]
     fn empty_overlays_not_allowed() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let res = create_device_tree_overlay(&mut buffer, None, &[], &[]);
+        let res = create_device_tree_overlay(&mut buffer, None, &[], &[], &[]);
         assert!(res.is_err());
     }
 
@@ -134,7 +149,7 @@ mod tests {
         let prop_name = c"XOXO";
         let prop_val_input = b"OXOX";
         let fdt =
-            create_device_tree_overlay(&mut buffer, None, &[(prop_name, prop_val_input)], &[])
+            create_device_tree_overlay(&mut buffer, None, &[(prop_name, prop_val_input)], &[], &[])
                 .unwrap();
 
         let prop_value_dt = fdt
@@ -145,6 +160,7 @@ mod tests {
             .unwrap()
             .expect("Prop not found!");
         assert_eq!(prop_value_dt, prop_val_input, "Unexpected property value");
+        assert_eq!(fdt.node(c"/fragment@0/__overlay__/firmware"), Ok(None));
     }
 
     #[test]
@@ -153,7 +169,7 @@ mod tests {
         let prop_name = c"XOXOXO";
         let prop_val_input = b"OXOXOX";
         let fdt =
-            create_device_tree_overlay(&mut buffer, None, &[], &[(prop_name, prop_val_input)])
+            create_device_tree_overlay(&mut buffer, None, &[], &[(prop_name, prop_val_input)], &[])
                 .unwrap();
 
         let prop_value_dt = fdt
@@ -164,5 +180,87 @@ mod tests {
             .unwrap()
             .expect("Prop not found!");
         assert_eq!(prop_value_dt, prop_val_input, "Unexpected property value");
+        assert_eq!(fdt.node(c"/fragment@0/__overlay__/firmware"), Ok(None));
+    }
+
+    #[test]
+    fn firmware_prop_test() {
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let prop_name = c"XOXOXO";
+        let prop_val_input = b"OXOXOX";
+        let firmware_props = [
+            (c"vbmeta.device_state", c"locked".to_bytes_with_nul()),
+            (c"vbmeta.digest", c"00000000000000000000000000000000".to_bytes_with_nul()),
+            (
+                c"vbmeta.public_key_digest",
+                c"0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_bytes_with_nul(),
+            ),
+            (c"verifiedbootstate", c"fake".to_bytes_with_nul()),
+        ];
+        let fdt = create_device_tree_overlay(
+            &mut buffer,
+            None,
+            &[],
+            &[(prop_name, prop_val_input)],
+            &firmware_props,
+        )
+        .unwrap();
+
+        let prop_value_dt = fdt
+            .node(c"/fragment@0/__overlay__/avf")
+            .unwrap()
+            .expect("/avf node doesn't exist")
+            .getprop(prop_name)
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(prop_value_dt, prop_val_input, "Unexpected property value");
+
+        for (prop_name, prop_value) in firmware_props {
+            let prop_value_dt = fdt
+                .node(c"/fragment@0/__overlay__/firmware/android")
+                .unwrap()
+                .expect("/firmware/android node doesn't exist")
+                .getprop(prop_name)
+                .unwrap()
+                .expect("Prop not found!");
+            assert_eq!(prop_value_dt, prop_value, "Unexpected property value");
+        }
+    }
+
+    #[test]
+    fn firmware_prop_only_test() {
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let firmware_props = [
+            (c"vbmeta.device_state", c"locked".to_bytes_with_nul()),
+            (c"vbmeta.digest", c"00000000000000000000000000000000".to_bytes_with_nul()),
+            (
+                c"vbmeta.public_key_digest",
+                c"0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_bytes_with_nul(),
+            ),
+            (c"verifiedbootstate", c"fake".to_bytes_with_nul()),
+        ];
+        let fdt = create_device_tree_overlay(&mut buffer, None, &[], &[], &firmware_props).unwrap();
+
+        assert_eq!(fdt.node(c"/fragment@0/__overlay__/avf"), Ok(None));
+        assert!(fdt
+            .node(c"/fragment@0")
+            .unwrap()
+            .expect("/fragment@0 node doesn't exist")
+            .getprop(c"target-path")
+            .unwrap()
+            .is_some());
+
+        for (prop_name, prop_value) in firmware_props {
+            let prop_value_dt = fdt
+                .node(c"/fragment@0/__overlay__/firmware/android")
+                .unwrap()
+                .expect("/firmware/android node doesn't exist")
+                .getprop(prop_name)
+                .unwrap()
+                .expect("Prop not found!");
+            assert_eq!(prop_value_dt, prop_value, "Unexpected property value");
+        }
     }
 }
