@@ -23,14 +23,13 @@ use android_system_virtualmachineservice::aidl::android::system::virtualmachines
 use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::ISecretkeeper::ISecretkeeper;
 use secretkeeper_comm::data_types::request::Request;
 use binder::{Strong};
+use bssl_crypto::digest::{Sha256, Sha512};
+use bssl_crypto::hkdf::{self, HkdfSha256};
 use coset::{CoseKey, CborSerializable, CborOrdering};
 use dice_policy_builder::{TargetEntry, ConstraintSpec, ConstraintType, policy_for_dice_chain, MissingAction, WILDCARD_FULL_ARRAY};
 use diced_open_dice::{DiceArtifacts, OwnedDiceArtifacts};
 use explicitkeydice::OwnedDiceArtifactsWithExplicitKey;
 use keystore2_crypto::ZVec;
-use openssl::hkdf::hkdf;
-use openssl::md::Md;
-use openssl::sha;
 use secretkeeper_client::SkSession;
 use secretkeeper_comm::data_types::{Id, ID_SIZE, Secret, SECRET_SIZE};
 use secretkeeper_comm::data_types::response::Response;
@@ -188,18 +187,17 @@ impl VmSecret {
     }
 
     fn get_vm_secret(&self, salt: &[u8], identifier: &[u8], key: &mut [u8]) -> Result<()> {
-        match self {
+        let secret = match self {
             Self::V2 { dice_artifacts, skp_secret, .. } => {
-                let mut hasher = sha::Sha256::new();
+                let mut hasher = Sha256::new();
                 hasher.update(dice_artifacts.cdi_seal());
                 hasher.update(skp_secret);
-                hkdf(key, Md::sha256(), &hasher.finish(), salt, identifier)?
+                &hasher.digest()
             }
-            Self::V1 { dice_artifacts } => {
-                hkdf(key, Md::sha256(), dice_artifacts.cdi_seal(), salt, identifier)?
-            }
-        }
-        Ok(())
+            Self::V1 { dice_artifacts } => dice_artifacts.cdi_seal(),
+        };
+        HkdfSha256::derive_into(secret, hkdf::Salt::NonEmpty(salt), identifier, key)
+            .map_err(|_| anyhow!("HKDF can't produce that much"))
     }
 
     /// Derive sealing key for payload with following identifier.
@@ -223,8 +221,8 @@ impl VmSecret {
 
     /// Derives a key with random salt.
     pub fn derive_random_key(&self, key: &mut [u8]) -> Result<()> {
-        let salt = rand::random::<[u8; 32]>();
-        let id = rand::random::<[u8; 16]>();
+        let salt: [u8; 32] = bssl_crypto::rand_array();
+        let id: [u8; 16] = bssl_crypto::rand_array();
         self.get_vm_secret(&salt, &id, key)
     }
 
@@ -232,7 +230,7 @@ impl VmSecret {
         let Self::V2 { instance_id, secretkeeper_session, .. } = self else {
             return Err(anyhow!("Rollback protected data is not available with V1 secrets"));
         };
-        let payload_id = sha::sha512(instance_id);
+        let payload_id = Sha512::hash(instance_id);
         secretkeeper_session.get_secret(payload_id).or_else(|e| {
             log::info!("Secretkeeper get failed with {e:?}. Refreshing connection & retrying!");
             secretkeeper_session.refresh()?;
@@ -246,7 +244,7 @@ impl VmSecret {
         else {
             return Err(anyhow!("Rollback protected data is not available with V1 secrets"));
         };
-        let payload_id = sha::sha512(instance_id);
+        let payload_id = Sha512::hash(instance_id);
         // Claim the Secretkeeper entry - this pings AVF host to account this Secretkeeper entry
         // correctly.
         virtual_machine_service.claimSecretkeeperEntry(&payload_id).map_err(|e| {
@@ -443,7 +441,7 @@ fn get_or_create_sk_secret(
         false
     } else {
         log::warn!("No entry found in Secretkeeper for this VM instance, creating new secret.");
-        *skp_secret = rand::random();
+        *skp_secret = bssl_crypto::rand_array();
         session.store_secret(id, skp_secret.clone())?;
         true
     };
