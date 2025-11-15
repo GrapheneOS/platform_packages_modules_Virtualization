@@ -15,6 +15,7 @@
 //! Logic for handling the DICE values and boot operations.
 
 use anyhow::{anyhow, bail, Context, Error, Result};
+use bssl_crypto::hkdf::{self, HkdfSha256};
 use byteorder::{NativeEndian, ReadBytesExt};
 use diced_open_dice::{
     bcc_handover_parse, retry_bcc_main_flow, BccHandover, Config, DiceArtifacts, DiceMode, Hash,
@@ -22,8 +23,6 @@ use diced_open_dice::{
 };
 use keystore2_crypto::ZVec;
 use libc::{c_void, mmap, munmap, MAP_FAILED, MAP_PRIVATE, PROT_READ};
-use openssl::hkdf::hkdf;
-use openssl::md::Md;
 use std::fs;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
@@ -123,8 +122,9 @@ impl DiceDriver<'_> {
         // directly, so we have the chance to rotate the key if needed. A salt isn't needed as the
         // input key material is already cryptographically strong.
         let mut key = ZVec::new(key_length)?;
-        let salt = &[];
-        hkdf(&mut key, Md::sha256(), self.dice_artifacts().cdi_seal(), salt, identifier)?;
+        let secret = self.dice_artifacts().cdi_seal();
+        HkdfSha256::derive_into(secret, hkdf::Salt::None, identifier, &mut key)
+            .map_err(|_| anyhow!("HKDF can't produce that much"))?;
         Ok(key)
     }
 

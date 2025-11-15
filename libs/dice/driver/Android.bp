@@ -13,6 +13,7 @@ rust_defaults {
     prefer_rlib: true,
     rustlibs: [
         "libanyhow",
+        "libbssl_crypto",
         "libbyteorder",
         "libciborium",
         "libcoset",
@@ -23,7 +24,6 @@ rust_defaults {
         "liblibc",
         "liblog_rust",
         "libnix",
-        "libopenssl",
         "libthiserror",
     ],
     multilib: {
