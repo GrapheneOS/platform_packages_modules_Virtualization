@@ -18,7 +18,7 @@ use super::common::{
     build_fsverity_digest, merkle_tree_height, FsverityError, Sha256Hash, SHA256_HASH_SIZE,
 };
 use crate::common::{divide_roundup, CHUNK_SIZE};
-use openssl::sha::Sha256;
+use bssl_crypto::digest::Sha256;
 
 const HASH_SIZE: usize = SHA256_HASH_SIZE;
 const HASH_PER_PAGE: usize = CHUNK_SIZE as usize / HASH_SIZE;
@@ -51,7 +51,7 @@ fn hash_all_pages(source: &[Sha256Hash]) -> Vec<Sha256Hash> {
                 ctx.update(data.as_ref());
             }
             ctx.update(&vec![0u8; padding_bytes]);
-            ctx.finish()
+            ctx.digest()
         })
         .collect()
 }
@@ -154,7 +154,6 @@ mod tests {
     //  $ fsverity digest foo
     use super::*;
     use anyhow::Result;
-    use openssl::sha::sha256;
 
     #[test]
     fn merkle_tree_empty_file() -> Result<()> {
@@ -206,7 +205,7 @@ mod tests {
     #[test]
     fn merkle_tree_non_sequential() -> Result<()> {
         let mut tree = MerkleLeaves::new();
-        let hash = sha256(&vec![1u8; CHUNK_SIZE as usize]);
+        let hash = Sha256::hash(&vec![1u8; CHUNK_SIZE as usize]);
 
         // Update hashes of 4 1-blocks.
         tree.update_hash(1, &hash, CHUNK_SIZE * 2);
@@ -262,7 +261,7 @@ mod tests {
             let mut ctx = Sha256::new();
             ctx.update(chunk);
             ctx.update(&vec![0u8; CHUNK_SIZE as usize - chunk.len()]);
-            let hash = ctx.finish();
+            let hash = ctx.digest();
 
             tree.update_hash(index, &hash, CHUNK_SIZE * index as u64 + chunk.len() as u64);
         }
