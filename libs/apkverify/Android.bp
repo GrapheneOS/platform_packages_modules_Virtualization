@@ -6,7 +6,7 @@ rust_defaults {
     name: "libapkverify.defaults",
     crate_name: "apkverify",
     defaults: ["avf_build_flags_rust"],
-    srcs: ["src/lib.rs"],
+    crate_root: "src/lib.rs",
     edition: "2021",
     rustlibs: [
         "libanyhow",
@@ -37,6 +37,9 @@ rust_test {
     name: "libapkverify.test",
     defaults: ["libapkverify.defaults"],
     prefer_rlib: true,
+    srcs: [
+        "tests/data/v4-digest-v3-Sha256withEC.apk",
+    ],
     test_suites: ["general-tests"],
     data: ["tests/data/*"],
 }

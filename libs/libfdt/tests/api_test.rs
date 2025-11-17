@@ -534,3 +534,42 @@ fn node_descendants_lifetime() {
     };
     assert_eq!(Ok(c"node_a"), first_descendant_name);
 }
+
+#[test]
+fn node_mut_find_or_add_subnode_mut() {
+    let mut data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
+    data.resize(data.len() * 2, 0);
+
+    let fdt = Fdt::from_mut_slice(&mut data).unwrap();
+    fdt.unpack().unwrap();
+
+    let path = c"/node_z/node_zz/node_zza";
+
+    let node = path
+        .to_bytes()
+        .split(|c| *c == b'/')
+        .filter(|&component| !component.is_empty())
+        .try_fold(fdt.root_mut(), |node, name| node.find_or_add_subnode_raw(name))
+        .unwrap();
+    assert_eq!(Ok(c"node_zza"), node.as_node().name());
+
+    let node = fdt.node(path).unwrap().unwrap();
+    assert_eq!(Ok(c"node_zza"), node.name());
+}
+
+#[test]
+fn fdt_find_or_add_node_mut() {
+    let mut data = fs::read(TEST_TREE_PHANDLE_PATH).unwrap();
+    data.resize(data.len() * 2, 0);
+
+    let fdt = Fdt::from_mut_slice(&mut data).unwrap();
+    fdt.unpack().unwrap();
+
+    let path = c"/node_z/node_zz/node_zza";
+    assert_eq!(Ok(None), fdt.node(path));
+    let node = fdt.find_or_add_node_mut(path).unwrap();
+    assert_eq!(Ok(c"node_zza"), node.as_node().name());
+
+    let node = fdt.node(path).unwrap().unwrap();
+    assert_eq!(Ok(c"node_zza"), node.name());
+}

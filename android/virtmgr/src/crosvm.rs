@@ -1721,10 +1721,11 @@ impl VmInstance {
     fn try_shutdown(&self) -> bool {
         if let Some(guest_agent) = &*self.guest_agent.lock().unwrap() {
             info!("Asking VM (name: {}, cid: {}) to shut down", self.name, self.cid);
-            return guest_agent
-                .shutdownAsync()
-                .map_err(|e| error!("Failed to ask shut down: {e:?}"))
-                .is_ok();
+            // If a guest agent was registered, the VM is assumed to support graceful shutdown.
+            // Return true to give it more time to shutdown.
+            let _ =
+                guest_agent.shutdownAsync().map_err(|e| error!("Failed to ask shut down: {e:?}"));
+            return true;
         }
         false
     }
@@ -2101,7 +2102,10 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
             0o777,
         );
 
-        let cfg_arg = format!("ugid_map='{ugid_map_value}'");
+        let mut cfg_arg = format!("ugid_map='{ugid_map_value}'");
+        if config.protected {
+            cfg_arg.push_str(",unmap_guest_memory_on_fork=true");
+        }
 
         let mut command = Command::new(CROSVM_PATH);
         command

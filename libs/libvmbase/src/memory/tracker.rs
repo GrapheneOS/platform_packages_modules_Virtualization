@@ -128,7 +128,8 @@ pub fn unshare_uart() -> Result<()> {
 pub fn map_data(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
-    let _ = tracker.map_data(addr, size)?;
+    let end = addr + usize::from(size);
+    let _ = tracker.map_data(&(addr..end), MapDataMode::ReadWrite)?;
     Ok(())
 }
 
@@ -140,7 +141,8 @@ pub fn map_data(addr: usize, size: NonZeroUsize) -> Result<()> {
 pub fn map_data_noflush(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
-    let _ = tracker.map_data_noflush(addr, size)?;
+    let end = addr + usize::from(size);
+    let _ = tracker.map_data(&(addr..end), MapDataMode::ReadWriteNoFlush)?;
     Ok(())
 }
 
@@ -160,11 +162,11 @@ pub fn map_image_footer() -> Result<Range<usize>> {
 pub fn map_rodata(addr: usize, size: NonZeroUsize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
-    let _ = tracker.map_rodata(addr, size)?;
+    let end = addr + usize::from(size);
+    let _ = tracker.map_data(&(addr..end), MapDataMode::ReadOnly)?;
     Ok(())
 }
 
-// TODO(ptosi): Merge this into map_rodata.
 /// Map the provided range as normal memory, with read-only permissions.
 ///
 /// # Safety
@@ -175,7 +177,7 @@ pub unsafe fn map_rodata_outside_main_memory(addr: usize, size: NonZeroUsize) ->
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
     let end = addr + usize::from(size);
     // SAFETY: Caller has checked that it is valid to map the range.
-    let _ = unsafe { tracker.map_rodata_range_outside_main_memory(&(addr..end)) }?;
+    let _ = unsafe { tracker.map_data_outside_main_memory(&(addr..end), MapDataMode::ReadOnly) }?;
     Ok(())
 }
 
@@ -200,6 +202,7 @@ pub fn map_device(addr: usize, size: NonZeroUsize) -> Result<()> {
 }
 
 /// Handles a permission fault for a write to a data region, mapped as RO to track the dirty state.
+#[cfg_attr(target_arch = "x86_64", allow(dead_code))]
 pub(crate) fn handle_read_only_fault(addr: usize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
@@ -208,6 +211,7 @@ pub(crate) fn handle_read_only_fault(addr: usize) -> Result<()> {
 }
 
 /// Handler for faults triggered by accesses to MMIO, previously marked as lazy MMIO.
+#[cfg_attr(target_arch = "x86_64", allow(dead_code))]
 pub(crate) fn handle_lazy_mmio_fault(addr: usize) -> Result<()> {
     let mut locked_tracker = try_lock_memory_tracker()?;
     let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
@@ -231,6 +235,25 @@ struct TrackedRegion {
 impl TrackedRegion {
     pub fn range(&self) -> Range<usize> {
         self.range.clone()
+    }
+}
+
+/// How to map data
+#[allow(clippy::enum_variant_names)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum MapDataMode {
+    ReadOnly,
+    ReadWrite,
+    ReadWriteNoFlush,
+}
+
+impl MapDataMode {
+    fn memory_type(&self) -> MemoryType {
+        match self {
+            Self::ReadOnly => MemoryType::ReadOnly,
+            Self::ReadWrite => MemoryType::ReadWrite,
+            Self::ReadWriteNoFlush => MemoryType::ReadWrite,
+        }
     }
 }
 
@@ -290,53 +313,53 @@ impl<Mmu: MmuOps> MemoryTracker<Mmu> {
         Ok(())
     }
 
-    fn map_rodata(&mut self, base: usize, size: NonZeroUsize) -> Result<Range<usize>> {
-        let region =
-            TrackedRegion { range: base..(base + size.get()), mem_type: MemoryType::ReadOnly };
-        self.check_allocatable(&region)?;
-        self.mmu.map_rodata(&region.range()).map_err(|e| {
-            error!("Error during range allocation: {e}");
-            MemoryTrackerError::FailedToMap
-        })?;
-        self.add(region)
+    /// Maps the given range as data
+    fn map_data(&mut self, range: &Range<usize>, mode: MapDataMode) -> Result<Range<usize>> {
+        // SAFETY: map_data_impl will check that range belongs to the main memory range.
+        unsafe { self.map_data_impl(range, mode, false) }
     }
 
-    /// Allocates the address range for a const slice.
+    /// Maps the given range as data outside the main memory range.
     ///
     /// # Safety
     ///
-    /// Callers of this method need to ensure that the `range` is valid for mapping as read-only
-    /// data.
-    unsafe fn map_rodata_range_outside_main_memory(
+    /// Callers of this method need to ensure that `range` is valid for mapping as data.
+    unsafe fn map_data_outside_main_memory(
         &mut self,
         range: &Range<usize>,
+        mode: MapDataMode,
     ) -> Result<Range<usize>> {
-        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadOnly };
-        self.check_no_overlap(&region)?;
-        self.mmu.map_rodata(&region.range()).map_err(|e| {
-            error!("Error during range allocation: {e}");
-            MemoryTrackerError::FailedToMap
-        })?;
-        self.add(region)
+        // SAFETY: caller called that range can be mapped
+        unsafe { self.map_data_impl(range, mode, true) }
     }
 
-    fn map_data(&mut self, base: usize, size: NonZeroUsize) -> Result<Range<usize>> {
-        let range = base..(base + size.get());
-        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
-        self.check_allocatable(&region)?;
-        self.mmu.map_data_track_dirty_state(&region.range()).map_err(|e| {
-            error!("Error during mutable range allocation: {e}");
-            MemoryTrackerError::FailedToMap
-        })?;
-        self.add(region)
-    }
-
-    fn map_data_noflush(&mut self, base: usize, size: NonZeroUsize) -> Result<Range<usize>> {
-        let range = base..(base + size.get());
-        let region = TrackedRegion { range: range.clone(), mem_type: MemoryType::ReadWrite };
-        self.check_allocatable(&region)?;
-        self.mmu.map_data(&region.range()).map_err(|e| {
-            error!("Error during non-flushed mutable range allocation: {e}");
+    /// Maps the given range as data
+    ///
+    /// # Safety
+    ///
+    /// Callers of this method need to ensure that `range` is valid for mapping as data.
+    unsafe fn map_data_impl(
+        &mut self,
+        range: &Range<usize>,
+        mode: MapDataMode,
+        outside_main_memory: bool,
+    ) -> Result<Range<usize>> {
+        let region = TrackedRegion { range: range.clone(), mem_type: mode.memory_type() };
+        if outside_main_memory {
+            self.check_no_overlap(&region)?;
+        } else {
+            self.check_allocatable(&region)?;
+        }
+        match mode {
+            MapDataMode::ReadOnly => self.mmu.map_rodata(&region.range()),
+            MapDataMode::ReadWrite => self.mmu.map_data_track_dirty_state(&region.range()),
+            MapDataMode::ReadWriteNoFlush => self.mmu.map_data(&region.range()),
+        }
+        .map_err(|e| {
+            error!(
+                "Error during range allocation mode: {:?} outside_main_memory: {}: {e}",
+                mode, outside_main_memory
+            );
             MemoryTrackerError::FailedToMap
         })?;
         self.add(region)
@@ -466,8 +489,7 @@ impl<Mmu: MmuOps> MemoryTracker<Mmu> {
     /// shared memory region is indicated in swiotlb node. On such platforms use
     /// a separate heap to allocate buffers that can be shared with host.
     fn init_static_shared_pool(&mut self, range: &Range<usize>) -> Result<()> {
-        let size = NonZeroUsize::new(range.len()).unwrap();
-        let range = self.map_data(range.start, size)?;
+        let range = self.map_data(range, MapDataMode::ReadWrite)?;
         let shared_pool = LockedFrameAllocator::<32>::new();
 
         shared_pool.lock().insert(range);

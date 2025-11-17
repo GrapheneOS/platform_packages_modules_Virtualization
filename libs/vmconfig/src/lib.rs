@@ -26,15 +26,17 @@ use android_system_virtualizationservice::{
     binder::ParcelFileDescriptor,
 };
 
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use std::fs::{File, OpenOptions};
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+
+const INSTANCE_ID_SIZE: usize = 64;
 
 /// Configuration for a particular VM to be started.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -72,6 +74,8 @@ pub struct VmConfig {
     pub console_input_device: Option<String>,
     /// The USB config of the VM.
     pub usb_config: Option<UsbConfig>,
+    /// VM Instance ID
+    pub instance_id: Option<PathBuf>,
 }
 
 impl VmConfig {
@@ -116,6 +120,11 @@ impl VmConfig {
         };
         let cpu_options = CpuOptions { cpuTopology: cpu_topology };
         let usb_config = self.usb_config.clone().map(|x| x.to_parcelable()).transpose()?;
+        let instance_id = if let Some(path) = self.instance_id.as_ref() {
+            load_instance_id(path)?
+        } else {
+            [0u8; INSTANCE_ID_SIZE]
+        };
         Ok(VirtualMachineRawConfig {
             kernel: maybe_open_parcel_file(self.kernel.as_ref(), false)?,
             initrd: maybe_open_parcel_file(self.initrd.as_ref(), false)?,
@@ -139,9 +148,32 @@ impl VmConfig {
             consoleInputDevice: self.console_input_device.clone(),
             usbConfig: usb_config,
             balloon: true,
+            instanceId: instance_id,
             ..Default::default()
         })
     }
+}
+
+fn load_instance_id(path: &Path) -> anyhow::Result<[u8; INSTANCE_ID_SIZE]> {
+    let mut file =
+        File::open(path).with_context(|| format!("open VM Instance ID file: {:?}", path))?;
+
+    let metadata = file
+        .metadata()
+        .with_context(|| format!("get metadata for VM Instance ID file: {:?}", path))?;
+
+    ensure!(
+        metadata.len() == INSTANCE_ID_SIZE as u64,
+        "VM Instance ID file {:?} has incorrect size. Expected {}, Got {}",
+        path,
+        INSTANCE_ID_SIZE,
+        metadata.len()
+    );
+
+    let mut buffer = [0u8; INSTANCE_ID_SIZE];
+    file.read_exact(&mut buffer)
+        .with_context(|| format!("read VM Instance ID file: {:?}", path))?;
+    Ok(buffer)
 }
 
 /// Returns the debug level of the VM from its configuration.

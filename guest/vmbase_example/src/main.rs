@@ -149,11 +149,9 @@ fn modify_fdt(writer: &mut Fdt) {
     writer.unpack().unwrap();
     info!("FDT successfully unpacked.");
 
-    let path = c"/memory";
-    let node = writer.node_mut(path).unwrap().unwrap();
-    let name = c"child";
-    let mut child = node.add_subnode(name).unwrap();
-    info!("Created subnode '{}/{}'.", path.to_str().unwrap(), name.to_str().unwrap());
+    let path = c"/memory/child";
+    let mut child = writer.find_or_add_node_mut(path).unwrap();
+    info!("Created subnode '{path:?}'.");
 
     let name = c"str-property";
     child.appendprop(name, b"property-value\0").unwrap();

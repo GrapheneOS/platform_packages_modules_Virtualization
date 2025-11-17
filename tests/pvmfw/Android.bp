@@ -56,6 +56,7 @@ java_test_host {
         "MicrodroidHostTestLib",
         "PvmfwHostTestLib",
         "compatibility-host-util",
+        "cts-host-utils",
     ],
     per_testcase_directory: true,
     data: [

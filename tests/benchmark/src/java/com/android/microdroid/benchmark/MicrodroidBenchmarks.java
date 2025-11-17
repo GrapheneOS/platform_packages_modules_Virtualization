@@ -426,7 +426,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     }
 
     private static class VirtioBlkListener implements BenchmarkVmListener.InnerListener {
-        private static final String FILENAME = "/dev/block/by-name/super";
+        private static final String FILENAME = "/dev/block/by-name/system_a";
 
         private final List<Double> mReadRates;
         private final boolean mIsRand;

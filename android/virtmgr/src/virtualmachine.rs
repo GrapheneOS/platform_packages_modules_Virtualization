@@ -51,7 +51,7 @@ use rustutils::android::system_properties;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::fs;
 use std::fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File};
 use std::io::{Error, ErrorKind, Seek, SeekFrom, Write};
@@ -89,6 +89,21 @@ const UNFORMATTED_STORAGE_MAGIC: &str = "UNFORMATTED-STORAGE";
 const PARTITION_GRANULARITY_BYTES: u64 = 4096;
 
 const VM_REFERENCE_DT_ON_HOST_PATH: &str = "/proc/device-tree/avf/reference";
+
+const VM_DEBUG_POLICY_OVERLAY_FILE_NAME: &str = "debug_policy.dtbo";
+
+const ROOT_OF_TRUST_PROPS: [&str; 4] = [
+    "ro.boot.vbmeta.device_state",
+    "ro.boot.vbmeta.digest",
+    "ro.boot.vbmeta.public_key_digest",
+    "ro.boot.verifiedbootstate",
+];
+
+const ROOT_OF_TRUST_PROP_PREFIX: &str = "ro.boot.";
+const ROOT_OF_TRUST_PROP_HOST_PREFIX: &str = "host.";
+
+const SECURITY_VM_INSTANCE_ID: &[u8; 64] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/security_vm_instance_id"));
 
 static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
     Mutex::new(None);
@@ -617,6 +632,11 @@ impl VirtualizationService {
         }
 
         let debug_config = DebugConfig::new(config);
+        if let Some(dt_overlay) =
+            maybe_create_debug_policy_overlay(&debug_config, &temporary_directory)?
+        {
+            device_tree_overlays.push(dt_overlay);
+        }
 
         let (is_app_config, config) = match config {
             aidl::VirtualMachineConfig::RawConfig(config) => {
@@ -942,22 +962,68 @@ fn maybe_create_reference_dt_overlay(
         }
     }
 
+    let mut android_firmware_props_owned = Vec::new();
+
+    // Populate the root of trust properties for Keymint.
+    if cfg!(forward_rot) && extract_instance_id(config) == *SECURITY_VM_INSTANCE_ID {
+        for prop_name in ROOT_OF_TRUST_PROPS {
+            if let Some(prop_value) = system_properties::read(prop_name)
+                .map_err(|e| anyhow!("Failed to read system property, {e:?}"))
+                .or_service_specific_exception(-1)?
+            {
+                let prop_name = prop_name.strip_prefix(ROOT_OF_TRUST_PROP_PREFIX).unwrap();
+                let prop_name = format!("{ROOT_OF_TRUST_PROP_HOST_PREFIX}{prop_name}");
+                android_firmware_props_owned
+                    .push((CString::new(prop_name).unwrap(), CString::new(prop_value).unwrap()));
+            }
+        }
+    }
+
     let device_tree_overlay = if host_ref_dt.is_some()
         || !untrusted_props.is_empty()
         || !trusted_props.is_empty()
+        || !android_firmware_props_owned.is_empty()
     {
         let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
         let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let fdt =
-            create_device_tree_overlay(&mut data, host_ref_dt, &untrusted_props, &trusted_props)
-                .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
-                .or_service_specific_exception(-1)?;
+        let android_firmware_props = android_firmware_props_owned
+            .iter()
+            .map(|(n, v)| (n.as_c_str(), v.as_bytes_with_nul()))
+            .collect::<Vec<_>>();
+        let fdt = create_device_tree_overlay(
+            &mut data,
+            host_ref_dt,
+            &untrusted_props,
+            &trusted_props,
+            &android_firmware_props,
+        )
+        .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
+        .or_service_specific_exception(-1)?;
         fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
         Some(File::open(dt_output).or_service_specific_exception(-1)?)
     } else {
         None
     };
     Ok(device_tree_overlay)
+}
+
+fn maybe_create_debug_policy_overlay(
+    config: &DebugConfig,
+    temporary_directory: &Path,
+) -> binder::Result<Option<File>> {
+    if let Some(fdt_overlay) = config.get_debug_policy_overlay() {
+        let dt_output = temporary_directory.join(VM_DEBUG_POLICY_OVERLAY_FILE_NAME);
+        fs::write(&dt_output, fdt_overlay.as_slice())
+            .map_err(|e| anyhow!("Failed to create DT overlay, {dt_output:?}, e={e:?}"))
+            .or_service_specific_exception(-1)?;
+        Ok(Some(
+            File::open(&dt_output)
+                .map_err(|e| anyhow!("Failed to open DT overlay, {dt_output:?}, e={e:?}"))
+                .or_service_specific_exception(-1)?,
+        ))
+    } else {
+        Ok(None)
+    }
 }
 
 fn format_as_android_vm_instance(part: &mut dyn Write) -> std::io::Result<()> {
@@ -1128,6 +1194,11 @@ fn load_app_config(
         vm_config.teeServices.clone_from(&custom_config.teeServices);
 
         vm_config.gdbPort = custom_config.gdbPort;
+    }
+
+    // Workaround until we can unconditionally start traced_relay services for debuggable VMs.
+    if system_properties::read_bool("microdroid.start_traced_relay", false).unwrap_or(false) {
+        append_kernel_param("androidboot.microdroid.start_traced_relay=1", &mut vm_config);
     }
 
     if config.memoryMib > 0 {

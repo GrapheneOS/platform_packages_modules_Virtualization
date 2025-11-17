@@ -53,6 +53,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -183,7 +184,50 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         appStartupHelper(launchIntentPackage);
     }
 
+    Callable<String> getSimpleMicrodroidPayload(String os, String name, long timeout)
+            throws Exception {
+        final int MIN_MEM_ARM64 = 170;
+        final String configPath = "assets/vm_config_apex.json"; // path inside the APK
+        MicrodroidBuilder microdroidBuilder =
+                MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
+                        .debugLevel("full")
+                        .memoryMib(MIN_MEM_ARM64)
+                        .cpuTopology("match_host")
+                        .protectedVm(true)
+                        .os(os)
+                        .name(name);
+
+        TestDevice testDevice = (TestDevice) getDevice();
+
+        Callable<String> callable =
+                () -> {
+                    ITestDevice microdroid = microdroidBuilder.build(testDevice);
+                    microdroid.waitForBootComplete(timeout);
+
+                    CommandRunner runner = new CommandRunner(getDevice());
+                    String pid = runner.run("pidof crosvm_" + name + " | cut -f1 -d' '");
+                    testDevice.shutdownMicrodroid(microdroid);
+
+                    /*
+                     * shutdownMicrodroid will kill the ADB connection. However
+                     * it doesn't guarantee crosvm is done i.e. the VM teardown
+                     * is complete and that all interesting events for testing
+                     * have been emitted.
+                     *
+                     * TODO(b/459708534): Use a wait method not relying on the
+                     * crosvm_ naming scheme.
+                     */
+                    runner.run("while ps -p " + pid + " 2>/dev/null; do sleep 1; done");
+
+                    return pid;
+                };
+
+        return callable;
+    }
+
     private void noLongHypSectionsHelper(String osKey) throws Exception {
+        final long timeout = 60 * 10 * 1000;
+
         assumeKernelSupported(osKey);
         assumeVmTypeSupported(osKey, true);
         String os = SUPPORTED_OSES.get(osKey);
@@ -216,13 +260,18 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
             "*force_pte_cb",
             "*pte_is_counted",
         };
-        String cmd = COMPOSD_CMD_BIN + " test-compile --os " + os;
         KvmHypTracer tracer = new KvmHypTracer(getDevice(), hasFunc ? hypEventFuncs : hypEvents);
-        String result = hasFunc ? tracer.run(cmd, NO_TRACE, 128 << 10) : tracer.run(cmd);
-        assertWithMessage("Failed to test compilation VM.")
-                .that(result)
-                .ignoringCase()
-                .contains("all ok");
+
+        try {
+            Callable payload = getSimpleMicrodroidPayload(os, "no_long_hyp_sections", timeout);
+            if (hasFunc) {
+                tracer.run(payload, NO_TRACE, 128 << 10, timeout);
+            } else {
+                tracer.run(payload);
+            }
+        } catch (Exception e) {
+            throw new AssertionError("Failed to run payload (" + e.getMessage() + ")");
+        }
 
         SimpleStats stats = tracer.getDurationStats();
         reportMetric(stats.getData(), "hyp_sections", "s");
@@ -258,6 +307,8 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
     }
 
     public void psciMemProtectHelper(String osKey) throws Exception {
+        final long timeout = 60 * 10 * 1000;
+
         assumeKernelSupported(osKey);
         assumeVmTypeSupported(osKey, true);
         String os = SUPPORTED_OSES.get(osKey);
@@ -272,17 +323,11 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         CommandRunner android = new CommandRunner(getDevice());
         boolean vm_contention = android.run("/apex/com.android.virt/bin/vm list").contains("cid:");
 
-        /* We need to wait for crosvm to die so all the VM pages are reclaimed */
-        String result =
-                tracer.run(
-                        COMPOSD_CMD_BIN
-                                + " test-compile --os "
-                                + os
-                                + " && killall -w crosvm_ComposdTest || true");
-        assertWithMessage("Failed to test compilation VM.")
-                .that(result)
-                .ignoringCase()
-                .contains("all ok");
+        try {
+            tracer.run(getSimpleMicrodroidPayload(os, "psci_mem_protect_test", timeout));
+        } catch (Exception e) {
+            throw new AssertionError("Failed to run payload (" + e.getMessage() + ")");
+        }
 
         List<Integer> values = tracer.getPsciMemProtect();
 
@@ -690,12 +735,19 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
 
                 String artApexPath = m.group(1);
 
-                CommandResult result = android.runForResult("pm install --apex " + artApexPath);
-                assertWithMessage("Failed to install APEX. Reason: " + result)
-                        .that(result.getExitCode())
-                        .isEqualTo(0);
+                // Copy the backing APEX file to a temp file first
+                String tmpApexPath = "/data/local/tmp/art.apex";
+                android.run("cp " + artApexPath + " " + tmpApexPath);
+                try {
+                    CommandResult result = android.runForResult("pm install --apex " + tmpApexPath);
+                    assertWithMessage("Failed to install APEX. Reason: " + result)
+                            .that(result.getExitCode())
+                            .isEqualTo(0);
+                } finally {
+                    android.run("rm -f " + tmpApexPath);
+                }
 
-                CLog.i("Success to install APEX. Result: " + result);
+                CLog.i("Success to install APEX");
 
                 break;
             } catch (AssertionError e) {

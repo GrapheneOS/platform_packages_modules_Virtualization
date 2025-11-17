@@ -520,6 +520,27 @@ impl<'a> FdtNodeMut<'a> {
         Ok(Self { fdt: self.fdt, offset })
     }
 
+    /// Finds or adds a new subnode to the given node and return it as a FdtNodeMut on success.
+    pub fn find_or_add_subnode<T>(self, name: &T) -> Result<Self>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.find_or_add_subnode_raw(name.as_ref().to_bytes())
+    }
+
+    /// Same as `find_or_add_subnode`, with `name` as a slice of C characters, without nul
+    /// terminator.
+    pub fn find_or_add_subnode_raw<T>(self, name: &T) -> Result<Self>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        if let Some(offset) = self.as_node().subnode_offset(name)? {
+            Ok(Self { fdt: self.fdt, offset })
+        } else {
+            self.add_subnode_raw(name)
+        }
+    }
+
     fn add_subnode_offset<T>(&mut self, name: &T) -> Result<NodeOffset>
     where
         T: AsRef<[u8]> + ?Sized,
@@ -866,6 +887,33 @@ impl Fdt {
         T: AsRef<[u8]> + ?Sized,
     {
         self.path_offset_namelen(path.as_ref())
+    }
+
+    /// Returns a mutable tree node by its full path, creates it (and any parent) if necessary.
+    pub fn find_or_add_node_mut<T>(&mut self, path: &T) -> Result<FdtNodeMut<'_>>
+    where
+        T: AsRef<CStr> + ?Sized,
+    {
+        self.find_or_add_node_mut_raw(path.as_ref().to_bytes())
+    }
+
+    /// Same as `find_or_add_node_mut`, with `path` as a slice of C characters, without nul
+    /// terminator.
+    pub fn find_or_add_node_mut_raw<T>(&mut self, path: &T) -> Result<FdtNodeMut<'_>>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        let mut names = path.as_ref().split(|c| *c == b'/');
+        // Absolute DT paths must start with '/', making the first name empty.
+        if names.next().is_none_or(|n| !n.is_empty()) {
+            return Err(FdtError::BadPath);
+        }
+        let mut node = self.root_mut();
+        for name in names {
+            node = node.find_or_add_subnode_raw(&name)?;
+        }
+
+        Ok(node)
     }
 
     fn next_node_skip_subnodes(

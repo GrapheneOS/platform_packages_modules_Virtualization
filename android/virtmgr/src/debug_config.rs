@@ -15,11 +15,13 @@
 //! Functions for AVF debug policy and debug level
 
 use crate::aidl;
+use crate::dt_overlay;
 use anyhow::{anyhow, Context, Error, Result};
 use libfdt::{Fdt, FdtError};
 use log::{info, warn};
 use rustutils::android::system_properties;
 use std::ffi::{CString, NulError};
+use std::fmt;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -29,6 +31,7 @@ use vmconfig::get_debug_level;
 const CUSTOM_DEBUG_POLICY_OVERLAY_SYSPROP: &str =
     "hypervisor.virtualizationmanager.debug_policy.path";
 const DUMP_DT_SYSPROP: &str = "hypervisor.virtualizationmanager.dump_device_tree";
+const DEVICE_TREE_OVERLAY_SIZE_BYTES: usize = 400; // rough estimation.
 
 struct DPPath {
     node_path: CString,
@@ -108,6 +111,13 @@ fn get_fdt_prop_bool(fdt_overlay: &Fdt, path: &DPPath) -> Result<bool> {
     }
 }
 
+/// Sets the DP value by creating its path as well.
+fn set_fdt_prop(fdt: &mut Fdt, path: &DPPath, value: &[u8]) -> Result<()> {
+    let mut node = fdt.find_or_add_node_mut(&path.to_fdt_overlay_path())?;
+    node.setprop(&path.prop_name, value)?;
+    Ok(())
+}
+
 /// Fdt with owned vector.
 struct OwnedFdt {
     buffer: Vec<u8>,
@@ -130,11 +140,22 @@ impl OwnedFdt {
 }
 
 /// Debug configurations for debug policy.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct DebugPolicy {
     log: bool,
     ramdump: bool,
     adb: bool,
+    fdt: Option<OwnedFdt>,
+}
+
+impl fmt::Debug for DebugPolicy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DebugPolicy")
+            .field("log", &self.log)
+            .field("ramdump", &self.ramdump)
+            .field("adb", &self.adb)
+            .finish()
+    }
 }
 
 impl DebugPolicy {
@@ -147,16 +168,26 @@ impl DebugPolicy {
             log: get_fdt_prop_bool(fdt, &DP_LOG_PATH)?,
             ramdump: get_fdt_prop_bool(fdt, &DP_RAMDUMP_PATH)?,
             adb: get_fdt_prop_bool(fdt, &DP_ADB_PATH)?,
+            fdt: Some(owned_fdt),
         })
     }
 
     /// Build from the /avf/guest subtree of the host DT.
     pub fn from_host() -> Result<Self> {
-        Ok(Self {
-            log: get_debug_policy_bool(&DP_LOG_PATH.to_path())?,
-            ramdump: get_debug_policy_bool(&DP_RAMDUMP_PATH.to_path())?,
-            adb: get_debug_policy_bool(&DP_ADB_PATH.to_path())?,
-        })
+        let log = get_debug_policy_bool(&DP_LOG_PATH.to_path())?;
+        let ramdump = get_debug_policy_bool(&DP_RAMDUMP_PATH.to_path())?;
+        let adb = get_debug_policy_bool(&DP_ADB_PATH.to_path())?;
+        let fdt = if log || ramdump || adb {
+            let mut buffer = vec![0_u8; DEVICE_TREE_OVERLAY_SIZE_BYTES];
+            let fdt = dt_overlay::create_empty_device_tree_overlay(&mut buffer)?;
+            set_fdt_prop(fdt, &DP_LOG_PATH, &[log as u8])?;
+            set_fdt_prop(fdt, &DP_RAMDUMP_PATH, &[ramdump as u8])?;
+            set_fdt_prop(fdt, &DP_ADB_PATH, &[adb as u8])?;
+            Some(OwnedFdt { buffer })
+        } else {
+            None
+        };
+        Ok(Self { log, ramdump, adb, fdt })
     }
 }
 
@@ -188,6 +219,10 @@ impl DebugConfig {
         });
 
         Self { debug_level, debug_policy, dump_device_tree }
+    }
+
+    pub fn get_debug_policy_overlay(&self) -> Option<&Fdt> {
+        self.debug_policy.fdt.as_ref().map(|fdt| fdt.as_fdt())
     }
 
     fn try_load_debug_policy() -> Result<DebugPolicy> {
