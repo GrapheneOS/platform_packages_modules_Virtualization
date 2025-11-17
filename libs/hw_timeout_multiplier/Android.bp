@@ -3,13 +3,12 @@ package {
 }
 
 rust_library {
-    name: "libnested_virt",
-    crate_name: "nested_virt",
+    name: "libhw_timeout_multiplier",
+    crate_name: "hw_timeout_multiplier",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
     edition: "2021",
     rustlibs: [
-        "libanyhow",
         "librustutils",
     ],
     apex_available: [

@@ -52,7 +52,7 @@ rust_defaults {
         "liblog_rust",
         "libmicrodroid_metadata",
         "libmicrodroid_payload_config",
-        "libnested_virt",
+        "libhw_timeout_multiplier",
         "libnix",
         "libonce_cell",
         "libpsi_rs",
