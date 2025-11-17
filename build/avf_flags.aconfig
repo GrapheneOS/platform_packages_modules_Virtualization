@@ -35,6 +35,14 @@ flag {
 }
 
 flag {
+  name: "microdroid_updatable_vm_attestation_support"
+  is_exported: true
+  namespace: "virtualization"
+  description: "Flag used to allow apps to check if Updatable VM or Remote Attestation is supported by AVF on the device"
+  bug: "458669008"
+}
+
+flag {
   name: "microdroid_pvm_gic_its"
   namespace: "virtualization"
   description: "Flag used to allow microdroid pVMs to use vGIC ITS"
