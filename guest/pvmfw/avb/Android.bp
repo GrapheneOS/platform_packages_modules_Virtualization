@@ -74,9 +74,9 @@ rust_test {
         "libanyhow",
         "libavb_bindgen",
         "libavb_rs_nostd",
+        "libbssl_crypto",
         "libhex",
         "libpvmfw_avb_nostd",
-        "libopenssl",
     ],
     enabled: false,
     arch: {

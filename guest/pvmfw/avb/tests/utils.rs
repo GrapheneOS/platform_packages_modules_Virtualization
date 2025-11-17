@@ -21,7 +21,7 @@ use avb_bindgen::{
     avb_footer_validate_and_byteswap, avb_vbmeta_image_header_to_host_byte_order, AvbFooter,
     AvbVBMetaImageHeader,
 };
-use openssl::sha;
+use bssl_crypto::digest::Sha256;
 use pvmfw_avb::{
     verify_payload, Capability, DebugLevel, Digest, PvmfwVerifyError, VerifiedBootData,
 };
@@ -215,7 +215,7 @@ pub fn read_page_size(kernel: &[u8]) -> Result<Option<usize>, PvmfwVerifyError> 
 }
 
 pub fn hash(inputs: &[&[u8]]) -> Digest {
-    let mut digester = sha::Sha256::new();
+    let mut digester = Sha256::new();
     inputs.iter().for_each(|input| digester.update(input));
-    digester.finish()
+    digester.digest()
 }
