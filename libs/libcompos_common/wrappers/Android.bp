@@ -1,0 +1,47 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_defaults {
+    name: "libcompos_wrappers_defaults",
+    edition: "2021",
+    srcs: ["libwrappers.rs"],
+    rustlibs: [
+        "libanyhow",
+        "libauthfs_fsverity_metadata",
+        "libfsverity_rs",
+        "liblibc",
+        "libminijail_rust",
+        "librustutils",
+    ],
+}
+
+rust_library {
+    name: "libcompos_wrappers",
+    crate_name: "compos_wrappers",
+    defaults: ["libcompos_wrappers_defaults"],
+    apex_available: [
+        "com.android.compos",
+    ],
+}
+
+rust_library {
+    name: "libcompos_wrappers_with_mocks",
+    crate_name: "compos_wrappers_with_mocks",
+    defaults: ["libcompos_wrappers_defaults"],
+    cfgs: ["enable_mock"],
+    rustlibs: [
+        "libmockall",
+    ],
+}
+
+rust_test {
+    name: "libcompos_wrappers_test",
+    defaults: ["libcompos_wrappers_defaults"],
+    test_suites: ["general-tests"],
+    data: [
+        "testdata/input.4m",
+        "testdata/input.4m.fsv_meta",
+    ],
+    test_config: "libcompos_wrappers_test.xml",
+}

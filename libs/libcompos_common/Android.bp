@@ -41,37 +41,6 @@ rust_library {
     rustlibs: ["libmockall"],
 }
 
-rust_defaults {
-    name: "libcompos_wrappers_defaults",
-    edition: "2021",
-    srcs: ["libwrappers.rs"],
-    rustlibs: [
-        "libfsverity_rs",
-        "liblibc",
-        "libminijail_rust",
-        "librustutils",
-    ],
-}
-
-rust_library {
-    name: "libcompos_wrappers",
-    crate_name: "compos_wrappers",
-    defaults: ["libcompos_wrappers_defaults"],
-    apex_available: [
-        "com.android.compos",
-    ],
-}
-
-rust_library {
-    name: "libcompos_wrappers_with_mocks",
-    crate_name: "compos_wrappers_with_mocks",
-    defaults: ["libcompos_wrappers_defaults"],
-    cfgs: ["test"],
-    rustlibs: [
-        "libmockall",
-    ],
-}
-
 rust_protobuf {
     name: "libcompos_manifest_proto",
     crate_name: "compos_manifest_proto",
