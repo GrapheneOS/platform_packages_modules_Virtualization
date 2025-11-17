@@ -14,16 +14,24 @@
 
 //! Tests running a VM with LLNDK
 
+use android_logger::Config;
 use anyhow::{bail, ensure, Context, Result};
-use log::info;
+use libloading::Library;
+use log::{info, LevelFilter};
+use std::ffi::c_void;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::os::fd::IntoRawFd;
+use std::os::raw::c_int;
+use std::sync::mpsc::{self, Sender};
+use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
 use avf_bindgen::*;
 use service_vm_comm::{Request, Response, ServiceVmRequest, VmType};
+
+const LOG_TAG: &str = "VtsLibAvf";
 
 const VM_MEMORY_MB: i32 = 16;
 const WRITE_BUFFER_CAPACITY: usize = 512;
@@ -32,6 +40,13 @@ const LISTEN_TIMEOUT: Duration = Duration::from_secs(10);
 const READ_TIMEOUT: Duration = Duration::from_secs(10);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 const STOP_TIMEOUT: timespec = timespec { tv_sec: 10, tv_nsec: 0 };
+
+static ON_STOPPED_EVENT: LazyLock<Mutex<Sender<(usize, AVirtualMachineStopReason, u8)>>> =
+    LazyLock::new(|| {
+        // Returning stub here because `Receiver` isn't `Sync`.
+        let (tx, _) = mpsc::channel();
+        Mutex::new(tx)
+    });
 
 /// Processes the request in the service VM.
 fn process_request(vsock_stream: &mut VsockStream, request: Request) -> Result<Response> {
@@ -73,10 +88,25 @@ fn listen_from_guest(port: u32) -> Result<VsockStream> {
     }
 }
 
+unsafe extern "C" fn on_stopped(
+    vm: *mut AVirtualMachine,
+    reason: AVirtualMachineStopReason,
+    data: *mut c_void,
+) {
+    info!("on_stopped");
+
+    // SAFETY: `data` is a valid pointer passed by AVirtualMachine_start.
+    let data = unsafe { *(data as *const u8) };
+    ON_STOPPED_EVENT.lock().unwrap().send((vm as usize, reason, data)).unwrap();
+}
+
 fn run_service_vm(protected_vm: bool) -> Result<()> {
     let kernel_file = File::open("/data/nativetest64/vendor/service_vm.bin")
         .context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
+
+    let (tx, rx) = mpsc::channel();
+    (*ON_STOPPED_EVENT.lock().unwrap()) = tx;
 
     // SAFETY: AVirtualMachineRawConfig_create() isn't unsafe but rust_bindgen forces it to be seen
     // as unsafe
@@ -124,6 +154,7 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
         "AVirtualMachine_createRaw failed"
     );
 
+    // Note: You can call AVirtualMachine_destroy() inside the stop callback.
     scopeguard::defer! {
         // SAFETY: vm is a valid pointer to AVirtualMachine
         unsafe { AVirtualMachine_destroy(vm); }
@@ -135,10 +166,41 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
 
     let listener_thread = std::thread::spawn(move || listen_from_guest(vm_type.port()));
 
-    // SAFETY: vm is the only reference to a valid object
+    let mut callback_data = 33_u8;
+    let mut supports_callback: bool = false;
+
+    // SAFETY:
+    //   - vm is the only reference to a valid object
+    //   - libavf.so is guaranteed by precondition check in AndroidTest.xml.
+    //   - AVirtualMachine_startWithStopCallback is released as LLNDK, hence interface is stable.
     unsafe {
-        AVirtualMachine_start(vm);
+        let lib = Library::new("libavf.so").unwrap();
+        let start_with_callback: Result<
+            libloading::Symbol<
+                unsafe extern "C" fn(
+                    *mut AVirtualMachine,
+                    AVirtualMachine_stopCallback,
+                    *mut c_void,
+                ) -> c_int,
+            >,
+            _,
+        > = lib.get(b"AVirtualMachine_startWithStopCallback");
+
+        // With trunk stable, this test may run on device without the start_with_callback.
+        // Only test with callbacks when the API is available.
+        // TODO: Remove this block when the API is fully deployed, or invent better way
+        //       to do this.
+        if let Ok(start_with_callback) = start_with_callback {
+            info!("starting VM with AVirtualMachine_startWithStopCallback");
+            supports_callback = true;
+            start_with_callback(vm, Some(on_stopped), &mut callback_data as *mut _ as *mut c_void);
+        } else {
+            info!("starting VM with AVirtualMachine_start");
+            AVirtualMachine_start(vm);
+        }
     }
+
+    let vm_ptr = vm as usize;
 
     info!("VM started");
 
@@ -171,13 +233,35 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
         "AVirtualMachine_waitForStop failed"
     );
 
+    assert_eq!(AVirtualMachineStopReason::AVIRTUAL_MACHINE_SHUTDOWN, stop_reason);
+
     info!("stopped");
+
+    if supports_callback {
+        let timeout = Duration::from_secs(STOP_TIMEOUT.tv_sec.try_into().unwrap());
+        let (stopped_vm_ptr, stopped_reason, stopped_callback_data) =
+            rx.recv_timeout(timeout).expect("Callback should have been called");
+        assert_eq!(stopped_vm_ptr, vm_ptr);
+        assert_eq!(stopped_reason, stop_reason);
+        assert_eq!(stopped_callback_data, callback_data);
+    }
 
     Ok(())
 }
 
+fn init_logger() {
+    android_logger::init_once(
+        Config::default()
+            .with_tag(LOG_TAG)
+            .with_max_level(LevelFilter::Info)
+            .with_log_buffer(android_logger::LogId::System),
+    );
+}
+
 #[test]
 fn test_run_service_vm_protected() -> Result<()> {
+    init_logger();
+
     if hypervisor_props::is_protected_vm_supported()? {
         run_service_vm(true /* protected_vm */)
     } else {
@@ -188,6 +272,8 @@ fn test_run_service_vm_protected() -> Result<()> {
 
 #[test]
 fn test_run_service_vm_non_protected() -> Result<()> {
+    init_logger();
+
     if hypervisor_props::is_vm_supported()? {
         run_service_vm(false /* protected_vm */)
     } else {

@@ -17,9 +17,11 @@ rust_test {
     crate_name: "vts_libavf_test",
     srcs: ["src/vts_libavf_test.rs"],
     rustlibs: [
+        "libandroid_logger",
         "libanyhow",
         "libavf_bindgen",
         "libciborium",
+        "liblibloading",
         "liblog_rust",
         "libhypervisor_props",
         "libscopeguard",
