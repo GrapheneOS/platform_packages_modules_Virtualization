@@ -32,7 +32,9 @@ use android_system_virtualizationservice::{
     },
     binder::{ParcelFileDescriptor, Strong},
 };
-use avf_bindgen::{AVirtualMachineStopReason, AVirtualMachine_stopCallback};
+use avf_bindgen::{
+    AVirtualMachineMemoryMappingAttributes, AVirtualMachineStopReason, AVirtualMachine_stopCallback,
+};
 use libc::timespec;
 use log::error;
 use vmclient::{DeathReason, ErrorCode, VirtualizationService, VmCallback, VmInstance};
@@ -610,6 +612,62 @@ pub unsafe extern "C" fn AVirtualMachine_destroy(vm: *mut VmInstance) {
         // AVirtualMachine_create. It's the only reference to the object.
         unsafe {
             let _ = Arc::from_raw(vm);
+        }
+    }
+}
+
+/// Adds this fd as memory into the guest IPA space at the given range.
+///
+/// # Safety
+/// `vm` must be a pointer returned by `AVirtualMachine_createRaw`.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachine_addMemoryMapping(
+    vm: *const VmInstance,
+    fd: c_int,
+    range_start: u64,
+    range_end: u64,
+    offset: u64,
+    memory_attrs: AVirtualMachineMemoryMappingAttributes,
+) -> c_int {
+    // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
+    // AVirtualMachine_create. It's the only reference to the object.
+    let vm = unsafe { &*vm };
+
+    let Some(fd) = get_file_from_fd(fd) else {
+        return -libc::EINVAL;
+    };
+
+    let cache_coherent = match memory_attrs {
+        AVirtualMachineMemoryMappingAttributes::AVIRTUAL_MACHINE_MEMORY_MAPPING_ATTRIBUTE_CACHE_COHERENT => true,
+        AVirtualMachineMemoryMappingAttributes::AVIRTUAL_MACHINE_MEMORY_MAPPING_ATTRIBUTE_NON_CACHE_COHERENT => false,
+    };
+    match vm.add_memory_mapping(fd, range_start, range_end, offset, cache_coherent) {
+        Ok(memory_id) => memory_id,
+        Err(e) => {
+            error!("AVirtualMachine_addFileMapping failed: {e:?}");
+            -libc::EIO
+        }
+    }
+}
+
+/// Removes previously shared with guest memory from the guest IPA space.
+///
+/// # Safety
+/// `vm` must be a pointer returned by `AVirtualMachine_createRaw`.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachine_removeMemoryMapping(
+    vm: *const VmInstance,
+    memory_id: c_int,
+) -> bool {
+    // SAFETY: `vm` is assumed to be a valid, non-null pointer returned by
+    // AVirtualMachine_create. It's the only reference to the object.
+    let vm = unsafe { &*vm };
+
+    match vm.remove_memory_mapping(memory_id) {
+        Ok(_) => true,
+        Err(e) => {
+            error!("AVirtualMachine_removeFileMapping failed: {e:?}");
+            false
         }
     }
 }
