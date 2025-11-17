@@ -154,6 +154,9 @@ def ExtractAvbPubkey(args, key, output):
 
 
 def is_lz4(args, path):
+    # lz4 -t returns 0 for empty files
+    if os.path.getsize(path) == 0:
+        return False
     # error 44: Unrecognized header
     result = RunCommand(args, ['lz4', '-t', path], expected_return_values={0, 44})
     return result[1] == 0
