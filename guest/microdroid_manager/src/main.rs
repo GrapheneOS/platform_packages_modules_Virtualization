@@ -101,6 +101,7 @@ use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
 use std::sync::Arc;
+use std::thread::JoinHandle;
 use std::time::Duration;
 use vm_secret::VmSecret;
 use vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
@@ -469,6 +470,20 @@ struct CgroupConfig {
     memory_high_mib: u64,
 }
 
+struct EncryptedstoreHandle {
+    encryptedstore_thread: Option<JoinHandle<()>>,
+}
+
+impl Drop for EncryptedstoreHandle {
+    fn drop(&mut self) {
+        if let Some(t) = self.encryptedstore_thread.take() {
+            if system_properties::read_bool(ENCRYPTED_STORE_SETUP_PROP, false).unwrap_or(false) {
+                t.join().unwrap();
+            }
+        }
+    }
+}
+
 fn try_run_payload(
     service: &Strong<dyn IVirtualMachineService>,
     vm_internal_service_fd: OwnedFd,
@@ -643,6 +658,7 @@ fn try_run_payload(
         VM_INTERNAL_SERVICE_SOCKET_NAME,
     )?;
 
+    let mut encryptedstore_handle = EncryptedstoreHandle { encryptedstore_thread: None };
     // Run encryptedstore binary to prepare the storage
     // Postpone initialization until apex mount completes to ensure e2fsck and resize2fs binaries
     // are accessible.
@@ -668,7 +684,7 @@ fn try_run_payload(
             let encrypted_store_mode = instance_data.apk_data.encrypted_store_mode;
             let tenant_manager_for_enc_store = tenant_manager.clone();
             info!("Delaying preparation of encryptedstore as requested ...");
-            std::thread::spawn(move || {
+            encryptedstore_handle.encryptedstore_thread = Some(std::thread::spawn(move || {
                 if let Err(e) = delayed_prepare_encryptedstore(
                     encrypted_store_mode,
                     service_clone,
@@ -682,7 +698,7 @@ fn try_run_payload(
                     // keep it simple and just SIGABRT.
                     panic!("delayed prepare encrypted store failed: {e:#?}");
                 }
-            });
+            }));
             None
         } else {
             info!("Preparing encryptedstore ...");
