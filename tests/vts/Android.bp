@@ -4,7 +4,7 @@ prebuilt_etc {
     src: ":empty_file",
     target: {
         android_arm64: {
-            src: ":service_vm_signed",
+            src: ":vmbase_test_vm_signed",
         },
     },
     installable: false,
@@ -27,6 +27,7 @@ rust_test {
         "libscopeguard",
         "libservice_vm_comm",
         "libvsock",
+        "libvmbase_test_vm_messages",
     ],
     shared_libs: ["libavf"],
     test_suites: [

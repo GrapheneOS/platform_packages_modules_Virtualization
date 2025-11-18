@@ -17,4 +17,5 @@ rust_library {
         features: [],
         enabled: true,
     },
+    vendor_available: true,
 }
