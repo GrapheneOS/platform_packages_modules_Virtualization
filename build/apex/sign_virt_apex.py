@@ -553,13 +553,14 @@ def SignVirtApex(args):
     input_dir = args.input_dir
     files = TargetFiles(input_dir)
 
-    # Legacy microdroid instances use a super partition.
     if os.path.exists(files['system.img']):
         system_a_f = Async(AddHashTreeFooter, args, key, files['system.img'])
         images = [files['system.img']]
         images_f = [system_a_f]
     else:
+        # Legacy microdroid instances use a super partition.
         system_a_img = os.path.join(unpack_dir.name, 'system_a.img')
+        vendor_a_img = os.path.join(unpack_dir.name, 'vendor_a.img')
 
         # re-sign super.img
         # 1. unpack super.img
@@ -570,6 +571,12 @@ def SignVirtApex(args):
         partitions = {"system_a": system_a_img}
         images = [system_a_img]
         images_f = [system_a_f]
+
+        if os.path.exists(vendor_a_img):
+            partitions.update({'vendor_a': vendor_a_img})
+            images.append(vendor_a_img)
+            vendor_a_f = Async(AddHashTreeFooter, args, key, vendor_a_img)
+            images_f.append(vendor_a_f)
 
         Async(MakeSuperImage, args, partitions,
               files['super.img'], wait=images_f)
