@@ -29,6 +29,7 @@ use std::time::{Duration, Instant};
 use authfs_aidl_interface::aidl::com::android::virt::fs::AuthFsConfig::{
     AuthFsConfig, InputDirFdAnnotation::InputDirFdAnnotation, InputFdAnnotation::InputFdAnnotation,
     OutputDirFdAnnotation::OutputDirFdAnnotation, OutputFdAnnotation::OutputFdAnnotation,
+    VerifiedInputFdAnnotation::VerifiedInputFdAnnotation,
 };
 use authfs_aidl_interface::aidl::com::android::virt::fs::IAuthFs::{BnAuthFs, IAuthFs};
 use binder::{self, BinderFeatures, Interface, ParcelFileDescriptor, Status, Strong};
@@ -83,6 +84,7 @@ impl AuthFs {
     ) -> Result<Strong<dyn IAuthFs>> {
         let child = run_authfs(
             &mountpoint,
+            &config.verifiedInputFdAnnotations,
             &config.inputFdAnnotations,
             &config.outputFdAnnotations,
             &config.inputDirFdAnnotations,
@@ -125,6 +127,7 @@ impl Drop for AuthFs {
 
 fn run_authfs(
     mountpoint: &OsStr,
+    in_verified_file_fds: &[VerifiedInputFdAnnotation],
     in_file_fds: &[InputFdAnnotation],
     out_file_fds: &[OutputFdAnnotation],
     in_dir_fds: &[InputDirFdAnnotation],
@@ -134,6 +137,10 @@ fn run_authfs(
     let mut args = vec![mountpoint.to_owned(), OsString::from("--cid=2")];
     args.push(OsString::from("-o"));
     args.push(OsString::from("fscontext=u:object_r:authfs_fuse:s0"));
+    for conf in in_verified_file_fds {
+        args.push(OsString::from("--remote-ro-file-verified"));
+        args.push(OsString::from(format!("{}:{}", conf.fd, conf.digest)));
+    }
     for conf in in_file_fds {
         // TODO(b/185178698): Many input files need to be signed and verified.
         // or can we use debug cert for now, which is better than nothing?
