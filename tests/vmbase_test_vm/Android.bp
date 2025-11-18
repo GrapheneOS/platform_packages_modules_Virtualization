@@ -11,6 +11,11 @@ rust_ffi_static {
         "liblibfdt_nostd",
         "liblog_rust_nostd",
         "libvmbase",
+        "libvmbase_test_vm_messages_nostd",
+        "libvirtio_drivers",
+        "libtinyvec_nostd",
+        "libciborium_io_nostd",
+        "libciborium_nostd",
     ],
 }
 

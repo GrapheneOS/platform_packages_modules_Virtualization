@@ -18,16 +18,34 @@
 #![no_main]
 #![no_std]
 
+mod communication;
 mod error;
 
-use crate::error::Result;
+use crate::communication::VsockStream;
+use crate::error::{Error, Result};
+use ciborium_io::Write;
 use core::num::NonZeroUsize;
 use core::slice;
 use log::{error, info};
+use virtio_drivers::device::socket::{VsockAddr, VMADDR_CID_HOST};
+use virtio_drivers::transport::pci::bus::{ConfigurationAccess, PciRoot};
+use virtio_drivers::transport::{DeviceType, Transport};
+use virtio_drivers::Hal;
+use vmbase::fdt::pci::initialize_from_fdt;
 use vmbase::layout::crosvm;
 use vmbase::memory::{map_rodata, resize_available_memory, SIZE_128KB};
 use vmbase::power::reboot;
+use vmbase::virtio::pci::{PciTransportIterator, VirtIOSocket};
+use vmbase::virtio::HalImpl;
 use vmbase::{configure_heap, generate_image_header, main};
+use vmbase_test_vm_messages::{Request, Response, VM_PORT};
+
+fn process_request(req: Request) -> Response {
+    match req {
+        Request::Reverse(v) => Response::Reverse(v.into_iter().rev().collect()),
+        Request::Shutdown => unreachable!(),
+    }
+}
 
 /// # Safety
 ///
@@ -56,9 +74,39 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     })?;
 
     info!("main memory region: {memory_range:#?}");
-    // TODO(ioffe): start vsock server to accept requests from the host.
+
+    let mut pci_root = initialize_from_fdt(fdt).map_err(Error::PciInitializationFailed)?;
+    let socket_device = find_socket_device::<HalImpl>(&mut pci_root)?;
+    info!("Found socket device: guest cid = {:?}", socket_device.guest_cid());
+    let host_addr = VsockAddr { cid: VMADDR_CID_HOST, port: VM_PORT };
+    let mut vsock_stream = VsockStream::new(socket_device, host_addr)?;
+    info!("listening for messages from host");
+    loop {
+        let req = vsock_stream.read_request()?;
+        info!("Received request: {req:?}");
+        if req == Request::Shutdown {
+            info!("Shutting down. Bye!");
+            break;
+        }
+        let resp = process_request(req);
+        info!("Sending response: {resp:?}");
+        vsock_stream.write_response(&resp)?;
+        vsock_stream.flush()?;
+    }
+    vsock_stream.shutdown()?;
 
     Ok(())
+}
+
+fn find_socket_device<T: Hal>(
+    pci_root: &mut PciRoot<impl ConfigurationAccess>,
+) -> Result<VirtIOSocket<T>> {
+    PciTransportIterator::<T, _>::new(pci_root)
+        .find(|t| DeviceType::Socket == t.device_type())
+        .map(VirtIOSocket::<T>::new)
+        .transpose()
+        .map_err(Error::VirtIOSocketCreationFailed)?
+        .ok_or(Error::MissingVirtIOSocketDevice)
 }
 
 /// Entry point for this VM.
