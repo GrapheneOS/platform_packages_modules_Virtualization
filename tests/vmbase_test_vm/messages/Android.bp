@@ -1,0 +1,21 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_library {
+    name: "libvmbase_test_vm_messages",
+    crate_name: "vmbase_test_vm_messages",
+    defaults: ["avf_build_flags_rust"],
+    srcs: ["src/lib.rs"],
+    prefer_rlib: true,
+    rustlibs: [
+        "libciborium",
+        "libserde",
+    ],
+    features: ["std"],
+    no_std: {
+        features: [],
+        enabled: true,
+    },
+    vendor_available: true,
+}

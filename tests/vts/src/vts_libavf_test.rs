@@ -29,7 +29,7 @@ use std::time::{Duration, Instant};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
 use avf_bindgen::*;
-use service_vm_comm::{Request, Response, ServiceVmRequest, VmType};
+use vmbase_test_vm_messages::{Request, Response, VM_PORT};
 
 const LOG_TAG: &str = "VtsLibAvf";
 
@@ -50,12 +50,12 @@ static ON_STOPPED_EVENT: LazyLock<Mutex<Sender<(usize, AVirtualMachineStopReason
 
 /// Processes the request in the service VM.
 fn process_request(vsock_stream: &mut VsockStream, request: Request) -> Result<Response> {
-    write_request(vsock_stream, &ServiceVmRequest::Process(request))?;
+    write_request(vsock_stream, &request)?;
     read_response(vsock_stream)
 }
 
 /// Sends the request to the service VM.
-fn write_request(vsock_stream: &mut VsockStream, request: &ServiceVmRequest) -> Result<()> {
+fn write_request(vsock_stream: &mut VsockStream, request: &Request) -> Result<()> {
     let mut buffer = BufWriter::with_capacity(WRITE_BUFFER_CAPACITY, vsock_stream);
     ciborium::into_writer(request, &mut buffer)?;
     buffer.flush().context("Failed to flush the buffer")?;
@@ -101,7 +101,7 @@ unsafe extern "C" fn on_stopped(
 }
 
 fn run_service_vm(protected_vm: bool) -> Result<()> {
-    let kernel_file = File::open("/data/nativetest64/vendor/service_vm.bin")
+    let kernel_file = File::open("/data/nativetest64/vendor/vts_libavf_vm.bin")
         .context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
 
@@ -162,9 +162,7 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
 
     info!("vm created");
 
-    let vm_type = if protected_vm { VmType::ProtectedVm } else { VmType::NonProtectedVm };
-
-    let listener_thread = std::thread::spawn(move || listen_from_guest(vm_type.port()));
+    let listener_thread = std::thread::spawn(move || listen_from_guest(VM_PORT));
 
     let mut callback_data = 33_u8;
     let mut supports_callback: bool = false;
@@ -212,17 +210,14 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
 
     let request_data = vec![1, 2, 3, 4, 5];
     let expected_data = vec![5, 4, 3, 2, 1];
-    let response = process_request(&mut vsock_stream, Request::Reverse(request_data))
-        .context("Failed to process request")?;
-    let Response::Reverse(reversed_data) = response else {
-        bail!("Expected Response::Reverse but was {response:?}");
-    };
+    let Response::Reverse(reversed_data) =
+        process_request(&mut vsock_stream, Request::Reverse(request_data))
+            .context("Failed to process request")?;
     ensure!(reversed_data == expected_data, "Expected {expected_data:?} but was {reversed_data:?}");
 
     info!("request processed");
 
-    write_request(&mut vsock_stream, &ServiceVmRequest::Shutdown)
-        .context("Failed to send shutdown")?;
+    write_request(&mut vsock_stream, &Request::Shutdown).context("Failed to send shutdown")?;
 
     info!("shutdown sent");
 

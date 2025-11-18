@@ -1,0 +1,77 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_ffi_static {
+    name: "libvmbase_test_vm",
+    crate_name: "vmbase_test_vm",
+    srcs: ["src/main.rs"],
+    defaults: ["vmbase_ffi_defaults"],
+    no_std_rlibs: [
+        "liblibfdt_nostd",
+        "liblog_rust_nostd",
+        "libvmbase",
+        "libvmbase_test_vm_messages_nostd",
+        "libvirtio_drivers",
+        "libtinyvec_nostd",
+        "libciborium_io_nostd",
+        "libciborium_nostd",
+    ],
+}
+
+cc_binary {
+    name: "vmbase_test_vm_elf",
+    stem: "vmbase_test_vm",
+    defaults: ["vmbase_elf_0x80000000_defaults"],
+    static_libs: [
+        "libvmbase_test_vm",
+    ],
+}
+
+raw_binary {
+    name: "vmbase_test_vm_unsigned",
+    src: ":vmbase_test_vm_elf",
+    enabled: false,
+    target: {
+        android_arm64: {
+            enabled: true,
+        },
+    },
+}
+
+// python -c "import hashlib; print(hashlib.sha256(b'vmbase_test_vm_salt').hexdigest())"
+vmbase_test_vm_salt = "db706ce9993c4e4c6f05cba5491236df10f5f5e26f55471b13c3b53a7865e980"
+
+filegroup {
+    name: "vmbase_test_vm_sign_key",
+    srcs: [":avb_testkey_rsa4096"],
+}
+
+avb_add_hash_footer {
+    name: "vmbase_test_vm_signed",
+    src: ":empty_file",
+    filename: "vmbase_test_vm",
+    partition_name: "boot",
+    private_key: ":vmbase_test_vm_sign_key",
+    salt: vmbase_test_vm_salt,
+    rollback_index: 1,
+    enabled: false,
+    arch: {
+        arm64: {
+            src: ":vmbase_test_vm_unsigned",
+            enabled: true,
+        },
+    },
+}
+
+prebuilt_etc {
+    name: "vmbase_test_vm_bin",
+    filename: "vmbase_test_vm.bin",
+    target: {
+        android_arm64: {
+            src: ":vmbase_test_vm_signed",
+        },
+    },
+    src: ":empty_file",
+    installable: false,
+}
