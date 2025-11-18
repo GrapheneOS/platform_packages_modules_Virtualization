@@ -1,6 +1,6 @@
 prebuilt_etc {
     name: "vts_libavf_test_kernel",
-    filename: "service_vm.bin",
+    filename: "vts_libavf_vm.bin",
     src: ":empty_file",
     target: {
         android_arm64: {

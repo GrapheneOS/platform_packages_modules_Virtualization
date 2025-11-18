@@ -101,7 +101,7 @@ unsafe extern "C" fn on_stopped(
 }
 
 fn run_service_vm(protected_vm: bool) -> Result<()> {
-    let kernel_file = File::open("/data/nativetest64/vendor/service_vm.bin")
+    let kernel_file = File::open("/data/nativetest64/vendor/vts_libavf_vm.bin")
         .context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
 
