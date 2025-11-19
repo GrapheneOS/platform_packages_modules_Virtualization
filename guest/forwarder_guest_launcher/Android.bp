@@ -1,0 +1,30 @@
+// Copyright 2025 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law-or-agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This module is only expected to be used in Debian linux running inside the VM.
+// There's no guarantee that this module works well on the Android.
+rust_library {
+    name: "libforwarder_guest_launcher",
+    srcs: ["src/lib.rs"],
+    crate_name: "forwarder_guest_launcher",
+    edition: "2021",
+    rustlibs: [
+        "libanyhow",
+        "liblog_rust",
+        "libnix",
+        "libtokio",
+        "liblinux",
+    ],
+    apex_available: ["com.android.virt"],
+}

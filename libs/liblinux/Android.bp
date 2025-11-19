@@ -28,7 +28,7 @@ rust_library {
         "libanyhow",
         "libglob",
     ],
-    visibility: ["//packages/modules/Virtualization/guest/__subpackages__"],
+    visibility: ["//packages/modules/Virtualization/guest:__subpackages__"],
 }
 
 rust_test_host {
