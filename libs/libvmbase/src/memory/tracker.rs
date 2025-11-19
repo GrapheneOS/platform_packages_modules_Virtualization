@@ -181,6 +181,20 @@ pub unsafe fn map_rodata_outside_main_memory(addr: usize, size: NonZeroUsize) ->
     Ok(())
 }
 
+/// Map the provided range as normal memory, with read-write permissions.
+///
+/// # Safety
+///
+/// Callers of this method need to ensure that the `range` is valid for mapping as read-only data.
+pub unsafe fn map_data_outside_main_memory(addr: usize, size: NonZeroUsize) -> Result<()> {
+    let mut locked_tracker = try_lock_memory_tracker()?;
+    let tracker = locked_tracker.as_mut().ok_or(MemoryTrackerError::Unavailable)?;
+    let end = addr + usize::from(size);
+    // SAFETY: Caller has checked that it is valid to map the range.
+    let _ = unsafe { tracker.map_data_outside_main_memory(&(addr..end), MapDataMode::ReadWrite) }?;
+    Ok(())
+}
+
 /// Unmap the provided memory range
 ///
 /// Fails if the region is not mapped.

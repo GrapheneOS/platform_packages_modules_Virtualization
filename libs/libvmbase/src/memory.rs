@@ -22,9 +22,10 @@ mod util;
 
 pub use error::MemoryTrackerError;
 pub use tracker::{
-    deactivate_dynamic_page_tables, init_shared_pool, map_data, map_data_noflush, map_device,
-    map_image_footer, map_rodata, map_rodata_outside_main_memory, resize_available_memory, unmap,
-    unshare_all_memory, unshare_all_mmio_except_uart, unshare_uart,
+    deactivate_dynamic_page_tables, init_shared_pool, map_data, map_data_noflush,
+    map_data_outside_main_memory, map_device, map_image_footer, map_rodata,
+    map_rodata_outside_main_memory, resize_available_memory, unmap, unshare_all_memory,
+    unshare_all_mmio_except_uart, unshare_uart,
 };
 
 #[cfg(target_arch = "aarch64")]
