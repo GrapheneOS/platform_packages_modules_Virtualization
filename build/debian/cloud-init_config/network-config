@@ -15,6 +15,7 @@ network:
             dhcp6: true
             dhcp6-overrides:
                 use-domains: true
+            optional: true
         all-eth:
             match:
                 name: eth*
@@ -24,3 +25,4 @@ network:
             dhcp6: true
             dhcp6-overrides:
                 use-domains: true
+            optional: true
