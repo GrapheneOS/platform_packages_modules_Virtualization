@@ -26,6 +26,23 @@ parcelable AuthFsConfig {
         int fd;
     }
 
+    parcelable VerifiedInputFdAnnotation {
+        /**
+         * File descriptor number to be passed to the program.  This is also the same file
+         * descriptor number used in the backend server.
+         */
+        int fd;
+        /**
+         * The fs-verity sha256 digest for the file.
+         *
+         * The format of the string should be "sha256-" followed by the sha256
+         * in string hex format (upper or lowercase)
+         * For example:
+         * "sha256-9828cd65f4744d6adda216d3a63d8205375be485bfa261b3b8153d3358f5a576"
+         */
+        String digest;
+    }
+
     parcelable OutputFdAnnotation {
         /**
          * File descriptor number to be passed to the program.  This is also the same file
@@ -64,6 +81,9 @@ parcelable AuthFsConfig {
 
     /** Port of the filesystem backend. */
     int port;
+
+    /** Annotation for the remote verified input file descriptors. */
+    VerifiedInputFdAnnotation[] verifiedInputFdAnnotations;
 
     /** Annotation for the remote input file descriptors. */
     InputFdAnnotation[] inputFdAnnotations;
