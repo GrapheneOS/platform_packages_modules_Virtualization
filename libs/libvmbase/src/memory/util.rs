@@ -31,6 +31,9 @@ pub const SIZE_128KB: usize = 128 << 10;
 /// The size of a 256KB memory in bytes.
 #[allow(dead_code)]
 pub const SIZE_256KB: usize = 256 << 10;
+/// The size of a 640KB memory in bytes.
+#[allow(dead_code)]
+pub const SIZE_640KB: usize = 640 << 10;
 /// The size of a 2MB memory in bytes.
 pub const SIZE_2MB: usize = 2 << 20;
 /// The size of a 4MB memory in bytes.
