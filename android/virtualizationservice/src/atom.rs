@@ -16,9 +16,7 @@
 
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::Atom;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
-use anyhow::Result;
 use log::{trace, warn};
-use rustutils::android::system_properties::PropertyWatcher;
 use statslog_virtualization_rust::{
     cgroup_memory_breach_reported, fsck_failed_reported, get_or_create_sk_secret_failed_reported,
     psi_monitor_failed_reported, stale_encryptedstore_detected, vm_booted, vm_creation_requested,
@@ -26,8 +24,6 @@ use statslog_virtualization_rust::{
 };
 
 pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-
     let result = match atom {
         Atom::CgroupMemoryBreachReported(atom) => {
             cgroup_memory_breach_reported::CgroupMemoryBreachReported {
@@ -150,9 +146,4 @@ pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
         Err(e) => warn!("statslog_rust failed with error: {e}"),
         Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
-}
-
-fn wait_for_statsd() -> Result<()> {
-    PropertyWatcher::new("init.svc.statsd")?.wait_for_value("running", None)?;
-    Ok(())
 }
