@@ -195,20 +195,26 @@ impl VirtualizationServiceInternal {
 
         let service_clone = service.clone();
         let on_shutdown = move || {
+            // Request all the VMs to stop in parallel.
+            let mut threads = Vec::new();
             service_clone.state.lock().unwrap().virtual_machines.iter().for_each(|(key, value)| {
                 let cid = *key;
                 let vm = value.0.clone();
-                // Don't wait for the VM to be completely killed. Move on to the next VM as
-                // soon as possible.
-                std::thread::Builder::new()
-                    .name(format!("shutdown_monitor_{cid}"))
-                    .spawn(move || {
-                        let _ = vm.stop().inspect_err(|e| {
-                            error!("Failed to stop virtual machine ({cid}): {e:?}");
-                        });
-                    })
-                    .expect("Failed to create shutdown_monitor thread");
+                threads.push(
+                    std::thread::Builder::new()
+                        .name(format!("shutdown_monitor_{cid}"))
+                        .spawn(move || {
+                            let _ = vm.stop().inspect_err(|e| {
+                                error!("Failed to stop virtual machine ({cid}): {e:?}");
+                            });
+                        })
+                        .expect("Failed to create shutdown_monitor thread"),
+                );
             });
+            for thread in threads {
+                thread.join().unwrap();
+            }
+            info!("All VMs stopped.");
         };
         // SAFETY: ShutdownMonitor::start is called only once as
         // VirtualizationServiceInternal::init is called only once. This place is the only where
@@ -1131,7 +1137,6 @@ impl ShutdownMonitor {
                                 Ok(()) => {
                                     info!("SIGTERM received. Stopping VMs...");
                                     handler();
-                                    info!("All VMs stopped.");
                                     break;
                                 }
                                 Err(e) => {
