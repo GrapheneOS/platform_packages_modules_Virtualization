@@ -90,9 +90,10 @@ impl Hypervisor for ProtectedKvmHypervisor {
     }
 }
 
-macro_rules! vmcall {
-    ($hypcall:expr, $base:expr, $size:expr) => {{
+macro_rules! __vmcall_impl {
+    ($hypcall:expr, $a1:expr, $a2:expr, $a3:expr, $a4:expr) => {{
         let ret;
+
         // SAFETY:
         // Any undeclared register aren't clobbered except rbx but rbx value is restored at the end
         // of the asm block.
@@ -101,13 +102,36 @@ macro_rules! vmcall {
                 "xchg %rbx, {0:r}",
                 "vmcall",
                 "xchg %rbx, {0:r}",
-                in(reg) $base,
+                in(reg) $a1,
                 inout("rax") $hypcall => ret,
-                in("rcx") $size,
+                in("rcx") $a2,
+                in("rdx") $a3,
+                in("rsi") $a4,
                 options(att_syntax, nomem));
         };
         ret
     }};
+}
+
+// This block uses inline assembly to perform a vmcall, interacting directly with the hypervisor.
+// The pKVM hypervisor can share RAX/RBX/RCX/RDX/RSI with pKVM host during hypercall
+// handling. Make sure no valuable information are stored in non-used arguments.
+macro_rules! vmcall {
+    ($hypcall:expr) => {
+        __vmcall_impl!($hypcall, 0, 0, 0, 0)
+    };
+    ($hypcall:expr, $a1:expr) => {
+        __vmcall_impl!($hypcall, $a1, 0, 0, 0)
+    };
+    ($hypcall:expr, $a1:expr, $a2:expr) => {
+        __vmcall_impl!($hypcall, $a1, $a2, 0, 0)
+    };
+    ($hypcall:expr, $a1:expr, $a2:expr, $a3:expr) => {
+        __vmcall_impl!($hypcall, $a1, $a2, $a3, 0)
+    };
+    ($hypcall:expr, $a1:expr, $a2:expr, $a3:expr, $a4:expr) => {
+        __vmcall_impl!($hypcall, $a1, $a2, $a3, $a4)
+    };
 }
 
 macro_rules! cpuid {
