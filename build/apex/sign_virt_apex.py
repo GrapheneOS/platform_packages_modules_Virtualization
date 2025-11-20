@@ -272,6 +272,52 @@ def print_descriptors_diff(
 
     raise AssertionError('\n'.join(output_list))
 
+def print_dict_diff(
+    original_dict, updated_dict, context, dict_type
+):
+    common = original_dict.keys() & updated_dict.keys()
+    extra = updated_dict.keys() - original_dict.keys()
+    missing = original_dict.keys() - updated_dict.keys()
+    modified = {
+        key: (original_dict[key], updated_dict[key])
+        for key in common
+        if original_dict[key] != updated_dict[key]
+    }
+
+    common = common - set(modified.keys())
+
+    assert extra or missing or modified, \
+        f"print_dict_diff called for {context}, but no differences found."
+
+    output_list = [
+        f"{dict_type} mismatch for {context}:",
+        f"Original {dict_type} had {len(original_dict)} items, "
+        f"updated {dict_type} has {len(updated_dict)} items."
+    ]
+
+    if common:
+        common_items = [(k, original_dict[k]) for k in common]
+        append_list_section('\n* Common Items', common_items, output_list)
+
+    if missing:
+        missing_items = [(k, original_dict[k]) for k in missing]
+        append_list_section(
+            f'\n* Missing from Updated {dict_type}', missing_items, output_list
+        )
+
+    if extra:
+        extra_items = [(k, updated_dict[k]) for k in extra]
+        append_list_section(f'\n* Extra in Updated {dict_type}', extra_items, output_list)
+
+    if modified:
+        output_list.append(f'\n* Modified Items ({len(modified)} items):')
+        for i, (key, (orig_val, new_val)) in enumerate(
+            sorted(modified.items()), 1
+        ):
+            output_list.append(f"    {i}. {key}: '{orig_val}' -> '{new_val}'")
+
+    raise AssertionError('\n'.join(output_list))
+
 def check_resigned_image_avb_info(image_path, original_info, original_descriptors, args):
     updated_info, updated_descriptors = AvbInfo(args, image_path)
     assert original_info is not None, f'no avbinfo on original image: {image_path}'
@@ -306,17 +352,20 @@ def check_resigned_image_avb_info(image_path, original_info, original_descriptor
             descriptor_type='Property',
         )
 
-    assert original_info == updated_info, \
-        f"Original info and updated info should be the same for {image_path}. " \
-        f"Original info: {original_info}, updated info: {updated_info}"
+    # Verify that the rest of the AVB info is the same
+    if original_info != updated_info:
+        print_dict_diff(original_info, updated_info, image_path, dict_type='Info')
 
     # Remove digest from hash descriptors before comparing, since some digests should change.
     original_hash_descriptors = extract_hash_descriptors(original_descriptors, drop_digest)
     updated_hash_descriptors = extract_hash_descriptors(updated_descriptors, drop_digest)
-    assert original_hash_descriptors == updated_hash_descriptors, \
-        f"Hash descriptors' parameters should be the same for {image_path}. " \
-        f"Original hash descriptors: {original_hash_descriptors}, " \
-        f"updated hash descriptors: {updated_hash_descriptors}"
+    if original_hash_descriptors != updated_hash_descriptors:
+        print_dict_diff(
+            original_hash_descriptors,
+            updated_hash_descriptors,
+            image_path,
+            dict_type='Hash descriptor',
+        )
 
 def drop_digest(descriptor):
     return {k: v for k, v in descriptor.items() if k != "Digest"}
