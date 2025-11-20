@@ -44,7 +44,10 @@ pub use gunyah::GunyahError;
 
 use alloc::boxed::Box;
 use common::Hypervisor;
-pub use common::{DeviceAssigningHypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
+pub use common::{
+    DeviceAssigningHypervisor, MemRelinquishingHypervisor, MemSharingHypervisor,
+    MmioGuardedHypervisor,
+};
 pub use kvm::KvmError;
 use kvm::{ProtectedKvmHypervisor, RegularKvmHypervisor};
 use once_cell::race::OnceBox;
@@ -159,4 +162,9 @@ pub fn get_device_assigner() -> Option<&'static dyn DeviceAssigningHypervisor> {
 /// Gets the unique hypervisor granule size, if any.
 pub fn get_granule_size() -> Option<usize> {
     get_hypervisor().get_granule_size()
+}
+
+/// Gets the memory relinquisher hypervisor singleton, if any.
+pub fn get_mem_relinquisher() -> Option<&'static dyn MemRelinquishingHypervisor> {
+    get_hypervisor().as_mem_relinquisher()
 }
