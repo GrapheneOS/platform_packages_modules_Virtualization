@@ -1720,6 +1720,42 @@ impl aidl::IVirtualMachine for VirtualMachine {
             hostConsoleName: self.instance.host_console_name.lock().unwrap().clone(),
         })
     }
+
+    fn addMemoryToGuest(
+        &self,
+        fd: &ParcelFileDescriptor,
+        offset: i64,
+        range_start: i64,
+        range_end: i64,
+        cacheable: bool,
+    ) -> binder::Result<i32> {
+        info!("addMemoryToGuest called");
+        if !cfg!(dynamic_memshare_with_guest) {
+            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        check_memory_share_supported()?;
+        let fd = clone_file(fd)?;
+        self.instance
+            .add_memory(fd.into(), offset as u64, range_start as u64, range_end as u64, cacheable)
+            .with_context(|| format!("add memory failed. CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
+
+    fn removeMemoryFromGuest(&self, memory_id: i32) -> binder::Result<()> {
+        info!("removeMemoryFromGuest called");
+        if !cfg!(dynamic_memshare_with_guest) {
+            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        check_memory_share_supported()?;
+        self.instance
+            .remove_memory(memory_id)
+            .with_context(|| format!("remove memory failed. CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(-1)
+    }
 }
 
 impl Drop for VirtualMachine {
@@ -1980,6 +2016,15 @@ fn check_config_allowed_for_early_vms(config: &aidl::VirtualMachineConfig) -> bi
     check_no_devices(config)?;
 
     Ok(())
+}
+
+fn check_memory_share_supported() -> binder::Result<()> {
+    if !system_properties::read_bool("hypervisor.memory_share.supported", false).unwrap_or(false) {
+        Err(anyhow!("hypervisor doesn't support dynamic memory sharing with guest"))
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+    } else {
+        Ok(())
+    }
 }
 
 /// Simple utility for referencing Borrowed or Owned. Similar to std::borrow::Cow, but
