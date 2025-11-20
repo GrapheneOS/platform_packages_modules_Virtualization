@@ -19,6 +19,13 @@ flag {
 }
 
 flag {
+  name: "terminal_vm_communication_refactoring"
+  namespace: "virtualization"
+  description: "Flag for refactoring communication with vm to vsock"
+  bug: "458589051"
+}
+
+flag {
   name: "terminal_storage_balloon"
   is_exported: true
   namespace: "virtualization"
