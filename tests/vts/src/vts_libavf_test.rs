@@ -18,7 +18,8 @@ use android_logger::Config;
 use anyhow::{bail, ensure, Context, Result};
 use libloading::Library;
 use log::{info, LevelFilter};
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
+use std::fmt;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::os::fd::IntoRawFd;
@@ -100,7 +101,39 @@ unsafe extern "C" fn on_stopped(
     ON_STOPPED_EVENT.lock().unwrap().send((vm as usize, reason, data)).unwrap();
 }
 
-fn run_service_vm(protected_vm: bool) -> Result<()> {
+#[derive(Debug)]
+enum VmType {
+    Protected,
+    NonProtected,
+}
+
+impl VmType {
+    fn is_supported(&self) -> Result<bool> {
+        match self {
+            VmType::Protected => hypervisor_props::is_protected_vm_supported(),
+            VmType::NonProtected => hypervisor_props::is_vm_supported(),
+        }
+    }
+}
+
+impl fmt::Display for VmType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            VmType::Protected => write!(f, "protected"),
+            VmType::NonProtected => write!(f, "non-protected"),
+        }
+    }
+}
+
+fn run_test<TestFn>(test_vm_name: &CStr, vm_type: VmType, test_fn: TestFn) -> Result<()>
+where
+    TestFn: FnOnce(&mut VsockStream) -> Result<()>,
+{
+    if !vm_type.is_supported()? {
+        info!("{vm_type} VMs are not supported. skipping test");
+        return Ok(());
+    }
+
     let kernel_file = File::open("/data/nativetest64/vendor/vts_libavf_vm.bin")
         .context("Failed to open kernel file")?;
     let kernel_fd = kernel_file.into_raw_fd();
@@ -120,9 +153,9 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
 
     // SAFETY: config is the only reference to a valid object
     unsafe {
-        AVirtualMachineRawConfig_setName(config, c"vts_libavf_test_service_vm".as_ptr());
+        AVirtualMachineRawConfig_setName(config, test_vm_name.as_ptr());
         AVirtualMachineRawConfig_setKernel(config, kernel_fd);
-        AVirtualMachineRawConfig_setProtectedVm(config, protected_vm);
+        AVirtualMachineRawConfig_setProtectedVm(config, matches!(vm_type, VmType::Protected));
         AVirtualMachineRawConfig_setMemoryMiB(config, VM_MEMORY_MB);
         AVirtualMachineRawConfig_setInstanceId(config, instance_id.as_ptr(), instance_id.len());
     }
@@ -208,14 +241,7 @@ fn run_service_vm(protected_vm: bool) -> Result<()> {
 
     info!("client connected");
 
-    let request_data = vec![1, 2, 3, 4, 5];
-    let expected_data = vec![5, 4, 3, 2, 1];
-    let Response::Reverse(reversed_data) =
-        process_request(&mut vsock_stream, Request::Reverse(request_data))
-            .context("Failed to process request")?;
-    ensure!(reversed_data == expected_data, "Expected {expected_data:?} but was {reversed_data:?}");
-
-    info!("request processed");
+    test_fn(&mut vsock_stream)?;
 
     write_request(&mut vsock_stream, &Request::Shutdown).context("Failed to send shutdown")?;
 
@@ -253,26 +279,27 @@ fn init_logger() {
     );
 }
 
+fn run_reverse_test(vsock_stream: &mut VsockStream) -> Result<()> {
+    let request_data = vec![1, 2, 3, 4, 5];
+    let expected_data = vec![5, 4, 3, 2, 1];
+    let Response::Reverse(reversed_data) =
+        process_request(vsock_stream, Request::Reverse(request_data))
+            .context("Failed to process request")?;
+    ensure!(reversed_data == expected_data, "Expected {expected_data:?} but was {reversed_data:?}");
+    info!("request processed");
+    Ok(())
+}
+
 #[test]
 fn test_run_service_vm_protected() -> Result<()> {
     init_logger();
 
-    if hypervisor_props::is_protected_vm_supported()? {
-        run_service_vm(true /* protected_vm */)
-    } else {
-        info!("pVMs are not supported on device. skipping test");
-        Ok(())
-    }
+    run_test(c"vts_libavf_test_service_vm", VmType::Protected, run_reverse_test)
 }
 
 #[test]
 fn test_run_service_vm_non_protected() -> Result<()> {
     init_logger();
 
-    if hypervisor_props::is_vm_supported()? {
-        run_service_vm(false /* protected_vm */)
-    } else {
-        info!("non-pVMs are not supported on device. skipping test");
-        Ok(())
-    }
+    run_test(c"vts_libavf_test_service_vm", VmType::NonProtected, run_reverse_test)
 }
