@@ -22,7 +22,7 @@ use rustutils::android::system_properties;
 pub fn timeout_multiplier() -> u64 {
     // Android allows setting hardware multipliers for dealing with situations such as running on
     // slower hardware. An example of this is nested virtualization.
-    system_properties::read("ro.hardware.multiplier")
+    system_properties::read("ro.hw_timeout_multiplier")
         .unwrap_or_else(|_| Some("1".to_string()))
         .unwrap_or_else(|| "1".to_string())
         .parse()
