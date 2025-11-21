@@ -23,6 +23,7 @@ mod ioutil;
 mod payload;
 mod swap;
 mod tenant;
+mod tenant_config;
 mod verify;
 mod vm_internal_service;
 mod vm_payload_service;
@@ -52,9 +53,8 @@ use crate::dice::dice_derivation;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{ApexData, EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::tenant::{TenantAttribute, TenantManager};
-use crate::verify::{
-    integrity_protect_tenant_apks, validate_tenant_apks_against_tenant_config, verify_payload,
-};
+use crate::tenant_config::validate_tenants_against_tenant_config;
+use crate::verify::{integrity_protect_tenant_apks, verify_payload};
 use crate::vm_internal_service::VmInternalService;
 use crate::vm_payload_service::VmPayloadService;
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
@@ -558,16 +558,6 @@ fn try_run_payload(
     let (vm_secret, is_new_instance) =
         VmSecret::new(dice_artifacts, service, state).context("Failed to create VM secrets")?;
     let vm_secret = Arc::new(vm_secret);
-    if cfg!(dice_changes) {
-        // Now that the DICE derivation is done, it's ok to allow payload code to run.
-
-        // Start apexd to activate APEXes. This may allow code within them to run.
-        system_properties::write("ctl.start", "apexd-vm")?;
-
-        // Unmounting /microdroid_resources is a defence-in-depth effort to ensure that payload
-        // can't get hold of dice chain stored there.
-        umount2("/microdroid_resources", MntFlags::MNT_DETACH)?;
-    }
 
     let mut zipfuse = Zipfuse::default();
 
@@ -589,6 +579,20 @@ fn try_run_payload(
 
     let config = load_config(payload_metadata).context("Failed to load payload metadata")?;
 
+    if !config.tenants.is_empty() {
+        validate_tenants_against_tenant_config(&tenant_apks, &tenant_apex_data, &config.tenants)?;
+    }
+
+    if cfg!(dice_changes) {
+        // Now that the DICE derivation is done, it's ok to allow payload code to run.
+
+        // Start apexd to activate APEXes. This may allow code within them to run.
+        system_properties::write("ctl.start", "apexd-vm")?;
+
+        // Unmounting /microdroid_resources is a defence-in-depth effort to ensure that payload
+        // can't get hold of dice chain stored there.
+        umount2("/microdroid_resources", MntFlags::MNT_DETACH)?;
+    }
     // TODO(b/429639517): Add a CI test to ensure ill-formed tenantConfig check robust
     if let Some(invalid_tenant) = config.tenants.iter().find(|tenant| !tenant.is_wellformed()) {
         bail!(MicrodroidError::PayloadInvalidConfig(format!(
@@ -618,7 +622,7 @@ fn try_run_payload(
         .context("Failed to mount extra apks")?;
 
     // TODO(b/429639517): Verify the tenant packages against`VmPayloadConfig` from main_apk
-    validate_tenant_apks_against_tenant_config(&tenant_apks, &config.tenants)?;
+
     let tenant_manager = TenantManager::initialize(&config.tenants)?;
     let tenant_manager = Arc::new(tenant_manager);
 
@@ -638,7 +642,6 @@ fn try_run_payload(
         )?;
     }
 
-    // TODO(b/429639517): Validate tenant apex against tenant_config
     let tenant_apk_count =
         config.tenants.iter().filter(|t| matches!(t, TenantConfig::Apk(_))).count();
     mount_additional_apks(&mut zipfuse, tenant_apk_count, AdditionalApkType::TenantApk)
