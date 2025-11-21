@@ -96,12 +96,9 @@ const CONSOLE_TX_QUEUE_SIZE: u32 = 32;
 /// If the VM doesn't move to the Started state within this amount time, a hang-up error is
 /// triggered.
 static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
-    if nested_virt::is_nested_virtualization().unwrap() {
-        // Nested virtualization is slow, so we need a longer timeout.
-        Duration::from_secs(300)
-    } else {
-        Duration::from_secs(60)
-    }
+    let multiplier = hw_timeout_multiplier::timeout_p2m50();
+    // Cap multiplier at 50 to avoid having exceedingly large timeouts reaching infinity.
+    Duration::from_secs(60 * multiplier)
 });
 
 /// Configuration for a VM to run with crosvm.
