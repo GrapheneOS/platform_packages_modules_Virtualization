@@ -1816,7 +1816,10 @@ impl VmInstance {
 
                 // Wait until the VM moves out of the ShuttingDown state. When the VM is shut down
                 // or killed, the state is set to Dead. See monitor_vm_exit_thread.
-                let shutdown_timeout = Duration::from_secs(5);
+                // In nested virtualization environments, operations may be slower, scale the
+                // timeout accordingly
+                let hw_timeout_multiplier = hw_timeout_multiplier::timeout_p2m50();
+                let shutdown_timeout = Duration::from_secs(5 * hw_timeout_multiplier);
                 let result = self
                     .vm_state_changed_condvar
                     .wait_timeout_while(self.vm_state.lock().unwrap(), shutdown_timeout, |state| {
