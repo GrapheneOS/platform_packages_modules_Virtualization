@@ -444,6 +444,9 @@ impl CrosvmCommand {
         // non-protected VMs, so force it off.
         self.arg("--force-disable-readonly-mem");
 
+        // TODO(b/462545596): Enable on x86 once crosvm supports it. It is inentional that we
+        // continue to pad the RAM size with `swiotlb_size_mib`.
+        #[cfg(target_arch = "aarch64")]
         if swiotlb_size_mib > 0 {
             self.args(["--swiotlb", &swiotlb_size_mib.to_string()]);
         }
