@@ -68,11 +68,15 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         return ttydView!!
     }
 
+    fun terminalClose() {
+        ttydView?.terminalClose()
+        ttydView = null
+    }
+
     override fun onCleared() {
         super.onCleared()
         Log.d("TerminalViewModel", "Clearing TtydView")
-        // Disconnect or close the terminal if necessary
-        // ttydView?.terminalClose() // Assuming this method exists and is safe to call
+        ttydView?.terminalClose()
         ttydView = null
     }
 }
