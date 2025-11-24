@@ -9,8 +9,12 @@ rust_bindgen {
     defaults: ["avf_build_flags_rust"],
     source_stem: "bindings",
     bindgen_flags: ["--default-enum-style rust"],
-    apex_available: ["com.android.virt"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
     visibility: [
+        "//device/generic/trusty/custom_vm/launcher",
         "//packages/modules/Virtualization/tests/vts",
         "//packages/modules/Virtualization/tests/old_images_avf_test",
     ],
