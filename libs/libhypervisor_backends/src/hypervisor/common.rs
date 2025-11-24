@@ -39,6 +39,11 @@ pub trait Hypervisor {
     fn get_granule_size(&self) -> Option<usize> {
         None
     }
+
+    /// Returns the hypervisor's memory relinquish implementation, if any.
+    fn as_mem_relinquisher(&self) -> Option<&dyn MemRelinquishingHypervisor> {
+        None
+    }
 }
 
 pub trait MmioGuardedHypervisor {
@@ -80,4 +85,10 @@ pub trait DeviceAssigningHypervisor {
 
     /// Returns DMA token as a tuple of (phys_iommu_id, phys_sid).
     fn get_phys_iommu_token(&self, pviommu_id: u64, vsid: u64) -> Result<(u64, u64)>;
+}
+
+/// Hypervisor that supports relinquishing pages from guest and giving them back to host.
+pub trait MemRelinquishingHypervisor {
+    /// Relinquishes memory region from guest and gives it back to host.
+    fn relinquish(&self, ipa: usize) -> Result<()>;
 }
