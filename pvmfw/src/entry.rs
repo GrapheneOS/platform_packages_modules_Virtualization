@@ -333,7 +333,7 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
 
             "1:",
             // Flush d-cache over .data & .bss (including BCC).
-            "0: dc cvau, {cache_line}",
+            "0: dc cvac, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {scratch_end}",
             "b.lo 0b",
@@ -345,7 +345,7 @@ fn jump_to_payload(fdt_address: u64, payload_start: u64, bcc: Range<usize>) -> !
             "b.lo 0b",
 
             // Flush d-cache over stack region.
-            "0: dc cvau, {cache_line}",
+            "0: dc cvac, {cache_line}",
             "add {cache_line}, {cache_line}, {dcache_line_size}",
             "cmp {cache_line}, {stack_end}",
             "b.lo 0b",
