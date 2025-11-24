@@ -135,7 +135,8 @@ install_prerequisites() {
 		apt install --no-install-recommends --assume-yes "${packages[@]}"
 
 	if [ ! -f $"HOME"/.cargo/bin/cargo ]; then
-		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+		git clone https://github.com/rust-lang/rustup.git rustup
+		rustup/rustup-init.sh -y
 	fi
 
 	source "$HOME"/.cargo/env
