@@ -14,7 +14,7 @@ rust_defaults {
         "libbinder_rs",
         "libglob",
         "liblog_rust",
-        "libnested_virt",
+        "libhw_timeout_multiplier",
         "libnum_traits",
         "librustutils",
         "libminijail_rust",

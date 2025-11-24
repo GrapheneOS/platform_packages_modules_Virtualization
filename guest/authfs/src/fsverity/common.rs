@@ -20,7 +20,7 @@ use thiserror::Error;
 
 use super::sys::{FS_VERITY_HASH_ALG_SHA256, FS_VERITY_LOG_BLOCKSIZE, FS_VERITY_VERSION};
 use crate::common::{divide_roundup, CHUNK_SIZE};
-use openssl::sha::Sha256;
+use bssl_crypto::digest::Sha256;
 
 /// Output size of SHA-256 in bytes.
 pub const SHA256_HASH_SIZE: usize = 32;
@@ -86,7 +86,7 @@ pub fn build_fsverity_digest(root_hash: &Sha256Hash, file_size: u64) -> Sha256Ha
     hash.update(&[0u8; 32]); // reserved
     hash.update(&[0u8; 32]); // reserved
     hash.update(&[0u8; 16]); // reserved
-    hash.finish()
+    hash.digest()
 }
 
 #[cfg(test)]

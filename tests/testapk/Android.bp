@@ -64,6 +64,8 @@ java_defaults {
     ],
     // AVF java APIs were introduced in Android U.
     min_sdk_version: "34",
+    host_required: ["MicrodroidTestPreparer"],
+    host_common_data: [":MicrodroidTestPreparer"],
 }
 
 DATA = [

@@ -18,6 +18,7 @@ package android.system.virtualmachine;
 
 import static java.util.Objects.requireNonNull;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -35,6 +36,7 @@ import android.system.virtualizationservice.IVirtualizationService;
 import android.util.ArrayMap;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.system.virtualmachine.flags.Flags;
 
 import java.io.File;
 import java.lang.annotation.Retention;
@@ -438,8 +440,9 @@ public class VirtualMachineManager {
      *
      * @hide
      */
-    @TestApi
+    @SystemApi
     @RequiresPermission(VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION)
+    @FlaggedApi(Flags.FLAG_MICRODROID_UPDATABLE_VM_ATTESTATION_SUPPORT)
     public boolean isRemoteAttestationSupported() throws VirtualMachineException {
         synchronized (sCreateLock) {
             VirtualizationService service = VirtualizationService.getInstance();
@@ -458,8 +461,9 @@ public class VirtualMachineManager {
      *
      * @hide
      */
-    @TestApi
+    @SystemApi
     @RequiresPermission(VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION)
+    @FlaggedApi(Flags.FLAG_MICRODROID_UPDATABLE_VM_ATTESTATION_SUPPORT)
     public boolean isUpdatableVmSupported() throws VirtualMachineException {
         synchronized (sCreateLock) {
             VirtualizationService service = VirtualizationService.getInstance();

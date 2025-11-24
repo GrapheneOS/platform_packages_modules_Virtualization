@@ -39,7 +39,7 @@ use crate::rollback::perform_rollback_protection;
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use bssl_avf::Digester;
+use bssl_crypto::digest::Sha512;
 use core::slice::ChunksMut;
 use diced_open_dice::{
     bcc_handover_parse, DiceArtifacts, DiceContext, Hidden, HIDDEN_SIZE, VM_KEY_ALGORITHM,
@@ -294,13 +294,8 @@ fn salt_from_instance_id(fdt: &Fdt) -> Result<Option<Hidden>, RebootReason> {
     else {
         return Ok(None);
     };
-    let salt = Digester::sha512()
-        .digest(&[&b"InstanceId:"[..], id].concat())
-        .map_err(|e| {
-            error!("Failed to get digest of instance-id: {e}");
-            RebootReason::InternalError
-        })?
-        .try_into()
-        .map_err(|_| RebootReason::InternalError)?;
-    Ok(Some(salt))
+    let mut ctx = Sha512::new();
+    ctx.update(b"InstanceId:");
+    ctx.update(id);
+    Ok(Some(ctx.digest()))
 }

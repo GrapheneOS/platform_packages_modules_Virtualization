@@ -1406,7 +1406,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
-    public void invalidTenantAuthority() throws Exception {
+    public void invalidTenantApkAuthority() throws Exception {
         assumeSupportedDevice();
         assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1419,6 +1419,48 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine("tenant_with_different_cert", config);
+        CompletableFuture<String> res = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(res.getNow(null))
+                .isNull();
+    }
+
+    @Test
+    @CddTest
+    public void invalidTenantApexAuthority() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_invalid_tenant_apex_auth.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("tenant_with_different_cert_fail", config);
+        CompletableFuture<String> res = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(res.getNow(null))
+                .isNull();
+    }
+
+    @Test
+    @CddTest
+    public void invalidTenantApexVersion() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_invalid_tenant_apex_version.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("tenant_with_lower_version_fail", config);
         CompletableFuture<String> res = readTenantPackagesMounted(vm);
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
                 .that(res.getNow(null))

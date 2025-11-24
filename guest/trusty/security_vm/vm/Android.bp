@@ -117,7 +117,9 @@ filegroup {
 // python -c "import hashlib; print(hashlib.sha256(b'trusty_security_vm_salt').hexdigest())"
 trusty_security_vm_salt = "75a71e967c1a1e0f805cca20465e7acf83e6a04e567a67c426d8b5a94f8d61c5"
 
-TRUSTY_SECURITY_VM_VERSION = 1
+TRUSTY_SECURITY_VM_VERSION = select(soong_config_variable("ANDROID", "platform_security_patch_timestamp"), {
+    any @ val: val,
+})
 
 avb_add_hash_footer {
     name: "trusty_security_vm_signed_bin",

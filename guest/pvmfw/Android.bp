@@ -21,7 +21,7 @@ rust_defaults {
         "compat-raw-dice-handover",
     ],
     rustlibs: [
-        "libbssl_avf_nostd",
+        "libbssl_crypto",
         "libcbor_util_nostd",
         "libcfg_if",
         "libciborium_io_nostd",

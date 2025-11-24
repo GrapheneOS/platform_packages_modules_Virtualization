@@ -1,10 +1,10 @@
 prebuilt_etc {
     name: "vts_libavf_test_kernel",
-    filename: "service_vm.bin",
+    filename: "vts_libavf_vm.bin",
     src: ":empty_file",
     target: {
         android_arm64: {
-            src: ":service_vm_signed",
+            src: ":vmbase_test_vm_signed",
         },
     },
     installable: false,
@@ -17,14 +17,17 @@ rust_test {
     crate_name: "vts_libavf_test",
     srcs: ["src/vts_libavf_test.rs"],
     rustlibs: [
+        "libandroid_logger",
         "libanyhow",
         "libavf_bindgen",
         "libciborium",
+        "liblibloading",
         "liblog_rust",
         "libhypervisor_props",
         "libscopeguard",
         "libservice_vm_comm",
         "libvsock",
+        "libvmbase_test_vm_messages",
     ],
     shared_libs: ["libavf"],
     test_suites: [

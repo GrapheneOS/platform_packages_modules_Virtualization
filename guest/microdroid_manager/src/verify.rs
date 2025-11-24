@@ -15,18 +15,15 @@
 use crate::instance::{ApexData, ApkData, EncryptedStoreMode, MicrodroidData};
 use crate::payload::{get_apex_data_from_payload, get_tenant_apex_data_from_payload, to_metadata};
 use crate::MicrodroidError;
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use apkmanifest::{get_manifest_info, ApkManifestInfo};
 use apkverify::{extract_signed_data, verify, V4Signature};
 use glob::glob;
 use itertools::sorted;
 use log::{info, warn};
 use microdroid_metadata::{write_metadata, Metadata};
-use microdroid_payload_config::TenantConfig;
-use microdroid_payload_config::TenantConfiguration;
 use openssl::sha::sha512;
 use rustutils::android::system_properties;
-use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::path::Path;
 use std::process::{Child, Command};
@@ -250,74 +247,6 @@ pub(crate) fn integrity_protect_tenant_apks() -> Result<Vec<ApkData>> {
         .collect::<Result<Vec<_>>>()?;
 
     Ok(tenant_apks_data)
-}
-
-// Validation logic includes:
-// 1. The tenant_apk exactly matches apks described in tenant_config (comparison is by package name)
-// 2. The order of description in tenant_config is irrelevant.
-// 3. The rollback_index (or version_code if rollback_index is missing) >=  min_version in
-//    tenant_config
-// 4. The cert_hash of tenant apk == expected_authority in tenant_config
-pub(crate) fn validate_tenant_apks_against_tenant_config(
-    tenant_apk: &[ApkData], // data extracted from the apk passed from host
-    tenant_config: &[TenantConfig],
-) -> Result<()> {
-    let apk_configs: Vec<&TenantConfiguration> = tenant_config
-        .iter()
-        .filter_map(
-            |config| {
-                if let TenantConfig::Apk(config) = config {
-                    Some(config)
-                } else {
-                    None
-                }
-            },
-        )
-        .collect();
-    let config_map: HashMap<&String, &TenantConfiguration> =
-        apk_configs.iter().map(|&c| (&c.name, c)).collect();
-
-    let apk_map: HashMap<&String, &ApkData> =
-        tenant_apk.iter().map(|apk| (&apk.package_name, apk)).collect();
-
-    // Since the following loop verifies that every provided APK is defined in the configuration,
-    // this length check is sufficient to guarantee that the set of provided APKs is exactly what
-    // the configuration specifies.
-    if apk_map.len() != config_map.len() {
-        bail!(MicrodroidError::PayloadVerificationFailed(
-            "Provided tenant APKs do not match the configuration".to_string()
-        ));
-    }
-
-    for (package_name, apk_data) in &apk_map {
-        // This unwrap is safe because we've checked that the key sets of both maps are identical.
-        let config = config_map.get(*package_name).unwrap();
-        // Version check!
-        if let Some(min_version) = config.min_version {
-            // Check rollback_index (or version_code if rollback_index is missing)  against
-            // min_version
-            let version = apk_data.rollback_index.map_or(apk_data.version_code, u64::from);
-            if version < min_version {
-                bail!(MicrodroidError::PayloadVerificationFailed(format!(
-                    "APK ('{}') version ({}) is less than min_version ({})",
-                    package_name, version, min_version
-                )));
-            }
-        }
-        // Expected authority check!
-        if let Some(expected_auth) = &config.expected_authority {
-            // Check version_code against min_version
-            let cert_hash = hex::encode(&apk_data.cert_hash);
-            if *expected_auth != cert_hash {
-                bail!(MicrodroidError::PayloadVerificationFailed(format!(
-                    "APK ('{}') cert_hash ('{}') mismatches expected authority ({})",
-                    package_name, cert_hash, expected_auth
-                )));
-            }
-        }
-    }
-
-    Ok(())
 }
 
 fn validate_manifest_info(info: &ApkManifestInfo) -> Result<()> {

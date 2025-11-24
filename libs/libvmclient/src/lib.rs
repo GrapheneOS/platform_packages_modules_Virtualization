@@ -360,6 +360,37 @@ impl VmInstance {
     pub fn connect_vsock(&self, port: u32) -> BinderResult<ParcelFileDescriptor> {
         self.vm.connectVsock(port as i32)
     }
+
+    /// Adds memory backed by the `fd` starting from the `offset` to the guest address space at the
+    /// given range.
+    ///
+    /// On success returns a unique non-negative integer that represents the shared memory. This id
+    /// can be passed to the `remove_file_mapping` function below to unshare the memory.
+    pub fn add_file_mapping(
+        &self,
+        fd: File,
+        range_start: u64,
+        range_end: u64,
+        offset: u64,
+        cache_coherent: bool,
+    ) -> BinderResult<i32> {
+        let pfd = ParcelFileDescriptor::new(fd);
+        self.vm.addMemoryToGuest(
+            &pfd,
+            offset as i64,
+            range_start as i64,
+            range_end as i64,
+            cache_coherent,
+        )
+    }
+
+    /// Removes the shared memory (identified by the `memory_id`) from the guest address space.
+    ///
+    /// Note: guest must first relinquish the memory. On pkvm this can be done by issuing
+    /// `ARM_SMCCC_KVM_FUNC_MEM_RELINQUISH` hypercall.
+    pub fn remove_file_mapping(&self, memory_id: i32) -> BinderResult<()> {
+        self.vm.removeMemoryFromGuest(memory_id)
+    }
 }
 
 impl Debug for VmInstance {

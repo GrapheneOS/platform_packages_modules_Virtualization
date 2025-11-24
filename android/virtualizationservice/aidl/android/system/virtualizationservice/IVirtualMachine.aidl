@@ -81,4 +81,22 @@ interface IVirtualMachine {
 
     /** Returns debug info for this virtual machine */
     VirtualMachineDebugInfo getDebugInfo();
+
+    /**
+     * Adds memory represented by the fd and offset to the guest IPA space at the given range
+     * [rangeStart, rangeEnd).
+     *
+     * On success returns a unique id representing the memory shared with guest. This id can be
+     * used to remove the memory from the guest using the removeMemoryFromGuest API below. Returns
+     * a negative value on failure.
+     */
+    int addMemoryToGuest(in ParcelFileDescriptor fd, long offset, long rangeStart, long rangeEnd,
+            boolean cacheable);
+
+    /**
+     * Removes the memory represented by memory_id from guest IPA space.
+     * NOTE: This API must be called only after guest frees the memory using the
+     * ARM_SMCCC_MEM_RELIQUINSH hypercall.
+     */
+    void removeMemoryFromGuest(int memory_id);
 }

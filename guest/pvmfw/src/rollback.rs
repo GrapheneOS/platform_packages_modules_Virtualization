@@ -23,7 +23,7 @@ use crate::instance::{get_recorded_entry, record_instance_entry};
 use crate::PUBLIC_KEY;
 use diced_open_dice::Hidden;
 use libfdt::Fdt;
-use log::{error, info};
+use log::{error, info, warn};
 use pvmfw_avb::Capability;
 use pvmfw_avb::Digest;
 use pvmfw_avb::VerifiedBootData;
@@ -178,11 +178,15 @@ fn perform_legacy_rollback_protection(
     instance_hash: Option<Hidden>,
 ) -> Result<(bool, Hidden, bool), RebootReason> {
     info!("Fallback to instance.img based rollback checks");
-    let (recorded_entry, mut instance_img, header_index) =
-        get_recorded_entry(&mut pci_root, cdi_seal).map_err(|e| {
-            error!("Failed to get entry from instance.img: {e}");
-            RebootReason::InternalError
-        })?;
+    let result = get_recorded_entry(&mut pci_root, cdi_seal);
+    if matches!(result, Err(InstanceError::MissingInstanceImage)) {
+        warn!("instance.img is missing. Falling back to force_new_instance");
+        return force_new_instance();
+    }
+    let (recorded_entry, mut instance_img, header_index) = result.map_err(|e| {
+        error!("Failed to get entry from instance.img: {e}");
+        RebootReason::InternalError
+    })?;
     let (new_instance, salt) = if let Some(entry) = recorded_entry {
         check_dice_measurements_match_entry(dice_inputs, &entry)?;
         let salt = instance_hash.unwrap_or(entry.salt);
