@@ -200,31 +200,28 @@ impl VirtualizationServiceInternal {
             display_service_set: Arc::new(Condvar::new()),
             shutdown_monitor: Arc::new(Mutex::new(ShutdownMonitor::new())),
         };
-        let service_clone = service.clone();
 
+        let service_clone = service.clone();
+        let on_shutdown = move || {
+            service_clone.state.lock().unwrap().virtual_machines.iter().for_each(|(key, value)| {
+                let cid = *key;
+                let vm = value.0.clone();
+                // Don't wait for the VM to be completely killed. Move on to the next VM as
+                // soon as possible.
+                std::thread::Builder::new()
+                    .name(format!("shutdown_monitor_{cid}"))
+                    .spawn(move || {
+                        let _ = vm.stop().inspect_err(|e| {
+                            error!("Failed to stop virtual machine ({cid}): {e:?}");
+                        });
+                    })
+                    .expect("Failed to create shutdown_monitor thread");
+            });
+        };
         // SAFETY: ShutdownMonitor::start is called only once as
         // VirtualizationServiceInternal::init is called only once. This place is the only where
         // ShutdownMonitor is created.
-        unsafe {
-            service.shutdown_monitor.lock().unwrap().start(move || {
-                service_clone.state.lock().unwrap().virtual_machines.iter().for_each(
-                    |(key, value)| {
-                        let cid = *key;
-                        let vm = value.0.clone();
-                        // Don't wait for the VM to be completely killed. Move on to the next VM as
-                        // soon as possible.
-                        std::thread::Builder::new()
-                            .name(format!("shutdown_monitor_{cid}"))
-                            .spawn(move || {
-                                let _ = vm.stop().inspect_err(|e| {
-                                    error!("Failed to stop virtual machine ({cid}): {e:?}");
-                                });
-                            })
-                            .expect("Failed to create shutdown_monitor thread");
-                    },
-                );
-            });
-        }
+        unsafe { service.shutdown_monitor.lock().unwrap().start(on_shutdown) };
 
         std::thread::Builder::new()
             .name("tombstone_handler".to_string())
