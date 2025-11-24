@@ -827,7 +827,7 @@ fn try_run_payload(
                 .with_context(|| format!("Failed to get tenant attribute for '{name}'"))?;
             let uid_gid = Some((tenant_attribute.uid(), TenantAttribute::gid()));
             let command = build_payload_command(package_path.as_ref(), task, uid_gid, is_apex)
-                .context("Failed to build tenant {name} payload command")?;
+                .context(format!("Failed to build tenant {name} payload command"))?;
             let tenant_process = exec_task(
                 command,
                 cgroup_config.as_ref(),
