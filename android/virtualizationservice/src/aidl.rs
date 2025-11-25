@@ -73,9 +73,6 @@ use virtualizationservice::{
     VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
 use virtualizationservice_internal::{
-    AtomVmBooted::AtomVmBooted,
-    AtomVmCreationRequested::AtomVmCreationRequested,
-    AtomVmExited::AtomVmExited,
     IBoundDevice::IBoundDevice,
     IVfioHandler::VfioDev::VfioDev,
     IVfioHandler::{BpVfioHandler, IVfioHandler},
@@ -439,21 +436,6 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
-    fn atomVmBooted(&self, atom: &AtomVmBooted) -> Result<(), Status> {
-        forward_vm_booted_atom(atom);
-        Ok(())
-    }
-
-    fn atomVmCreationRequested(&self, atom: &AtomVmCreationRequested) -> Result<(), Status> {
-        forward_vm_creation_atom(atom);
-        Ok(())
-    }
-
-    fn atomVmExited(&self, atom: &AtomVmExited) -> Result<(), Status> {
-        forward_vm_exited_atom(atom);
-        Ok(())
-    }
-
     fn forwardAtom(
         &self,
         atom: &Atom,
@@ -489,6 +471,11 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             Atom::StaleEncryptedstoreDetected(_) => {
                 forward_stale_encryptedstore_detected(vm_requester_uid, vm_identifier);
             }
+            Atom::VmBooted(atom) => forward_vm_booted_atom(atom, vm_requester_uid, vm_identifier),
+            Atom::VmCreationRequested(atom) => {
+                forward_vm_creation_atom(atom, vm_requester_uid, vm_identifier)
+            }
+            Atom::VmExited(atom) => forward_vm_exited_atom(atom, vm_requester_uid, vm_identifier),
         }
         Ok(())
     }

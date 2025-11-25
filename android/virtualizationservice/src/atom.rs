@@ -14,18 +14,24 @@
 
 //! Functions for creating and collecting atoms.
 
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
-use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::{
-    AtomVmBooted::AtomVmBooted,
-    AtomVmCreationRequested::AtomVmCreationRequested,
-    AtomVmExited::AtomVmExited,
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::{
+    VmBooted::VmBooted, VmCreationRequested::VmCreationRequested, VmExited::VmExited,
 };
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
 use anyhow::Result;
 use log::{trace, warn};
 use rustutils::android::system_properties::PropertyWatcher;
-use statslog_virtualization_rust::{cgroup_memory_breach_reported, fsck_failed_reported, get_or_create_sk_secret_failed_reported,  psi_monitor_failed_reported, stale_encryptedstore_detected, vm_booted, vm_creation_requested, vm_exited};
+use statslog_virtualization_rust::{
+    cgroup_memory_breach_reported, fsck_failed_reported, get_or_create_sk_secret_failed_reported,
+    psi_monitor_failed_reported, stale_encryptedstore_detected, vm_booted, vm_creation_requested,
+    vm_exited,
+};
 
-pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {
+pub fn forward_vm_creation_atom(
+    atom: &VmCreationRequested,
+    vm_requester_uid: i32,
+    vm_identifier: &str,
+) {
     let config_type = match atom.configType {
         x if x == vm_creation_requested::ConfigType::VirtualMachineAppConfig as i32 => {
             vm_creation_requested::ConfigType::VirtualMachineAppConfig
@@ -36,8 +42,8 @@ pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {
         _ => vm_creation_requested::ConfigType::UnknownConfig,
     };
     let vm_creation_requested = vm_creation_requested::VmCreationRequested {
-        uid: atom.uid,
-        vm_identifier: &atom.vmIdentifier,
+        uid: vm_requester_uid,
+        vm_identifier,
         hypervisor: vm_creation_requested::Hypervisor::Pkvm,
         is_protected: atom.isProtected,
         creation_succeeded: atom.creationSucceeded,
@@ -57,10 +63,10 @@ pub fn forward_vm_creation_atom(atom: &AtomVmCreationRequested) {
     }
 }
 
-pub fn forward_vm_booted_atom(atom: &AtomVmBooted) {
+pub fn forward_vm_booted_atom(atom: &VmBooted, vm_requester_uid: i32, vm_identifier: &str) {
     let vm_booted = vm_booted::VmBooted {
-        uid: atom.uid,
-        vm_identifier: &atom.vmIdentifier,
+        uid: vm_requester_uid,
+        vm_identifier,
         elapsed_time_millis: atom.elapsedTimeMillis,
     };
 
@@ -71,7 +77,7 @@ pub fn forward_vm_booted_atom(atom: &AtomVmBooted) {
     }
 }
 
-pub fn forward_vm_exited_atom(atom: &AtomVmExited) {
+pub fn forward_vm_exited_atom(atom: &VmExited, vm_requester_uid: i32, vm_identifier: &str) {
     let death_reason = match atom.deathReason {
         DeathReason::INFRASTRUCTURE_ERROR => vm_exited::DeathReason::InfrastructureError,
         DeathReason::KILLED => vm_exited::DeathReason::Killed,
@@ -106,8 +112,8 @@ pub fn forward_vm_exited_atom(atom: &AtomVmExited) {
     };
 
     let vm_exited = vm_exited::VmExited {
-        uid: atom.uid,
-        vm_identifier: &atom.vmIdentifier,
+        uid: vm_requester_uid,
+        vm_identifier,
         elapsed_time_millis: atom.elapsedTimeMillis,
         death_reason,
         guest_time_millis: atom.guestTimeMillis,

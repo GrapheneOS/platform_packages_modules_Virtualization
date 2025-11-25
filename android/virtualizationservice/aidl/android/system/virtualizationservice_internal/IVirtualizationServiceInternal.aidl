@@ -20,9 +20,6 @@ import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationservice.AssignableDevice;
 import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.VirtualMachineDebugInfo;
-import android.system.virtualizationservice_internal.AtomVmBooted;
-import android.system.virtualizationservice_internal.AtomVmCreationRequested;
-import android.system.virtualizationservice_internal.AtomVmExited;
 import android.system.virtualizationservice_internal.IBoundDevice;
 import android.system.virtualizationservice_internal.IGlobalVmContext;
 
@@ -55,15 +52,6 @@ interface IVirtualizationServiceInternal {
      * Unregisters the VirtualMachine object
      */
     void unregisterVirtualMachine(int cid);
-
-    /** Forwards a VmBooted atom to statsd. */
-    void atomVmBooted(in AtomVmBooted atom);
-
-    /** Forwards a VmCreationRequested atom to statsd. */
-    void atomVmCreationRequested(in AtomVmCreationRequested atom);
-
-    /** Forwards a VmExited atom to statsd. */
-    void atomVmExited(in AtomVmExited atom);
 
     /** Forwards an atom to statsd. */
     void forwardAtom(in Atom atom, in int requesterUid, in String vmIdentifier);
