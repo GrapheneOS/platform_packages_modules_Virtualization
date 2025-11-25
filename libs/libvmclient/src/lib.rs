@@ -365,8 +365,8 @@ impl VmInstance {
     /// given range.
     ///
     /// On success returns a unique non-negative integer that represents the shared memory. This id
-    /// can be passed to the `remove_file_mapping` function below to unshare the memory.
-    pub fn add_file_mapping(
+    /// can be passed to the `remove_memory_mapping` function below to unshare the memory.
+    pub fn add_memory_mapping(
         &self,
         fd: File,
         range_start: u64,
@@ -388,7 +388,7 @@ impl VmInstance {
     ///
     /// Note: guest must first relinquish the memory. On pkvm this can be done by issuing
     /// `ARM_SMCCC_KVM_FUNC_MEM_RELINQUISH` hypercall.
-    pub fn remove_file_mapping(&self, memory_id: i32) -> BinderResult<()> {
+    pub fn remove_memory_mapping(&self, memory_id: i32) -> BinderResult<()> {
         self.vm.removeMemoryFromGuest(memory_id)
     }
 }

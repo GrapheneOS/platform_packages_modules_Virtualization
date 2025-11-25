@@ -445,4 +445,60 @@ bool AVirtualMachine_waitForStop(AVirtualMachine* _Nonnull vm,
  */
 void AVirtualMachine_destroy(AVirtualMachine* _Nullable vm) __INTRODUCED_IN(36);
 
+/**
+ * Memory attributes of the file descriptor passed to the `AVirtualMachine_addMemoryMapping`.
+ * @see AVirtualMachine_addMemoryMapping
+ */
+enum AVirtualMachineMemoryMappingAttributes : int32_t {
+    /**
+     * Memory is cache coherent, meaning that when host CPUs and guest VCPUs access the shared
+     * memory they will see the most up-to-date and consistent version of the data.
+     */
+    AVIRTUAL_MACHINE_MEMORY_MAPPING_ATTRIBUTE_CACHE_COHERENT = 0,
+    /**
+     * Memory is non cache coherent, meaning that manual cache management should be implemented.
+     * In case of non cache coherent DMA buffers host should call the `DMA_BUF_IOCTL_SYNC` ioctl
+     * first before accessing shared data.
+     */
+    AVIRTUAL_MACHINE_MEMORY_MAPPING_ATTRIBUTE_NON_CACHE_COHERENT = 1,
+};
+
+/**
+ * Adds memory represented by the `fd` to the guest address space at the given range.
+ *
+ * \param vm a handle on a virtual machine.
+ * \param fd a file descriptor (e.g. dma_buf_fd) representing memory to share with guest.
+ *   Supported types are hypervisor-specific. As of now pkvm hypervisor supports only dma_buf_fd.
+ *   This function takes ownership of this fd.
+ * \param rangeStart range start of guest memory addresses.
+ * \param rangeEnd range end of guest memory addresses.
+ * \param offset offset in the `fd`.
+ * \param memory_attrs memory attributes of the `fd`.
+ *
+ * \return
+ *   - On success returns a unique non-negative integer representing the shared memory. This id can
+ *     be passed to the `AVirtualMachine_removeMemoryMapping` to remove this shared memory from the
+ *     guest.
+ *   - If `fd` is not a valid file descriptor returns -EINVAL.
+ *   - On any other failure returns `-EIO`.
+ */
+int AVirtualMachine_addMemoryMapping(AVirtualMachine* _Nonnull vm, int fd, uint64_t rangeStart,
+                                     uint64_t rangeEnd, uint64_t offset,
+                                     enum AVirtualMachineMemoryMappingAttributes attrs)
+        __INTRODUCED_IN(37);
+
+/**
+ * Removes memory represented by the `memory_id` from the guest address space.
+ * Guest is expected to relinquish the shared memory first, before the VM owning process on the
+ * host side calls this API.
+ *
+ * \param vm a handle on a virtual machine.
+ * \param memory_id an id representing memory to be removed.
+ *
+ * \return
+ *   - Returns `true` on success and `false` on failure.
+ */
+bool AVirtualMachine_removeMemoryMapping(AVirtualMachine* _Nonnull vm, int memory_id)
+        __INTRODUCED_IN(37);
+
 __END_DECLS
