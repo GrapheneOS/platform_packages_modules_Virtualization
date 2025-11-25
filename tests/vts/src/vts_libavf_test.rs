@@ -282,9 +282,11 @@ fn init_logger() {
 fn run_reverse_test(vsock_stream: &mut VsockStream) -> Result<()> {
     let request_data = vec![1, 2, 3, 4, 5];
     let expected_data = vec![5, 4, 3, 2, 1];
-    let Response::Reverse(reversed_data) =
-        process_request(vsock_stream, Request::Reverse(request_data))
-            .context("Failed to process request")?;
+    let response = process_request(vsock_stream, Request::Reverse(request_data))
+        .context("Failed to process request")?;
+    let Response::Reverse(reversed_data) = response else {
+        bail!("Expected `Response::Reverse` but was {response:?}");
+    };
     ensure!(reversed_data == expected_data, "Expected {expected_data:?} but was {reversed_data:?}");
     info!("request processed");
     Ok(())
