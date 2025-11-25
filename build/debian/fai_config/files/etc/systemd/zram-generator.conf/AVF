@@ -1,4 +1,0 @@
-[zram0]
-zram-size = ram / 4
-
-compression-algorithm = zstd

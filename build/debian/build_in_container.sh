@@ -9,16 +9,14 @@ show_help() {
   echo "Builds images.tar.gz with Debian payload."
   echo "Options:"
   echo "-a ARCH        Architecture of the image [default is host arch: $(uname -m)]"
-  echo "-b             Set build id [default is eng-\$(hostname)-\$(date --utc)]"
-  echo "-g             Use Debian generic kernel [default is our custom kernel]"
+  echo "-b BUILD_ID    Set build id of the debian image [default is eng-\$(hostname)-\$(date --utc)]"
+  echo "-k KERNEL_ID   Build ID for kernel [default is the last known good build]"
   echo "-h             Print usage and this help message and exit."
   echo "-i IMAGE_NAME  Specify the image name [default is ubuntu:22.04]"
   echo "-s             Leave a shell open if able [default: only if the build fails]"
   echo "-t VIRT_TOP    Specify the virtualization repo top [default is deduced from script location]"
-  echo "-u             Set VM boot mode to u-boot [default is to load kernel directly]"
   echo "-w             Save temp work directory in the container [for debugging]"
   echo "-W WORK_DIR    Specify work dir instead of temporarily creating one. Imply -w [for debugging]"
-  echo "-c             Build with cloud-init"
 }
 
 ensure_binfmt_misc() {
@@ -32,7 +30,7 @@ ensure_binfmt_misc() {
 }
 
 parse_options() {
-  while getopts "a:b:ghi:st:uwW:c" option; do
+  while getopts "a:b:k:hi:st:wW:" option; do
     case ${option} in
       a)
         arch="$OPTARG"
@@ -40,8 +38,8 @@ parse_options() {
       b)
         build_id="$OPTARG"
         ;;
-      g)
-        kernel_flag="-g"
+      k)
+        kernel_id_flag="-k ${OPTARG}"
         ;;
       h)
         show_help ; exit
@@ -55,18 +53,12 @@ parse_options() {
       t)
         virt_repo_top="$OPTARG"
         ;;
-      u)
-        uboot_flag="-u"
-        ;;
       w)
         save_workdir_flag="-w"
         ;;
       W)
         mount_work_dir="-v ${OPTARG}:${OPTARG}"
         work_dir_flag="-W ${OPTARG}"
-        ;;
-      c)
-        cloud_init_flag="-c"
         ;;
       *)
         echo "Invalid option: $OPTARG" ; exit 1
@@ -88,13 +80,11 @@ parse_options() {
 
 arch="$(uname -m)"
 build_id=$(echo eng-$(hostname)-$(date --utc))
+kernel_id_flag=
 image_name="ubuntu:22.04"
-kernel_flag=
 save_workdir_flag=
 shell="|| bash"
-uboot_flag=
 virt_repo_top="${SCRIPT_DIR}/../../"
-cloud_init_flag=
 mount_work_dir=
 work_dir_flag=
 
@@ -108,4 +98,4 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build.sh -a $arch $kernel_flag $uboot_flag $save_workdir_flag $work_dir_flag $cloud_init_flag -b \"$build_id\" $shell"
+  bash -c "./build.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell"

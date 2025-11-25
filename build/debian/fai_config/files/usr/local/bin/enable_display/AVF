@@ -1,9 +1,0 @@
-#!/bin/bash
-touch /home/droid/weston.env
-sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty7 sleep 1d
-(sleep 3s; systemctl --user start weston)& disown
-export DISPLAY=:0
-export MESA_LOADER_DRIVER_OVERRIDE=zink
-
-export LIBGL_ALWAYS_SOFTWARE=1
-export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
