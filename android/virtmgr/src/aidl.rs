@@ -18,7 +18,7 @@ pub use android_os_permissions_aidl::aidl::android::os::{
     IPermissionController::IPermissionController,
 };
 pub use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
-    Atom::{Atom, PsiMonitorFailedReported::PsiMonitorFailedReported},
+    Atom::{Atom, PsiMonitorFailedReported::PsiMonitorFailedReported, VmBooted::VmBooted, VmCreationRequested::VmCreationRequested, VmExited::VmExited},
     Certificate::Certificate,
     DeathReason::DeathReason,
     ErrorCode::ErrorCode,
@@ -48,12 +48,7 @@ pub use android_system_virtualmachineservice::aidl::android::system::virtualmach
     IGuestAgent::IGuestAgent,
     IVirtualMachineService::{BnVirtualMachineService, IVirtualMachineService},
 };
-pub use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::{
-    AtomVmBooted::AtomVmBooted,
-    AtomVmCreationRequested::AtomVmCreationRequested,
-    AtomVmExited::AtomVmExited,
-    IVirtualizationServiceInternal::IVirtualizationServiceInternal,
-};
+pub use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal::IVirtualizationServiceInternal;
 pub use android_hardware_security_secretkeeper::aidl::android::hardware::security::secretkeeper::{
     ISecretkeeper::{BnSecretkeeper, ISecretkeeper},
     SecretId::SecretId,
