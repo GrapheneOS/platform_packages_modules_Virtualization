@@ -55,3 +55,10 @@ flag {
   description: "Flag used to allow microdroid pVMs to use vGIC ITS"
   bug: "401031659"
 }
+
+flag {
+  name: "terminal_newui_jetpack"
+  namespace: "virtualization"
+  description: "Flag used to guard the new implementation of the terminal app using jetpack compose"
+  bug: "448356313"
+}
