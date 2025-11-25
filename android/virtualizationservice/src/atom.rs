@@ -14,9 +14,7 @@
 
 //! Functions for creating and collecting atoms.
 
-use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::{
-    VmBooted::VmBooted, VmCreationRequested::VmCreationRequested, VmExited::VmExited,
-};
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::Atom::Atom;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::DeathReason::DeathReason;
 use anyhow::Result;
 use log::{trace, warn};
@@ -27,191 +25,180 @@ use statslog_virtualization_rust::{
     vm_exited,
 };
 
-pub fn forward_vm_creation_atom(
-    atom: &VmCreationRequested,
-    vm_requester_uid: i32,
-    vm_identifier: &str,
-) {
-    let config_type = match atom.configType {
-        x if x == vm_creation_requested::ConfigType::VirtualMachineAppConfig as i32 => {
-            vm_creation_requested::ConfigType::VirtualMachineAppConfig
+pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
+    match atom {
+        Atom::CgroupMemoryBreachReported(atom) => {
+            let cgroup_memory_breach_reported =
+                cgroup_memory_breach_reported::CgroupMemoryBreachReported {
+                    high_breach_count: atom.highBreachCount,
+                    high_memory_peak_mb: atom.highMemoryPeakMb,
+                    vm_requester_uid,
+                    vm_identifier,
+                };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match cgroup_memory_breach_reported.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        x if x == vm_creation_requested::ConfigType::VirtualMachineRawConfig as i32 => {
-            vm_creation_requested::ConfigType::VirtualMachineRawConfig
+        Atom::FsckFailedReported(atom) => {
+            let fsck_failed_reported = fsck_failed_reported::FsckFailedReported {
+                exit_code: atom.exitCode,
+                vm_requester_uid,
+                vm_identifier,
+            };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match fsck_failed_reported.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        _ => vm_creation_requested::ConfigType::UnknownConfig,
-    };
-    let vm_creation_requested = vm_creation_requested::VmCreationRequested {
-        uid: vm_requester_uid,
-        vm_identifier,
-        hypervisor: vm_creation_requested::Hypervisor::Pkvm,
-        is_protected: atom.isProtected,
-        creation_succeeded: atom.creationSucceeded,
-        binder_exception_code: atom.binderExceptionCode,
-        config_type,
-        num_cpus: atom.numCpus,
-        cpu_affinity: "", // deprecated
-        memory_mib: atom.memoryMib,
-        apexes: &atom.apexes,
-        // TODO(seungjaeyoo) Fill information about disk_image for raw config
-    };
+        Atom::GetOrCreateSkSecretFailedReported(atom) => {
+            let get_or_create_sk_secret_failed_reported =
+                get_or_create_sk_secret_failed_reported::GetOrCreateSkSecretFailedReported {
+                    retry_count: atom.retryCount,
+                    vm_requester_uid,
+                    vm_identifier,
+                };
 
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match vm_creation_requested.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_vm_booted_atom(atom: &VmBooted, vm_requester_uid: i32, vm_identifier: &str) {
-    let vm_booted = vm_booted::VmBooted {
-        uid: vm_requester_uid,
-        vm_identifier,
-        elapsed_time_millis: atom.elapsedTimeMillis,
-    };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match vm_booted.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_vm_exited_atom(atom: &VmExited, vm_requester_uid: i32, vm_identifier: &str) {
-    let death_reason = match atom.deathReason {
-        DeathReason::INFRASTRUCTURE_ERROR => vm_exited::DeathReason::InfrastructureError,
-        DeathReason::KILLED => vm_exited::DeathReason::Killed,
-        DeathReason::UNKNOWN => vm_exited::DeathReason::Unknown,
-        DeathReason::SHUTDOWN => vm_exited::DeathReason::Shutdown,
-        DeathReason::START_FAILED => vm_exited::DeathReason::Error,
-        DeathReason::REBOOT => vm_exited::DeathReason::Reboot,
-        DeathReason::CRASH => vm_exited::DeathReason::Crash,
-        DeathReason::PVM_FIRMWARE_PUBLIC_KEY_MISMATCH => {
-            vm_exited::DeathReason::PvmFirmwarePublicKeyMismatch
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match get_or_create_sk_secret_failed_reported.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        DeathReason::PVM_FIRMWARE_INSTANCE_IMAGE_CHANGED => {
-            vm_exited::DeathReason::PvmFirmwareInstanceImageChanged
+        Atom::PsiMonitorFailedReported(atom) => {
+            let psi_monitor_failed_reported =
+                psi_monitor_failed_reported::PsiMonitorFailedReported {
+                    exponential_backoff_seconds: atom.exponentialBackoffSeconds,
+                    vm_requester_uid,
+                    vm_identifier,
+                };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match psi_monitor_failed_reported.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        DeathReason::MICRODROID_FAILED_TO_CONNECT_TO_VIRTUALIZATION_SERVICE => {
-            vm_exited::DeathReason::MicrodroidFailedToConnectToVirtualizationService
+        Atom::StaleEncryptedstoreDetected(_) => {
+            let stale_encryptedstore_detected =
+                stale_encryptedstore_detected::StaleEncryptedstoreDetected {
+                    vm_requester_uid,
+                    vm_identifier,
+                };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match stale_encryptedstore_detected.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        DeathReason::MICRODROID_PAYLOAD_HAS_CHANGED => {
-            vm_exited::DeathReason::MicrodroidPayloadHasChanged
+        Atom::VmBooted(atom) => {
+            let vm_booted = vm_booted::VmBooted {
+                uid: vm_requester_uid,
+                vm_identifier,
+                elapsed_time_millis: atom.elapsedTimeMillis,
+            };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match vm_booted.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        DeathReason::MICRODROID_PAYLOAD_VERIFICATION_FAILED => {
-            vm_exited::DeathReason::MicrodroidPayloadVerificationFailed
+        Atom::VmCreationRequested(atom) => {
+            let config_type = match atom.configType {
+                x if x == vm_creation_requested::ConfigType::VirtualMachineAppConfig as i32 => {
+                    vm_creation_requested::ConfigType::VirtualMachineAppConfig
+                }
+                x if x == vm_creation_requested::ConfigType::VirtualMachineRawConfig as i32 => {
+                    vm_creation_requested::ConfigType::VirtualMachineRawConfig
+                }
+                _ => vm_creation_requested::ConfigType::UnknownConfig,
+            };
+            let vm_creation_requested = vm_creation_requested::VmCreationRequested {
+                uid: vm_requester_uid,
+                vm_identifier,
+                hypervisor: vm_creation_requested::Hypervisor::Pkvm,
+                is_protected: atom.isProtected,
+                creation_succeeded: atom.creationSucceeded,
+                binder_exception_code: atom.binderExceptionCode,
+                config_type,
+                num_cpus: atom.numCpus,
+                cpu_affinity: "", // deprecated
+                memory_mib: atom.memoryMib,
+                apexes: &atom.apexes,
+                // TODO(seungjaeyoo) Fill information about disk_image for raw config
+            };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match vm_creation_requested.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        DeathReason::MICRODROID_INVALID_PAYLOAD_CONFIG => {
-            vm_exited::DeathReason::MicrodroidInvalidPayloadConfig
+        Atom::VmExited(atom) => {
+            let death_reason = match atom.deathReason {
+                DeathReason::INFRASTRUCTURE_ERROR => vm_exited::DeathReason::InfrastructureError,
+                DeathReason::KILLED => vm_exited::DeathReason::Killed,
+                DeathReason::UNKNOWN => vm_exited::DeathReason::Unknown,
+                DeathReason::SHUTDOWN => vm_exited::DeathReason::Shutdown,
+                DeathReason::START_FAILED => vm_exited::DeathReason::Error,
+                DeathReason::REBOOT => vm_exited::DeathReason::Reboot,
+                DeathReason::CRASH => vm_exited::DeathReason::Crash,
+                DeathReason::PVM_FIRMWARE_PUBLIC_KEY_MISMATCH => {
+                    vm_exited::DeathReason::PvmFirmwarePublicKeyMismatch
+                }
+                DeathReason::PVM_FIRMWARE_INSTANCE_IMAGE_CHANGED => {
+                    vm_exited::DeathReason::PvmFirmwareInstanceImageChanged
+                }
+                DeathReason::MICRODROID_FAILED_TO_CONNECT_TO_VIRTUALIZATION_SERVICE => {
+                    vm_exited::DeathReason::MicrodroidFailedToConnectToVirtualizationService
+                }
+                DeathReason::MICRODROID_PAYLOAD_HAS_CHANGED => {
+                    vm_exited::DeathReason::MicrodroidPayloadHasChanged
+                }
+                DeathReason::MICRODROID_PAYLOAD_VERIFICATION_FAILED => {
+                    vm_exited::DeathReason::MicrodroidPayloadVerificationFailed
+                }
+                DeathReason::MICRODROID_INVALID_PAYLOAD_CONFIG => {
+                    vm_exited::DeathReason::MicrodroidInvalidPayloadConfig
+                }
+                DeathReason::MICRODROID_UNKNOWN_RUNTIME_ERROR => {
+                    vm_exited::DeathReason::MicrodroidUnknownRuntimeError
+                }
+                DeathReason::HANGUP => vm_exited::DeathReason::Hangup,
+                _ => vm_exited::DeathReason::Unknown,
+            };
+
+            let vm_exited = vm_exited::VmExited {
+                uid: vm_requester_uid,
+                vm_identifier,
+                elapsed_time_millis: atom.elapsedTimeMillis,
+                death_reason,
+                guest_time_millis: atom.guestTimeMillis,
+                rss_vm_kb: atom.rssKb,
+                rss_crosvm_kb: atom.rssKb,
+                exit_signal: atom.exitSignal,
+            };
+
+            wait_for_statsd()
+                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
+            match vm_exited.stats_write() {
+                Err(e) => warn!("statslog_rust failed with error: {e}"),
+                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            }
         }
-        DeathReason::MICRODROID_UNKNOWN_RUNTIME_ERROR => {
-            vm_exited::DeathReason::MicrodroidUnknownRuntimeError
-        }
-        DeathReason::HANGUP => vm_exited::DeathReason::Hangup,
-        _ => vm_exited::DeathReason::Unknown,
-    };
-
-    let vm_exited = vm_exited::VmExited {
-        uid: vm_requester_uid,
-        vm_identifier,
-        elapsed_time_millis: atom.elapsedTimeMillis,
-        death_reason,
-        guest_time_millis: atom.guestTimeMillis,
-        rss_vm_kb: atom.rssKb,
-        rss_crosvm_kb: atom.rssKb,
-        exit_signal: atom.exitSignal,
-    };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match vm_exited.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_cgroup_memory_breach_reported_atom(
-    high_breach_count: i64,
-    high_memory_peak_mb: i64,
-    vm_requester_uid: i32,
-    vm_identifier: &str,
-) {
-    let cgroup_memory_breach_reported = cgroup_memory_breach_reported::CgroupMemoryBreachReported {
-        high_breach_count,
-        high_memory_peak_mb,
-        vm_requester_uid,
-        vm_identifier,
-    };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match cgroup_memory_breach_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_fsck_failed_reported_atom(
-    exit_code: i32,
-    vm_requester_uid: i32,
-    vm_identifier: &str,
-) {
-    let fsck_failed_reported =
-        fsck_failed_reported::FsckFailedReported { exit_code, vm_requester_uid, vm_identifier };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match fsck_failed_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_get_or_create_sk_secret_failed_reported_atom(
-    retry_count: i32,
-    vm_requester_uid: i32,
-    vm_identifier: &str,
-) {
-    let get_or_create_sk_secret_failed_reported =
-        get_or_create_sk_secret_failed_reported::GetOrCreateSkSecretFailedReported {
-            retry_count,
-            vm_requester_uid,
-            vm_identifier,
-        };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match get_or_create_sk_secret_failed_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_psi_monitor_failed_reported_atom(
-    exponential_backoff_seconds: i64,
-    vm_requester_uid: i32,
-    vm_identifier: &str,
-) {
-    let psi_monitor_failed_reported = psi_monitor_failed_reported::PsiMonitorFailedReported {
-        exponential_backoff_seconds,
-        vm_requester_uid,
-        vm_identifier,
-    };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match psi_monitor_failed_reported.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-    }
-}
-
-pub fn forward_stale_encryptedstore_detected(vm_requester_uid: i32, vm_identifier: &str) {
-    let stale_encryptedstore_detected =
-        stale_encryptedstore_detected::StaleEncryptedstoreDetected {
-            vm_requester_uid,
-            vm_identifier,
-        };
-
-    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-    match stale_encryptedstore_detected.stats_write() {
-        Err(e) => warn!("statslog_rust failed with error: {e}"),
-        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
 

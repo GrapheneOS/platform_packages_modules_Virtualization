@@ -14,12 +14,7 @@
 
 //! Implementation of the AIDL interface of the VirtualizationService.
 
-use crate::atom::{
-    forward_cgroup_memory_breach_reported_atom, forward_fsck_failed_reported_atom,
-    forward_get_or_create_sk_secret_failed_reported_atom, forward_psi_monitor_failed_reported_atom,
-    forward_stale_encryptedstore_detected, forward_vm_booted_atom, forward_vm_creation_atom,
-    forward_vm_exited_atom,
-};
+use crate::atom::write_atom;
 use crate::maintenance;
 use crate::remote_provisioning;
 use crate::rkpvm::{generate_ecdsa_p256_key_pair, request_attestation};
@@ -442,41 +437,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         vm_requester_uid: i32,
         vm_identifier: &str,
     ) -> Result<(), Status> {
-        match atom {
-            Atom::CgroupMemoryBreachReported(atom) => {
-                forward_cgroup_memory_breach_reported_atom(
-                    atom.highBreachCount,
-                    atom.highMemoryPeakMb,
-                    vm_requester_uid,
-                    vm_identifier,
-                );
-            }
-            Atom::FsckFailedReported(atom) => {
-                forward_fsck_failed_reported_atom(atom.exitCode, vm_requester_uid, vm_identifier);
-            }
-            Atom::GetOrCreateSkSecretFailedReported(atom) => {
-                forward_get_or_create_sk_secret_failed_reported_atom(
-                    atom.retryCount,
-                    vm_requester_uid,
-                    vm_identifier,
-                );
-            }
-            Atom::PsiMonitorFailedReported(atom) => {
-                forward_psi_monitor_failed_reported_atom(
-                    atom.exponentialBackoffSeconds,
-                    vm_requester_uid,
-                    vm_identifier,
-                );
-            }
-            Atom::StaleEncryptedstoreDetected(_) => {
-                forward_stale_encryptedstore_detected(vm_requester_uid, vm_identifier);
-            }
-            Atom::VmBooted(atom) => forward_vm_booted_atom(atom, vm_requester_uid, vm_identifier),
-            Atom::VmCreationRequested(atom) => {
-                forward_vm_creation_atom(atom, vm_requester_uid, vm_identifier)
-            }
-            Atom::VmExited(atom) => forward_vm_exited_atom(atom, vm_requester_uid, vm_identifier),
-        }
+        write_atom(atom, vm_requester_uid, vm_identifier);
         Ok(())
     }
 
