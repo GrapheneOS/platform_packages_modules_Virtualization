@@ -26,95 +26,53 @@ use statslog_virtualization_rust::{
 };
 
 pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
-    match atom {
-        Atom::CgroupMemoryBreachReported(atom) => {
-            let cgroup_memory_breach_reported =
-                cgroup_memory_breach_reported::CgroupMemoryBreachReported {
-                    high_breach_count: atom.highBreachCount,
-                    high_memory_peak_mb: atom.highMemoryPeakMb,
-                    vm_requester_uid,
-                    vm_identifier,
-                };
+    wait_for_statsd().unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
 
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match cgroup_memory_breach_reported.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-            }
-        }
-        Atom::FsckFailedReported(atom) => {
-            let fsck_failed_reported = fsck_failed_reported::FsckFailedReported {
-                exit_code: atom.exitCode,
+    let result = match atom {
+        Atom::CgroupMemoryBreachReported(atom) => {
+            cgroup_memory_breach_reported::CgroupMemoryBreachReported {
+                high_breach_count: atom.highBreachCount,
+                high_memory_peak_mb: atom.highMemoryPeakMb,
                 vm_requester_uid,
                 vm_identifier,
-            };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match fsck_failed_reported.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
             }
+            .stats_write()
         }
+        Atom::FsckFailedReported(atom) => fsck_failed_reported::FsckFailedReported {
+            exit_code: atom.exitCode,
+            vm_requester_uid,
+            vm_identifier,
+        }
+        .stats_write(),
         Atom::GetOrCreateSkSecretFailedReported(atom) => {
-            let get_or_create_sk_secret_failed_reported =
-                get_or_create_sk_secret_failed_reported::GetOrCreateSkSecretFailedReported {
-                    retry_count: atom.retryCount,
-                    vm_requester_uid,
-                    vm_identifier,
-                };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match get_or_create_sk_secret_failed_reported.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            get_or_create_sk_secret_failed_reported::GetOrCreateSkSecretFailedReported {
+                retry_count: atom.retryCount,
+                vm_requester_uid,
+                vm_identifier,
             }
+            .stats_write()
         }
         Atom::PsiMonitorFailedReported(atom) => {
-            let psi_monitor_failed_reported =
-                psi_monitor_failed_reported::PsiMonitorFailedReported {
-                    exponential_backoff_seconds: atom.exponentialBackoffSeconds,
-                    vm_requester_uid,
-                    vm_identifier,
-                };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match psi_monitor_failed_reported.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
+            psi_monitor_failed_reported::PsiMonitorFailedReported {
+                exponential_backoff_seconds: atom.exponentialBackoffSeconds,
+                vm_requester_uid,
+                vm_identifier,
             }
+            .stats_write()
         }
         Atom::StaleEncryptedstoreDetected(_) => {
-            let stale_encryptedstore_detected =
-                stale_encryptedstore_detected::StaleEncryptedstoreDetected {
-                    vm_requester_uid,
-                    vm_identifier,
-                };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match stale_encryptedstore_detected.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
-            }
-        }
-        Atom::VmBooted(atom) => {
-            let vm_booted = vm_booted::VmBooted {
-                uid: vm_requester_uid,
+            stale_encryptedstore_detected::StaleEncryptedstoreDetected {
+                vm_requester_uid,
                 vm_identifier,
-                elapsed_time_millis: atom.elapsedTimeMillis,
-            };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match vm_booted.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
             }
+            .stats_write()
         }
+        Atom::VmBooted(atom) => vm_booted::VmBooted {
+            uid: vm_requester_uid,
+            vm_identifier,
+            elapsed_time_millis: atom.elapsedTimeMillis,
+        }
+        .stats_write(),
         Atom::VmCreationRequested(atom) => {
             let config_type = match atom.configType {
                 x if x == vm_creation_requested::ConfigType::VirtualMachineAppConfig as i32 => {
@@ -125,7 +83,7 @@ pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
                 }
                 _ => vm_creation_requested::ConfigType::UnknownConfig,
             };
-            let vm_creation_requested = vm_creation_requested::VmCreationRequested {
+            vm_creation_requested::VmCreationRequested {
                 uid: vm_requester_uid,
                 vm_identifier,
                 hypervisor: vm_creation_requested::Hypervisor::Pkvm,
@@ -138,14 +96,8 @@ pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
                 memory_mib: atom.memoryMib,
                 apexes: &atom.apexes,
                 // TODO(seungjaeyoo) Fill information about disk_image for raw config
-            };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match vm_creation_requested.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
             }
+            .stats_write()
         }
         Atom::VmExited(atom) => {
             let death_reason = match atom.deathReason {
@@ -181,7 +133,7 @@ pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
                 _ => vm_exited::DeathReason::Unknown,
             };
 
-            let vm_exited = vm_exited::VmExited {
+            vm_exited::VmExited {
                 uid: vm_requester_uid,
                 vm_identifier,
                 elapsed_time_millis: atom.elapsedTimeMillis,
@@ -190,15 +142,13 @@ pub fn write_atom(atom: &Atom, vm_requester_uid: i32, vm_identifier: &str) {
                 rss_vm_kb: atom.rssKb,
                 rss_crosvm_kb: atom.rssKb,
                 exit_signal: atom.exitSignal,
-            };
-
-            wait_for_statsd()
-                .unwrap_or_else(|e| warn!("failed to wait for statsd with error: {e}"));
-            match vm_exited.stats_write() {
-                Err(e) => warn!("statslog_rust failed with error: {e}"),
-                Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
             }
+            .stats_write()
         }
+    };
+    match result {
+        Err(e) => warn!("statslog_rust failed with error: {e}"),
+        Ok(_) => trace!("statslog_rust succeeded for virtualization service"),
     }
 }
 
