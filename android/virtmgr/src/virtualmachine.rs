@@ -2019,7 +2019,7 @@ fn check_config_allowed_for_early_vms(config: &aidl::VirtualMachineConfig) -> bi
 }
 
 fn check_memory_share_supported() -> binder::Result<()> {
-    if !system_properties::read_bool("hypervisor.memory_share.supported", false).unwrap_or(false) {
+    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported().unwrap_or(false) {
         Err(anyhow!("hypervisor doesn't support dynamic memory sharing with guest"))
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
     } else {
