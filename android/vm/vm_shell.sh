@@ -166,7 +166,7 @@ function handle_start_microdroid_cmd() {
 
         cid=$(sed -n 's/^Created.*with\ CID\ \([0-9]*\),.*$/\1/p' "${temp_file}")
 
-        if [[ -n "${cid}" ]]; then
+        if [[ -z "${cid}" ]]; then
           echo "Fail to find CID of launched VM" >&2
           exit 1
         fi
