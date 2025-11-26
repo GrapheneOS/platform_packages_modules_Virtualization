@@ -52,14 +52,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
-import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
-import com.android.virtualization.terminal.new2.ui.main.TerminalViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -67,6 +63,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val tabs by viewModel.tabs.collectAsStateWithLifecycle()
+    val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val activity = context as? Activity
@@ -105,8 +103,19 @@ fun MainScreen(viewModel: MainViewModel) {
                     // Activity will finish
                 }
                 is MainUiState.Booting -> BootingScreen()
-                is MainUiState.Running -> TerminalScreen(state.address, state.port)
-                is MainUiState.Stopping -> BootingScreen()
+                is MainUiState.Running -> {
+                    Column {
+                        TerminalTabBar(
+                            tabs = tabs,
+                            selectedTabId = selectedTabId,
+                            onTabSelected = { viewModel.selectTab(it) },
+                            onTabClosed = { viewModel.closeTab(it) },
+                            onAddTab = { viewModel.addTab() },
+                        )
+                        TerminalScreen(state.address, state.port, selectedTabId)
+                    }
+                }
+                is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
                 is MainUiState.Error ->
                     Text(
                         text = "Error: ${state.message}",
@@ -171,39 +180,6 @@ fun InstallProgressScreen(
 fun BootingScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-fun TerminalScreen(address: String, port: Int) {
-    val terminalViewModel: TerminalViewModel = viewModel()
-    val terminalUiState by terminalViewModel.uiState.collectAsStateWithLifecycle()
-    val ttydView = remember(address, port) { terminalViewModel.getOrCreateTtydView(address, port) }
-
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (terminalUiState) {
-            is TerminalUiState.Ready -> {
-                AndroidView(factory = { ttydView })
-            }
-            is TerminalUiState.Connecting -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Connecting to terminal...")
-                }
-            }
-            is TerminalUiState.Disconnected -> {
-                Text(text = "Terminal disconnected.")
-            }
-            else -> {
-                // Initializing state
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Initializing terminal...")
-                }
-            }
-        }
     }
 }
 

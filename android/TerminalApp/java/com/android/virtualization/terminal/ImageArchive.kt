@@ -31,10 +31,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.function.Function
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.apache.commons.compress.archivers.ArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -133,7 +135,12 @@ internal class ImageArchive {
                         val bufferedStream = BufferedInputStream(rawStream)
                         val filteredStream = filter?.apply(bufferedStream) ?: bufferedStream
                         val countingStream =
-                            CountingInputStream(filteredStream) { bytes -> trySend(bytes) }
+                            CountingInputStream(filteredStream) { bytes ->
+                                if (!isActive) {
+                                    throw CancellationException("Installation cancelled")
+                                }
+                                trySend(bytes)
+                            }
 
                         TarArchiveInputStream(GzipCompressorInputStream(countingStream)).use {
                             tarStream ->

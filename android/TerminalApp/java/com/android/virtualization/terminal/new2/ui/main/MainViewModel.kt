@@ -20,10 +20,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
+import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.core.VmState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -51,8 +54,47 @@ sealed interface MainUiState {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     var hasVmEverStarted = false
 
+    private val _tabs = MutableStateFlow<List<TerminalSession>>(listOf(TerminalSession()))
+    val tabs: StateFlow<List<TerminalSession>> = _tabs.asStateFlow()
+
+    private val _selectedTabId = MutableStateFlow(_tabs.value.first().id)
+    val selectedTabId: StateFlow<String> = _selectedTabId.asStateFlow()
+
     init {
         VmController.reset()
+    }
+
+    fun addTab() {
+        val newSession = TerminalSession()
+        val currentTabs = _tabs.value.toMutableList()
+        currentTabs.add(newSession)
+        _tabs.value = currentTabs
+        _selectedTabId.value = newSession.id
+    }
+
+    fun closeTab(id: String) {
+        val currentTabs = _tabs.value.toMutableList()
+
+        val index = currentTabs.indexOfFirst { it.id == id }
+        if (index == -1) return
+
+        currentTabs.removeAt(index)
+        _tabs.value = currentTabs
+
+        if (currentTabs.isEmpty()) {
+            stopVm()
+            return
+        }
+
+        if (_selectedTabId.value == id) {
+            // Select the previous tab, or the first one if we closed the first
+            val newIndex = if (index > 0) index - 1 else 0
+            _selectedTabId.value = currentTabs[newIndex].id
+        }
+    }
+
+    fun selectTab(id: String) {
+        _selectedTabId.value = id
     }
 
     val uiState: StateFlow<MainUiState> =
