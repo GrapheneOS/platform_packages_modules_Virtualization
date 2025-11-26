@@ -27,4 +27,7 @@ sealed interface VmState {
     data object Stopped : VmState
 
     data class Error(val cause: Throwable) : VmState
+
+    val isAlive: Boolean
+        get() = this is Starting || this is Running || this is Stopping
 }
