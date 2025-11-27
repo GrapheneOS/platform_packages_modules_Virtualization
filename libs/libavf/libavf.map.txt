@@ -14,6 +14,7 @@ LIBAVF {
     AVirtualMachineRawConfig_setHypervisorSpecificAuthMethod; # apex llndk
     AVirtualMachineRawConfig_addCustomMemoryBackingFile; # apex llndk
     AVirtualMachineRawConfig_setDeviceTreeOverlay; # apex llndk
+    AVirtualMachineRawConfig_addTeeService; # apex llndk introduced=37
     AVirtualizationService_create; # apex llndk
     AVirtualizationService_destroy; # apex llndk
     AVirtualMachine_createRaw; # apex llndk
