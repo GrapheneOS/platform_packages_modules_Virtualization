@@ -1,0 +1,19 @@
+[Unit]
+Description=VSOCK to UDS Bridge for ttyd
+After=ttyd_uds.service
+Requires=ttyd_uds.service
+
+[Service]
+Type=simple
+
+# socat command
+# VSOCK-LISTEN:7681 : Listen for Android connection
+# fork : Handle multiple connections
+# UNIX-CONNECT : Forward to ttyd
+ExecStart=/usr/bin/socat VSOCK-LISTEN:7681,fork,reuseaddr UNIX-CONNECT:/run/ttyd/ttyd.sock
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

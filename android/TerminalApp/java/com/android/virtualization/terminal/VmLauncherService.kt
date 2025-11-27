@@ -252,31 +252,52 @@ class VmLauncherService : Service() {
         resultReceiver.send(RESULT_START, null)
 
         portNotifier = PortNotifier(this)
+        if (canUseTtydOverVsock()) {
+            val bridge = AndroidToVmBridge(virtualMachine.getCid())
+            val port = bridge.start()
+            if (port == null) {
+                Log.e(TAG, "Failed to start bridge")
+                resultReceiver.send(RESULT_ERROR, null)
+                stopSelf()
+                return
+            }
+            val bundle = Bundle()
+            bundle.putString(KEY_TERMINAL_IPADDRESS, "localhost")
+            bundle.putInt(KEY_TERMINAL_PORT, port)
+            bundle.putString(KEY_TERMINAL_KEY, bridge.secretKey)
+            resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
+        } else {
+            getTerminalServiceInfo(timeout_secs)
+                .thenAcceptAsync(
+                    { info ->
+                        // It must exist because it is checked in `getTerminalServiceInfo`
+                        val ipAddress =
+                            info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
+                        val port = info.port
+                        val bundle = Bundle()
+                        bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
+                        bundle.putInt(KEY_TERMINAL_PORT, port)
+                        resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
+                        startDebianServer(ipAddress)
+                    },
+                    bgThreads,
+                )
+                .exceptionallyAsync(
+                    { e ->
+                        Log.e(TAG, "Failed to start VM", e)
+                        resultReceiver.send(RESULT_ERROR, null)
+                        stopSelf()
+                        null
+                    },
+                    bgThreads,
+                )
+        }
+    }
 
-        getTerminalServiceInfo(timeout_secs)
-            .thenAcceptAsync(
-                { info ->
-                    // It must exist because it is checked in `getTerminalServiceInfo`
-                    val ipAddress =
-                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
-                    val port = info.port
-                    val bundle = Bundle()
-                    bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
-                    bundle.putInt(KEY_TERMINAL_PORT, port)
-                    resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-                    startDebianServer(ipAddress)
-                },
-                bgThreads,
-            )
-            .exceptionallyAsync(
-                { e ->
-                    Log.e(TAG, "Failed to start VM", e)
-                    resultReceiver.send(RESULT_ERROR, null)
-                    stopSelf()
-                    null
-                },
-                bgThreads,
-            )
+    private fun canUseTtydOverVsock(): Boolean {
+        // TODO(b/464237113): Should check both `terminalVmCommunicationRefactoring` flag and
+        // the image version
+        return false
     }
 
     private fun getTerminalServiceInfo(timeout_secs: Int): CompletableFuture<NsdServiceInfo> {
@@ -547,6 +568,7 @@ class VmLauncherService : Service() {
 
         private const val KEY_TERMINAL_IPADDRESS = "address"
         private const val KEY_TERMINAL_PORT = "port"
+        private const val KEY_TERMINAL_KEY = "terminal_key"
 
         private const val SHUTDOWN_TIMEOUT_SECONDS = 3L
 
@@ -572,7 +594,8 @@ class VmLauncherService : Service() {
                             RESULT_TERMINAL_AVAIL -> {
                                 val ipAddress = resultData!!.getString(KEY_TERMINAL_IPADDRESS)
                                 val port = resultData!!.getInt(KEY_TERMINAL_PORT)
-                                callback.onTerminalAvailable(TerminalInfo(ipAddress!!, port))
+                                val key = resultData!!.getString(KEY_TERMINAL_KEY)
+                                callback.onTerminalAvailable(TerminalInfo(ipAddress!!, port, key))
                             }
                             RESULT_SHUTTING_DOWN -> callback.onVmShuttingDown()
                             RESULT_STOP -> callback.onVmStop()
@@ -617,7 +640,7 @@ class VmLauncherService : Service() {
     }
 }
 
-data class TerminalInfo(val ipAddress: String, val port: Int)
+data class TerminalInfo(val ipAddress: String, val port: Int, val key: String?)
 
 data class DisplayInfo(val width: Int, val height: Int, val dpi: Int, val refreshRate: Int) :
     Parcelable {
