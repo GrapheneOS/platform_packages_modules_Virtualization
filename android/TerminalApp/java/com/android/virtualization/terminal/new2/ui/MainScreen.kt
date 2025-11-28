@@ -22,18 +22,21 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.text.format.Formatter
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -112,15 +115,36 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
                 is MainUiState.Booting -> BootingScreen()
                 is MainUiState.Running -> {
+                    val isDisplayActive by viewModel.isDisplayActive.collectAsStateWithLifecycle()
                     Column {
-                        TerminalTabBar(
-                            tabs = tabs,
-                            selectedTabId = selectedTabId,
-                            onTabSelected = { viewModel.selectTab(it) },
-                            onTabClosed = { viewModel.closeTab(it) },
-                            onAddTab = { viewModel.addTab() },
-                        )
-                        TerminalScreen(state.address, state.port, selectedTabId)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surface),
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                TerminalTabBar(
+                                    tabs = tabs,
+                                    selectedTabId = if (isDisplayActive) null else selectedTabId,
+                                    onTabSelected = {
+                                        viewModel.showDisplay(false)
+                                        viewModel.selectTab(it)
+                                    },
+                                    onTabClosed = { viewModel.closeTab(it) },
+                                    onAddTab = { viewModel.addTab() },
+                                )
+                            }
+                            DisplayController(
+                                isDisplayActive = isDisplayActive,
+                                onDisplayToggle = { viewModel.showDisplay(!isDisplayActive) },
+                            )
+                        }
+                        if (isDisplayActive) {
+                            DisplayScreen()
+                        } else if (selectedTabId != null) {
+                            TerminalScreen(state.address, state.port, selectedTabId!!)
+                        }
                     }
                 }
                 is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
