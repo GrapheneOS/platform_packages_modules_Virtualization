@@ -77,8 +77,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isDisplayActive = MutableStateFlow(false)
     val isDisplayActive: StateFlow<Boolean> = _isDisplayActive.asStateFlow()
 
+    private val _isImeVisible = MutableStateFlow(false)
+    val isImeVisible: StateFlow<Boolean> = _isImeVisible.asStateFlow()
+
     fun showDisplay(show: Boolean) {
         _isDisplayActive.value = show
+    }
+
+    fun setIsImeVisible(visible: Boolean) {
+        _isImeVisible.value = visible
     }
 
     init {

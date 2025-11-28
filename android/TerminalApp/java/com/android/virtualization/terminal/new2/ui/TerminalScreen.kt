@@ -62,6 +62,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -81,6 +82,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.new2.core.TerminalSession
+import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
 import com.android.virtualization.terminal.new2.ui.main.TerminalViewModel
 import kotlinx.coroutines.delay
@@ -195,11 +197,51 @@ private fun TerminalTab(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TerminalScreen(address: String, port: Int, tabId: String) {
+fun TerminalScreen(address: String, port: Int, tabId: String, mainViewModel: MainViewModel) {
     val terminalViewModel: TerminalViewModel = viewModel(key = tabId)
     val terminalUiState by terminalViewModel.uiState.collectAsStateWithLifecycle()
     val ttydView =
         remember(address, port, tabId) { terminalViewModel.getOrCreateTtydView(address, port) }
+
+    val storedImeVisibility by mainViewModel.isImeVisible.collectAsStateWithLifecycle()
+    val isWindowImeVisible = WindowInsets.isImeVisible
+
+    // 1. Sync ViewModel state to UI (Show/Hide Keyboard)
+    LaunchedEffect(tabId, storedImeVisibility, terminalUiState) {
+        if (terminalUiState is TerminalUiState.Ready) {
+            ttydView.post {
+                if (storedImeVisibility) {
+                    ttydView.showSoftInput()
+                } else {
+                    ttydView.hideSoftInput()
+                }
+            }
+        }
+    }
+
+    // 2. Sync UI state to ViewModel (Update ViewModel when user changes keyboard state)
+    LaunchedEffect(tabId, isWindowImeVisible, storedImeVisibility) {
+        if (storedImeVisibility != isWindowImeVisible) {
+            if (storedImeVisibility) {
+                // ViewModel says visible, but Window says invisible.  This could be due to tab
+                // switching or keyboard animation.  Wait a bit to see if it persists (meaning user
+                // closed it).
+                delay(500)
+                // Check directly against current window state (needs recomposition to get fresh
+                // value?  No, LaunchedEffect restarts if isWindowImeVisible changes.  So if we are
+                // here, it means isWindowImeVisible didn't change to true within 500ms.  But we
+                // cannot access 'current' value inside LaunchedEffect without snapshotFlow or
+                // simple variable capture.  Actually, if isWindowImeVisible changes, this coroutine
+                // is cancelled.  So if we reached here, isWindowImeVisible is still false.
+                mainViewModel.setIsImeVisible(false)
+            } else {
+                // ViewModel says invisible, Window says visible.  User opened the keyboard. Update
+                // immediately.
+                mainViewModel.setIsImeVisible(true)
+            }
+        }
+    }
+
     Column(
         modifier =
             Modifier.fillMaxSize()

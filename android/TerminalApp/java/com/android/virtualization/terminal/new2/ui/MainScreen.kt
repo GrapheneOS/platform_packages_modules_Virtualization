@@ -143,7 +143,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         if (isDisplayActive) {
                             DisplayScreen()
                         } else if (selectedTabId != null) {
-                            TerminalScreen(state.address, state.port, selectedTabId!!)
+                            TerminalScreen(state.address, state.port, selectedTabId!!, viewModel)
                         }
                     }
                 }
