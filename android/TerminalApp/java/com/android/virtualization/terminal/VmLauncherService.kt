@@ -295,9 +295,10 @@ class VmLauncherService : Service() {
     }
 
     private fun canUseTtydOverVsock(): Boolean {
-        // TODO(b/464237113): Should check both `terminalVmCommunicationRefactoring` flag and
-        // the image version
-        return false
+        val buildId = InstalledImage.getDefault(this).buildInfo?.buildId ?: 0
+        val FIRST_VERSION_SUPPORTS_TTYD_VSOCK = 5106
+        return Flags.terminalVmCommunicationRefactoring() &&
+            buildId >= FIRST_VERSION_SUPPORTS_TTYD_VSOCK
     }
 
     private fun getTerminalServiceInfo(timeout_secs: Int): CompletableFuture<NsdServiceInfo> {
