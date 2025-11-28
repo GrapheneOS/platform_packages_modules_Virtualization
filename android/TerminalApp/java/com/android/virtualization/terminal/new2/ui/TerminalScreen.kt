@@ -17,8 +17,13 @@ package com.android.virtualization.terminal.new2.ui
 
 import android.content.res.Configuration
 import android.view.KeyEvent
+import android.view.ViewConfiguration
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,11 +66,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -74,6 +83,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
 import com.android.virtualization.terminal.new2.ui.main.TerminalViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun TerminalTabBar(
@@ -242,14 +253,15 @@ fun TerminalScreen(address: String, port: Int, tabId: String) {
         }
         if (WindowInsets.isImeVisible) {
             TerminalKeys(
-                onKey = { key ->
+                onKeyAction = { key, action ->
                     if (key == ExtraKey.CTRL) {
-                        ttydView.mapCtrlKey()
-                        ttydView.enableCtrlKey()
+                        if (action == KeyEvent.ACTION_DOWN) {
+                            ttydView.mapCtrlKey()
+                            ttydView.enableCtrlKey()
+                        }
                     } else {
                         key.keyCode?.let { code ->
-                            ttydView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
-                            ttydView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+                            ttydView.dispatchKeyEvent(KeyEvent(action, code))
                         }
                     }
                 }
@@ -278,7 +290,7 @@ enum class ExtraKey(val label: String, val icon: ImageVector? = null, val keyCod
 }
 
 @Composable
-fun TerminalKeys(onKey: (ExtraKey) -> Unit) {
+fun TerminalKeys(onKeyAction: (ExtraKey, Int) -> Unit) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val keys =
@@ -323,7 +335,15 @@ fun TerminalKeys(onKey: (ExtraKey) -> Unit) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 rowKeys.forEach { key ->
                     Box(
-                        modifier = Modifier.weight(1f).height(40.dp).clickable { onKey(key) },
+                        modifier =
+                            Modifier.weight(1f)
+                                .height(40.dp)
+                                .repeatingClickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    enabled = true,
+                                    onPress = { onKeyAction(key, KeyEvent.ACTION_DOWN) },
+                                    onRelease = { onKeyAction(key, KeyEvent.ACTION_UP) },
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (key.icon != null) {
@@ -336,4 +356,38 @@ fun TerminalKeys(onKey: (ExtraKey) -> Unit) {
             }
         }
     }
+}
+
+fun Modifier.repeatingClickable(
+    interactionSource: MutableInteractionSource,
+    enabled: Boolean,
+    onPress: () -> Unit,
+    onRelease: () -> Unit,
+): Modifier = composed {
+    val currentPressListener by rememberUpdatedState(onPress)
+    val currentReleaseListener by rememberUpdatedState(onRelease)
+    val scope = rememberCoroutineScope()
+
+    val initialDelay = remember { ViewConfiguration.getKeyRepeatTimeout().toLong() }
+    val repeatDelay = remember { ViewConfiguration.getKeyRepeatDelay().toLong() }
+
+    this.pointerInput(interactionSource, enabled) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                val job =
+                    scope.launch {
+                        // Initial press
+                        currentPressListener()
+                        delay(initialDelay)
+                        while (enabled) {
+                            currentPressListener()
+                            delay(repeatDelay)
+                        }
+                    }
+                waitForUpOrCancellation()
+                job.cancel()
+                currentReleaseListener()
+            }
+        }
+        .indication(interactionSource, androidx.compose.foundation.LocalIndication.current)
 }
