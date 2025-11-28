@@ -16,10 +16,14 @@
 package com.android.virtualization.terminal.new2.ui.main
 
 import android.app.Application
+import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
@@ -170,7 +174,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startVm() {
-        viewModelScope.launch { VmController.start() }
+        val displayInfo = getDisplayInfo(getApplication())
+        viewModelScope.launch { VmController.start(displayInfo) }
     }
 
     fun stopVm() {
@@ -180,5 +185,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
+    }
+
+    private fun getDisplayInfo(context: Context): DisplayInfo {
+        val wm = context.getSystemService(WindowManager::class.java)
+        // For now, display size is fixed.(1280x720)
+        val width = 1280
+        val height = 720
+        val dpi =
+            (DisplayMetrics.DENSITY_DEFAULT * context.resources.displayMetrics.density).toInt()
+        val refreshRate = 60 // Simple default
+        return DisplayInfo(width, height, dpi, refreshRate)
     }
 }
