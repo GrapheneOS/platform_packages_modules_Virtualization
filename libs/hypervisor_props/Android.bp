@@ -10,6 +10,7 @@ rust_library {
     rustlibs: [
         "libanyhow",
         "libplatformproperties_rust",
+        "librustutils",
     ],
     apex_available: [
         "com.android.compos",

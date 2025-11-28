@@ -16,6 +16,7 @@ rust_ffi_static {
         "libtinyvec_nostd",
         "libciborium_io_nostd",
         "libciborium_nostd",
+        "libhypervisor_backends",
     ],
 }
 

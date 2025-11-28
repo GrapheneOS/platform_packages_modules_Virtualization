@@ -29,7 +29,10 @@ pub const VM_PORT: u32 = 17239;
 pub enum Request {
     /// Reverses the provided array and sends it back to host.
     Reverse(Vec<u8>),
-
+    /// Maps data at the given range.
+    MapData(usize, usize),
+    /// Relinquishes given range of pages.
+    MemRelinquish(usize, usize),
     /// Shut down the VM. No response is expected.
     Shutdown,
 }
@@ -39,4 +42,10 @@ pub enum Request {
 pub enum Response {
     /// Response to the `Request::Reverse`.
     Reverse(Vec<u8>),
+    /// Response to the `Request::MapData`.
+    /// Contains the mapped data, or empty Vec if failed to map data.
+    MapData(Vec<u8>),
+    /// Response to the `Request::MemRelinquish`.
+    /// Contains `true` if request was handled successfully, or `false` otherwise.
+    MemRelinquish(bool),
 }
