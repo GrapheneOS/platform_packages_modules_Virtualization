@@ -94,10 +94,11 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
                 "&fontWeightBold=" +
                 (FontStyle.FONT_WEIGHT_BOLD + config.fontWeightAdjustment) +
                 "&screenReaderMode=" +
-                a11yManager.isEnabled)
+                a11yManager.isEnabled +
+                "&disableResizeOverlay=true")
 
         try {
-            return URL("https", ipAddress, port, "")
+            return URL("https", ipAddress, port, query)
         } catch (e: MalformedURLException) {
             // this cannot happen
             return null
