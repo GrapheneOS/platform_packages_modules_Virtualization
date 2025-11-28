@@ -45,7 +45,13 @@ use vmbase::virtio::HalImpl;
 use vmbase::{configure_heap, generate_image_header, main};
 use vmbase_test_vm_messages::{Request, Response, VM_PORT};
 
-fn map_data(range_start: usize, range_end: usize) -> Vec<u8> {
+/// Implementation of the `Request::MapData`.
+///
+/// # Safety
+///
+/// A test sending the `Request::MapData` to this VM must ensure that memory region is available to
+/// the VM (e.g. by sharing it via `AVirtualMachine_addMemoryMapping` API).
+unsafe fn process_map_data(range_start: usize, range_end: usize) -> Vec<u8> {
     info!("mapping data at range {range_start:x} {range_end:x}");
     let size = range_end.checked_sub(range_start).unwrap().try_into().unwrap();
     // SAFETY: range is valid because test first shared the memory with guest VM.
@@ -63,7 +69,8 @@ fn map_data(range_start: usize, range_end: usize) -> Vec<u8> {
     data.to_vec()
 }
 
-fn mem_relinquish(range_start: usize, range_end: usize) -> bool {
+/// Implementation of the `Request::MemRelinquish`.
+fn process_mem_relinquish(range_start: usize, range_end: usize) -> bool {
     let Some(granule_size) = hypervisor_backends::get_granule_size() else {
         error!("can't get hypervisor granule size");
         return false;
@@ -88,14 +95,21 @@ fn mem_relinquish(range_start: usize, range_end: usize) -> bool {
     true
 }
 
-fn process_request(req: Request) -> Response {
+/// Processes requests coming from the test process on the Android host.
+///
+/// # Safety
+///
+/// Test process must ensure that all the requests are safe to process. For more information see
+/// relevant safety comments of the individual process_ functions.
+unsafe fn process_request(req: Request) -> Response {
     match req {
         Request::Reverse(v) => Response::Reverse(v.into_iter().rev().collect()),
         Request::MapData(range_start, range_end) => {
-            Response::MapData(map_data(range_start, range_end))
+            // SAFETY: test issuing MapData request must ensure that pages are shared with guest.
+            unsafe { Response::MapData(process_map_data(range_start, range_end)) }
         }
         Request::MemRelinquish(range_start, range_end) => {
-            Response::MemRelinquish(mem_relinquish(range_start, range_end))
+            Response::MemRelinquish(process_mem_relinquish(range_start, range_end))
         }
         Request::Shutdown => unreachable!(),
     }
@@ -142,7 +156,8 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
             info!("Shutting down. Bye!");
             break;
         }
-        let resp = process_request(req);
+        // SAFETY: test process sending requests must ensure that they are safe.
+        let resp = unsafe { process_request(req) };
         info!("Sending response: {resp:?}");
         vsock_stream.write_response(&resp)?;
         vsock_stream.flush()?;
