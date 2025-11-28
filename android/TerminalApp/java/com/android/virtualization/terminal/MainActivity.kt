@@ -260,7 +260,7 @@ public class MainActivity :
         )
     }
 
-    private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {
+    private fun getTerminalServiceUrl(ipAddress: String?, port: Int, ssl: Boolean = true): URL? {
         val config = resources.configuration
         // TODO: Always enable screenReaderMode (b/395845063)
         val query =
@@ -274,7 +274,7 @@ public class MainActivity :
                 accessibilityManager.isEnabled)
 
         try {
-            return URL("https", ipAddress, port, "/$query")
+            return URL(if (ssl) "https" else "http", ipAddress, port, "/$query")
         } catch (e: MalformedURLException) {
             // this cannot happen
             return null
@@ -284,8 +284,8 @@ public class MainActivity :
     fun connectToTerminalService(terminalFragment: TerminalTabFragment) {
         terminalInfo.thenAcceptAsync(
             { info ->
-                val url = getTerminalServiceUrl(info.ipAddress, info.port)
-                runOnUiThread({ terminalFragment.loadUrl(url!!.toString()) })
+                val url = getTerminalServiceUrl(info.ipAddress, info.port, false)
+                runOnUiThread({ terminalFragment.loadUrl(url!!.toString(), info.key) })
             },
             executorService,
         )

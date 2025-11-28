@@ -26,6 +26,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ClientCertRequest
+import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
@@ -113,12 +114,20 @@ class TerminalTabFragment() : Fragment() {
     }
 
     @MainThread
-    public fun loadUrl(url: String) {
+    public fun loadUrl(url: String, key: String?) {
         Log.d(TAG, "loading $url")
         if (isResumed()) {
             terminalView.getHandler().postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
         }
         ttydStatus = TTYD_STATUS_STARTED
+        if (key != null) {
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
+
+            // Should match the "access_token=" logic in the AndroidToVmBridge
+            cookieManager.setCookie(url, "access_token=$key")
+            cookieManager.flush()
+        }
         terminalView.loadUrl(url)
     }
 
@@ -211,6 +220,7 @@ class TerminalTabFragment() : Fragment() {
                 ERROR_CONNECT,
                 ERROR_HOST_LOOKUP,
                 ERROR_FAILED_SSL_HANDSHAKE,
+                ERROR_UNKNOWN,
                 ERROR_TIMEOUT -> {
                     // Note that ERROR_TIMEOUT is for timeout after onPageStarted()
                     // and can be called if MainActivity is started while screen is locked
@@ -222,7 +232,7 @@ class TerminalTabFragment() : Fragment() {
 
             val url: String? = request.getUrl().toString()
             val msg = error.getDescription()
-            Log.e(MainActivity.TAG, "Failed to load $url: $msg")
+            Log.e(MainActivity.TAG, "Failed to load $url: $msg with ${error.getErrorCode()}")
 
             // Let unhandled exception handler to handle this
             throw Exception(msg.toString())
