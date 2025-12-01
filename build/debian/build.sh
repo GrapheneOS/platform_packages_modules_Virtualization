@@ -88,8 +88,6 @@ install_prerequisites() {
 		curl
 		debsums
 		dosfstools
-		fai-server
-		fai-setup-storage
 		fdisk
 		genisoimage
 		git
