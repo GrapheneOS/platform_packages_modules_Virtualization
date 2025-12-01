@@ -28,27 +28,14 @@ use core::fmt::{self, Write};
 use core::result;
 
 /// Represents an error that can occur while handling an exception.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum HandleExceptionError {
     /// An internal error occurred in the memory tracker.
-    InternalError(MemoryTrackerError),
+    #[error("Error while updating page table: {0}")]
+    InternalError(#[from] MemoryTrackerError),
     /// An unknown exception occurred.
+    #[error("An unknown exception occurred, not handled.")]
     UnknownException,
-}
-
-impl From<MemoryTrackerError> for HandleExceptionError {
-    fn from(other: MemoryTrackerError) -> Self {
-        Self::InternalError(other)
-    }
-}
-
-impl fmt::Display for HandleExceptionError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::InternalError(e) => write!(f, "Error while updating page table: {e}"),
-            Self::UnknownException => write!(f, "An unknown exception occurred, not handled."),
-        }
-    }
 }
 
 /// Represents the possible types of exception syndrome register (ESR) values.

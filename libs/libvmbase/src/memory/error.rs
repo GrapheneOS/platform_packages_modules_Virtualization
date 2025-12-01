@@ -14,78 +14,65 @@
 
 //! Error relating to memory management.
 
-use core::fmt;
-
 use hypervisor_backends::Error as HypervisorError;
 
 /// Errors for MemoryTracker operations.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum MemoryTrackerError {
     /// MemoryTracker not configured or deactivated.
+    #[error("MemoryTracker is not available")]
     Unavailable,
     /// Tried to modify the memory base address.
+    #[error("Received different base address")]
     DifferentBaseAddress,
     /// Tried to shrink to a larger memory size.
+    #[error("Tried to shrink to a larger memory size")]
     SizeTooLarge,
     /// Tracked regions would not fit in memory size.
+    #[error("Tracked regions would not fit in memory size")]
     SizeTooSmall,
     /// Reached limit number of tracked regions.
+    #[error("Reached limit number of tracked regions")]
     Full,
     /// Region is out of the tracked memory address space.
+    #[error("Region is out of the tracked memory address space")]
     OutOfRange,
     /// New region overlaps with tracked regions.
+    #[error("New region overlaps with tracked regions")]
     Overlaps,
     /// Region is not present in the tracked regions.
+    #[error("Region is not mapped")]
     NotMapped,
     /// Region couldn't be mapped.
+    #[error("Failed to map the new region")]
     FailedToMap,
     /// Region couldn't be unmapped.
+    #[error("Failed to unmap the new region")]
     FailedToUnmap,
     /// Error from the interaction with the hypervisor.
+    #[error("{0}")]
     Hypervisor(HypervisorError),
     /// Failure to set `SHARED_MEMORY`.
+    #[error("Failed to set SHARED_MEMORY")]
     SharedMemorySetFailure,
     /// Failure to set `SHARED_POOL`.
+    #[error("Failed to set SHARED_POOL")]
     SharedPoolSetFailure,
     /// Rejected request to map footer that is already mapped.
+    #[error("Refused to map image footer again")]
     FooterAlreadyMapped,
     /// Invalid page table entry.
+    #[error("Page table entry is not valid")]
     InvalidPte,
     /// Failed to set PTE dirty state.
+    #[error("Failed to set PTE dirty state")]
     SetPteDirtyFailed,
     /// Attempting to MMIO_GUARD_MAP more than once the same region.
+    #[error("Attempted to share the same MMIO region at {0:#x} twice")]
     DuplicateMmioShare(usize),
     /// The MMIO_GUARD granule used by the hypervisor is not supported.
+    #[error("Unsupported MMIO guard granule: {0}")]
     UnsupportedMmioGuardGranule(usize),
-}
-
-impl fmt::Display for MemoryTrackerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Unavailable => write!(f, "MemoryTracker is not available"),
-            Self::DifferentBaseAddress => write!(f, "Received different base address"),
-            Self::SizeTooLarge => write!(f, "Tried to shrink to a larger memory size"),
-            Self::SizeTooSmall => write!(f, "Tracked regions would not fit in memory size"),
-            Self::Full => write!(f, "Reached limit number of tracked regions"),
-            Self::OutOfRange => write!(f, "Region is out of the tracked memory address space"),
-            Self::Overlaps => write!(f, "New region overlaps with tracked regions"),
-            Self::NotMapped => write!(f, "Region is not mapped"),
-            Self::FailedToMap => write!(f, "Failed to map the new region"),
-            Self::FailedToUnmap => write!(f, "Failed to unmap the new region"),
-            Self::Hypervisor(e) => e.fmt(f),
-            Self::SharedMemorySetFailure => write!(f, "Failed to set SHARED_MEMORY"),
-            Self::SharedPoolSetFailure => write!(f, "Failed to set SHARED_POOL"),
-            Self::FooterAlreadyMapped => write!(f, "Refused to map image footer again"),
-            Self::InvalidPte => write!(f, "Page table entry is not valid"),
-            Self::SetPteDirtyFailed => write!(f, "Failed to set PTE dirty state"),
-            Self::DuplicateMmioShare(addr) => {
-                write!(f, "Attempted to share the same MMIO region at {addr:#x} twice")
-            }
-            Self::UnsupportedMmioGuardGranule(g) => {
-                write!(f, "Unsupported MMIO guard granule: {g}")
-            }
-        }
-    }
 }
 
 impl From<HypervisorError> for MemoryTrackerError {

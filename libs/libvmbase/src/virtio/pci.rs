@@ -16,7 +16,6 @@
 
 use crate::memory::{init_shared_pool, map_device, MemoryTrackerError};
 use alloc::boxed::Box;
-use core::fmt;
 use core::marker::PhantomData;
 use core::ops::Range;
 use log::debug;
@@ -120,29 +119,20 @@ impl PciInfoType {
 pub(super) static PCI_INFO_TYPE: OnceBox<PciInfoType> = OnceBox::new();
 
 /// PCI errors.
-#[derive(Debug, Clone)]
+#[derive(Debug, thiserror::Error, Clone)]
 pub enum PciError {
     /// Attempted to initialize the PCI more than once.
+    #[error("Attempted to initialize the PCI more than once.")]
     DuplicateInitialization,
     /// Failed to map PCI CAM.
-    CamMapFailed(MemoryTrackerError),
+    #[error("Failed to map PCI CAM: {0}")]
+    CamMapFailed(#[source] MemoryTrackerError),
     /// Failed to map PCI BAR.
-    BarMapFailed(MemoryTrackerError),
+    #[error("Failed to map PCI BAR: {0}")]
+    BarMapFailed(#[source] MemoryTrackerError),
     /// Failed to initialize shared pool
-    SharedPoolInitFailed(MemoryTrackerError),
-}
-
-impl fmt::Display for PciError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::DuplicateInitialization => {
-                write!(f, "Attempted to initialize the PCI more than once.")
-            }
-            Self::CamMapFailed(e) => write!(f, "Failed to map PCI CAM: {e}"),
-            Self::BarMapFailed(e) => write!(f, "Failed to map PCI BAR: {e}"),
-            Self::SharedPoolInitFailed(e) => write!(f, "Failed to initialize shared pool: {e}"),
-        }
-    }
+    #[error("Failed to initialize shared pool: {0}")]
+    SharedPoolInitFailed(#[source] MemoryTrackerError),
 }
 
 /// Prepares to use VirtIO PCI devices.

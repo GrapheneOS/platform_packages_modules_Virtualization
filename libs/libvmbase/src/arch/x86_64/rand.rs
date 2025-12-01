@@ -17,25 +17,18 @@
 use crate::rand::{Entropy, Error, Result};
 use core::arch::asm;
 use core::arch::x86_64::__cpuid_count;
-use core::fmt;
 
 const RDSEED_MAX_RETRIES: i32 = 10;
 
 /// Error type for rand operations.
+#[derive(Debug, thiserror::Error)]
 pub enum PlatformError {
     /// CPU does not have the necessary random number generator instruction.
+    #[error("Unsupported CPU")]
     UnsupportedCpu,
     /// Hardware random number generator is not ready yet.
+    #[error("No entropy")]
     NoEntropy,
-}
-
-impl fmt::Display for PlatformError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PlatformError::UnsupportedCpu => write!(f, "unsupported CPU"),
-            PlatformError::NoEntropy => write!(f, "no entropy"),
-        }
-    }
 }
 
 pub(crate) const MAX_BYTES_PER_CALL: usize = size_of::<u64>();

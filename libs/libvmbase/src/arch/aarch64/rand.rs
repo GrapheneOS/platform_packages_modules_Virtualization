@@ -16,20 +16,24 @@
 
 use crate::arch::aarch64::hvc;
 use crate::rand::{Entropy, Error, Result};
-use core::fmt;
 use core::mem::size_of;
 use smccc::{self, Hvc};
 use zerocopy::IntoBytes as _;
 
 /// Error type for rand operations.
+#[derive(Debug, thiserror::Error)]
 pub enum PlatformError {
     /// Error during architectural SMCCC call.
-    Smccc(smccc::arch::Error),
+    #[error("Architectural SMCCC error: {0}")]
+    Smccc(#[from] smccc::arch::Error),
     /// Error during SMCCC TRNG call.
-    Trng(hvc::trng::Error),
+    #[error("SMCCC TRNG error: {0}")]
+    Trng(#[from] hvc::trng::Error),
     /// Unsupported SMCCC version.
+    #[error("Unsupported SMCCC version {0}")]
     UnsupportedSmcccVersion(smccc::arch::Version),
     /// Unsupported SMCCC TRNG version.
+    #[error("Unsupported SMCCC TRNG version {0}")]
     UnsupportedTrngVersion(hvc::trng::Version),
 }
 
@@ -42,23 +46,6 @@ impl From<smccc::arch::Error> for Error {
 impl From<hvc::trng::Error> for Error {
     fn from(e: hvc::trng::Error) -> Self {
         Self::Platform(PlatformError::Trng(e))
-    }
-}
-
-impl fmt::Display for PlatformError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Smccc(e) => write!(f, "Architectural SMCCC error: {e}"),
-            Self::Trng(e) => write!(f, "SMCCC TRNG error: {e}"),
-            Self::UnsupportedSmcccVersion(v) => write!(f, "Unsupported SMCCC version {v}"),
-            Self::UnsupportedTrngVersion(v) => write!(f, "Unsupported SMCCC TRNG version {v}"),
-        }
-    }
-}
-
-impl fmt::Debug for PlatformError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{self}")
     }
 }
 
