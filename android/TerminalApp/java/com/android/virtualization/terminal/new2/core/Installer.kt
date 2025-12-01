@@ -49,13 +49,13 @@ object Installer {
 
     private suspend fun checkInstallStatus() {
         _installState.value = InstallState.Checking
+        if (installedImage.isInstalled()) {
+            _installState.value = InstallState.Installed
+            return
+        }
         try {
-            if (installedImage.isInstalled()) {
-                _installState.value = InstallState.Installed
-            } else {
-                val downloadSize = ImageArchive.getDefault().getSize()
-                _installState.value = InstallState.NotInstalled(downloadSize)
-            }
+            val downloadSize = ImageArchive.getDefault().getSize()
+            _installState.value = InstallState.NotInstalled(downloadSize)
         } catch (e: IOException) {
             android.util.Log.e("Installer", "Failed to check install status", e)
             _installState.value = InstallState.Error(e, InstallState.ErrorCause.CheckFailed)

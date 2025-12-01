@@ -88,16 +88,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isImeVisible.value = visible
     }
 
+    private val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Installer.retryCheck()
+            }
+        }
+
     init {
         VmController.reset()
-        val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
-        connectivityManager?.registerDefaultNetworkCallback(
-            object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    Installer.retryCheck()
+        connectivityManager?.registerDefaultNetworkCallback(networkCallback)
+
+        viewModelScope.launch {
+            Installer.installState.collect { state ->
+                if (state is InstallState.Installed) {
+                    try {
+                        connectivityManager?.unregisterNetworkCallback(networkCallback)
+                    } catch (e: IllegalArgumentException) {
+                        // Already unregistered
+                    }
                 }
             }
-        )
+        }
     }
 
     fun addTab() {
@@ -187,6 +200,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Installer.cancelInstall()
     }
 
+    fun retryCheck() {
+        Installer.retryCheck()
+    }
+
     fun startVm() {
         val displayInfo = getDisplayInfo(getApplication())
         viewModelScope.launch { VmController.start(displayInfo) }
@@ -199,6 +216,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
+        try {
+            connectivityManager?.unregisterNetworkCallback(networkCallback)
+        } catch (e: IllegalArgumentException) {
+            // Already unregistered
+        }
     }
 
     private fun getDisplayInfo(context: Context): DisplayInfo {
