@@ -16,20 +16,19 @@
 
 use android_logger::Config;
 use anyhow::{bail, ensure, Context, Result};
-use libloading::Library;
 use log::{info, LevelFilter};
 use std::ffi::{c_void, CStr};
 use std::fmt;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::os::fd::IntoRawFd;
-use std::os::raw::c_int;
 use std::sync::mpsc::{self, Sender};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
-use avf_bindgen::*;
+//use avf_bindgen::*;
+use avf_compat_bindgen::*;
 use vmbase_test_vm_messages::{Request, Response, VM_PORT};
 
 const LOG_TAG: &str = "VtsLibAvf";
@@ -198,38 +197,18 @@ where
     let listener_thread = std::thread::spawn(move || listen_from_guest(VM_PORT));
 
     let mut callback_data = 33_u8;
-    let mut supports_callback: bool = false;
+    let mut supports_callback = false;
 
-    // SAFETY:
-    //   - vm is the only reference to a valid object
-    //   - libavf.so is guaranteed by precondition check in AndroidTest.xml.
-    //   - AVirtualMachine_startWithStopCallback is released as LLNDK, hence interface is stable.
+    // SAFETY: vm is the only reference to a valid object, on_stopped is a correct callback and
+    // callback data is a valid pointer.
     unsafe {
-        let lib = Library::new("libavf.so").unwrap();
-        let start_with_callback: Result<
-            libloading::Symbol<
-                unsafe extern "C" fn(
-                    *mut AVirtualMachine,
-                    AVirtualMachine_stopCallback,
-                    *mut c_void,
-                ) -> c_int,
-            >,
-            _,
-        > = lib.get(b"AVirtualMachine_startWithStopCallback");
-
-        // With trunk stable, this test may run on device without the start_with_callback.
-        // Only test with callbacks when the API is available.
-        // TODO: Remove this block when the API is fully deployed, or invent better way
-        //       to do this.
-        if let Ok(start_with_callback) = start_with_callback {
-            info!("starting VM with AVirtualMachine_startWithStopCallback");
-            supports_callback = true;
-            start_with_callback(vm, Some(on_stopped), &mut callback_data as *mut _ as *mut c_void);
-        } else {
-            info!("starting VM with AVirtualMachine_start");
-            AVirtualMachine_start(vm);
-        }
-    }
+        AVirtualMachineCompat_startWithStopCallback(
+            vm,
+            Some(on_stopped),
+            &mut callback_data as *mut _ as *mut c_void,
+            &mut supports_callback,
+        )
+    };
 
     let vm_ptr = vm as usize;
 
@@ -259,6 +238,7 @@ where
     info!("stopped");
 
     if supports_callback {
+        info!("checking that callback was invoked");
         let timeout = Duration::from_secs(STOP_TIMEOUT.tv_sec.try_into().unwrap());
         let (stopped_vm_ptr, stopped_reason, stopped_callback_data) =
             rx.recv_timeout(timeout).expect("Callback should have been called");

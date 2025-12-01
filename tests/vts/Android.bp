@@ -19,9 +19,8 @@ rust_test {
     rustlibs: [
         "libandroid_logger",
         "libanyhow",
-        "libavf_bindgen",
+        "libavf_compat_bindgen",
         "libciborium",
-        "liblibloading",
         "liblog_rust",
         "libhypervisor_props",
         "libscopeguard",
@@ -29,6 +28,7 @@ rust_test {
         "libvsock",
         "libvmbase_test_vm_messages",
     ],
+    whole_static_libs: ["libavf_compat"],
     shared_libs: ["libavf"],
     test_suites: [
         "general-tests",
