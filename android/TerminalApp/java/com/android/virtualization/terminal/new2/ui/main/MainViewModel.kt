@@ -65,6 +65,11 @@ sealed interface MainUiState {
     data class Error(val handler: ErrorHandler) : MainUiState
 }
 
+enum class DisplayState {
+    Hidden,
+    Shown,
+}
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     var hasVmEverStarted = false
 
@@ -74,14 +79,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedTabId = MutableStateFlow(_tabs.value.first().id)
     val selectedTabId: StateFlow<String> = _selectedTabId.asStateFlow()
 
-    private val _isDisplayActive = MutableStateFlow(false)
-    val isDisplayActive: StateFlow<Boolean> = _isDisplayActive.asStateFlow()
+    private val _displayState = MutableStateFlow(DisplayState.Hidden)
+    val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
 
     private val _isImeVisible = MutableStateFlow(false)
     val isImeVisible: StateFlow<Boolean> = _isImeVisible.asStateFlow()
 
-    fun showDisplay(show: Boolean) {
-        _isDisplayActive.value = show
+    fun toggleDisplay() {
+        _displayState.value =
+            if (_displayState.value == DisplayState.Shown) {
+                DisplayState.Hidden
+            } else {
+                DisplayState.Shown
+            }
     }
 
     fun setIsImeVisible(visible: Boolean) {
@@ -144,6 +154,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectTab(id: String) {
         _selectedTabId.value = id
+        _displayState.value = DisplayState.Hidden
     }
 
     val uiState: StateFlow<MainUiState> =

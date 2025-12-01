@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.BetterBugLauncher
 import com.android.virtualization.terminal.R
+import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -114,7 +115,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
                 is MainUiState.Booting -> BootingScreen()
                 is MainUiState.Running -> {
-                    val isDisplayActive by viewModel.isDisplayActive.collectAsStateWithLifecycle()
+                    val displayState by viewModel.displayState.collectAsStateWithLifecycle()
                     Column {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -125,21 +126,20 @@ fun MainScreen(viewModel: MainViewModel) {
                             Box(modifier = Modifier.weight(1f)) {
                                 TerminalTabBar(
                                     tabs = tabs,
-                                    selectedTabId = if (isDisplayActive) null else selectedTabId,
-                                    onTabSelected = {
-                                        viewModel.showDisplay(false)
-                                        viewModel.selectTab(it)
-                                    },
+                                    selectedTabId =
+                                        if (displayState == DisplayState.Shown) null
+                                        else selectedTabId,
+                                    onTabSelected = { viewModel.selectTab(it) },
                                     onTabClosed = { viewModel.closeTab(it) },
                                     onAddTab = { viewModel.addTab() },
                                 )
                             }
                             DisplayController(
-                                isDisplayActive = isDisplayActive,
-                                onDisplayToggle = { viewModel.showDisplay(!isDisplayActive) },
+                                isDisplayActive = displayState == DisplayState.Shown,
+                                onDisplayToggle = { viewModel.toggleDisplay() },
                             )
                         }
-                        if (isDisplayActive) {
+                        if (displayState == DisplayState.Shown) {
                             DisplayScreen()
                         } else if (selectedTabId != null) {
                             TerminalScreen(state.address, state.port, selectedTabId!!, viewModel)
