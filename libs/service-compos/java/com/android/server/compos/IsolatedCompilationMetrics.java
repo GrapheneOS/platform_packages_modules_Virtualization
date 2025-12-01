@@ -32,7 +32,7 @@ import java.lang.annotation.RetentionPolicy;
  * @hide
  */
 class IsolatedCompilationMetrics {
-    private static final String TAG = IsolatedCompilationMetrics.class.getName();
+    private static final String TAG = IsolatedCompilationMetrics.class.getSimpleName();
 
     // TODO(b/218525257): Move the definition of these enums to atoms.proto
     @Retention(RetentionPolicy.SOURCE)
