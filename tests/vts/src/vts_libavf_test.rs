@@ -49,13 +49,13 @@ static ON_STOPPED_EVENT: LazyLock<Mutex<Sender<(usize, AVirtualMachineStopReason
         Mutex::new(tx)
     });
 
-/// Processes the request in the service VM.
+/// Processes the request in the test VM.
 fn process_request(vsock_stream: &mut VsockStream, request: Request) -> Result<Response> {
     write_request(vsock_stream, &request)?;
     read_response(vsock_stream)
 }
 
-/// Sends the request to the service VM.
+/// Sends the request to the test VM.
 fn write_request(vsock_stream: &mut VsockStream, request: &Request) -> Result<()> {
     let mut buffer = BufWriter::with_capacity(WRITE_BUFFER_CAPACITY, vsock_stream);
     ciborium::into_writer(request, &mut buffer)?;
@@ -63,10 +63,10 @@ fn write_request(vsock_stream: &mut VsockStream, request: &Request) -> Result<()
     Ok(())
 }
 
-/// Reads the response from the service VM.
+/// Reads the response from the test VM.
 fn read_response(vsock_stream: &mut VsockStream) -> Result<Response> {
     let response: Response = ciborium::from_reader(vsock_stream)
-        .context("Failed to read the response from the service VM")?;
+        .context("Failed to read the response from the test VM")?;
     Ok(response)
 }
 
@@ -127,7 +127,7 @@ impl fmt::Display for VmType {
 
 fn run_test<TestFn>(test_vm_name: &CStr, vm_type: VmType, test_fn: TestFn) -> Result<()>
 where
-    TestFn: FnOnce(&mut VsockStream) -> Result<()>,
+    TestFn: FnOnce(&mut VsockStream, *mut AVirtualMachine) -> Result<()>,
 {
     if !vm_type.is_supported()? {
         info!("{vm_type} VMs are not supported. skipping test");
@@ -241,7 +241,7 @@ where
 
     info!("client connected");
 
-    test_fn(&mut vsock_stream)?;
+    test_fn(&mut vsock_stream, vm)?;
 
     write_request(&mut vsock_stream, &Request::Shutdown).context("Failed to send shutdown")?;
 
@@ -279,27 +279,29 @@ fn init_logger() {
     );
 }
 
-fn run_reverse_test(vsock_stream: &mut VsockStream) -> Result<()> {
+fn run_reverse_test(vsock_stream: &mut VsockStream, _: *mut AVirtualMachine) -> Result<()> {
     let request_data = vec![1, 2, 3, 4, 5];
     let expected_data = vec![5, 4, 3, 2, 1];
-    let Response::Reverse(reversed_data) =
-        process_request(vsock_stream, Request::Reverse(request_data))
-            .context("Failed to process request")?;
+    let response = process_request(vsock_stream, Request::Reverse(request_data))
+        .context("Failed to process request")?;
+    let Response::Reverse(reversed_data) = response else {
+        bail!("Expected `Response::Reverse` but was {response:?}");
+    };
     ensure!(reversed_data == expected_data, "Expected {expected_data:?} but was {reversed_data:?}");
     info!("request processed");
     Ok(())
 }
 
 #[test]
-fn test_run_service_vm_protected() -> Result<()> {
+fn test_run_test_vm_protected() -> Result<()> {
     init_logger();
 
-    run_test(c"vts_libavf_test_service_vm", VmType::Protected, run_reverse_test)
+    run_test(c"vts_libavf_test_vm", VmType::Protected, run_reverse_test)
 }
 
 #[test]
-fn test_run_service_vm_non_protected() -> Result<()> {
+fn test_run_test_vm_non_protected() -> Result<()> {
     init_logger();
 
-    run_test(c"vts_libavf_test_service_vm", VmType::NonProtected, run_reverse_test)
+    run_test(c"vts_libavf_test_vm", VmType::NonProtected, run_reverse_test)
 }

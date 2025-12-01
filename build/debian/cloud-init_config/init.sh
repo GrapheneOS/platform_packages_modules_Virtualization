@@ -23,6 +23,8 @@ _restart_services() {
 		virtiofs.service
 		virtiofs_internal.service
 		ttyd.service
+		ttyd_uds.service
+		ttyd_vsock_bridge.service
 	)
 	systemctl enable --now "${CONFIG_CHANGED_SERVICES[@]}"
 }

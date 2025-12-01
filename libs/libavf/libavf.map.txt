@@ -23,6 +23,8 @@ LIBAVF {
     AVirtualMachine_connectVsock; # apex llndk
     AVirtualMachine_waitForStop; # apex llndk
     AVirtualMachine_destroy; # apex llndk
+    AVirtualMachine_addMemoryMapping; # apex llndk introduced=37
+    AVirtualMachine_removeMemoryMapping; #apex llndk introduced=37
   local:
     *;
 };

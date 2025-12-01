@@ -35,7 +35,7 @@ pub use crate::arch::x86_64::page_table::PageTable;
 
 pub use util::{
     flush, flushed_zeroize, page_4kb_of, PAGE_SIZE, SIZE_128KB, SIZE_16KB, SIZE_256KB, SIZE_2MB,
-    SIZE_4KB, SIZE_4MB, SIZE_64KB,
+    SIZE_4KB, SIZE_4MB, SIZE_640KB, SIZE_64KB,
 };
 
 pub(crate) use shared::{alloc_shared, dealloc_shared};

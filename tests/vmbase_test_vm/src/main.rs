@@ -18,11 +18,14 @@
 #![no_main]
 #![no_std]
 
+extern crate alloc;
+
 mod communication;
 mod error;
 
 use crate::communication::VsockStream;
 use crate::error::{Error, Result};
+use alloc::vec::Vec;
 use ciborium_io::Write;
 use core::num::NonZeroUsize;
 use core::slice;
@@ -33,16 +36,81 @@ use virtio_drivers::transport::{DeviceType, Transport};
 use virtio_drivers::Hal;
 use vmbase::fdt::pci::initialize_from_fdt;
 use vmbase::layout::crosvm;
-use vmbase::memory::{map_rodata, resize_available_memory, SIZE_128KB};
+use vmbase::memory::{
+    map_data_outside_main_memory, map_rodata, resize_available_memory, SIZE_128KB,
+};
 use vmbase::power::reboot;
 use vmbase::virtio::pci::{PciTransportIterator, VirtIOSocket};
 use vmbase::virtio::HalImpl;
 use vmbase::{configure_heap, generate_image_header, main};
 use vmbase_test_vm_messages::{Request, Response, VM_PORT};
 
-fn process_request(req: Request) -> Response {
+/// Implementation of the `Request::MapData`.
+///
+/// # Safety
+///
+/// A test sending the `Request::MapData` to this VM must ensure that memory region is available to
+/// the VM (e.g. by sharing it via `AVirtualMachine_addMemoryMapping` API).
+unsafe fn process_map_data(range_start: usize, range_end: usize) -> Vec<u8> {
+    info!("mapping data at range {range_start:x} {range_end:x}");
+    let size = range_end.checked_sub(range_start).unwrap().try_into().unwrap();
+    // SAFETY: range is valid because test first shared the memory with guest VM.
+    unsafe {
+        if let Err(e) = map_data_outside_main_memory(range_start, size) {
+            error!("map_data failed: {e:#}");
+            // This will make the test fail.
+            return Vec::new();
+        }
+    }
+    // Now read the shared pages. This will result in page faults, which will trigger hypervisor
+    // to map the shared pages in guest stage-2 page table.
+    // SAFETY: range is valid because test first shared the memory with guest VM.
+    let data = unsafe { slice::from_raw_parts(range_start as *const u8, size.into()) };
+    data.to_vec()
+}
+
+/// Implementation of the `Request::MemRelinquish`.
+fn process_mem_relinquish(range_start: usize, range_end: usize) -> bool {
+    let Some(granule_size) = hypervisor_backends::get_granule_size() else {
+        error!("can't get hypervisor granule size");
+        return false;
+    };
+    info!("hypervisor granule size is {granule_size}");
+    let Some(hyp) = hypervisor_backends::get_mem_relinquisher() else {
+        error!("hypervisor doesn't support memory relinquish");
+        return false;
+    };
+    if !range_end.checked_sub(range_start).unwrap().is_multiple_of(granule_size) {
+        error!("requested range {range_start}-{range_end} must be divisible by {granule_size}");
+        return false;
+    }
+    let mut ipa = range_start;
+    while ipa < range_end {
+        if let Err(e) = hyp.relinquish(ipa) {
+            error!("failed to relinquish {ipa:x} : {e:#?}");
+            return false;
+        }
+        ipa += granule_size;
+    }
+    true
+}
+
+/// Processes requests coming from the test process on the Android host.
+///
+/// # Safety
+///
+/// Test process must ensure that all the requests are safe to process. For more information see
+/// relevant safety comments of the individual process_ functions.
+unsafe fn process_request(req: Request) -> Response {
     match req {
         Request::Reverse(v) => Response::Reverse(v.into_iter().rev().collect()),
+        Request::MapData(range_start, range_end) => {
+            // SAFETY: test issuing MapData request must ensure that pages are shared with guest.
+            unsafe { Response::MapData(process_map_data(range_start, range_end)) }
+        }
+        Request::MemRelinquish(range_start, range_end) => {
+            Response::MemRelinquish(process_mem_relinquish(range_start, range_end))
+        }
         Request::Shutdown => unreachable!(),
     }
 }
@@ -88,7 +156,8 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
             info!("Shutting down. Bye!");
             break;
         }
-        let resp = process_request(req);
+        // SAFETY: test process sending requests must ensure that they are safe.
+        let resp = unsafe { process_request(req) };
         info!("Sending response: {resp:?}");
         vsock_stream.write_response(&resp)?;
         vsock_stream.flush()?;

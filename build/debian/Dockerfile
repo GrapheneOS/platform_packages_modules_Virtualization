@@ -22,8 +22,6 @@ RUN apt-get install -y --no-install-recommends \
     cmake \
     debsums \
     dosfstools \
-    fai-server \
-    fai-setup-storage \
     fdisk \
     git \
     libjson-c-dev \
@@ -48,38 +46,6 @@ RUN apt-get install -y --no-install-recommends \
     qemu-system \
     # Cloud-init optional package
     genisoimage
-
-RUN apt-get install -y --no-install-recommends \
-    # Kernel build
-    bc \
-    bison \
-    build-essential \
-    ca-certificates \
-    cpio \
-    debhelper \
-    dh-exec \
-    dh-python \
-    erofs-utils \
-    flex \
-    gcc-12 \
-    initramfs-tools \
-    kernel-wedge \
-    libelf-dev \
-    libpci-dev \
-    libssl-dev \
-    lz4 \
-    pahole \
-    python3-docutils \
-    python3-jinja2 \
-    quilt \
-    rsync \
-    wget \
-    zstd \
-    # For aarch64 \
-    gcc-aarch64-linux-gnu \
-    gcc-12-aarch64-linux-gnu \
-    gcc-arm-linux-gnueabihf \
-    libc6-dev-arm64-cross
 
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*

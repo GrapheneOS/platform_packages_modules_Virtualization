@@ -845,6 +845,17 @@ public class VirtualMachine implements AutoCloseable {
         return status;
     }
 
+    /**
+     * Returns the cid of this VM
+     *
+     * @hide
+     */
+    public int getCid() {
+        synchronized (mLock) {
+            return mCid;
+        }
+    }
+
     private int stateToStatus(@VirtualMachineState int state) {
         switch (state) {
             case VirtualMachineState.STARTING:

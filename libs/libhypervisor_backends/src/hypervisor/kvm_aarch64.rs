@@ -14,7 +14,10 @@
 
 //! Wrappers around calls to the KVM hypervisor.
 
-use super::{DeviceAssigningHypervisor, Hypervisor, MemSharingHypervisor, MmioGuardedHypervisor};
+use super::{
+    DeviceAssigningHypervisor, Hypervisor, MemRelinquishingHypervisor, MemSharingHypervisor,
+    MmioGuardedHypervisor,
+};
 use crate::{mem::page_4kb_of, Error, Result};
 
 use smccc::{
@@ -57,6 +60,7 @@ impl From<i32> for KvmError {
 const ARM_SMCCC_KVM_FUNC_HYP_MEMINFO: u32 = 0xc6000002;
 const ARM_SMCCC_KVM_FUNC_MEM_SHARE: u32 = 0xc6000003;
 const ARM_SMCCC_KVM_FUNC_MEM_UNSHARE: u32 = 0xc6000004;
+const ARM_SMCCC_KVM_FUNC_MEM_RELINQUISH: u32 = 0xc600_0009;
 
 const VENDOR_HYP_KVM_MMIO_GUARD_INFO_FUNC_ID: u32 = 0xc6000005;
 const VENDOR_HYP_KVM_MMIO_GUARD_ENROLL_FUNC_ID: u32 = 0xc6000006;
@@ -93,6 +97,10 @@ impl Hypervisor for ProtectedKvmHypervisor {
 
     fn get_granule_size(&self) -> Option<usize> {
         <Self as MemSharingHypervisor>::granule(self).ok()
+    }
+
+    fn as_mem_relinquisher(&self) -> Option<&dyn MemRelinquishingHypervisor> {
+        Some(self)
     }
 }
 
@@ -184,6 +192,14 @@ impl DeviceAssigningHypervisor for ProtectedKvmHypervisor {
 
         let ret = checked_hvc64_expect_results(VENDOR_HYP_KVM_DEV_REQ_DMA_FUNC_ID, args)?;
         Ok((ret[0], ret[1]))
+    }
+}
+
+impl MemRelinquishingHypervisor for ProtectedKvmHypervisor {
+    fn relinquish(&self, ipa: usize) -> Result<()> {
+        let mut args = [0u64; 17];
+        args[0] = ipa.try_into().unwrap();
+        checked_hvc64_expect_zero(ARM_SMCCC_KVM_FUNC_MEM_RELINQUISH, args)
     }
 }
 

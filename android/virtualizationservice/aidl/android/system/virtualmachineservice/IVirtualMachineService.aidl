@@ -72,7 +72,7 @@ interface IVirtualMachineService {
      * Account the caller for the corresponding Secretkeeper entry.
      * @param id Identifier for the secret held in Secretkeeper for the caller
      */
-    void claimSecretkeeperEntry(in byte[64] id);
+    oneway void claimSecretkeeperEntry(in byte[64] id);
 
     /**
      * Return an interface for the rpc_servicemanager instance to use.

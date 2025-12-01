@@ -14,12 +14,7 @@
 
 //! Implementation of the AIDL interface of the VirtualizationService.
 
-use crate::atom::{
-    forward_cgroup_memory_breach_reported_atom, forward_fsck_failed_reported_atom,
-    forward_get_or_create_sk_secret_failed_reported_atom, forward_psi_monitor_failed_reported_atom,
-    forward_stale_encryptedstore_detected, forward_vm_booted_atom, forward_vm_creation_atom,
-    forward_vm_exited_atom,
-};
+use crate::atom::write_atom;
 use crate::maintenance;
 use crate::remote_provisioning;
 use crate::rkpvm::{generate_ecdsa_p256_key_pair, request_attestation};
@@ -73,9 +68,6 @@ use virtualizationservice::{
     VirtualMachineDebugInfo::VirtualMachineDebugInfo,
 };
 use virtualizationservice_internal::{
-    AtomVmBooted::AtomVmBooted,
-    AtomVmCreationRequested::AtomVmCreationRequested,
-    AtomVmExited::AtomVmExited,
     IBoundDevice::IBoundDevice,
     IVfioHandler::VfioDev::VfioDev,
     IVfioHandler::{BpVfioHandler, IVfioHandler},
@@ -200,31 +192,28 @@ impl VirtualizationServiceInternal {
             display_service_set: Arc::new(Condvar::new()),
             shutdown_monitor: Arc::new(Mutex::new(ShutdownMonitor::new())),
         };
-        let service_clone = service.clone();
 
+        let service_clone = service.clone();
+        let on_shutdown = move || {
+            service_clone.state.lock().unwrap().virtual_machines.iter().for_each(|(key, value)| {
+                let cid = *key;
+                let vm = value.0.clone();
+                // Don't wait for the VM to be completely killed. Move on to the next VM as
+                // soon as possible.
+                std::thread::Builder::new()
+                    .name(format!("shutdown_monitor_{cid}"))
+                    .spawn(move || {
+                        let _ = vm.stop().inspect_err(|e| {
+                            error!("Failed to stop virtual machine ({cid}): {e:?}");
+                        });
+                    })
+                    .expect("Failed to create shutdown_monitor thread");
+            });
+        };
         // SAFETY: ShutdownMonitor::start is called only once as
         // VirtualizationServiceInternal::init is called only once. This place is the only where
         // ShutdownMonitor is created.
-        unsafe {
-            service.shutdown_monitor.lock().unwrap().start(move || {
-                service_clone.state.lock().unwrap().virtual_machines.iter().for_each(
-                    |(key, value)| {
-                        let cid = *key;
-                        let vm = value.0.clone();
-                        // Don't wait for the VM to be completely killed. Move on to the next VM as
-                        // soon as possible.
-                        std::thread::Builder::new()
-                            .name(format!("shutdown_monitor_{cid}"))
-                            .spawn(move || {
-                                let _ = vm.stop().inspect_err(|e| {
-                                    error!("Failed to stop virtual machine ({cid}): {e:?}");
-                                });
-                            })
-                            .expect("Failed to create shutdown_monitor thread");
-                    },
-                );
-            });
-        }
+        unsafe { service.shutdown_monitor.lock().unwrap().start(on_shutdown) };
 
         std::thread::Builder::new()
             .name("tombstone_handler".to_string())
@@ -442,57 +431,13 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
-    fn atomVmBooted(&self, atom: &AtomVmBooted) -> Result<(), Status> {
-        forward_vm_booted_atom(atom);
-        Ok(())
-    }
-
-    fn atomVmCreationRequested(&self, atom: &AtomVmCreationRequested) -> Result<(), Status> {
-        forward_vm_creation_atom(atom);
-        Ok(())
-    }
-
-    fn atomVmExited(&self, atom: &AtomVmExited) -> Result<(), Status> {
-        forward_vm_exited_atom(atom);
-        Ok(())
-    }
-
     fn forwardAtom(
         &self,
         atom: &Atom,
         vm_requester_uid: i32,
         vm_identifier: &str,
     ) -> Result<(), Status> {
-        match atom {
-            Atom::CgroupMemoryBreachReported(atom) => {
-                forward_cgroup_memory_breach_reported_atom(
-                    atom.highBreachCount,
-                    atom.highMemoryPeakMb,
-                    vm_requester_uid,
-                    vm_identifier,
-                );
-            }
-            Atom::FsckFailedReported(atom) => {
-                forward_fsck_failed_reported_atom(atom.exitCode, vm_requester_uid, vm_identifier);
-            }
-            Atom::GetOrCreateSkSecretFailedReported(atom) => {
-                forward_get_or_create_sk_secret_failed_reported_atom(
-                    atom.retryCount,
-                    vm_requester_uid,
-                    vm_identifier,
-                );
-            }
-            Atom::PsiMonitorFailedReported(atom) => {
-                forward_psi_monitor_failed_reported_atom(
-                    atom.exponentialBackoffSeconds,
-                    vm_requester_uid,
-                    vm_identifier,
-                );
-            }
-            Atom::StaleEncryptedstoreDetected(_) => {
-                forward_stale_encryptedstore_detected(vm_requester_uid, vm_identifier);
-            }
-        }
+        write_atom(atom, vm_requester_uid, vm_identifier);
         Ok(())
     }
 

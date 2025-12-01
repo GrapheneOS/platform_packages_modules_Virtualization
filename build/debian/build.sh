@@ -13,14 +13,12 @@ show_help() {
 	echo "Usage: sudo $0 [OPTION]... [FILE]"
 	echo "Builds a debian image and save it to FILE. [sudo is required]"
 	echo "Options:"
-	echo "-a ARCH      Architecture of the image [default is host arch: $(uname -m)]"
-	echo "-b BUILD_ID  Set build id [default is eng-\$(hostname)-\$(date --utc)]"
-	echo "-g           Use Debian generic kernel [default is our custom kernel]"
-	echo "-h           Print usage and this help message and exit."
-	echo "-u           Set VM boot mode to u-boot [default is to load kernel directly]"
-	echo "-w           Save temp work directory [for debugging]"
-	echo "-W WORK_DIR  Specify work dir instead of temporarily creating. Imply -w [for debugging]"
-	echo "-c           Build with cloud-init"
+	echo "-a ARCH       Architecture of the image [default is host arch: $(uname -m)]"
+	echo "-b BUILD_ID   Set build id of the debian image [default is eng-\$(hostname)-\$(date --utc)]"
+	echo "-k KERNEL_ID  Build ID for kernel [default is the last known good build]"
+	echo "-h            Print usage and this help message and exit."
+	echo "-w            Save temp work directory [for debugging]"
+	echo "-W WORK_DIR   Specify work dir instead of temporarily creating. Imply -w [for debugging]"
 }
 
 check_sudo() {
@@ -30,7 +28,7 @@ check_sudo() {
 }
 
 parse_options() {
-	while getopts "a:b:ghuwW:c" option; do
+	while getopts "a:b:k:hwW:" option; do
 		case ${option} in
 			a)
 				arch="$OPTARG"
@@ -38,14 +36,11 @@ parse_options() {
 			b)
 				build_id="$OPTARG"
 				;;
-			g)
-				use_generic_kernel=1
-				;;
+			k)
+                kernel_build_id="$OPTARG"
+                ;;
 			h)
 				show_help ; exit
-				;;
-			u)
-				uboot=1
 				;;
 			w)
 				save_workdir=1
@@ -55,9 +50,6 @@ parse_options() {
 				save_workdir=1
 				may_skip_build=1
 				;;
-			c)
-				cloud_init=1
-				;;
 			*)
 				echo "Invalid option: $OPTARG" ; exit 1
 				;;
@@ -66,9 +58,11 @@ parse_options() {
 	case "$arch" in
 		aarch64)
 			debian_arch="arm64"
+			vmlinuz_name="Image"
 			;;
 		x86_64)
 			debian_arch="amd64"
+			vmlinuz_name="bzImage"
 			;;
 		*)
 			echo "Invalid architecture: $arch" ; exit 1
@@ -94,10 +88,10 @@ install_prerequisites() {
 		curl
 		debsums
 		dosfstools
-		fai-server
-		fai-setup-storage
 		fdisk
+		genisoimage
 		git
+		jq
 		libjson-c-dev
 		libtool
 		libwebsockets-dev
@@ -125,17 +119,12 @@ install_prerequisites() {
 		)
 	fi
 
-	if [[ "$cloud_init" == 1 ]]; then
-		packages+=(
-			genisoimage
-		)
-	fi
-
 	DEBIAN_FRONTEND=noninteractive \
 		apt install --no-install-recommends --assume-yes "${packages[@]}"
 
 	if [ ! -f $"HOME"/.cargo/bin/cargo ]; then
-		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+		git clone https://github.com/rust-lang/rustup.git rustup
+		rustup/rustup-init.sh -y
 	fi
 
 	source "$HOME"/.cargo/env
@@ -153,25 +142,13 @@ download_debian_cloud_image() {
 	local outdir="${debian_cloud_image}"
 	mkdir -p "${outdir}" || true
 
-	if [[ "$cloud_init" == 1 ]]; then
-		local img=debian-12-genericcloud-${debian_arch}.tar.xz
-		local url="https://cloud.debian.org/images/cloud/${debian_version}/latest/${img}"
-		wget -O - "${url}" | tar xJ -C "${outdir}"
-	else
-		local ver=38da93fe
-		local prj=debian-cloud-images
-		local url="https://salsa.debian.org/cloud-team/${prj}/-/archive/${ver}/${prj}-${ver}.tar.gz"
-
-		wget -O - "${url}" | tar xz -C "${outdir}" --strip-components=1
-	fi
+	local img=debian-12-genericcloud-${debian_arch}.tar.xz
+	local url="https://cloud.debian.org/images/cloud/${debian_version}/latest/${img}"
+	wget -O - "${url}" | tar xJ -C "${outdir}"
 }
 
 build_rust_as_deb() {
-	if [[ "$cloud_init" == 1 ]]; then
-		local dst="${cidata}/localdebs"
-	else
-		local dst="${debian_cloud_image}/localdebs"
-	fi
+	local dst="${cidata}/localdebs"
 
 	# deb file format: ${name}_${version}_${arch}.deb)
 	local name="${1//_/-}"
@@ -189,21 +166,11 @@ build_rust_as_deb() {
 }
 
 build_ttyd() {
-	if [[ "$cloud_init" == 1 ]]; then
-		local install_path="${chroot_ttyd}/usr/local/bin/ttyd"
+	local install_path="${chroot_ttyd}/usr/local/bin/ttyd"
 
-		if [[ "$may_skip_build" == 1 && -f "${install_path}" ]]; then
-			echo "Skipping build_ttyd(). ${install_path} already exists"
-			return
-		fi
-	else
-		local dst="${config_space}"
-		local install_path="${dst}/files/usr/local/bin/ttyd"
-
-		if [[ "$may_skip_build" == 1 && -d "${install_path}" ]]; then
-			echo "Skipping build_ttyd(). ${install_path} already exists"
-			return
-		fi
+	if [[ "$may_skip_build" == 1 && -f "${install_path}" ]]; then
+		echo "Skipping build_ttyd(). ${install_path} already exists"
+		return
 	fi
 
 	local ttyd_version=1.7.7
@@ -224,62 +191,25 @@ build_ttyd() {
 	pushd "$workdir/ttyd-${ttyd_version}" > /dev/null
 	bash -c "env ${build_env[*]} ./scripts/cross-build.sh"
 
-	if [[ "$cloud_init" == 1 ]]; then
-		mkdir -p "${chroot_ttyd}/usr/local/bin" || true
-		cp "${out}/bin/ttyd" "${chroot_ttyd}/usr/local/bin/ttyd"
-		chmod 755 "${chroot_ttyd}/usr/local/bin/ttyd"
-		mkdir -p "${chroot_ttyd}/usr/share/doc/ttyd/copyright"
-		cp LICENSE "${chroot_ttyd}/usr/share/doc/ttyd/copyright/"
-	else
-		mkdir -p "${dst}/files/usr/local/bin/ttyd"
-		cp "${out}/bin/ttyd" "${dst}/files/usr/local/bin/ttyd/AVF"
-		chmod 777 "${dst}/files/usr/local/bin/ttyd/AVF"
-		mkdir -p "${dst}/files/usr/share/doc/ttyd/copyright/LICENSE"
-		cp LICENSE "${dst}/files/usr/share/doc/ttyd/copyright/LICENSE/AVF"
-	fi
+	mkdir -p "${chroot_ttyd}/usr/local/bin" || true
+	cp "${out}/bin/ttyd" "${chroot_ttyd}/usr/local/bin/ttyd"
+	chmod 755 "${chroot_ttyd}/usr/local/bin/ttyd"
+	mkdir -p "${chroot_ttyd}/usr/share/doc/ttyd/copyright"
+	cp LICENSE "${chroot_ttyd}/usr/share/doc/ttyd/copyright/"
 	popd > /dev/null
 	popd > /dev/null
 }
 
 copy_android_config() {
-	if [[ "$cloud_init" == 1 ]]; then
-		mkdir -p "${cidata}/localdebs" || true
-		cp -avpR "$SCRIPT_DIR/cloud-init_config"/* "${cidata}"
-		cp -avpR "$SCRIPT_DIR/localdebs/"* "${cidata}/localdebs" || true
-	else
-		local src="$SCRIPT_DIR/fai_config"
-		local dst="${config_space}"
-
-		cp -R "${src}"/* "${dst}"
-		cp "$SCRIPT_DIR/image.yaml" "${resources_dir}"
-
-		cp -R "$SCRIPT_DIR/localdebs/" "${debian_cloud_image}/"
-	fi
+	mkdir -p "${cidata}/localdebs" || true
+	cp -avpR "$SCRIPT_DIR/cloud-init_config"/* "${cidata}"
+	cp -avpR "$SCRIPT_DIR/localdebs/"* "${cidata}/localdebs" || true
 
 	build_ttyd
 	build_rust_as_deb forwarder_guest
 	build_rust_as_deb forwarder_guest_launcher
 	build_rust_as_deb shutdown_runner
 	build_rust_as_deb storage_balloon_agent
-}
-
-package_custom_kernel() {
-	if [[ "$cloud_init" != 1 ]]; then
-		# NOTE: Prevent FAI from installing a default Debian kernel, by removing
-		#       linux-image meta package names from arch-specific class files.
-		sed -i "/linux-image.*-${debian_arch}/d" \
-			"${config_space}/package_config/${debian_arch^^}"
-	fi
-
-	cmd_args=(
-		-a "$arch"
-		-d "$workdir"
-	)
-
-	if [[ "$save_workdir" -eq 1 ]]; then
-		cmd_args+=(-W "${workdir}/tmp.kernel")
-	fi
-	$SCRIPT_DIR/build_custom_kernel.sh "${cmd_args[@]}"
 }
 
 build_cidata() {
@@ -295,42 +225,8 @@ build_cidata() {
 	genisoimage -output "${dst}" -V cidata -J -R "${cidata}"
 }
 
-run_fai() {
-	if [[ "$cloud_init" == 1 ]]; then
-		echo "FAI shouldn't be configured for cloud-init" >&2
-		exit 1
-	fi
-
-	# NOTE: Prevent FAI from installing grub packages and running related scripts,
-	#       if we are loading the kernel directly.
-	if [[ "$uboot" != 1 ]]; then
-		sed -i "/\/boot\/efi/d" \
-			"${config_space}/files/etc/fstab/${debian_arch^^}"
-		sed -i "/shim-signed/d ; /grub.*${debian_arch}.*/d" \
-			"${config_space}/package_config/${debian_arch^^}"
-		rm "${config_space}/scripts/SYSTEM_BOOT/20-grub" || true
-	fi
-
-	local out="${raw_disk_image}"
-	make -C "${debian_cloud_image}" "image_bookworm_nocloud_${debian_arch}"
-	mv "${debian_cloud_image}/image_bookworm_nocloud_${debian_arch}.raw" "${out}"
-}
-
-build_debian() {
-	if [[ "$cloud_init" == 1 ]]; then
-		build_cidata
-	else
-		run_fai
-	fi
-}
-
 generate_output_package() {
 	local vm_config="$SCRIPT_DIR/vm_config.json"
-	if [[ "$cloud_init" == 1 ]]; then
-		vm_config="$SCRIPT_DIR/vm_config.cloud-init.json"
-	elif [[ "$uboot" == 1 ]]; then
-		vm_config="$SCRIPT_DIR/vm_config.u-boot.json"
-	fi
 
 	pushd ${workdir} > /dev/null
 
@@ -342,54 +238,40 @@ generate_output_package() {
 		dd if="${loop}p$root_partition_num" of=root_part
 		losetup -d "${loop}"
 
-		if [[ "$cloud_init" == 1 ]]; then
-			${SCRIPT_DIR}/chroot_rootfs.sh \
-				-b "${SCRIPT_DIR}:/mnt/build" \
-				-b "${chroot_ttyd}:/mnt/ttyd" \
-				-c /mnt/build/build_rootfs_in_chroot.sh \
-				root_part
-		fi
+		${SCRIPT_DIR}/chroot_rootfs.sh \
+			-b "${SCRIPT_DIR}:/mnt/build" \
+			-b "${chroot_ttyd}:/mnt/ttyd" \
+			-c /mnt/build/build_rootfs_in_chroot.sh \
+			root_part
 	fi
 
 	cp ${vm_config} vm_config.json
-	# TODO(b/363985291): remove this when ballooning is supported on generic kernel
-	if [[ "$use_generic_kernel" == 1 ]] && [[ "$arch" == "aarch64" ]]; then
-		sed -i 's/"auto_memory_balloon": true/"auto_memory_balloon": false/g' vm_config.json
-	fi
 
 	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
+
+	if [[ -z "${kernel_build_id}" ]]; then
+		kernel_build_id=$(curl https://ci.android.com/builds/branches/aosp_kernel-common-android14-6.1/status.json | \
+			jq -r '.targets[] | select(.name == "kernel_server_'${arch}'") | .last_known_good_build')
+
+		if [[ -z "${kernel_build_id}" || "${kernel_build_id}" == "null" ]]; then
+			echo "ERROR: Failed to fetch the latest kernel build ID for ${arch}." >&2
+			echo "The CI endpoint may be down or the build is missing." >&2
+			echo "Please try specifying a build ID manually using the -k option." >&2
+			exit 1
+		fi
+	fi
+
+	wget -O vmlinuz https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/${vmlinuz_name}/url
+	wget -O initrd.img https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/initramfs.img/url
 
 	contents=(
 		build_id
 		root_part
 		vm_config.json
+		vmlinuz
+		initrd.img
+		${cidata_image}
 	)
-	if [[ "$uboot" == 1 ]]; then
-		local efi_partition_num=15
-		local guid="$(sfdisk --part-uuid $raw_disk_image $efi_partition_num)"
-
-		loop=$(losetup -f --show --partscan $raw_disk_image)
-		dd if="${loop}p$efi_partition_num" of=efi_part
-		losetup -d "${loop}"
-
-		sed -i "s/{efi_part_guid}/${guid}/g" vm_config.json
-
-		contents+=(
-			efi_part
-		)
-	else
-		contents+=(
-			vmlinuz
-			initrd.img
-			kernel_extras_part
-		)
-	fi
-
-	if [[ "$cloud_init" == 1 ]]; then
-		contents+=(
-			${cidata_image}
-		)
-	fi
 
 	popd > /dev/null
 
@@ -408,13 +290,11 @@ check_sudo
 
 output=images.tar.gz
 build_id=$(echo eng-$(hostname)-$(date --utc))
+kernel_build_id=
 debian_version=bookworm
 arch="$(uname -m)"
 save_workdir=0
 may_skip_build=0
-use_generic_kernel=0
-uboot=0
-cloud_init=0
 
 parse_options "$@"
 
@@ -425,20 +305,13 @@ else
 fi
 
 debian_cloud_image=${workdir}/debian_cloud_image
-if [[ "$cloud_init" == 1 ]]; then
-	cidata=${debian_cloud_image}/cidata
-	cidata_image="cidata.iso"
-	chroot_ttyd=${debian_cloud_image}/chroot_ttyd
-	raw_disk_image=${debian_cloud_image}/disk.raw
-else
-	raw_disk_image=${workdir}/image.raw
-	config_space=${debian_cloud_image}/config_space/${debian_version}
-	resources_dir=${debian_cloud_image}/src/debian_cloud_images/resources
-fi
+cidata=${debian_cloud_image}/cidata
+cidata_image="cidata.iso"
+chroot_ttyd=${debian_cloud_image}/chroot_ttyd
+raw_disk_image=${debian_cloud_image}/disk.raw
 
 install_prerequisites
 download_debian_cloud_image
 copy_android_config
-package_custom_kernel
-build_debian
+build_cidata
 generate_output_package

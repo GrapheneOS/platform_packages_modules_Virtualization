@@ -44,16 +44,27 @@
         android:supportsRtl="true"
         android:enabled="false"
         android:name=".Application">
+        <activity android:name=".LauncherActivity"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity android:name=".MainActivity"
                   android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize|fontScale|density"
                   android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.virtualization.VM_TERMINAL" />
-                <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".new2.ui.MainActivity"
+                  android:exported="false"
+                  android:launchMode="singleTop"
+                  android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize|fontScale|density"
+                  android:windowSoftInputMode="adjustResize"
+                  android:label="@string/app_name" />
         <activity android:name=".DisplayActivity"
             android:taskAffinity="com.android.virtualization.terminal.display"
             android:resizeableActivity="false"
@@ -100,6 +111,14 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
+        <service android:name=".new2.core.VmService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Run VM instances" />
+        </service>
+
         <service android:name=".InstallerService"
             android:foregroundServiceType="specialUse"
             android:value="Prepares Linux image"

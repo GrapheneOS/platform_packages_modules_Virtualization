@@ -13,10 +13,6 @@ android_app {
     static_libs: [
         // TODO(b/330257000): will be removed when binder RPC is used
         "android.system.virtualizationservice_internal-java",
-        "androidx-constraintlayout_constraintlayout",
-        "androidx.navigation_navigation-fragment-ktx",
-        "androidx.window_window",
-        "androidx.work_work-runtime",
         "apache-commons-compress",
         "avf_aconfig_flags_java",
         "com.google.android.material_material",
@@ -26,6 +22,22 @@ android_app {
         "libcrosvm_android_display_service-java",
         "VmTerminalApp.aidl-java",
         "MicrodroidCommonTestLib", // for DeviceProperties class
+        "androidx-constraintlayout_constraintlayout",
+        "androidx.activity_activity-compose",
+        "androidx.compose.foundation_foundation",
+        "androidx.compose.foundation_foundation-layout",
+        "androidx.compose.material3_material3",
+        "androidx.compose.material_material-icons-core",
+        "androidx.compose.material_material-icons-extended",
+        "androidx.compose.runtime_runtime",
+        "androidx.compose.ui_ui",
+        "androidx.lifecycle_lifecycle-runtime-compose",
+        "androidx.lifecycle_lifecycle-runtime-ktx",
+        "androidx.lifecycle_lifecycle-service",
+        "androidx.lifecycle_lifecycle-viewmodel-compose",
+        "androidx.navigation_navigation-fragment-ktx",
+        "androidx.window_window",
+        "androidx.work_work-runtime",
     ],
     jni_libs: [
         "libforwarder_host_jni",

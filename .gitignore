@@ -4,3 +4,4 @@ policy
 zipfuse/target/
 Cargo.lock
 images.tar.gz
+target/

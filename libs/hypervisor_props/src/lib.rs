@@ -16,6 +16,7 @@
 
 use anyhow::Result;
 use platformproperties::hypervisorproperties;
+use rustutils::android::system_properties;
 
 /// Returns whether there is a hypervisor present that supports non-protected VMs.
 pub fn is_vm_supported() -> Result<bool> {
@@ -46,4 +47,9 @@ pub fn is_gunyah() -> Result<bool> {
 /// Returns true if the hypervisor is pkvm
 pub fn is_pkvm() -> Result<bool> {
     Ok(version()?.unwrap_or_default().starts_with("kvm.arm-protected"))
+}
+
+/// Returns true if hypervisor supports dynamic zero copy memory share with guest.
+pub fn is_dynamic_zero_copy_memshare_supported() -> Result<bool> {
+    Ok(system_properties::read_bool("hypervisor.memory_share.supported", false)?)
 }

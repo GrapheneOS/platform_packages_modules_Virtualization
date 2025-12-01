@@ -43,6 +43,8 @@ import java.net.UnknownHostException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.min
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.runBlocking
 
 class InstallerService : Service() {
     private val lock = Any()
@@ -166,7 +168,7 @@ class InstallerService : Service() {
 
         val dest = getDefault(this).installDir
         try {
-            archive.installTo(dest, null)
+            runBlocking { archive.installTo(dest, null).collect() }
             Log.i(TAG, "image is installed from $archive_path")
             return true
         } catch (e: IOException) {
@@ -194,10 +196,14 @@ class InstallerService : Service() {
 
         val dest = getDefault(this).installDir
         try {
-            fromInternet().installTo(dest) {
-                val filter = WifiCheckInputStream(it)
-                filter.setWifiOnly(isWifiOnly)
-                filter
+            runBlocking {
+                fromInternet()
+                    .installTo(dest) {
+                        val filter = WifiCheckInputStream(it)
+                        filter.setWifiOnly(isWifiOnly)
+                        filter
+                    }
+                    .collect()
             }
         } catch (e: NoWifiException) {
             Log.e(TAG, "Install failed because of Wi-Fi is gone")

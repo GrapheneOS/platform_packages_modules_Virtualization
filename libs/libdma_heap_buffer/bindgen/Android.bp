@@ -1,0 +1,13 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_bindgen {
+    name: "libdma_buf_heap_bindgen",
+    crate_name: "dma_buf_heap_bindgen",
+    wrapper_src: "dma_buf_heap_bindgen.h",
+    source_stem: "dma_buf_heap_bindgen",
+    defaults: ["avf_build_flags_rust"],
+    vendor_available: true,
+    visibility: ["//packages/modules/Virtualization/tests/vts"],
+}

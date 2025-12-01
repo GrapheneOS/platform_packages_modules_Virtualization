@@ -15,6 +15,8 @@
  */
 package android.system.virtualizationcommon;
 
+import android.system.virtualizationcommon.DeathReason;
+
 /** @hide */
 union Atom {
     CgroupMemoryBreachReported cgroupMemoryBreachReported;
@@ -22,6 +24,9 @@ union Atom {
     GetOrCreateSkSecretFailedReported getOrCreateSkSecretFailedReported;
     PsiMonitorFailedReported psiMonitorFailedReported;
     StaleEncryptedstoreDetected staleEncryptedstoreDetected;
+    VmBooted vmBooted;
+    VmCreationRequested vmCreationRequested;
+    VmExited vmExited;
 
     parcelable CgroupMemoryBreachReported {
         long highBreachCount;
@@ -41,4 +46,26 @@ union Atom {
     }
 
     parcelable StaleEncryptedstoreDetected {}
+
+    parcelable VmBooted {
+        long elapsedTimeMillis;
+    }
+
+    parcelable VmCreationRequested {
+        boolean isProtected;
+        boolean creationSucceeded;
+        int binderExceptionCode;
+        int configType;
+        int numCpus;
+        int memoryMib;
+        @utf8InCpp String apexes;
+    }
+
+    parcelable VmExited {
+        DeathReason deathReason;
+        int exitSignal;
+        long elapsedTimeMillis;
+        long guestTimeMillis;
+        long rssKb;
+    }
 }

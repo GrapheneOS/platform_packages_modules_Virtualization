@@ -1,0 +1,21 @@
+[Unit]
+Description=TTYD Server (UDS Backend)
+
+[Service]
+Type=simple
+
+# Automatic Directory Management
+# Creates /run/ttyd/ owned by root:root before start
+# Deletes it on stop.
+RuntimeDirectory=ttyd
+RuntimeDirectoryMode=0755
+
+# Command
+# -i : Bind to the socket file inside the RuntimeDirectory
+ExecStart=/usr/local/bin/ttyd -i /run/ttyd/ttyd.sock -t disableLeaveAlert=true -W login -f droid
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

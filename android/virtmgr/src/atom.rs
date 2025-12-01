@@ -133,9 +133,9 @@ pub fn write_vm_creation_stats(
         ),
     };
 
-    let atom = aidl::AtomVmCreationRequested {
-        uid: get_calling_uid() as i32,
-        vmIdentifier: vm_identifier,
+    let uid = get_calling_uid() as i32;
+
+    let atom = aidl::Atom::VmCreationRequested(aidl::VmCreationRequested {
         isProtected: is_protected,
         creationSucceeded: creation_succeeded,
         binderExceptionCode: binder_exception_code,
@@ -143,7 +143,7 @@ pub fn write_vm_creation_stats(
         numCpus: num_cpus,
         memoryMib: memory_mib,
         apexes,
-    };
+    });
 
     info!("Writing VmCreationRequested atom into statsd.");
     thread::Builder::new()
@@ -151,7 +151,7 @@ pub fn write_vm_creation_stats(
         .spawn(move || {
             virtualmachine::global_service()
                 .unwrap()
-                .atomVmCreationRequested(&atom)
+                .forwardAtom(&atom, uid, &vm_identifier)
                 .unwrap_or_else(|e| {
                     warn!("Failed to write VmCreationRequested atom: {e}");
                 });
@@ -174,19 +174,19 @@ pub fn write_vm_booted_stats(
     let vm_identifier = vm_identifier.to_owned();
     let duration = get_duration(vm_start_timestamp);
 
-    let atom = aidl::AtomVmBooted {
-        uid,
-        vmIdentifier: vm_identifier,
-        elapsedTimeMillis: duration.as_millis() as i64,
-    };
+    let atom =
+        aidl::Atom::VmBooted(aidl::VmBooted { elapsedTimeMillis: duration.as_millis() as i64 });
 
     info!("Writing VmBooted atom into statsd.");
     thread::Builder::new()
         .name("vm_booted_atom_forwarder".to_string())
         .spawn(move || {
-            virtualmachine::global_service().unwrap().atomVmBooted(&atom).unwrap_or_else(|e| {
-                warn!("Failed to write VmBooted atom: {e}");
-            });
+            virtualmachine::global_service()
+                .unwrap()
+                .forwardAtom(&atom, uid, &vm_identifier)
+                .unwrap_or_else(|e| {
+                    warn!("Failed to write VmBooted atom: {e}");
+                });
         })
         .expect("Failed to create vm_booted_atom_forwarder thread");
 }
@@ -203,23 +203,23 @@ pub fn write_vm_exited_stats_sync(
         info!("Writing VmExited atom for early VMs is not implemented; skipping");
         return;
     }
-    let vm_identifier = vm_identifier.to_owned();
     let elapsed_time_millis = get_duration(vm_metric.start_timestamp).as_millis() as i64;
     let guest_time_millis = vm_metric.cpu_guest_time.unwrap_or_default();
     let rss_kb = vm_metric.rss.unwrap_or_default();
 
-    let atom = aidl::AtomVmExited {
-        uid,
-        vmIdentifier: vm_identifier,
+    let atom = aidl::Atom::VmExited(aidl::VmExited {
         elapsedTimeMillis: elapsed_time_millis,
         deathReason: reason,
         guestTimeMillis: guest_time_millis,
         rssKb: rss_kb,
         exitSignal: exit_signal.unwrap_or_default(),
-    };
+    });
 
     info!("Writing VmExited atom into statsd.");
-    virtualmachine::global_service().unwrap().atomVmExited(&atom).unwrap_or_else(|e| {
-        warn!("Failed to write VmExited atom: {e}");
-    });
+    virtualmachine::global_service()
+        .unwrap()
+        .forwardAtom(&atom, uid, vm_identifier)
+        .unwrap_or_else(|e| {
+            warn!("Failed to write VmExited atom: {e}");
+        });
 }
