@@ -37,10 +37,8 @@ import java.net.MalformedURLException
 import java.net.URL
 import java.security.cert.X509Certificate
 
-class TtydView
-@JvmOverloads
-constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) :
-    TerminalView(context, attrs, defStyleAttr) {
+class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
+    TerminalView(context, attrs) {
 
     var onTerminalReady: (() -> Unit)? = null
     var onTerminalDisconnected: (() -> Unit)? = null

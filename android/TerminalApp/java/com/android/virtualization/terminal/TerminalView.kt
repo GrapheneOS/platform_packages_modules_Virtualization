@@ -34,10 +34,8 @@ import android.webkit.WebView
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
 
-open class TerminalView
-@JvmOverloads
-constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) :
-    WebView(context, attrs, defStyleAttr),
+open class TerminalView @JvmOverloads constructor(context: Context, attrs: AttributeSet?) :
+    WebView(context, attrs),
     AccessibilityManager.AccessibilityStateChangeListener,
     AccessibilityManager.TouchExplorationStateChangeListener {
 
