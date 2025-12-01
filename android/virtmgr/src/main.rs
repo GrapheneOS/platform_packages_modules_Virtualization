@@ -136,8 +136,13 @@ fn main() {
     info!("Started VirtualizationService RpcServer. Ready to accept connections");
 
     // Signal readiness to the caller by closing our end of the pipe.
-    write(ready_fd.as_fd(), "o".as_bytes())
-        .expect("Failed to write a single character through ready_fd");
+    if let Err(e) = write(ready_fd.as_fd(), "o".as_bytes()) {
+        error!(
+            "Failed to signal to the VM client that virtmgr is ready. Is the client dead?: {:#}",
+            e
+        );
+        std::process::exit(1);
+    }
     drop(ready_fd);
 
     server.join();
