@@ -21,10 +21,10 @@ extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::ffi::CString;
-use alloc::fmt;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ffi::CStr;
+use core::fmt;
 use core::iter::Iterator;
 use core::mem;
 use core::ops::Range;
@@ -41,122 +41,77 @@ use zerocopy::FromBytes as _;
 const CELLS_PER_INTERRUPT: usize = 3; // from /intc node in platform.dts
 
 /// Errors in device assignment.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum DeviceAssignmentError {
     /// Invalid VM DTBO
+    #[error("Invalid DTBO")]
     InvalidDtbo,
     /// Invalid __symbols__
+    #[error("Invalid property in /__symbols__. Must point to valid assignable device node.")]
     InvalidSymbols,
     /// Malformed <reg>. Can't parse.
+    #[error("Malformed <reg>. Can't parse")]
     MalformedReg,
     /// Missing physical <reg> of assigned device.
+    #[error("Missing physical MMIO region: addr:{0:#x}), size:{1:#x}")]
     MissingReg(u64, u64),
     /// Extra <reg> of assigned device.
+    #[error("Unexpected extra MMIO region: addr:{0:#x}), size:{1:#x}")]
     ExtraReg(u64, u64),
     /// Invalid virtual <reg> of assigned device.
+    #[error("Invalid guest MMIO granule (addr: {0:#x})")]
     InvalidReg(u64),
     /// Token for <reg> of assigned device does not match expected value.
+    #[error("Unexpected MMIO token ({0:#x}), should be {1:#x}")]
     InvalidRegToken(u64, u64),
     /// Invalid virtual <reg> size of assigned device.
+    #[error("Unexpected MMIO size ({0:#x}), should be {1:#x}")]
     InvalidRegSize(u64, u64),
     /// Invalid <interrupts>
+    #[error("Invalid <interrupts>")]
     InvalidInterrupts,
     /// Malformed <iommus>
+    #[error("Malformed <iommus>. Can't parse.")]
     MalformedIommus,
     /// Invalid <iommus>
+    #[error("Invalid <iommus>. Failed to validate with hypervisor")]
     InvalidIommus,
     /// Invalid phys IOMMU node
+    #[error("Invalid phys IOMMU node")]
     InvalidPhysIommu,
     /// Invalid pvIOMMU node
+    #[error("Invalid pvIOMMU node")]
     InvalidPvIommu,
     /// Too many pvIOMMU
+    #[error("Too many pvIOMMU node. Insufficient pre-populated pvIOMMUs in platform DT")]
     TooManyPvIommu,
     /// Duplicated phys IOMMU IDs exist
+    #[error("Duplicated IOMMU IDs exist. IDs must unique among iommu node")]
     DuplicatedIommuIds,
     /// Duplicated pvIOMMU IDs exist
+    #[error("Duplicated pvIOMMU IDs exist. IDs must unique among iommu node")]
     DuplicatedPvIommuIds,
     /// Unsupported path format. Only supports full path.
+    #[error("Unsupported UnsupportedPathFormat. Only supports full path")]
     UnsupportedPathFormat,
     /// Unsupported overlay target syntax. Only supports <target-path> with full path.
+    #[error("Unsupported overlay target. Only supports 'target-path = \"/\"'")]
     UnsupportedOverlayTarget,
     /// Unsupported PhysIommu,
+    #[error("Unsupported Phys IOMMU. Currently only supports #iommu-cells = <1>")]
     UnsupportedPhysIommu,
     /// Unsupported (pvIOMMU id, vSID) duplication. Currently the pair should be unique.
+    #[error("Unsupported (pvIOMMU id, vSID) duplication. Currently the pair should be unique.")]
     UnsupportedPvIommusDuplication,
     /// Unsupported (IOMMU token, SID) duplication. Currently the pair should be unique.
+    #[error("Unsupported (IOMMU token, SID) duplication. Currently the pair should be unique.")]
     UnsupportedIommusDuplication,
     /// Internal error
+    #[error("Internal error")]
     Internal,
     /// Unexpected error from libfdt
-    UnexpectedFdtError(FdtError),
-}
-
-impl From<FdtError> for DeviceAssignmentError {
-    fn from(e: FdtError) -> Self {
-        DeviceAssignmentError::UnexpectedFdtError(e)
-    }
-}
-
-impl fmt::Display for DeviceAssignmentError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::InvalidDtbo => write!(f, "Invalid DTBO"),
-            Self::InvalidSymbols => write!(
-                f,
-                "Invalid property in /__symbols__. Must point to valid assignable device node."
-            ),
-            Self::MalformedReg => write!(f, "Malformed <reg>. Can't parse"),
-            Self::MissingReg(addr, size) => {
-                write!(f, "Missing physical MMIO region: addr:{addr:#x}), size:{size:#x}")
-            }
-            Self::ExtraReg(addr, size) => {
-                write!(f, "Unexpected extra MMIO region: addr:{addr:#x}), size:{size:#x}")
-            }
-            Self::InvalidReg(addr) => {
-                write!(f, "Invalid guest MMIO granule (addr: {addr:#x})")
-            }
-            Self::InvalidRegSize(size, expected) => {
-                write!(f, "Unexpected MMIO size ({size:#x}), should be {expected:#x}")
-            }
-            Self::InvalidRegToken(token, expected) => {
-                write!(f, "Unexpected MMIO token ({token:#x}), should be {expected:#x}")
-            }
-            Self::InvalidInterrupts => write!(f, "Invalid <interrupts>"),
-            Self::MalformedIommus => write!(f, "Malformed <iommus>. Can't parse."),
-            Self::InvalidIommus => {
-                write!(f, "Invalid <iommus>. Failed to validate with hypervisor")
-            }
-            Self::InvalidPhysIommu => write!(f, "Invalid phys IOMMU node"),
-            Self::InvalidPvIommu => write!(f, "Invalid pvIOMMU node"),
-            Self::TooManyPvIommu => write!(
-                f,
-                "Too many pvIOMMU node. Insufficient pre-populated pvIOMMUs in platform DT"
-            ),
-            Self::DuplicatedIommuIds => {
-                write!(f, "Duplicated IOMMU IDs exist. IDs must unique among iommu node")
-            }
-            Self::DuplicatedPvIommuIds => {
-                write!(f, "Duplicated pvIOMMU IDs exist. IDs must unique among iommu node")
-            }
-            Self::UnsupportedPathFormat => {
-                write!(f, "Unsupported UnsupportedPathFormat. Only supports full path")
-            }
-            Self::UnsupportedOverlayTarget => {
-                write!(f, "Unsupported overlay target. Only supports 'target-path = \"/\"'")
-            }
-            Self::UnsupportedPhysIommu => {
-                write!(f, "Unsupported Phys IOMMU. Currently only supports #iommu-cells = <1>")
-            }
-            Self::UnsupportedPvIommusDuplication => {
-                write!(f, "Unsupported (pvIOMMU id, vSID) duplication. Currently the pair should be unique.")
-            }
-            Self::UnsupportedIommusDuplication => {
-                write!(f, "Unsupported (IOMMU token, SID) duplication. Currently the pair should be unique.")
-            }
-            Self::Internal => write!(f, "Internal error"),
-            Self::UnexpectedFdtError(e) => write!(f, "Unexpected Error from libfdt: {e}"),
-        }
-    }
+    #[error("Unexpected Error from libfdt: {0}")]
+    UnexpectedFdtError(#[from] FdtError),
 }
 
 pub type Result<T> = core::result::Result<T, DeviceAssignmentError>;
@@ -1136,28 +1091,16 @@ pub fn clean(fdt: &mut Fdt) -> Result<()> {
 }
 
 #[cfg(test)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, thiserror::Error)]
 enum MockHypervisorError {
+    #[error("Failed to get physical MMIO token")]
     FailedGetPhysMmioToken,
+    #[error("Failed to get physical IOMMU token")]
     FailedGetPhysIommuToken,
 }
 
 #[cfg(test)]
 type MockHypervisorResult<T> = core::result::Result<T, MockHypervisorError>;
-
-#[cfg(test)]
-impl fmt::Display for MockHypervisorError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            MockHypervisorError::FailedGetPhysMmioToken => {
-                write!(f, "Failed to get physical MMIO token")
-            }
-            MockHypervisorError::FailedGetPhysIommuToken => {
-                write!(f, "Failed to get physical IOMMU token")
-            }
-        }
-    }
-}
 
 #[cfg(test)]
 trait DeviceAssigningHypervisor {

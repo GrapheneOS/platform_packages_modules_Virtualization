@@ -27,7 +27,6 @@ use alloc::vec::Vec;
 use core::cmp::max;
 use core::cmp::min;
 use core::ffi::CStr;
-use core::fmt;
 use core::mem::size_of;
 use core::ops::Range;
 use hypervisor_backends::get_device_assigner;
@@ -61,28 +60,17 @@ const FDT_TEMPLATE: &Fdt = unsafe { Fdt::unchecked_from_slice(pvmfw_fdt_template
 const FDT_TEMPLATE: &Fdt = unsafe { Fdt::unchecked_from_slice(pvmfw_fdt_template::RAW_X86_64) };
 
 /// An enumeration of errors that can occur during the FDT validation.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, thiserror::Error)]
 pub enum FdtValidationError {
     /// Invalid CPU count.
+    #[error("Invalid CPU count: {0}")]
     InvalidCpuCount(usize),
     /// Invalid VCpufreq Range.
+    #[error("Invalid vcpufreq region: ({0:#x}, {1:#x})")]
     InvalidVcpufreq(u64, u64),
     /// Forbidden /avf/untrusted property.
+    #[error("Forbidden /avf/untrusted property '{0:?}'")]
     ForbiddenUntrustedProp(&'static CStr),
-}
-
-impl fmt::Display for FdtValidationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::InvalidCpuCount(num_cpus) => write!(f, "Invalid CPU count: {num_cpus}"),
-            Self::InvalidVcpufreq(addr, size) => {
-                write!(f, "Invalid vcpufreq region: ({addr:#x}, {size:#x})")
-            }
-            Self::ForbiddenUntrustedProp(name) => {
-                write!(f, "Forbidden /avf/untrusted property '{name:?}'")
-            }
-        }
-    }
 }
 
 /// For non-standardly sized integer properties, not following <#size-cells> or <#address-cells>.
