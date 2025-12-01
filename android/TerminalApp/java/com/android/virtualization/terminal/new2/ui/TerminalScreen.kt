@@ -22,6 +22,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,7 +66,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -172,13 +173,13 @@ private fun TerminalTab(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TerminalScreen(address: String, port: Int, tabId: String) {
     val terminalViewModel: TerminalViewModel = viewModel(key = tabId)
     val terminalUiState by terminalViewModel.uiState.collectAsStateWithLifecycle()
     val ttydView =
         remember(address, port, tabId) { terminalViewModel.getOrCreateTtydView(address, port) }
-    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(
         modifier =
             Modifier.fillMaxSize()
@@ -230,7 +231,7 @@ fun TerminalScreen(address: String, port: Int, tabId: String) {
                 }
             }
         }
-        if (isImeVisible) {
+        if (WindowInsets.isImeVisible) {
             TerminalKeys(
                 onKey = { key ->
                     if (key == ExtraKey.CTRL) {

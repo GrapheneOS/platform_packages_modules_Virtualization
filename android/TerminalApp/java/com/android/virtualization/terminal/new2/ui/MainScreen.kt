@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.virtualization.terminal.BetterBugLauncher
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
@@ -63,6 +64,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var lastValidState by remember { mutableStateOf<MainUiState>(MainUiState.Checking) }
+    if (uiState !is MainUiState.Error) {
+        lastValidState = uiState
+    }
+
     val tabs by viewModel.tabs.collectAsStateWithLifecycle()
     val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -72,16 +78,18 @@ fun MainScreen(viewModel: MainViewModel) {
 
     LaunchedEffect(uiState) {
         val state = uiState
-        if (state is MainUiState.Ready) {
-            viewModel.startVm()
-        } else if (state is MainUiState.Stopped) {
-            activity?.finish()
+        when (state) {
+            is MainUiState.Ready -> viewModel.startVm()
+            is MainUiState.Stopped -> activity?.finish()
+            is MainUiState.Error ->
+                handleError(context, activity, snackbarHostState, viewModel, state)
+            else -> {}
         }
     }
 
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            when (val state = uiState) {
+            when (val state = lastValidState) {
                 is MainUiState.Checking -> SplashScreen()
                 is MainUiState.NotInstalled ->
                     InstallStartScreen(
@@ -116,11 +124,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 }
                 is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
-                is MainUiState.Error ->
-                    Text(
-                        text = "Error: ${state.message}",
-                        modifier = Modifier.align(Alignment.Center),
-                    )
+                else -> {}
             }
         }
     }
@@ -180,6 +184,48 @@ fun InstallProgressScreen(
 fun BootingScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
+    }
+}
+
+private suspend fun handleError(
+    context: Context,
+    activity: Activity?,
+    snackbarHostState: SnackbarHostState,
+    viewModel: MainViewModel,
+    state: MainUiState.Error,
+) {
+    val (messageId, actionLabel, action) =
+        when (val handler = state.handler) {
+            MainUiState.ErrorHandler.CheckNetwork ->
+                Triple(
+                    R.string.installer_error_no_wifi,
+                    context.getString(R.string.action_settings),
+                    { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
+                )
+            MainUiState.ErrorHandler.Retry ->
+                Triple(R.string.installer_error_unknown, "Retry", { viewModel.installVm() })
+            is MainUiState.ErrorHandler.ReportBug ->
+                Triple(
+                    R.string.vm_error_message,
+                    context.getString(R.string.error_button_report_bug),
+                    {
+                        if (activity != null) {
+                            val error = handler.error
+                            val exception = error as? Exception ?: Exception(error)
+                            BetterBugLauncher.launchBetterBugActivity(activity, exception)
+                        }
+                    },
+                )
+        }
+
+    val result =
+        snackbarHostState.showSnackbar(
+            message = context.getString(messageId),
+            actionLabel = actionLabel,
+            duration = SnackbarDuration.Indefinite,
+        )
+    if (result == SnackbarResult.ActionPerformed) {
+        action()
     }
 }
 

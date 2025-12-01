@@ -58,7 +58,7 @@ object Installer {
             }
         } catch (e: IOException) {
             android.util.Log.e("Installer", "Failed to check install status", e)
-            _installState.value = InstallState.Error(e)
+            _installState.value = InstallState.Error(e, InstallState.ErrorCause.CheckFailed)
         }
     }
 
@@ -80,7 +80,8 @@ object Installer {
                     }
                     _installState.value = InstallState.Installed
                 } catch (e: IOException) {
-                    _installState.value = InstallState.Error(e)
+                    _installState.value =
+                        InstallState.Error(e, InstallState.ErrorCause.InstallFailed)
                 } catch (e: CancellationException) {
                     checkInstallStatus()
                 }
@@ -89,5 +90,12 @@ object Installer {
 
     fun cancelInstall() {
         installJob?.cancel()
+    }
+
+    fun retryCheck() {
+        val state = _installState.value
+        if (state is InstallState.Error) {
+            repositoryScope.launch { checkInstallStatus() }
+        }
     }
 }

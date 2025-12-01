@@ -16,8 +16,14 @@
 package com.android.virtualization.terminal.new2.ui.main
 
 import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
@@ -48,7 +54,15 @@ sealed interface MainUiState {
 
     data object Stopping : MainUiState
 
-    data class Error(val message: String) : MainUiState
+    sealed interface ErrorHandler {
+        data object Retry : ErrorHandler
+
+        data object CheckNetwork : ErrorHandler
+
+        data class ReportBug(val error: Throwable) : ErrorHandler
+    }
+
+    data class Error(val handler: ErrorHandler) : MainUiState
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,6 +76,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         VmController.reset()
+        val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
+        connectivityManager?.registerDefaultNetworkCallback(
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    Installer.retryCheck()
+                }
+            }
+        )
     }
 
     fun addTab() {
@@ -122,11 +144,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 }
                             }
                             is VmState.Error ->
-                                MainUiState.Error(vmState.cause.message ?: "Unknown VM error")
+                                MainUiState.Error(MainUiState.ErrorHandler.ReportBug(vmState.cause))
                         }
                     }
-                    is InstallState.Error ->
-                        MainUiState.Error(installState.cause.message ?: "Unknown install error")
+                    is InstallState.Error -> {
+                        val handler =
+                            when (installState.errorCause) {
+                                InstallState.ErrorCause.CheckFailed ->
+                                    MainUiState.ErrorHandler.CheckNetwork
+                                InstallState.ErrorCause.InstallFailed ->
+                                    MainUiState.ErrorHandler.Retry
+                            }
+                        MainUiState.Error(handler)
+                    }
                 }
             }
             .stateIn(
@@ -144,7 +174,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startVm() {
-        viewModelScope.launch { VmController.start() }
+        val displayInfo = getDisplayInfo(getApplication())
+        viewModelScope.launch { VmController.start(displayInfo) }
     }
 
     fun stopVm() {
@@ -154,5 +185,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
+    }
+
+    private fun getDisplayInfo(context: Context): DisplayInfo {
+        val wm = context.getSystemService(WindowManager::class.java)
+        // For now, display size is fixed.(1280x720)
+        val width = 1280
+        val height = 720
+        val dpi =
+            (DisplayMetrics.DENSITY_DEFAULT * context.resources.displayMetrics.density).toInt()
+        val refreshRate = 60 // Simple default
+        return DisplayInfo(width, height, dpi, refreshRate)
     }
 }
