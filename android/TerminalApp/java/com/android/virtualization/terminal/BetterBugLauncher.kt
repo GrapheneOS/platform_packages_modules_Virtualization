@@ -78,10 +78,10 @@ class BetterBugLauncher {
 
     @WorkerThread
     private fun collectBugReport(context: Context, error: Exception?): BugReport {
-        val buildId = getDefault(context).buildId
+        val rawBuildId = getDefault(context).buildInfo?.rawString ?: "<no build id>"
         val logZipContentUri = tryZipLogs(context)
 
-        return BugReport(error, buildId, logZipContentUri)
+        return BugReport(error, rawBuildId, logZipContentUri)
     }
 
     private fun launchBetterBugActivityInternal(context: Context, bugReport: BugReport) {
@@ -99,14 +99,14 @@ class BetterBugLauncher {
         )
         reportIntent.putExtra(
             BUGREPORT_EXTRA_ADDITIONAL_COMMENT,
-            "Build id: ${bugReport.buildId}\n",
+            "Build id: ${bugReport.rawBuildId}\n",
         )
         reportIntent.setData(bugReport.logZipContentUri)
 
         context.startActivity(reportIntent)
     }
 
-    class BugReport(val error: Exception?, val buildId: String, val logZipContentUri: Uri?)
+    class BugReport(val error: Exception?, val rawBuildId: String, val logZipContentUri: Uri?)
 
     companion object {
         private const val TAG = "TerminalBugReport"

@@ -297,7 +297,7 @@ class TerminalTabFragment() : Fragment() {
 
     companion object {
         const val TAG: String = "VmTerminalApp"
-        const val TTYD_TIMEOUT_MS = 5_000L
+        const val TTYD_TIMEOUT_MS = 30_000L
 
         @IntDef(TTYD_STATUS_UNAVAILABLE, TTYD_STATUS_STARTED, TTYD_STATUS_LOADED, TTYD_STATUS_ERROR)
         @Retention(AnnotationRetention.SOURCE)

@@ -30,6 +30,9 @@ import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.ceil
 
 /** Collection of files that consist of a VM image. */
@@ -40,8 +43,43 @@ public class InstalledImage private constructor(val installDir: Path) {
     /** The path to the VM config file. */
     val configPath: Path = installDir.resolve(CONFIG_FILENAME)
     private val marker: Path = installDir.resolve(MARKER_FILENAME)
-    /** The build ID of the installed image */
-    val buildId: String by lazy { readBuildId() }
+
+    data class BuildInfo(
+        val rawString: String,
+        val target: String, // "ferrochrome/aarch64/hourly"
+        val buildId: Int, // 5106
+        val timestamp: ZonedDateTime,
+    ) {
+        companion object {
+            // Regex captures: Group 1 (Target), Group 2 (ID), Group 3 (Date)
+            // This handles cases where the target itself might contain hyphens.
+            private val PATTERN = """^(.*?)-(\d+)-(.*)$""".toRegex()
+
+            // Matches: "Fri Nov 28 04:09:48 UTC 2025"
+            private val DATE_FORMATTER =
+                DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy", Locale.US)
+
+            fun parse(input: String): BuildInfo {
+                val match =
+                    PATTERN.find(input)
+                        ?: throw IllegalArgumentException(
+                            "String does not match 'target-id-date' format: $input"
+                        )
+
+                val (target, idStr, dateStr) = match.destructured
+
+                return BuildInfo(
+                    rawString = input,
+                    target = target,
+                    buildId = idStr.toInt(),
+                    timestamp = ZonedDateTime.parse(dateStr, DATE_FORMATTER),
+                )
+            }
+        }
+    }
+
+    /** The build info of the installed image */
+    val buildInfo: BuildInfo? by lazy { readBuildInfo() }
 
     /** Tests if this InstalledImage is actually installed. */
     @VisibleForTesting
@@ -55,14 +93,14 @@ public class InstalledImage private constructor(val installDir: Path) {
         FileUtils.deleteContentsAndDir(installDir.toFile())
     }
 
-    private fun readBuildId(): String {
+    private fun readBuildInfo(): BuildInfo? {
         val file = installDir.resolve(BUILD_ID_FILENAME)
         if (!Files.exists(file)) {
-            return "<no build id>"
+            return null
         }
         try {
             BufferedReader(FileReader(file.toFile())).use { r ->
-                return r.readLine()
+                return BuildInfo.parse(r.readLine())
             }
         } catch (e: IOException) {
             throw RuntimeException("Failed to read build ID", e)
@@ -70,12 +108,7 @@ public class InstalledImage private constructor(val installDir: Path) {
     }
 
     fun isOlderThanCurrentVersion(): Boolean {
-        val year =
-            try {
-                buildId.split(" ").last().toInt()
-            } catch (_: Exception) {
-                0
-            }
+        val year = buildInfo?.timestamp?.year ?: return false
         return year < RELEASE_YEAR
     }
 
