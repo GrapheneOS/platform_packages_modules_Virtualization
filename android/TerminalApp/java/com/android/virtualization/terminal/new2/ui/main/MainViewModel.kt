@@ -65,9 +65,14 @@ sealed interface MainUiState {
     data class Error(val handler: ErrorHandler) : MainUiState
 }
 
-enum class DisplayState {
-    Hidden,
-    Shown,
+sealed interface DisplayState {
+    data object Hidden : DisplayState
+
+    data object Normal : DisplayState
+
+    data class Fullscreen(val landscape: Boolean, val controller: Boolean) : DisplayState
+
+    data object Minimized : DisplayState
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -79,7 +84,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedTabId = MutableStateFlow(_tabs.value.first().id)
     val selectedTabId: StateFlow<String> = _selectedTabId.asStateFlow()
 
-    private val _displayState = MutableStateFlow(DisplayState.Hidden)
+    private val _displayState = MutableStateFlow<DisplayState>(DisplayState.Hidden)
     val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
 
     private val _isImeVisible = MutableStateFlow(false)
@@ -87,11 +92,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleDisplay() {
         _displayState.value =
-            if (_displayState.value == DisplayState.Shown) {
-                DisplayState.Hidden
+            if (_displayState.value == DisplayState.Hidden) {
+                DisplayState.Normal
             } else {
-                DisplayState.Shown
+                DisplayState.Hidden
             }
+    }
+
+    fun switchToFullscreen() {
+        val context = getApplication<Application>()
+        val displayInfo = getDisplayInfo(context)
+        val landscape = displayInfo.width > displayInfo.height
+        _displayState.value = DisplayState.Fullscreen(landscape, controller = true)
+    }
+
+    fun exitFullscreen() {
+        _displayState.value = DisplayState.Normal
     }
 
     fun setIsImeVisible(visible: Boolean) {

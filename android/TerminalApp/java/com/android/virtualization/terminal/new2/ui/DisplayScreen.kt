@@ -86,6 +86,8 @@ fun DisplayScreen(modifier: Modifier = Modifier) {
 fun DisplayController(
     isDisplayActive: Boolean,
     onDisplayToggle: () -> Unit,
+    onFullscreenToggle: () -> Unit,
+    isFullscreen: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -110,9 +112,13 @@ fun DisplayController(
                             modifier = Modifier.size(24.dp),
                         )
                     }
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = onFullscreenToggle) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_fullscreen),
+                            painter =
+                                painterResource(
+                                    if (isFullscreen) R.drawable.ic_fullscreen_exit
+                                    else R.drawable.ic_fullscreen
+                                ),
                             contentDescription = "Fullscreen",
                             modifier = Modifier.size(24.dp),
                         )
