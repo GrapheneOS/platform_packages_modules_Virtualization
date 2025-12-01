@@ -56,7 +56,8 @@ object VmController {
         LoggingMutableStateFlow<VmState>(MutableStateFlow(VmState.Ready), "VmController")
     val vmState: StateFlow<VmState> = _vmState.asStateFlow()
 
-    private var virtualMachine: VirtualMachine? = null
+    var virtualMachine: VirtualMachine? = null
+        private set
 
     fun initialize(context: Context) {
         this.context = context.applicationContext

@@ -39,8 +39,6 @@ import libcore.io.IoBridge
 internal class DisplayProvider(
     private val mainView: SurfaceView,
     private val cursorView: SurfaceView,
-    private val width: Int,
-    private val height: Int,
 ) {
     private var cursorHandler: CursorHandler? = null
     private val displayService: ICrosvmAndroidDisplayService by lazy {
@@ -71,9 +69,6 @@ internal class DisplayProvider(
         }
 
         override fun surfaceCreated(holder: SurfaceHolder) {
-            if (surfaceKind == SurfaceKind.MAIN) {
-                holder.setFixedSize(width, height)
-            }
             try {
                 displayService.setSurface(holder.getSurface(), isForCursor())
             } catch (e: Exception) {

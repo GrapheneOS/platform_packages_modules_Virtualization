@@ -26,7 +26,7 @@ import android.view.inputmethod.EditorInfo
 
 val HARDWARE_KEYCODE_SHIFT: Short = 42
 
-class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(context, attrs) {
+class DisplaySurfaceView(context: Context, attrs: AttributeSet?) : SurfaceView(context, attrs) {
     lateinit var virtualMachine: VirtualMachine
 
     init {
