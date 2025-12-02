@@ -129,6 +129,7 @@ fn try_notify_payload_ready() -> Result<()> {
 /// If present, the `on_ready` callback must be a valid function pointer, which will be called at
 /// most once, while this function is executing, with the `param` parameter.
 #[no_mangle]
+#[allow(unreachable_code)]
 pub unsafe extern "C" fn AVmPayload_runVsockRpcServer(
     service: *mut AIBinder,
     port: u32,
