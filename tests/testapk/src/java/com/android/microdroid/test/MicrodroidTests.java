@@ -371,11 +371,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
-    private SigningResult attestation_signing_result_multitenant(byte[] challenge)
-            throws Exception {
+    private SigningResult attestation_signing_result(byte[] challenge) throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
-        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         ensureVmAttestationSupported();
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -412,7 +410,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         "This test does not apply to a device that supports Remote Attestation")
                 .that(isRemoteAttestationSupported())
                 .isFalse();
-        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
@@ -445,7 +442,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
             throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
-        attestation_signing_result_multitenant(challenge);
+        attestation_signing_result(challenge);
     }
 
     @Test
@@ -457,7 +454,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                     throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
-        SigningResult signingResult = attestation_signing_result_multitenant(challenge);
+        SigningResult signingResult = attestation_signing_result(challenge);
 
         assume().withMessage(
                         "AttestationStatus is ERROR_ATTESTATION_FAILED possibly due to unstable"
@@ -1341,7 +1338,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
-        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
 
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
@@ -1408,7 +1404,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void invalidTenantAuthority() throws Exception {
         assumeSupportedDevice();
-        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -1429,7 +1424,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void invalidTenantRollbackIndex() throws Exception {
         assumeSupportedDevice();
-        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -1462,7 +1456,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest
     public void multiTenantInstanceSpecRollbackTest() throws Exception {
         assumeSupportedDevice();
-        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
@@ -1507,33 +1500,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(bootResult.deathReason)
                 .isEqualTo(
                         VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_VERIFICATION_FAILED);
-    }
-
-    @Test
-    @CddTest
-    public void multiTenantBootFailsWithoutSecretkeeper() throws Exception {
-        assumeSupportedDevice();
-        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
-        assumeFalse(
-                "This test runs only when Secretkeeper is not supported", isUpdatableVmSupported());
-        assumeTrue(
-                "AVF Advance Multi-tenancy feature not enabled",
-                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
-
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
-
-        VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig(
-                                "assets/vm_config_tenant_rollback_index_instance_spec.json")
-                        .setMemoryBytes(minMemoryRequired())
-                        .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .build();
-
-        VirtualMachine vm = forceCreateNewVirtualMachine("multi_tenant_no_sk_should_fail", config);
-        BootResult bootResult = tryBootVm(TAG, vm);
-        assertThat(bootResult.payloadStarted).isFalse();
-        assertThat(bootResult.deathReason)
-                .isEqualTo(VirtualMachineCallback.STOP_REASON_MICRODROID_INVALID_PAYLOAD_CONFIG);
     }
 
     private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)

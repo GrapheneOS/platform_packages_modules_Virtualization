@@ -602,12 +602,6 @@ fn try_run_payload(
     let tenant_manager = TenantManager::initialize(&config.tenants)?;
     let tenant_manager = Arc::new(tenant_manager);
 
-    if !config.tenants.is_empty() && matches!(*vm_secret, VmSecret::V1 { .. }) {
-        bail!(MicrodroidError::PayloadInvalidConfig(
-            "Tenants are not supported with V1 secrets.".to_string()
-        ));
-    }
-
     if !config.tenants.is_empty() {
         tenant::validate_tenants_against_existing_spec_update_spec(
             is_new_instance,
