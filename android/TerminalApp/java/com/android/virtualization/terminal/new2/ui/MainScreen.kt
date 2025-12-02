@@ -188,6 +188,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                     onDisplayToggle = { viewModel.toggleDisplay() },
                                     onFullscreenToggle = { viewModel.switchToFullscreen() },
                                     isFullscreen = false,
+                                    onKeyboardToggle = {
+                                        viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
+                                    },
                                 )
                             }
                         }
@@ -196,7 +199,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                 currentDisplayState is DisplayState.Fullscreen
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
-                                DisplayScreen()
+                                DisplayScreen(viewModel = viewModel)
                                 if (
                                     currentDisplayState is DisplayState.Fullscreen &&
                                         currentDisplayState.controller
@@ -206,6 +209,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                         onDisplayToggle = { viewModel.toggleDisplay() },
                                         onFullscreenToggle = { viewModel.exitFullscreen() },
                                         isFullscreen = true,
+                                        onKeyboardToggle = {
+                                            viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
+                                        },
                                         modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
                                     )
                                 }

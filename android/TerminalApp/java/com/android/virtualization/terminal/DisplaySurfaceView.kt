@@ -23,6 +23,7 @@ import android.view.MotionEvent
 import android.view.SurfaceView
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 
 val HARDWARE_KEYCODE_SHIFT: Short = 42
 
@@ -32,6 +33,18 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet?) : SurfaceView(c
     init {
         setFocusable(true)
         setFocusableInTouchMode(true)
+    }
+
+    fun showSoftInput() {
+        if (requestFocus()) {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(this, 0)
+        }
+    }
+
+    fun hideSoftInput() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
     fun convertAndroidKeyCodeToEvdevScanCode(androidKeyCode: Int): Short {

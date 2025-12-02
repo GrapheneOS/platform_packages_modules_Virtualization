@@ -33,6 +33,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,20 +45,36 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.DisplayProvider
 import com.android.virtualization.terminal.DisplaySurfaceView
 import com.android.virtualization.terminal.InputForwarder
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
+import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 
 @Composable
-fun DisplayScreen(modifier: Modifier = Modifier) {
+fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val vm = VmController.virtualMachine ?: return
 
     val width = vm.config.customImageConfig?.displayConfig!!.width
     val height = vm.config.customImageConfig?.displayConfig!!.height
     val aspectRatio = width.toFloat() / height.toFloat()
+
+    var displaySurfaceView by remember { mutableStateOf<DisplaySurfaceView?>(null) }
+    val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
+
+    LaunchedEffect(displaySurfaceView, isImeVisible) {
+        val dsv = displaySurfaceView
+        if (dsv != null) {
+            if (isImeVisible) {
+                dsv.post { dsv.showSoftInput() }
+            } else {
+                dsv.post { dsv.hideSoftInput() }
+            }
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         AndroidView(
@@ -74,6 +95,7 @@ fun DisplayScreen(modifier: Modifier = Modifier) {
                 DisplayProvider(mainView, cursorView)
                 val inputForwarder = InputForwarder(ctx, vm, mainView, mainView, mainView)
                 container.tag = inputForwarder
+                displaySurfaceView = mainView
 
                 container
             },
@@ -88,6 +110,7 @@ fun DisplayController(
     onDisplayToggle: () -> Unit,
     onFullscreenToggle: () -> Unit,
     isFullscreen: Boolean,
+    onKeyboardToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -98,7 +121,7 @@ fun DisplayController(
         Row(verticalAlignment = Alignment.CenterVertically) {
             AnimatedVisibility(visible = isDisplayActive) {
                 Row {
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = onKeyboardToggle) {
                         Icon(
                             painter = painterResource(R.drawable.ic_keyboard),
                             contentDescription = "Keyboard",
