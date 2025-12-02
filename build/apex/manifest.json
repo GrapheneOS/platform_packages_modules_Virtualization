@@ -1,6 +1,10 @@
 {
   "name": "com.android.virt",
-  "version": 3,
+
+  // Placeholder module version to be replaced during build.
+  // Do not change!
+  "version": 0,
+
   "requireNativeLibs": [
     "libEGL.so",
     "libGLESv2.so",
