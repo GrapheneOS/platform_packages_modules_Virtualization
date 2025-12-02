@@ -74,6 +74,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedTabId = MutableStateFlow(_tabs.value.first().id)
     val selectedTabId: StateFlow<String> = _selectedTabId.asStateFlow()
 
+    private val _isDisplayActive = MutableStateFlow(false)
+    val isDisplayActive: StateFlow<Boolean> = _isDisplayActive.asStateFlow()
+
+    fun showDisplay(show: Boolean) {
+        _isDisplayActive.value = show
+    }
+
     init {
         VmController.reset()
         val connectivityManager = application.getSystemService(ConnectivityManager::class.java)

@@ -52,6 +52,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,7 +78,7 @@ import com.android.virtualization.terminal.new2.ui.main.TerminalViewModel
 @Composable
 fun TerminalTabBar(
     tabs: List<TerminalSession>,
-    selectedTabId: String,
+    selectedTabId: String?,
     onTabSelected: (String) -> Unit,
     onTabClosed: (String) -> Unit,
     onAddTab: () -> Unit,
@@ -87,11 +88,19 @@ fun TerminalTabBar(
         modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
     ) {
         key(tabs.size) {
+            val selectedTabIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
             ScrollableTabRow(
-                selectedTabIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0),
+                selectedTabIndex = selectedTabIndex,
                 modifier = Modifier.fillMaxWidth(),
                 edgePadding = 0.dp,
                 containerColor = Color.Transparent,
+                indicator = { tabPositions ->
+                    if (selectedTabId != null && selectedTabIndex < tabPositions.size) {
+                        androidx.compose.material3.TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex])
+                        )
+                    }
+                },
                 divider = {},
             ) {
                 tabs.forEachIndexed { index, tab ->
