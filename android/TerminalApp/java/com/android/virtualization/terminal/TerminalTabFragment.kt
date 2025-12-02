@@ -97,14 +97,14 @@ class TerminalTabFragment() : Fragment() {
         updateFocus()
 
         if (ttydStatus != TTYD_STATUS_UNAVAILABLE && ttydStatus != TTYD_STATUS_LOADED) {
-            terminalView.getHandler().postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
+            terminalView.postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
         }
     }
 
     override fun onPause() {
         super.onPause()
 
-        terminalView.getHandler().removeCallbacks(ttydTimeoutRunnable)
+        terminalView.removeCallbacks(ttydTimeoutRunnable)
     }
 
     override fun onDestroy() {
@@ -117,7 +117,7 @@ class TerminalTabFragment() : Fragment() {
     public fun loadUrl(url: String, key: String?) {
         Log.d(TAG, "loading $url")
         if (isResumed()) {
-            terminalView.getHandler().postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
+            terminalView.postDelayed(ttydTimeoutRunnable, TTYD_TIMEOUT_MS)
         }
         ttydStatus = TTYD_STATUS_STARTED
         if (key != null) {
@@ -250,7 +250,7 @@ class TerminalTabFragment() : Fragment() {
                     override fun onComplete(completedRequestId: Long) {
                         if (completedRequestId == requestId) {
                             ttydStatus = TTYD_STATUS_LOADED
-                            view.getHandler().removeCallbacks(ttydTimeoutRunnable)
+                            view.removeCallbacks(ttydTimeoutRunnable)
 
                             bootProgressView.visibility = View.GONE
                             terminalView.visibility = View.VISIBLE
