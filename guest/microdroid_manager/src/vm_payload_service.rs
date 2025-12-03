@@ -16,7 +16,7 @@
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
     IVmPayloadService, AttestationResult::AttestationResult,
-    STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
+    ENCRYPTEDSTORE_MOUNTPOINT, STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use anyhow::{anyhow, Context};
@@ -24,8 +24,11 @@ use avflog::LogResult;
 use binder::{ExceptionCode, Interface, IntoBinderResult, Status, Strong};
 use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
 use crate::encrypted_assets::{mount_encrypted_assets, MountError};
+use crate::tenant::TenantManager;
 use crate::vm_secret::VmSecret;
 use log::{error, info};
+use microdroid_uids::MICRODROID_PAYLOAD_UID;
+use std::path::Path;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -39,6 +42,7 @@ pub(crate) struct VmPayloadService {
     is_new_instance: bool,
     total_tasks: usize,
     tasks_ready: AtomicUsize,
+    tenant_manager: Arc<TenantManager>,
 }
 
 impl IVmPayloadService for VmPayloadService {
@@ -168,6 +172,22 @@ impl IVmPayloadService for VmPayloadService {
                 }
             })
     }
+
+    fn getEncryptedStoragePath(&self, uid: i64) -> binder::Result<String> {
+        if Path::new(ENCRYPTEDSTORE_MOUNTPOINT).exists() {
+            if uid == MICRODROID_PAYLOAD_UID as i64 {
+                return Ok(ENCRYPTEDSTORE_MOUNTPOINT.to_string());
+            }
+            let package_name = self
+                .tenant_manager
+                .get_tenant_package_name(uid)
+                .context("Failed to get tenant package name for encrypted storage path")
+                .with_log()
+                .or_service_specific_exception(-1)?;
+            return Ok(format!("{}/{}", ENCRYPTEDSTORE_MOUNTPOINT, package_name));
+        }
+        Ok("".to_string())
+    }
 }
 
 impl Interface for VmPayloadService {}
@@ -180,6 +200,7 @@ impl VmPayloadService {
         secret: Arc<VmSecret>,
         is_new_instance: bool,
         total_tasks: usize,
+        tenant_manager: Arc<TenantManager>,
     ) -> VmPayloadService {
         Self {
             allow_restricted_apis,
@@ -188,6 +209,7 @@ impl VmPayloadService {
             is_new_instance,
             total_tasks,
             tasks_ready: AtomicUsize::new(0),
+            tenant_manager,
         }
     }
 

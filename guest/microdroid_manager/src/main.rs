@@ -724,6 +724,7 @@ fn try_run_payload(
             vm_secret.clone(),
             is_new_instance,
             total_tasks,
+            tenant_manager.clone(),
         ),
         BinderFeatures::default(),
     );
