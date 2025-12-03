@@ -1308,7 +1308,11 @@ fn create_vm_payload_config(
         bail!("Payload binary name must not specify a path: {payload_binary_name}");
     }
 
-    let task = Task { type_: TaskType::MicrodroidLauncher, command: payload_binary_name.clone() };
+    let task = Task {
+        type_: TaskType::MicrodroidLauncher,
+        command: payload_binary_name.clone(),
+        command_args: None,
+    };
 
     // The VM only cares about how many there are, these names are actually ignored.
     let extra_apk_count = payload_config.extraApks.len();

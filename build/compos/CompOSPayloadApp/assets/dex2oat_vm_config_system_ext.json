@@ -5,7 +5,8 @@
   },
   "task": {
     "type": "executable",
-    "command": "/apex/com.android.compos/bin/dex2oatsvc"
+    "command": "/apex/com.android.compos/bin/compsvc",
+    "command_args": ["dex2oat"]
   },
   "extra_apks": [
     {

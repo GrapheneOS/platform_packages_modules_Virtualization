@@ -108,6 +108,11 @@ pub struct Task {
     /// - For executable task, this is the path to the executable.
     /// - For microdroid_launcher task, this is the name of .so
     pub command: String,
+
+    /// Optional arguments to pass to an executable.
+    /// If this is non-None the arguments will be passed to the executable.
+    /// For type=microdroid_launcher this should be omitted.
+    pub command_args: Option<Vec<String>>,
 }
 
 /// APEX config
