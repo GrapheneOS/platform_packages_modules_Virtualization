@@ -99,6 +99,14 @@ impl TenantManager {
     pub fn list_tenants_info(&self) -> impl Iterator<Item = (&String, &TenantAttribute)> {
         self.tenants.iter()
     }
+
+    pub fn get_tenant_package_name(&self, uid: i64) -> Result<String> {
+        let uid = uid as u32;
+        self.list_tenants_info()
+            .find(|&(_, attribute)| attribute.uid() == uid)
+            .map(|(name, _)| name.clone())
+            .ok_or_else(|| anyhow!("Tenant not found for uid: {:?}", uid))
+    }
 }
 
 // TODO(rkrohit): Update the TenancySpec to keep the fields that are required for replay protection

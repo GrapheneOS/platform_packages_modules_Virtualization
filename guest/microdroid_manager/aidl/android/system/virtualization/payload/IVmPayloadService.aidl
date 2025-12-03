@@ -164,4 +164,12 @@ interface IVmPayloadService {
     @utf8InCpp String mountEncryptedAssets(in @utf8InCpp String imagePath,
             in @utf8InCpp String fsType, in @utf8InCpp String cipher, in byte[] key,
             in int sectorSize);
+
+    /**
+     * Returns the absolute path to the encrypted storage path for the given tenant.
+     *
+     * @param uid The uid of the tenant.
+     * @return The path to the encrypted storage.
+     */
+    String getEncryptedStoragePath(in long uid);
 }

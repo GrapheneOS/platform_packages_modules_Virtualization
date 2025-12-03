@@ -1406,6 +1406,74 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     @Test
     @CddTest
+    public void multiTenantEncryptedStoragePath() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("test_vm_tenant_encrypted_storage_path", config);
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String val = tsOnAPort.getEncryptedStoragePath();
+                            prop.complete(val);
+
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            String alternateVal = tsOnAlternatePort.getEncryptedStoragePath();
+                            assertWithMessage(
+                                            "Encrypted storage paths for the same package must be"
+                                                + " identical")
+                                    .that(alternateVal)
+                                    .isEqualTo(val);
+
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_services's"
+                                + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertWithMessage("Encrypted storage path should be specific to the tenant")
+                .that(prop.getNow(null))
+                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest
     public void invalidTenantApkAuthority() throws Exception {
         assumeSupportedDevice();
         assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());

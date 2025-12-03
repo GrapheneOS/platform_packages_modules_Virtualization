@@ -16,6 +16,7 @@ rust_ffi {
         "libanyhow",
         "libbinder_rs",
         "liblibc",
+        "libnix",
         "liblog_rust",
         "libopenssl",
         "librpcbinder_rs",

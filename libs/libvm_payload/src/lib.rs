@@ -15,7 +15,7 @@
 //! This module handles the interaction with virtual machine payload service.
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload:: IVmPayloadService::{
-    IVmPayloadService, ENCRYPTEDSTORE_MOUNTPOINT, VM_APK_CONTENTS_PATH,
+    IVmPayloadService, VM_APK_CONTENTS_PATH,
     VM_PAYLOAD_SERVICE_SOCKET_NAME, AttestationResult::AttestationResult
 };
 use anyhow::{bail, ensure, Context, Result};
@@ -24,13 +24,13 @@ use binder::{
     Strong, ExceptionCode,
 };
 use log::{error, info, LevelFilter, debug};
+use nix::unistd;
 use rpcbinder::{RpcServer, RpcSession};
 use openssl::{ec::EcKey, sha::sha256, ecdsa::EcdsaSig};
 use std::convert::Infallible;
 use std::ffi::{CStr, CString};
 use std::fmt::Debug;
 use std::os::raw::{c_char, c_void};
-use std::path::Path;
 use std::ptr::{self, NonNull};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -54,8 +54,6 @@ const RP_DATA_SIZE: usize = 32;
 static VM_APK_CONTENTS_PATH_C: LazyLock<CString> =
     LazyLock::new(|| CString::new(VM_APK_CONTENTS_PATH).expect("CString::new failed"));
 static PAYLOAD_CONNECTION: Mutex<Option<Strong<dyn IVmPayloadService>>> = Mutex::new(None);
-static VM_ENCRYPTED_STORAGE_PATH_C: LazyLock<CString> =
-    LazyLock::new(|| CString::new(ENCRYPTEDSTORE_MOUNTPOINT).expect("CString::new failed"));
 
 static ALREADY_NOTIFIED: AtomicBool = AtomicBool::new(false);
 
@@ -562,14 +560,35 @@ pub extern "C" fn AVmPayload_getApkContentsPath() -> *const c_char {
     VM_APK_CONTENTS_PATH_C.as_ptr()
 }
 
-/// Gets the path to the VM's encrypted storage.
+/// Gets the path to the payload's encrypted storage.
 #[no_mangle]
 pub extern "C" fn AVmPayload_getEncryptedStoragePath() -> *const c_char {
-    if Path::new(ENCRYPTEDSTORE_MOUNTPOINT).exists() {
-        VM_ENCRYPTED_STORAGE_PATH_C.as_ptr()
-    } else {
-        ptr::null()
-    }
+    initialize_logging();
+
+    let uid = unistd::getuid().as_raw() as i64;
+    let path = match try_get_encrypted_storage_path(uid) {
+        Ok(path) => {
+            if path.is_empty() {
+                error!("Encrypted storage path is not initialized");
+                return ptr::null();
+            }
+            path
+        }
+        Err(e) => {
+            error!("Failed to get encrypted storage path: {e:?}");
+            return ptr::null();
+        }
+    };
+
+    let cstr =
+        unwrap_or_abort(CString::new(path).context("Failed to create CString, path has nul byte"));
+    cstr.into_raw()
+}
+
+fn try_get_encrypted_storage_path(uid: i64) -> Result<String> {
+    get_vm_payload_service()?
+        .getEncryptedStoragePath(uid)
+        .context("Failed to get encrypted storage path")
 }
 
 /// Writes up to n bytes from buffer starting at `buf`, on behalf of the payload, to rollback
