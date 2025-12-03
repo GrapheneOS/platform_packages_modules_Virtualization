@@ -15,16 +15,25 @@
  */
 package com.android.virtualization.terminal.new2.ui
 
+import android.content.res.Configuration
+import android.view.KeyEvent
 import android.view.SurfaceView
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -41,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -53,6 +63,7 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -64,6 +75,9 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
     var displaySurfaceView by remember { mutableStateOf<DisplaySurfaceView?>(null) }
     val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
+    val isWindowImeVisible = WindowInsets.isImeVisible
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     LaunchedEffect(displaySurfaceView, isImeVisible) {
         val dsv = displaySurfaceView
@@ -76,31 +90,68 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        AndroidView(
-            modifier = Modifier.aspectRatio(aspectRatio).fillMaxSize(),
-            factory = { ctx ->
-                val container = FrameLayout(ctx)
-                val mainView =
-                    DisplaySurfaceView(ctx, null).apply {
-                        layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                    }
-                val cursorView =
-                    SurfaceView(ctx).apply {
-                        layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                    }
-                container.addView(mainView)
-                container.addView(cursorView)
+    val insets =
+        if (isLandscape) {
+            WindowInsets.ime
+        } else {
+            WindowInsets.ime.exclude(WindowInsets.navigationBars)
+        }
 
-                DisplayProvider(mainView, cursorView)
-                val inputForwarder = InputForwarder(ctx, vm, mainView, mainView, mainView)
-                container.tag = inputForwarder
-                displaySurfaceView = mainView
+    Box(modifier = modifier.fillMaxSize().windowInsetsPadding(insets)) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            AndroidView(
+                modifier = Modifier.aspectRatio(aspectRatio).fillMaxSize(),
+                factory = { ctx ->
+                    val container = FrameLayout(ctx)
+                    val mainView =
+                        DisplaySurfaceView(ctx, null).apply {
+                            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                        }
+                    val cursorView =
+                        SurfaceView(ctx).apply {
+                            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                        }
+                    container.addView(mainView)
+                    container.addView(cursorView)
 
-                container
-            },
-            onRelease = { view -> (view.tag as? InputForwarder)?.cleanUp() },
-        )
+                    DisplayProvider(mainView, cursorView)
+                    val inputForwarder = InputForwarder(ctx, vm, mainView, mainView, mainView)
+                    container.tag = inputForwarder
+                    displaySurfaceView = mainView
+
+                    container
+                },
+                onRelease = { view -> (view.tag as? InputForwarder)?.cleanUp() },
+            )
+        }
+
+        if (isWindowImeVisible) {
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                TerminalKeys(
+                    onKeyAction = { key, action ->
+                        val dsv = displaySurfaceView ?: return@TerminalKeys
+                        val down = action == KeyEvent.ACTION_DOWN
+                        val scanCode: Short? =
+                            when (key) {
+                                ExtraKey.CTRL -> 0x1D
+                                ExtraKey.ALT -> 0x38
+                                ExtraKey.HOME -> 0x66
+                                ExtraKey.END -> 0x6b
+                                ExtraKey.PGUP -> 0x68
+                                ExtraKey.PGDN -> 0x6d
+                                else ->
+                                    key.keyCode?.let {
+                                        dsv.convertAndroidKeyCodeToEvdevScanCode(it)
+                                    }
+                            }
+
+                        if (scanCode != null && scanCode != (-1).toShort()) {
+                            vm.sendKeyEvent(scanCode, down)
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 
