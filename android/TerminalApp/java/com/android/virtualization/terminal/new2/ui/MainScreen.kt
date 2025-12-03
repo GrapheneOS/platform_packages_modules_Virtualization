@@ -24,7 +24,6 @@ import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.text.format.Formatter
 import android.view.WindowManager
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -130,11 +129,6 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
 
-    BackHandler(enabled = displayState is DisplayState.Fullscreen) {
-        // TODO: Show controller logic? Or exit fullscreen?
-        // viewModel.exitFullscreen()
-    }
-
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
         val padding =
             if (displayState is DisplayState.Fullscreen) PaddingValues(0.dp) else innerPadding
@@ -200,21 +194,6 @@ fun MainScreen(viewModel: MainViewModel) {
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 DisplayScreen(viewModel = viewModel)
-                                if (
-                                    currentDisplayState is DisplayState.Fullscreen &&
-                                        currentDisplayState.controller
-                                ) {
-                                    DisplayController(
-                                        isDisplayActive = true,
-                                        onDisplayToggle = { viewModel.toggleDisplay() },
-                                        onFullscreenToggle = { viewModel.exitFullscreen() },
-                                        isFullscreen = true,
-                                        onKeyboardToggle = {
-                                            viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
-                                        },
-                                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-                                    )
-                                }
                             }
                         } else if (selectedTabId != null) {
                             TerminalScreen(state.address, state.port, selectedTabId!!, viewModel)
