@@ -127,9 +127,9 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         if (isWindowImeVisible) {
             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                TerminalKeys(
+                ModifierKeys(
                     onKeyAction = { key, action ->
-                        val dsv = displaySurfaceView ?: return@TerminalKeys
+                        val dsv = displaySurfaceView ?: return@ModifierKeys
                         val down = action == KeyEvent.ACTION_DOWN
                         val scanCode: Short? =
                             when (key) {
