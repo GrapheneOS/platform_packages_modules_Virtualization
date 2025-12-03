@@ -16,20 +16,21 @@
 
 use android_logger::Config;
 use anyhow::{bail, ensure, Context, Result};
-use libloading::Library;
 use log::{info, LevelFilter};
+use nix::fcntl::OFlag;
 use std::ffi::{c_void, CStr};
 use std::fmt;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
-use std::os::fd::IntoRawFd;
-use std::os::raw::c_int;
+use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
-use avf_bindgen::*;
+use avf_compat_bindgen::*;
+use dma_buf_heap_bindgen::{dma_heap_allocation_data, DMA_HEAP_IOC_MAGIC};
+use memmap2::MmapOptions;
 use vmbase_test_vm_messages::{Request, Response, VM_PORT};
 
 const LOG_TAG: &str = "VtsLibAvf";
@@ -198,38 +199,18 @@ where
     let listener_thread = std::thread::spawn(move || listen_from_guest(VM_PORT));
 
     let mut callback_data = 33_u8;
-    let mut supports_callback: bool = false;
+    let mut supports_callback = false;
 
-    // SAFETY:
-    //   - vm is the only reference to a valid object
-    //   - libavf.so is guaranteed by precondition check in AndroidTest.xml.
-    //   - AVirtualMachine_startWithStopCallback is released as LLNDK, hence interface is stable.
+    // SAFETY: vm is the only reference to a valid object, on_stopped is a correct callback and
+    // callback data is a valid pointer.
     unsafe {
-        let lib = Library::new("libavf.so").unwrap();
-        let start_with_callback: Result<
-            libloading::Symbol<
-                unsafe extern "C" fn(
-                    *mut AVirtualMachine,
-                    AVirtualMachine_stopCallback,
-                    *mut c_void,
-                ) -> c_int,
-            >,
-            _,
-        > = lib.get(b"AVirtualMachine_startWithStopCallback");
-
-        // With trunk stable, this test may run on device without the start_with_callback.
-        // Only test with callbacks when the API is available.
-        // TODO: Remove this block when the API is fully deployed, or invent better way
-        //       to do this.
-        if let Ok(start_with_callback) = start_with_callback {
-            info!("starting VM with AVirtualMachine_startWithStopCallback");
-            supports_callback = true;
-            start_with_callback(vm, Some(on_stopped), &mut callback_data as *mut _ as *mut c_void);
-        } else {
-            info!("starting VM with AVirtualMachine_start");
-            AVirtualMachine_start(vm);
-        }
-    }
+        AVirtualMachineCompat_startWithStopCallback(
+            vm,
+            Some(on_stopped),
+            &mut callback_data as *mut _ as *mut c_void,
+            &mut supports_callback,
+        )
+    };
 
     let vm_ptr = vm as usize;
 
@@ -259,6 +240,7 @@ where
     info!("stopped");
 
     if supports_callback {
+        info!("checking that callback was invoked");
         let timeout = Duration::from_secs(STOP_TIMEOUT.tv_sec.try_into().unwrap());
         let (stopped_vm_ptr, stopped_reason, stopped_callback_data) =
             rx.recv_timeout(timeout).expect("Callback should have been called");
@@ -304,4 +286,120 @@ fn test_run_test_vm_non_protected() -> Result<()> {
     init_logger();
 
     run_test(c"vts_libavf_test_vm", VmType::NonProtected, run_reverse_test)
+}
+
+#[test]
+fn test_share_dma_buf_4096_protected_vm() -> Result<()> {
+    init_logger();
+
+    run_test(c"vts_libavf_test_share_dma_buf_4096", VmType::Protected, |vsock_stream, vm| {
+        share_dma_buf_test_impl(vsock_stream, vm, 4096)
+    })
+}
+
+#[test]
+fn test_share_dma_buf_16384_protected_vm() -> Result<()> {
+    init_logger();
+
+    run_test(c"vts_libavf_test_share_dma_buf_16384", VmType::Protected, |vsock_stream, vm| {
+        share_dma_buf_test_impl(vsock_stream, vm, 16384)
+    })
+}
+
+#[test]
+fn test_share_dma_buf_32768_protected_vm() -> Result<()> {
+    init_logger();
+
+    run_test(c"vts_libavf_test_share_dma_buf_32768", VmType::Protected, |vsock_stream, vm| {
+        share_dma_buf_test_impl(vsock_stream, vm, 32768)
+    })
+}
+
+// TODO(ioffe): add test sharing 2 MiB dma buf.
+
+fn share_dma_buf_test_impl(
+    vsock_stream: &mut VsockStream,
+    vm: *mut AVirtualMachine,
+    size: usize,
+) -> Result<()> {
+    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
+        info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
+        return Ok(());
+    }
+
+    let dma_buf_fd = dma_buf_alloc(size).context("failed to allocate dma_buf_fd")?;
+
+    let data = vec![7; size];
+
+    // SAFETY: dma_buf_fd is valid fd that can be memory mapped.
+    let mut mmap = unsafe { MmapOptions::new().len(size).offset(0).map_mut(&dma_buf_fd) }
+        .context("failed to mmap")?;
+    mmap.copy_from_slice(&data);
+
+    // Pick a range that is outside the main memory region of the VM.
+    let range_start = 0x8000_0000 + 32 * 1024 * 1024;
+    let range_end = range_start + size;
+    // SAFETY: vm is valid pointer to AVirtualMachine. dma_buf_fd is a valid fd which ownership
+    // gets transferred to the `AVirtualMachine_addMemoryMapping`.
+    let memory_id = unsafe {
+        AVirtualMachineCompat_addMemoryMapping(
+            vm,
+            dma_buf_fd.into_raw_fd(),
+            range_start as u64,
+            range_end as u64,
+            0 /* offset */,
+            AVirtualMachineMemoryMappingAttributes::AVIRTUAL_MACHINE_MEMORY_MAPPING_ATTRIBUTE_CACHE_COHERENT,
+        )
+    };
+    ensure!(memory_id >= 0, "AVirtualMachine_addMemoryMapping failed");
+
+    let response = process_request(vsock_stream, Request::MapData(range_start, range_end))
+        .context("failed to process request")?;
+
+    let Response::MapData(mapped_data) = response else {
+        bail!("Expected Response::MapData but was {response:?}");
+    };
+    assert_eq!(mapped_data, data);
+
+    let response = process_request(vsock_stream, Request::MemRelinquish(range_start, range_end))
+        .context("failed to process request")?;
+    let Response::MemRelinquish(success) = response else {
+        bail!("Expected Response::MemRelinquish but was {response:?}");
+    };
+    ensure!(success, "Request::MemRelinquish failed");
+
+    // SAFETY: vm is a valid pointer to AVirtualMachine.
+    let success = unsafe { AVirtualMachineCompat_removeMemoryMapping(vm, memory_id) };
+    ensure!(success, "AVirtualMachine_removeMemoryMapping failed");
+
+    Ok(())
+}
+
+// TODO(ioffe): move code below in libdma_buf_heap library?
+mod ioctl {
+    use super::*;
+
+    nix::ioctl_readwrite!(dma_heap_alloc, DMA_HEAP_IOC_MAGIC, 0, dma_heap_allocation_data);
+}
+
+const DMA_HEAP_SYSTEM: &str = "/dev/dma_heap/system";
+
+fn dma_buf_alloc(size: usize) -> Result<OwnedFd> {
+    let dma_heap = File::open(DMA_HEAP_SYSTEM).context("failed to open {DMA_HEAP_SYSTEM}")?;
+
+    let mut data = dma_heap_allocation_data {
+        len: size as u64,
+        fd: 0,
+        fd_flags: OFlag::O_RDWR.bits() as u32 | OFlag::O_CLOEXEC.bits() as u32,
+        heap_flags: 0,
+    };
+
+    // SAFETY: dma_heap is opened /dev/dma_heap/system and data is valid dma_heap_allocation_data
+    match unsafe { ioctl::dma_heap_alloc(dma_heap.as_raw_fd(), &mut data) } {
+        Ok(_) => {
+            // SAFETY: `data.fd` is valid dma_buf_fd created by kernel.
+            unsafe { Ok(OwnedFd::from_raw_fd(data.fd as RawFd)) }
+        }
+        Err(_) => bail!("dma_heap_alloc failed: {:#?}", io::Error::last_os_error()),
+    }
 }

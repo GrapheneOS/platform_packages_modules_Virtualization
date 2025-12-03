@@ -1,0 +1,36 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+cc_library_static {
+    name: "libavf_compat",
+    srcs: ["virtualization_compat.cpp"],
+    shared_libs: [
+        "libavf",
+        "liblog",
+    ],
+    visibility: [
+        "//packages/modules/Virtualization/tests/vts",
+    ],
+    vendor_available: true,
+    min_sdk_version: "36",
+}
+
+rust_bindgen {
+    name: "libavf_compat_bindgen",
+    wrapper_src: "virtualization_compat.hpp",
+    crate_name: "avf_compat_bindgen",
+    defaults: ["avf_build_flags_rust"],
+    source_stem: "bindings",
+    bindgen_flags: ["--default-enum-style rust"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
+    shared_libs: ["libavf"],
+    visibility: [
+        "//packages/modules/Virtualization/tests/vts",
+    ],
+    vendor_available: true,
+    min_sdk_version: "36",
+}

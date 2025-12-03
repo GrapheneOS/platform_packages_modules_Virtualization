@@ -236,7 +236,7 @@ void AVirtualMachineRawConfig_setDeviceTreeOverlay(AVirtualMachineRawConfig* _No
  *   returns -EINVAL.
  */
 int AVirtualMachineRawConfig_addTeeService(AVirtualMachineRawConfig* _Nonnull config,
-                                           const char* teeService) __INTRODUCED_IN(37);
+                                           const char* _Nonnull teeService) __INTRODUCED_IN(37);
 
 /**
  * Represents a handle on a virtualization service, responsible for managing virtual machines.
