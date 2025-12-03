@@ -14,7 +14,7 @@ show_help() {
 	echo "Builds a debian image and save it to FILE. [sudo is required]"
 	echo "Options:"
 	echo "-a ARCH       Architecture of the image [default is host arch: $(uname -m)]"
-	echo "-b BUILD_ID   Set build id of the debian image [default is eng-\$(hostname)-\$(date --utc)]"
+	echo "-b BUILD_ID   Set build id of the debian image [default is eng-1000000-\$(date --utc +'%a %b %d %H:%M:%S %Z %Y')]"
 	echo "-k KERNEL_ID  Build ID for kernel [default is the last known good build]"
 	echo "-h            Print usage and this help message and exit."
 	echo "-w            Save temp work directory [for debugging]"
@@ -106,6 +106,7 @@ install_prerequisites() {
 		qemu-utils
 		sudo
 		udev
+		wget
 	)
 	if [[ "$arch" == "aarch64" ]]; then
 		packages+=(
@@ -123,8 +124,8 @@ install_prerequisites() {
 		apt install --no-install-recommends --assume-yes "${packages[@]}"
 
 	if [ ! -f $"HOME"/.cargo/bin/cargo ]; then
-		git clone https://github.com/rust-lang/rustup.git rustup
-		rustup/rustup-init.sh -y
+		git clone https://github.com/rust-lang/rustup.git ${workdir}/rustup
+		${workdir}/rustup/rustup-init.sh -y
 	fi
 
 	source "$HOME"/.cargo/env
@@ -289,7 +290,7 @@ trap clean_up EXIT
 check_sudo
 
 output=images.tar.gz
-build_id=$(echo eng-$(hostname)-$(date --utc))
+build_id=$(echo eng-1000000-$(date --utc +'%a %b %d %H:%M:%S %Z %Y'))
 kernel_build_id=
 debian_version=bookworm
 arch="$(uname -m)"
