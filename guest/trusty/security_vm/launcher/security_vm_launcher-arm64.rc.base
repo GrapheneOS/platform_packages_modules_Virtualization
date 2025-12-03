@@ -23,3 +23,4 @@ service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher 
     oneshot
     # task_profiles MaxPerformance
     interface aidl android.os.IAccessor/ICommService/security_vm_keymint
+    interface aidl android.os.IAccessor/IGatekeeper/security_vm_gatekeeper
