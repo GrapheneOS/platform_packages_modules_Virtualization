@@ -131,22 +131,11 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     onKeyAction = { key, action ->
                         val dsv = displaySurfaceView ?: return@ModifierKeys
                         val down = action == KeyEvent.ACTION_DOWN
-                        val scanCode: Short? =
-                            when (key) {
-                                ExtraKey.CTRL -> 0x1D
-                                ExtraKey.ALT -> 0x38
-                                ExtraKey.HOME -> 0x66
-                                ExtraKey.END -> 0x6b
-                                ExtraKey.PGUP -> 0x68
-                                ExtraKey.PGDN -> 0x6d
-                                else ->
-                                    key.keyCode?.let {
-                                        dsv.convertAndroidKeyCodeToEvdevScanCode(it)
-                                    }
+                        key.keyCode?.let {
+                            val scanCode = dsv.convertAndroidKeyCodeToEvdevScanCode(it)
+                            if (scanCode != (-1).toShort()) {
+                                vm.sendKeyEvent(scanCode, down)
                             }
-
-                        if (scanCode != null && scanCode != (-1).toShort()) {
-                            vm.sendKeyEvent(scanCode, down)
                         }
                     }
                 )
