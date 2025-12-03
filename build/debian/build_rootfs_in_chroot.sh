@@ -21,23 +21,19 @@ install_packages() {
 		avahi-utils
 		libbpf-tools
 		libnss-mdns
+		libvulkan1
+		mesa-vulkan-drivers
 		procps
 		pulseaudio
 		systemd-zram-generator
-	)
-	INSTALL_PACKAGES_BOOKWORM_BACKPORTS=(
+		vulkan-tools
 		weston
 		xwayland
-		mesa-vulkan-drivers
-		libvulkan1
-		vulkan-tools
 	)
 
-	echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list.d/bookworm-backports.list
 	apt update || apt update
 	DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
 	apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
-	apt install --no-install-recommends -t bookworm-backports -y "${INSTALL_PACKAGES_BOOKWORM_BACKPORTS[@]}"
 }
 
 # TODO: Install ttyd from debian package after it picks up our patches
