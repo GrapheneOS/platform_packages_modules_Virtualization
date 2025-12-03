@@ -22,6 +22,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
+import android.view.inputmethod.InputMethodManager
 import android.webkit.ClientCertRequest
 import android.webkit.ConsoleMessage
 import android.webkit.SslErrorHandler
@@ -78,6 +79,18 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val url = getTerminalServiceUrl(ipAddress, port)
         Log.d("TtydView", "Loading URL: ${url.toString()}")
         loadUrl(url.toString())
+    }
+
+    fun showSoftInput() {
+        if (requestFocus()) {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(this, 0)
+        }
+    }
+
+    fun hideSoftInput() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
     private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {

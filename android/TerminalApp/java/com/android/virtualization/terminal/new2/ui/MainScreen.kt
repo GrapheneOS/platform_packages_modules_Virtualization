@@ -76,7 +76,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = context as Activity
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(uiState) {
@@ -84,8 +84,7 @@ fun MainScreen(viewModel: MainViewModel) {
         when (state) {
             is MainUiState.Ready -> viewModel.startVm()
             is MainUiState.Stopped -> activity?.finish()
-            is MainUiState.Error ->
-                handleError(context, activity, snackbarHostState, viewModel, state)
+            is MainUiState.Error -> handleError(activity, snackbarHostState, viewModel, state)
             else -> {}
         }
     }
@@ -143,7 +142,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         if (isDisplayActive) {
                             DisplayScreen()
                         } else if (selectedTabId != null) {
-                            TerminalScreen(state.address, state.port, selectedTabId!!)
+                            TerminalScreen(state.address, state.port, selectedTabId!!, viewModel)
                         }
                     }
                 }
@@ -212,8 +211,7 @@ fun BootingScreen() {
 }
 
 private suspend fun handleError(
-    context: Context,
-    activity: Activity?,
+    activity: Activity,
     snackbarHostState: SnackbarHostState,
     viewModel: MainViewModel,
     state: MainUiState.Error,
@@ -223,28 +221,26 @@ private suspend fun handleError(
             MainUiState.ErrorHandler.CheckNetwork ->
                 Triple(
                     R.string.installer_error_no_wifi,
-                    context.getString(R.string.action_settings),
-                    { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
+                    activity.getString(R.string.action_settings),
+                    { activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
                 )
             MainUiState.ErrorHandler.Retry ->
-                Triple(R.string.installer_error_unknown, "Retry", { viewModel.installVm() })
+                Triple(R.string.installer_error_unknown, "Retry", { viewModel.retryCheck() })
             is MainUiState.ErrorHandler.ReportBug ->
                 Triple(
                     R.string.vm_error_message,
-                    context.getString(R.string.error_button_report_bug),
+                    activity.getString(R.string.error_button_report_bug),
                     {
-                        if (activity != null) {
-                            val error = handler.error
-                            val exception = error as? Exception ?: Exception(error)
-                            BetterBugLauncher.launchBetterBugActivity(activity, exception)
-                        }
+                        val error = handler.error
+                        val exception = error as? Exception ?: Exception(error)
+                        BetterBugLauncher.launchBetterBugActivity(activity, exception)
                     },
                 )
         }
 
     val result =
         snackbarHostState.showSnackbar(
-            message = context.getString(messageId),
+            message = activity.getString(messageId),
             actionLabel = actionLabel,
             duration = SnackbarDuration.Indefinite,
         )
