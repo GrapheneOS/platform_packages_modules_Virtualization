@@ -17,7 +17,7 @@
 //! Wraps lower level APIs so they can be mocked for unit tests.
 
 /// Path related wrappers.
-#[cfg_attr(test, mockall::automock)]
+#[cfg_attr(enable_mock, mockall::automock)]
 pub mod paths {
     use std::path::PathBuf;
 
@@ -28,19 +28,48 @@ pub mod paths {
     }
 }
 /// A wrapper for fsverity.
-#[cfg_attr(test, mockall::automock)]
+#[cfg_attr(enable_mock, mockall::automock)]
 pub mod fsverity {
+    use anyhow::{anyhow, Context, Result};
+    use authfs_fsverity_metadata as fsvmeta;
+    use std::convert::TryInto;
+    use std::fs;
     use std::io;
-    use std::os::unix::io::BorrowedFd;
+    use std::os::unix::io::{AsRawFd, BorrowedFd};
+
     /// Wraps fsverity::enable.
     /// Needless lifetimes are to satisfy mockall.
     #[allow(clippy::needless_lifetimes)]
     pub fn enable<'a>(fd: BorrowedFd<'a>) -> io::Result<()> {
         fsverity::enable(fd)
     }
+
+    /// Wraps fsverity::read_digest
+    /// Needless lifetimes are to satisfy mockall.
+    #[allow(clippy::needless_lifetimes)]
+    pub fn read_digest<'a>(fd: BorrowedFd<'a>) -> io::Result<[u8; 32]> {
+        fsverity::read_sha256_digest(fd)
+    }
+
+    /// If an fsv meta for the file exists implicitly trust it
+    /// and return the fsverity sha256-digest from that file.
+    #[allow(clippy::needless_lifetimes)]
+    pub fn read_digest_from_fsv_meta<'a>(fd: BorrowedFd<'a>) -> Result<[u8; 32]> {
+        let raw_fd = fd.as_raw_fd();
+        let fd_path = format!("/proc/self/fd/{}", raw_fd);
+        let fd_path = fs::read_link(&fd_path)
+            .with_context(|| format!("Failed to read link for {}", fd_path))?;
+
+        let fsv_meta = {
+            let fsv_meta_path = fsvmeta::get_fsverity_metadata_path(&fd_path);
+            let fsv_meta_file = fs::File::open(&fsv_meta_path)?;
+            fsvmeta::parse_fsverity_metadata(fsv_meta_file)?
+        };
+        fsv_meta.digest.try_into().map_err(|_| anyhow!("Unexpected vector length"))
+    }
 }
 /// A wrapper for rstutils::system_properties.
-#[cfg_attr(test, mockall::automock)]
+#[cfg_attr(enable_mock, mockall::automock)]
 pub mod system_properties {
     /// Wraps rustutils::android::system_properties::write
     pub fn write(
@@ -74,7 +103,7 @@ pub mod system_properties {
 /// A wrapper for minijail.
 pub mod minijail {
     use libc::pid_t;
-    #[cfg(test)]
+    #[cfg(enable_mock)]
     use mockall::automock;
     use std::os::unix::io::RawFd;
     use std::path::Path;
@@ -85,14 +114,14 @@ pub mod minijail {
         pub real_command: Option<minijail::Command>,
 
         /// Used by unit tests to track Commands across different expectations.
-        #[cfg(test)]
+        #[cfg(enable_mock)]
         pub tag: u32,
     }
 
     /// Wraps minijail::Command.
     pub struct CommandFactory;
 
-    #[cfg_attr(test, automock, allow(dead_code))]
+    #[cfg_attr(enable_mock, automock, allow(dead_code))]
     #[allow(clippy::ptr_arg)]
     impl CommandFactory {
         /// Wraps minijail::Command::new_for_path, generics were stripped
@@ -106,10 +135,10 @@ pub mod minijail {
             let real_command =
                 Some(minijail::Command::new_for_path(path, keep_fds, args, Some(env_vars))?);
 
-            #[cfg(test)]
+            #[cfg(enable_mock)]
             return Ok(Command { real_command, tag: Default::default() });
 
-            #[cfg(not(test))]
+            #[cfg(not(enable_mock))]
             Ok(Command { real_command })
         }
     }
@@ -118,7 +147,7 @@ pub mod minijail {
     pub struct Minijail {
         real_mini_jail: minijail::Minijail,
     }
-    #[cfg_attr(test, automock, allow(dead_code))]
+    #[cfg_attr(enable_mock, automock, allow(dead_code))]
     impl Minijail {
         /// Wraps minijail::Minijail::new.
         pub fn new() -> minijail::Result<Self> {
@@ -151,5 +180,33 @@ pub mod minijail {
         pub fn wait(&self) -> minijail::Result<()> {
             self.real_mini_jail.wait()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::os::unix::io::AsFd;
+
+    #[test]
+    fn test_fsverity_digest_match() {
+        // The `data` property in Android.bp makes these files available
+        // in the test's execution directory.
+        let file = File::open("./testdata/input.4m").expect("Failed to open input.4m");
+        let fd = file.as_fd();
+
+        // 1. Enable fs-verity on the file. This should succeed.
+        fsverity::enable(fd).expect("Failed to enable fs-verity");
+
+        // 2. Read the digest directly from the kernel. This should also succeed.
+        let kernel_digest = fsverity::read_digest(fd).expect("Failed to read digest from kernel");
+
+        // 3. Read the digest from the .fsv_meta file. This should also succeed.
+        let meta_digest = fsverity::read_digest_from_fsv_meta(fd)
+            .expect("Failed to read digest from fsv_meta file");
+
+        // 4. Verify that the digests match.
+        assert_eq!(kernel_digest, meta_digest, "Kernel digest and fsv_meta digest do not match!");
     }
 }
