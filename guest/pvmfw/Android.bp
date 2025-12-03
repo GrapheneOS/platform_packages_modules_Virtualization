@@ -11,6 +11,27 @@ rust_ffi_static {
     ],
 }
 
+PLATFORM_SECURITY_PATCH_TIMESTAMP_STRING = select(soong_config_variable("ANDROID", "platform_security_patch_timestamp_string"), {
+    any @ val: val,
+})
+
+genrule {
+    name: "platform_security_patch_timestamp_rs",
+    out: ["lib.rs"],
+    cmd: "(" +
+        "    echo '#![no_std]';" +
+        "    echo '#![allow(missing_docs)]';" +
+        "    echo 'pub const TIMESTAMP: u64 = " + PLATFORM_SECURITY_PATCH_TIMESTAMP_STRING + ";'" +
+        ") > $(out)",
+}
+
+rust_library_rlib {
+    name: "libplatform_security_patch_timestamp",
+    crate_name: "platform_security_patch_timestamp",
+    defaults: ["vmbase_rlib_defaults"],
+    srcs: [":platform_security_patch_timestamp_rs"],
+}
+
 rust_defaults {
     name: "libpvmfw.defaults",
     crate_name: "pvmfw",
@@ -31,9 +52,9 @@ rust_defaults {
         "libhypervisor_backends",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
+        "libplatform_security_patch_timestamp",
         "libpvmfw_avb_nostd",
         "libpvmfw_fdt_template",
-        "libservice_vm_version",
         "libstatic_assertions",
         "libtinyvec_nostd",
         "libuuid_nostd",

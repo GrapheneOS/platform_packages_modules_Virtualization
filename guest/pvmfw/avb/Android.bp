@@ -76,6 +76,7 @@ rust_test {
         "libavb_rs_nostd",
         "libbssl_crypto",
         "libhex",
+        "libplatform_security_patch_timestamp",
         "libpvmfw_avb_nostd",
     ],
     enabled: false,
