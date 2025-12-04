@@ -123,7 +123,7 @@ install_prerequisites() {
 	DEBIAN_FRONTEND=noninteractive \
 		apt install --no-install-recommends --assume-yes "${packages[@]}"
 
-	if [ ! -f $"HOME"/.cargo/bin/cargo ]; then
+	if [ ! -f "$HOME"/.cargo/bin/cargo ]; then
 		git clone https://github.com/rust-lang/rustup.git ${workdir}/rustup
 		${workdir}/rustup/rustup-init.sh -y
 	fi
