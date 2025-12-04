@@ -21,6 +21,7 @@ use crate::instance::EntryBody;
 use crate::instance::Error as InstanceError;
 use crate::instance::{get_recorded_entry, record_instance_entry};
 use crate::PUBLIC_KEY;
+use bssl_crypto::digest::Sha512;
 use diced_open_dice::Hidden;
 use libfdt::Fdt;
 use log::{error, info, warn};
@@ -79,7 +80,7 @@ pub fn perform_rollback_protection(
             error!("Failed to initialize PCI: {:?}", e);
             RebootReason::InternalError
         })?;
-        perform_legacy_rollback_protection(pci_root, dice_inputs, cdi_seal, instance_hash)
+        perform_legacy_rollback_protection(pci_root, dice_inputs, cdi_seal)
     } else {
         force_new_instance()
     }
@@ -175,7 +176,6 @@ fn perform_legacy_rollback_protection(
     mut pci_root: PciRoot<impl ConfigurationAccess>,
     dice_inputs: &PartialInputs,
     cdi_seal: &[u8],
-    instance_hash: Option<Hidden>,
 ) -> Result<(bool, Hidden, bool), RebootReason> {
     info!("Fallback to instance.img based rollback checks");
     let result = get_recorded_entry(&mut pci_root, cdi_seal);
@@ -187,17 +187,13 @@ fn perform_legacy_rollback_protection(
         error!("Failed to get entry from instance.img: {e}");
         RebootReason::InternalError
     })?;
+
     let (new_instance, salt) = if let Some(entry) = recorded_entry {
         check_dice_measurements_match_entry(dice_inputs, &entry)?;
-        let salt = instance_hash.unwrap_or(entry.salt);
+        let salt = entry.salt;
         (false, salt)
     } else {
-        // New instance!
-        let salt = instance_hash.map_or_else(rand::random_array, Ok).map_err(|e| {
-            error!("Failed to generated instance.img salt: {e}");
-            RebootReason::InternalError
-        })?;
-
+        let salt = random_hidden_input()?;
         let entry = EntryBody::new(dice_inputs, &salt);
         record_instance_entry(&entry, cdi_seal, &mut instance_img, header_index).map_err(|e| {
             error!("Failed to get recorded entry in instance.img: {e}");
@@ -205,17 +201,25 @@ fn perform_legacy_rollback_protection(
         })?;
         (true, salt)
     };
-    Ok((new_instance, salt, false))
+
+    const HIDDEN_INPUT_MECHANISM_RNG_BASED: &[u8] = b"RNG_BASED";
+    let mut hasher = Sha512::new();
+    hasher.update(HIDDEN_INPUT_MECHANISM_RNG_BASED);
+    hasher.update(&salt);
+    let salt_for_dice_hidden_input = hasher.digest();
+    Ok((new_instance, salt_for_dice_hidden_input, false))
 }
 
 fn force_new_instance() -> Result<(bool, Hidden, bool), RebootReason> {
     info!("No rollback protection mechanism available: generating a new instance");
-    let salt = rand::random_array().map_err(|e| {
+    Ok((true, random_hidden_input()?, false))
+}
+
+fn random_hidden_input() -> Result<Hidden, RebootReason> {
+    rand::random_array().map_err(|e| {
         error!("Failed to generate salt: {e}");
         RebootReason::InternalError
-    })?;
-
-    Ok((true, salt, false))
+    })
 }
 
 fn check_dice_measurements_match_entry(
