@@ -48,7 +48,7 @@ use std::fs::{canonicalize, read_to_string, File, OpenOptions};
 use std::io::{self, Read, Seek};
 use std::mem;
 use std::num::{NonZeroU16, NonZeroU32};
-use std::os::unix::io::{AsFd, AsRawFd, IntoRawFd, OwnedFd};
+use std::os::unix::io::{AsFd, AsRawFd, FromRawFd, IntoRawFd, OwnedFd};
 use std::os::unix::process::CommandExt;
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
@@ -2055,6 +2055,23 @@ impl VmInstance {
         ensure!(success, "crosvm_unregister_memory failed");
         shared_memory_handler_guard.remove(memory_id);
         Ok(())
+    }
+
+    /// Returns the vm fd of this VM.
+    pub fn get_vm_fd(&self) -> Result<OwnedFd> {
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        // TODO(ioffe): crosvm_control should have HYPERVISOR_UNSPECIFIED?
+        let mut vm_desc = crosvm_control::VmDescriptorFfi {
+            hypervisor: crosvm_control::HYPERVISOR_KVM,
+            descriptor: crosvm_control::HypervisorSpecificVmDescriptorFfi { vm_fd: -1 },
+        };
+        // SAFETY: Pointers are valid for the lifetime of the call.
+        let success = unsafe {
+            crosvm_control::crosvm_get_vm_descriptor(socket_path_cstring.as_ptr(), &mut vm_desc)
+        };
+        ensure!(success, "crosvm_get_vm_descriptor failed");
+        // SAFETY: `vm_desc.descriptor.vm_fd` is a valid vm fd.
+        unsafe { Ok(OwnedFd::from_raw_fd(vm_desc.descriptor.vm_fd)) }
     }
 }
 
