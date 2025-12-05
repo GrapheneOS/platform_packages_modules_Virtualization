@@ -46,6 +46,9 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         )
     val uiState: StateFlow<TerminalUiState> = _uiState.asStateFlow()
 
+    private val _title = MutableStateFlow<String>("Terminal")
+    val title: StateFlow<String> = _title.asStateFlow()
+
     // TODO: explain reason for this
     private val context: Context by lazy {
         val dm = application.getSystemService<DisplayManager>(DisplayManager::class.java)
@@ -62,6 +65,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 TtydView(context).apply {
                     onTerminalReady = { _uiState.value = TerminalUiState.Ready }
                     onTerminalDisconnected = { _uiState.value = TerminalUiState.Disconnected }
+                    onTitleChanged = { title -> _title.value = title }
                     load(address, port)
                 }
         }

@@ -43,6 +43,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     var onTerminalReady: (() -> Unit)? = null
     var onTerminalDisconnected: (() -> Unit)? = null
+    var onTitleChanged: ((String) -> Unit)? = null
 
     init {
         settings.domStorageEnabled = true
@@ -126,6 +127,15 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 override fun onConsoleMessage(msg: ConsoleMessage?): Boolean {
                     Log.d("TTYD", "${msg?.message()}")
                     return true
+                }
+
+                override fun onReceivedTitle(view: WebView?, title: String?) {
+                    super.onReceivedTitle(view, title)
+                    title?.let { originalTitle ->
+                        val displayedTitle =
+                            originalTitle.substringBeforeLast(" | login -f droid (")
+                        onTitleChanged?.invoke(displayedTitle)
+                    }
                 }
             }
     }
