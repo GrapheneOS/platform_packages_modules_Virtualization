@@ -22,7 +22,7 @@ cd "${KOKORO_ARTIFACTS_DIR}/git/avf/build/debian/"
 
 # Sibling docker would be launched from host, so provide host's path for mount.
 AVF_BUILD_TOP="${KOKORO_HOST_ROOT_DIR}/src/git/avf"
-BUILD_ID="${KOKORO_JOB_NAME}-${KOKORO_BUILD_NUMBER}-$(date --utc)"
+BUILD_ID="${KOKORO_JOB_NAME}-${KOKORO_BUILD_NUMBER}-$(date --utc +'%a %b %d %H:%M:%S %Z %Y')"
 sudo ./build_in_container.sh $@ -a ${arch} -t ${AVF_BUILD_TOP} -w -b "${BUILD_ID}"
 
 sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR}
