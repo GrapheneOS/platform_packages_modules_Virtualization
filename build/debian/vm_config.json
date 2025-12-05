@@ -39,5 +39,6 @@
     "auto_memory_balloon": true,
     "gpu": {
         "backend": "2d"
-    }
+    },
+    "boot_timeout_secs": 20
 }

@@ -7,7 +7,7 @@ cat << EOF > /home/droid/weston.env
 MESA_VK_WSI_DEBUG=sw,linear
 XWAYLAND_NO_GLAMOR=1
 EOF
-sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty7 sleep 1d
+sudo systemd-run --collect -E XDG_SESSION_TYPE=wayland --uid=1000 -p PAMName=login -p TTYPath=/dev/tty1 sleep 1d
 (sleep 3s; systemctl --user start weston)& disown
 export DISPLAY=:0
 export MESA_LOADER_DRIVER_OVERRIDE=zink
