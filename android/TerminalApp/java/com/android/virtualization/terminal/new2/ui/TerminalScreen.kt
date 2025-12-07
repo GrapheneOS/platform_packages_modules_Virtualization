@@ -133,6 +133,7 @@ private fun TerminalTab(
     tabViewModel: TerminalViewModel,
 ) {
     var showCloseDialog by remember { mutableStateOf(false) }
+    val title by tabViewModel.title.collectAsStateWithLifecycle()
 
     if (showCloseDialog) {
         AlertDialog(
@@ -166,7 +167,7 @@ private fun TerminalTab(
                     )
                     .padding(horizontal = 8.dp, vertical = 12.dp),
         ) {
-            Text(tab.title)
+            Text(title)
             IconButton(
                 onClick = { showCloseDialog = true },
                 modifier = Modifier.size(24.dp).padding(start = 12.dp),

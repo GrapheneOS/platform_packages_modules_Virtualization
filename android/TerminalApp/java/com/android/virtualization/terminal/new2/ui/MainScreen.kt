@@ -16,37 +16,25 @@
 package com.android.virtualization.terminal.new2.ui
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.provider.Settings
-import android.text.format.Formatter
 import android.view.WindowManager
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -68,9 +55,6 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -128,11 +112,6 @@ fun MainScreen(viewModel: MainViewModel) {
             insetsController.show(WindowInsetsCompat.Type.systemBars())
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
-    }
-
-    BackHandler(enabled = displayState is DisplayState.Fullscreen) {
-        // TODO: Show controller logic? Or exit fullscreen?
-        // viewModel.exitFullscreen()
     }
 
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
@@ -200,21 +179,6 @@ fun MainScreen(viewModel: MainViewModel) {
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 DisplayScreen(viewModel = viewModel)
-                                if (
-                                    currentDisplayState is DisplayState.Fullscreen &&
-                                        currentDisplayState.controller
-                                ) {
-                                    DisplayController(
-                                        isDisplayActive = true,
-                                        onDisplayToggle = { viewModel.toggleDisplay() },
-                                        onFullscreenToggle = { viewModel.exitFullscreen() },
-                                        isFullscreen = true,
-                                        onKeyboardToggle = {
-                                            viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
-                                        },
-                                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-                                    )
-                                }
                             }
                         } else if (selectedTabId != null) {
                             TerminalScreen(state.address, state.port, selectedTabId!!, viewModel)
@@ -232,49 +196,6 @@ fun MainScreen(viewModel: MainViewModel) {
 fun SplashScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-fun InstallStartScreen(totalSizeBytes: Long, onInstallClick: (Boolean) -> Unit) {
-    var wifiOnly by remember { mutableStateOf(true) }
-    val context = LocalContext.current
-    val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = stringResource(R.string.installer_desc_text_format, formattedSize))
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = wifiOnly, onCheckedChange = { wifiOnly = it })
-            Text(text = stringResource(R.string.installer_wait_for_wifi_checkbox_text))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { onInstallClick(wifiOnly) }) {
-            Text(text = stringResource(R.string.installer_install_button_enabled_text))
-        }
-    }
-}
-
-@Composable
-fun InstallProgressScreen(
-    progressFlow: StateFlow<Long>,
-    totalBytes: Long,
-    onCancelClick: () -> Unit,
-) {
-    val currentBytes by progressFlow.collectAsStateWithLifecycle()
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        val progress = if (totalBytes > 0) currentBytes.toFloat() / totalBytes else 0f
-        LinearProgressIndicator(progress = { progress })
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onCancelClick) { Text(text = stringResource(android.R.string.cancel)) }
     }
 }
 
@@ -322,36 +243,4 @@ private suspend fun handleError(
     if (result == SnackbarResult.ActionPerformed) {
         action()
     }
-}
-
-private fun onInstallClick(
-    context: Context,
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    viewModel: MainViewModel,
-    wifiOnly: Boolean,
-) {
-    if (wifiOnly && !isWifiConnected(context)) {
-        scope.launch {
-            val result =
-                snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.installer_error_no_wifi),
-                    actionLabel = context.getString(R.string.action_settings),
-                    duration = SnackbarDuration.Short,
-                )
-            if (result == SnackbarResult.ActionPerformed) {
-                context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-            }
-        }
-    } else {
-        viewModel.installVm()
-    }
-}
-
-private fun isWifiConnected(context: Context): Boolean {
-    val connectivityManager =
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val network = connectivityManager.activeNetwork ?: return false
-    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-    return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
 }

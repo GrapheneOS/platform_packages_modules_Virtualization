@@ -20,7 +20,10 @@ import android.view.KeyEvent
 import android.view.SurfaceView
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -50,6 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -61,7 +66,9 @@ import com.android.virtualization.terminal.DisplaySurfaceView
 import com.android.virtualization.terminal.InputForwarder
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
+import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -141,6 +148,55 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                 )
             }
         }
+
+        val displayState by viewModel.displayState.collectAsStateWithLifecycle()
+        if (displayState is DisplayState.Fullscreen) {
+            Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                DisplayControllerOverlay(viewModel = viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayControllerOverlay(viewModel: MainViewModel) {
+    var controllerVisible by remember { mutableStateOf(true) }
+    var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(controllerVisible, lastInteractionTime) {
+        if (controllerVisible) {
+            delay(2000)
+            controllerVisible = false
+        }
+    }
+
+    BackHandler {
+        if (controllerVisible) {
+            viewModel.exitFullscreen()
+        } else {
+            controllerVisible = true
+            lastInteractionTime = System.currentTimeMillis()
+        }
+    }
+
+    AnimatedVisibility(visible = controllerVisible, enter = fadeIn(), exit = fadeOut()) {
+        DisplayController(
+            isDisplayActive = true,
+            onDisplayToggle = { viewModel.toggleDisplay() },
+            onFullscreenToggle = { viewModel.exitFullscreen() },
+            isFullscreen = true,
+            onKeyboardToggle = { viewModel.setIsImeVisible(!viewModel.isImeVisible.value) },
+            modifier =
+                Modifier.pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                            controllerVisible = true
+                            lastInteractionTime = System.currentTimeMillis()
+                        }
+                    }
+                },
+        )
     }
 }
 
