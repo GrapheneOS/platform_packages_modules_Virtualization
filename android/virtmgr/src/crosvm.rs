@@ -1387,17 +1387,27 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
     }
 }
 
+/// A per-VM unique id representing the memory shared with guest.
+/// This id is managed by virtmngr and has 1:1 mapping to GuestRegionId.
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub struct SharedMemoryId(pub i32);
+
+/// A unique id representing the memory shared with guest.
+/// This id is managed by crosvm.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct GuestRegionId(pub u64);
+
 // Information about memory (e.g. dmabuf) shared with guest.
 struct SharedMemoryInfo {
     // A per-VM unique id representing the shared memory on the virtmngr side.
     // This id is returned from the `VmInstance::add_memory` API and returned back to the VM owner.
     // The VM owner can use this id later to remove the memory from guest.
     // See `add_memory` and `remove_memory` APIs of the `VmInstance`.
-    id: i32,
+    id: SharedMemoryId,
     // Unique id representing the shared memory from the crosvm POV.
     // This id can be passed to the `crosvm_control::crosvm_unregister_memory` API to remove the
     // memory from guest.
-    guest_region_id: u64,
+    guest_region_id: GuestRegionId,
 }
 
 // Manages all the memory shared with guest.
@@ -1412,25 +1422,25 @@ impl SharedMemoryHandler {
     }
 
     // TODO(b/457714108): consider having an opaque type instead of plain i32 here.
-    fn add(&mut self, guest_region_id: u64) -> i32 {
-        let id = self.last_id;
+    fn add(&mut self, guest_region_id: GuestRegionId) -> SharedMemoryId {
+        let id = SharedMemoryId(self.last_id);
         self.last_id = self.last_id.checked_add(1).expect("unexpected overflow");
         self.mem_infos.push(SharedMemoryInfo { id, guest_region_id });
         id
     }
 
-    fn find(&self, id: i32) -> Option<u64> {
-        self.mem_infos.iter().find(|m| m.id == id).map(|m| m.guest_region_id)
+    fn find(&self, id: &SharedMemoryId) -> Option<GuestRegionId> {
+        self.mem_infos.iter().find(|m| m.id == *id).map(|m| m.guest_region_id)
     }
 
-    fn remove(&mut self, id: i32) -> bool {
-        match self.mem_infos.iter().position(|m| m.id == id) {
+    fn remove(&mut self, id: &SharedMemoryId) -> bool {
+        match self.mem_infos.iter().position(|m| m.id == *id) {
             Some(idx) => {
                 self.mem_infos.swap_remove(idx);
                 true
             }
             None => {
-                error!("failed to find shared_memory_info with id {id}");
+                error!("failed to find shared_memory_info with id {id:#?}");
                 false
             }
         }
@@ -2016,7 +2026,7 @@ impl VmInstance {
         range_start: u64,
         range_end: u64,
         cacheable: bool,
-    ) -> Result<i32> {
+    ) -> Result<SharedMemoryId> {
         let mut shared_memory_handler_guard = self.shared_memory_handler.lock().unwrap();
         let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
         let memory_args = crosvm_control::AddMemoryArgs {
@@ -2038,19 +2048,22 @@ impl VmInstance {
             )
         };
         ensure!(success, "crosvm_register_memory failed");
-        Ok(shared_memory_handler_guard.add(guest_region_id))
+        Ok(shared_memory_handler_guard.add(GuestRegionId(guest_region_id)))
     }
 
     /// Removes memory from the guest VM.
-    pub fn remove_memory(&self, memory_id: i32) -> Result<()> {
+    pub fn remove_memory(&self, memory_id: &SharedMemoryId) -> Result<()> {
         let mut shared_memory_handler_guard = self.shared_memory_handler.lock().unwrap();
         let guest_region_id = shared_memory_handler_guard
             .find(memory_id)
-            .ok_or_else(|| anyhow!("can't find shared memory with id {memory_id}"))?;
+            .ok_or_else(|| anyhow!("can't find shared memory with id {memory_id:#?}"))?;
         let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
         // SAFETY: Pointer is valid for the lifetime of the call.
         let success = unsafe {
-            crosvm_control::crosvm_unregister_memory(socket_path_cstring.as_ptr(), guest_region_id)
+            crosvm_control::crosvm_unregister_memory(
+                socket_path_cstring.as_ptr(),
+                guest_region_id.0,
+            )
         };
         ensure!(success, "crosvm_unregister_memory failed");
         shared_memory_handler_guard.remove(memory_id);
@@ -2511,40 +2524,40 @@ mod tests {
     fn test_shared_memory_handler() {
         let mut handler = SharedMemoryHandler::new();
 
-        assert_eq!(handler.find(1), None);
+        assert_eq!(handler.find(&SharedMemoryId(1)), None);
 
-        let id1 = handler.add(37);
-        let id2 = handler.add(73);
-        assert!(id1 < id2);
+        let id1 = handler.add(GuestRegionId(37));
+        let id2 = handler.add(GuestRegionId(73));
+        assert!(id1.0 < id2.0);
 
-        assert_eq!(handler.find(id1), Some(37));
-        assert_eq!(handler.find(id2), Some(73));
-        assert_eq!(handler.find(id2 + 1), None);
+        assert_eq!(handler.find(&id1), Some(GuestRegionId(37)));
+        assert_eq!(handler.find(&id2), Some(GuestRegionId(73)));
+        assert_eq!(handler.find(&SharedMemoryId(id2.0 + 1)), None);
 
-        assert!(handler.remove(id1));
-        assert_eq!(handler.find(id1), None);
-        assert_eq!(handler.find(id2), Some(73));
+        assert!(handler.remove(&id1));
+        assert_eq!(handler.find(&id1), None);
+        assert_eq!(handler.find(&id2), Some(GuestRegionId(73)));
 
         // Trying to remove id1 again should fail.
-        assert!(!handler.remove(id1));
+        assert!(!handler.remove(&id1));
 
-        let id3 = handler.add(53);
-        assert!(id2 < id3);
+        let id3 = handler.add(GuestRegionId(53));
+        assert!(id2.0 < id3.0);
 
-        assert_eq!(handler.find(id1), None);
-        assert_eq!(handler.find(id2), Some(73));
-        assert_eq!(handler.find(id3), Some(53));
+        assert_eq!(handler.find(&id1), None);
+        assert_eq!(handler.find(&id2), Some(GuestRegionId(73)));
+        assert_eq!(handler.find(&id3), Some(GuestRegionId(53)));
 
-        assert!(handler.remove(id3));
+        assert!(handler.remove(&id3));
 
-        assert_eq!(handler.find(id1), None);
-        assert_eq!(handler.find(id2), Some(73));
-        assert_eq!(handler.find(id3), None);
+        assert_eq!(handler.find(&id1), None);
+        assert_eq!(handler.find(&id2), Some(GuestRegionId(73)));
+        assert_eq!(handler.find(&id3), None);
 
-        assert!(handler.remove(id2));
+        assert!(handler.remove(&id2));
 
-        assert_eq!(handler.find(id1), None);
-        assert_eq!(handler.find(id2), None);
-        assert_eq!(handler.find(id3), None);
+        assert_eq!(handler.find(&id1), None);
+        assert_eq!(handler.find(&id2), None);
+        assert_eq!(handler.find(&id3), None);
     }
 }
