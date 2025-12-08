@@ -14,8 +14,6 @@
 
 //! Error relating to memory management.
 
-use hypervisor_backends::Error as HypervisorError;
-
 /// Errors for MemoryTracker operations.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum MemoryTrackerError {
@@ -51,7 +49,7 @@ pub enum MemoryTrackerError {
     FailedToUnmap,
     /// Error from the interaction with the hypervisor.
     #[error("{0}")]
-    Hypervisor(HypervisorError),
+    Hypervisor(#[from] hypervisor_backends::Error),
     /// Failure to set `SHARED_MEMORY`.
     #[error("Failed to set SHARED_MEMORY")]
     SharedMemorySetFailure,
@@ -73,10 +71,4 @@ pub enum MemoryTrackerError {
     /// The MMIO_GUARD granule used by the hypervisor is not supported.
     #[error("Unsupported MMIO guard granule: {0}")]
     UnsupportedMmioGuardGranule(usize),
-}
-
-impl From<HypervisorError> for MemoryTrackerError {
-    fn from(e: HypervisorError) -> Self {
-        Self::Hypervisor(e)
-    }
 }

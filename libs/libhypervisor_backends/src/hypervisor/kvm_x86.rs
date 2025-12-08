@@ -16,7 +16,6 @@
 
 use super::{Hypervisor, MemSharingHypervisor};
 use crate::{mem::SIZE_4KB, Error, Result};
-use core::fmt::{self, Display, Formatter};
 
 const KVM_HC_PKVM_OP: u32 = 20;
 const PKVM_GHC_SHARE_MEM: u32 = KVM_HC_PKVM_OP + 1;
@@ -30,13 +29,16 @@ const KVM_EINVAL: i64 = -22;
 pub const KVM_CPUID_SIGNATURE: u32 = 0x40000000;
 
 /// Error from a KVM HVC call.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum KvmError {
     /// The call is not supported by the implementation.
+    #[error("KVM call not supported")]
     NotSupported,
     /// One of the call parameters has a non-supported value.
+    #[error("KVM call received non-supported value")]
     InvalidParameter,
     /// There was an unexpected return value.
+    #[error("Unknown return value from KVM {0} ({0:#x})")]
     Unknown(i64),
 }
 
@@ -53,16 +55,6 @@ impl From<i64> for KvmError {
 impl From<i32> for KvmError {
     fn from(value: i32) -> Self {
         i64::from(value).into()
-    }
-}
-
-impl Display for KvmError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::NotSupported => write!(f, "KVM call not supported"),
-            Self::InvalidParameter => write!(f, "KVM call received non-supported value"),
-            Self::Unknown(e) => write!(f, "Unknown return value from KVM {e} ({e:#x})"),
-        }
     }
 }
 
