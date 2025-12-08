@@ -1,0 +1,20 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_binary_host {
+    name: "linux_vm_manager",
+    crate_name: "linux_vm_manager",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    prefer_rlib: true,
+    rustlibs: [
+        "android.system.virtualmachineservice_non_microdroid-rust",
+        "libanyhow",
+        "libbinder_rs",
+        "liblog_rust",
+        "librpcbinder_rs",
+        "libvsock",
+    ],
+
+}
