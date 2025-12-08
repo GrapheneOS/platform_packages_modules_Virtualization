@@ -19,17 +19,24 @@ import android.content.Context
 import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.os.SystemProperties
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCallback
+import android.system.virtualmachine.VirtualMachineCustomImageConfig
 import android.system.virtualmachine.VirtualMachineException
 import android.system.virtualmachine.VirtualMachineManager
 import android.util.Log
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.CertificateUtils
 import com.android.virtualization.terminal.ConfigJson
+import com.android.virtualization.terminal.DisplayInfo
+import com.android.virtualization.terminal.GraphicsManager
+import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
+import java.nio.file.Files
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -49,7 +56,8 @@ object VmController {
         LoggingMutableStateFlow<VmState>(MutableStateFlow(VmState.Ready), "VmController")
     val vmState: StateFlow<VmState> = _vmState.asStateFlow()
 
-    private var virtualMachine: VirtualMachine? = null
+    var virtualMachine: VirtualMachine? = null
+        private set
 
     fun initialize(context: Context) {
         this.context = context.applicationContext
@@ -63,7 +71,7 @@ object VmController {
         }
     }
 
-    fun start() {
+    fun start(displayInfo: DisplayInfo) {
         if (_vmState.value is VmState.Running || _vmState.value is VmState.Starting) return
 
         val intent = Intent(context, VmService::class.java)
@@ -73,7 +81,15 @@ object VmController {
             try {
                 val image = InstalledImage.getDefault(context)
                 val json = ConfigJson.from(context, image.configPath)
-                val config = json.toConfigBuilder(context).build()
+                val configBuilder = json.toConfigBuilder(context)
+                val customImageConfigBuilder = json.toCustomImageConfigBuilder(context)
+
+                // Override config for Display
+                setDisplayConfig(customImageConfigBuilder, displayInfo)
+                setGpuConfig(context, customImageConfigBuilder)
+                configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
+
+                val config = configBuilder.build()
 
                 val vmm = context.getSystemService(VirtualMachineManager::class.java)!!
                 val vmName = config.customImageConfig!!.name!!
@@ -123,6 +139,56 @@ object VmController {
                 Log.e("VmController", "Failed to start VM", e)
                 _vmState.value = VmState.Error(e)
             }
+        }
+    }
+
+    private fun isGfxstreamEnabled(context: Context): Boolean {
+        if (
+            Build.isDebuggable() &&
+                Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))
+        ) {
+            return true
+        }
+        return GraphicsManager.getInstance(context).accelerationType ==
+            GraphicsManager.AccelerationType.Gfxstream
+    }
+
+    private fun setGpuConfig(context: Context, builder: VirtualMachineCustomImageConfig.Builder) {
+        if (isGfxstreamEnabled(context)) {
+            builder.addParam("gfxstream_enabled")
+            builder.setGpuConfig(
+                VirtualMachineCustomImageConfig.GpuConfig.Builder()
+                    .setBackend("gfxstream")
+                    .setRendererUseEgl(false)
+                    .setRendererUseGles(false)
+                    .setRendererUseGlx(false)
+                    .setRendererUseSurfaceless(true)
+                    .setRendererUseVulkan(true)
+                    .setContextTypes(arrayOf<String>("gfxstream-vulkan", "gfxstream-composer"))
+                    .setRendererFeatures("VulkanDisableCoherentMemoryAndEmulate:enabled")
+                    .build()
+            )
+        }
+    }
+
+    private fun setDisplayConfig(
+        builder: VirtualMachineCustomImageConfig.Builder,
+        displayInfo: DisplayInfo,
+    ) {
+        if (Flags.terminalGuiSupport()) {
+            builder
+                .setDisplayConfig(
+                    VirtualMachineCustomImageConfig.DisplayConfig.Builder()
+                        .setWidth(displayInfo.width)
+                        .setHeight(displayInfo.height)
+                        .setHorizontalDpi(displayInfo.dpi)
+                        .setVerticalDpi(displayInfo.dpi)
+                        .setRefreshRate(displayInfo.refreshRate)
+                        .build()
+                )
+                .useKeyboard(true)
+                .useMouse(true)
+                .useTouch(true)
         }
     }
 

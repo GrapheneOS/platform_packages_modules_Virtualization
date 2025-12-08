@@ -8,7 +8,10 @@ rust_bindgen {
     defaults: ["avf_build_flags_rust"],
     crate_name: "authfs_fsverity_metadata_bindgen",
     source_stem: "metadata_bindings",
-    apex_available: ["com.android.virt"],
+    apex_available: [
+        "com.android.compos",
+        "com.android.virt",
+    ],
 }
 
 rust_library {
@@ -23,5 +26,8 @@ rust_library {
         "libbssl_crypto",
     ],
     edition: "2021",
-    apex_available: ["com.android.virt"],
+    apex_available: [
+        "com.android.compos",
+        "com.android.virt",
+    ],
 }

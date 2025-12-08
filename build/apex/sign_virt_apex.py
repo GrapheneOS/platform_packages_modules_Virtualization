@@ -37,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+from collections import Counter
 from concurrent import futures
 
 # pylint: disable=line-too-long,consider-using-with
@@ -234,6 +235,42 @@ def AppendPropArgument(cmd, descriptors):
         result = re.match(r"(.+) -> '(.+)'", prop)
         cmd.append(result.group(1) + ":" + result.group(2))
 
+def append_list_section(title, items, output_list):
+    output_list.append(f'{title} ({len(items)} items):')
+    output_list.extend(
+        f'  {i}. {item}' for i, item in enumerate(sorted(items, key=str), 1)
+    )
+
+def print_descriptors_diff(
+    original_list, updated_list, context, descriptor_type
+):
+    # Convert to Counters to handle duplicates efficiently
+    orig_counts = Counter(original_list)
+    upd_counts = Counter(updated_list)
+
+    # Calculate differences using multiset math
+    common = list((orig_counts & upd_counts).elements())
+    missing = list((orig_counts - upd_counts).elements())
+    extra = list((upd_counts - orig_counts).elements())
+
+    assert missing or extra, "print_descriptors_diff called with no differences."
+
+    output_list = [
+        f"{descriptor_type} descriptor list mismatch for {context}:",
+        f"Original list had {len(original_list)} descriptors, "
+        f"updated list has {len(updated_list)}."
+    ]
+
+    if common:
+        append_list_section("\n* Common Descriptors", common, output_list)
+
+    if missing:
+        append_list_section("\n* Missing from Updated Descriptors", missing, output_list)
+
+    if extra:
+        append_list_section("\n* Extra in Updated Descriptors", extra, output_list)
+
+    raise AssertionError('\n'.join(output_list))
 
 def check_resigned_image_avb_info(image_path, original_info, original_descriptors, args):
     updated_info, updated_descriptors = AvbInfo(args, image_path)
@@ -261,10 +298,13 @@ def check_resigned_image_avb_info(image_path, original_info, original_descriptor
     # Verify the property descriptors
     original_prop_descriptors = sorted(find_all_values_by_key(original_descriptors, "Prop"))
     updated_prop_descriptors = sorted(find_all_values_by_key(updated_descriptors, "Prop"))
-    assert original_prop_descriptors == updated_prop_descriptors, \
-        f"Prop descriptors should be the same for {image_path}. " \
-        f"Original prop descriptors: {original_prop_descriptors}, " \
-        f"updated prop descriptors: {updated_prop_descriptors}"
+    if original_prop_descriptors != updated_prop_descriptors:
+        print_descriptors_diff(
+            original_prop_descriptors,
+            updated_prop_descriptors,
+            image_path,
+            descriptor_type='Property',
+        )
 
     assert original_info == updated_info, \
         f"Original info and updated info should be the same for {image_path}. " \

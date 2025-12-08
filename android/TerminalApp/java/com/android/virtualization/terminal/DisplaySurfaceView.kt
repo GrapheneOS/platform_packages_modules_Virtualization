@@ -23,15 +23,28 @@ import android.view.MotionEvent
 import android.view.SurfaceView
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 
 val HARDWARE_KEYCODE_SHIFT: Short = 42
 
-class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(context, attrs) {
+class DisplaySurfaceView(context: Context, attrs: AttributeSet?) : SurfaceView(context, attrs) {
     lateinit var virtualMachine: VirtualMachine
 
     init {
         setFocusable(true)
         setFocusableInTouchMode(true)
+    }
+
+    fun showSoftInput() {
+        if (requestFocus()) {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(this, 0)
+        }
+    }
+
+    fun hideSoftInput() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
     fun convertAndroidKeyCodeToEvdevScanCode(androidKeyCode: Int): Short {
@@ -64,6 +77,20 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(co
             KeyEvent.KEYCODE_Y -> 0x15 // EV_KEY_Y
             KeyEvent.KEYCODE_Z -> 0x2C // EV_KEY_Z
 
+            // Function Keys
+            KeyEvent.KEYCODE_F1 -> 0x3B // EV_KEY_F1
+            KeyEvent.KEYCODE_F2 -> 0x3C // EV_KEY_F2
+            KeyEvent.KEYCODE_F3 -> 0x3D // EV_KEY_F3
+            KeyEvent.KEYCODE_F4 -> 0x3E // EV_KEY_F4
+            KeyEvent.KEYCODE_F5 -> 0x3F // EV_KEY_F5
+            KeyEvent.KEYCODE_F6 -> 0x40 // EV_KEY_F6
+            KeyEvent.KEYCODE_F7 -> 0x41 // EV_KEY_F7
+            KeyEvent.KEYCODE_F8 -> 0x42 // EV_KEY_F8
+            KeyEvent.KEYCODE_F9 -> 0x43 // EV_KEY_F9
+            KeyEvent.KEYCODE_F10 -> 0x44 // EV_KEY_F10
+            KeyEvent.KEYCODE_F11 -> 0x57 // EV_KEY_F11
+            KeyEvent.KEYCODE_F12 -> 0x58 // EV_KEY_F12
+
             KeyEvent.KEYCODE_0 -> 0x0B // EV_KEY_0
             KeyEvent.KEYCODE_1 -> 0x02 // EV_KEY_1
             KeyEvent.KEYCODE_2 -> 0x03 // EV_KEY_2
@@ -92,6 +119,14 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet) : SurfaceView(co
             KeyEvent.KEYCODE_COMMA -> 0x33 // EV_KEY_COMMA
             KeyEvent.KEYCODE_PERIOD -> 0x34 // EV_KEY_DOT
             KeyEvent.KEYCODE_SLASH -> 0x35 // EV_KEY_SLASH
+
+            // Modifier and Navigation Keys
+            KeyEvent.KEYCODE_CTRL_LEFT -> 0x1D // EV_KEY_LEFTCTRL
+            KeyEvent.KEYCODE_ALT_LEFT -> 0x38 // EV_KEY_LEFTALT
+            KeyEvent.KEYCODE_MOVE_HOME -> 0x66 // EV_KEY_HOME
+            KeyEvent.KEYCODE_MOVE_END -> 0x6B // EV_KEY_END
+            KeyEvent.KEYCODE_PAGE_UP -> 0x68 // EV_KEY_PAGEUP
+            KeyEvent.KEYCODE_PAGE_DOWN -> 0x6D // EV_KEY_PAGEDOWN
 
             // Arrow keys
             KeyEvent.KEYCODE_DPAD_UP -> 0x67 // EV_KEY_UP

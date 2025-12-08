@@ -315,6 +315,31 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_setDeviceTreeOverlay(
     };
 }
 
+/// Adds a `tee_service` to the list of TEE (Trusted Execution Environment) services accesses by
+/// this pVM.
+///
+/// # Safety
+/// `config` must be a pointer returned by `AVirtualMachineRawConfig_create`, `tee_service` must be
+/// a valid pointer to the null-terminated UTF-8 encoded string.
+#[no_mangle]
+pub unsafe extern "C" fn AVirtualMachineRawConfig_addTeeService(
+    config: *mut VirtualMachineRawConfig,
+    tee_service: *const c_char,
+) -> c_int {
+    // SAFETY: `config` is assumed to be a valid, non-null pointer returned by
+    // AVirtualMachineRawConfig_create. It's the only reference to the object.
+    let config = unsafe { &mut *config };
+    // SAFETY: `tee_service` is assumed to be a pointer to a valid C string.
+    let tee_service = unsafe { CStr::from_ptr(tee_service) };
+    match tee_service.to_str() {
+        Ok(tee_service) => {
+            config.teeServices.push(tee_service.to_owned());
+            0
+        }
+        Err(_) => -libc::EINVAL,
+    }
+}
+
 /// Spawn a new instance of `virtmgr`, a child process that will host the `VirtualizationService`
 /// AIDL service, and connect to the child process.
 ///

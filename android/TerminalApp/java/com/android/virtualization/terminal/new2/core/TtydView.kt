@@ -22,6 +22,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
+import android.view.inputmethod.InputMethodManager
 import android.webkit.ClientCertRequest
 import android.webkit.ConsoleMessage
 import android.webkit.SslErrorHandler
@@ -37,13 +38,12 @@ import java.net.MalformedURLException
 import java.net.URL
 import java.security.cert.X509Certificate
 
-class TtydView
-@JvmOverloads
-constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) :
-    TerminalView(context, attrs, defStyleAttr) {
+class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
+    TerminalView(context, attrs) {
 
     var onTerminalReady: (() -> Unit)? = null
     var onTerminalDisconnected: (() -> Unit)? = null
+    var onTitleChanged: ((String) -> Unit)? = null
 
     init {
         settings.domStorageEnabled = true
@@ -82,6 +82,18 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         loadUrl(url.toString())
     }
 
+    fun showSoftInput() {
+        if (requestFocus()) {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(this, 0)
+        }
+    }
+
+    fun hideSoftInput() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
+    }
+
     private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {
         val config = resources.configuration
         val a11yManager = context.getSystemService(AccessibilityManager::class.java)
@@ -115,6 +127,15 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
                 override fun onConsoleMessage(msg: ConsoleMessage?): Boolean {
                     Log.d("TTYD", "${msg?.message()}")
                     return true
+                }
+
+                override fun onReceivedTitle(view: WebView?, title: String?) {
+                    super.onReceivedTitle(view, title)
+                    title?.let { originalTitle ->
+                        val displayedTitle =
+                            originalTitle.substringBeforeLast(" | login -f droid (")
+                        onTitleChanged?.invoke(displayedTitle)
+                    }
                 }
             }
     }

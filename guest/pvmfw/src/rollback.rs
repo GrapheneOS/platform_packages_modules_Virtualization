@@ -104,7 +104,7 @@ fn get_fixed_rollback_protection(
 ) -> Option<FixedRollbackCriterion> {
     match verified_boot_data.name.as_deref()? {
         VerifiedBootData::RKP_VM_NAME => Some(FixedRollbackCriterion::RollbackIndexPublicKey {
-            index: service_vm_version::VERSION,
+            index: platform_security_patch_timestamp::TIMESTAMP,
             public_key: PUBLIC_KEY,
         }),
         VerifiedBootData::DESKTOP_TRUSTY_VM_NAME => {

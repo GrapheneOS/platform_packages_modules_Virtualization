@@ -9,7 +9,7 @@ show_help() {
   echo "Builds images.tar.gz with Debian payload."
   echo "Options:"
   echo "-a ARCH        Architecture of the image [default is host arch: $(uname -m)]"
-  echo "-b BUILD_ID    Set build id of the debian image [default is eng-\$(hostname)-\$(date --utc)]"
+  echo "-b BUILD_ID    Set build id of the debian image [default is eng-1000000-\$(date --utc +'%a %b %d %H:%M:%S %Z %Y')]"
   echo "-k KERNEL_ID   Build ID for kernel [default is the last known good build]"
   echo "-h             Print usage and this help message and exit."
   echo "-i IMAGE_NAME  Specify the image name [default is ubuntu:22.04]"
@@ -79,7 +79,7 @@ parse_options() {
 }
 
 arch="$(uname -m)"
-build_id=$(echo eng-$(hostname)-$(date --utc))
+build_id=$(echo eng-1000000-$(date --utc +'%a %b %d %H:%M:%S %Z %Y'))
 kernel_id_flag=
 image_name="ubuntu:22.04"
 save_workdir_flag=

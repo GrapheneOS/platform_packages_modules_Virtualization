@@ -21,23 +21,19 @@ install_packages() {
 		avahi-utils
 		libbpf-tools
 		libnss-mdns
+		libvulkan1
+		mesa-vulkan-drivers
 		procps
 		pulseaudio
 		systemd-zram-generator
-	)
-	INSTALL_PACKAGES_BOOKWORM_BACKPORTS=(
+		vulkan-tools
 		weston
 		xwayland
-		mesa-vulkan-drivers
-		libvulkan1
-		vulkan-tools
 	)
 
-	echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list.d/bookworm-backports.list
 	apt update || apt update
 	DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
 	apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
-	apt install --no-install-recommends -t bookworm-backports -y "${INSTALL_PACKAGES_BOOKWORM_BACKPORTS[@]}"
 }
 
 # TODO: Install ttyd from debian package after it picks up our patches
@@ -53,6 +49,12 @@ modify_pre_cloud_init_configs() {
 	# LLMNR cause port notification (5355) before cloud-init can configure.
 	# TODO: Move this to cloud-init, and add the port to the disallow-list.
 	sed -i 's/#LLMNR=yes/LLMNR=no/' /etc/systemd/resolved.conf
+
+	# Disable systemd-networkd-wait-online.service. Not only it randomly hangs
+	# for 2 minutes, but also it slows down the boot process even though this
+	# system doesn't need networking.
+	systemctl disable systemd-networkd-wait-online.service
+	systemctl mask systemd-networkd-wait-online.service
 }
 
 remove_packages

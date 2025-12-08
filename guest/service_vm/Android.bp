@@ -55,31 +55,9 @@ filegroup {
 
 // This name is reserved and recognized by pvmfw; see guest/pvmfw/README.md.
 SERVICE_VM_NAME = "rkp_vm"
-// Both SERVICE_VM_VERSION and SERVICE_VM_VERSION_STRING should represent the
-// same version number for the service VM.
 SERVICE_VM_VERSION = select(soong_config_variable("ANDROID", "platform_security_patch_timestamp"), {
     any @ val: val,
 })
-SERVICE_VM_VERSION_STRING = select(soong_config_variable("ANDROID", "platform_security_patch_timestamp_string"), {
-    any @ val: val,
-})
-
-genrule {
-    name: "service_vm_version_rs",
-    out: ["lib.rs"],
-    cmd: "(" +
-        "    echo '#![no_std]';" +
-        "    echo '#![allow(missing_docs)]';" +
-        "    echo 'pub const VERSION: u64 = " + SERVICE_VM_VERSION_STRING + ";'" +
-        ") > $(out)",
-}
-
-rust_library_rlib {
-    name: "libservice_vm_version",
-    crate_name: "service_vm_version",
-    defaults: ["vmbase_rlib_defaults"],
-    srcs: [":service_vm_version_rs"],
-}
 
 avb_add_hash_footer {
     name: "service_vm_signed",

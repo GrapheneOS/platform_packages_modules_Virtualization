@@ -480,7 +480,9 @@ avb_add_hash_footer_defaults {
     },
 }
 
-MICRODROID_GKI_ROLLBACK_INDEX = 2
+MICRODROID_GKI_ROLLBACK_INDEX = select(soong_config_variable("ANDROID", "platform_security_patch_timestamp"), {
+    any @ val: val,
+})
 
 avb_add_hash_footer_defaults {
     name: "microdroid_kernel_cap_defaults",

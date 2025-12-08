@@ -217,6 +217,28 @@ void AVirtualMachineRawConfig_setDeviceTreeOverlay(AVirtualMachineRawConfig* _No
                                                    int fd) __INTRODUCED_IN(36);
 
 /**
+ * Adds given service to the list of TEE (Trusted Execution Environment) services this VM might use.
+ *
+ * The `teeService` should correspond to one of the know TEE services defined in one of the
+ * `tee_service_contexts` SEpolicy files (e.g.
+ * /system/etc/selinux/plat_tee_service_contexts, /vendor/etc/selinux/vendor_tee_service_contexts,
+ * etc.). Vendor defined TEE services must be prefixed with `vendor.`.
+ *
+ * TEE services are only supported for protected VMs. Attempting to create a non-protected VM with
+ * TEE service will fail `AVirtualMachine_createRaw`.
+ *
+ * For more documentation see packages/modules/Virtualization/docs/pvm_accessing_trustzone.md.
+ *
+ * \param config a virtual machine config object.
+ * \param name a pointer to a null-terminated, UTF-8 encoded string for the name of the TEE service.
+ *
+ * \return If successful, returns 0. If `teeService` is not a null-terminated UTF-8 encoded string,
+ *   returns -EINVAL.
+ */
+int AVirtualMachineRawConfig_addTeeService(AVirtualMachineRawConfig* _Nonnull config,
+                                           const char* _Nonnull teeService) __INTRODUCED_IN(37);
+
+/**
  * Represents a handle on a virtualization service, responsible for managing virtual machines.
  */
 typedef struct AVirtualizationService AVirtualizationService;

@@ -16,8 +16,14 @@
 package com.android.virtualization.terminal.new2.ui.main
 
 import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
@@ -48,7 +54,25 @@ sealed interface MainUiState {
 
     data object Stopping : MainUiState
 
-    data class Error(val message: String) : MainUiState
+    sealed interface ErrorHandler {
+        data object Retry : ErrorHandler
+
+        data object CheckNetwork : ErrorHandler
+
+        data class ReportBug(val error: Throwable) : ErrorHandler
+    }
+
+    data class Error(val handler: ErrorHandler) : MainUiState
+}
+
+sealed interface DisplayState {
+    data object Hidden : DisplayState
+
+    data object Normal : DisplayState
+
+    data class Fullscreen(val landscape: Boolean, val controller: Boolean) : DisplayState
+
+    data object Minimized : DisplayState
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -60,8 +84,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedTabId = MutableStateFlow(_tabs.value.first().id)
     val selectedTabId: StateFlow<String> = _selectedTabId.asStateFlow()
 
+    private val _displayState = MutableStateFlow<DisplayState>(DisplayState.Hidden)
+    val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
+
+    private val _isImeVisible = MutableStateFlow(false)
+    val isImeVisible: StateFlow<Boolean> = _isImeVisible.asStateFlow()
+
+    fun toggleDisplay() {
+        _displayState.value =
+            if (_displayState.value == DisplayState.Hidden) {
+                DisplayState.Normal
+            } else {
+                DisplayState.Hidden
+            }
+    }
+
+    fun switchToFullscreen() {
+        val context = getApplication<Application>()
+        val displayInfo = getDisplayInfo(context)
+        val landscape = displayInfo.width > displayInfo.height
+        _displayState.value = DisplayState.Fullscreen(landscape, controller = true)
+    }
+
+    fun exitFullscreen() {
+        _displayState.value = DisplayState.Normal
+    }
+
+    fun setIsImeVisible(visible: Boolean) {
+        _isImeVisible.value = visible
+    }
+
+    private val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Installer.retryCheck()
+            }
+        }
+
     init {
         VmController.reset()
+        connectivityManager?.registerDefaultNetworkCallback(networkCallback)
+
+        viewModelScope.launch {
+            Installer.installState.collect { state ->
+                if (state is InstallState.Installed) {
+                    try {
+                        connectivityManager?.unregisterNetworkCallback(networkCallback)
+                    } catch (e: IllegalArgumentException) {
+                        // Already unregistered
+                    }
+                }
+            }
+        }
     }
 
     fun addTab() {
@@ -95,6 +170,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectTab(id: String) {
         _selectedTabId.value = id
+        _displayState.value = DisplayState.Hidden
     }
 
     val uiState: StateFlow<MainUiState> =
@@ -122,11 +198,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 }
                             }
                             is VmState.Error ->
-                                MainUiState.Error(vmState.cause.message ?: "Unknown VM error")
+                                MainUiState.Error(MainUiState.ErrorHandler.ReportBug(vmState.cause))
                         }
                     }
-                    is InstallState.Error ->
-                        MainUiState.Error(installState.cause.message ?: "Unknown install error")
+                    is InstallState.Error -> {
+                        val handler =
+                            when (installState.errorCause) {
+                                InstallState.ErrorCause.CheckFailed ->
+                                    MainUiState.ErrorHandler.CheckNetwork
+                                InstallState.ErrorCause.InstallFailed ->
+                                    MainUiState.ErrorHandler.Retry
+                            }
+                        MainUiState.Error(handler)
+                    }
                 }
             }
             .stateIn(
@@ -143,8 +227,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Installer.cancelInstall()
     }
 
+    fun retryCheck() {
+        Installer.retryCheck()
+    }
+
     fun startVm() {
-        viewModelScope.launch { VmController.start() }
+        val displayInfo = getDisplayInfo(getApplication())
+        viewModelScope.launch { VmController.start(displayInfo) }
     }
 
     fun stopVm() {
@@ -154,5 +243,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
+        try {
+            connectivityManager?.unregisterNetworkCallback(networkCallback)
+        } catch (e: IllegalArgumentException) {
+            // Already unregistered
+        }
+    }
+
+    private fun getDisplayInfo(context: Context): DisplayInfo {
+        val wm = context.getSystemService(WindowManager::class.java)
+        // For now, display size is fixed.(1280x720)
+        val width = 1280
+        val height = 720
+        val dpi =
+            (DisplayMetrics.DENSITY_DEFAULT * context.resources.displayMetrics.density).toInt()
+        val refreshRate = 60 // Simple default
+        return DisplayInfo(width, height, dpi, refreshRate)
     }
 }

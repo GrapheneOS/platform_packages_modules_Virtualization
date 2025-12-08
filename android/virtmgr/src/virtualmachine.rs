@@ -66,6 +66,7 @@ use vbmeta::VbMetaImage;
 use vmconfig::VmConfig;
 use vsock::VsockStream;
 use zip::ZipArchive;
+use android_hardware_virtualization_capabilities_capabilities_service::aidl::android::hardware::virtualization::capabilities::IVmCapabilitiesService::IVmCapabilitiesService;
 
 /// The unique ID of a VM used (together with a port number) for vsock communication.
 pub type Cid = u32;
@@ -1455,8 +1456,26 @@ impl VirtualMachine {
     }
 
     fn handle_vendor_tee_services(&self) -> binder::Result<()> {
-        // TODO(b/360102915): get vm_fd from crosvm
-        // TODO(b/360102915): talk to HAL
+        let vm_fd = self
+            .instance
+            .get_vm_fd()
+            .with_context(|| format!("Error getting fd of VM with CID {}", self.instance.cid))
+            .with_log()
+            .or_service_specific_exception(1)?;
+
+        let vm_caps_hal: Strong<dyn IVmCapabilitiesService> =
+            binder::wait_for_interface(VM_CAPABILITIES_HAL_IDENTIFIER)
+                .with_context(|| format!("failed to connect to {VM_CAPABILITIES_HAL_IDENTIFIER}"))
+                .with_log()
+                .or_service_specific_exception(-1)?;
+
+        let vm_pfd = ParcelFileDescriptor::new(vm_fd);
+        vm_caps_hal
+            .grantAccessToVendorTeeServices(&vm_pfd, &self.instance.vendor_tee_services)
+            .context("grantAccessToVendorTeeServices failed")
+            .with_log()
+            .or_service_specific_exception(-1)?;
+
         self.instance
             .resume_full()
             .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))

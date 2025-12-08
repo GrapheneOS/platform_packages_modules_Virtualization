@@ -284,7 +284,9 @@ public class MainActivity :
     fun connectToTerminalService(terminalFragment: TerminalTabFragment) {
         terminalInfo.thenAcceptAsync(
             { info ->
-                val url = getTerminalServiceUrl(info.ipAddress, info.port, false)
+                // If key exists, it uses cookie-based authentication, so ssl isn't required.
+                // Else, it uses client certificate, so ssl is needed.
+                val url = getTerminalServiceUrl(info.ipAddress, info.port, info.key.isNullOrEmpty())
                 runOnUiThread({ terminalFragment.loadUrl(url!!.toString(), info.key) })
             },
             executorService,

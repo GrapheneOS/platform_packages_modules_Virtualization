@@ -252,52 +252,55 @@ class VmLauncherService : Service() {
         resultReceiver.send(RESULT_START, null)
 
         portNotifier = PortNotifier(this)
-        if (canUseTtydOverVsock()) {
-            val bridge = AndroidToVmBridge(virtualMachine.getCid())
-            val port = bridge.start()
-            if (port == null) {
-                Log.e(TAG, "Failed to start bridge")
-                resultReceiver.send(RESULT_ERROR, null)
-                stopSelf()
-                return
-            }
-            val bundle = Bundle()
-            bundle.putString(KEY_TERMINAL_IPADDRESS, "localhost")
-            bundle.putInt(KEY_TERMINAL_PORT, port)
-            bundle.putString(KEY_TERMINAL_KEY, bridge.secretKey)
-            resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-        } else {
-            getTerminalServiceInfo(timeout_secs)
-                .thenAcceptAsync(
-                    { info ->
-                        // It must exist because it is checked in `getTerminalServiceInfo`
-                        val ipAddress =
-                            info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
-                        val port = info.port
+
+        getTerminalServiceInfo(timeout_secs)
+            .thenAcceptAsync(
+                { info ->
+                    // It must exist because it is checked in `getTerminalServiceInfo`
+                    val guestIpAddress =
+                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
+
+                    if (canUseTtydOverVsock()) {
+                        val bridge = AndroidToVmBridge(virtualMachine.getCid())
+                        val port = bridge.start()
+                        if (port == null) {
+                            Log.e(TAG, "Failed to start bridge")
+                            resultReceiver.send(RESULT_ERROR, null)
+                            stopSelf()
+                        } else {
+                            val bundle = Bundle()
+                            bundle.putString(KEY_TERMINAL_IPADDRESS, "localhost")
+                            bundle.putInt(KEY_TERMINAL_PORT, port)
+                            bundle.putString(KEY_TERMINAL_KEY, bridge.secretKey)
+                            resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
+                            startDebianServer(guestIpAddress)
+                        }
+                    } else {
                         val bundle = Bundle()
-                        bundle.putString(KEY_TERMINAL_IPADDRESS, ipAddress)
-                        bundle.putInt(KEY_TERMINAL_PORT, port)
+                        bundle.putString(KEY_TERMINAL_IPADDRESS, guestIpAddress)
+                        bundle.putInt(KEY_TERMINAL_PORT, info.port)
                         resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-                        startDebianServer(ipAddress)
-                    },
-                    bgThreads,
-                )
-                .exceptionallyAsync(
-                    { e ->
-                        Log.e(TAG, "Failed to start VM", e)
-                        resultReceiver.send(RESULT_ERROR, null)
-                        stopSelf()
-                        null
-                    },
-                    bgThreads,
-                )
-        }
+                        startDebianServer(guestIpAddress)
+                    }
+                },
+                bgThreads,
+            )
+            .exceptionallyAsync(
+                { e ->
+                    Log.e(TAG, "Failed to start VM", e)
+                    resultReceiver.send(RESULT_ERROR, null)
+                    stopSelf()
+                    null
+                },
+                bgThreads,
+            )
     }
 
     private fun canUseTtydOverVsock(): Boolean {
-        // TODO(b/464237113): Should check both `terminalVmCommunicationRefactoring` flag and
-        // the image version
-        return false
+        val buildId = InstalledImage.getDefault(this).buildInfo?.buildId ?: 0
+        val FIRST_VERSION_SUPPORTS_TTYD_VSOCK = 5106
+        return Flags.terminalVmCommunicationRefactoring() &&
+            buildId >= FIRST_VERSION_SUPPORTS_TTYD_VSOCK
     }
 
     private fun getTerminalServiceInfo(timeout_secs: Int): CompletableFuture<NsdServiceInfo> {

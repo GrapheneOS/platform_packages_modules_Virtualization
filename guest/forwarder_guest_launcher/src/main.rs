@@ -108,7 +108,7 @@ async fn report_active_ports(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::new("stdbuf")
         .arg("-oL")
-        .arg("/usr/sbin/tcpstates")
+        .arg("/usr/sbin/tcpstates-libbpf")
         .stdout(Stdio::piped())
         .spawn()?;
     let stdout = cmd.stdout.take().context("Failed to get stdout of tcpstates")?;

@@ -17,8 +17,4 @@ package com.android.virtualization.terminal.new2.core
 
 import java.util.UUID
 
-data class TerminalSession(
-    val id: String = UUID.randomUUID().toString(),
-    // TODO: show the real name
-    val title: String = "Terminal",
-)
+data class TerminalSession(val id: String = UUID.randomUUID().toString())

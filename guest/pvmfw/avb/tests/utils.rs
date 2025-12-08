@@ -147,9 +147,7 @@ pub fn assert_latest_payload_verification_passes(
         public_key: &public_key,
         vbmeta_digest,
         capabilities,
-        // TODO(b/392081737): Capture expected rollback_index from build variables as we
-        // intend on auto-syncing rollback_index with security patch timestamps
-        rollback_index: 2,
+        rollback_index: platform_security_patch_timestamp::TIMESTAMP,
         page_size,
         name: None,
     };
