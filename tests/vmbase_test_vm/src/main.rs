@@ -170,14 +170,14 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     info!("listening for messages from host");
     loop {
         let req = vsock_stream.read_request()?;
-        info!("Received request: {req:?}");
+        info!("Received request: {req}");
         if req == Request::Shutdown {
             info!("Shutting down. Bye!");
             break;
         }
         // SAFETY: test process sending requests must ensure that they are safe.
         let resp = unsafe { process_request(req) };
-        info!("Sending response: {resp:?}");
+        info!("Sending response: {resp}");
         vsock_stream.write_response(&resp)?;
         vsock_stream.flush()?;
     }

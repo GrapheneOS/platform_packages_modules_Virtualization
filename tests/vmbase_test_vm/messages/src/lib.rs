@@ -19,6 +19,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Port VM listens to requests on.
@@ -39,6 +40,18 @@ pub enum Request {
     Shutdown,
 }
 
+impl fmt::Display for Request {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Reverse(..) => write!(f, "Reverse"),
+            Self::MapData(..) => write!(f, "MapData"),
+            Self::MemRelinquish(..) => write!(f, "MemRelinquish"),
+            Self::ReadMappedData(..) => write!(f, "ReadMappedData"),
+            Self::Shutdown => write!(f, "Shutdown"),
+        }
+    }
+}
+
 /// Response received from the VM.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Response {
@@ -53,4 +66,15 @@ pub enum Response {
     MemRelinquish(bool),
     /// Response to the `Request::ReadMappedData`.
     ReadMappedData(Vec<u8>),
+}
+
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Reverse(..) => write!(f, "Reverse"),
+            Self::MapData(..) => write!(f, "MapData"),
+            Self::MemRelinquish(..) => write!(f, "MemRelinquish"),
+            Self::ReadMappedData(..) => write!(f, "ReadMappedData"),
+        }
+    }
 }
