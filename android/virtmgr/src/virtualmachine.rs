@@ -1456,31 +1456,26 @@ impl VirtualMachine {
     }
 
     fn handle_vendor_tee_services(&self) -> binder::Result<()> {
+        self.handle_vendor_tee_services_internal().with_log().or_service_specific_exception(-1)
+    }
+
+    fn handle_vendor_tee_services_internal(&self) -> Result<()> {
         let vm_fd = self
             .instance
             .get_vm_fd()
-            .with_context(|| format!("Error getting fd of VM with CID {}", self.instance.cid))
-            .with_log()
-            .or_service_specific_exception(1)?;
+            .with_context(|| format!("Error getting fd of VM with CID {}", self.instance.cid))?;
 
         let vm_caps_hal: Strong<dyn IVmCapabilitiesService> =
-            binder::wait_for_interface(VM_CAPABILITIES_HAL_IDENTIFIER)
-                .with_context(|| format!("failed to connect to {VM_CAPABILITIES_HAL_IDENTIFIER}"))
-                .with_log()
-                .or_service_specific_exception(-1)?;
+            binder::wait_for_interface(VM_CAPABILITIES_HAL_IDENTIFIER)?;
 
         let vm_pfd = ParcelFileDescriptor::new(vm_fd);
         vm_caps_hal
             .grantAccessToVendorTeeServices(&vm_pfd, &self.instance.vendor_tee_services)
-            .context("grantAccessToVendorTeeServices failed")
-            .with_log()
-            .or_service_specific_exception(-1)?;
+            .context("grantAccessToVendorTeeServices failed")?;
 
         self.instance
             .resume_full()
             .with_context(|| format!("Error resuming VM with CID {}", self.instance.cid))
-            .with_log()
-            .or_service_specific_exception(-1)
     }
 }
 
