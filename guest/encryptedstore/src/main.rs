@@ -88,6 +88,13 @@ struct Cli {
         value_delimiter = ','
     )]
     config_dirs: Vec<DirSpec>,
+
+    #[arg(
+        long = "dm-default-key",
+        value_name = "DM_DEFAULT_KEY",
+        help = "Use dm-default-key for encryption."
+    )]
+    dm_default_key: bool,
 }
 
 static INTERNAL_CONNECTION: LazyLock<Strong<dyn IVmInternalService>> = LazyLock::new(|| {
@@ -136,7 +143,7 @@ fn try_main() -> Result<()> {
     validate_unique_dir_names(config_dir_specs)?;
 
     // Note this error context is used in MicrodroidTests.
-    encryptedstore_init(blkdevice, key, mountpoint).with_context(|| {
+    encryptedstore_init(blkdevice, key, mountpoint, cli.dm_default_key).with_context(|| {
         format!("Unable to initialize encryptedstore on {blkdevice:?} & mount at {mountpoint:?}")
     })?;
     config_dirs(mountpoint, config_dir_specs)?;
@@ -204,7 +211,12 @@ fn set_queue_tunable(device_path: &Path, tunable: &str, value: &str) -> Result<(
     Ok(())
 }
 
-fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result<()> {
+fn encryptedstore_init(
+    blkdevice: &Path,
+    key: &str,
+    mountpoint: &Path,
+    dm_default_key: bool,
+) -> Result<()> {
     ensure!(
         std::fs::metadata(blkdevice)
             .with_context(|| format!("Failed to get metadata of {blkdevice:?}"))?
@@ -225,8 +237,12 @@ fn encryptedstore_init(blkdevice: &Path, key: &str, mountpoint: &Path) -> Result
     if needs_formatting {
         zeroize_header(blkdevice).context("Zeroing the header")?;
     }
-    let crypt_device =
-        enable_crypt(blkdevice, key, "cryptdev").context("Unable to map crypt device")?;
+    let crypt_device = if dm_default_key {
+        enable_dm_default_key(blkdevice, key, "defaultkey")
+            .context("Unable to map dm_default_key device")?
+    } else {
+        enable_crypt(blkdevice, key, "crypt").context("Unable to map crypt device")?
+    };
 
     // Set read_ahead_kb for the newly created dm-crypt device (e.g., dm-6)
     set_queue_tunable(&crypt_device, "read_ahead_kb", "512")
@@ -306,6 +322,20 @@ fn enable_crypt(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
         .context("Couldn't build the DMCrypt target")?;
     let dm = dm::DeviceMapper::new()?;
     dm.create_crypt_device(name, &target).context("Failed to create dm-crypt device")
+}
+
+fn enable_dm_default_key(data_device: &Path, key: &str, name: &str) -> Result<PathBuf> {
+    let dev_size = util::blkgetsize64(data_device)?;
+    let key = hex::decode(key).context("Unable to decode hex key")?;
+
+    let target = dm::defaultkey::DmDefaultKeyTargetBuilder::default()
+        .data_device(data_device, dev_size)
+        .cipher(CipherType::AES256XTS)
+        .key(&key)
+        .build()
+        .context("Couldn't build the DmDefaultKey target")?;
+    let dm = dm::DeviceMapper::new()?;
+    dm.create_default_key_device(name, &target).context("Failed to create dm-defaultkey device")
 }
 
 fn zeroize_header(data_device: &Path) -> Result<()> {
