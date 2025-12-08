@@ -356,9 +356,17 @@ fn share_dma_buf_test_impl(
     let response = process_request(vsock_stream, Request::MapData(range_start, range_end))
         .context("failed to process request")?;
 
-    let Response::MapData(mapped_data) = response else {
+    let Response::MapData(success) = response else {
         bail!("Expected Response::MapData but was {response:?}");
     };
+    ensure!(success, "Request::MapData failed");
+
+    let response = process_request(vsock_stream, Request::ReadMappedData(range_start, range_end))
+        .context("failed to process request")?;
+    let Response::ReadMappedData(mapped_data) = response else {
+        bail!("Expected Response::ReadMappedData but was {response:?}");
+    };
+
     assert_eq!(mapped_data, data);
 
     let response = process_request(vsock_stream, Request::MemRelinquish(range_start, range_end))

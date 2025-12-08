@@ -33,6 +33,8 @@ pub enum Request {
     MapData(usize, usize),
     /// Relinquishes given range of pages.
     MemRelinquish(usize, usize),
+    /// Reads the mapped data at the given range.
+    ReadMappedData(usize, usize),
     /// Shut down the VM. No response is expected.
     Shutdown,
 }
@@ -43,9 +45,12 @@ pub enum Response {
     /// Response to the `Request::Reverse`.
     Reverse(Vec<u8>),
     /// Response to the `Request::MapData`.
-    /// Contains the mapped data, or empty Vec if failed to map data.
-    MapData(Vec<u8>),
+    /// Contains `true` if map data succeeds, or `false` otherwise. If map data succeeds then you
+    /// can use `Request::ReadMappedData` to read the mapped data and return it back to host.
+    MapData(bool),
     /// Response to the `Request::MemRelinquish`.
     /// Contains `true` if request was handled successfully, or `false` otherwise.
     MemRelinquish(bool),
+    /// Response to the `Request::ReadMappedData`.
+    ReadMappedData(Vec<u8>),
 }
