@@ -293,7 +293,7 @@ fn test_share_dma_buf_4096_protected_vm() -> Result<()> {
     init_logger();
 
     run_test(c"vts_libavf_test_share_dma_buf_4096", VmType::Protected, |vsock_stream, vm| {
-        share_dma_buf_test_impl(vsock_stream, vm, 4096)
+        share_dma_buf_test_impl(vsock_stream, vm, 4096, 4096)
     })
 }
 
@@ -302,7 +302,7 @@ fn test_share_dma_buf_16384_protected_vm() -> Result<()> {
     init_logger();
 
     run_test(c"vts_libavf_test_share_dma_buf_16384", VmType::Protected, |vsock_stream, vm| {
-        share_dma_buf_test_impl(vsock_stream, vm, 16384)
+        share_dma_buf_test_impl(vsock_stream, vm, 16384, 16384)
     })
 }
 
@@ -311,16 +311,27 @@ fn test_share_dma_buf_32768_protected_vm() -> Result<()> {
     init_logger();
 
     run_test(c"vts_libavf_test_share_dma_buf_32768", VmType::Protected, |vsock_stream, vm| {
-        share_dma_buf_test_impl(vsock_stream, vm, 32768)
+        share_dma_buf_test_impl(vsock_stream, vm, 32768, 32768)
     })
 }
 
-// TODO(ioffe): add test sharing 2 MiB dma buf.
+#[test]
+fn test_share_dma_buf_2097152_protected_vm() -> Result<()> {
+    init_logger();
+
+    run_test(c"vts_libavf_test_share_dma_buf_2097152", VmType::Protected, |vsock_stream, vm| {
+        // Sending 2 MiBs of data in a single chunk over vsock results in a VM crash because
+        // vmbase_test_vm has swiotlb backed by heap. A 16 KiB is a good as any other size of the
+        // chunk ¯\_(ツ)_/¯
+        share_dma_buf_test_impl(vsock_stream, vm, 2097152, 16384)
+    })
+}
 
 fn share_dma_buf_test_impl(
     vsock_stream: &mut VsockStream,
     vm: *mut AVirtualMachine,
     size: usize,
+    chunk_size: usize,
 ) -> Result<()> {
     if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
         info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
@@ -361,13 +372,22 @@ fn share_dma_buf_test_impl(
     };
     ensure!(success, "Request::MapData failed");
 
-    let response = process_request(vsock_stream, Request::ReadMappedData(range_start, range_end))
+    let mut cur_range_start = range_start;
+    let mut cur_chunk_idx = 0;
+    while cur_range_start < range_end {
+        let response = process_request(
+            vsock_stream,
+            Request::ReadMappedData(cur_range_start, cur_range_start + chunk_size),
+        )
         .context("failed to process request")?;
-    let Response::ReadMappedData(mapped_data) = response else {
-        bail!("Expected Response::ReadMappedData but was {response:?}");
-    };
+        let Response::ReadMappedData(mapped_data) = response else {
+            bail!("Expected Response::ReadMappedData but was {response:?}");
+        };
 
-    assert_eq!(mapped_data, data);
+        assert_eq!(mapped_data, data[cur_chunk_idx..(cur_chunk_idx + chunk_size)]);
+        cur_range_start += chunk_size;
+        cur_chunk_idx += chunk_size;
+    }
 
     let response = process_request(vsock_stream, Request::MemRelinquish(range_start, range_end))
         .context("failed to process request")?;
