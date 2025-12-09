@@ -5,7 +5,7 @@ After=network.target
 After=virtiofs_internal.service
 
 [Service]
-ExecStart=/usr/local/bin/ttyd --ssl --ssl-cert /etc/ttyd/server.crt --ssl-key /etc/ttyd/server.key --ssl-ca /mnt/internal/ca.crt -t disableLeaveAlert=true -W login -f droid
+ExecStart=/usr/local/bin/ttyd --ssl --ssl-cert /etc/ttyd/server.crt --ssl-key /etc/ttyd/server.key --ssl-ca /mnt/internal/ca.crt -t disableLeaveAlert=true -W /bin/bash -c "exec su - droid"
 Type=simple
 Restart=always
 User=root
