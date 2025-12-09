@@ -16,91 +16,37 @@
 
 // TODO(ioffe): consolidate with guest/service_vm/src/error.rs and put as a library?
 
-use core::fmt;
-use libfdt::FdtError;
 use vmbase::fdt::pci::PciError;
-use vmbase::memory::MemoryTrackerError;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-type VirtioDriverError = virtio_drivers::Error;
-type CiboriumSerError = ciborium::ser::Error<virtio_drivers::Error>;
-type CiboriumDeError = ciborium::de::Error<virtio_drivers::Error>;
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Failed memory operation.
-    MemoryOperationFailed(MemoryTrackerError),
+    #[error("Failed memory operation: {0}")]
+    MemoryOperationFailed(#[from] vmbase::memory::MemoryTrackerError),
     /// Invalid FDT.
-    InvalidFdt(FdtError),
+    #[error("Invalid FDT: {0}")]
+    InvalidFdt(#[from] libfdt::FdtError),
     /// Invalid PCI.
-    InvalidPci(PciError),
+    #[error("Invalid PCI: {0}")]
+    InvalidPci(#[from] PciError),
     /// Failed VirtIO driver operation.
-    VirtIODriverOperationFailed(VirtioDriverError),
+    #[error("Failed VirtIO driver operation: {0}")]
+    VirtIODriverOperationFailed(#[from] virtio_drivers::Error),
     /// Missing socket device.
+    #[error("Missing VirtIO Socket device.")]
     MissingVirtIOSocketDevice,
     /// Failed to create VirtIO Socket device.
-    VirtIOSocketCreationFailed(VirtioDriverError),
+    #[error("Failed to create VirtIO Socket device: {0}")]
+    VirtIOSocketCreationFailed(virtio_drivers::Error),
     /// Failed to initialize PCI.
+    #[error("Failed to initialize PCI: {0}")]
     PciInitializationFailed(PciError),
     /// Failed to serialize.
-    SerializationFailed(CiboriumSerError),
+    #[error("Failed to serialize: {0}")]
+    SerializationFailed(#[from] ciborium::ser::Error<virtio_drivers::Error>),
     /// Failed to deserialize.
-    DeserializationFailed(CiboriumDeError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::MemoryOperationFailed(e) => write!(f, "Failed memory operation: {e}"),
-            Self::InvalidFdt(e) => write!(f, "Invalid FDT: {e}"),
-            Self::PciInitializationFailed(e) => write!(f, "Failed to initialize PCI: {e}"),
-            Self::VirtIOSocketCreationFailed(e) => {
-                write!(f, "Failed to create VirtIO Socket device: {e}")
-            }
-            Self::MissingVirtIOSocketDevice => write!(f, "Missing VirtIO Socket device."),
-            Self::VirtIODriverOperationFailed(e) => {
-                write!(f, "Failed VirtIO driver operation: {e}")
-            }
-            Self::SerializationFailed(e) => write!(f, "Failed to serialize: {e}"),
-            Self::DeserializationFailed(e) => write!(f, "Failed to deserialize: {e}"),
-            Self::InvalidPci(e) => write!(f, "Invalid PCI: {e}"),
-        }
-    }
-}
-
-impl From<MemoryTrackerError> for Error {
-    fn from(e: MemoryTrackerError) -> Self {
-        Self::MemoryOperationFailed(e)
-    }
-}
-
-impl From<FdtError> for Error {
-    fn from(e: FdtError) -> Self {
-        Self::InvalidFdt(e)
-    }
-}
-
-impl From<PciError> for Error {
-    fn from(e: PciError) -> Self {
-        Self::InvalidPci(e)
-    }
-}
-
-impl From<virtio_drivers::Error> for Error {
-    fn from(e: VirtioDriverError) -> Self {
-        Self::VirtIODriverOperationFailed(e)
-    }
-}
-
-impl From<CiboriumSerError> for Error {
-    fn from(e: CiboriumSerError) -> Self {
-        Self::SerializationFailed(e)
-    }
-}
-
-impl From<CiboriumDeError> for Error {
-    fn from(e: CiboriumDeError) -> Self {
-        Self::DeserializationFailed(e)
-    }
+    #[error("Failed to deserialize: {0}")]
+    DeserializationFailed(#[from] ciborium::de::Error<virtio_drivers::Error>),
 }
