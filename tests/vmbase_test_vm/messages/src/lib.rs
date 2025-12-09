@@ -19,6 +19,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Port VM listens to requests on.
@@ -33,8 +34,22 @@ pub enum Request {
     MapData(usize, usize),
     /// Relinquishes given range of pages.
     MemRelinquish(usize, usize),
+    /// Reads the mapped data at the given range.
+    ReadMappedData(usize, usize),
     /// Shut down the VM. No response is expected.
     Shutdown,
+}
+
+impl fmt::Display for Request {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Reverse(..) => write!(f, "Reverse"),
+            Self::MapData(..) => write!(f, "MapData"),
+            Self::MemRelinquish(..) => write!(f, "MemRelinquish"),
+            Self::ReadMappedData(..) => write!(f, "ReadMappedData"),
+            Self::Shutdown => write!(f, "Shutdown"),
+        }
+    }
 }
 
 /// Response received from the VM.
@@ -43,9 +58,23 @@ pub enum Response {
     /// Response to the `Request::Reverse`.
     Reverse(Vec<u8>),
     /// Response to the `Request::MapData`.
-    /// Contains the mapped data, or empty Vec if failed to map data.
-    MapData(Vec<u8>),
+    /// Contains `true` if map data succeeds, or `false` otherwise. If map data succeeds then you
+    /// can use `Request::ReadMappedData` to read the mapped data and return it back to host.
+    MapData(bool),
     /// Response to the `Request::MemRelinquish`.
     /// Contains `true` if request was handled successfully, or `false` otherwise.
     MemRelinquish(bool),
+    /// Response to the `Request::ReadMappedData`.
+    ReadMappedData(Vec<u8>),
+}
+
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Reverse(..) => write!(f, "Reverse"),
+            Self::MapData(..) => write!(f, "MapData"),
+            Self::MemRelinquish(..) => write!(f, "MemRelinquish"),
+            Self::ReadMappedData(..) => write!(f, "ReadMappedData"),
+        }
+    }
 }
