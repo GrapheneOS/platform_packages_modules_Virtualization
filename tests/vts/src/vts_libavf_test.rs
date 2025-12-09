@@ -327,6 +327,8 @@ fn test_share_dma_buf_2097152_protected_vm() -> Result<()> {
     })
 }
 
+const TEST_DATA_PATTERN: u64 = 0x0021_6B4F_206C_6C41;
+
 fn share_dma_buf_test_impl(
     vsock_stream: &mut VsockStream,
     vm: *mut AVirtualMachine,
@@ -340,7 +342,8 @@ fn share_dma_buf_test_impl(
 
     let dma_buf_fd = dma_buf_alloc(size).context("failed to allocate dma_buf_fd")?;
 
-    let data = vec![7; size];
+    // Fill the buffer with the test data it deserves.
+    let data = TEST_DATA_PATTERN.to_le_bytes().to_vec().repeat(size / 8);
 
     // SAFETY: dma_buf_fd is valid fd that can be memory mapped.
     let mut mmap = unsafe { MmapOptions::new().len(size).offset(0).map_mut(&dma_buf_fd) }
