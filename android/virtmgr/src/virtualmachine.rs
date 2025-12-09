@@ -17,7 +17,8 @@
 use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::crosvm::{
-    CrosvmCommand, CrosvmConfig, PayloadState, RunContext, SharedPathConfig, VmInstance, VmState,
+    CrosvmCommand, CrosvmConfig, PayloadState, RunContext, SharedMemoryId, SharedPathConfig,
+    VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
 use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
@@ -1750,11 +1751,13 @@ impl aidl::IVirtualMachine for VirtualMachine {
         }
         check_memory_share_supported()?;
         let fd = clone_file(fd)?;
-        self.instance
+        let id = self
+            .instance
             .add_memory(fd.into(), offset as u64, range_start as u64, range_end as u64, cacheable)
             .with_context(|| format!("add memory failed. CID {}", self.instance.cid))
             .with_log()
-            .or_service_specific_exception(-1)
+            .or_service_specific_exception(-1)?;
+        Ok(id.0)
     }
 
     fn removeMemoryFromGuest(&self, memory_id: i32) -> binder::Result<()> {
@@ -1764,8 +1767,9 @@ impl aidl::IVirtualMachine for VirtualMachine {
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
         check_memory_share_supported()?;
+        let memory_id = SharedMemoryId(memory_id);
         self.instance
-            .remove_memory(memory_id)
+            .remove_memory(&memory_id)
             .with_context(|| format!("remove memory failed. CID {}", self.instance.cid))
             .with_log()
             .or_service_specific_exception(-1)
