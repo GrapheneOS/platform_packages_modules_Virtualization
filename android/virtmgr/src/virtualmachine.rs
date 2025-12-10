@@ -1745,10 +1745,6 @@ impl aidl::IVirtualMachine for VirtualMachine {
         cacheable: bool,
     ) -> binder::Result<i32> {
         info!("addMemoryToGuest called");
-        if !cfg!(dynamic_memshare_with_guest) {
-            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
         check_memory_share_supported()?;
         let fd = clone_file(fd)?;
         let id = self
@@ -1762,10 +1758,6 @@ impl aidl::IVirtualMachine for VirtualMachine {
 
     fn removeMemoryFromGuest(&self, memory_id: i32) -> binder::Result<()> {
         info!("removeMemoryFromGuest called");
-        if !cfg!(dynamic_memshare_with_guest) {
-            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
         check_memory_share_supported()?;
         let memory_id = SharedMemoryId(memory_id);
         self.instance
