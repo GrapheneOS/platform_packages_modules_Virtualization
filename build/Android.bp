@@ -38,9 +38,6 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
         true: ["vendor_modules"],
         default: [],
-    }) + select(release_flag("RELEASE_AVF_ENABLE_VM_TO_TEE_SERVICES_ALLOWLIST"), {
-        true: ["tee_services_allowlist"],
-        default: [],
     }) + select(release_flag("RELEASE_AVF_IMPROVE_DEBUGGABLE_VMS"), {
         true: ["debuggable_vms_improvements"],
         default: [],

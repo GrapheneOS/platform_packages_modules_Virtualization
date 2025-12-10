@@ -159,7 +159,7 @@ pub fn command_run_app(
             })
             .collect::<Result<_, _>>()?,
         networkSupported: config.common.network_supported(),
-        teeServices: config.common.tee_services().to_vec(),
+        teeServices: config.common.tee_services,
         ..Default::default()
     };
 
@@ -303,7 +303,7 @@ pub fn command_run(
     vm_config.cpuOptions = CpuOptions { cpuTopology: config.common.cpu_topology.clone() };
     vm_config.hugePages = config.common.hugepages;
     vm_config.boostUclamp = config.common.boost_uclamp;
-    vm_config.teeServices = config.common.tee_services().to_vec();
+    vm_config.teeServices = config.common.tee_services;
     run(
         service,
         &VirtualMachineConfig::RawConfig(vm_config),

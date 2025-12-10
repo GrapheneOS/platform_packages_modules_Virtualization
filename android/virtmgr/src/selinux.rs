@@ -285,11 +285,6 @@ mod tests {
     #[test]
     #[ignore = "disabling test while investigating b/379087641"]
     fn test_check_tee_service_permission_has_permission() -> Result<()> {
-        if cfg!(not(tee_services_allowlist)) {
-            // Skip test on release configurations without tee_services_allowlist feature enabled.
-            return Ok(());
-        }
-
         let caller_ctx = SeContext::new("u:r:shell:s0")?;
         let tee_services = [String::from("test_pkvm_tee_service")];
         check_tee_service_permission(&caller_ctx, &tee_services)
@@ -298,11 +293,6 @@ mod tests {
     #[test]
     #[ignore = "disabling test while investigating b/379087641"]
     fn test_check_tee_service_permission_invalid_tee_service() -> Result<()> {
-        if cfg!(not(tee_services_allowlist)) {
-            // Skip test on release configurations without tee_services_allowlist feature enabled.
-            return Ok(());
-        }
-
         let caller_ctx = SeContext::new("u:r:shell:s0")?;
         let tee_services = [String::from("test_tee_service_does_not_exist")];
         let ret = check_tee_service_permission(&caller_ctx, &tee_services);

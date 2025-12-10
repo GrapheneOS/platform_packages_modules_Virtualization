@@ -1943,26 +1943,6 @@ fn check_no_extra_kernel_cmdline_params(config: &aidl::VirtualMachineConfig) -> 
     Ok(())
 }
 
-fn check_no_tee_services(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(config) => {
-            if !config.teeServices.is_empty() {
-                return Err(anyhow!("tee_services_allowlist feature is disabled"))
-                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-            }
-        }
-        aidl::VirtualMachineConfig::AppConfig(config) => {
-            if let Some(custom_config) = &config.customConfig {
-                if !custom_config.teeServices.is_empty() {
-                    return Err(anyhow!("tee_services_allowlist feature is disabled"))
-                        .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-                }
-            }
-        }
-    };
-    Ok(())
-}
-
 fn check_no_delay_enc_store(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if config.shouldDelayEncryptedStoreSetup {
@@ -2008,9 +1988,6 @@ fn check_config_features(config: &aidl::VirtualMachineConfig) -> binder::Result<
     }
     if !cfg!(debuggable_vms_improvements) {
         check_no_extra_kernel_cmdline_params(config)?;
-    }
-    if !cfg!(tee_services_allowlist) {
-        check_no_tee_services(config)?;
     }
     if !cfg!(long_running_vms) {
         check_no_delay_enc_store(config)?;
