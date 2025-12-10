@@ -23,7 +23,6 @@ use binder::{ParcelFileDescriptor, Status, Strong};
 use log::{info, warn};
 use microdroid_payload_config::VmPayloadConfig;
 use statslog_virtualization_rust::vm_creation_requested;
-use std::thread;
 use std::time::{Duration, SystemTime};
 use zip::ZipArchive;
 
@@ -93,7 +92,6 @@ fn get_num_vcpus(cpu_options: &aidl::CpuOptions) -> i32 {
 }
 
 /// Write the stats of VMCreation to statsd
-/// The function creates a separate thread which waits for statsd to start to push atom
 pub fn write_vm_creation_stats(
     config: &aidl::VirtualMachineConfig,
     is_protected: bool,
@@ -146,21 +144,15 @@ pub fn write_vm_creation_stats(
     });
 
     info!("Writing VmCreationRequested atom into statsd.");
-    thread::Builder::new()
-        .name("vm_create_atom_forwarder".to_string())
-        .spawn(move || {
-            virtualmachine::global_service()
-                .unwrap()
-                .forwardAtom(&atom, uid, &vm_identifier)
-                .unwrap_or_else(|e| {
-                    warn!("Failed to write VmCreationRequested atom: {e}");
-                });
-        })
-        .expect("Failed to create vm_create_atom_forwarder thread");
+    virtualmachine::global_service()
+        .unwrap()
+        .forwardAtom(&atom, uid, &vm_identifier)
+        .unwrap_or_else(|e| {
+            warn!("Failed to write VmCreationRequested atom: {e}");
+        });
 }
 
 /// Write the stats of VM boot to statsd
-/// The function creates a separate thread which waits for statsd to start to push atom
 pub fn write_vm_booted_stats(
     uid: i32,
     vm_identifier: &str,
@@ -178,17 +170,12 @@ pub fn write_vm_booted_stats(
         aidl::Atom::VmBooted(aidl::VmBooted { elapsedTimeMillis: duration.as_millis() as i64 });
 
     info!("Writing VmBooted atom into statsd.");
-    thread::Builder::new()
-        .name("vm_booted_atom_forwarder".to_string())
-        .spawn(move || {
-            virtualmachine::global_service()
-                .unwrap()
-                .forwardAtom(&atom, uid, &vm_identifier)
-                .unwrap_or_else(|e| {
-                    warn!("Failed to write VmBooted atom: {e}");
-                });
-        })
-        .expect("Failed to create vm_booted_atom_forwarder thread");
+    virtualmachine::global_service()
+        .unwrap()
+        .forwardAtom(&atom, uid, &vm_identifier)
+        .unwrap_or_else(|e| {
+            warn!("Failed to write VmBooted atom: {e}");
+        });
 }
 
 /// Write the stats of VM exit to statsd
