@@ -71,7 +71,6 @@ pub struct CommonConfig {
     boost_uclamp: bool,
 
     /// Secure services this VM wants to access.
-    #[cfg(tee_services_allowlist)]
     #[arg(long)]
     tee_services: Vec<String>,
 
@@ -88,16 +87,6 @@ impl CommonConfig {
                 self.network_supported
             } else {
                 false
-            }
-        }
-    }
-
-    fn tee_services(&self) -> &[String] {
-        cfg_if::cfg_if! {
-            if #[cfg(tee_services_allowlist)] {
-                &self.tee_services
-            } else {
-                &[]
             }
         }
     }
