@@ -51,7 +51,7 @@ use vmbase_test_vm_messages::{Request, Response, VM_PORT};
 ///
 /// A test sending the `Request::MapData` to this VM must ensure that memory region is available to
 /// the VM (e.g. by sharing it via `AVirtualMachine_addMemoryMapping` API).
-unsafe fn process_map_data(range_start: usize, range_end: usize) -> Vec<u8> {
+unsafe fn process_map_data(range_start: usize, range_end: usize) -> bool {
     info!("mapping data at range {range_start:x} {range_end:x}");
     let size = range_end.checked_sub(range_start).unwrap().try_into().unwrap();
     // SAFETY: range is valid because test first shared the memory with guest VM.
@@ -59,14 +59,10 @@ unsafe fn process_map_data(range_start: usize, range_end: usize) -> Vec<u8> {
         if let Err(e) = map_data_outside_main_memory(range_start, size) {
             error!("map_data failed: {e:#}");
             // This will make the test fail.
-            return Vec::new();
+            return false;
         }
     }
-    // Now read the shared pages. This will result in page faults, which will trigger hypervisor
-    // to map the shared pages in guest stage-2 page table.
-    // SAFETY: range is valid because test first shared the memory with guest VM.
-    let data = unsafe { slice::from_raw_parts(range_start as *const u8, size.into()) };
-    data.to_vec()
+    true
 }
 
 /// Implementation of the `Request::MemRelinquish`.
@@ -95,6 +91,23 @@ fn process_mem_relinquish(range_start: usize, range_end: usize) -> bool {
     true
 }
 
+/// Implementation of the `Request::ReadMappedData`.
+///
+/// # Safety
+///
+/// A test sending the `Request:ReadMappedData` must first send `Request::MapData` and check that
+/// it succeeded. The ranges passed to the `Request::ReadMappedData` must be inside the range
+/// used in the `Request::MapData`.
+unsafe fn process_read_mapped_data(range_start: usize, range_end: usize) -> Vec<u8> {
+    info!("reading data at range {range_start:x} {range_end:x}");
+    let size = range_end.checked_sub(range_start).unwrap();
+    // Now read the shared pages. This will result in page faults, which will trigger hypervisor
+    // to map the shared pages in guest stage-2 page table.
+    // SAFETY: range is valid because test first shared the memory with guest and guest mapped it.
+    let data = unsafe { slice::from_raw_parts(range_start as *const u8, size) };
+    data.to_vec()
+}
+
 /// Processes requests coming from the test process on the Android host.
 ///
 /// # Safety
@@ -110,6 +123,12 @@ unsafe fn process_request(req: Request) -> Response {
         }
         Request::MemRelinquish(range_start, range_end) => {
             Response::MemRelinquish(process_mem_relinquish(range_start, range_end))
+        }
+        Request::ReadMappedData(range_start, range_end) => {
+            // SAFETY: this is completely unsafe interface that functions correctly if the test
+            // process on the Android host follows the contract described in the safety section of
+            // the `process_read_mapped_data` function.
+            unsafe { Response::ReadMappedData(process_read_mapped_data(range_start, range_end)) }
         }
         Request::Shutdown => unreachable!(),
     }
@@ -151,14 +170,14 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     info!("listening for messages from host");
     loop {
         let req = vsock_stream.read_request()?;
-        info!("Received request: {req:?}");
+        info!("Received request: {req}");
         if req == Request::Shutdown {
             info!("Shutting down. Bye!");
             break;
         }
         // SAFETY: test process sending requests must ensure that they are safe.
         let resp = unsafe { process_request(req) };
-        info!("Sending response: {resp:?}");
+        info!("Sending response: {resp}");
         vsock_stream.write_response(&resp)?;
         vsock_stream.flush()?;
     }

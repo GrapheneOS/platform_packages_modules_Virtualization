@@ -15,42 +15,23 @@
 //! Functions and drivers for obtaining true entropy.
 
 use crate::arch::rand::{platform_entropy, PlatformError, MAX_BYTES_PER_CALL};
-use core::fmt;
 
 pub(crate) type Entropy = [u8; MAX_BYTES_PER_CALL];
 
 /// Error type for rand operations.
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// No source of entropy found.
+    #[error("No source of entropy available")]
     NoEntropySource,
 
     /// Platform specific error
-    Platform(PlatformError),
-}
-
-impl From<PlatformError> for Error {
-    fn from(e: PlatformError) -> Self {
-        Error::Platform(e)
-    }
+    #[error("Platform error: {0}")]
+    Platform(#[from] PlatformError),
 }
 
 /// Result type for rand operations.
 pub type Result<T> = core::result::Result<T, Error>;
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::NoEntropySource => write!(f, "No source of entropy available"),
-            Self::Platform(e) => write!(f, "Platform error: {e}"),
-        }
-    }
-}
-
-impl fmt::Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{self}")
-    }
-}
 
 /// Fills a slice of bytes with true entropy.
 pub fn fill_with_entropy(s: &mut [u8]) -> Result<()> {

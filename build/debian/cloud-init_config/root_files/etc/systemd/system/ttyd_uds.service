@@ -12,7 +12,7 @@ RuntimeDirectoryMode=0755
 
 # Command
 # -i : Bind to the socket file inside the RuntimeDirectory
-ExecStart=/usr/local/bin/ttyd -i /run/ttyd/ttyd.sock -t disableLeaveAlert=true -W login -f droid
+ExecStart=/usr/local/bin/ttyd -i /run/ttyd/ttyd.sock -t disableLeaveAlert=true -W /bin/bash -c "exec su - droid"
 
 Restart=always
 RestartSec=3

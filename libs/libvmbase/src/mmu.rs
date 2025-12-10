@@ -15,41 +15,30 @@
 //! Architecture-agnostic interface to the MMU and page tables.
 
 use crate::layout;
-use core::fmt;
 use core::ops::Range;
 use core::result;
 
 pub(crate) type MmuResult<T> = result::Result<T, MmuError>;
 
 /// Enum describing memory mapping errors
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub(crate) enum MmuError {
     /// The address is invalid.
+    #[error("Invalid address {0:#x}")]
     BadAddress(usize),
     /// The region is invalid.
+    #[error("Invalid region {0:#x?}")]
     BadRegion(Range<usize>),
     /// The flags are invalid.
+    #[error("Invalid flags {0:#x}")]
     BadFlags(usize),
     /// An update operation failed.
+    #[error("Update operation failed at {addr:#x} (flags={flags:#x?})")]
     UpdateFailed { addr: usize, flags: Option<usize> },
     /// The region can't be updated.
     #[cfg(not(target_arch = "x86_64"))]
+    #[error("Region {0:#x?} is locked")]
     RegionLocked(Range<usize>),
-}
-
-impl fmt::Display for MmuError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::BadAddress(a) => write!(f, "Invalid address {a:#x}"),
-            Self::BadRegion(r) => write!(f, "Invalid region {r:#x?}"),
-            Self::BadFlags(g) => write!(f, "Invalid flags {g:#x}"),
-            Self::UpdateFailed { addr, flags } => {
-                write!(f, "Update operation failed at {addr:#x} (flags={flags:#x?})")
-            }
-            #[cfg(not(target_arch = "x86_64"))]
-            Self::RegionLocked(r) => write!(f, "Region {r:#x?} is locked"),
-        }
-    }
 }
 
 #[cfg(target_arch = "aarch64")]

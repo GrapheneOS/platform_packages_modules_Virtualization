@@ -150,9 +150,9 @@ class TerminalTabFragment() : Fragment() {
             super.onReceivedTitle(view, title)
             title?.let { originalTitle ->
                 // When the session is created. The format of the title will be
-                // 'droid@localhost: ~ | login -f droid (localhost)'
-                // or 'droid@debian: ~ | login -f droid (debian)'.
-                val displayedTitle = originalTitle.substringBeforeLast(" | login -f droid (")
+                // 'droid@localhost: ~ | /bin/bash -c exec su - droid (localhost)'
+                // or 'droid@debian: ~ | /bin/bash -c exec su - droid (debian)'.
+                val displayedTitle = originalTitle.substringBeforeLast(" | ")
 
                 terminalViewModel.terminalTabs[id]
                     ?.customView

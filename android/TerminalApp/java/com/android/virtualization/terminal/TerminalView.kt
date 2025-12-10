@@ -185,9 +185,9 @@ open class TerminalView @JvmOverloads constructor(context: Context, attrs: Attri
                         // real WebView whose ID is View.NO_ID as it's at the root of the
                         // virtual view hierarchy. The second one is a virtual view for the
                         // iframe. The latter one's text is set to the command that we give to
-                        // ttyd, which is "login -f droid ...". This is an impl detail which
-                        // doesn't have to be announced.  Replace the text with "Terminal
-                        // display".
+                        // ttyd, which is "/bin/bash -c exec su - droid ...". This is an impl
+                        // detail which doesn't have to be announced.  Replace the text with
+                        // "Terminal display".
                         if (id != NO_ID) {
                             info.setText(null)
                             info.setContentDescription(getString(R.string.terminal_display))

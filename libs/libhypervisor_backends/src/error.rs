@@ -14,7 +14,7 @@
 
 //! Error and Result types for hypervisor.
 
-use core::{fmt, result};
+use core::result;
 
 #[cfg(target_arch = "aarch64")]
 use super::hypervisor::GeniezoneError;
@@ -28,52 +28,28 @@ use uuid::Uuid;
 pub type Result<T> = result::Result<T, Error>;
 
 /// Hypervisor error.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum Error {
     /// MMIO guard is not supported.
+    #[error("MMIO guard is not supported")]
     MmioGuardNotSupported,
     /// Failed to invoke a certain KVM HVC function.
+    #[error("Failed to invoke the HVC function with function ID {1}: {0}")]
     KvmError(KvmError, u32),
     #[cfg(target_arch = "aarch64")]
     /// Failed to invoke GenieZone HVC function.
+    #[error("Failed to invoke GenieZone HVC function with function ID {1}: {0}")]
     GeniezoneError(GeniezoneError, u32),
     #[cfg(target_arch = "aarch64")]
     /// Unsupported Hypervisor
+    #[error("Unsupported Hypervisor UUID {0}")]
     UnsupportedHypervisorUuid(Uuid),
     #[cfg(target_arch = "x86_64")]
     /// Unsupported x86_64 Hypervisor
+    #[error("Unsupported x86_64 Hypervisor {0}")]
     UnsupportedHypervisor(u128),
     #[cfg(target_arch = "aarch64")]
     /// Failed to invoke Gunyah HVC.
+    #[error("Failed to invoke Gunyah HVC: {0}")]
     GunyahError(GunyahError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::MmioGuardNotSupported => write!(f, "MMIO guard is not supported"),
-            Self::KvmError(e, function_id) => {
-                write!(f, "Failed to invoke the HVC function with function ID {function_id}: {e}")
-            }
-            #[cfg(target_arch = "aarch64")]
-            Self::GeniezoneError(e, function_id) => {
-                write!(
-                    f,
-                    "Failed to invoke GenieZone HVC function with function ID {function_id}: {e}"
-                )
-            }
-            #[cfg(target_arch = "aarch64")]
-            Self::GunyahError(e) => {
-                write!(f, "Failed to invoke Gunyah HVC: {e}")
-            }
-            #[cfg(target_arch = "aarch64")]
-            Self::UnsupportedHypervisorUuid(u) => {
-                write!(f, "Unsupported Hypervisor UUID {u}")
-            }
-            #[cfg(target_arch = "x86_64")]
-            Self::UnsupportedHypervisor(c) => {
-                write!(f, "Unsupported x86_64 Hypervisor {c}")
-            }
-        }
-    }
 }

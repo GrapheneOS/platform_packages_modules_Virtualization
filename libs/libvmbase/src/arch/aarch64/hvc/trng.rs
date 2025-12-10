@@ -16,30 +16,23 @@ use core::fmt;
 use core::result;
 
 /// Standard SMCCC TRNG error values as described in DEN 0098 1.0 REL0.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum Error {
     /// The call is not supported by the implementation.
+    #[error("SMCCC TRNG call not supported")]
     NotSupported,
     /// One of the call parameters has a non-supported value.
+    #[error("SMCCC TRNG call received non-supported value")]
     InvalidParameter,
     /// Call returned without the requested entropy bits.
+    #[error("SMCCC TRNG call returned no entropy")]
     NoEntropy,
     /// Negative values indicate error.
+    #[error("Unknown SMCCC TRNG return value {0} ({0:#x})")]
     Unknown(i64),
     /// The call returned a positive value when 0 was expected.
+    #[error("Unexpected SMCCC TRNG return value {0} ({0:#x})")]
     Unexpected(u64),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::NotSupported => write!(f, "SMCCC TRNG call not supported"),
-            Self::InvalidParameter => write!(f, "SMCCC TRNG call received non-supported value"),
-            Self::NoEntropy => write!(f, "SMCCC TRNG call returned no entropy"),
-            Self::Unexpected(v) => write!(f, "Unexpected SMCCC TRNG return value {} ({0:#x})", v),
-            Self::Unknown(e) => write!(f, "Unknown SMCCC TRNG return value {} ({0:#x})", e),
-        }
-    }
 }
 
 impl From<i64> for Error {

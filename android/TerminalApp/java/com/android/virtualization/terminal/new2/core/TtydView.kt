@@ -132,8 +132,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     super.onReceivedTitle(view, title)
                     title?.let { originalTitle ->
-                        val displayedTitle =
-                            originalTitle.substringBeforeLast(" | login -f droid (")
+                        val displayedTitle = originalTitle.substringBeforeLast(" | ")
                         onTitleChanged?.invoke(displayedTitle)
                     }
                 }
