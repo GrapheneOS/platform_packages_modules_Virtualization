@@ -19,7 +19,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use ciborium::value::Value;
-use core::fmt;
 use core::mem::size_of;
 use coset::{iana, Algorithm, CborSerializable, CoseKey};
 use diced_open_dice::{BccHandover, Cdi, DiceArtifacts, DiceMode};
@@ -27,12 +26,19 @@ use log::trace;
 
 type Result<T> = core::result::Result<T, DiceChainError>;
 
+#[derive(Debug, thiserror::Error)]
 pub enum DiceChainError {
+    #[error("Error parsing DICE chain CBOR")]
     CborDecodeError,
+    #[error("Error encoding DICE chain CBOR")]
     CborEncodeError,
+    #[error("Encountered an error with coset: {0}")]
     CosetError(coset::CoseError),
+    #[error("Dice error: {0:?}")]
     DiceError(diced_open_dice::DiceError),
+    #[error("DICE chain does not have the expected CBOR structure: {0}")]
     Malformed(&'static str),
+    #[error("Missing DICE chain")]
     Missing,
 }
 
@@ -42,18 +48,9 @@ impl From<coset::CoseError> for DiceChainError {
     }
 }
 
-impl fmt::Display for DiceChainError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CborDecodeError => write!(f, "Error parsing DICE chain CBOR"),
-            Self::CborEncodeError => write!(f, "Error encoding DICE chain CBOR"),
-            Self::CosetError(e) => write!(f, "Encountered an error with coset: {e}"),
-            Self::DiceError(e) => write!(f, "Dice error: {e:?}"),
-            Self::Malformed(s) => {
-                write!(f, "DICE chain does not have the expected CBOR structure: {s}")
-            }
-            Self::Missing => write!(f, "Missing DICE chain"),
-        }
+impl From<diced_open_dice::DiceError> for DiceChainError {
+    fn from(e: diced_open_dice::DiceError) -> Self {
+        Self::DiceError(e)
     }
 }
 
@@ -87,8 +84,7 @@ fn taint_cdi(cdi: &Cdi, info: &str) -> Result<Cdi> {
         0x02, 0x90, 0x60, 0xd3,
     ];
     let mut result = [0u8; size_of::<Cdi>()];
-    diced_open_dice::kdf(cdi.as_slice(), &SALT, info.as_bytes(), result.as_mut_slice())
-        .map_err(DiceChainError::DiceError)?;
+    diced_open_dice::kdf(cdi.as_slice(), &SALT, info.as_bytes(), result.as_mut_slice())?;
     Ok(result)
 }
 

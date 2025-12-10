@@ -43,45 +43,33 @@ struct Header {
     flags: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Reserved region can't fit configuration header.
+    #[error("Reserved region is smaller than config header")]
     BufferTooSmall,
     /// Header has the wrong alignment
+    #[error("Reserved region is misaligned")]
     HeaderMisaligned,
     /// Header doesn't contain the expect magic value.
+    #[error("Wrong magic number")]
     InvalidMagic,
     /// Version of the header isn't supported.
+    #[error("Version {0} not supported")]
     UnsupportedVersion(Version),
     /// Header describes configuration data that doesn't fit in the expected buffer.
+    #[error("Total size ({0:#x}) overflows reserved region")]
     InvalidSize(usize),
     #[allow(dead_code)]
     /// Header entry is missing.
+    #[error("Mandatory {0:?} entry is missing")]
     MissingEntry(Entry),
     /// Range described by entry does not fit within config data.
+    #[error("Entry {0:?} out of bounds: {1:#x?} must be within range {2:#x?}")]
     EntryOutOfBounds(Entry, Range<usize>, Range<usize>),
     /// Entries are in out of order
+    #[error("Entries are out of order")]
     EntryOutOfOrder,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::BufferTooSmall => write!(f, "Reserved region is smaller than config header"),
-            Self::HeaderMisaligned => write!(f, "Reserved region is misaligned"),
-            Self::InvalidMagic => write!(f, "Wrong magic number"),
-            Self::UnsupportedVersion(v) => write!(f, "Version {v} not supported"),
-            Self::InvalidSize(sz) => write!(f, "Total size ({sz:#x}) overflows reserved region"),
-            Self::MissingEntry(entry) => write!(f, "Mandatory {entry:?} entry is missing"),
-            Self::EntryOutOfBounds(entry, range, limits) => {
-                write!(
-                    f,
-                    "Entry {entry:?} out of bounds: {range:#x?} must be within range {limits:#x?}"
-                )
-            }
-            Self::EntryOutOfOrder => write!(f, "Entries are out of order"),
-        }
-    }
 }
 
 pub type Result<T> = result::Result<T, Error>;

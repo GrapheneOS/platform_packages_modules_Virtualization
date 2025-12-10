@@ -56,6 +56,7 @@ rust_defaults {
         "libpvmfw_avb_nostd",
         "libpvmfw_fdt_template",
         "libstatic_assertions",
+        "libthiserror",
         "libtinyvec_nostd",
         "libuuid_nostd",
         "libvirtio_drivers",
@@ -134,6 +135,7 @@ rust_defaults {
         "liblibfdt",
         "liblog_rust",
         "libpvmfw_fdt_template",
+        "libthiserror",
         "libzerocopy",
     ],
     data: [
@@ -183,6 +185,7 @@ rust_defaults {
         "liblog_rust",
         "libpvmfw_avb",
         "libdiced_sample_inputs_multialg",
+        "libthiserror",
         "libzerocopy",
         "libhex",
     ],
@@ -206,6 +209,7 @@ rust_defaults {
     rustlibs: [
         "liblibfdt",
         "liblog_rust",
+        "libthiserror",
         "libzerocopy",
     ],
     data: [
