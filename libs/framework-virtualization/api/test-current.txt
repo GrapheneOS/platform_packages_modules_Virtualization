@@ -17,6 +17,7 @@ package android.system.virtualmachine {
 
   public static final class VirtualMachineConfig.Builder {
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder addExtraApk(@NonNull String);
+    method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setDisableUpdatability();
     method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setOs(@NonNull String);
     method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setPayloadConfigPath(@NonNull String);
     method @NonNull @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public android.system.virtualmachine.VirtualMachineConfig.Builder setVendorDiskImage(@NonNull java.io.File);
