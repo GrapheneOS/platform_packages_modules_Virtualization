@@ -47,7 +47,7 @@ use compos_common_injection::{
     compos_client::CompOsType,
     odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR},
 };
-use rustutils::android::{users::AID_ROOT, users::AID_SYSTEM};
+use rustutils::android::{users::AID_ARTD, users::AID_ROOT, users::AID_SHELL, users::AID_SYSTEM};
 use std::sync::Arc;
 
 pub struct IsolatedCompilationService {
@@ -77,7 +77,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         callback: &Strong<dyn ICompilationTaskCallback>,
         base_os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
-        check_permissions()?;
+        check_permissions_for_odrefresh()?;
         to_binder_result(self.do_start_staged_apex_compile(callback, base_os))
     }
 
@@ -87,7 +87,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         callback: &Strong<dyn ICompilationTaskCallback>,
         base_os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
-        check_permissions()?;
+        check_permissions_for_odrefresh()?;
         let prefer_staged = match apex_source {
             ApexSource::NoStaged => false,
             ApexSource::PreferStaged => true,
@@ -106,6 +106,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         if !aconfig_compos_flags_rust::verified_dex2oat() {
             return Err(Status::new_exception(ExceptionCode::UNSUPPORTED_OPERATION, None));
         }
+        check_permissions_for_dex2oat()?;
         to_binder_result(self.do_start_verified_dex2oat(
             dex2oat_args,
             signed_manifest_fd,
@@ -178,12 +179,21 @@ impl IsolatedCompilationService {
     }
 }
 
-fn check_permissions() -> binder::Result<()> {
+fn check_permissions_for_odrefresh() -> binder::Result<()> {
     let calling_uid = ThreadState::get_calling_uid();
     // This should only be called by system server, or root while testing
     if calling_uid != AID_SYSTEM && calling_uid != AID_ROOT {
         Err(Status::new_exception(ExceptionCode::SECURITY, None))
     } else {
         Ok(())
+    }
+}
+
+fn check_permissions_for_dex2oat() -> binder::Result<()> {
+    let calling_uid = ThreadState::get_calling_uid();
+    // restrict to ARTd, shell (for testing) and root.
+    match calling_uid {
+        AID_ARTD | AID_SHELL | AID_ROOT => Ok(()),
+        _ => Err(Status::new_exception(ExceptionCode::SECURITY, None)),
     }
 }
