@@ -301,6 +301,13 @@
 		#interrupt-cells = <3>;
 		interrupt-controller;
 		reg = <0x00 0x3fff0000 0x00 0x10000>, <PLACEHOLDER4>;
+
+		ranges;
+		msic: msic {
+			compatible = "arm,gic-v3-its";
+			msi-controller;
+			reg = <0x00 0x40000000 0x00 0x20000>;
+		};
 	};
 
 	timer {
@@ -394,6 +401,7 @@
 				      0xf800 0x0 0x0 0x7
 				      0xf800 0x0 0x0 0x7
 				      0xf800 0x0 0x0 0x7>;
+		msi-parent = <&msic>;
 	};
 
 	clk: pclk@3M {
