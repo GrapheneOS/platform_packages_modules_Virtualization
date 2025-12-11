@@ -52,10 +52,11 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::fs::{self, create_dir, remove_dir_all, set_permissions, File, Permissions};
 use std::io::{Read, Write};
+use std::os::fd::{AsFd, OwnedFd};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::uid_t;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, LazyLock, Mutex};
+use std::sync::{Arc, Condvar, LazyLock, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::{Atom::Atom, Certificate::Certificate};
@@ -1081,7 +1082,6 @@ impl ShutdownMonitor {
         Default::default()
     }
 
-    /// # SAFETY: this function must be called only once in the program.
     unsafe fn start<F>(&mut self, handler: F)
     where
         F: FnOnce() + std::marker::Send + std::clone::Clone + 'static,
@@ -1106,16 +1106,9 @@ impl ShutdownMonitor {
         self.threads[1] = {
             let (reader, writer) = pipe2(OFlag::O_CLOEXEC).expect("pipe failed");
 
-            // SAFETY: SIGNAL_PIPE_WRITE_FD is read only by the handle_sigterm function. The
-            // function gets executed far after this write is done; the function first needs to be
-            // registered as a signal handler (done just below), and then SIGTERM should be sent to
-            // this process, which is out of our control, but usually is during the shutdown of the
-            // device. Lastly, this part is executed only once by the safety requirement of the
-            // containing function `start`.
-            unsafe {
-                use std::os::fd::AsRawFd;
-                SIGNAL_PIPE_WRITE_FD = writer.as_raw_fd();
-            }
+            SIGNAL_PIPE_WRITE_FD
+                .set(writer)
+                .expect("ShutdownMonitor::start should only be called once");
 
             let sa_handler = SigHandler::Handler(handle_sigterm);
             let sa_flags = SaFlags::SA_RESTART | SaFlags::SA_RESETHAND;
@@ -1144,7 +1137,6 @@ impl ShutdownMonitor {
                                 }
                             }
                         }
-                        drop(writer);
                         // In response to SIGTERM, we kill ourselves without waiting for init to
                         // come to use with SIGKILL (which would take up to 3s after SIGTERM is
                         // sent).
@@ -1172,14 +1164,10 @@ impl Drop for ShutdownMonitor {
     }
 }
 
-static mut SIGNAL_PIPE_WRITE_FD: i32 = -1;
+static SIGNAL_PIPE_WRITE_FD: OnceLock<OwnedFd> = OnceLock::new();
 
 extern "C" fn handle_sigterm(_signal: libc::c_int) {
-    // SAFETY: the FD is open because it is owned by the shutdown thread above and this variable
-    // was set "before" this function is registered as a signal handler and gets executed. Also
-    // note that this handler is registered with SA_RESETHAND, so it's called at most once, which
-    // means it's not called after the FD is closed by the thread.
-    let fd = unsafe { std::os::fd::BorrowedFd::borrow_raw(SIGNAL_PIPE_WRITE_FD) };
+    let fd = SIGNAL_PIPE_WRITE_FD.get().unwrap().as_fd();
     let one_byte: [u8; 1] = [1];
     let _ = nix::unistd::write(fd, &one_byte);
 }
