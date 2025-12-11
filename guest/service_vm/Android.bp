@@ -16,6 +16,7 @@ rust_ffi_static {
         "libhypervisor_backends",
         "liblibfdt_nostd",
         "liblog_rust_nostd",
+        "libservice_vm_avf_attestation_nostd",
         "libservice_vm_comm_nostd",
         "libservice_vm_fake_chain_nostd",
         "libtinyvec_nostd",

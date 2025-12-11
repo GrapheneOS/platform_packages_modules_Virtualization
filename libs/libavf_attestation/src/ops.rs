@@ -16,6 +16,8 @@
 
 //! Defines the abstract operations for VM Attestation and Key Provisioning.
 
+use crate::dice::ClientVmDiceChain;
+use coset::CoseSign1;
 use service_vm_comm::Result;
 use zeroize::Zeroizing;
 
@@ -30,4 +32,32 @@ pub trait KeyDerivationOps: Send + Sync {
     /// * `salt` - A non-secret value used to randomize the derivation.
     /// * `info` - Application-specific context information (e.g., "KeyBlobEncryption").
     fn derive_kek(&self, salt: &[u8], info: &[u8]) -> Result<Zeroizing<[u8; 32]>>;
+}
+
+/// A provider for platform-specific cryptographic and validation operations required
+/// for VM attestation.
+///
+/// This trait abstracts the differences between Attesters while providing a unified
+/// interface for the core attestation logic.
+pub trait AttestationOps: KeyDerivationOps + Send + Sync {
+    /// Returns the full DICE chain of the reference VM (the Attester).
+    fn reference_vm_dice_chain(&self) -> Result<&[u8]>;
+
+    /// Returns the length of the suffix in the reference DICE chain that is specific
+    /// to the Attester VM itself.
+    ///
+    /// The "Common Chain Prefix" is calculated as: `len(reference_chain) - suffix_len`.
+    fn reference_vm_dice_chain_suffix_len(&self) -> usize;
+
+    /// Signs the provided payload using the DICE Chain's Leaf Private Key (CDI_Leaf_Priv).
+    ///
+    /// This is primarily used to generate the Certificate Signing Request (CSR) sent to the
+    /// RKP server.
+    fn sign_with_cdi_leaf(&self, payload: &[u8]) -> Result<CoseSign1>;
+
+    /// Validates a Client VM's DICE chain against platform policies.
+    ///
+    /// This method delegates the specific validation logic (e.g., Allow-Listing,
+    /// Anti-Rollback) to the platform integrator.
+    fn validate_vm(&self, client_chain_suffix: &ClientVmDiceChain) -> Result<()>;
 }
