@@ -20,7 +20,6 @@ use crate::gpt::Partition;
 use crate::gpt::Partitions;
 use bssl_crypto::aead::{Aead, Aes256Gcm};
 use bssl_crypto::hkdf::{self, HkdfSha512};
-use core::fmt;
 use core::mem::size_of;
 use diced_open_dice::DiceMode;
 use diced_open_dice::Hash;
@@ -39,49 +38,41 @@ use zerocopy::Immutable;
 use zerocopy::IntoBytes;
 use zerocopy::KnownLayout;
 
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Unexpected I/O error while accessing the underlying disk.
+    #[error("Failed I/O to disk: {0}")]
     FailedIo(gpt::Error),
     /// Impossible to create a new instance.img entry.
+    #[error("Failed to obtain a free instance.img partition")]
     InstanceImageFull,
     /// Badly formatted instance.img header block.
+    #[error("instance.img header is invalid")]
     InvalidInstanceImageHeader,
     /// No instance.img ("vm-instance") partition found.
+    #[error("Failed to find the instance.img partition")]
     MissingInstanceImage,
     /// The instance.img doesn't contain a header.
+    #[error("instance.img header is missing")]
     MissingInstanceImageHeader,
     /// Authority hash found in the pvmfw instance.img entry doesn't match the trusted public key.
+    #[error("Recorded authority hash doesn't match")]
     RecordedAuthHashMismatch,
     /// Code hash found in the pvmfw instance.img entry doesn't match the inputs.
+    #[error("Recorded code hash doesn't match")]
     RecordedCodeHashMismatch,
     /// DICE mode found in the pvmfw instance.img entry doesn't match the current one.
+    #[error("Recorded DICE mode doesn't match")]
     RecordedDiceModeMismatch,
     /// Size of the instance.img entry being read or written is not supported.
+    #[error("Invalid entry size: {0}")]
     UnsupportedEntrySize(usize),
     /// Failed to create VirtIO Block device.
+    #[error("Failed to create VirtIO Block device: {0}")]
     VirtIOBlkCreationFailed(virtio_drivers::Error),
     /// The instance.img entry could not be decrypted.
+    #[error("Failed to decrypt entry")]
     DecryptionFailed,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::FailedIo(e) => write!(f, "Failed I/O to disk: {e}"),
-            Self::InstanceImageFull => write!(f, "Failed to obtain a free instance.img partition"),
-            Self::InvalidInstanceImageHeader => write!(f, "instance.img header is invalid"),
-            Self::MissingInstanceImage => write!(f, "Failed to find the instance.img partition"),
-            Self::MissingInstanceImageHeader => write!(f, "instance.img header is missing"),
-            Self::RecordedAuthHashMismatch => write!(f, "Recorded authority hash doesn't match"),
-            Self::RecordedCodeHashMismatch => write!(f, "Recorded code hash doesn't match"),
-            Self::RecordedDiceModeMismatch => write!(f, "Recorded DICE mode doesn't match"),
-            Self::UnsupportedEntrySize(sz) => write!(f, "Invalid entry size: {sz}"),
-            Self::VirtIOBlkCreationFailed(e) => {
-                write!(f, "Failed to create VirtIO Block device: {e}")
-            }
-            Self::DecryptionFailed => write!(f, "Failed to decrypt entry"),
-        }
-    }
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

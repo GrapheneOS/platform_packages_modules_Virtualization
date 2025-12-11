@@ -1745,10 +1745,6 @@ impl aidl::IVirtualMachine for VirtualMachine {
         cacheable: bool,
     ) -> binder::Result<i32> {
         info!("addMemoryToGuest called");
-        if !cfg!(dynamic_memshare_with_guest) {
-            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
         check_memory_share_supported()?;
         let fd = clone_file(fd)?;
         let id = self
@@ -1762,10 +1758,6 @@ impl aidl::IVirtualMachine for VirtualMachine {
 
     fn removeMemoryFromGuest(&self, memory_id: i32) -> binder::Result<()> {
         info!("removeMemoryFromGuest called");
-        if !cfg!(dynamic_memshare_with_guest) {
-            return Err(anyhow!("dynamic_memshare_with_guest feature is disabled"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
         check_memory_share_supported()?;
         let memory_id = SharedMemoryId(memory_id);
         self.instance
@@ -1951,26 +1943,6 @@ fn check_no_extra_kernel_cmdline_params(config: &aidl::VirtualMachineConfig) -> 
     Ok(())
 }
 
-fn check_no_tee_services(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
-    match config {
-        aidl::VirtualMachineConfig::RawConfig(config) => {
-            if !config.teeServices.is_empty() {
-                return Err(anyhow!("tee_services_allowlist feature is disabled"))
-                    .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-            }
-        }
-        aidl::VirtualMachineConfig::AppConfig(config) => {
-            if let Some(custom_config) = &config.customConfig {
-                if !custom_config.teeServices.is_empty() {
-                    return Err(anyhow!("tee_services_allowlist feature is disabled"))
-                        .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-                }
-            }
-        }
-    };
-    Ok(())
-}
-
 fn check_no_delay_enc_store(config: &aidl::VirtualMachineConfig) -> binder::Result<()> {
     let aidl::VirtualMachineConfig::AppConfig(config) = config else { return Ok(()) };
     if config.shouldDelayEncryptedStoreSetup {
@@ -2016,9 +1988,6 @@ fn check_config_features(config: &aidl::VirtualMachineConfig) -> binder::Result<
     }
     if !cfg!(debuggable_vms_improvements) {
         check_no_extra_kernel_cmdline_params(config)?;
-    }
-    if !cfg!(tee_services_allowlist) {
-        check_no_tee_services(config)?;
     }
     if !cfg!(long_running_vms) {
         check_no_delay_enc_store(config)?;

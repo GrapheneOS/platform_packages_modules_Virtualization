@@ -38,9 +38,6 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
         true: ["vendor_modules"],
         default: [],
-    }) + select(release_flag("RELEASE_AVF_ENABLE_VM_TO_TEE_SERVICES_ALLOWLIST"), {
-        true: ["tee_services_allowlist"],
-        default: [],
     }) + select(release_flag("RELEASE_AVF_IMPROVE_DEBUGGABLE_VMS"), {
         true: ["debuggable_vms_improvements"],
         default: [],
@@ -59,9 +56,6 @@ rust_defaults {
         default: [],
     }) + select(release_flag("RELEASE_AVF_ENABLE_ADVANCE_MULTITENANCY"), {
         true: ["advance_multitenancy"],
-        default: [],
-    }) + select(release_flag("RELEASE_AVF_ENABLE_DYNAMIC_ZERO_COPY_SHARE_WITH_GUEST"), {
-        true: ["dynamic_memshare_with_guest"],
         default: [],
     }) + select(release_flag("RELEASE_AVF_FORWARD_ROOT_OF_TRUST_PROPS_TO_SECURITY_VM"), {
         true: ["forward_rot"],

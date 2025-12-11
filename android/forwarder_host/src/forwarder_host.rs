@@ -370,7 +370,6 @@ fn create_forwarder_session(
     }
 }
 
-// TODO(b/340126051): Host can receive opened ports from the guest.
 fn run_forwarder_host(cid: i32, jni_env: JNIEnv, jni_cb: JObject) -> Result<()> {
     debug!("Starting forwarder_host");
     let mut sessions = ForwarderSessions::new(cid, jni_env, jni_cb)?;

@@ -15,7 +15,6 @@
 //! Support for parsing GUID partition tables.
 
 use core::cmp::min;
-use core::fmt;
 use core::mem::size_of;
 use core::ops::RangeInclusive;
 use core::slice;
@@ -29,26 +28,20 @@ use zerocopy::FromBytes;
 
 type VirtIOBlk<'a> = pci::VirtIOBlk<'a, HalImpl>;
 
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// VirtIO error during read operation.
+    #[error("Failed to read from disk: {0}")]
     FailedRead(virtio_drivers::Error),
     /// VirtIO error during write operation.
+    #[error("Failed to write to disk: {0}")]
     FailedWrite(virtio_drivers::Error),
     /// Invalid GPT header.
+    #[error("Found invalid GPT header")]
     InvalidHeader,
     /// Invalid partition block index.
+    #[error("Accessed invalid block index {0}")]
     BlockOutsidePartition(usize),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::FailedRead(e) => write!(f, "Failed to read from disk: {e}"),
-            Self::FailedWrite(e) => write!(f, "Failed to write to disk: {e}"),
-            Self::InvalidHeader => write!(f, "Found invalid GPT header"),
-            Self::BlockOutsidePartition(i) => write!(f, "Accessed invalid block index {i}"),
-        }
-    }
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

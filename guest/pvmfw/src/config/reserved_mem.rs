@@ -1,36 +1,26 @@
 use core::ffi::CStr;
-use core::fmt;
 use zerocopy::byteorder::U32;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, NativeEndian};
 
 pub const NO_MAP: u32 = 1u32;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum Error {
     /// The struct indicated a different number of headers than were found.
+    #[error("Header count did not match indicated number")]
     InconsistentSize,
     /// Data offsets invalid.
+    #[error("Encountered an invalid data offset ({0})")]
     InvalidOffset(usize),
     /// Compat string was not a valid CStr.
+    #[error("Encountered an invalid CStr")]
     InvalidCStr,
     /// Passed in buffer too small for any data.
+    #[error("Input buffer too small")]
     InputBufferSmall,
     /// A header referenced an invalid blob size.
+    #[error("An entry indicated an invalid size ({0})")]
     InvalidSize(usize),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::InconsistentSize => write!(f, "Header count did not match indicated number"),
-            Self::InvalidOffset(offset) => {
-                write!(f, "Encountered an invalid data offset ({offset})")
-            }
-            Self::InvalidCStr => write!(f, "Encountered an invalid CStr"),
-            Self::InputBufferSmall => write!(f, "Input buffer too small"),
-            Self::InvalidSize(sz) => write!(f, "An entry indicated an invalid size ({sz})"),
-        }
-    }
 }
 
 #[repr(C)]

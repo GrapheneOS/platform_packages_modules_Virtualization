@@ -363,16 +363,16 @@ bool AVmPayload_isNewInstance(void) __INTRODUCED_IN(36);
  * \param key_size Size of the encryption key in bytes.
  * \param sector_size The logical sector size of the block device in bytes.
  *                    Must be a power of two between 512 and 4096.
- * \param mount_point Output buffer to write the null-terminated absolute path of the mount point.
+ * \param mount_point Output buffer to write the null-terminated absolute path of the mount point,
+ *                    UTF-8 encoded.
  * \param mount_point_size Size of the mount_point buffer, should be at least `PATH_MAX`.
  *
  * \return AVMMOUNTENCRYPTEDASSETSSTATUS_OK on success,
  *         or a negative error code in AVmMountEncryptedAssetsStatus on failure.
  */
-int32_t AVmPayload_mountEncryptedAssets(const char* _Nonnull image_path,
-                                        const char* _Nonnull fs_type, const char* _Nonnull cipher,
-                                        const void* _Nonnull key, size_t key_size,
-                                        int32_t sector_size, char* _Nonnull mount_point,
-                                        size_t mount_point_size) __INTRODUCED_IN(37);
+AVmMountEncryptedAssetsStatus AVmPayload_mountEncryptedAssets(
+        const char* _Nonnull image_path, const char* _Nonnull fs_type, const char* _Nonnull cipher,
+        const void* _Nonnull key, size_t key_size, int32_t sector_size, char* _Nonnull mount_point,
+        size_t mount_point_size) __INTRODUCED_IN(37);
 
 __END_DECLS
