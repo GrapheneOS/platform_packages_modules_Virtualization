@@ -64,7 +64,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -418,7 +417,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
     @VsrTest(requirements = {"VSR-7.1-001.007"})
     public void UpgradedPackageIsAcceptedWithSecretkeeper() throws Exception {
@@ -444,7 +443,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
     @VsrTest(requirements = {"VSR-7.1-001.007"})
     public void DowngradedPackageIsRejectedProtectedVm() throws Exception {
@@ -1047,7 +1046,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "params")
     @TestCaseName("{method}_protectedVm_{0}_os_{1}")
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-001.002"})
     public void testMicrodroidBoots(boolean protectedVm, String os) throws Exception {
         // Preconditions
@@ -1142,7 +1141,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testPathToBinaryIsRejected() throws Exception {
         CommandRunner android = new CommandRunner(getDevice());
 
@@ -1191,7 +1190,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testRunEmptyPayload() throws Exception {
         assumeVmTypeSupported("microdroid", false);
 
@@ -1263,7 +1262,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testNoAvfDebugPolicyInLockedDevice() throws Exception {
         ITestDevice device = getDevice();
 
@@ -1357,7 +1356,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     @Test
     @Parameters(method = "params")
     @TestCaseName("{method}_protectedVm_{0}_os_{1}")
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testDeviceAssignment(boolean protectedVm, String os) throws Exception {
         // Preconditions
         assumeKernelSupported(os);
@@ -1415,7 +1414,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-001.002"})
     public void testOsVersions() throws Exception {
         for (String os : getSupportedOSList()) {
