@@ -238,13 +238,13 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void createAndConnectToVm() throws Exception {
         createAndConnectToVmHelper(CPU_TOPOLOGY_ONE_CPU, /* shouldUseHugepages= */ false);
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void createAndConnectToVm_HostCpuTopology() throws Exception {
         createAndConnectToVmHelper(CPU_TOPOLOGY_MATCH_HOST, /* shouldUseHugepages= */ false);
     }
@@ -270,7 +270,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWhenRemoteAttestationIsNotSupported() throws Exception {
@@ -299,7 +299,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWithVendorPartitionWhenSupported() throws Exception {
@@ -318,7 +318,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWhenRemoteAttestationIsSupported() throws Exception {
@@ -399,7 +399,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWithMultipleTenantsWhenRemoteAttestationIsNotSupported()
@@ -435,7 +435,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceMaybeOffline()
@@ -446,7 +446,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void
@@ -479,7 +479,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void createAndRunNoDebugVm() throws Exception {
         assumeSupportedDevice();
 
@@ -500,7 +500,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void autoCloseVm() throws Exception {
         assumeSupportedDevice();
 
@@ -530,7 +530,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void autoCloseVmDescriptor() throws Exception {
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
@@ -561,7 +561,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmDescriptorClosedOnImport() throws Exception {
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
@@ -604,7 +604,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void preconnectedBinderException() throws Exception {
         assumeSupportedDevice();
 
@@ -624,7 +624,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 });
     }
 
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmLifecycleChecks() throws Exception {
         assumeSupportedDevice();
 
@@ -779,7 +779,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void connectVsock() throws Exception {
         assumeSupportedDevice();
 
@@ -817,7 +817,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void binderCallbacksWork() throws Exception {
         assumeSupportedDevice();
 
@@ -869,7 +869,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmConfigGetAndSetTests() {
         // Minimal has as little as specified as possible; everything that can be is defaulted.
         VirtualMachineConfig.Builder minimalBuilder =
@@ -938,7 +938,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmConfigBuilderValidationTests() {
         VirtualMachineConfig.Builder builder =
                 new VirtualMachineConfig.Builder(getContext()).setProtectedVm(mProtectedVm);
@@ -981,7 +981,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void compatibleConfigTests() {
         VirtualMachineConfig baseline = newBaselineBuilder().build();
 
@@ -1063,7 +1063,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmUnitTests() throws Exception {
         VirtualMachineConfig.Builder builder = newVmConfigBuilderWithPayloadBinary("binary.so");
         VirtualMachineConfig config = builder.build();
@@ -1084,7 +1084,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testAvfRequiresUpdatableApex() throws Exception {
         assertWithMessage("Devices that support AVF must also support updatable APEX")
                 .that(SystemProperties.getBoolean("ro.apex.updatable", false))
@@ -1092,7 +1092,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmmGetAndCreate() throws Exception {
         assumeSupportedDevice();
 
@@ -1139,7 +1139,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmFilesStoredInDeDirWhenCreatedFromDEContext() throws Exception {
         final Context ctx = getContext().createDeviceProtectedStorageContext();
         final int userId = ctx.getUserId();
@@ -1175,7 +1175,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void vmFilesStoredInCeDirWhenCreatedFromCEContext() throws Exception {
         final Context ctx = getContext().createCredentialProtectedStorageContext();
         final int userId = ctx.getUserId();
@@ -1192,7 +1192,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void differentManagersForDifferentContexts() throws Exception {
         final Context ceCtx = getContext().createCredentialProtectedStorageContext();
         final Context deCtx = getContext().createDeviceProtectedStorageContext();
@@ -1201,7 +1201,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void createVmWithConfigRequiresPermission() throws Exception {
         assumeSupportedDevice();
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1223,7 +1223,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void deleteVm() throws Exception {
         assumeSupportedDevice();
 
@@ -1247,7 +1247,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void deleteVmFiles() throws Exception {
         assumeSupportedDevice();
 
@@ -1277,7 +1277,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void validApkPathIsAccepted() throws Exception {
         assumeSupportedDevice();
 
@@ -1302,7 +1302,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void invalidVmNameIsRejected() {
         VirtualMachineManager vmm = getVirtualMachineManager();
         assertThrows(IllegalArgumentException.class, () -> vmm.get("../foo"));
@@ -1310,7 +1310,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void extraApk() throws Exception {
         assumeSupportedDevice();
 
@@ -1335,7 +1335,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
 
@@ -1401,7 +1401,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void multiTenantEncryptedStoragePath() throws Exception {
         assumeSupportedDevice();
         assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
@@ -1469,7 +1469,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void invalidTenantApkAuthority() throws Exception {
         assumeSupportedDevice();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1489,7 +1489,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void invalidTenantApexAuthority() throws Exception {
         assumeSupportedDevice();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1510,7 +1510,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void invalidTenantApexVersion() throws Exception {
         assumeSupportedDevice();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1531,7 +1531,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void invalidTenantRollbackIndex() throws Exception {
         assumeSupportedDevice();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1563,7 +1563,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void multiTenantInstanceSpecRollbackTest() throws Exception {
         assumeSupportedDevice();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
@@ -1655,7 +1655,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void extraApkInVmConfig() throws Exception {
         assumeSupportedDevice();
 
@@ -1714,7 +1714,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void changingNonDebuggableVmDebuggableInvalidatesVmIdentity() throws Exception {
         // Debuggability changes initrd which is verified by pvmfw.
         // Therefore, skip this on non-protected VM.
@@ -1768,7 +1768,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void changingDebuggableVmNonDebuggableInvalidatesVmIdentity() throws Exception {
         // Debuggability changes initrd which is verified by pvmfw.
         // Therefore, skip this on non-protected VM.
@@ -1849,7 +1849,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-011"})
     public void instancesOfSameVmHaveDifferentCdis() throws Exception {
         assumeSupportedDevice();
@@ -1877,7 +1877,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-011"})
     public void sameInstanceKeepsSameCdis() throws Exception {
         assumeSupportedDevice();
@@ -1934,7 +1934,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void accessToCdisIsRestricted() throws Exception {
         assumeSupportedDevice();
 
@@ -2147,7 +2147,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void sameInstancesShareTheSameVmObject() throws Exception {
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so").build();
@@ -2164,7 +2164,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void importedVmAndOriginalVmHaveTheSameCdi() throws Exception {
         assumeSupportedDevice();
         // Arrange
@@ -2260,7 +2260,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageAvailable() throws Exception {
         assumeSupportedDevice();
 
@@ -2283,7 +2283,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageIsInaccessibleToDifferentVm() throws Exception {
         assumeSupportedDevice();
         // TODO(b/325094712): VMs on CF with same payload have the same secret. This is because
@@ -2348,7 +2348,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void microdroidLauncherHasEmptyCapabilities() throws Exception {
         assumeSupportedDevice();
 
@@ -2372,7 +2372,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-005"})
     public void payloadIsNotRoot() throws Exception {
         assumeSupportedDevice();
@@ -2395,7 +2395,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageIsPersistent() throws Exception {
         assumeSupportedDevice();
 
@@ -2431,7 +2431,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageSupportsExpansion() throws Exception {
         assumeSupportedDevice();
 
@@ -2476,7 +2476,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageExpansionIsPersistent() throws Exception {
         assumeSupportedDevice();
 
@@ -2516,7 +2516,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageSizeUnchanged() throws Exception {
         assumeSupportedDevice();
 
@@ -2561,7 +2561,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void encryptedStorageShrinkFails() throws Exception {
         assumeSupportedDevice();
 
@@ -2604,7 +2604,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void rollbackProtectedDataOfPayload() throws Exception {
         assumeSupportedDevice();
         // Rollback protected data is only possible if Updatable VMs is supported -
@@ -2722,7 +2722,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void isNewInstanceTest() throws Exception {
         assumeSupportedDevice();
 
@@ -2784,7 +2784,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void outputShouldBeExplicitlyCaptured() throws Exception {
         assumeSupportedDevice();
 
@@ -2811,7 +2811,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void inputShouldBeExplicitlyAllowed() throws Exception {
         assumeSupportedDevice();
 
@@ -2865,7 +2865,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void outputIsRedirectedToLogcatIfNotCaptured() throws Exception {
         assumeSupportedDevice();
 
@@ -2890,7 +2890,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void outputIsNotRedirectedToLogcatIfNotDebuggable() throws Exception {
         assumeSupportedDevice();
 
@@ -2901,7 +2901,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testConsoleInputSupported() throws Exception {
         assumeSupportedDevice();
         assumeFalse("Not supported on GKI kernels", mOs.startsWith("microdroid_gki-"));
@@ -2931,7 +2931,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testStartVmWithPayloadOfAnotherApp() throws Exception {
         assumeSupportedDevice();
 
@@ -2961,7 +2961,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testVmDescriptorParcelUnparcel_noTrustedStorage() throws Exception {
         assumeSupportedDevice();
 
@@ -2995,7 +2995,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testVmDescriptorParcelUnparcel_withTrustedStorage() throws Exception {
         assumeSupportedDevice();
 
@@ -3049,7 +3049,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testShareVmWithAnotherApp() throws Exception {
         assumeSupportedDevice();
 
@@ -3095,7 +3095,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void testShareVmWithAnotherApp_encryptedStorage() throws Exception {
         assumeSupportedDevice();
 
@@ -3165,7 +3165,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-3-7.1-005"})
     public void testFileUnderBinHasExecutePermission() throws Exception {
         assumeSupportedDevice();
@@ -3260,7 +3260,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     public void createAndRunRustVm() throws Exception {
         // This test is here mostly to exercise the Rust wrapper around the VM Payload API.
         // We're testing the same functionality as in other tests, the only difference is
@@ -3343,7 +3343,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.007"})
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void configuringVendorDiskImageRequiresCustomPermission() throws Exception {
@@ -3363,7 +3363,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.007"})
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void bootsWithVendorPartition() throws Exception {
@@ -3385,7 +3385,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.007"})
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void bootsWithCustomVendorPartitionForNonPvm() throws Exception {
@@ -3409,7 +3409,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.007"})
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void bootFailsWithCustomVendorPartitionForPvm() throws Exception {
@@ -3424,7 +3424,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.007"})
     @VsrTest(requirements = {"VSR-7.1-001.008"})
     public void creationFailsWithUnsignedVendorPartition() throws Exception {
