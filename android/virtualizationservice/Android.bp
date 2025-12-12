@@ -31,6 +31,7 @@ rust_defaults {
         "android.system.virtualizationservice_internal-rust",
         "android.system.virtualmachineservice-rust",
         "android.system.vmtethering-rust",
+        "android.trusty.vm_attestation-rust",
         "android.os.permissions_aidl-rust",
         "libandroid_logger",
         "libanyhow",
