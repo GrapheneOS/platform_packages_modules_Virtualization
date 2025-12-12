@@ -96,7 +96,7 @@ const CONSOLE_TX_QUEUE_SIZE: u32 = 32;
 /// If the VM doesn't move to the Started state within this amount time, a hang-up error is
 /// triggered.
 static BOOT_HANGUP_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
-    let multiplier = hw_timeout_multiplier::timeout_p2m50();
+    let multiplier = hw_timeout_multiplier::vm_timeout_multiplier();
     // Cap multiplier at 50 to avoid having exceedingly large timeouts reaching infinity.
     Duration::from_secs(60 * multiplier)
 });
@@ -1831,7 +1831,7 @@ impl VmInstance {
                 // or killed, the state is set to Dead. See monitor_vm_exit_thread.
                 // In nested virtualization environments, operations may be slower, scale the
                 // timeout accordingly
-                let hw_timeout_multiplier = hw_timeout_multiplier::timeout_p2m50();
+                let hw_timeout_multiplier = hw_timeout_multiplier::vm_timeout_multiplier();
                 let shutdown_timeout = Duration::from_secs(5 * hw_timeout_multiplier);
                 let result = self
                     .vm_state_changed_condvar

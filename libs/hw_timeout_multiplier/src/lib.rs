@@ -30,6 +30,6 @@ pub fn timeout_multiplier() -> u64 {
 }
 
 /// Returns multiplier squared, capped at 50.
-pub fn timeout_p2m50() -> u64 {
+pub fn vm_timeout_multiplier() -> u64 {
     std::cmp::min(timeout_multiplier().pow(2), 50)
 }
