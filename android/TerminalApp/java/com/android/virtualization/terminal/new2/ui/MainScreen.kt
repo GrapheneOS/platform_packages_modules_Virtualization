@@ -20,6 +20,9 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.provider.Settings
 import android.view.WindowManager
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +31,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -71,6 +78,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val activity = context as Activity
     val scope = rememberCoroutineScope()
+    var showSettings by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
         val state = uiState
@@ -171,6 +179,14 @@ fun MainScreen(viewModel: MainViewModel) {
                                         viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
                                     },
                                 )
+                                IconButton(
+                                    onClick = {
+                                        showSettings = true
+                                        viewModel.setIsImeVisible(false)
+                                    }
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                }
                             }
                         }
                         if (
@@ -187,6 +203,14 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
                 is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
                 else -> {}
+            }
+
+            AnimatedVisibility(
+                visible = showSettings,
+                enter = slideInHorizontally(initialOffsetX = { it }),
+                exit = slideOutHorizontally(targetOffsetX = { it }),
+            ) {
+                SettingsScreen(onBack = { showSettings = false })
             }
         }
     }

@@ -218,8 +218,8 @@ fun TerminalScreen(address: String, port: Int, tabId: String, mainViewModel: Mai
                 // is cancelled.  So if we reached here, isWindowImeVisible is still false.
                 mainViewModel.setIsImeVisible(false)
             } else {
-                // ViewModel says invisible, Window says visible.  User opened the keyboard. Update
-                // immediately.
+                // ViewModel says invisible, Window says visible.  User opened the keyboard.
+                delay(500)
                 mainViewModel.setIsImeVisible(true)
             }
         }
