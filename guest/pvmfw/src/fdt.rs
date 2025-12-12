@@ -602,6 +602,7 @@ struct PciInfo {
     ranges: [PciAddrRange; 2],
     irq_masks: ArrayVec<[PciIrqMask; PciInfo::MAX_IRQS]>,
     irq_maps: ArrayVec<[PciIrqMap; PciInfo::MAX_IRQS]>,
+    has_msi_parent: bool,
 }
 
 impl PciInfo {
@@ -664,7 +665,9 @@ fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<Option<PciInfo>> {
         return Err(FdtError::NoSpace);
     }
 
-    Ok(Some(PciInfo { ranges: [range0, range1], irq_masks, irq_maps }))
+    let has_msi_parent = node.getprop(c"msi-parent")?.is_some();
+
+    Ok(Some(PciInfo { ranges: [range0, range1], irq_masks, irq_maps, has_msi_parent }))
 }
 
 fn validate_pci_info(pci_info: &PciInfo, memory_range: &Range<usize>) -> Result<(), RebootReason> {
@@ -812,7 +815,13 @@ fn patch_pci_info(fdt: &mut Fdt, pci_info: &PciInfo) -> libfdt::Result<()> {
     node.setprop_inplace(
         c"ranges",
         [pci_info.ranges[0].to_cells(), pci_info.ranges[1].to_cells()].as_flattened(),
-    )
+    )?;
+
+    if !pci_info.has_msi_parent {
+        node.nop_property(c"msi-parent")?;
+    }
+
+    Ok(())
 }
 
 #[derive(Default, Debug)]
@@ -1002,7 +1011,7 @@ fn patch_swiotlb_info(fdt: &mut Fdt, swiotlb_info: &SwiotlbInfo) -> libfdt::Resu
     Ok(())
 }
 
-fn patch_gic(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
+fn patch_gic(fdt: &mut Fdt, num_cpus: usize, has_its: bool) -> libfdt::Result<()> {
     let node = fdt.compatible_nodes(c"arm,gic-v3")?.next().ok_or(FdtError::NotFound)?;
     let mut ranges = node.reg()?.ok_or(FdtError::NotFound)?;
     let range0 = ranges.next().ok_or(FdtError::NotFound)?;
@@ -1022,7 +1031,14 @@ fn patch_gic(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
     let value = [addr0, size0.unwrap(), addr1, size1.unwrap()];
 
     let mut node = fdt.root_mut().next_compatible(c"arm,gic-v3")?.ok_or(FdtError::NotFound)?;
-    node.setprop_inplace(c"reg", value.as_flattened())
+    node.setprop_inplace(c"reg", value.as_flattened())?;
+
+    if !has_its {
+        node.nop_property(c"ranges")?;
+        node.next_compatible(c"arm,gic-v3-its")?.ok_or(FdtError::NotFound)?.nop()?;
+    }
+
+    Ok(())
 }
 
 fn patch_timer(fdt: &mut Fdt, num_cpus: usize) -> libfdt::Result<()> {
@@ -1431,7 +1447,9 @@ fn patch_device_tree(fdt: &mut Fdt, info: &DeviceTreeInfo) -> Result<(), RebootR
         })?;
     }
     if cfg!(target_arch = "aarch64") {
-        patch_gic(fdt, info.cpus.len()).map_err(|e| {
+        // Assume there is an ITS if the PCI node has an msi-parent.
+        let has_its = info.pci_info.as_ref().is_some_and(|pci_info| pci_info.has_msi_parent);
+        patch_gic(fdt, info.cpus.len(), has_its).map_err(|e| {
             error!("Failed to patch gic info to DT: {e}");
             RebootReason::InvalidFdt
         })?;
