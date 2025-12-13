@@ -2,7 +2,7 @@
     "name": "trusty_test_vm",
     "kernel": "/data/local/tmp/trusty_test_vm/trusty_test_vm.elf",
     "platform_version": "1.0",
-    "cpu_topology": "one_cpu",
+    "cpu_topology": "match_host",
     "memory_mib": 112,
     "instance_id": "/data/local/tmp/trusty_test_vm/trusty_test_vm_instance_id",
     "protected": true
