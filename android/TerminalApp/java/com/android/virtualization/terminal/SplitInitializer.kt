@@ -77,12 +77,19 @@ class SplitInitializer : Initializer<RuleController> {
                 .setMinWidthDp(context.resources.getInteger(R.integer.split_min_width))
                 .build()
 
+        val placeholderIntent =
+            if (Flags.terminalStorageBalloon()) {
+                Intent(context, SettingsPortForwardingActivity::class.java)
+            } else {
+                Intent(context, SettingsDiskResizeActivity::class.java)
+            }
+
         val placeholderRule =
             SplitPlaceholderRule.Builder(
                     setOf(
                         ActivityFilter(ComponentName(context, SettingsActivity::class.java), null)
                     ),
-                    Intent(context, SettingsDiskResizeActivity::class.java),
+                    placeholderIntent,
                 )
                 .setFinishPrimaryWithPlaceholder(SplitRule.FinishBehavior.ADJACENT)
                 .setDefaultSplitAttributes(
