@@ -45,6 +45,39 @@ class VmService : LifecycleService() {
 
         monitorInstaller()
         monitorVmController()
+        monitorPorts()
+    }
+
+    private fun monitorPorts() {
+        lifecycleScope.launch {
+            var previousPorts = emptySet<Int>()
+            VmController.ports.collect { currentPorts ->
+                val currentPortSet = currentPorts.map { it.port }.toSet()
+                val newPorts = currentPorts.filter { it.port !in previousPorts }
+
+                newPorts.forEach { port ->
+                    val notification = createPortNotification(port)
+                    getSystemService(NotificationManager::class.java)
+                        .notify(port.port, notification)
+                }
+
+                val closedPorts = previousPorts - currentPortSet
+                closedPorts.forEach { portId ->
+                    getSystemService(NotificationManager::class.java).cancel(portId)
+                }
+
+                previousPorts = currentPortSet
+            }
+        }
+    }
+
+    private fun createPortNotification(port: OpenPort): Notification {
+        // TODO: Add pending intent to handle port notification click
+        return Notification.Builder(this, CHANNEL_ID)
+            .setContentTitle("New Port Opened")
+            .setContentText("Port ${port.port} (${port.name}) is now open")
+            .setSmallIcon(R.drawable.ic_terminal)
+            .build()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

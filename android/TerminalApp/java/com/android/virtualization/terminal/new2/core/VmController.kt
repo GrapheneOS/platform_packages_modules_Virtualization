@@ -56,6 +56,10 @@ object VmController {
         LoggingMutableStateFlow<VmState>(MutableStateFlow(VmState.Ready), "VmController")
     val vmState: StateFlow<VmState> = _vmState.asStateFlow()
 
+    private var guestAgentController: GuestAgentController? = null
+    val ports: StateFlow<List<OpenPort>>
+        get() = guestAgentController?.ports ?: MutableStateFlow(emptyList())
+
     var virtualMachine: VirtualMachine? = null
         private set
 
@@ -63,12 +67,21 @@ object VmController {
         this.context = context.applicationContext
         val key = CertificateUtils.createOrGetKey()
         CertificateUtils.writeCertificateToFile(this.context, key.certificate)
+        guestAgentController = GuestAgentController(this.context, repositoryScope)
     }
 
     fun reset() {
         if (_vmState.value == VmState.Stopped || _vmState.value is VmState.Error) {
             _vmState.value = VmState.Ready
         }
+    }
+
+    fun enablePortForwarding(port: Int, enable: Boolean) {
+        guestAgentController?.enablePortForwarding(port, enable)
+    }
+
+    fun shutdownVm() {
+        guestAgentController?.shutdownVm()
     }
 
     fun start(displayInfo: DisplayInfo) {
@@ -121,10 +134,12 @@ object VmController {
                         override fun onError(vm: VirtualMachine, errorCode: Int, message: String) {
                             Log.e("VmController", "VM error: $message ($errorCode)")
                             _vmState.value = VmState.Error(RuntimeException("VM error: $message"))
+                            guestAgentController?.stop()
                         }
 
                         override fun onStopped(vm: VirtualMachine, reason: Int) {
                             _vmState.value = VmState.Stopped
+                            guestAgentController?.stop()
                         }
                     }
 
@@ -138,6 +153,7 @@ object VmController {
             } catch (e: Exception) {
                 Log.e("VmController", "Failed to start VM", e)
                 _vmState.value = VmState.Error(e)
+                guestAgentController?.stop()
             }
         }
     }
@@ -231,6 +247,7 @@ object VmController {
                                 .firstOrNull { !it.isLinkLocalAddress }!!
                                 .hostAddress!!
                         val port = info.port
+                        guestAgentController?.start(ipAddress)
                         _vmState.value = VmState.Running(ipAddress, port)
                     }
                 }
