@@ -83,41 +83,22 @@ pub(super) fn request_attestation(
     let rkp_cert = Certificate::from_der(&params.remotely_provisioned_cert)?;
 
     let vm_payload_components = client_vm_dice_chain.microdroid_payload_components()?;
-    let vm_tenant_components = if cfg!(advance_multitenancy) {
-        client_vm_dice_chain.microdroid_tenant_components()
-    } else {
-        Ok(Vec::new())
-    }?;
+    #[cfg(advance_multitenancy)]
+    let vm_tenant_components = client_vm_dice_chain.microdroid_tenant_components()?;
 
     fn to_vm_components(
         components: &[crate::dice::SubComponent],
     ) -> der::Result<Vec<cert::VmComponent>> {
         components.iter().map(cert::VmComponent::new).collect()
     }
-
-    let vm_payload_components = to_vm_components(&vm_payload_components)?;
-    let _vm_tenant_components = to_vm_components(&vm_tenant_components)?;
-
     info!("The client VM DICE chain validation succeeded. Beginning to generate the certificate.");
-    let attestation_ext = {
+    let attestation_ext = cert::AttestationExtension::new(
+        &csr_payload.challenge,
+        client_vm_dice_chain.all_entries_are_secure(),
+        to_vm_components(&vm_payload_components)?,
         #[cfg(advance_multitenancy)]
-        {
-            cert::AttestationExtension::new(
-                &csr_payload.challenge,
-                client_vm_dice_chain.all_entries_are_secure(),
-                vm_payload_components,
-                _vm_tenant_components,
-            )
-        }
-        #[cfg(not(advance_multitenancy))]
-        {
-            cert::AttestationExtension::new(
-                &csr_payload.challenge,
-                client_vm_dice_chain.all_entries_are_secure(),
-                vm_payload_components,
-            )
-        }
-    }
+        to_vm_components(&vm_tenant_components)?,
+    )
     .to_der()?;
     let tbs_cert = cert::build_tbs_certificate(
         &serial_number,
