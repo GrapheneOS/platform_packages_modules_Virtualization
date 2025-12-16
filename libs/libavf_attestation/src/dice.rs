@@ -82,10 +82,10 @@ impl ClientVmDiceChain {
     /// Returns a partially decoded client VM's DICE chain if the verification succeeds.
     pub(crate) fn validate_signatures_and_parse_dice_chain(
         mut client_vm_dice_chain: Vec<Value>,
-        service_vm_dice_chain_len: usize,
+        common_chain_prefix_len: usize,
     ) -> Result<Self> {
         let has_vendor_partition =
-            vendor_partition_exists(client_vm_dice_chain.len(), service_vm_dice_chain_len)?;
+            vendor_partition_exists(client_vm_dice_chain.len(), common_chain_prefix_len)?;
 
         let root_public_key =
             CoseKey::from_cbor_value(client_vm_dice_chain.remove(0))?.try_into()?;
@@ -179,14 +179,13 @@ impl ClientVmDiceChain {
 
 fn vendor_partition_exists(
     client_vm_dice_chain_len: usize,
-    service_vm_dice_chain_len: usize,
+    common_chain_prefix_len: usize,
 ) -> Result<bool> {
-    let entries_up_to_pvmfw_len = service_vm_dice_chain_len - 1;
-    // Client VM DICE chain = entries_up_to_pvmfw
+    // Client VM DICE chain = Common DICE chain prefix
     //    + Vendor module entry (exists only when the vendor partition is present)
     //    + Microdroid kernel entry (added in pvmfw)
     //    + Apk/Apexes entry (added in microdroid)
-    match client_vm_dice_chain_len.checked_sub(entries_up_to_pvmfw_len) {
+    match client_vm_dice_chain_len.checked_sub(common_chain_prefix_len) {
         Some(2) => {
             debug!("The vendor partition entry is not present in the client VM's DICE chain");
             Ok(false)
@@ -197,8 +196,9 @@ fn vendor_partition_exists(
         }
         _ => {
             error!(
-                "The client VM's DICE chain must contain two or three extra entries. \
-            Service VM DICE chain: {service_vm_dice_chain_len} entries, client VM DICE chain: {client_vm_dice_chain_len} entries"
+                "The client VM DICE chain must extend the common chain prefix by exactly \
+                 2 or 3 entries. Common chain prefix length: {common_chain_prefix_len}, \
+                 Client chain length: {client_vm_dice_chain_len}"
             );
             Err(RequestProcessingError::InvalidDiceChain)
         }
