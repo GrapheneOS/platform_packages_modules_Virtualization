@@ -377,6 +377,33 @@ typedef void (*AVirtualMachine_stopCallback)(AVirtualMachine* _Nonnull vm,
                                              void* _Null_unspecified data);
 
 /**
+ * \brief Registers a Binder RPC accessor for a service running in the virtual machine.
+ *
+ * This function creates a host-side proxy service (an "accessor") that enables Binder RPC
+ * communication with a specific service running inside the guest virtual machine.
+ *
+ * The accessor is registered with the host Service Manager using the provided \p accessorName.
+ * Host clients can then connect to the guest service using `ABinderRpc_registerAccessorProvider`,
+ * which intercepts requests for \p rpcServiceName and routes them through this accessor.
+ *
+ * \param vm The handle on a virtual machine. Must not be NULL.
+ * \param rpcServiceName The name of the service running inside the guest VM
+ *        (e.g., "my.service.IInterface/default"). Must be a null-terminated, UTF-8 string.
+ * \param accessorName The name to register the accessor under with the host Service Manager
+ *        (e.g., "android.os.IAccessor/my.service.IInterface/default").
+ *        Must be a null-terminated, UTF-8 string.
+ * \param port The VSOCK port number the service is listening on within the guest.
+ *
+ * \return 0 on success.
+ * \return -EINVAL if \p vm, \p rpcServiceName, or \p accessorName are NULL,
+ *         or if the provided strings are not valid UTF-8.
+ * \return -EIO if the accessor could not be created or registered.
+ */
+int AVirtualMachine_addAccessor(AVirtualMachine* _Nonnull vm, const char* _Nonnull rpcServiceName,
+                                const char* _Nonnull accessorName, int32_t port)
+        __INTRODUCED_IN(37);
+
+/**
  * Start a virtual machine. `AVirtualMachine_start` is synchronous and blocks until the virtual
  * machine is initialized and free to start executing code, or until an error happens.
  *

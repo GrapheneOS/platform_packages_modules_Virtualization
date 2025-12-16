@@ -23,10 +23,10 @@ use binder::{
     unstable_api::{new_spibinder, AIBinder},
     Strong, ExceptionCode,
 };
+use bssl_crypto::{ecdsa, ec::P256};
 use log::{error, info, LevelFilter, debug};
 use nix::unistd;
 use rpcbinder::{RpcServer, RpcSession};
-use openssl::{ec::EcKey, sha::sha256, ecdsa::EcdsaSig};
 use std::convert::Infallible;
 use std::ffi::{CStr, CString};
 use std::fmt::Debug;
@@ -464,7 +464,11 @@ pub unsafe extern "C" fn AVmAttestationResult_sign(
     }
     // SAFETY: See the requirements on `message` above.
     let message = unsafe { std::slice::from_raw_parts(message, message_size) };
-    let signature = unwrap_or_abort(try_ecdsa_sign(message, &res.privateKey));
+    let key = unwrap_or_abort(
+        ecdsa::PrivateKey::<P256>::from_der_ec_private_key(&res.privateKey)
+            .context("invalid private key"),
+    );
+    let signature = key.sign(message);
     let data = NonNull::new(data).expect("data must not be null when size > 0");
     // SAFETY: See the requirements on `data` above. The number of bytes copied doesn't exceed
     // the length of either buffer, and the caller ensures that `signature` cannot overlap
@@ -484,13 +488,6 @@ pub unsafe extern "C" fn AVmAttestationResult_sign(
     } else {
         signature.len()
     }
-}
-
-fn try_ecdsa_sign(message: &[u8], der_encoded_ec_private_key: &[u8]) -> Result<Vec<u8>> {
-    let private_key = EcKey::private_key_from_der(der_encoded_ec_private_key)?;
-    let digest = sha256(message);
-    let sig = EcdsaSig::sign(&digest, &private_key)?;
-    Ok(sig.to_der()?)
 }
 
 /// Gets the number of certificates in the certificate chain.
