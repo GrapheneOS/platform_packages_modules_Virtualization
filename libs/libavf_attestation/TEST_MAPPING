@@ -3,7 +3,7 @@
 {
   "avf-postsubmit" : [
     {
-      "name" : "libservice_vm_requests.test"
+      "name" : "libavf_attestation.test"
     }
   ]
 }

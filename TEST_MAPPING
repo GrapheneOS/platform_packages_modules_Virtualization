@@ -162,7 +162,7 @@
       "path": "packages/modules/Virtualization/guest/service_vm"
     },
         {
-      "path": "packages/modules/Virtualization/guest/service_vm/requests"
+      "path": "packages/modules/Virtualization/libs/libavf_attestation"
     },
     {
       "path": "packages/modules/Virtualization/libs/libclient_vm_csr"

@@ -3,9 +3,9 @@ package {
 }
 
 rust_defaults {
-    name: "libservice_vm_requests_nostd_defaults",
+    name: "libavf_attestation_nostd_defaults",
     compile_multilib: "first",
-    crate_name: "service_vm_requests",
+    crate_name: "avf_attestation",
     defaults: ["avf_build_flags_rust"],
     srcs: ["src/lib.rs"],
     prefer_rlib: true,
@@ -32,15 +32,15 @@ rust_defaults {
 }
 
 rust_library_rlib {
-    name: "libservice_vm_requests_nostd",
-    defaults: ["libservice_vm_requests_nostd_defaults"],
+    name: "libavf_attestation_nostd",
+    defaults: ["libavf_attestation_nostd_defaults"],
     apex_available: [
         "com.android.virt",
     ],
 }
 
 rust_test {
-    name: "libservice_vm_requests.test",
-    defaults: ["libservice_vm_requests_nostd_defaults"],
+    name: "libavf_attestation.test",
+    defaults: ["libavf_attestation_nostd_defaults"],
     test_suites: ["general-tests"],
 }

@@ -8,6 +8,7 @@ rust_ffi_static {
     srcs: ["src/main.rs"],
     defaults: ["vmbase_ffi_defaults"],
     no_std_rlibs: [
+        "libavf_attestation_nostd",
         "libbssl_avf_nostd",
         "libciborium_io_nostd",
         "libciborium_nostd",
@@ -17,7 +18,6 @@ rust_ffi_static {
         "liblog_rust_nostd",
         "libservice_vm_comm_nostd",
         "libservice_vm_fake_chain_nostd",
-        "libservice_vm_requests_nostd",
         "libtinyvec_nostd",
         "libvirtio_drivers",
         "libvmbase",
