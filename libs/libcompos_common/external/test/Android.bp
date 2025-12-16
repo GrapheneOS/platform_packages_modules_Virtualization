@@ -1,0 +1,29 @@
+android_test {
+    name: "TestAppForCompilation",
+    srcs: ["TestApp/*.java"],
+    manifest: "TestApp/AndroidManifest.xml",
+    sdk_version: "36",
+    certificate: "testkey",
+    v4_signature: true,
+}
+
+cc_test {
+    name: "verified_dex2oat_api_test",
+    srcs: ["verified_dex2oat_api_test.cc"],
+    static_libs: [
+        "libcom_android_compos_ffi_c",
+        "libgmock",
+    ],
+    test_suites: [
+        "general-tests",
+        // "mts-compos" //uncomment when tests pass and ready to be included.
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "liblog",
+    ],
+    required: [
+        "TestAppForCompilation",
+    ],
+}
