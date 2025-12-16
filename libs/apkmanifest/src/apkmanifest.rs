@@ -102,3 +102,105 @@ pub fn get_manifest_info<P: AsRef<Path>>(apk_path: P) -> Result<ApkManifestInfo>
         encrypted_store_mode,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_apk() -> Result<()> {
+        let manifest_info = get_manifest_info("libapkmanifest_test_apks.basic.apk")?;
+        assert_eq!(
+            manifest_info,
+            ApkManifestInfo {
+                package: "com.android.libapkmanifest_test".to_string(),
+                version_code: 23,
+                rollback_index: None,
+                has_relaxed_rollback_protection_permission: false,
+                encrypted_store_mode: 0,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_enc_store_mode_apk() -> Result<()> {
+        let manifest_info = get_manifest_info("libapkmanifest_test_apks.enc_store_mode.apk")?;
+        assert_eq!(
+            manifest_info,
+            ApkManifestInfo {
+                package: "com.android.libapkmanifest_test".to_string(),
+                version_code: 23,
+                rollback_index: None,
+                has_relaxed_rollback_protection_permission: false,
+                encrypted_store_mode: 1,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_relaxed_rollback_apk() -> Result<()> {
+        let manifest_info = get_manifest_info("libapkmanifest_test_apks.relaxed_rollback.apk")?;
+        assert_eq!(
+            manifest_info,
+            ApkManifestInfo {
+                package: "com.android.libapkmanifest_test".to_string(),
+                version_code: 23,
+                rollback_index: Some(1),
+                has_relaxed_rollback_protection_permission: true,
+                encrypted_store_mode: 0,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_full_apk() -> Result<()> {
+        let manifest_info = get_manifest_info("libapkmanifest_test_apks.full.apk")?;
+        assert_eq!(
+            manifest_info,
+            ApkManifestInfo {
+                package: "com.android.libapkmanifest_test".to_string(),
+                version_code: 23,
+                rollback_index: Some(1),
+                has_relaxed_rollback_protection_permission: true,
+                encrypted_store_mode: 1,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_only_rollback_index_apk() -> Result<()> {
+        let manifest_info = get_manifest_info("libapkmanifest_test_apks.only_rollback_index.apk")?;
+        assert_eq!(
+            manifest_info,
+            ApkManifestInfo {
+                package: "com.android.libapkmanifest_test".to_string(),
+                version_code: 23,
+                rollback_index: Some(1),
+                has_relaxed_rollback_protection_permission: false,
+                encrypted_store_mode: 0,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_only_relaxed_rollback_permission_apk() -> Result<()> {
+        let manifest_info =
+            get_manifest_info("libapkmanifest_test_apks.only_relaxed_rollback_permission.apk")?;
+        assert_eq!(
+            manifest_info,
+            ApkManifestInfo {
+                package: "com.android.libapkmanifest_test".to_string(),
+                version_code: 23,
+                rollback_index: None,
+                has_relaxed_rollback_protection_permission: true,
+                encrypted_store_mode: 0,
+            }
+        );
+        Ok(())
+    }
+}
