@@ -33,7 +33,9 @@ oneway interface IVerifiedDex2OatTaskCallback {
         int cpu_time_milliseconds;
     }
     /**
-     * On a successful compilation this function is called.
+     * Called if a compilation successfully completes, generating all the required artifacts.
+     * cpuTimeMs is the cpu time (in milliseconds) of dex2oat during compilation within the
+     * pVM.
      *
      * {@param} metrics pertaining to the successful compilation.
      */

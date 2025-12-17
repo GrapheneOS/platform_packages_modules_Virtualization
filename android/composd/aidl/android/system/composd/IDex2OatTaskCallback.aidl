@@ -52,11 +52,6 @@ oneway interface IDex2OatTaskCallback {
          */
         int exit_code;
         /**
-         * If the compilation failed due to a signal this will be set to the
-         * POSIX signal code, otherwise it is set to 0.
-         */
-        int signal;
-        /**
          * The total amount of time between dex2oat is invoked within the PVM
          * until the compilation failed.
          */
