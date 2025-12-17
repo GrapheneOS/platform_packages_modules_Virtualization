@@ -17,12 +17,9 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use bssl_avf::{hkdf, rand_bytes, Aead, AeadContext, Digester, AES_GCM_NONCE_LENGTH};
-use core::result;
 use serde::{Deserialize, Serialize};
-use service_vm_comm::RequestProcessingError;
+use service_vm_comm::Result;
 use zeroize::Zeroizing;
-
-type Result<T> = result::Result<T, RequestProcessingError>;
 
 /// The KEK (Key Encryption Key) info is used as information to derive the KEK using HKDF.
 const KEK_INFO: &[u8] = b"rialto keyblob kek";
@@ -108,6 +105,7 @@ pub(crate) fn decrypt_private_key(
 mod tests {
     use super::*;
     use bssl_avf::{ApiName, CipherError, Error};
+    use service_vm_comm::RequestProcessingError;
 
     /// The test data are generated randomly with /dev/urandom.
     const TEST_KEY: [u8; 32] = [

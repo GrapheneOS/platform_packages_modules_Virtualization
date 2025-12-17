@@ -24,7 +24,6 @@ use cbor_util::{
 };
 use ciborium::value::Value;
 use core::cell::OnceCell;
-use core::result;
 use coset::{
     self,
     iana::{self, EnumI64},
@@ -33,9 +32,7 @@ use coset::{
 };
 use diced_open_dice::DiceMode;
 use log::{debug, error, info};
-use service_vm_comm::RequestProcessingError;
-
-type Result<T> = result::Result<T, RequestProcessingError>;
+use service_vm_comm::{RequestProcessingError, Result};
 
 const CODE_HASH: i64 = -4670545;
 const CONFIG_DESC: i64 = -4670548;
