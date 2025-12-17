@@ -37,10 +37,10 @@ use crate::ioutil;
 
 use crate::tenant::TenancySpec;
 use anyhow::{anyhow, bail, Context, Result};
+use bssl_crypto::aead::{Aead, Aes256Gcm};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use dice_driver::DiceDriver;
 use log::{info, warn};
-use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -67,6 +67,9 @@ const MICRODROID_PARTITION_UUID: &str = "cf9afe9a-0662-11ec-a329-c32663a09d75";
 
 /// UUID of the partition that instance spec uses
 const INSTANCE_SPEC_PARTITION_UUID: &str = "a0b1c2d3-e4f5-a6b7-c8d9-e0f1a2b3c4d5";
+
+/// Size of the AES256-GCM key
+const AES_256_GCM_KEY_LENGTH: usize = 32;
 
 /// Size of the AES256-GCM tag
 const AES_256_GCM_TAG_LENGTH: usize = 16;
@@ -132,14 +135,9 @@ impl InstanceDisk {
         self.file.read_exact(&mut nonce)?;
 
         // Read the encrypted payload
-        let payload_size =
-            header.payload_size as usize - AES_256_GCM_NONCE_LENGTH - AES_256_GCM_TAG_LENGTH;
+        let payload_size = header.payload_size as usize - AES_256_GCM_NONCE_LENGTH;
         let mut data = vec![0; payload_size];
         self.file.read_exact(&mut data)?;
-
-        // Read the tag
-        let mut tag = [0; AES_256_GCM_TAG_LENGTH];
-        self.file.read_exact(&mut tag)?;
 
         // Read the header as well because it's part of the signed data (though not encrypted).
         let mut header = [0; PARTITION_HEADER_SIZE as usize];
@@ -147,9 +145,13 @@ impl InstanceDisk {
         self.file.read_exact(&mut header)?;
 
         // Decrypt and authenticate the data (along with the header).
-        let cipher = Cipher::aes_256_gcm();
-        let key = dice.get_sealing_key(INSTANCE_KEY_IDENTIFIER, cipher.key_len())?;
-        let plaintext = decrypt_aead(cipher, &key, Some(&nonce), &header, &data, &tag)?;
+        let key = dice
+            .get_sealing_key(INSTANCE_KEY_IDENTIFIER, AES_256_GCM_KEY_LENGTH)?
+            .as_ref()
+            .try_into()
+            .context("wrong key size")?;
+        let plaintext =
+            Aes256Gcm::new(&key).open(&nonce, &data, &header).context("could not decrypt")?;
 
         let microdroid_data = ciborium::from_reader(plaintext.as_slice())?;
         Ok(Some(microdroid_data))
@@ -189,20 +191,21 @@ impl InstanceDisk {
         self.file.seek(SeekFrom::Start(offset))?;
         self.file.read_exact(&mut header)?;
 
-        // Generate a nonce randomly and recorde it on the disk first.
-        let nonce = rand::random::<[u8; AES_256_GCM_NONCE_LENGTH]>();
+        // Generate a nonce randomly and record it on the disk first.
+        let nonce: [u8; AES_256_GCM_NONCE_LENGTH] = bssl_crypto::rand_array();
         self.file.seek(SeekFrom::Start(offset + PARTITION_HEADER_SIZE))?;
         self.file.write_all(nonce.as_ref())?;
 
-        // Then encrypt and sign the data.
-        let cipher = Cipher::aes_256_gcm();
-        let key = dice.get_sealing_key(INSTANCE_KEY_IDENTIFIER, cipher.key_len())?;
-        let mut tag = [0; AES_256_GCM_TAG_LENGTH];
-        let ciphertext = encrypt_aead(cipher, &key, Some(&nonce), &header, &data, &mut tag)?;
+        // Then encrypt the data.
+        let key = dice
+            .get_sealing_key(INSTANCE_KEY_IDENTIFIER, AES_256_GCM_KEY_LENGTH)?
+            .as_ref()
+            .try_into()
+            .context("wrong key size")?;
+        let ciphertext = Aes256Gcm::new(&key).seal(&nonce, &data, &header);
 
-        // Persist the encrypted payload data and the tag.
+        // Persist the encrypted payload data.
         self.file.write_all(&ciphertext)?;
-        self.file.write_all(&tag)?;
         ioutil::blkflsbuf(&mut self.file)?;
 
         Ok(())

@@ -18,11 +18,11 @@ use crate::MicrodroidError;
 use anyhow::{anyhow, ensure, Context, Result};
 use apkmanifest::{get_manifest_info, ApkManifestInfo};
 use apkverify::{extract_signed_data, verify, V4Signature};
+use bssl_crypto::digest::Sha512;
 use glob::glob;
 use itertools::sorted;
 use log::{info, warn};
 use microdroid_metadata::{write_metadata, Metadata};
-use openssl::sha::sha512;
 use rustutils::android::system_properties;
 use std::fs::OpenOptions;
 use std::path::Path;
@@ -310,7 +310,7 @@ fn get_cert_hash_from_apk(apk: &str, root_hash_trustful: bool) -> Result<[u8; 64
     } else {
         extract_signed_data(apk, current_sdk)
     }?;
-    Ok(sha512(signed_data.first_certificate_der()?))
+    Ok(Sha512::hash(signed_data.first_certificate_der()?))
 }
 
 fn get_current_sdk() -> Result<u32> {

@@ -15,12 +15,12 @@
 use crate::instance::{ApexData, ApkData};
 use crate::{is_debuggable, is_strict_boot, MicrodroidData, DEBUGGABLE_PROP};
 use anyhow::{bail, Context, Result};
+use bssl_crypto::digest::Sha512;
 use ciborium::{cbor, Value};
 use coset::CborSerializable;
 use dice_driver::DiceDriver;
 use diced_open_dice::{Hidden, OwnedDiceArtifacts, HIDDEN_SIZE};
 use microdroid_metadata::PayloadMetadata;
-use openssl::sha::{sha512, Sha512};
 use rustutils::android::system_properties;
 use std::iter::once;
 
@@ -51,8 +51,8 @@ pub fn dice_derivation(
         code_hash_ctx.update(apex.root_digest.as_ref());
         authority_hash_ctx.update(apex.public_key.as_ref());
     }
-    let code_hash = code_hash_ctx.finish();
-    let authority_hash = authority_hash_ctx.finish();
+    let code_hash = code_hash_ctx.digest();
+    let authority_hash = authority_hash_ctx.digest();
 
     // Check debuggability, conservatively assuming it's debuggable to avoid mistakenly attributing
     // a normal mode which would compromise VM security. Note that this is in contrast to
@@ -72,7 +72,7 @@ fn hidden_input_from_instance_id() -> Result<Hidden> {
     // For non-protected VM: this is derived from instance_id of the VM instance.
     let hidden_input = if !is_strict_boot() {
         if let Some(id) = super::get_instance_id()? {
-            sha512(&id)
+            Sha512::hash(&id)
         } else {
             // TODO(b/325094712): Absence of instance_id occurs due to missing DT in some
             // x86_64 test devices (such as Cuttlefish). From security perspective, this is
@@ -143,7 +143,7 @@ impl Subcomponent {
             name: format!("apex:{}", apex.manifest_name.as_ref().unwrap()),
             version: dice_version,
             code_hash: apex.root_digest.clone(),
-            authority_hash: sha512(&apex.public_key).to_vec(),
+            authority_hash: Sha512::hash(&apex.public_key).to_vec(),
         }
     }
 }
