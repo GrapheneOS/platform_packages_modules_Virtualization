@@ -28,6 +28,7 @@ use crate::communication::VsockStream;
 use crate::error::{Error, Result};
 use crate::fdt::{read_dice_range_from, read_is_strict_boot, read_vendor_hashtree_root_digest};
 use alloc::boxed::Box;
+use avf_attestation::{process_request, RequestContext};
 use ciborium_io::Write;
 use core::num::NonZeroUsize;
 use core::slice;
@@ -35,7 +36,6 @@ use diced_open_dice::{bcc_handover_parse, DiceArtifacts};
 use log::{debug, error, info};
 use service_vm_comm::{ServiceVmRequest, VmType};
 use service_vm_fake_chain::service_vm;
-use service_vm_requests::{process_request, RequestContext};
 use virtio_drivers::{
     device::socket::{VsockAddr, VMADDR_CID_HOST},
     transport::{

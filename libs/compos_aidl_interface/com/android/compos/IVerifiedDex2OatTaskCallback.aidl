@@ -21,9 +21,7 @@ package com.android.compos;
  */
 oneway interface IVerifiedDex2OatTaskCallback {
     /**
-     * Called if a compilation successfully completes, generating all the required artifacts.
-     * cpuTimeMs is the cpu time (in milliseconds) of dex2oat during compilation within the
-     * pVM.
+     * On a successful compilation this function is called.
      *
      * wallTimeMs is the amount of total elapsed time from the start of invoking dex2oat
      * in the pVM until it exits.

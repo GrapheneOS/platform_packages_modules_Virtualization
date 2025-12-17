@@ -666,6 +666,14 @@ fn read_pci_info_from(fdt: &Fdt) -> libfdt::Result<Option<PciInfo>> {
     }
 
     let has_msi_parent = node.getprop(c"msi-parent")?.is_some();
+    if has_msi_parent {
+        let node = fdt.compatible_nodes(c"arm,gic-v3-its")?.next().ok_or(FdtError::NotFound)?;
+        let reg = node.first_reg()?;
+        if reg.addr != 0x40000000 || reg.size != Some(0x20000) {
+            warn!("Input DT has GIC ITS at unexpected range: {:x?}", reg);
+            return Err(FdtError::BadValue);
+        }
+    }
 
     Ok(Some(PciInfo { ranges: [range0, range1], irq_masks, irq_maps, has_msi_parent }))
 }

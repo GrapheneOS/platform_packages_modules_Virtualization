@@ -33,7 +33,7 @@ pub struct Timeouts {
 
 /// The timeouts that are appropriate on the current platform.
 pub static TIMEOUTS: LazyLock<Timeouts> = LazyLock::new(|| {
-    let multiplier = hw_timeout_multiplier::timeout_p2m50();
+    let multiplier = hw_timeout_multiplier::vm_timeout_multiplier();
     // Note: the source of truth for this odrefresh timeout is art/odrefresh/odrefresh.cc.
     Timeouts {
         odrefresh_max_execution_time: Duration::from_secs(if multiplier == 1 { 300 } else { 480 }),

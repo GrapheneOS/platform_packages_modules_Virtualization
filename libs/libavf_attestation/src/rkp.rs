@@ -26,10 +26,8 @@ use ciborium::{
     value::{CanonicalValue, Value},
 };
 use core::result;
-use coset::{AsCborValue, CoseSign1, CoseSign1Builder, HeaderBuilder};
-use diced_open_dice::{
-    derive_cdi_leaf_priv, kdf, sign, DiceArtifacts, PrivateKey, VM_KEY_ALGORITHM,
-};
+use coset::AsCborValue;
+use diced_open_dice::{kdf, retry_sign_cose_sign1_with_cdi_leaf_priv, DiceArtifacts};
 use log::{debug, error};
 use service_vm_comm::{EcdsaP256KeyPair, GenerateCertificateRequestParams, RequestProcessingError};
 use zeroize::Zeroizing;
@@ -93,7 +91,7 @@ pub(super) fn generate_certificate_request(
     // Builds `SignedData`.
     let signed_data_payload =
         cbor!([Value::Bytes(params.challenge.to_vec()), Value::Bytes(csr_payload)])?;
-    let signed_data = build_signed_data(&signed_data_payload, dice_artifacts)?.to_cbor_value()?;
+    let signed_data = build_signed_data(&signed_data_payload, dice_artifacts)?;
     debug!("Successfully signed the CSR payload.");
 
     // Builds `AuthenticatedRequest<CsrPayload>`.
@@ -147,27 +145,17 @@ fn derive_hmac_key(dice_artifacts: &dyn DiceArtifacts) -> Result<Zeroizing<[u8; 
 }
 
 /// Builds the `SignedData` for the given payload.
-fn build_signed_data(payload: &Value, dice_artifacts: &dyn DiceArtifacts) -> Result<CoseSign1> {
-    let cdi_leaf_priv = derive_cdi_leaf_priv(None, dice_artifacts).map_err(|e| {
-        error!("Failed to derive the CDI_Leaf_Priv: {e}");
-        RequestProcessingError::InternalError
-    })?;
-    let protected = HeaderBuilder::new().algorithm(VM_KEY_ALGORITHM.into()).build();
-    let signed_data = CoseSign1Builder::new()
-        .protected(protected)
-        .payload(cbor_util::serialize(payload)?)
-        .try_create_signature(&[], |message| sign_message(message, &cdi_leaf_priv))?
-        .build();
-    Ok(signed_data)
-}
-
-fn sign_message(message: &[u8], private_key: &PrivateKey) -> Result<Vec<u8>> {
-    Ok(sign(message, private_key.as_array())
-        .map_err(|e| {
-            error!("Failed to sign the CSR: {e}");
-            RequestProcessingError::InternalError
-        })?
-        .to_vec())
+fn build_signed_data(payload: &Value, dice_artifacts: &dyn DiceArtifacts) -> Result<Value> {
+    let dice_context = None;
+    let message = cbor_util::serialize(payload)?;
+    let aad = &[];
+    let signed_data =
+        retry_sign_cose_sign1_with_cdi_leaf_priv(dice_context, aad, &message, dice_artifacts)
+            .map_err(|e| {
+                error!("Failed to sign the CSR: {e}");
+                RequestProcessingError::InternalError
+            })?;
+    Ok(cbor_util::deserialize(&signed_data)?)
 }
 
 #[cfg(test)]

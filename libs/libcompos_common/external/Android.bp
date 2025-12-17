@@ -10,6 +10,8 @@ rust_defaults {
         "libcompos_bindgen",
         "liblibc",
         "libparking_lot",
+        "libscopeguard",
+        "librustix",
     ],
 }
 
@@ -18,8 +20,14 @@ rust_ffi {
     crate_name: "com_android_compos_ffi_c",
     defaults: ["libcomposd_c_common_defaults"],
     export_include_dirs: ["include"],
+    stubs: {
+        symbol_file: "libcom_android_compos_ffi_c.map.txt",
+        versions: ["37"],
+    },
     apex_available: [
         "com.android.compos",
+        "com.android.art",
+        "com.android.art.debug",
     ],
 }
 

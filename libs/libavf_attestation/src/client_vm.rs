@@ -179,15 +179,15 @@ fn validate_client_vm_dice_chain(
 ) -> Result<ClientVmDiceChain> {
     let service_vm_dice_chain = parse_value_array(service_vm_dice_chain, "service_vm_dice_chain")?;
     validate_service_vm_dice_chain_length(&service_vm_dice_chain)?;
+    let common_chain_len = service_vm_dice_chain.len() - 1;
 
     let client_vm_dice_chain = parse_value_array(client_vm_dice_chain, "client_vm_dice_chain")?;
-    validate_client_vm_dice_chain_prefix_match(&client_vm_dice_chain, &service_vm_dice_chain)?;
-
+    validate_common_prefix(&client_vm_dice_chain, &service_vm_dice_chain[..common_chain_len])?;
     // Validates the signatures in the Client VM DICE chain and extracts the partially decoded
     // DiceChainEntryPayloads.
     let client_vm_dice_chain = ClientVmDiceChain::validate_signatures_and_parse_dice_chain(
         client_vm_dice_chain,
-        service_vm_dice_chain.len(),
+        common_chain_len,
     )?;
     validate_vendor_partition_code_hash_if_exists(
         &client_vm_dice_chain,
@@ -289,19 +289,10 @@ fn expected_kernel_authority_hash(service_vm_entry: &Value) -> Result<Vec<u8>> {
     Ok(service_vm.authority_hash)
 }
 
-fn validate_client_vm_dice_chain_prefix_match(
-    client_vm_dice_chain: &[Value],
-    service_vm_dice_chain: &[Value],
-) -> Result<()> {
-    // Ignores the last entry that describes service VM
-    let entries_up_to_pvmfw = &service_vm_dice_chain[0..(service_vm_dice_chain.len() - 1)];
-    if client_vm_dice_chain.get(0..entries_up_to_pvmfw.len()) == Some(entries_up_to_pvmfw) {
-        Ok(())
-    } else {
-        error!(
-            "The client VM's DICE chain does not match service VM's DICE chain up to \
-             the pvmfw entry"
-        );
-        Err(RequestProcessingError::InvalidDiceChain)
+fn validate_common_prefix(client_chain: &[Value], common_chain: &[Value]) -> Result<()> {
+    if !client_chain.starts_with(common_chain) {
+        error!("Client VM DICE chain does not match the expected common chain prefix");
+        return Err(RequestProcessingError::InvalidDiceChain);
     }
+    Ok(())
 }
