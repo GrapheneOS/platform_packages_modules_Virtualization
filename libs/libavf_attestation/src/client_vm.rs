@@ -22,16 +22,13 @@ use alloc::vec::Vec;
 use bssl_avf::{rand_bytes, sha256, Digester, EcKey, PKey};
 use cbor_util::parse_value_array;
 use ciborium::value::Value;
-use core::result;
 use coset::{AsCborValue, CborSerializable, CoseSign, CoseSign1};
 use der::{Decode, Encode};
 use diced_open_dice::DiceArtifacts;
 use log::{debug, error, info};
 use microdroid_kernel_hashes::{HASH_SIZE as KERNEL_HASH_SIZE, OS_HASHES};
-use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError};
+use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError, Result};
 use x509_cert::{certificate::Certificate, name::Name};
-
-type Result<T> = result::Result<T, RequestProcessingError>;
 
 const DICE_CDI_LEAF_SIGNATURE_INDEX: usize = 0;
 const ATTESTATION_KEY_SIGNATURE_INDEX: usize = 1;

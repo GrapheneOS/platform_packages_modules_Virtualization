@@ -16,11 +16,14 @@
 //! between the host and the service VM.
 
 use alloc::vec::Vec;
-use core::fmt;
+use core::{fmt, result};
 use log::error;
 use serde::{Deserialize, Serialize};
 
 type MacedPublicKey = Vec<u8>;
+
+/// Result type specific for this crate.
+pub type Result<T> = result::Result<T, RequestProcessingError>;
 
 /// The main request type to be sent to the service VM.
 #[derive(Clone, Debug, Serialize, Deserialize)]
