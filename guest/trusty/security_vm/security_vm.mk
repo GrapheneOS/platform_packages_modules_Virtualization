@@ -24,6 +24,8 @@ TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES ?= trusty_security_vm.elf \
 	trusty_security_vm_rpc_services.json \
 	early_vms.xml \
 
-PRODUCT_PACKAGES += $(TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES)
+PRODUCT_PACKAGES += \
+	keymint_provisioning_tool \
+	$(TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES) \
 
 endif
