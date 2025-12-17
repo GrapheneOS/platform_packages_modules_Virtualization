@@ -121,7 +121,7 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     container.addView(mainView)
                     container.addView(cursorView)
 
-                    DisplayProvider(mainView, cursorView)
+                    DisplayProvider(mainView, cursorView, width, height)
                     val inputForwarder = InputForwarder(ctx, vm, mainView, mainView, mainView)
                     container.tag = inputForwarder
                     displaySurfaceView = mainView

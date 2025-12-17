@@ -72,7 +72,7 @@ class DisplayActivity : BaseActivity() {
         val width = vm.config.customImageConfig?.displayConfig!!.width
         val height = vm.config.customImageConfig?.displayConfig!!.height
         val ratio = android.util.Rational(width, height)
-        displayProvider = DisplayProvider(mainView, cursorView)
+        displayProvider = DisplayProvider(mainView, cursorView, width, height)
         InputForwarder(this, vm, mainView, mainView, mainView)
         // Calculate the screen ratio of the VM
         (mainView.layoutParams as ConstraintLayout.LayoutParams).dimensionRatio =
