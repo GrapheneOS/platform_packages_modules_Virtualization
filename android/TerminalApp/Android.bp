@@ -26,6 +26,9 @@ android_app {
         "androidx.activity_activity-compose",
         "androidx.compose.foundation_foundation",
         "androidx.compose.foundation_foundation-layout",
+        "androidx.compose.material3.adaptive_adaptive",
+        "androidx.compose.material3.adaptive_adaptive-layout",
+        "androidx.compose.material3.adaptive_adaptive-navigation",
         "androidx.compose.material3_material3",
         "androidx.compose.material_material-icons-core",
         "androidx.compose.material_material-icons-extended",
@@ -59,6 +62,7 @@ android_app {
     },
     apex_available: [
         "com.android.virt",
+        "//apex_available:platform",
     ],
     jarjar_rules: "jarjar-rules.txt",
 }
