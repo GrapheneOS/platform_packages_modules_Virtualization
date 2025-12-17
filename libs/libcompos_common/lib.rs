@@ -39,6 +39,10 @@ pub const COMPOS_DATA_ROOT: &str = "/data/misc/apexdata/com.android.compos";
 pub const CURRENT_INSTANCE_DIR: &str = "current";
 
 /// The sub-directory where we store information relating to the instance of CompOS used for
+/// verified dex2oat compilation.
+pub const DEX2OAT_INSTANCE_DIR: &str = "dex2oat";
+
+/// The sub-directory where we store information relating to the instance of CompOS used for
 /// tests.
 pub const TEST_INSTANCE_DIR: &str = "test";
 

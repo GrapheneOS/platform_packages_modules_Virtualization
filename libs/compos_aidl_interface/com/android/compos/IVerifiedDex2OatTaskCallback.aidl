@@ -20,20 +20,59 @@ package com.android.compos;
  * verified dex2oat task completes.
  */
 oneway interface IVerifiedDex2OatTaskCallback {
+    @RustDerive(PartialEq=true, Clone=true, Copy=true)
+    parcelable GuestDex2OatMetrics {
+        /**
+         * The total amount of time the compilation took from the time
+         * dex2oat was called until the compilation finished.
+         */
+        int wallclock_time_milliseconds;
+        /**
+         * The total amount of time dex2oat was actively compiling.
+         */
+        int cpu_time_milliseconds;
+    }
     /**
      * On a successful compilation this function is called.
      *
-     * wallTimeMs is the amount of total elapsed time from the start of invoking dex2oat
-     * in the pVM until it exits.
+     * {@param} metrics pertaining to the successful compilation.
      */
-    void onSuccess(int cpuTimeMs, int wallTimeMs, byte exitCode);
+    void onSuccess(in GuestDex2OatMetrics metrics);
 
     /**
-     * Called if a verified dex2oat task has failed.
-     *
-     * message is a descriptive message of the failure.
-     *
-     * exitCode is the exit code of the dex2oat ran within the pVM.
+     * The details of why a verifiedDex2Oat failed.
      */
-    void onFailure(String message, byte exitCode, int cpuTimeMs, int WallTimeMs);
+    @RustDerive(PartialEq=true, Clone=true)
+    parcelable GuestFailureDetails {
+        /**
+         * The exit code of dex2oat if available, otherwise this
+         * is set to -1.
+         */
+        int exit_code;
+        /**
+         * If the compilation failed due to a signal this will be set to the
+         * POSIX signal code, otherwise it is set to -1.
+         */
+        int signal;
+        /**
+         * The total amount of time between dex2oat is invoked until the
+         * compilation failed. If dex2oat never ran this is set to -1.
+         */
+        int wallclock_time_milliseconds;
+        /**
+         * The total amount of time dex2oat was actively compiling before
+         * failure.
+         */
+        int cpu_time_milliseconds;
+        /**
+         * Additional description of the failure.
+         */
+        String message;
+    }
+    /**
+     * On a failed compilation this function is called.
+     *
+     * {@param} failureDetails contains the details of why verifiedDex2Oat failed.
+     */
+    void onFailure(in GuestFailureDetails failureDetails);
 }

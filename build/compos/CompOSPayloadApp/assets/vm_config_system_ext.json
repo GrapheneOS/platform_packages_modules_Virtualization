@@ -5,7 +5,8 @@
   },
   "task": {
     "type": "executable",
-    "command": "/apex/com.android.compos/bin/compsvc"
+    "command": "/apex/com.android.compos/bin/compsvc",
+    "command_args": ["odrefresh"]
   },
   "extra_apks": [
     {

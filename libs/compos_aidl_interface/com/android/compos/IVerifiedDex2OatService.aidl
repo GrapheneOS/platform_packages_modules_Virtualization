@@ -123,12 +123,14 @@ interface IVerifiedDex2OatService {
      * @param args An array of {@link Dex2OatArg} objects, each specifying the format string and
      * file descriptors for the dex2oat process.
      * @systemDirFd a file descriptor number that refers to /system/.
+     * @systemDirFd a file descriptor number that refers to /system_ext/ if it exists, if not
+     *  this should be set to -1.
      * @param manifestFd The file descriptor for the manifest where the compilation details and
      * file fs-verity digests will be recorded.
      * @param callback An {@link IVerifiedDex2OatTaskCallback} instance to handle callbacks
      * related to the task's execution.
      */
-    void verifiedDex2Oat(in Dex2OatArg[] args, int systemDirFd, int manifestFd,
+    void verifiedDex2Oat(in Dex2OatArg[] args, int systemDirFd, int systemExtDirFd, int manifestFd,
             IVerifiedDex2OatTaskCallback callback);
 
     /**

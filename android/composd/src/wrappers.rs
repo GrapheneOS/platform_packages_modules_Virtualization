@@ -66,3 +66,10 @@ pub mod compos_common_injection {
     #[cfg(test)]
     pub use compos_common_with_mocks::*;
 }
+
+pub mod compos_wrappers_injection {
+    #[cfg(not(test))]
+    pub use compos_wrappers::*;
+    #[cfg(test)]
+    pub use compos_wrappers_with_mocks::*;
+}

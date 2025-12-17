@@ -34,7 +34,7 @@ use binder::Strong;
 
 use compos_common_injection::{
     compos_client::{CompOsType, VmCpuTopology, VmParameters},
-    CURRENT_INSTANCE_DIR, TEST_INSTANCE_DIR,
+    CURRENT_INSTANCE_DIR, DEX2OAT_INSTANCE_DIR, TEST_INSTANCE_DIR,
 };
 
 use log::info;
@@ -42,17 +42,30 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 use virtualizationservice::IVirtualizationService::IVirtualizationService;
 
-pub struct InstanceManager {
-    service: Strong<dyn IVirtualizationService>,
-    state: Mutex<State>,
+#[cfg_attr(test, mockall::automock)]
+pub trait IInstanceManager: Send + Sync {
+    fn start_current_instance(
+        &self,
+        compos_type: CompOsType,
+        base_os: &str,
+    ) -> Result<CompOsInstance>;
+
+    fn start_test_instance(
+        &self,
+        compos_type: CompOsType,
+        prefer_staged: bool,
+        base_os: &str,
+    ) -> Result<CompOsInstance>;
 }
 
-impl InstanceManager {
-    pub fn new(service: Strong<dyn IVirtualizationService>) -> Self {
-        Self { service, state: Default::default() }
-    }
+pub struct InstanceManager {
+    service: Strong<dyn IVirtualizationService>,
+    odrefresh_vm_state: Mutex<State>,
+    dex2oat_vm_state: Mutex<State>,
+}
 
-    pub fn start_current_instance(
+impl IInstanceManager for InstanceManager {
+    fn start_current_instance(
         &self,
         compos_type: CompOsType,
         base_os: &str,
@@ -61,11 +74,15 @@ impl InstanceManager {
             CompOsType::OdRefresh => "VerifiedOdRefresh".to_owned(),
             CompOsType::Dex2Oat => "VerifiedDex2Oat".to_owned(),
         };
+        let instance_name = match compos_type {
+            CompOsType::OdRefresh => CURRENT_INSTANCE_DIR,
+            CompOsType::Dex2Oat => DEX2OAT_INSTANCE_DIR,
+        };
         let vm_parameters = new_vm_parameters(name, compos_type, base_os)?;
-        self.start_instance(CURRENT_INSTANCE_DIR, vm_parameters)
+        self.start_instance(instance_name, vm_parameters)
     }
 
-    pub fn start_test_instance(
+    fn start_test_instance(
         &self,
         compos_type: CompOsType,
         prefer_staged: bool,
@@ -80,25 +97,39 @@ impl InstanceManager {
         vm_parameters.prefer_staged = prefer_staged;
         self.start_instance(TEST_INSTANCE_DIR, vm_parameters)
     }
+}
+
+impl InstanceManager {
+    pub fn new(service: Strong<dyn IVirtualizationService>) -> Self {
+        Self {
+            service,
+            odrefresh_vm_state: Default::default(),
+            dex2oat_vm_state: Default::default(),
+        }
+    }
 
     fn start_instance(
         &self,
         instance_name: &str,
         vm_parameters: VmParameters,
     ) -> Result<CompOsInstance> {
-        let mut state = self.state.lock().unwrap();
-        state.mark_starting()?;
+        let state_mutex = match vm_parameters.compos_type {
+            CompOsType::OdRefresh => &self.odrefresh_vm_state,
+            CompOsType::Dex2Oat => &self.dex2oat_vm_state,
+        };
+        let mut state_guard = state_mutex.lock().unwrap();
+        state_guard.mark_starting()?;
         // Don't hold the lock while we start the instance to avoid blocking other callers.
-        drop(state);
+        drop(state_guard);
 
         let instance_starter = InstanceStarter::new(instance_name, vm_parameters);
         let instance = instance_starter.start_new_instance(&*self.service);
 
-        let mut state = self.state.lock().unwrap();
+        state_guard = state_mutex.lock().unwrap();
         if let Ok(ref instance) = instance {
-            state.mark_started(instance.get_instance_tracker())?;
+            state_guard.mark_started(instance.get_instance_tracker())?;
         } else {
-            state.mark_stopped();
+            state_guard.mark_stopped();
         }
         instance
     }
@@ -204,7 +235,7 @@ impl State {
 
 #[cfg(test)]
 mod test {
-    use super::InstanceManager;
+    use super::{IInstanceManager, InstanceManager};
     use crate::{
         instance_starter::{CompOsInstance, MockInstanceStarter},
         wrappers::binder::MockLazyServiceGuard,

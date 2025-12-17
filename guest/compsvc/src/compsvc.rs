@@ -239,6 +239,7 @@ impl IVerifiedDex2OatService for VerifiedDex2OatService {
         &self,
         args: &[Dex2OatArg],
         system_dir_fd: i32,
+        system_ext_dir_fd: i32,
         manifest_fd: i32,
         cb: &Strong<dyn IVerifiedDex2OatTaskCallback>,
     ) -> BinderResult<()> {
