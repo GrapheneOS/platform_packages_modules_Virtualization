@@ -72,11 +72,40 @@ class VmService : LifecycleService() {
     }
 
     private fun createPortNotification(port: OpenPort): Notification {
-        // TODO: Add pending intent to handle port notification click
+        val acceptIntent =
+            Intent(this, VmService::class.java).apply {
+                action = ACTION_PORT_FORWARD
+                putExtra(EXTRA_PORT, port.port)
+                putExtra(EXTRA_ENABLE, true)
+            }
+        val acceptPending =
+            PendingIntent.getService(
+                this,
+                port.port * 2,
+                acceptIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val denyIntent =
+            Intent(this, VmService::class.java).apply {
+                action = ACTION_PORT_FORWARD
+                putExtra(EXTRA_PORT, port.port)
+                putExtra(EXTRA_ENABLE, false)
+            }
+        val denyPending =
+            PendingIntent.getService(
+                this,
+                port.port * 2 + 1,
+                denyIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("New Port Opened")
-            .setContentText("Port ${port.port} (${port.name}) is now open")
+            .setContentText("Port ${port.port} (${port.name}) is now open. Allow forwarding?")
             .setSmallIcon(R.drawable.ic_terminal)
+            .addAction(Notification.Action.Builder(null, "Accept", acceptPending).build())
+            .addAction(Notification.Action.Builder(null, "Deny", denyPending).build())
             .build()
     }
 
@@ -130,6 +159,14 @@ class VmService : LifecycleService() {
         when (intent?.action) {
             ACTION_CANCEL_INSTALL -> Installer.cancelInstall()
             ACTION_STOP_VM -> VmController.stop()
+            ACTION_PORT_FORWARD -> {
+                val port = intent.getIntExtra(EXTRA_PORT, -1)
+                val enable = intent.getBooleanExtra(EXTRA_ENABLE, false)
+                if (port != -1) {
+                    VmController.enablePortForwarding(port, enable)
+                    getSystemService(NotificationManager::class.java).cancel(port)
+                }
+            }
         }
         super.onStartCommand(intent, flags, startId)
         return START_NOT_STICKY
@@ -208,6 +245,9 @@ class VmService : LifecycleService() {
         private const val NOTIFICATION_ID = 1
         private const val ACTION_CANCEL_INSTALL = "ACTION_CANCEL_INSTALL"
         private const val ACTION_STOP_VM = "ACTION_STOP_VM"
+        private const val ACTION_PORT_FORWARD = "ACTION_PORT_FORWARD"
+        private const val EXTRA_PORT = "EXTRA_PORT"
+        private const val EXTRA_ENABLE = "EXTRA_ENABLE"
         private const val CHANNEL_ID = "vm_service_channel"
     }
 }
