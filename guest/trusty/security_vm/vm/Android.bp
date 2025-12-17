@@ -63,6 +63,7 @@ cc_binary {
         memtag_stack: false,
         memtag_globals: false,
     },
+    xom: false,
     nocrt: true,
     no_libcrt: true,
     static_executable: true,
