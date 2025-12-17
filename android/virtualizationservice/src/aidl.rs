@@ -1082,6 +1082,7 @@ impl ShutdownMonitor {
         Default::default()
     }
 
+    /// # SAFETY: this function must be called only once in the program.
     unsafe fn start<F>(&mut self, handler: F)
     where
         F: FnOnce() + std::marker::Send + std::clone::Clone + 'static,
