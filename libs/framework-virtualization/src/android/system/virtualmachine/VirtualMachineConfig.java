@@ -1518,9 +1518,11 @@ public final class VirtualMachineConfig {
          *   <li>Android host kernel version should be at least {@code android15-5.15}
          * </ul>
          *
-         * @see https://docs.kernel.org/admin-guide/mm/transhuge.html
-         * @see
-         *     https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/hugepages.md
+         * @see <a href="https://docs.kernel.org/admin-guide/mm/transhuge.html">Transparent Hugepage
+         *     Support</a>
+         * @see <a
+         *     href="https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/hugepages.md">Huge
+         *     Pages</a>
          * @hide
          */
         @SystemApi
