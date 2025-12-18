@@ -23,6 +23,7 @@ mod cert;
 mod client_vm;
 mod dice;
 mod keyblob;
+mod ops;
 mod pub_key;
 mod rkp;
 

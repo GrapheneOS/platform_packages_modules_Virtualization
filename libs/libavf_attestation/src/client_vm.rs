@@ -17,7 +17,7 @@
 
 use crate::cert;
 use crate::dice::{ClientVmDiceChain, DiceChainEntryPayload};
-use crate::keyblob::decrypt_private_key;
+use crate::keyblob::{decrypt_private_key, InMemoryKeyDerivationOps};
 use alloc::vec::Vec;
 use bssl_avf::{rand_bytes, sha256, Digester, EcKey, PKey};
 use cbor_util::parse_value_array;
@@ -29,6 +29,7 @@ use log::{debug, error, info};
 use microdroid_kernel_hashes::{HASH_SIZE as KERNEL_HASH_SIZE, OS_HASHES};
 use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError, Result};
 use x509_cert::{certificate::Certificate, name::Name};
+use zeroize::Zeroizing;
 
 const DICE_CDI_LEAF_SIGNATURE_INDEX: usize = 0;
 const ATTESTATION_KEY_SIGNATURE_INDEX: usize = 1;
@@ -127,12 +128,12 @@ pub(super) fn request_attestation(
 
     // Signs the TBSCertificate and builds the Certificate.
     // The two private key structs below will be zeroed out on drop.
+    let ops: InMemoryKeyDerivationOps = Zeroizing::new(dice_artifacts.cdi_seal().to_vec()).into();
     let private_key =
-        decrypt_private_key(&params.remotely_provisioned_key_blob, dice_artifacts.cdi_seal())
-            .map_err(|e| {
-                error!("Failed to decrypt the remotely provisioned key blob: {e}");
-                RequestProcessingError::FailedToDecryptKeyBlob
-            })?;
+        decrypt_private_key(&params.remotely_provisioned_key_blob, &ops).map_err(|e| {
+            error!("Failed to decrypt the remotely provisioned key blob: {e}");
+            RequestProcessingError::FailedToDecryptKeyBlob
+        })?;
     let ec_private_key = EcKey::from_ec_private_key(private_key.as_slice())?;
     let signature = ecdsa_sign_der(&ec_private_key, &tbs_cert.to_der()?)?;
     let certificate = cert::build_certificate(tbs_cert, &signature)?;

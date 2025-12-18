@@ -14,6 +14,7 @@
 
 //! Handles the encryption and decryption of the key blob.
 
+use crate::ops::KeyDerivationOps;
 use alloc::vec;
 use alloc::vec::Vec;
 use bssl_avf::{hkdf, rand_bytes, Aead, AeadContext, Digester, AES_GCM_NONCE_LENGTH};
@@ -34,6 +35,23 @@ const PRIVATE_KEY_NONCE: &[u8; AES_GCM_NONCE_LENGTH] = &[0; AES_GCM_NONCE_LENGTH
 /// is needed.
 const PRIVATE_KEY_AD: &[u8] = &[];
 
+/// A simple implementation of [`KeyDerivationOps`] that holds a raw secret in memory.
+pub struct InMemoryKeyDerivationOps {
+    secret: Zeroizing<Vec<u8>>,
+}
+
+impl From<Zeroizing<Vec<u8>>> for InMemoryKeyDerivationOps {
+    fn from(secret: Zeroizing<Vec<u8>>) -> Self {
+        Self { secret }
+    }
+}
+
+impl KeyDerivationOps for InMemoryKeyDerivationOps {
+    fn derive_kek(&self, salt: &[u8], info: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
+        Ok(hkdf::<32>(&self.secret, salt, info, Digester::sha512())?)
+    }
+}
+
 // Encrypted key blob.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) enum EncryptedKeyBlob {
@@ -52,22 +70,25 @@ pub(crate) struct EncryptedKeyBlobV1 {
 }
 
 impl EncryptedKeyBlob {
-    pub(crate) fn new(private_key: &[u8], kek_secret: &[u8]) -> Result<Self> {
-        EncryptedKeyBlobV1::new(private_key, kek_secret).map(Self::V1)
+    pub(crate) fn new(private_key: &[u8], ops: &impl KeyDerivationOps) -> Result<Self> {
+        EncryptedKeyBlobV1::new(private_key, ops).map(Self::V1)
     }
 
-    pub(crate) fn decrypt_private_key(&self, kek_secret: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    pub(crate) fn decrypt_private_key(
+        &self,
+        ops: &impl KeyDerivationOps,
+    ) -> Result<Zeroizing<Vec<u8>>> {
         match self {
-            Self::V1(blob) => blob.decrypt_private_key(kek_secret),
+            Self::V1(blob) => blob.decrypt_private_key(ops),
         }
     }
 }
 
 impl EncryptedKeyBlobV1 {
-    fn new(private_key: &[u8], kek_secret: &[u8]) -> Result<Self> {
+    fn new(private_key: &[u8], ops: &impl KeyDerivationOps) -> Result<Self> {
         let mut kek_salt = [0u8; 32];
         rand_bytes(&mut kek_salt)?;
-        let kek = hkdf::<32>(kek_secret, &kek_salt, KEK_INFO, Digester::sha512())?;
+        let kek = ops.derive_kek(&kek_salt, KEK_INFO)?;
 
         let tag_len = None;
         let aead_ctx = AeadContext::new(Aead::aes_256_gcm(), kek.as_slice(), tag_len)?;
@@ -77,8 +98,8 @@ impl EncryptedKeyBlobV1 {
         Ok(Self { kek_salt, encrypted_private_key: ciphertext.to_vec() })
     }
 
-    fn decrypt_private_key(&self, kek_secret: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-        let kek = hkdf::<32>(kek_secret, &self.kek_salt, KEK_INFO, Digester::sha512())?;
+    fn decrypt_private_key(&self, ops: &impl KeyDerivationOps) -> Result<Zeroizing<Vec<u8>>> {
+        let kek = ops.derive_kek(&self.kek_salt, KEK_INFO)?;
         let mut out = Zeroizing::new(vec![0u8; self.encrypted_private_key.len()]);
         let tag_len = None;
         let aead_ctx = AeadContext::new(Aead::aes_256_gcm(), kek.as_slice(), tag_len)?;
@@ -94,10 +115,10 @@ impl EncryptedKeyBlobV1 {
 
 pub(crate) fn decrypt_private_key(
     encrypted_key_blob: &[u8],
-    kek_secret: &[u8],
+    ops: &impl KeyDerivationOps,
 ) -> Result<Zeroizing<Vec<u8>>> {
     let key_blob: EncryptedKeyBlob = cbor_util::deserialize(encrypted_key_blob)?;
-    let private_key = key_blob.decrypt_private_key(kek_secret)?;
+    let private_key = key_blob.decrypt_private_key(ops)?;
     Ok(private_key)
 }
 
@@ -126,9 +147,9 @@ mod tests {
 
     #[test]
     fn decrypting_keyblob_succeeds_with_the_same_kek() -> Result<()> {
-        let encrypted_key_blob =
-            cbor_util::serialize(&EncryptedKeyBlob::new(&TEST_KEY, &TEST_SECRET1)?)?;
-        let decrypted_key = decrypt_private_key(&encrypted_key_blob, &TEST_SECRET1)?;
+        let ops = InMemoryKeyDerivationOps::from(Zeroizing::new(TEST_SECRET1.to_vec()));
+        let encrypted_key_blob = cbor_util::serialize(&EncryptedKeyBlob::new(&TEST_KEY, &ops)?)?;
+        let decrypted_key = decrypt_private_key(&encrypted_key_blob, &ops)?;
 
         assert_eq!(TEST_KEY, decrypted_key.as_slice());
         Ok(())
@@ -136,9 +157,10 @@ mod tests {
 
     #[test]
     fn decrypting_keyblob_fails_with_a_different_kek() -> Result<()> {
-        let encrypted_key_blob =
-            cbor_util::serialize(&EncryptedKeyBlob::new(&TEST_KEY, &TEST_SECRET1)?)?;
-        let err = decrypt_private_key(&encrypted_key_blob, &TEST_SECRET2).unwrap_err();
+        let ops1 = InMemoryKeyDerivationOps::from(Zeroizing::new(TEST_SECRET1.to_vec()));
+        let ops2 = InMemoryKeyDerivationOps::from(Zeroizing::new(TEST_SECRET2.to_vec()));
+        let encrypted_key_blob = cbor_util::serialize(&EncryptedKeyBlob::new(&TEST_KEY, &ops1)?)?;
+        let err = decrypt_private_key(&encrypted_key_blob, &ops2).unwrap_err();
 
         let expected_err: RequestProcessingError =
             Error::CallFailed(ApiName::EVP_AEAD_CTX_open, CipherError::BadDecrypt.into()).into();
