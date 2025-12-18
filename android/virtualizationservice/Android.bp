@@ -36,13 +36,13 @@ rust_defaults {
         "libanyhow",
         "libavflog",
         "libbinder_rs",
+        "libder",
         "libhex",
         "libhypervisor_props",
         "liblibc",
         "liblibsqlite3_sys",
         "liblog_rust",
         "libnix",
-        "libopenssl",
         "librand",
         "librkpd_client",
         "librusqlite",
@@ -88,6 +88,7 @@ rust_test {
     test_suites: ["general-tests"],
     rustlibs: [
         "libtempfile",
+        "libx509_cert",
     ],
     data: [
         ":test_rkp_cert_chain",
