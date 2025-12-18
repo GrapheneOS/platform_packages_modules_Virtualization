@@ -22,16 +22,13 @@ use alloc::vec::Vec;
 use bssl_avf::{rand_bytes, sha256, Digester, EcKey, PKey};
 use cbor_util::parse_value_array;
 use ciborium::value::Value;
-use core::result;
 use coset::{AsCborValue, CborSerializable, CoseSign, CoseSign1};
 use der::{Decode, Encode};
 use diced_open_dice::DiceArtifacts;
 use log::{debug, error, info};
 use microdroid_kernel_hashes::{HASH_SIZE as KERNEL_HASH_SIZE, OS_HASHES};
-use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError};
+use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError, Result};
 use x509_cert::{certificate::Certificate, name::Name};
-
-type Result<T> = result::Result<T, RequestProcessingError>;
 
 const DICE_CDI_LEAF_SIGNATURE_INDEX: usize = 0;
 const ATTESTATION_KEY_SIGNATURE_INDEX: usize = 1;
@@ -153,21 +150,6 @@ fn ecdsa_sign_der(key: &EcKey, message: &[u8]) -> bssl_avf::Result<Vec<u8>> {
     key.ecdsa_sign_der(&digest)
 }
 
-fn validate_service_vm_dice_chain_length(service_vm_dice_chain: &[Value]) -> Result<()> {
-    if service_vm_dice_chain.len() < 3 {
-        // The service VM's DICE chain must contain the root key and at least two other entries
-        // that describe:
-        //   - pvmfw
-        //   - Service VM kernel
-        error!(
-            "The service VM DICE chain must contain at least three entries. Got '{}' entries",
-            service_vm_dice_chain.len()
-        );
-        return Err(RequestProcessingError::InternalError);
-    }
-    Ok(())
-}
-
 /// Validates the client VM DICE chain against the reference service VM DICE chain and
 /// the reference `vendor_hashtree_root_digest`.
 ///
@@ -178,8 +160,17 @@ fn validate_client_vm_dice_chain(
     vendor_hashtree_root_digest: Option<&[u8]>,
 ) -> Result<ClientVmDiceChain> {
     let service_vm_dice_chain = parse_value_array(service_vm_dice_chain, "service_vm_dice_chain")?;
-    validate_service_vm_dice_chain_length(&service_vm_dice_chain)?;
-    let common_chain_len = service_vm_dice_chain.len() - 1;
+    let common_chain_len = service_vm_dice_chain.len().checked_sub(1).ok_or_else(|| {
+        error!("Service VM DICE chain is empty");
+        RequestProcessingError::InternalError
+    })?;
+    if common_chain_len < 2 {
+        error!(
+            "Common DICE chain prefix too short. Must contain at least 2 entries \
+             (Root Key and a cert describing pvmfw). Got: {common_chain_len}"
+        );
+        return Err(RequestProcessingError::InternalError);
+    }
 
     let client_vm_dice_chain = parse_value_array(client_vm_dice_chain, "client_vm_dice_chain")?;
     validate_common_prefix(&client_vm_dice_chain, &service_vm_dice_chain[..common_chain_len])?;

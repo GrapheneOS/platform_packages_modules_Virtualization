@@ -31,6 +31,7 @@ use anyhow::{bail, Result};
 use binder::{BinderFeatures, ProcessState};
 use clap::Parser;
 use log::{error, info, LevelFilter};
+use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
 use nix::unistd::{setpgid, write, Pid, Uid};
 use rpcbinder::{FileDescriptorTransportMode, RpcServer};
 use rustutils::inherited_fd::take_fd_ownership;
@@ -144,6 +145,16 @@ fn main() {
         std::process::exit(1);
     }
     drop(ready_fd);
+
+    let sa_flags = SaFlags::empty();
+    let sa_mask = SigSet::empty();
+    let sa = SigAction::new(SigHandler::SigIgn, sa_flags, sa_mask);
+    // Ignore SIGTERM in virtmgr and crosvm to allow the VM to shutdown gracefully.
+    // As part of the shutdown sequence, processes receive SIGTERM, which leads to
+    // Virtualizationservice requesting a shutdown of the VM. However, virtmgr and crosvm also
+    // receive SIGTERM which then leads to those processes dying.
+    // SAFETY: we don't do anything in the handler
+    unsafe { sigaction(Signal::SIGTERM, &sa) }.expect("failed to set sigaction for SIGTERM");
 
     server.join();
     info!("Shutting down VirtualizationService RpcServer");

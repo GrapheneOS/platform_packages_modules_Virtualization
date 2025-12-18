@@ -15,49 +15,23 @@
 //! Manages Key Encryption Keys (KEKs) used to set up encrypted store.
 
 use anyhow::{Context, Result};
+use bssl_crypto::aead::{Aead, Aes256Gcm};
 use keystore2_crypto::ZVec;
-use openssl::symm::{decrypt_aead, encrypt_aead, Cipher};
-
-/// Size of the AES256-GCM tag
-const AES_256_GCM_TAG_LENGTH: usize = 16;
-
-/// Size of the AES256-GCM nonce
-const AES_256_GCM_NONCE_LENGTH: usize = 12;
 
 /// Encrypts key_to_encrypt using provided encryption_key.
-pub fn encrypt_kek(key_to_encrypt: &[u8], encryption_key: &[u8]) -> Result<ZVec> {
-    let mut result =
-        ZVec::new(AES_256_GCM_NONCE_LENGTH + key_to_encrypt.len() + AES_256_GCM_TAG_LENGTH)?;
-
-    let nonce = rand::random::<[u8; AES_256_GCM_NONCE_LENGTH]>();
-    let mut tag = [0; AES_256_GCM_TAG_LENGTH];
-    let cipher = Cipher::aes_256_gcm();
-    let aad = [0; 0];
-    let ciphertext =
-        encrypt_aead(cipher, encryption_key, Some(&nonce), &aad, key_to_encrypt, &mut tag)?;
-
-    result[0..AES_256_GCM_NONCE_LENGTH].copy_from_slice(&nonce);
-    let cipher_start_idx = AES_256_GCM_NONCE_LENGTH;
-    let tag_start_idx = cipher_start_idx + ciphertext.len();
-    result[cipher_start_idx..tag_start_idx].copy_from_slice(&ciphertext);
-    result[tag_start_idx..].copy_from_slice(&tag);
-    Ok(result)
+pub fn encrypt_kek(key_to_encrypt: &[u8], encryption_key: &[u8]) -> Result<Vec<u8>> {
+    let encryption_key = encryption_key.try_into().context("wrong key size")?;
+    let nonce: [u8; 12] = bssl_crypto::rand_array();
+    let ciphertext = Aes256Gcm::new(encryption_key).seal(&nonce, key_to_encrypt, &[]);
+    Ok([&nonce, ciphertext.as_slice()].concat())
 }
 
 /// Decrypts encrypted_key using provided encryption_key.
 pub fn decrypt_kek(encrypted_key: &[u8], encryption_key: &[u8]) -> Result<ZVec> {
-    let cipher_start_idx = AES_256_GCM_NONCE_LENGTH;
-    let tag_start_idx = encrypted_key.len() - AES_256_GCM_TAG_LENGTH;
-
-    let nonce = &encrypted_key[0..AES_256_GCM_NONCE_LENGTH];
-    let ciphertext = &encrypted_key[cipher_start_idx..tag_start_idx];
-    let tag = &encrypted_key[tag_start_idx..];
-
-    let cipher = Cipher::aes_256_gcm();
-    let aad = [0; 0];
-    let plaintext = decrypt_aead(cipher, encryption_key, Some(nonce), &aad, ciphertext, tag)
-        .context("decrypt_aead failed")?;
-
+    let encryption_key = encryption_key.try_into().context("wrong key size")?;
+    let (nonce, ciphertext) = encrypted_key.split_first_chunk::<12>().unwrap();
+    let plaintext =
+        Aes256Gcm::new(encryption_key).open(nonce, ciphertext, &[]).context("could not decrypt")?;
     ZVec::try_from(plaintext).context("conversion to ZVec failed")
 }
 

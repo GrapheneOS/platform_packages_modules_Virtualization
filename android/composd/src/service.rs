@@ -17,7 +17,10 @@
 //! Implementation of IIsolatedCompilationService, called from system server when compilation is
 //! desired.
 
-use crate::{instance_manager::InstanceManager, odrefresh_task::OdrefreshTask};
+use crate::{
+    instance_manager::IInstanceManager, odrefresh_task::OdrefreshTask,
+    verified_dex2oat_task::VerifiedDex2OatTaskQueue,
+};
 use android_system_composd::aidl::android::system::composd::{
     ICompilationTask::{BnCompilationTask, ICompilationTask},
     ICompilationTaskCallback::ICompilationTaskCallback,
@@ -37,27 +40,36 @@ use compos_aidl_interface::aidl::com::android::compos::ICompOsService::Compilati
 use compos_common as compos_common_injection;
 #[cfg(test)]
 use compos_common_with_mocks as compos_common_injection;
+use std::time::Duration;
 
 use compos_common_injection::{
     binder::to_binder_result,
     compos_client::CompOsType,
     odrefresh::{PENDING_ARTIFACTS_SUBDIR, TEST_ARTIFACTS_SUBDIR},
 };
-use rustutils::android::{users::AID_ROOT, users::AID_SYSTEM};
+use rustutils::android::{users::AID_ARTD, users::AID_ROOT, users::AID_SHELL, users::AID_SYSTEM};
 use std::sync::Arc;
 
 pub struct IsolatedCompilationService {
-    instance_manager: Arc<InstanceManager>,
+    instance_manager: Arc<dyn IInstanceManager>,
+    dex2oat_queue: Arc<VerifiedDex2OatTaskQueue>,
 }
 
 pub fn new_binder(
-    instance_manager: Arc<InstanceManager>,
+    instance_manager: Arc<dyn IInstanceManager>,
+    dex2oat_queue: Arc<VerifiedDex2OatTaskQueue>,
 ) -> Strong<dyn IIsolatedCompilationService> {
-    let service = IsolatedCompilationService { instance_manager };
+    let service = IsolatedCompilationService { instance_manager, dex2oat_queue };
     BnIsolatedCompilationService::new_binder(service, BinderFeatures::default())
 }
 
 impl Interface for IsolatedCompilationService {}
+
+impl Drop for IsolatedCompilationService {
+    fn drop(&mut self) {
+        self.dex2oat_queue.quit();
+    }
+}
 
 impl IIsolatedCompilationService for IsolatedCompilationService {
     fn startStagedApexCompile(
@@ -65,7 +77,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         callback: &Strong<dyn ICompilationTaskCallback>,
         base_os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
-        check_permissions()?;
+        check_permissions_for_odrefresh()?;
         to_binder_result(self.do_start_staged_apex_compile(callback, base_os))
     }
 
@@ -75,7 +87,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         callback: &Strong<dyn ICompilationTaskCallback>,
         base_os: &str,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
-        check_permissions()?;
+        check_permissions_for_odrefresh()?;
         let prefer_staged = match apex_source {
             ApexSource::NoStaged => false,
             ApexSource::PreferStaged => true,
@@ -94,6 +106,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         if !aconfig_compos_flags_rust::verified_dex2oat() {
             return Err(Status::new_exception(ExceptionCode::UNSUPPORTED_OPERATION, None));
         }
+        check_permissions_for_dex2oat()?;
         to_binder_result(self.do_start_verified_dex2oat(
             dex2oat_args,
             signed_manifest_fd,
@@ -147,7 +160,6 @@ impl IsolatedCompilationService {
         Ok(BnCompilationTask::new_binder(task, BinderFeatures::default()))
     }
 
-    #[allow(unused_variables)]
     fn do_start_verified_dex2oat(
         &self,
         dex2oat_args: &[Dex2OatArg],
@@ -155,16 +167,33 @@ impl IsolatedCompilationService {
         callback: &Strong<dyn IDex2OatTaskCallback>,
         timeout_seconds: i32,
     ) -> Result<Strong<dyn ICompilationTask>> {
-        todo!("b415850856 : Not implemented");
+        let u_timeout: u64 = timeout_seconds
+            .try_into()
+            .context("Unable to convert timeout_seconds from i32 to u64")?;
+        self.dex2oat_queue.enqueue_job(
+            dex2oat_args,
+            signed_manifest_fd,
+            Duration::from_secs(u_timeout),
+            callback,
+        )
     }
 }
 
-fn check_permissions() -> binder::Result<()> {
+fn check_permissions_for_odrefresh() -> binder::Result<()> {
     let calling_uid = ThreadState::get_calling_uid();
     // This should only be called by system server, or root while testing
     if calling_uid != AID_SYSTEM && calling_uid != AID_ROOT {
         Err(Status::new_exception(ExceptionCode::SECURITY, None))
     } else {
         Ok(())
+    }
+}
+
+fn check_permissions_for_dex2oat() -> binder::Result<()> {
+    let calling_uid = ThreadState::get_calling_uid();
+    // restrict to ARTd, shell (for testing) and root.
+    match calling_uid {
+        AID_ARTD | AID_SHELL | AID_ROOT => Ok(()),
+        _ => Err(Status::new_exception(ExceptionCode::SECURITY, None)),
     }
 }

@@ -41,14 +41,28 @@ fn try_main() -> Result<()> {
             .with_max_level(log::LevelFilter::Debug),
     );
 
-    if cfg!(compos_verified_dex2oat) {
-        if !aconfig_compos_flags_rust::verified_dex2oat() {
-            bail!("aconfig_compos_flags_rust::verified_dex2oat is not enabled")
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() < 2 {
+        bail!("Usage: compsvc <odrefresh|dex2oat>");
+    }
+
+    let service_type = &args[1];
+
+    match service_type.as_str() {
+        "odrefresh" => {
+            debug!("compsvc is starting as a rpc service for odrefresh.");
+            vm_payload::run_single_vsock_service(
+                compsvc::new_odrefresh_binder()?,
+                COMPOS_VSOCK_PORT,
+            )
         }
-        debug!("dex2oatsvc is starting as a rpc service.");
-        vm_payload::run_single_vsock_service(compsvc::new_dex2oat_binder()?, COMPOS_VSOCK_PORT)
-    } else {
-        debug!("compsvc is starting as a rpc service.");
-        vm_payload::run_single_vsock_service(compsvc::new_odrefresh_binder()?, COMPOS_VSOCK_PORT)
+        "dex2oat" => {
+            debug!("compsvc is starting as a rpc service for dex2oat.");
+            vm_payload::run_single_vsock_service(compsvc::new_dex2oat_binder()?, COMPOS_VSOCK_PORT)
+        }
+        _ => {
+            bail!("Invalid service type: {}. Must be 'odrefresh' or 'dex2oat'", service_type);
+        }
     }
 }

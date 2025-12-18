@@ -24,7 +24,6 @@ use cbor_util::{
 };
 use ciborium::value::Value;
 use core::cell::OnceCell;
-use core::result;
 use coset::{
     self,
     iana::{self, EnumI64},
@@ -33,9 +32,7 @@ use coset::{
 };
 use diced_open_dice::DiceMode;
 use log::{debug, error, info};
-use service_vm_comm::RequestProcessingError;
-
-type Result<T> = result::Result<T, RequestProcessingError>;
+use service_vm_comm::{RequestProcessingError, Result};
 
 const CODE_HASH: i64 = -4670545;
 const CONFIG_DESC: i64 = -4670548;
@@ -65,11 +62,12 @@ const MICRODROID_PAYLOAD_COMPONENT_NAME: &str = "Microdroid payload";
 /// ]
 #[derive(Debug, Clone)]
 pub(crate) struct ClientVmDiceChain {
+    /// Contains only the payloads specific to the Client VM (excluding the common prefix).
+    ///
+    /// The structure is either:
+    /// - [Kernel, Payload] (Length: 2)
+    /// - [Kernel, Vendor Module, Payload] (Length: 3)
     payloads: Vec<DiceChainEntryPayload>,
-    /// The index of the vendor partition entry in the DICE chain if it exists.
-    vendor_partition_index: Option<usize>,
-    /// The index of the kernel entry in the DICE chain.
-    kernel_index: usize,
 }
 
 impl ClientVmDiceChain {
@@ -84,79 +82,86 @@ impl ClientVmDiceChain {
         mut client_vm_dice_chain: Vec<Value>,
         common_chain_prefix_len: usize,
     ) -> Result<Self> {
-        let has_vendor_partition =
-            vendor_partition_exists(client_vm_dice_chain.len(), common_chain_prefix_len)?;
-
+        // Calculate the length of the Client VM specific suffix.
+        let suffix_len =
+            client_vm_dice_chain.len().checked_sub(common_chain_prefix_len).ok_or_else(|| {
+                error!(
+                    "The client VM DICE chain must extend the common chain prefix by exactly \
+                     2 or 3 entries. Common chain prefix length: {common_chain_prefix_len}, \
+                     Client chain length: {}",
+                    client_vm_dice_chain.len()
+                );
+                RequestProcessingError::InvalidDiceChain
+            })?;
+        if !(2..=3).contains(&suffix_len) {
+            error!("Invalid DICE chain suffix length: {suffix_len}. Expected 2 or 3.");
+            return Err(RequestProcessingError::InvalidDiceChain);
+        }
         let root_public_key =
             CoseKey::from_cbor_value(client_vm_dice_chain.remove(0))?.try_into()?;
 
-        let mut payloads = Vec::with_capacity(client_vm_dice_chain.len());
-        let mut previous_public_key = &root_public_key;
+        let mut payloads = Vec::with_capacity(suffix_len);
+        // Determine the index where the VM-specific suffix begins in the `client_vm_dice_chain`
+        // vector (which now excludes the root key).
+        let suffix_start_index = common_chain_prefix_len - 1;
+        let mut previous_public_key = root_public_key;
         for (i, value) in client_vm_dice_chain.into_iter().enumerate() {
             let payload = DiceChainEntryPayload::validate_cose_signature_and_extract_payload(
                 value,
-                previous_public_key,
+                &previous_public_key,
             )
-            .map_err(|e| {
-                error!("Failed to verify the DICE chain entry {i}: {e:?}");
-                e
-            })?;
-            payloads.push(payload);
-            previous_public_key = &payloads.last().unwrap().subject_public_key;
+            .inspect_err(|e| error!("Failed to verify VM DICE chain entry {i}: {e:?}"))?;
+            previous_public_key = payload.subject_public_key.clone();
+            if i >= suffix_start_index {
+                payloads.push(payload);
+            }
         }
-
-        Self::build(payloads, has_vendor_partition)
+        Self::build(payloads)
     }
 
-    fn build(
-        dice_entry_payloads: Vec<DiceChainEntryPayload>,
-        has_vendor_partition: bool,
-    ) -> Result<Self> {
-        let microdroid_payload_name =
-            &dice_entry_payloads[dice_entry_payloads.len() - 1].config_descriptor.component_name;
-        if Some(MICRODROID_PAYLOAD_COMPONENT_NAME) != microdroid_payload_name.as_deref() {
-            error!(
-                "The last entry in the client VM DICE chain must describe the Microdroid \
-                 payload. Got '{microdroid_payload_name:?}'"
-            );
-            return Err(RequestProcessingError::InvalidDiceChain);
-        }
-
-        let (vendor_partition_index, kernel_index) = if has_vendor_partition {
-            let index = dice_entry_payloads.len() - 2;
-            let vendor_partition_name =
-                &dice_entry_payloads[index].config_descriptor.component_name;
-            if Some(VENDOR_PARTITION_COMPONENT_NAME) != vendor_partition_name.as_deref() {
+    fn build(payloads: Vec<DiceChainEntryPayload>) -> Result<Self> {
+        let check_name = |payload: &DiceChainEntryPayload, expected: &str| -> Result<()> {
+            let actual = payload.config_descriptor.component_name.as_deref();
+            if actual != Some(expected) {
                 error!(
-                    "The vendor partition entry in the client VM DICE chain must describe the \
-                    vendor partition. Got '{vendor_partition_name:?}'"
+                    "DICE chain entry component expected to be named '{expected}'. \
+                        Got '{actual:?}'"
                 );
                 return Err(RequestProcessingError::InvalidDiceChain);
             }
-            (Some(index), index - 1)
-        } else {
-            (None, dice_entry_payloads.len() - 2)
+            Ok(())
         };
 
-        let kernel_name = &dice_entry_payloads[kernel_index].config_descriptor.component_name;
-        if Some(KERNEL_COMPONENT_NAME) != kernel_name.as_deref() {
-            error!(
-                "The microdroid kernel entry in the client VM DICE chain must describe the \
-                 Microdroid kernel. Got '{kernel_name:?}'"
-            );
-            return Err(RequestProcessingError::InvalidDiceChain);
+        match payloads.as_slice() {
+            [kernel, payload] => {
+                check_name(kernel, KERNEL_COMPONENT_NAME)?;
+                check_name(payload, MICRODROID_PAYLOAD_COMPONENT_NAME)?;
+            }
+            [kernel, vendor, payload] => {
+                check_name(kernel, KERNEL_COMPONENT_NAME)?;
+                check_name(vendor, VENDOR_PARTITION_COMPONENT_NAME)?;
+                check_name(payload, MICRODROID_PAYLOAD_COMPONENT_NAME)?;
+            }
+            _ => {
+                error!("Invalid Client VM DICE chain suffix with length {}", payloads.len());
+                return Err(RequestProcessingError::InvalidDiceChain);
+            }
         }
 
         debug!("All entries in the client VM DICE chain have correct component names");
-        Ok(Self { payloads: dice_entry_payloads, vendor_partition_index, kernel_index })
+        Ok(Self { payloads })
     }
 
     pub(crate) fn microdroid_kernel(&self) -> &DiceChainEntryPayload {
-        &self.payloads[self.kernel_index]
+        &self.payloads[0]
     }
 
     pub(crate) fn vendor_partition(&self) -> Option<&DiceChainEntryPayload> {
-        self.vendor_partition_index.map(|i| &self.payloads[i])
+        if self.payloads.len() == 3 {
+            Some(&self.payloads[1])
+        } else {
+            None
+        }
     }
 
     pub(crate) fn microdroid_payload(&self) -> &DiceChainEntryPayload {
@@ -174,34 +179,6 @@ impl ClientVmDiceChain {
     /// Returns true if all payloads in the DICE chain are in normal mode.
     pub(crate) fn all_entries_are_secure(&self) -> bool {
         self.payloads.iter().all(|p| p.mode == DiceMode::kDiceModeNormal)
-    }
-}
-
-fn vendor_partition_exists(
-    client_vm_dice_chain_len: usize,
-    common_chain_prefix_len: usize,
-) -> Result<bool> {
-    // Client VM DICE chain = Common DICE chain prefix
-    //    + Vendor module entry (exists only when the vendor partition is present)
-    //    + Microdroid kernel entry (added in pvmfw)
-    //    + Apk/Apexes entry (added in microdroid)
-    match client_vm_dice_chain_len.checked_sub(common_chain_prefix_len) {
-        Some(2) => {
-            debug!("The vendor partition entry is not present in the client VM's DICE chain");
-            Ok(false)
-        }
-        Some(3) => {
-            info!("The vendor partition entry is present in the client VM's DICE chain");
-            Ok(true)
-        }
-        _ => {
-            error!(
-                "The client VM DICE chain must extend the common chain prefix by exactly \
-                 2 or 3 entries. Common chain prefix length: {common_chain_prefix_len}, \
-                 Client chain length: {client_vm_dice_chain_len}"
-            );
-            Err(RequestProcessingError::InvalidDiceChain)
-        }
     }
 }
 

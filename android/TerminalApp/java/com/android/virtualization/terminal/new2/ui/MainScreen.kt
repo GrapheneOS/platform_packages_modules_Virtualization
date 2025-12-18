@@ -20,6 +20,9 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.provider.Settings
 import android.view.WindowManager
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +31,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -41,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +79,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val activity = context as Activity
     val scope = rememberCoroutineScope()
+    var showSettings by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
         val state = uiState
@@ -117,76 +126,110 @@ fun MainScreen(viewModel: MainViewModel) {
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
         val padding =
             if (displayState is DisplayState.Fullscreen) PaddingValues(0.dp) else innerPadding
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (val state = lastValidState) {
-                is MainUiState.Checking -> SplashScreen()
-                is MainUiState.NotInstalled ->
-                    InstallStartScreen(
-                        totalSizeBytes = state.totalSizeBytes,
-                        onInstallClick = { wifiOnly ->
-                            onInstallClick(context, scope, snackbarHostState, viewModel, wifiOnly)
-                        },
-                    )
-                is MainUiState.Installing ->
-                    InstallProgressScreen(
-                        progressFlow = state.progress,
-                        totalBytes = state.totalBytes,
-                        onCancelClick = { viewModel.cancelInstallVm() },
-                    )
-                is MainUiState.Ready -> {
-                    // VM will soon be booting
-                }
-                is MainUiState.Stopped -> {
-                    // Activity will finish
-                }
-                is MainUiState.Booting -> BootingScreen()
-                is MainUiState.Running -> {
-                    val currentDisplayState = displayState
 
-                    Column {
-                        if (currentDisplayState !is DisplayState.Fullscreen) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surface),
-                            ) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    TerminalTabBar(
-                                        tabs = tabs,
-                                        selectedTabId =
-                                            if (currentDisplayState == DisplayState.Normal) null
-                                            else selectedTabId,
-                                        onTabSelected = { viewModel.selectTab(it) },
-                                        onTabClosed = { viewModel.closeTab(it) },
-                                        onAddTab = { viewModel.addTab() },
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                when (val state = lastValidState) {
+                    is MainUiState.Checking -> SplashScreen()
+                    is MainUiState.NotInstalled ->
+                        InstallStartScreen(
+                            totalSizeBytes = state.totalSizeBytes,
+                            onInstallClick = { wifiOnly ->
+                                onInstallClick(
+                                    context,
+                                    scope,
+                                    snackbarHostState,
+                                    viewModel,
+                                    wifiOnly,
+                                )
+                            },
+                        )
+                    is MainUiState.Installing ->
+                        InstallProgressScreen(
+                            progressFlow = state.progress,
+                            totalBytes = state.totalBytes,
+                            onCancelClick = { viewModel.cancelInstallVm() },
+                        )
+                    is MainUiState.Ready -> {
+                        // VM will soon be booting
+                    }
+                    is MainUiState.Stopped -> {
+                        // Activity will finish
+                    }
+                    is MainUiState.Booting -> BootingScreen()
+                    is MainUiState.Running -> {
+                        val currentDisplayState = displayState
+
+                        Column {
+                            if (currentDisplayState !is DisplayState.Fullscreen) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surface),
+                                ) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        TerminalTabBar(
+                                            tabs = tabs,
+                                            selectedTabId =
+                                                if (currentDisplayState == DisplayState.Normal) null
+                                                else selectedTabId,
+                                            onTabSelected = { viewModel.selectTab(it) },
+                                            onTabClosed = { viewModel.closeTab(it) },
+                                            onAddTab = { viewModel.addTab() },
+                                        )
+                                    }
+                                    DisplayController(
+                                        isDisplayActive =
+                                            currentDisplayState == DisplayState.Normal,
+                                        onDisplayToggle = { viewModel.toggleDisplay() },
+                                        onFullscreenToggle = { viewModel.switchToFullscreen() },
+                                        isFullscreen = false,
+                                        onKeyboardToggle = {
+                                            viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
+                                        },
                                     )
+                                    IconButton(
+                                        onClick = {
+                                            showSettings = true
+                                            viewModel.setIsImeVisible(false)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Settings,
+                                            contentDescription = "Settings",
+                                        )
+                                    }
                                 }
-                                DisplayController(
-                                    isDisplayActive = currentDisplayState == DisplayState.Normal,
-                                    onDisplayToggle = { viewModel.toggleDisplay() },
-                                    onFullscreenToggle = { viewModel.switchToFullscreen() },
-                                    isFullscreen = false,
-                                    onKeyboardToggle = {
-                                        viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
-                                    },
+                            }
+                            if (
+                                currentDisplayState == DisplayState.Normal ||
+                                    currentDisplayState is DisplayState.Fullscreen
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    DisplayScreen(viewModel = viewModel)
+                                }
+                            } else if (selectedTabId != null) {
+                                TerminalScreen(
+                                    state.address,
+                                    state.port,
+                                    selectedTabId!!,
+                                    viewModel,
                                 )
                             }
                         }
-                        if (
-                            currentDisplayState == DisplayState.Normal ||
-                                currentDisplayState is DisplayState.Fullscreen
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                DisplayScreen(viewModel = viewModel)
-                            }
-                        } else if (selectedTabId != null) {
-                            TerminalScreen(state.address, state.port, selectedTabId!!, viewModel)
-                        }
                     }
+                    is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
+                    else -> {}
                 }
-                is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
-                else -> {}
+            }
+
+            AnimatedVisibility(
+                visible = showSettings,
+                enter = slideInHorizontally(initialOffsetX = { it }),
+                exit = slideOutHorizontally(targetOffsetX = { it }),
+            ) {
+                SettingsScreen(onBack = { showSettings = false })
             }
         }
     }

@@ -1096,6 +1096,7 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
             let task = Task {
                 type_: TaskType::MicrodroidLauncher,
                 command: payload_config.payload_binary_name,
+                command_args: None,
             };
             // We don't care about the paths, only the number of extra APKs really matters.
             let extra_apks = (0..payload_config.extra_apk_count)
@@ -1150,7 +1151,13 @@ struct PayloadCommand {
 
 fn build_command(package_name: &str, task: &Task, is_apex: bool) -> Result<Command> {
     match task.type_ {
-        TaskType::Executable => Ok(Command::new(&task.command)),
+        TaskType::Executable => {
+            let mut cmd = Command::new(&task.command);
+            if let Some(args) = &task.command_args {
+                cmd.args(args);
+            }
+            Ok(cmd)
+        }
         TaskType::MicrodroidLauncher => {
             let mut cmd = Command::new("/system/bin/microdroid_launcher");
             cmd.arg(find_library_path(package_name, &task.command, is_apex)?);

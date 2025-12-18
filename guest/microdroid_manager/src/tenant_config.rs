@@ -17,8 +17,8 @@
 use crate::instance::{ApexData, ApkData};
 use crate::MicrodroidError;
 use anyhow::{anyhow, bail, Result};
+use bssl_crypto::digest::Sha512;
 use microdroid_payload_config::TenantConfig;
-use openssl::sha::sha512;
 use std::collections::{HashMap, HashSet};
 
 // Validation logic includes:
@@ -85,7 +85,7 @@ pub(crate) fn validate_tenants_against_tenant_config(
                 } else {
                     Ok(apex_data.manifest_version.map(|v| v as u64).unwrap_or(0))
                 };
-                let authority_hash = hex::encode(sha512(&apex_data.public_key));
+                let authority_hash = hex::encode(Sha512::hash(&apex_data.public_key));
                 (config, "APEX", version_res, authority_hash, "authority_hash")
             }
             TenantConfig::Apk(config) => {
@@ -195,7 +195,7 @@ mod tests {
             create_tenant_config_apex(
                 "com.test.apex",
                 Some(20),
-                Some(hex::encode(sha512(&apex_public_key))),
+                Some(hex::encode(Sha512::hash(&apex_public_key))),
             ),
         ];
 
@@ -294,7 +294,7 @@ mod tests {
         let tenant_config = vec![create_tenant_config_apex(
             "com.test.apex",
             Some(20),
-            Some(hex::encode(sha512(&apex_public_key))),
+            Some(hex::encode(Sha512::hash(&apex_public_key))),
         )];
 
         let result =
@@ -330,7 +330,7 @@ mod tests {
         let tenant_config = vec![create_tenant_config_apex(
             "com.test.apex",
             Some(20),
-            Some(hex::encode(sha512(&wrong_key))),
+            Some(hex::encode(Sha512::hash(&wrong_key))),
         )];
 
         let result =
@@ -365,7 +365,7 @@ mod tests {
         let tenant_config = vec![create_tenant_config_apex(
             "com.test.apex",
             Some(20),
-            Some(hex::encode(sha512(&apex_public_key))),
+            Some(hex::encode(Sha512::hash(&apex_public_key))),
         )];
 
         let result = validate_tenants_against_tenant_config(&[], &tenant_apex, &tenant_config);

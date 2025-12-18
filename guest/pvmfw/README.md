@@ -250,7 +250,7 @@ In version 1.2, a fourth blob is added.
   - Passing the [vendor hashtree digest][vendor_hashtree_digest] to run
     Microdroid with verified vendor image.
 
-[header]: src/config.rs
+[header]: src/config/mod.rs
 [DTBO]: https://android.googlesource.com/platform/external/dtc/+/refs/heads/main/Documentation/dt-object-internal.txt
 [debug_policy]: ../../docs/debug/README.md#debug-policy
 [device_assignment]: ../../docs/device_assignment.md
