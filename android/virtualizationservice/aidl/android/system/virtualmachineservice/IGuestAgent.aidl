@@ -18,6 +18,12 @@ package android.system.virtualmachineservice;
 /** @hide */
 interface IGuestAgent {
     /**
+     * Shuts the VM down gracefully.
+     */
+    @SuppressWarnings(value={"mixed-oneway"}) oneway void shutdownAsync() = 1;
+
+    // TODO(b/469712830): Move these Microdroid specific APIs to an extension.
+    /**
      * Starts a vsock server to dump the VM's state, and return a port number for the listening
      * vsock. The guest agent must open a vsock server which accepts one client, and then sends VM's
      * dump to the client. Writing to the client vsock must be done within 5 seconds. Otherwise, the
@@ -25,7 +31,7 @@ interface IGuestAgent {
      *
      * TODO(b/395205629): Use IBinder::Interface::dump().
      */
-    int startDumpVsockServer(in String[] args);
+    int startDumpVsockServer(in String[] args) = 2;
 
     /**
      * Starts or stops traced_relay Perfetto service inside a VM. This process acts as a relay to
@@ -36,13 +42,8 @@ interface IGuestAgent {
      * NOTE: it is recommended to only implement this API for debuggable pVMs.
      * See Microdroid implementation for reference.
      */
-    void startOrStopTracedRelayService(boolean start);
-
-    /**
-     * Shuts the VM down gracefully.
-     */
-    @SuppressWarnings(value={"mixed-oneway"}) oneway void shutdownAsync();
+    void startOrStopTracedRelayService(boolean start) = 3;
 
     /** Requests the VM to trim its memory usage. */
-    @SuppressWarnings(value={"mixed-oneway"}) oneway void trimAsync();
+    @SuppressWarnings(value={"mixed-oneway"}) oneway void trimAsync() = 4;
 }
