@@ -724,7 +724,6 @@ public final class VirtualMachineConfig {
                 && this.mConnectVmConsole == other.mConnectVmConsole
                 && (this.mVendorDiskImage == null) == (other.mVendorDiskImage == null)
                 && Objects.equals(this.mConsoleInputDevice, other.mConsoleInputDevice)
-                && Objects.equals(this.mPayloadConfigPath, other.mPayloadConfigPath)
                 && Objects.equals(this.mPayloadBinaryName, other.mPayloadBinaryName)
                 && Objects.equals(this.mPackageName, other.mPackageName)
                 && Objects.equals(this.mOs, other.mOs)
