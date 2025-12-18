@@ -17,7 +17,7 @@ container: "com.android.compos"
 
 flag {
     name: "verified_dex2oat"
-    namespace: "desktop_security"
+    namespace: "hardware_backed_security"
     description: "This flag is for enabling verified dex2oat compilation using CompOS."
     bug: "423718710"
 }
