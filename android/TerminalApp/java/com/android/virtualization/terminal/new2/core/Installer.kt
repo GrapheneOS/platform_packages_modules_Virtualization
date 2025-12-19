@@ -17,6 +17,7 @@ package com.android.virtualization.terminal.new2.core
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
@@ -26,10 +27,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object Installer {
 
@@ -53,12 +56,22 @@ object Installer {
             _installState.value = InstallState.Installed
             return
         }
-        try {
-            val downloadSize = ImageArchive.getDefault().getSize()
-            _installState.value = InstallState.NotInstalled(downloadSize)
-        } catch (e: IOException) {
-            android.util.Log.e("Installer", "Failed to check install status", e)
-            _installState.value = InstallState.Error(e, InstallState.ErrorCause.CheckFailed)
+
+        var retryCount = 0
+        while (true) {
+            try {
+                val downloadSize = ImageArchive.getDefault().getSize()
+                _installState.value = InstallState.NotInstalled(downloadSize)
+                return
+            } catch (e: IOException) {
+                if (retryCount >= 2) {
+                    Log.e("Installer", "Failed to check install status", e)
+                    _installState.value = InstallState.Error(e, InstallState.ErrorCause.CheckFailed)
+                    return
+                }
+                retryCount++
+                delay(1000)
+            }
         }
     }
 
@@ -96,6 +109,23 @@ object Installer {
         val state = _installState.value
         if (state is InstallState.Error) {
             repositoryScope.launch { checkInstallStatus() }
+        }
+    }
+
+    suspend fun uninstall(backupRootfs: Boolean) {
+        withContext(Dispatchers.IO) {
+            try {
+                _installState.value = InstallState.Checking
+                if (backupRootfs) {
+                    installedImage.uninstallAndBackup()
+                } else {
+                    installedImage.uninstallFully()
+                }
+                checkInstallStatus()
+            } catch (e: IOException) {
+                Log.e("Installer", "Failed to uninstall or backup VM", e)
+                _installState.value = InstallState.Error(e, InstallState.ErrorCause.UninstallFailed)
+            }
         }
     }
 }
