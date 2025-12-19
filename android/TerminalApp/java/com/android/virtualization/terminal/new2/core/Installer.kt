@@ -128,4 +128,22 @@ object Installer {
             }
         }
     }
+
+    fun hasBackup(): Boolean {
+        return installedImage.hasBackup()
+    }
+
+    suspend fun deleteBackup(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                installedImage.deleteBackup()
+                true
+            } catch (e: IOException) {
+                Log.e("Installer", "Failed to delete backup", e)
+                _installState.value =
+                    InstallState.Error(e, InstallState.ErrorCause.DeleteBackupFailed)
+                false
+            }
+        }
+    }
 }

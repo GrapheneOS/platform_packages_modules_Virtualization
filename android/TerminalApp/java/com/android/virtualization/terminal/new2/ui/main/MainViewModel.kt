@@ -29,6 +29,7 @@ import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.core.VmState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -90,6 +91,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isImeVisible = MutableStateFlow(false)
     val isImeVisible: StateFlow<Boolean> = _isImeVisible.asStateFlow()
 
+    private val _hasBackup = MutableStateFlow(false)
+    val hasBackup: StateFlow<Boolean> = _hasBackup.asStateFlow()
+
     fun toggleDisplay() {
         _displayState.value =
             if (_displayState.value == DisplayState.Hidden) {
@@ -137,6 +141,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        viewModelScope.launch(Dispatchers.IO) { _hasBackup.value = Installer.hasBackup() }
     }
 
     fun addTab() {
@@ -208,7 +213,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     MainUiState.ErrorHandler.CheckNetwork
                                 InstallState.ErrorCause.InstallFailed ->
                                     MainUiState.ErrorHandler.Retry
-                                InstallState.ErrorCause.UninstallFailed ->
+                                InstallState.ErrorCause.UninstallFailed,
+                                InstallState.ErrorCause.DeleteBackupFailed ->
                                     MainUiState.ErrorHandler.ReportBug(installState.cause)
                             }
                         MainUiState.Error(handler)
@@ -246,6 +252,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             VmController.stop()
             Installer.uninstall(backupRootfs)
+        }
+    }
+
+    fun deleteBackup() {
+        viewModelScope.launch {
+            if (Installer.deleteBackup()) {
+                _hasBackup.value = false
+                startVm()
+            }
         }
     }
 
