@@ -2164,7 +2164,59 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest(requirements = {"3.1/C-0-1"})
+    @CddTest
+    public void vmNotUpdatableWithLegacyRpMechanism() throws Exception {
+        // Legacy secret management (which involves storing code hashes in instance.img) is expected
+        // to decline VM run with different code, which includes updated code hash.
+        // Failure to comply may indicate broken rollback protection.
+        assumeSupportedDevice();
+        assumeProtectedVM();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk");
+
+        Context testHelperAppCtx =
+                getContext()
+                        .createPackageContext(
+                                RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME, 0);
+        VirtualMachineConfig config =
+                new VirtualMachineConfig.Builder(testHelperAppCtx)
+                        .setDisableUpdatability()
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
+                        .setProtectedVm(isProtectedVm())
+                        .setOs(os())
+                        .setEncryptedStorageBytes(1 * 1024 * 1024)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("legacy_rp_update", config);
+
+        Path vmInstance = getVmFile("legacy_rp_update", "instance.img").toPath();
+        Path vmInstanceBackup = File.createTempFile("instance", ".img").toPath();
+        Files.copy(vmInstance, vmInstanceBackup, REPLACE_EXISTING);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ "/mnt/encryptedstore/test_file");
+                        });
+        testResults.assertNoException();
+
+        // Reset the instance img that tracks the code hashes across VM boot - an attempt to test
+        // the code hash checks is intact.
+        Files.copy(vmInstanceBackup, vmInstance, REPLACE_EXISTING);
+
+        // Install an updated payload!
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        // Now pVM shouldn't boot.
+        BootResult bootResult = tryBootVm(TAG, vm);
+        assertThat(bootResult.payloadStarted).isFalse();
+    }
+
+    @Test
+    @CddTest
     public void importedVmAndOriginalVmHaveTheSameCdi() throws Exception {
         assumeSupportedDevice();
         // Arrange
