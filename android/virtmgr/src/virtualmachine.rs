@@ -582,13 +582,15 @@ impl VirtualizationService {
         let encrypted_store_kek = extract_encrypted_store_kek(config);
         // Determine whether a VM config requires VirtualMachineService running on the host. Only
         // Microdroid VM (i.e. AppConfig) requires it. However, a few Microdroid tests use
-        // RawConfig for Microdroid VM. To handle the exceptional case, we use name as a second
-        // criteria; if the name is "microdroid" we run VirtualMachineService
+        // RawConfig for Microdroid VM. And also Debian VM supports GuestAgent as well.
+        // To handle the exceptional case, we use name as a second criteria;
+        // if the name is "microdroid" or "debian", we run VirtualMachineService
         let requires_vm_service = match config {
             aidl::VirtualMachineConfig::AppConfig(_) => true,
-            aidl::VirtualMachineConfig::RawConfig(config) => config.name == "microdroid",
+            aidl::VirtualMachineConfig::RawConfig(config) => {
+                config.name == "microdroid" || config.name == "debian"
+            }
         };
-
         // Require vendor instance IDs to start with a specific prefix so that they don't conflict
         // with system instance IDs.
         //

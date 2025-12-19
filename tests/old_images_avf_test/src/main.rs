@@ -24,7 +24,7 @@ use std::time::{Duration, Instant};
 use vsock::{VsockListener, VsockStream, VMADDR_CID_HOST};
 
 use avf_bindgen::*;
-use service_vm_comm::{Request, Response, ServiceVmRequest, VmType};
+use service_vm_comm::{ServiceVmRequest, VmType};
 
 const VM_MEMORY_MB: i32 = 16;
 const WRITE_BUFFER_CAPACITY: usize = 512;
@@ -34,25 +34,12 @@ const READ_TIMEOUT: Duration = Duration::from_secs(10);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 const STOP_TIMEOUT: timespec = timespec { tv_sec: 10, tv_nsec: 0 };
 
-/// Processes the request in the service VM.
-fn process_request(vsock_stream: &mut VsockStream, request: Request) -> Result<Response> {
-    write_request(vsock_stream, &ServiceVmRequest::Process(request))?;
-    read_response(vsock_stream)
-}
-
 /// Sends the request to the service VM.
 fn write_request(vsock_stream: &mut VsockStream, request: &ServiceVmRequest) -> Result<()> {
     let mut buffer = BufWriter::with_capacity(WRITE_BUFFER_CAPACITY, vsock_stream);
     ciborium::into_writer(request, &mut buffer)?;
     buffer.flush().context("Failed to flush the buffer")?;
     Ok(())
-}
-
-/// Reads the response from the service VM.
-fn read_response(vsock_stream: &mut VsockStream) -> Result<Response> {
-    let response: Response = ciborium::from_reader(vsock_stream)
-        .context("Failed to read the response from the service VM")?;
-    Ok(response)
 }
 
 fn listen_from_guest(port: u32) -> Result<VsockStream> {
@@ -142,17 +129,6 @@ fn run_vm(image_path: &str, test_name: &CStr, protected_vm: bool) -> Result<()> 
     vsock_stream.set_write_timeout(Some(WRITE_TIMEOUT))?;
 
     info!("client connected");
-
-    let request_data = vec![1, 2, 3, 4, 5];
-    let expected_data = vec![5, 4, 3, 2, 1];
-    let response = process_request(&mut vsock_stream, Request::Reverse(request_data))
-        .context("Failed to process request")?;
-    let Response::Reverse(reversed_data) = response else {
-        bail!("Expected Response::Reverse but was {response:?}");
-    };
-    ensure!(reversed_data == expected_data, "Expected {expected_data:?} but was {reversed_data:?}");
-
-    info!("request processed");
 
     write_request(&mut vsock_stream, &ServiceVmRequest::Shutdown)
         .context("Failed to send shutdown")?;

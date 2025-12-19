@@ -34,12 +34,12 @@ use binder::{
     self, wait_for_interface, DeathRecipient, ExceptionCode, IBinder, Interface, IntoBinderResult,
     ParcelFileDescriptor, Status, StatusCode, Strong,
 };
+use der::Reader;
 use libc::{VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR, VMADDR_CID_LOCAL};
 use log::{error, info, warn};
 use nix::fcntl::OFlag;
 use nix::sys::signal::{sigaction, SaFlags, SigAction, SigHandler, SigSet, Signal};
 use nix::unistd::{chown, pipe2, Uid};
-use openssl::x509::X509;
 use rand::Fill;
 use rkpd_client::get_rkpd_attestation_key;
 use rustutils::android::{
@@ -786,13 +786,12 @@ fn get_assignable_devices() -> binder::Result<Devices> {
     Ok(devices)
 }
 
-fn split_x509_certificate_chain(mut cert_chain: &[u8]) -> Result<Vec<Certificate>> {
+fn split_x509_certificate_chain(cert_chain: &[u8]) -> Result<Vec<Certificate>> {
     let mut out = Vec::new();
-    while !cert_chain.is_empty() {
-        let cert = X509::from_der(cert_chain)?;
-        let end = cert.to_der()?.len();
-        out.push(Certificate { encodedCertificate: cert_chain[..end].to_vec() });
-        cert_chain = &cert_chain[end..];
+    let mut reader = der::SliceReader::new(cert_chain)?;
+    while !reader.is_finished() {
+        let certificate = reader.tlv_bytes()?;
+        out.push(Certificate { encodedCertificate: certificate.to_vec() });
     }
     Ok(out)
 }
@@ -1176,6 +1175,8 @@ extern "C" fn handle_sigterm(_signal: libc::c_int) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use der::{Decode, Encode};
+    use x509_cert::Certificate;
 
     const TEST_RKP_CERT_CHAIN_PATH: &str = "testdata/rkp_cert_chain.der";
 
@@ -1186,7 +1187,7 @@ mod tests {
 
         assert_eq!(4, cert_chain.len());
         for cert in cert_chain {
-            let x509_cert = X509::from_der(&cert.encodedCertificate)?;
+            let x509_cert = Certificate::from_der(&cert.encodedCertificate)?;
             assert_eq!(x509_cert.to_der()?.len(), cert.encodedCertificate.len());
         }
         Ok(())
