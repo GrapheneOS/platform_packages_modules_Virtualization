@@ -86,6 +86,8 @@ fun MainScreen(viewModel: MainViewModel) {
         when (state) {
             is MainUiState.Ready -> viewModel.startVm()
             is MainUiState.Stopped -> activity.finish()
+            is MainUiState.NotInstalled -> showSettings = false
+            is MainUiState.Checking -> showSettings = false
             is MainUiState.Error -> handleError(activity, snackbarHostState, viewModel, state)
             else -> {}
         }

@@ -208,6 +208,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     MainUiState.ErrorHandler.CheckNetwork
                                 InstallState.ErrorCause.InstallFailed ->
                                     MainUiState.ErrorHandler.Retry
+                                InstallState.ErrorCause.UninstallFailed ->
+                                    MainUiState.ErrorHandler.ReportBug(installState.cause)
                             }
                         MainUiState.Error(handler)
                     }
@@ -238,6 +240,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopVm() {
         VmController.stop()
+    }
+
+    fun uninstallVm(backupRootfs: Boolean) {
+        viewModelScope.launch {
+            VmController.stop()
+            Installer.uninstall(backupRootfs)
+        }
     }
 
     override fun onCleared() {

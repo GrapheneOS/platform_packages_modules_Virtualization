@@ -29,6 +29,7 @@ sealed interface InstallState {
     enum class ErrorCause {
         CheckFailed,
         InstallFailed,
+        UninstallFailed,
     }
 
     data class Error(val cause: Throwable, val errorCause: ErrorCause) : InstallState

@@ -26,6 +26,7 @@ import android.util.Log
 import android.view.SurfaceControl
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.DisplayProvider.CursorHandler
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
@@ -39,6 +40,8 @@ import libcore.io.IoBridge
 internal class DisplayProvider(
     private val mainView: SurfaceView,
     private val cursorView: SurfaceView,
+    private val width: Int,
+    private val height: Int,
 ) {
     private var cursorHandler: CursorHandler? = null
     private val displayService: ICrosvmAndroidDisplayService by lazy {
@@ -69,6 +72,12 @@ internal class DisplayProvider(
         }
 
         override fun surfaceCreated(holder: SurfaceHolder) {
+            // Legacy UI with gfxstream requires this
+            if (!Flags.terminalNewuiJetpack()) {
+                if (surfaceKind == SurfaceKind.MAIN) {
+                    holder.setFixedSize(width, height)
+                }
+            }
             try {
                 displayService.setSurface(holder.getSurface(), isForCursor())
             } catch (e: Exception) {

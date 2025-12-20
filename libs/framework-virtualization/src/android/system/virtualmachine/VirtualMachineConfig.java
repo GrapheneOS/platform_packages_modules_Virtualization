@@ -222,6 +222,8 @@ public final class VirtualMachineConfig {
 
     @EncryptedStoreMode private final int mEncryptedStoreMode;
 
+    private boolean mDisableUpdatability;
+
     /**
      * Name of the {@code <property>} of the {@code AndroidManifest.xml} to specify which encrypted
      * store mode is used for the VM. If the property is not specified in the {@code
@@ -297,7 +299,8 @@ public final class VirtualMachineConfig {
             @NonNull @OsName String os,
             boolean shouldBoostUclamp,
             boolean shouldUseHugepages,
-            @EncryptedStoreMode int encryptedStoreMode) {
+            @EncryptedStoreMode int encryptedStoreMode,
+            boolean disableUpdatability) {
         // This is only called from Builder.build(); the builder handles parameter validation.
         mPackageName = packageName;
         mApkPath = apkPath;
@@ -323,6 +326,7 @@ public final class VirtualMachineConfig {
         mShouldBoostUclamp = shouldBoostUclamp;
         mShouldUseHugepages = shouldUseHugepages;
         mEncryptedStoreMode = encryptedStoreMode;
+        mDisableUpdatability = disableUpdatability;
     }
 
     /** Loads a config from a file. */
@@ -981,24 +985,7 @@ public final class VirtualMachineConfig {
                 break;
         }
 
-        if (mVendorDiskImage != null) {
-            VirtualMachineAppConfig.CustomConfig customConfig =
-                    new VirtualMachineAppConfig.CustomConfig();
-            customConfig.devices = EMPTY_STRING_ARRAY;
-            customConfig.extraKernelCmdlineParams = EMPTY_STRING_ARRAY;
-            customConfig.teeServices = EMPTY_STRING_ARRAY;
-            try {
-                customConfig.vendorImage =
-                        ParcelFileDescriptor.open(mVendorDiskImage, MODE_READ_ONLY);
-            } catch (FileNotFoundException e) {
-                throw new VirtualMachineException(
-                        "Failed to open vendor disk image " + mVendorDiskImage.getAbsolutePath(),
-                        e,
-                        VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
-            }
-            vsConfig.customConfig = customConfig;
-        }
-
+        vsConfig.customConfig = createCustomConfigIfNeeded();
         vsConfig.boostUclamp = mShouldBoostUclamp;
         vsConfig.hugePages = mShouldUseHugepages;
         vsConfig.hostServices = EMPTY_STRING_ARRAY;
@@ -1010,6 +997,34 @@ public final class VirtualMachineConfig {
         }
 
         return vsConfig;
+    }
+
+    private VirtualMachineAppConfig.CustomConfig createCustomConfigIfNeeded()
+            throws VirtualMachineException {
+        if (mVendorDiskImage == null && !mDisableUpdatability) {
+            return null;
+        }
+        VirtualMachineAppConfig.CustomConfig customConfig =
+                new VirtualMachineAppConfig.CustomConfig();
+        customConfig.devices = EMPTY_STRING_ARRAY;
+        customConfig.extraKernelCmdlineParams = EMPTY_STRING_ARRAY;
+        customConfig.teeServices = EMPTY_STRING_ARRAY;
+
+        if (mVendorDiskImage != null) {
+            try {
+                customConfig.vendorImage =
+                        ParcelFileDescriptor.open(mVendorDiskImage, MODE_READ_ONLY);
+            } catch (FileNotFoundException e) {
+                throw new VirtualMachineException(
+                        "Failed to open vendor disk image " + mVendorDiskImage.getAbsolutePath(),
+                        e,
+                        VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
+            }
+        }
+        if (mDisableUpdatability) {
+            customConfig.wantUpdatable = false;
+        }
+        return customConfig;
     }
 
     private String findPayloadApk(PackageManager packageManager) throws VirtualMachineException {
@@ -1092,6 +1107,7 @@ public final class VirtualMachineConfig {
         private boolean mShouldBoostUclamp = false;
         private boolean mShouldUseHugepages = false;
         private int mEncryptedStoreMode = ENCRYPTED_STORE_MODE_DEFAULT;
+        private boolean mDisableUpdatability = false;
 
         /**
          * Creates a builder for the given context.
@@ -1191,7 +1207,8 @@ public final class VirtualMachineConfig {
                     mOs,
                     mShouldBoostUclamp,
                     mShouldUseHugepages,
-                    mEncryptedStoreMode);
+                    mEncryptedStoreMode,
+                    mDisableUpdatability);
         }
 
         /**
@@ -1500,6 +1517,22 @@ public final class VirtualMachineConfig {
             return this;
         }
 
+        /**
+         * Force disable updatability for this VM.
+         *
+         * <p>Note that this Api is required for testing older devices or VMs which rely on legacy
+         * rollback mechanism.
+         *
+         * @hide
+         */
+        @TestApi
+        @RequiresPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
+        @NonNull
+        public Builder setDisableUpdatability() {
+            mDisableUpdatability = true;
+            return this;
+        }
+
         /** @hide */
         public Builder setShouldBoostUclamp(boolean shouldBoostUclamp) {
             mShouldBoostUclamp = shouldBoostUclamp;
@@ -1518,9 +1551,11 @@ public final class VirtualMachineConfig {
          *   <li>Android host kernel version should be at least {@code android15-5.15}
          * </ul>
          *
-         * @see https://docs.kernel.org/admin-guide/mm/transhuge.html
-         * @see
-         *     https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/hugepages.md
+         * @see <a href="https://docs.kernel.org/admin-guide/mm/transhuge.html">Transparent Hugepage
+         *     Support</a>
+         * @see <a
+         *     href="https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Virtualization/docs/hugepages.md">Huge
+         *     Pages</a>
          * @hide
          */
         @SystemApi
