@@ -7,7 +7,7 @@ After=virtiofs_internal.service
 Type=oneshot
 User=root
 Group=root
-ExecStart=/bin/bash -c '[ -e "/dev/vdb" ] && (mkdir -p /mnt/backup; chown 1000:100 /mnt/backup; mount /dev/vdb /mnt/backup) || (rm -rf /mnt/backup)'
+ExecStart=/bin/bash -c '[ -e "/dev/vdc" ] && (mkdir -p /mnt/backup; chown 1000:100 /mnt/backup; mount /dev/vdc /mnt/backup) || (rm -rf /mnt/backup)'
 RemainAfterExit=yes
 
 [Install]
