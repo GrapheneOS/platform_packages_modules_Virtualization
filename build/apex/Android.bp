@@ -180,6 +180,9 @@ apex_defaults {
             "microdroid_16k.json",
         ],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_SOONG_GENERATED_CIDATA"), {
+        true: ["debian_cidata.iso"],
+        default: [],
     }),
     host_required: [
         "vm_shell",

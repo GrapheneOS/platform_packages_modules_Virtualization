@@ -14,11 +14,10 @@
 
 use api::debian_service_client::DebianServiceClient;
 use api::ShutdownQueueOpeningRequest;
-use std::process::Command;
 
-use anyhow::anyhow;
 use clap::Parser;
 use log::debug;
+use shutdown_runner::power_off;
 pub mod api {
     tonic::include_proto!("com.android.virtualization.terminal.proto");
 }
@@ -59,11 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into_inner();
 
     while let Some(_response) = res_stream.message().await? {
-        let status = Command::new("poweroff").status().expect("power off");
-        if !status.success() {
-            return Err(anyhow!("Failed to power off: {status}").into());
-        }
-        debug!("poweroff");
+        let _ = power_off();
         break;
     }
     Ok(())
