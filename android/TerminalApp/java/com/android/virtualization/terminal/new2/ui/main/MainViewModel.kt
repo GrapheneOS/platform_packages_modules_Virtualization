@@ -217,8 +217,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     MainUiState.Ready
                                 }
                             }
-                            is VmState.Error ->
+                            is VmState.Error -> {
+                                setIsImeVisible(false)
                                 MainUiState.Error(MainUiState.ErrorHandler.ReportBug(vmState.cause))
+                            }
                         }
                     }
                     is InstallState.Error -> {

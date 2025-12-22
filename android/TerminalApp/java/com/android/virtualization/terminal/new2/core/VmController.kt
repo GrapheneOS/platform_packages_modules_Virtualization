@@ -138,7 +138,18 @@ object VmController {
                         }
 
                         override fun onStopped(vm: VirtualMachine, reason: Int) {
-                            _vmState.value = VmState.Stopped
+                            // TODO: b/438355564 STOP_REASON_KILLED should also be an error
+                            if (
+                                reason == VirtualMachineCallback.STOP_REASON_SHUTDOWN ||
+                                    reason == VirtualMachineCallback.STOP_REASON_KILLED
+                            ) {
+                                _vmState.value = VmState.Stopped
+                            } else {
+                                _vmState.value =
+                                    VmState.Error(
+                                        RuntimeException("VM stopped unexpectedly: $reason")
+                                    )
+                            }
                             guestAgentController?.stop()
                         }
                     }
