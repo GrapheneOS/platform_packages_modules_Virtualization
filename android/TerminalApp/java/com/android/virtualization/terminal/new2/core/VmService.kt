@@ -56,9 +56,11 @@ class VmService : LifecycleService() {
                 val newPorts = currentPorts.filter { it.port !in previousPorts }
 
                 newPorts.forEach { port ->
-                    val notification = createPortNotification(port)
-                    getSystemService(NotificationManager::class.java)
-                        .notify(port.port, notification)
+                    if (!port.isForwarded) {
+                        val notification = createPortNotification(port)
+                        getSystemService(NotificationManager::class.java)
+                            .notify(port.port, notification)
+                    }
                 }
 
                 val closedPorts = previousPorts - currentPortSet

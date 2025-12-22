@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class OpenPort(val port: Int, val name: String)
+data class OpenPort(val port: Int, val name: String, val isForwarded: Boolean)
 
 class GuestAgentController(private val context: Context, private val scope: CoroutineScope) {
     private var server: Server? = null
@@ -79,9 +79,12 @@ class GuestAgentController(private val context: Context, private val scope: Coro
 
     private fun updatePortsState() {
         val activePorts = portsStateManager.getActivePorts()
+        val enabledPorts = portsStateManager.getEnabledPorts()
         val openPorts =
             activePorts.mapNotNull { port ->
-                portsStateManager.getActivePortInfo(port)?.let { OpenPort(it.port, it.comm) }
+                portsStateManager.getActivePortInfo(port)?.let {
+                    OpenPort(it.port, it.comm, enabledPorts.contains(port))
+                }
             }
         _ports.value = openPorts
     }

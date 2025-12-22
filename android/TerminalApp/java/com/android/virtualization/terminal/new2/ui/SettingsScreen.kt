@@ -34,6 +34,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -42,10 +43,14 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
+import com.android.virtualization.terminal.new2.core.VmController
 import kotlinx.coroutines.launch
 
 enum class SettingsDestination(val title: String) {
@@ -181,7 +186,34 @@ fun SettingsDetailPane(
 
 @Composable
 fun PortControlPage() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Port Control Page (Empty)")
+    val ports by VmController.ports.collectAsState()
+
+    if (ports.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No port is opened")
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item {
+                Text(
+                    text = "Listening ports",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            items(ports) { port ->
+                ListItem(
+                    headlineContent = { Text("${port.port} (${port.name})") },
+                    trailingContent = {
+                        Switch(
+                            checked = port.isForwarded,
+                            onCheckedChange = { isChecked ->
+                                VmController.enablePortForwarding(port.port, isChecked)
+                            },
+                        )
+                    },
+                )
+            }
+        }
     }
 }
