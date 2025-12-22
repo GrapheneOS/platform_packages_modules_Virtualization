@@ -1475,6 +1475,71 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    public void multiTenantSelinuxDomain() throws Exception {
+        assumeSupportedDevice();
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        installApp("MicrodroidTestHelperAppAlternateTenant.apk");
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("vm_selinux_domain", config);
+        CompletableFuture<String> context1 = new CompletableFuture<>();
+        CompletableFuture<String> context2 = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String domain = tsOnAPort.getselinuxdomain();
+                            context1.complete(domain);
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            String domain2 = tsOnAlternatePort.getselinuxdomain();
+                            context2.complete(domain2);
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running vm_selinux_domain"
+                                + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+
+        // Assert that the first tenant got the expected domain (as specified in config)
+        assertWithMessage("Unexpected Selinux context of the tenant")
+                .that(context1.getNow(null))
+                .isEqualTo("u:r:appsearch_tenant:s0");
+        // Assert that the second tenant got the default/fallback context
+        assertWithMessage("Second tenant is using unexpected default/fallback context")
+                .that(context2.getNow(null))
+                .isEqualTo("u:r:microdroid_app:s0");
+    }
+
+    @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void multiTenantEncryptedStoragePath() throws Exception {
         assumeSupportedDevice();

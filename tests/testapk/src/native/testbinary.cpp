@@ -27,6 +27,7 @@
 #include <fstab/fstab.h>
 #include <fsverity_digests.pb.h>
 #include <linux/vm_sockets.h>
+#include <selinux/selinux.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/capability.h>
@@ -274,6 +275,18 @@ Result<void> start_test_service() {
                     out->push_back(std::string(name) + "(" + std::to_string(cap_id) + ")");
                 }
             }
+            return ScopedAStatus::ok();
+        }
+
+        // Function to get the SELinux domain of the current process
+        ScopedAStatus getselinuxdomain(std::string* out) {
+            char* context = nullptr;
+            int ret = getcon(&context);
+            if (ret != 0) {
+                return ScopedAStatus::fromServiceSpecificErrorWithMessage(0, "Failed to getCon");
+            }
+            *out = context;
+            freecon(context);
             return ScopedAStatus::ok();
         }
 

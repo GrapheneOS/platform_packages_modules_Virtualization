@@ -151,6 +151,9 @@ impl ITestService for TestService {
     fn mountEncryptedAssets(&self, _: &str) -> BinderResult<String> {
         unimplemented()
     }
+    fn getselinuxdomain(&self) -> BinderResult<String> {
+        unimplemented()
+    }
 }
 
 fn unimplemented<T>() -> BinderResult<T> {
