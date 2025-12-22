@@ -1419,7 +1419,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .build();
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("test_vm_tenant_encrypted_storage_path", config);
-        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<String> tenant1EncryptedStoragePath = new CompletableFuture<>();
+        CompletableFuture<String> tenant2EncryptedStoragePath = new CompletableFuture<>();
         CompletableFuture<Exception> exception = new CompletableFuture<>();
         CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
         VmEventListener listener =
@@ -1430,18 +1431,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                             ITestService tsOnAPort =
                                     ITestService.Stub.asInterface(
                                             vm.connectToVsockServer(ITestService.PORT));
-                            String val = tsOnAPort.getEncryptedStoragePath();
-                            prop.complete(val);
+                            tenant1EncryptedStoragePath.complete(
+                                    tsOnAPort.getEncryptedStoragePath());
 
                             ITestService tsOnAlternatePort =
                                     ITestService.Stub.asInterface(
                                             vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
-                            String alternateVal = tsOnAlternatePort.getEncryptedStoragePath();
-                            assertWithMessage(
-                                            "Encrypted storage paths for the same package must be"
-                                                + " identical")
-                                    .that(alternateVal)
-                                    .isEqualTo(val);
+                            tenant2EncryptedStoragePath.complete(
+                                    tsOnAlternatePort.getEncryptedStoragePath());
 
                             tsOnAPort.quit();
                             tsOnAlternatePort.quit();
@@ -1463,9 +1460,12 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .that(exception.getNow(null))
                 .isNull();
 
-        assertWithMessage("Encrypted storage path should be specific to the tenant")
-                .that(prop.getNow(null))
+        assertWithMessage("Tenant 1 encrypted storage path should be specific to the tenant")
+                .that(tenant1EncryptedStoragePath.getNow(null))
                 .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+        assertWithMessage("Tenant 2 encrypted storage path should be specific to the tenant")
+                .that(tenant2EncryptedStoragePath.getNow(null))
+                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test_alternate_tenant");
         assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
     }
 
@@ -1636,6 +1636,32 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .that(prop.getNow(null))
                 .isEqualTo(EXAMPLE_STRING);
         assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    public void duplicateTenantsAreRejected() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_invalid_duplicate_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_duplicate_tenants", config);
+        CompletableFuture<String> res = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(res.getNow(null))
+                .isNull();
     }
 
     @Test
