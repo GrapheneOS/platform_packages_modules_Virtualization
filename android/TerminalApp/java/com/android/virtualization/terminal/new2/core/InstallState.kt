@@ -30,6 +30,7 @@ sealed interface InstallState {
         CheckFailed,
         InstallFailed,
         UninstallFailed,
+        DeleteBackupFailed,
     }
 
     data class Error(val cause: Throwable, val errorCause: ErrorCause) : InstallState
