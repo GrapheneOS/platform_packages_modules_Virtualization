@@ -73,8 +73,10 @@ impl TenantManager {
 
     pub fn register_tenant_package(&mut self, package_name: &str) -> Result<()> {
         if self.tenants.contains_key(package_name) {
-            warn!("Tenant already registered: {package_name}");
-            return Ok(());
+            bail!(MicrodroidError::PayloadInvalidConfig(format!(
+                "Duplicate tenant name found during registration: {:?}",
+                package_name,
+            )));
         }
 
         let uid = self.next_tenant_uid;
