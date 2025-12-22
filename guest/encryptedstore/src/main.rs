@@ -468,21 +468,13 @@ fn setup_dir(mountpoint: &Path, dir_spec: &DirSpec) -> Result<()> {
             dir_spec.gid
         );
     } else {
-        // The directory already exists, validate its owner.
-        let metadata = fs::metadata(&dir_path).with_context(|| {
-            format!("Failed to get metadata for existing directory {}", dir_path.display())
-        })?;
-        let current_uid = metadata.st_uid();
-        let current_gid = metadata.st_gid();
-        if current_uid != dir_spec.uid || current_gid != dir_spec.gid {
-            anyhow::bail!(
-                "Directory {} already exists with owner {:?}, which doesn't match \
-                with the requested owner {:?}",
-                dir_path.display(),
-                (current_uid, current_gid),
-                (dir_spec.uid, dir_spec.gid)
-            );
-        }
+        // Update the ownership of the directory if it already exists.
+        nix::unistd::chown(
+            &dir_path,
+            Some(nix::unistd::Uid::from_raw(dir_spec.uid)),
+            Some(nix::unistd::Gid::from_raw(dir_spec.gid)),
+        )
+        .with_context(|| format!("Failed to chown directory {}", dir_path.display()))?;
     }
     Ok(())
 }

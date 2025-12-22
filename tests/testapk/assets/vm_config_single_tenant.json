@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "os": {
+      "name": "microdroid"
+    },
+    "tenants": [
+        {
+            "package": "apk",
+            "name": "com.android.microdroid.test",
+            "task": {
+                "type": "microdroid_launcher",
+                "command": "MicrodroidTestNativeLib.so"
+            }
+        }
+    ],
+    "export_tombstones": true,
+    "enable_authfs": false,
+    "hugepages": false
+}
