@@ -1340,7 +1340,13 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"3.1/C-0-1"})
     public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
-
+        // TODO(b/465728787): The signing keys used for virt apex in Cuttlefish do not match
+        // the expected public keys in TenancyConfig (vm_config_test_multi_tenants.json).
+        // Disable the test on CF till we implement robust strategy for testing different
+        // signing configuration of DUT.
+        assume().withMessage("Skip on CF, which has virt apex signed with different key")
+                .that(isCuttlefish())
+                .isFalse();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
         assumeTrue(
