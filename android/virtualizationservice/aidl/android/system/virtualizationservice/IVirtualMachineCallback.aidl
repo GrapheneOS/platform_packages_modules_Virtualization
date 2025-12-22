@@ -17,6 +17,7 @@ package android.system.virtualizationservice;
 
 import android.system.virtualizationcommon.DeathReason;
 import android.system.virtualizationcommon.ErrorCode;
+import android.system.virtualizationcommon.IGuestAgent;
 
 /**
  * An object which a client may register with the VirtualizationService to get callbacks about the
@@ -50,4 +51,9 @@ oneway interface IVirtualMachineCallback {
      * also use `link_to_death` to handle that.
      */
     void onDied(int cid, in DeathReason reason);
+
+    /**
+     * Called when guest agent is registered.
+     */
+    void onGuestAgentRegistered(int cid, in IGuestAgent guestAgent);
 }

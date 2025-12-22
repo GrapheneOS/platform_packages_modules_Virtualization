@@ -22,6 +22,22 @@ package {
 aidl_interface {
     name: "android.system.virtualmachineservice_non_microdroid",
     srcs: ["android/system/virtualmachineservice/**/*.aidl"],
+    imports: ["android.system.virtualizationcommon_non_microdroid"],
+    unstable: true,
+    backend: {
+        java: {
+            enabled: false,
+        },
+        rust: {
+            enabled: true,
+        },
+    },
+    host_supported: true,
+}
+
+aidl_interface {
+    name: "android.system.virtualizationcommon_non_microdroid",
+    srcs: ["android/system/virtualizationcommon/**/*.aidl"],
     unstable: true,
     backend: {
         java: {

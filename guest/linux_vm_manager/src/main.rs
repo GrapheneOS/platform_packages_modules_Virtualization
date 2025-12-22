@@ -14,7 +14,7 @@
 
 //! Linux VM Manager
 
-use android_system_virtualmachineservice_non_microdroid::aidl::android::system::virtualmachineservice::IGuestAgent::{
+use android_system_virtualizationcommon_non_microdroid::aidl::android::system::virtualizationcommon::IGuestAgent::{
     BnGuestAgent, IGuestAgent,
 };
 use android_system_virtualmachineservice_non_microdroid::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;

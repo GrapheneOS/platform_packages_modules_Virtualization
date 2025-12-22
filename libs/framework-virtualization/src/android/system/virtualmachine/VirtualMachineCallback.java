@@ -20,6 +20,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
+import android.system.virtualizationcommon.IGuestAgent;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -162,4 +163,12 @@ public interface VirtualMachineCallback {
 
     /** Called when the VM has stopped. */
     void onStopped(@NonNull VirtualMachine vm, @StopReason int reason);
+
+    /**
+     * Called when guest agent is registered.
+     *
+     * @hide
+     */
+    default void onGuestAgentRegistered(
+            @NonNull VirtualMachine vm, @NonNull IGuestAgent guestAgent) {}
 }

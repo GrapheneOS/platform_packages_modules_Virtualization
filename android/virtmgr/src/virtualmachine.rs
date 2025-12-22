@@ -1773,6 +1773,11 @@ impl aidl::IVirtualMachine for VirtualMachine {
             .with_log()
             .or_service_specific_exception(-1)
     }
+
+    fn getGuestAgent(&self) -> binder::Result<Option<Strong<dyn aidl::IGuestAgent>>> {
+        let guest_agent = self.instance.guest_agent.lock().unwrap();
+        Ok(guest_agent.clone())
+    }
 }
 
 impl Drop for VirtualMachine {
@@ -1826,6 +1831,20 @@ impl VirtualMachineCallbacks {
         for callback in callbacks {
             if let Err(e) = callback.onError(cid as i32, error_code, message) {
                 error!("Error notifying error event from VM CID {cid}: {e:?}");
+            }
+        }
+    }
+
+    /// Call all registered callbacks to say that the guest agent is registered
+    pub fn notify_guest_agent_registered(
+        &self,
+        cid: Cid,
+        guest_agent: &Strong<dyn aidl::IGuestAgent>,
+    ) {
+        let callbacks = &*self.0.lock().unwrap();
+        for callback in callbacks {
+            if let Err(e) = callback.onGuestAgentRegistered(cid as i32, guest_agent) {
+                error!("Error notifying guest agent registered event from VM CID {cid}: {e:?}");
             }
         }
     }
@@ -2175,7 +2194,10 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         guest_agent: &Strong<dyn aidl::IGuestAgent>,
     ) -> binder::Result<()> {
         let vm = &self.vm_instance;
+        let cid = vm.cid;
+        info!("VM with CID {cid} has registered guest agent");
         vm.set_guest_agent(guest_agent);
+        vm.callbacks.notify_guest_agent_registered(cid, guest_agent);
         Ok(())
     }
 
