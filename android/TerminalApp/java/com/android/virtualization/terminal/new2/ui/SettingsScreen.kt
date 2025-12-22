@@ -60,11 +60,17 @@ enum class SettingsDestination(val title: String) {
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? = null) {
     val navigator = rememberListDetailPaneScaffoldNavigator<SettingsDestination>()
     val scope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val isMobileMode = configuration.screenWidthDp < 600
+
+    androidx.compose.runtime.LaunchedEffect(initialDestination) {
+        if (initialDestination != null) {
+            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, initialDestination)
+        }
+    }
 
     BackHandler {
         if (navigator.canNavigateBack()) {

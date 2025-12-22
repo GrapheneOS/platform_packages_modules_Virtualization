@@ -17,6 +17,7 @@ package com.android.virtualization.terminal.new2.ui.main
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.util.DisplayMetrics
@@ -29,10 +30,15 @@ import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.core.VmState
+import com.android.virtualization.terminal.new2.ui.MainActivity
+import com.android.virtualization.terminal.new2.ui.SettingsDestination
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -93,6 +99,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _hasBackup = MutableStateFlow(false)
     val hasBackup: StateFlow<Boolean> = _hasBackup.asStateFlow()
+
+    private val _settingsRequest = MutableSharedFlow<SettingsDestination?>()
+    val settingsRequest: SharedFlow<SettingsDestination?> = _settingsRequest.asSharedFlow()
+
+    fun handleIntent(intent: Intent) {
+        if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
+            viewModelScope.launch { _settingsRequest.emit(SettingsDestination.PortControl) }
+        }
+    }
 
     fun toggleDisplay() {
         _displayState.value =

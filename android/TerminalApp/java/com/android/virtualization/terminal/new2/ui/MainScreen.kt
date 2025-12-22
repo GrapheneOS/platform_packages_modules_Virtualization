@@ -80,6 +80,16 @@ fun MainScreen(viewModel: MainViewModel) {
     val activity = context as Activity
     val scope = rememberCoroutineScope()
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var settingsInitialDestination by remember { mutableStateOf<SettingsDestination?>(null) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.settingsRequest.collect { destination ->
+            if (destination != null) {
+                settingsInitialDestination = destination
+                showSettings = true
+            }
+        }
+    }
 
     LaunchedEffect(uiState) {
         val state = uiState
@@ -235,7 +245,10 @@ fun MainScreen(viewModel: MainViewModel) {
                 enter = slideInHorizontally(initialOffsetX = { it }),
                 exit = slideOutHorizontally(targetOffsetX = { it }),
             ) {
-                SettingsScreen(onBack = { showSettings = false })
+                SettingsScreen(
+                    onBack = { showSettings = false },
+                    initialDestination = settingsInitialDestination,
+                )
             }
         }
     }

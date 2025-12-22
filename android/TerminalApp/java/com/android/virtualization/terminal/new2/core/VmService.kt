@@ -74,6 +74,19 @@ class VmService : LifecycleService() {
     }
 
     private fun createPortNotification(port: OpenPort): Notification {
+        val intent =
+            Intent(this, MainActivity::class.java).apply {
+                action = MainActivity.ACTION_OPEN_SETTINGS_PORT
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                this,
+                port.port,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
         val acceptIntent =
             Intent(this, VmService::class.java).apply {
                 action = ACTION_PORT_FORWARD
@@ -102,10 +115,11 @@ class VmService : LifecycleService() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        return Notification.Builder(this, CHANNEL_ID)
+        return Notification.Builder(this, PORT_CHANNEL_ID)
             .setContentTitle("New Port Opened")
             .setContentText("Port ${port.port} (${port.name}) is now open. Allow forwarding?")
             .setSmallIcon(R.drawable.ic_terminal)
+            .setContentIntent(pendingIntent)
             .addAction(Notification.Action.Builder(null, "Accept", acceptPending).build())
             .addAction(Notification.Action.Builder(null, "Deny", denyPending).build())
             .build()
@@ -175,9 +189,17 @@ class VmService : LifecycleService() {
     }
 
     private fun createNotificationChannel() {
+        val manager = getSystemService(NotificationManager::class.java)
         val channel =
             NotificationChannel(CHANNEL_ID, "VM Service", NotificationManager.IMPORTANCE_LOW)
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        manager.createNotificationChannel(channel)
+        val portChannel =
+            NotificationChannel(
+                PORT_CHANNEL_ID,
+                "Port Forwarding",
+                NotificationManager.IMPORTANCE_HIGH,
+            )
+        manager.createNotificationChannel(portChannel)
     }
 
     private fun getMainActivityPendingIntent(): PendingIntent {
@@ -251,5 +273,6 @@ class VmService : LifecycleService() {
         private const val EXTRA_PORT = "EXTRA_PORT"
         private const val EXTRA_ENABLE = "EXTRA_ENABLE"
         private const val CHANNEL_ID = "vm_service_channel"
+        private const val PORT_CHANNEL_ID = "vm_port_channel"
     }
 }

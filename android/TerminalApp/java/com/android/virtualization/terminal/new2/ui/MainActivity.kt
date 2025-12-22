@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal.new2.ui
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,8 +51,21 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(colorScheme = colorScheme) {
                 val viewModel: MainViewModel = viewModel()
+                viewModel.handleIntent(intent)
                 MainScreen(viewModel)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel.handleIntent(intent)
+    }
+
+    companion object {
+        const val ACTION_OPEN_SETTINGS_PORT =
+            "android.virtualization.terminal.action.OPEN_SETTINGS_PORT"
     }
 }
