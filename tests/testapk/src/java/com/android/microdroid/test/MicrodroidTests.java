@@ -184,6 +184,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     private static final String VM_SHARE_APP_PACKAGE_NAME = "com.android.microdroid.vmshare_app";
 
+    private static final int FIRST_TENANT_UID = 10000;
+
     private void createAndConnectToVmHelper(int cpuTopology, boolean shouldUseHugepages)
             throws Exception {
         assumeSupportedDevice();
@@ -1397,6 +1399,78 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
                 .that(prop.getNow(null))
                 .isEqualTo("PASS");
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest
+    public void multipleTenantUids() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        final int NUMBER_OF_TENANTS_IN_CONFIG = 3;
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_uids", config);
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+
+        CompletableFuture<Integer> tenant1UidFuture = new CompletableFuture<>();
+        CompletableFuture<Integer> tenant2UidFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tenant1Service =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            tenant1UidFuture.complete(tenant1Service.getUid());
+                            ITestService tenant2Service =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            tenant2UidFuture.complete(tenant2Service.getUid());
+
+                            tenant1Service.quit();
+                            tenant2Service.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        Integer tenant1Uid = tenant1UidFuture.get();
+        Integer tenant2Uid = tenant2UidFuture.get();
+
+        assertWithMessage("Tenant UIDs should be distinct")
+                .that(tenant1Uid)
+                .isNotEqualTo(tenant2Uid);
+
+        List<Integer> validUids = generateValidUidsForTenants(NUMBER_OF_TENANTS_IN_CONFIG);
+        assertWithMessage("Tenant 1 UID should be one of " + validUids)
+                .that(tenant1Uid)
+                .isIn(validUids);
+        assertWithMessage("Tenant 2 UID should be one of " + validUids)
+                .that(tenant2Uid)
+                .isIn(validUids);
+
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_uids's"
+                                + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+
         assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
     }
 
@@ -4385,6 +4459,19 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         Context context = getContext();
         Path filePath = Paths.get(context.getDataDir().getPath(), "vm", vmName, fileName);
         return filePath.toFile();
+    }
+
+    /**
+     * Generates a list of valid UIDs for tenants, starting from {@code FIRST_TENANT_UID}.
+     *
+     * @param numberOfUids The number of UIDs to generate in the list.
+     */
+    private List<Integer> generateValidUidsForTenants(int numberOfUids) {
+        List<Integer> validUids = new ArrayList<>();
+        for (int i = 0; i < numberOfUids; i++) {
+            validUids.add(FIRST_TENANT_UID + i);
+        }
+        return validUids;
     }
 
     private void assertThrowsVmException(ThrowingRunnable runnable) {
