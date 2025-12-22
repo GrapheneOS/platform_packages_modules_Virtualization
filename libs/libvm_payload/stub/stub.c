@@ -1,4 +1,5 @@
 void AVmPayload_notifyPayloadReady() {}
+void AVmPayload_runUnixDomainRpcServer() {}
 void AVmPayload_runVsockRpcServer() {}
 void AVmPayload_getVmInstanceSecret() {}
 void AVmPayload_getDiceAttestationChain() {}

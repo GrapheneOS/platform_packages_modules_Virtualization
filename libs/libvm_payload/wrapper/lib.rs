@@ -25,15 +25,15 @@ mod attestation;
 pub use attestation::{request_attestation, AttestationError, AttestationResult};
 use binder::unstable_api::AsNative;
 use binder::{FromIBinder, Strong};
-use std::ffi::{c_void, CStr, OsStr};
+use std::ffi::{c_void, CStr, CString, OsStr};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr;
 use vm_payload_bindgen::{
     AIBinder, AVmPayload_getApkContentsPath, AVmPayload_getEncryptedStoragePath,
     AVmPayload_getVmInstanceSecret, AVmPayload_isNewInstance, AVmPayload_notifyPayloadReady,
-    AVmPayload_readRollbackProtectedSecret, AVmPayload_runVsockRpcServer,
-    AVmPayload_writeRollbackProtectedSecret,
+    AVmPayload_readRollbackProtectedSecret, AVmPayload_runUnixDomainRpcServer,
+    AVmPayload_runVsockRpcServer, AVmPayload_writeRollbackProtectedSecret,
 };
 
 /// The functions declared here are restricted to VMs created with a config file;
@@ -103,6 +103,34 @@ pub fn notify_payload_ready() {
     // SAFETY: Invokes a method from the bindgen library `vm_payload_bindgen` which is safe to
     // call at any time.
     unsafe { AVmPayload_notifyPayloadReady() };
+}
+
+/// Runs a binder RPC server, serving the supplied binder service implementation on the unix
+/// domain socket.
+///
+/// This function creates the Unix domain socket with the given name and binds it.
+/// Starts the server listening on the socket with the service Binder.
+///
+/// Note that this function does not return. The calling thread joins the binder
+/// thread pool to handle incoming messages.
+pub fn run_single_unix_domain_service<T>(name: &[u8], service: Strong<T>) -> !
+where
+    T: FromIBinder + ?Sized,
+{
+    extern "C" fn on_ready(_param: *mut c_void) {
+        notify_payload_ready();
+    }
+
+    let c_name = CString::new(name).expect("name should not contain interior null bytes");
+
+    let mut service = service.as_binder();
+    // The cast here is needed because the compiler doesn't know that our vm_payload_bindgen
+    // AIBinder is the same type as binder_ndk_sys::AIBinder.
+    let service = service.as_native_mut() as *mut AIBinder;
+    let param = ptr::null_mut();
+    // SAFETY: We have a strong reference to the service, so the raw pointer remains valid. It is
+    // safe for on_ready to be invoked at any time, with any parameter.
+    unsafe { AVmPayload_runUnixDomainRpcServer(c_name.as_ptr(), service, Some(on_ready), param) }
 }
 
 /// Runs a binder RPC server, serving the supplied binder service implementation on the given vsock

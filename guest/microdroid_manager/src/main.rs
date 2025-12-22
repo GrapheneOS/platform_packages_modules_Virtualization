@@ -79,7 +79,7 @@ use nix::unistd::Pid;
 use payload::load_metadata;
 #[cfg(vm_to_host_services)]
 use rpc_servicemanager::register_rpc_servicemanager;
-use rpcbinder::{RpcServer, RpcSession};
+use rpcbinder::{FileDescriptorTransportMode, RpcServer, RpcSession};
 use rustutils::android::sockets::android_get_control_socket;
 use rustutils::android::system_properties;
 use rustutils::android::system_properties::PropertyWatcher;
@@ -653,6 +653,7 @@ fn try_run_payload(
         vm_internal_binder.as_binder(),
         vm_internal_service_fd,
         VM_INTERNAL_SERVICE_SOCKET_NAME,
+        /* enable_fd_transport */ false,
     )?;
 
     let mut encryptedstore_handle = EncryptedstoreHandle { encryptedstore_thread: None };
@@ -733,6 +734,7 @@ fn try_run_payload(
         vm_payload_binder.as_binder(),
         vm_payload_service_fd,
         VM_PAYLOAD_SERVICE_SOCKET_NAME,
+        /* enable_fd_transport */ true,
     )?;
 
     // Set export_tombstones if enabled
@@ -915,11 +917,18 @@ fn get_payload_exit_code(wait_status: WaitStatus) -> Result<i32> {
     }
 }
 
-fn spawn_binder_rpc_server(binder: SpIBinder, fd: OwnedFd, name: &str) -> Result<()> {
+fn spawn_binder_rpc_server(
+    binder: SpIBinder,
+    fd: OwnedFd,
+    name: &str,
+    enable_fd_transport: bool,
+) -> Result<()> {
     let server = RpcServer::new_bound_socket(binder, fd)?;
     info!("The RPC server '{name}' is running.");
-
-    // Move server reference into a background thread and run it forever.
+    // Required for the FD being passed through vm_payload_service to the payloads.
+    if enable_fd_transport {
+        server.set_supported_file_descriptor_transport_modes(&[FileDescriptorTransportMode::Unix]);
+    }
     std::thread::spawn(move || {
         server.join();
     });

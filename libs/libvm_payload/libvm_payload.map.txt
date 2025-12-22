@@ -19,6 +19,7 @@ LIBVM_PAYLOAD {
     AVmPayload_readRollbackProtectedSecret;   # systemapi introduced=36
     AVmPayload_isNewInstance;                 # systemapi introduced=36
     AVmPayload_mountEncryptedAssets;          # systemapi introduced=37
+    AVmPayload_runUnixDomainRpcServer;       # systemapi introduced=37
   local:
     *;
 };

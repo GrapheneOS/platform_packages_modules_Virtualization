@@ -52,6 +52,7 @@ on init
 
     # Allow the payload access to the console (default is 0600)
     chmod 0666 /dev/console
+    mkdir /dev/socket/microdroid_managed 0777 root root
 
     # Microdroid_manager starts apkdmverity/zipfuse/apexd
     start microdroid_manager

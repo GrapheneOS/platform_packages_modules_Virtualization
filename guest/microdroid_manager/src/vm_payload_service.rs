@@ -16,12 +16,12 @@
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
     IVmPayloadService, AttestationResult::AttestationResult,
-    ENCRYPTEDSTORE_MOUNTPOINT, STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
+    ENCRYPTEDSTORE_MOUNTPOINT, MICRODROID_SOCKET_PATH, STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context, Result};
 use avflog::LogResult;
-use binder::{ExceptionCode, Interface, IntoBinderResult, Status, Strong};
+use binder::{ExceptionCode, Interface, IntoBinderResult, ParcelFileDescriptor, Status, Strong};
 use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
 use crate::encrypted_assets::{mount_encrypted_assets, MountError};
 use crate::tenant::TenantManager;
@@ -29,6 +29,9 @@ use crate::vm_secret::VmSecret;
 use log::{error, info};
 use microdroid_uids::MICRODROID_PAYLOAD_UID;
 use std::path::Path;
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
+use std::os::unix::net::UnixListener;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -188,6 +191,10 @@ impl IVmPayloadService for VmPayloadService {
         }
         Ok("".to_string())
     }
+
+    fn createUnixDomainSocket(&self, name: &str) -> binder::Result<ParcelFileDescriptor> {
+        self.create_unix_domain_socket_internal(name).with_log().or_service_specific_exception(-1)
+    }
 }
 
 impl Interface for VmPayloadService {}
@@ -221,5 +228,20 @@ impl VmPayloadService {
                 .with_log()
                 .or_binder_exception(ExceptionCode::SECURITY)
         }
+    }
+
+    fn create_unix_domain_socket_internal(&self, name: &str) -> Result<ParcelFileDescriptor> {
+        let socket_path = format!("{}/{}", MICRODROID_SOCKET_PATH, name);
+
+        // TODO(b/460097396) : Integrate with access control
+        let listener = UnixListener::bind(&socket_path).with_context(|| {
+            format!("Failed to bind socket at {socket_path}. It may already be in use.")
+        })?;
+
+        let permissions = std::fs::Permissions::from_mode(0o666);
+        fs::set_permissions(&socket_path, permissions)
+            .context("Failed to set socket permissions")?;
+        // The listener's file descriptor is returned, effectively "leaking" it to the caller.
+        Ok(ParcelFileDescriptor::new(listener))
     }
 }
