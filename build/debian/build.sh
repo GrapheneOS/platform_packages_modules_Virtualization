@@ -98,4 +98,4 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell
+  bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b "$build_id" $kernel_id_flag $shell
