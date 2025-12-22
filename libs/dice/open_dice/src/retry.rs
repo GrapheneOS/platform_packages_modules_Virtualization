@@ -76,17 +76,18 @@ where
     F: FnMut(&mut Vec<u8>) -> Result<usize>,
 {
     let mut buffer = Vec::new();
-    match f(&mut buffer) {
-        Err(DiceError::BufferTooSmall(actual_size)) => {
+    let final_size = match f(&mut buffer) {
+        Ok(size) => size,
+        Err(DiceError::BufferTooSmall(size)) => {
             #[cfg(not(feature = "std"))]
-            buffer.try_reserve_exact(actual_size).map_err(|_| DiceError::MemoryAllocationError)?;
+            buffer.try_reserve_exact(size).map_err(|_| DiceError::MemoryAllocationError)?;
 
-            buffer.resize(actual_size, 0);
-            f(&mut buffer)?;
+            buffer.resize(size, 0);
+            f(&mut buffer)?
         }
         Err(e) => return Err(e),
-        Ok(_) => {}
     };
+    buffer.truncate(final_size);
     Ok(buffer)
 }
 
