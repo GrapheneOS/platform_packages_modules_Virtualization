@@ -23,7 +23,7 @@ cc_test {
         "libbinder_ndk",
         "liblog",
     ],
-    required: [
-        "TestAppForCompilation",
+    data: [
+        ":TestAppForCompilation",
     ],
 }
