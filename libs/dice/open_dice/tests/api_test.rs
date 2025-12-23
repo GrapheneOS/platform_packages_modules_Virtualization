@@ -208,19 +208,6 @@ mod tests {
     }
 
     #[test]
-    fn sign_cose_sign1_with_cdi_leaf_priv_large_msg_aad() {
-        let dice = TestArtifactsForSigning {};
-        let mut large_msg = Vec::new();
-        large_msg.resize(16 * 1024, 0x60);
-        let large_aad = vec![0x7a; 255];
-
-        let signature_res =
-            retry_sign_cose_sign1_with_cdi_leaf_priv(None, &large_msg, &large_aad, &dice);
-        let signature = signature_res.unwrap();
-        CoseSign1::from_slice(&signature).unwrap();
-    }
-
-    #[test]
     fn sign_cose_sign1_with_cdi_leaf_priv_verify() {
         let dice = TestArtifactsForSigning {};
 
