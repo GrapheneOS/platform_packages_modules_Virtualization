@@ -20,6 +20,8 @@ import android.graphics.fonts.FontStyle
 import android.net.http.SslError
 import android.util.AttributeSet
 import android.util.Log
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
 import android.view.inputmethod.InputMethodManager
@@ -44,6 +46,31 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     var onTerminalReady: (() -> Unit)? = null
     var onTerminalDisconnected: (() -> Unit)? = null
     var onTitleChanged: ((String) -> Unit)? = null
+    private var fontSize = (context.resources.configuration.fontScale * 13).toInt()
+
+    private val scaleGestureDetector =
+        ScaleGestureDetector(
+            context,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    if (Math.abs(detector.scaleFactor - 1.0f) < 0.1f) {
+                        return false
+                    }
+                    if (detector.scaleFactor > 1.0f) {
+                        if (fontSize < MAX_FONT_SIZE) {
+                            fontSize++
+                            updateFontSize()
+                        }
+                    } else {
+                        if (fontSize > MIN_FONT_SIZE) {
+                            fontSize--
+                            updateFontSize()
+                        }
+                    }
+                    return true
+                }
+            },
+        )
 
     init {
         settings.domStorageEnabled = true
@@ -74,6 +101,18 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         isFocusableInTouchMode = true
 
         enableJavascriptConsoleDebug()
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleGestureDetector.onTouchEvent(event)
+        return super.onTouchEvent(event)
+    }
+
+    private fun updateFontSize() {
+        evaluateJavascript(
+            "term.options.fontSize = $fontSize; window.dispatchEvent(new Event('resize'));",
+            null,
+        )
     }
 
     fun load(ipAddress: String, port: Int) {
@@ -171,6 +210,8 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
+            mapTouchToMouseEvent()
+            applyTerminalDisconnectCallback()
             // TODO: explain reason for this
             val js =
                 """
@@ -194,5 +235,10 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             """
             view.evaluateJavascript(js, null)
         }
+    }
+
+    companion object {
+        private const val MIN_FONT_SIZE = 5
+        private const val MAX_FONT_SIZE = 200
     }
 }
