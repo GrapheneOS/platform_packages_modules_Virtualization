@@ -53,8 +53,8 @@
         <option name="package" value="com.android.virtualization.terminal.test"/>
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner"/>
 
-        <!-- Set timeout to 20min for downloading, installing, and booting -->
-        <option name="test-timeout" value="1200000" />
-        <option name="shell-timeout" value="1200000" />
+        <!-- Set timeout to 30min for downloading, installing, and booting -->
+        <option name="test-timeout" value="1800000" />
+        <option name="shell-timeout" value="1800000" />
     </test>
 </configuration>
