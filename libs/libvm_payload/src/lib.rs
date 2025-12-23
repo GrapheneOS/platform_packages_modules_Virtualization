@@ -26,7 +26,7 @@ use binder::{
 use bssl_crypto::{ecdsa, ec::P256};
 use log::{error, info, LevelFilter, debug};
 use nix::unistd;
-use rpcbinder::{RpcServer, RpcSession};
+use rpcbinder::{FileDescriptorTransportMode, RpcServer, RpcSession};
 use std::convert::Infallible;
 use std::ffi::{CStr, CString};
 use std::fmt::Debug;
@@ -64,7 +64,9 @@ fn get_vm_payload_service() -> Result<Strong<dyn IVmPayloadService>> {
     if let Some(strong) = &*connection {
         Ok(strong.clone())
     } else {
-        let new_connection: Strong<dyn IVmPayloadService> = RpcSession::new()
+        let session = RpcSession::new();
+        session.set_file_descriptor_transport_mode(FileDescriptorTransportMode::Unix);
+        let new_connection: Strong<dyn IVmPayloadService> = session
             .setup_unix_domain_client(VM_PAYLOAD_SERVICE_SOCKET_NAME)
             .context(format!("Failed to connect to service: {VM_PAYLOAD_SERVICE_SOCKET_NAME}"))?;
         *connection = Some(new_connection.clone());
@@ -108,6 +110,73 @@ pub extern "C" fn AVmPayload_notifyPayloadReady() {
 /// Returns a `Result` containing error information if failed.
 fn try_notify_payload_ready() -> Result<()> {
     get_vm_payload_service()?.notifyPayloadReady().context("Cannot notify payload ready")
+}
+
+/// Runs a binder RPC server, serving the supplied binder service implementation on the unix
+/// domain socket.
+///
+/// The current thread joins the binder thread pool to handle incoming messages.
+/// This function never returns.
+///
+/// Panics on error (including unexpected server exit).
+///
+/// # Safety
+///
+/// * `name` must be a valid, null-terminated C string.
+/// * `service` must be a non-null pointer to an `AIBinder` representing the service to be hosted.
+/// * If present, the `on_ready` callback must be a valid function pointer, which will be called at
+///   most once, while this function is executing, with the `param` parameter.
+#[no_mangle]
+pub unsafe extern "C" fn AVmPayload_runUnixDomainRpcServer(
+    name: *const c_char,
+    service: *mut AIBinder,
+    on_ready: Option<unsafe extern "C" fn(param: *mut c_void)>,
+    param: *mut c_void,
+) -> ! {
+    initialize_logging();
+
+    // SAFETY: try_run_unix_domain_server has the same requirements as this function
+    unsafe { try_run_unix_domain_server(name, service, on_ready, param) }
+}
+
+/// # Safety: Same as `AVmPayload_runUnixDomainRpcServer`.
+unsafe fn try_run_unix_domain_server(
+    name: *const c_char,
+    service: *mut AIBinder,
+    on_ready: Option<unsafe extern "C" fn(param: *mut c_void)>,
+    param: *mut c_void,
+) -> ! {
+    // SAFETY: AIBinder returned has correct reference count, and the ownership can
+    // safely be taken by new_spibinder.
+    let service = unsafe { new_spibinder(service) };
+    if let Some(service) = service {
+        // SAFETY: The caller guarantees that `name` is a valid C string.
+        let socket_name = unsafe { CStr::from_ptr(name) };
+        let socket_name =
+            unwrap_or_abort(socket_name.to_str().context("Socket name is not valid UTF-8"));
+        let vm_payload_service = unwrap_or_abort(get_vm_payload_service());
+        let socket_fd = unwrap_or_abort(
+            vm_payload_service
+                .createUnixDomainSocket(socket_name)
+                .context(format!("Failed to create unix domain socket for {socket_name}")),
+        );
+        match RpcServer::new_bound_socket(service, socket_fd.into()) {
+            Ok(server) => {
+                if let Some(on_ready) = on_ready {
+                    // SAFETY: We're calling the callback with the parameter specified within the
+                    // allowed lifetime.
+                    unsafe { on_ready(param) };
+                }
+                server.join();
+                panic!("RpcServer unexpectedly terminated");
+            }
+            Err(err) => {
+                panic!("Failed to start RpcServer: {:?}", err);
+            }
+        }
+    } else {
+        panic!("Failed to convert the given service from AIBinder to SpIBinder.");
+    }
 }
 
 /// Runs a binder RPC server, serving the supplied binder service implementation on the given vsock

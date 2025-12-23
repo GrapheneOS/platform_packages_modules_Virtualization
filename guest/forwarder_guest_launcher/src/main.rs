@@ -14,34 +14,18 @@
 
 //! Launcher of forwarder_guest
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use debian_service::debian_service_client::DebianServiceClient;
 use debian_service::{ActivePort, QueueOpeningRequest, ReportVmActivePortsRequest};
 use log::{debug, error};
 use std::collections::HashMap;
-use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::Command;
 use tokio::try_join;
 use tonic::transport::{Channel, Endpoint};
 use tonic::Request;
 
 mod debian_service {
     tonic::include_proto!("com.android.virtualization.terminal.proto");
-}
-
-const NON_PREVILEGED_PORT_RANGE_START: i32 = 1024;
-const TTYD_PORT: i32 = 7681;
-const TCPSTATES_STATE_CLOSE: &str = "CLOSE";
-const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
-
-#[derive(Debug)]
-struct TcpState {
-    lport: i32,
-    rport: i32,
-    comm: String,
-    newstate: String,
 }
 
 #[derive(Parser)]
@@ -52,9 +36,7 @@ pub struct Args {
     grpc_port_file: String,
 }
 
-async fn process_forwarding_request_queue(
-    mut client: DebianServiceClient<Channel>,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn process_forwarding_request_queue(mut client: DebianServiceClient<Channel>) -> Result<()> {
     let cid = vsock::get_local_cid().context("Failed to get CID of VM")?;
     let mut res_stream = client
         .open_forwarding_request_queue(Request::new(QueueOpeningRequest { cid: cid as i32 }))
@@ -71,24 +53,22 @@ async fn process_forwarding_request_queue(
             &tcp_port, &vsock_port
         );
 
-        let _ = Command::new("forwarder_guest")
-            .arg("--local")
-            .arg(format!("127.0.0.1:{}", tcp_port))
-            .arg("--remote")
-            .arg(format!("vsock:2:{}", vsock_port))
-            .spawn();
+        forwarder_guest_launcher::forward_port(tcp_port.try_into().unwrap(), vsock_port);
     }
-    Err(anyhow!("process_forwarding_request_queue is terminated").into())
+    Err(anyhow!("process_forwarding_request_queue is terminated"))
 }
 
 async fn send_active_ports_report(
-    listening_ports: HashMap<i32, ActivePort>,
+    listening_ports: &HashMap<u16, String>,
     client: &mut DebianServiceClient<Channel>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
+    let ports = listening_ports
+        .iter()
+        .map(|(port, comm)| ActivePort { port: *port as i32, comm: comm.clone() })
+        .collect();
+
     let res = client
-        .report_vm_active_ports(Request::new(ReportVmActivePortsRequest {
-            ports: listening_ports.values().cloned().collect(),
-        }))
+        .report_vm_active_ports(Request::new(ReportVmActivePortsRequest { ports }))
         .await?
         .into_inner();
     if res.success {
@@ -99,93 +79,16 @@ async fn send_active_ports_report(
     Ok(())
 }
 
-fn is_forwardable_port(port: i32) -> bool {
-    port >= NON_PREVILEGED_PORT_RANGE_START && port != TTYD_PORT
-}
-
-async fn report_active_ports(
-    mut client: DebianServiceClient<Channel>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::new("stdbuf")
-        .arg("-oL")
-        .arg("/usr/sbin/tcpstates-libbpf")
-        .stdout(Stdio::piped())
-        .spawn()?;
-    let stdout = cmd.stdout.take().context("Failed to get stdout of tcpstates")?;
-    let mut lines = BufReader::new(stdout).lines();
-    let header_line = lines.next_line().await?.ok_or(anyhow!("Failed to get header line"))?;
-    let header: Vec<_> = header_line.split_whitespace().collect();
-    let lport = header
-        .iter()
-        .position(|col| *col == "LPORT")
-        .ok_or(anyhow!("Failed to find LPORT from header"))?;
-    let rport = header
-        .iter()
-        .position(|col| *col == "RPORT")
-        .ok_or(anyhow!("Failed to find RPORT from header"))?;
-    let comm = header
-        .iter()
-        .position(|col| *col == "COMM")
-        .ok_or(anyhow!("Failed to find COMM from header"))?;
-    let newstate = header
-        .iter()
-        .position(|col| *col == "NEWSTATE")
-        .ok_or(anyhow!("Failed to find NEWSTATE from header"))?;
-
-    debug!("Collecting already opened ports");
-    let mut listening_ports: HashMap<_, _> = linux::net::get_listening_tcp4_ports_from_localhost()?
-        .into_iter()
-        .filter(|(x, _)| is_forwardable_port((*x).into()))
-        .map(|(port, comm)| {
-            debug!("Port {port} is already opened by {comm:?}");
-            (port.into(), ActivePort { port: port.into(), comm })
-        })
-        .collect();
-    send_active_ports_report(listening_ports.clone(), &mut client).await?;
-
-    debug!("Starting monitoring ports");
-    while let Some(line) = lines.next_line().await? {
-        let items: Vec<_> = line.split_whitespace().collect();
-        let state = TcpState {
-            lport: items
-                .get(lport)
-                .ok_or(anyhow!("Failed to find LPORT"))?
-                .parse()
-                .context("Invalid LPORT format")?,
-            rport: items
-                .get(rport)
-                .ok_or(anyhow!("Failed to find RPORT"))?
-                .parse()
-                .context("Invalid RPORT format")?,
-            comm: items.get(comm).ok_or(anyhow!("Failed to find COMM"))?.to_string(),
-            newstate: items.get(newstate).ok_or(anyhow!("Failed to find NEWSTATE"))?.to_string(),
-        };
-        if !is_forwardable_port(state.lport) {
-            continue;
-        }
-        if state.rport > 0 {
-            continue;
-        }
-        match state.newstate.as_str() {
-            TCPSTATES_STATE_LISTEN => {
-                debug!("New listening port {} by {}", state.lport, state.comm);
-                listening_ports
-                    .insert(state.lport, ActivePort { port: state.lport, comm: state.comm });
-            }
-            TCPSTATES_STATE_CLOSE => {
-                debug!("Listening port {} by {} is now closed", state.lport, state.comm);
-                listening_ports.remove(&state.lport);
-            }
-            _ => continue,
-        }
-        send_active_ports_report(listening_ports.clone(), &mut client).await?;
-    }
-
-    Err(anyhow!("report_active_ports is terminated").into())
+async fn report_active_ports(mut client: DebianServiceClient<Channel>) -> Result<()> {
+    forwarder_guest_launcher::monitor_active_ports(async |ports| {
+        send_active_ports_report(ports, &mut client).await
+    })
+    .await?;
+    Err(anyhow!("report_active_ports is terminated"))
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     env_logger::builder().filter_level(log::LevelFilter::Debug).init();
     debug!("Starting forwarder_guest_launcher");
     let args = Args::parse();

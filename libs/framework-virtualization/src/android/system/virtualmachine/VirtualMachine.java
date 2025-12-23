@@ -111,6 +111,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -288,8 +289,9 @@ public class VirtualMachine implements AutoCloseable {
      */
     @NonNull private final List<ApkSpec> mExtraApks;
 
+    // TODO(b/455544131): mTenantApks should be part of VirtualMachineConfig.
     /** Unmodifiable list of tenant apks. */
-    @NonNull private final List<ApkSpec> mTenantApks;
+    @NonNull private List<ApkSpec> mTenantApks;
 
     @NonNull private final Executor mMemoryCallbackExecutor = Executors.newSingleThreadExecutor();
 
@@ -2133,6 +2135,10 @@ public class VirtualMachine implements AutoCloseable {
                 // disk in a broken state and also that any VirtualMachineDescriptor that refers to
                 // the old file does not see the new config.
                 newConfig.serialize(mConfigFilePath);
+                if (!Objects.equals(
+                        oldConfig.getPayloadConfigPath(), newConfig.getPayloadConfigPath())) {
+                    mTenantApks = setupTenantApks(mContext, newConfig, mVmRootPath);
+                }
                 mConfig = newConfig;
             }
             return oldConfig;

@@ -105,6 +105,26 @@ typedef enum AVmMountEncryptedAssetsStatus : int32_t {
 void AVmPayload_notifyPayloadReady(void);
 
 /**
+ * Runs a binder RPC server, serving the supplied binder service implementation on the unix
+ * domain socket.
+ *
+ * This function creates the Unix domain socket with the given name and binds it.
+ * Starts the server listening on the socket with the service Binder.
+ *
+ * Note that this function does not return. The calling thread joins the binder
+ * thread pool to handle incoming messages.
+ *
+ * \param name the null-terminated name of the unix domain socket, UTF-8 encoded.
+ * \param service the service to bind to the socket.
+ * \param on_ready the callback to execute once the server is ready for connections. If not null the
+ * callback will be called at most once.
+ * \param param parameter to be passed to the `on_ready` callback.
+ */
+__attribute__((noreturn)) void AVmPayload_runUnixDomainRpcServer(
+        const char* _Nonnull name, AIBinder* _Nonnull service,
+        void (*_Nullable on_ready)(void* _Nullable param), void* _Nullable param);
+
+/**
  * Runs a binder RPC server, serving the supplied binder service implementation on the given vsock
  * port.
  *

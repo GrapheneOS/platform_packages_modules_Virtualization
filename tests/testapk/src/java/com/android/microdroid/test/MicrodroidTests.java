@@ -184,6 +184,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
     private static final String VM_SHARE_APP_PACKAGE_NAME = "com.android.microdroid.vmshare_app";
 
+    private static final int FIRST_TENANT_UID = 10000;
+
     private void createAndConnectToVmHelper(int cpuTopology, boolean shouldUseHugepages)
             throws Exception {
         assumeSupportedDevice();
@@ -1338,7 +1340,13 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"3.1/C-0-1"})
     public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
-
+        // TODO(b/465728787): The signing keys used for virt apex in Cuttlefish do not match
+        // the expected public keys in TenancyConfig (vm_config_test_multi_tenants.json).
+        // Disable the test on CF till we implement robust strategy for testing different
+        // signing configuration of DUT.
+        assume().withMessage("Skip on CF, which has virt apex signed with different key")
+                .that(isCuttlefish())
+                .isFalse();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
         assumeTrue(
@@ -1401,6 +1409,78 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    @CddTest
+    public void multipleTenantUids() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        final int NUMBER_OF_TENANTS_IN_CONFIG = 3;
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_uids", config);
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+
+        CompletableFuture<Integer> tenant1UidFuture = new CompletableFuture<>();
+        CompletableFuture<Integer> tenant2UidFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tenant1Service =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            tenant1UidFuture.complete(tenant1Service.getUid());
+                            ITestService tenant2Service =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            tenant2UidFuture.complete(tenant2Service.getUid());
+
+                            tenant1Service.quit();
+                            tenant2Service.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        Integer tenant1Uid = tenant1UidFuture.get();
+        Integer tenant2Uid = tenant2UidFuture.get();
+
+        assertWithMessage("Tenant UIDs should be distinct")
+                .that(tenant1Uid)
+                .isNotEqualTo(tenant2Uid);
+
+        List<Integer> validUids = generateValidUidsForTenants(NUMBER_OF_TENANTS_IN_CONFIG);
+        assertWithMessage("Tenant 1 UID should be one of " + validUids)
+                .that(tenant1Uid)
+                .isIn(validUids);
+        assertWithMessage("Tenant 2 UID should be one of " + validUids)
+                .that(tenant2Uid)
+                .isIn(validUids);
+
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_tenant_uids's"
+                                + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void multiTenantEncryptedStoragePath() throws Exception {
         assumeSupportedDevice();
@@ -1419,7 +1499,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .build();
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("test_vm_tenant_encrypted_storage_path", config);
-        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<String> tenant1EncryptedStoragePath = new CompletableFuture<>();
+        CompletableFuture<String> tenant2EncryptedStoragePath = new CompletableFuture<>();
         CompletableFuture<Exception> exception = new CompletableFuture<>();
         CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
         VmEventListener listener =
@@ -1430,18 +1511,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                             ITestService tsOnAPort =
                                     ITestService.Stub.asInterface(
                                             vm.connectToVsockServer(ITestService.PORT));
-                            String val = tsOnAPort.getEncryptedStoragePath();
-                            prop.complete(val);
+                            tenant1EncryptedStoragePath.complete(
+                                    tsOnAPort.getEncryptedStoragePath());
 
                             ITestService tsOnAlternatePort =
                                     ITestService.Stub.asInterface(
                                             vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
-                            String alternateVal = tsOnAlternatePort.getEncryptedStoragePath();
-                            assertWithMessage(
-                                            "Encrypted storage paths for the same package must be"
-                                                + " identical")
-                                    .that(alternateVal)
-                                    .isEqualTo(val);
+                            tenant2EncryptedStoragePath.complete(
+                                    tsOnAlternatePort.getEncryptedStoragePath());
 
                             tsOnAPort.quit();
                             tsOnAlternatePort.quit();
@@ -1457,15 +1534,214 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 };
         listener.runToFinish(TAG, vm);
         assertWithMessage(
-                        "Unexpected exception while running test_vm_tenant_services's"
+                        "Unexpected exception while running"
+                                + " test_vm_tenant_encrypted_storage_path's onPayloadReady"
+                                + " callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertWithMessage("Tenant 1 encrypted storage path should be specific to the tenant")
+                .that(tenant1EncryptedStoragePath.getNow(null))
+                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+        assertWithMessage("Tenant 2 encrypted storage path should be specific to the tenant")
+                .that(tenant2EncryptedStoragePath.getNow(null))
+                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test_alternate_tenant");
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    public void addingMoretenantsIsSupported() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        // First run with a single tenant.
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_single_tenant.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_add_tenant", config);
+        CompletableFuture<String> result = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
+                .that(result.getNow(null))
+                .isEqualTo("PASS");
+
+        // Re-run the VM with more tenants
+        config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        vm.setConfig(config);
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            String val =
+                                    tsOnAPort.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                            prop.complete(val);
+                            // Connect to the second service!
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            String valFromAnotherTenant =
+                                    tsOnAlternatePort.readProperty(
+                                            "debug.microdroid.test.tenant_packages_mounted");
+                            assertWithMessage("Received different values from different tenants")
+                                    .that(valFromAnotherTenant)
+                                    .isEqualTo(val);
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_add_tenant's"
                                 + " onPayloadReady callback")
                 .that(exception.getNow(null))
                 .isNull();
 
-        assertWithMessage("Encrypted storage path should be specific to the tenant")
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
                 .that(prop.getNow(null))
-                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+                .isEqualTo("PASS");
         assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    public void testEncryptedStorageIsPersistentOnAddTenant() throws Exception {
+        assumeSupportedDevice();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        // First run with a single tenant.
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_single_tenant.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("test_vm_tenant_encrypted_storage_persistent", config);
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            String encryptedStoragePath = ts.getEncryptedStoragePath();
+                            tr.mEncryptedStoragePath = encryptedStoragePath;
+                            ts.writeToFile(
+                                    /* content= */ EXAMPLE_STRING,
+                                    /* path= */ encryptedStoragePath + "/test_file");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mEncryptedStoragePath)
+                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+
+        // Re-run the VM with more tenants
+        config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        vm.setConfig(config);
+
+        // Re-run the same VM & verify the file persisted.
+        CompletableFuture<String> prop = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            String encryptedStoragePath = tsOnAPort.getEncryptedStoragePath();
+
+                            String content =
+                                    tsOnAPort.readFromFile(encryptedStoragePath + "/test_file");
+                            prop.complete(content);
+
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running"
+                            + " test_vm_tenant_encrypted_storage_persistent's onPayloadReady"
+                            + " callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertWithMessage("File content should be the same as before")
+                .that(prop.getNow(null))
+                .isEqualTo(EXAMPLE_STRING);
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    public void duplicateTenantsAreRejected() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_invalid_duplicate_tenants.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_duplicate_tenants", config);
+        CompletableFuture<String> res = readTenantPackagesMounted(vm);
+        assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
+                .that(res.getNow(null))
+                .isNull();
     }
 
     @Test
@@ -4189,6 +4465,19 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         Context context = getContext();
         Path filePath = Paths.get(context.getDataDir().getPath(), "vm", vmName, fileName);
         return filePath.toFile();
+    }
+
+    /**
+     * Generates a list of valid UIDs for tenants, starting from {@code FIRST_TENANT_UID}.
+     *
+     * @param numberOfUids The number of UIDs to generate in the list.
+     */
+    private List<Integer> generateValidUidsForTenants(int numberOfUids) {
+        List<Integer> validUids = new ArrayList<>();
+        for (int i = 0; i < numberOfUids; i++) {
+            validUids.add(FIRST_TENANT_UID + i);
+        }
+        return validUids;
     }
 
     private void assertThrowsVmException(ThrowingRunnable runnable) {

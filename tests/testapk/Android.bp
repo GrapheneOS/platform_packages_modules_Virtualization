@@ -69,6 +69,7 @@ java_defaults {
 }
 
 DATA = [
+    ":MicrodroidTestHelperAppAlternateTenant",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V5",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V6",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version",
@@ -80,6 +81,17 @@ DATA = [
     ":test_microdroid_vendor_image",
     ":test_microdroid_vendor_image_unsigned",
 ]
+
+android_test_helper_app {
+    name: "MicrodroidTestHelperAppAlternateTenant",
+    defaults: ["MicrodroidTestAppsDefaults"],
+    manifest: "AndroidManifest_alternate_tenant.xml",
+    jni_libs: [
+        "MicrodroidTestNativeOnAlternatePortLib",
+        "MicrodroidTestNativeLibWithLibIcu",
+    ],
+    min_sdk_version: "33",
+}
 
 android_test_helper_app {
     name: "MicrodroidTestHelperAppRelaxedRollbackProtection_V5",

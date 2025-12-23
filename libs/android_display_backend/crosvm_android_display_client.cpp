@@ -19,7 +19,9 @@
 #include <android-base/result.h>
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
+#include <cutils/native_handle.h>
 #include <system/graphics.h> // for HAL_PIXEL_FORMAT_*
+#include <vndk/hardware_buffer.h>
 
 #include <condition_variable>
 #include <memory>
@@ -507,13 +509,72 @@ extern "C" void post_android_surface_buffer(struct AndroidDisplayContext* ctx,
     return;
 }
 
+struct AHardwareBufferInfo {
+    size_t num_fds;
+    const int32_t* fds_ptr;
+    size_t metadata_len;
+    const uint8_t* metadata_ptr;
+
+    // The logic should be synced with frameworks/native/libs/nativewindow/rust/src/lib.rs
+    Result<AHardwareBuffer*> toAHardwareBuffer() const {
+        if (metadata_len < sizeof(AHardwareBuffer_Desc)) {
+            return Error()
+                    << "Metadata size should be greater than the size of AHardwareBuffer_Desc";
+        }
+
+        AHardwareBuffer_Desc desc;
+        memcpy(&desc, metadata_ptr, sizeof(AHardwareBuffer_Desc));
+
+        size_t ints_size = metadata_len - sizeof(AHardwareBuffer_Desc);
+        int numInts = ints_size / sizeof(int);
+
+        native_handle_t* handle = native_handle_create(num_fds, numInts);
+        if (!handle) {
+            return Error() << "Failed to create native_handle";
+        }
+
+        for (size_t i = 0; i < num_fds; ++i) {
+            handle->data[i] = fds_ptr[i];
+        }
+
+        memcpy(&handle->data[num_fds], metadata_ptr + sizeof(AHardwareBuffer_Desc), ints_size);
+
+        AHardwareBuffer* ahb = nullptr;
+        int status =
+                AHardwareBuffer_createFromHandle(&desc, handle,
+                                                 AHARDWAREBUFFER_CREATE_FROM_HANDLE_METHOD_CLONE,
+                                                 &ahb);
+
+        native_handle_delete(handle);
+
+        if (status != 0) {
+            return Error() << "Failed to create AHB from handle: " << status;
+        }
+
+        return ahb;
+    }
+};
+
 extern "C" void android_display_flip_to(struct AndroidDisplayContext* ctx,
-                                        AndroidDisplaySurface* surface, int64_t rawHandle) {
-    AHardwareBuffer* ahb = static_cast<AHardwareBuffer*>(reinterpret_cast<void*>(rawHandle));
+                                        AndroidDisplaySurface* surface,
+                                        const AHardwareBufferInfo* info) {
+    if (info == nullptr) {
+        ctx->errorf("Invalid AHardwareBufferInfo provided");
+        return;
+    }
+
+    auto ahbResult = info->toAHardwareBuffer();
+    if (!ahbResult.ok()) {
+        ctx->errorf("%s", ahbResult.error().message().c_str());
+        return;
+    }
+    AHardwareBuffer* ahb = *ahbResult;
+
     auto ret = surface->setBuffer(ahb);
     if (!ret.ok()) {
         ctx->errorf("Failed to set buffer %s: %s", surface->name().c_str(),
                     ret.error().message().c_str());
     }
-    return;
+
+    AHardwareBuffer_release(ahb);
 }

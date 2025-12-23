@@ -16,6 +16,7 @@
 
 package android.system.virtualization.payload;
 
+import android.os.ParcelFileDescriptor;
 import android.system.virtualizationcommon.Certificate;
 
 /**
@@ -38,6 +39,11 @@ interface IVmPayloadService {
      * is not enabled.
      */
     const String ENCRYPTEDSTORE_MOUNTPOINT = "/mnt/encryptedstore";
+
+    /**
+     * Path to the microdroid managed socket directory.
+     */
+    const String MICRODROID_SOCKET_PATH = "/dev/socket/microdroid_managed";
 
     /**
      * An {@link AttestationResult} holds an attested private key and the remotely
@@ -172,4 +178,12 @@ interface IVmPayloadService {
      * @return The path to the encrypted storage.
      */
     String getEncryptedStoragePath(in long uid);
+
+    /**
+     * Creates a unix domain socket with the given name at the path /dev/socket/.
+     *
+     * @param name the name of the unix domain socket.
+     * @return the file descriptor of the unix domain socket.
+     */
+    ParcelFileDescriptor createUnixDomainSocket(in @utf8InCpp String name);
 }
