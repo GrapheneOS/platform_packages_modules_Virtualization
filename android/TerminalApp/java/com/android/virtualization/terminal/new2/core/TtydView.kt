@@ -210,6 +210,8 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
+            mapTouchToMouseEvent()
+            applyTerminalDisconnectCallback()
             // TODO: explain reason for this
             val js =
                 """
