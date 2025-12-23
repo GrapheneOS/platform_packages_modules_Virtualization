@@ -28,6 +28,7 @@ import android.system.virtualmachine.VirtualMachineException
 import android.system.virtualmachine.VirtualMachineManager
 import android.util.Log
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.AndroidToVmBridge
 import com.android.virtualization.terminal.CertificateUtils
 import com.android.virtualization.terminal.ConfigJson
 import com.android.virtualization.terminal.DisplayInfo
@@ -209,6 +210,21 @@ object VmController {
     }
 
     private fun startTtydDiscovery(timeoutSecs: Long) {
+        if (canUseTtydOverVsock()) {
+            Log.i("VmController", "Connect to ttyd using vsock")
+            val bridge = AndroidToVmBridge(virtualMachine!!.cid)
+            val port = bridge.start()
+            if (port == null) {
+                Log.e("VmController", "Failed to start bridge")
+                _vmState.value = VmState.Error(RuntimeException("Failed to start bridge"))
+            } else {
+                _vmState.value = VmState.Running("localhost", port, bridge.secretKey)
+            }
+        }
+
+        // We still need this logic to retrieve the IP address of the VM to use it for guest agent
+        // connection
+        // It will be replaced with RpcBinder with vsock.
         val executor =
             Executors.newSingleThreadExecutor(TerminalThreadFactory(context.applicationContext))
         val nsdManager = context.getSystemService<NsdManager>(NsdManager::class.java)!!
@@ -267,6 +283,13 @@ object VmController {
                     VmState.Error(RuntimeException("Timed out waiting for terminal service"))
             }
         }
+    }
+
+    private fun canUseTtydOverVsock(): Boolean {
+        val buildId = InstalledImage.getDefault(context).buildInfo?.buildId ?: 0
+        val FIRST_VERSION_SUPPORTS_TTYD_VSOCK = 5106
+        return Flags.terminalVmCommunicationRefactoring() &&
+            buildId >= FIRST_VERSION_SUPPORTS_TTYD_VSOCK
     }
 
     fun stop() {

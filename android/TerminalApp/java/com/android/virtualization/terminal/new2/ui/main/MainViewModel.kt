@@ -57,7 +57,7 @@ sealed interface MainUiState {
 
     data object Booting : MainUiState
 
-    data class Running(val address: String, val port: Int) : MainUiState
+    data class Running(val address: String, val port: Int, val key: String?) : MainUiState
 
     data object Stopping : MainUiState
 
@@ -208,7 +208,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 hasVmEverStarted = true
                                 MainUiState.Booting
                             }
-                            is VmState.Running -> MainUiState.Running(vmState.address, vmState.port)
+                            is VmState.Running ->
+                                MainUiState.Running(vmState.address, vmState.port, vmState.key)
                             is VmState.Stopping -> MainUiState.Stopping
                             is VmState.Stopped -> {
                                 if (hasVmEverStarted) {

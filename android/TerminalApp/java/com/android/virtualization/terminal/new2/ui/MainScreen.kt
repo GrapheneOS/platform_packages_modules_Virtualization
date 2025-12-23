@@ -229,6 +229,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                 TerminalScreen(
                                     state.address,
                                     state.port,
+                                    state.key,
                                     selectedTabId!!,
                                     viewModel,
                                 )

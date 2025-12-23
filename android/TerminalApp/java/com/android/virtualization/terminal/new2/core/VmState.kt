@@ -20,7 +20,7 @@ sealed interface VmState {
 
     data object Starting : VmState
 
-    data class Running(val address: String, val port: Int) : VmState
+    data class Running(val address: String, val port: Int, val key: String? = null) : VmState
 
     data object Stopping : VmState
 
