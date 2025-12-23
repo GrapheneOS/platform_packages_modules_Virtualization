@@ -79,7 +79,7 @@ internal data class ConfigJson(
     }
 
     internal fun getBootTimeoutSecs(): Int {
-        return boot_timeout_secs ?: DEFAULT_BOOT_TIMEOUT
+        return boot_timeout_secs ?: DEFAULT_BOOT_TIMEOUT_SECS
     }
 
     /** Converts this parsed JSON into VirtualMachineConfig Builder */
@@ -301,7 +301,7 @@ internal data class ConfigJson(
 
     companion object {
         private const val DEBUG = true
-        const val DEFAULT_BOOT_TIMEOUT: Int = 30
+        const val DEFAULT_BOOT_TIMEOUT_SECS: Int = 60
 
         /** Parses JSON file at jsonPath */
         fun from(context: Context, jsonPath: Path): ConfigJson {

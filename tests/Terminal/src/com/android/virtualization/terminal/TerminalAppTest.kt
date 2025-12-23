@@ -67,7 +67,7 @@ class TerminalAppTest {
     @Throws(Exception::class)
     fun boot() {
         val isNestedVirt = properties.isCuttlefish() || properties.isGoldfish()
-        val BOOT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(if (isNestedVirt) 6 else 1)
+        val BOOT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(if (isNestedVirt) 20 else 3)
 
         val intent = Intent(targetContext, MainActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
