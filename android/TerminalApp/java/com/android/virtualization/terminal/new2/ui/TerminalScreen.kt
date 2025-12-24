@@ -180,11 +180,17 @@ private fun TerminalTab(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TerminalScreen(address: String, port: Int, tabId: String, mainViewModel: MainViewModel) {
+fun TerminalScreen(
+    address: String,
+    port: Int,
+    key: String?,
+    tabId: String,
+    mainViewModel: MainViewModel,
+) {
     val terminalViewModel: TerminalViewModel = viewModel(key = tabId)
     val terminalUiState by terminalViewModel.uiState.collectAsStateWithLifecycle()
     val ttydView =
-        remember(address, port, tabId) { terminalViewModel.getOrCreateTtydView(address, port) }
+        remember(address, port, tabId) { terminalViewModel.getOrCreateTtydView(address, port, key) }
 
     val storedImeVisibility by mainViewModel.isImeVisible.collectAsStateWithLifecycle()
     val isWindowImeVisible = WindowInsets.isImeVisible

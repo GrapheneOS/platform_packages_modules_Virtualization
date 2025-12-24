@@ -80,15 +80,29 @@ fun MainScreen(viewModel: MainViewModel) {
     val activity = context as Activity
     val scope = rememberCoroutineScope()
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var settingsInitialDestination by remember { mutableStateOf<SettingsDestination?>(null) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.settingsRequest.collect { destination ->
+            if (destination != null) {
+                settingsInitialDestination = destination
+                showSettings = true
+            }
+        }
+    }
 
     LaunchedEffect(uiState) {
         val state = uiState
         when (state) {
             is MainUiState.Ready -> viewModel.startVm()
             is MainUiState.Stopped -> activity.finish()
-            is MainUiState.NotInstalled -> showSettings = false
-            is MainUiState.Checking -> showSettings = false
-            is MainUiState.Error -> handleError(activity, snackbarHostState, viewModel, state)
+            is MainUiState.NotInstalled,
+            is MainUiState.Checking,
+            is MainUiState.Booting -> showSettings = false
+            is MainUiState.Error -> {
+                showSettings = false
+                handleError(activity, snackbarHostState, viewModel, state)
+            }
             else -> {}
         }
     }
@@ -215,6 +229,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                 TerminalScreen(
                                     state.address,
                                     state.port,
+                                    state.key,
                                     selectedTabId!!,
                                     viewModel,
                                 )
@@ -231,7 +246,10 @@ fun MainScreen(viewModel: MainViewModel) {
                 enter = slideInHorizontally(initialOffsetX = { it }),
                 exit = slideOutHorizontally(targetOffsetX = { it }),
             ) {
-                SettingsScreen(onBack = { showSettings = false })
+                SettingsScreen(
+                    onBack = { showSettings = false },
+                    initialDestination = settingsInitialDestination,
+                )
             }
         }
     }

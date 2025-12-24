@@ -20,6 +20,8 @@ import android.graphics.fonts.FontStyle
 import android.net.http.SslError
 import android.util.AttributeSet
 import android.util.Log
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
 import android.view.inputmethod.InputMethodManager
@@ -44,6 +46,31 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     var onTerminalReady: (() -> Unit)? = null
     var onTerminalDisconnected: (() -> Unit)? = null
     var onTitleChanged: ((String) -> Unit)? = null
+    private var fontSize = (context.resources.configuration.fontScale * 13).toInt()
+
+    private val scaleGestureDetector =
+        ScaleGestureDetector(
+            context,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    if (Math.abs(detector.scaleFactor - 1.0f) < 0.1f) {
+                        return false
+                    }
+                    if (detector.scaleFactor > 1.0f) {
+                        if (fontSize < MAX_FONT_SIZE) {
+                            fontSize++
+                            updateFontSize()
+                        }
+                    } else {
+                        if (fontSize > MIN_FONT_SIZE) {
+                            fontSize--
+                            updateFontSize()
+                        }
+                    }
+                    return true
+                }
+            },
+        )
 
     init {
         settings.domStorageEnabled = true
@@ -76,9 +103,30 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         enableJavascriptConsoleDebug()
     }
 
-    fun load(ipAddress: String, port: Int) {
-        val url = getTerminalServiceUrl(ipAddress, port)
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleGestureDetector.onTouchEvent(event)
+        return super.onTouchEvent(event)
+    }
+
+    private fun updateFontSize() {
+        evaluateJavascript(
+            "term.options.fontSize = $fontSize; window.dispatchEvent(new Event('resize'));",
+            null,
+        )
+    }
+
+    fun load(ipAddress: String, port: Int, key: String? = null) {
+        val ssl = key.isNullOrEmpty()
+        val url = getTerminalServiceUrl(ipAddress, port, ssl)
         Log.d("TtydView", "Loading URL: ${url.toString()}")
+
+        if (key != null) {
+            val cookieManager = android.webkit.CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
+            cookieManager.setCookie(url.toString(), "access_token=$key")
+            cookieManager.flush()
+        }
+
         loadUrl(url.toString())
     }
 
@@ -94,7 +142,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
-    private fun getTerminalServiceUrl(ipAddress: String?, port: Int): URL? {
+    private fun getTerminalServiceUrl(ipAddress: String?, port: Int, ssl: Boolean): URL? {
         val config = resources.configuration
         val a11yManager = context.getSystemService(AccessibilityManager::class.java)
         // TODO: Always enable screenReaderMode (b/395845063)
@@ -110,7 +158,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 "&disableResizeOverlay=true")
 
         try {
-            return URL("https", ipAddress, port, query)
+            return URL(if (ssl) "https" else "http", ipAddress, port, query)
         } catch (e: MalformedURLException) {
             // this cannot happen
             return null
@@ -171,6 +219,8 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
+            mapTouchToMouseEvent()
+            applyTerminalDisconnectCallback()
             // TODO: explain reason for this
             val js =
                 """
@@ -194,5 +244,10 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             """
             view.evaluateJavascript(js, null)
         }
+    }
+
+    companion object {
+        private const val MIN_FONT_SIZE = 5
+        private const val MAX_FONT_SIZE = 200
     }
 }

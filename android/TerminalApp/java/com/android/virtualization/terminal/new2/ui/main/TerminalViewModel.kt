@@ -57,7 +57,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
     private var ttydView: TtydView? = null
 
-    fun getOrCreateTtydView(address: String, port: Int): TtydView {
+    fun getOrCreateTtydView(address: String, port: Int, key: String?): TtydView {
         if (ttydView == null) {
             Log.d("TerminalViewModel", "Creating new TtydView")
             _uiState.value = TerminalUiState.Connecting
@@ -66,7 +66,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                     onTerminalReady = { _uiState.value = TerminalUiState.Ready }
                     onTerminalDisconnected = { _uiState.value = TerminalUiState.Disconnected }
                     onTitleChanged = { title -> _title.value = title }
-                    load(address, port)
+                    load(address, port, key)
                 }
         }
         return ttydView!!
