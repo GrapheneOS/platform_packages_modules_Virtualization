@@ -61,16 +61,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.android.virtualization.terminal.GraphicsManager
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
 import kotlinx.coroutines.launch
 
-enum class SettingsDestination(val title: String) {
-    PortControl("Port Control"),
-    Graphics("Graphics"),
-    Recovery("Recovery"),
+enum class SettingsDestination(val title: String, val icon: Int) {
+    PortControl("Port Control", R.drawable.baseline_call_missed_outgoing_24),
+    Graphics("Graphics", R.drawable.ic_display),
+    Recovery("Recovery", R.drawable.baseline_settings_backup_restore_24),
 }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -166,6 +168,9 @@ fun SettingsListPane(
                 val isSelected = selectedItem == item
                 ListItem(
                     headlineContent = { Text(item.title) },
+                    leadingContent = {
+                        Icon(painter = painterResource(item.icon), contentDescription = null)
+                    },
                     modifier = Modifier.clickable { onItemClick(item) },
                     colors =
                         ListItemDefaults.colors(
