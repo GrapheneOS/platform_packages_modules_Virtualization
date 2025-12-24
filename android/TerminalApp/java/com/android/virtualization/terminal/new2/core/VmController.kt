@@ -80,6 +80,16 @@ object VmController {
         guestAgentController?.enablePortForwarding(port, enable)
     }
 
+    val graphicsAccelerationType: GraphicsManager.AccelerationType
+        get() = GraphicsManager.getInstance(context).accelerationType
+
+    val isGraphicsAccelerationSupported: Boolean
+        get() = GraphicsManager.getInstance(context).isGfxstreamSupported
+
+    fun setGraphicsAccelerationType(type: GraphicsManager.AccelerationType) {
+        GraphicsManager.getInstance(context).accelerationType = type
+    }
+
     fun shutdownVm() {
         guestAgentController?.shutdownVm()
     }
