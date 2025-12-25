@@ -59,7 +59,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,20 +105,28 @@ fun TerminalTabBar(
             ) {
                 tabs.forEachIndexed { index, tab ->
                     val tabViewModel: TerminalViewModel = viewModel(key = tab.id)
+                    val isSelected = tab.id == selectedTabId
+                    val isNextSelected =
+                        if (index < tabs.lastIndex) {
+                            tabs[index + 1].id == selectedTabId
+                        } else {
+                            false
+                        }
                     TerminalTab(
                         tab = tab,
-                        selected = tab.id == selectedTabId,
+                        selected = isSelected,
+                        showSeparator = !isSelected && !isNextSelected,
                         onTabSelected = { onTabSelected(tab.id) },
                         onTabClosed = { onTabClosed(tab.id) },
                         tabViewModel = tabViewModel,
                     )
                     if (index == tabs.lastIndex) {
                         Box(modifier = Modifier.padding(horizontal = 6.dp)) {
-                            IconButton(onClick = onAddTab, modifier = Modifier.width(24.dp)) {
+                            IconButton(onClick = onAddTab) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = "Add tab",
-                                    modifier = Modifier.size(12.dp),
+                                    modifier = Modifier.size(24.dp),
                                 )
                             }
                         }
@@ -128,12 +141,14 @@ fun TerminalTabBar(
 private fun TerminalTab(
     tab: TerminalSession,
     selected: Boolean,
+    showSeparator: Boolean,
     onTabSelected: () -> Unit,
     onTabClosed: () -> Unit,
     tabViewModel: TerminalViewModel,
 ) {
     var showCloseDialog by remember { mutableStateOf(false) }
     val title by tabViewModel.title.collectAsStateWithLifecycle()
+    val separatorColor = MaterialTheme.colorScheme.outlineVariant
 
     if (showCloseDialog) {
         AlertDialog(
@@ -155,22 +170,53 @@ private fun TerminalTab(
         )
     }
 
-    Tab(selected = selected, onClick = onTabSelected) {
+    Tab(
+        selected = selected,
+        onClick = onTabSelected,
+        modifier =
+            Modifier.width(150.dp).drawWithContent {
+                drawContent()
+                if (showSeparator) {
+                    drawLine(
+                        color = separatorColor,
+                        start = Offset(x = size.width, y = 12.dp.toPx()),
+                        end = Offset(x = size.width, y = size.height - 12.dp.toPx()),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+            },
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier.fillMaxHeight()
-                    .padding(end = 4.dp)
                     .background(
                         if (selected) MaterialTheme.colorScheme.surfaceVariant
                         else Color.Transparent
                     )
                     .padding(horizontal = 8.dp, vertical = 12.dp),
         ) {
-            Text(title)
+            Text(
+                text = title,
+                maxLines = 1,
+                modifier =
+                    Modifier.weight(1f)
+                        .graphicsLayer { alpha = 0.99f }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush =
+                                    Brush.horizontalGradient(
+                                        0.8f to Color.Black,
+                                        1f to Color.Transparent,
+                                    ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        },
+            )
             IconButton(
                 onClick = { showCloseDialog = true },
-                modifier = Modifier.size(24.dp).padding(start = 12.dp),
+                modifier = Modifier.size(24.dp).padding(start = 4.dp),
             ) {
                 Icon(imageVector = Icons.Default.Close, contentDescription = "Close tab")
             }
