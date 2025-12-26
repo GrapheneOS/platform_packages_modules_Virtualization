@@ -186,7 +186,7 @@ service apexd-vm /system/bin/apexd --vm
     group system
     oneshot
     disabled
-    capabilities CHOWN DAC_OVERRIDE DAC_READ_SEARCH FOWNER SYS_ADMIN
+    capabilities CHOWN DAC_OVERRIDE DAC_READ_SEARCH FOWNER SYS_ADMIN MKNOD
 
 service ueventd /system/bin/ueventd
     user root
