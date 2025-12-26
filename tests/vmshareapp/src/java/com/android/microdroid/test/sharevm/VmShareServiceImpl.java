@@ -316,5 +316,10 @@ public class VmShareServiceImpl extends Service {
         public String mountEncryptedAssets(String path) {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public String getselinuxdomain() {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }

@@ -286,6 +286,7 @@ cc_defaults {
         "libfsverity_digests_proto_cc",
         "liblog",
         "libprotobuf-cpp-lite-ndk",
+        "libselinux",
     ],
     // We've added support for updatable payloads in Android U.
     min_sdk_version: "UpsideDownCake",

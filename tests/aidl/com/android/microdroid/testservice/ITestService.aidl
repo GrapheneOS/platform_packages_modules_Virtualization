@@ -136,4 +136,7 @@ interface ITestService {
      * @return The mount point path on success.
      */
     String mountEncryptedAssets(String path);
+
+    /* Returns the SELinux context of the process running the binary. */
+    String getselinuxdomain();
 }

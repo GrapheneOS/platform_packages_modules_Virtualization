@@ -15,6 +15,7 @@
 //! VM Payload Config
 
 use serde::{Deserialize, Serialize};
+use std::ffi::CString;
 
 /// VM payload config
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -113,6 +114,10 @@ pub struct Task {
     /// If this is non-None the arguments will be passed to the executable.
     /// For type=microdroid_launcher this should be omitted.
     pub command_args: Option<Vec<String>>,
+
+    /// The "type" (in SELinux Context) applied to the task.
+    /// Default, minimal type is applied if selinux_type = None
+    pub selinux_type: Option<CString>,
 }
 
 /// APEX config
