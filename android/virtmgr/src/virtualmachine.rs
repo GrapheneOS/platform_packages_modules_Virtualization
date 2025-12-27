@@ -1314,6 +1314,7 @@ fn create_vm_payload_config(
         type_: TaskType::MicrodroidLauncher,
         command: payload_binary_name.clone(),
         command_args: None,
+        selinux_type: None,
     };
 
     // The VM only cares about how many there are, these names are actually ignored.

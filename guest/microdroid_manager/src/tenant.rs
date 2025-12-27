@@ -17,11 +17,13 @@
 
 use super::instance::{ApexData, ApkData, InstanceDisk, InstanceSpec};
 use crate::MicrodroidError;
+use crate::Task;
 use anyhow::{anyhow, bail, Context, Result};
 use log::{info, warn};
 use microdroid_payload_config::TenantConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::ffi::CString;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TenantPackageInfo {
@@ -29,9 +31,12 @@ pub enum TenantPackageInfo {
     ApexData(ApexData),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub(crate) struct TenantAttribute {
     uid: u32,
+    // Domains requiring setexeccon-based domain transitions.
+    // If None, auto-transition into `microdroid_app` happens.
+    selinux_domain: Option<CString>,
 }
 
 impl TenantAttribute {
@@ -41,6 +46,10 @@ impl TenantAttribute {
 
     pub fn gid() -> u32 {
         microdroid_uids::MICRODROID_PAYLOAD_GID
+    }
+
+    pub fn selinux_domain(&self) -> Option<CString> {
+        self.selinux_domain.clone()
     }
 }
 
@@ -62,16 +71,16 @@ impl TenantManager {
     pub fn initialize(tenants_config: &[TenantConfig]) -> Result<Self> {
         let mut manager = Self::new();
         for tenant in tenants_config {
-            let name = match tenant {
-                TenantConfig::Apex(c) => &c.name,
-                TenantConfig::Apk(c) => &c.name,
+            let tenant = match tenant {
+                TenantConfig::Apex(c) => c,
+                TenantConfig::Apk(c) => c,
             };
-            manager.register_tenant_package(name)?;
+            manager.register_tenant_package(&tenant.name, tenant.task.as_ref())?;
         }
         Ok(manager)
     }
 
-    pub fn register_tenant_package(&mut self, package_name: &str) -> Result<()> {
+    fn register_tenant_package(&mut self, package_name: &str, task: Option<&Task>) -> Result<()> {
         if self.tenants.contains_key(package_name) {
             bail!(MicrodroidError::PayloadInvalidConfig(format!(
                 "Duplicate tenant name found during registration: {:?}",
@@ -81,8 +90,14 @@ impl TenantManager {
 
         let uid = self.next_tenant_uid;
         self.next_tenant_uid += 1;
+        let selinux_domain = if let Some(Task { selinux_type: Some(selinux_type), .. }) = task {
+            let selinux_type_str = selinux_type.to_str().expect("SELinux type must be valid UTF-8");
+            Some(CString::new(format!("u:r:{selinux_type_str}:s0")).unwrap())
+        } else {
+            None
+        };
 
-        let attribute = TenantAttribute { uid };
+        let attribute = TenantAttribute { uid, selinux_domain };
         info!("Registering tenant: {package_name} with uid: {:?}", uid);
         self.tenants.insert(package_name.to_string(), attribute);
         // TODO(basantwani): update instance spec
@@ -222,14 +237,14 @@ pub(crate) fn validate_tenants_against_existing_spec_update_spec(
             let attribute = tenant_manager.get_tenant_attribute(&apk_data.package_name)?;
             tenants.insert(
                 apk_data.package_name.clone(),
-                (TenantPackageInfo::ApkData(apk_data), *attribute),
+                (TenantPackageInfo::ApkData(apk_data), attribute.clone()),
             );
         }
         for apex_data in tenant_apex_data {
             let attribute = tenant_manager.get_tenant_attribute(&apex_data.name)?;
             tenants.insert(
                 apex_data.name.clone(),
-                (TenantPackageInfo::ApexData(apex_data), *attribute),
+                (TenantPackageInfo::ApexData(apex_data), attribute.clone()),
             );
         }
         InstanceSpec { tenancy_spec: TenancySpec { tenants } }

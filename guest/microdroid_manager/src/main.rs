@@ -87,6 +87,7 @@ use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
 use std::collections::HashSet;
 use std::env;
+use std::ffi::{CStr, CString};
 use std::fs::{self, create_dir, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
@@ -231,6 +232,22 @@ impl std::fmt::Display for SeContext {
             unsafe { std::ffi::CStr::from_ptr(self.0) }.to_str().unwrap_or("Invalid context")
         )
     }
+}
+
+// TODO: Use libselinux_rs.
+fn setexeccon(selinux_domain: &CStr) -> Result<()> {
+    // Safety: we pass non null pointer to the setexeccon call here which is guaranteed
+    // to be valid after call to CStr::as_ptr() that always returns valid pointer for
+    // the lifetime of CStr.
+    let result = unsafe { selinux_bindgen::setexeccon(selinux_domain.as_ptr()) };
+    if result != 0 {
+        return Err(anyhow!(format!(
+            "Failed to set SELinux security context. Error code: {}. Errno: {}",
+            result,
+            std::io::Error::last_os_error()
+        )));
+    }
+    Ok(())
 }
 
 fn debug_logs_encryptedstore() -> Result<()> {
@@ -823,8 +840,14 @@ fn try_run_payload(
                 .get_tenant_attribute(name)
                 .with_context(|| format!("Failed to get tenant attribute for '{name}'"))?;
             let uid_gid = Some((tenant_attribute.uid(), TenantAttribute::gid()));
-            let command = build_payload_command(package_path.as_ref(), task, uid_gid, is_apex)
-                .context(format!("Failed to build tenant {name} payload command"))?;
+            let command = build_payload_command(
+                package_path.as_ref(),
+                task,
+                uid_gid,
+                tenant_attribute.selinux_domain(),
+                is_apex,
+            )
+            .context(format!("Failed to build tenant {name} payload command"))?;
             let tenant_process = exec_task(
                 command,
                 cgroup_config.as_ref(),
@@ -1106,6 +1129,7 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
                 type_: TaskType::MicrodroidLauncher,
                 command: payload_config.payload_binary_name,
                 command_args: None,
+                selinux_type: None,
             };
             // We don't care about the paths, only the number of extra APKs really matters.
             let extra_apks = (0..payload_config.extra_apk_count)
@@ -1153,9 +1177,11 @@ fn load_crashkernel_if_supported() -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug)]
 struct PayloadCommand {
     command: Command,
     uid_gid: Option<(u32, u32)>,
+    selinux_domain: Option<CString>,
 }
 
 fn build_command(package_name: &str, task: &Task, is_apex: bool) -> Result<Command> {
@@ -1179,10 +1205,11 @@ fn build_payload_command(
     package_name: &str,
     task: &Task,
     uid_gid: Option<(u32, u32)>,
+    selinux_domain: Option<CString>,
     is_apex: bool,
 ) -> Result<PayloadCommand> {
     let command = build_command(package_name, task, is_apex)?;
-    Ok(PayloadCommand { command, uid_gid })
+    Ok(PayloadCommand { command, uid_gid, selinux_domain })
 }
 
 fn get_task_command(
@@ -1205,7 +1232,7 @@ fn get_task_command(
             )),
         }
     };
-    build_payload_command(package_name, task, uid_gid, is_apex)
+    build_payload_command(package_name, task, uid_gid, None, is_apex)
 }
 
 /// Executes the given task.
@@ -1215,7 +1242,7 @@ fn exec_task(
     service: &Strong<dyn IVirtualMachineService>,
     notify_payload_started: bool,
 ) -> Result<Child> {
-    info!("executing main task {:?}...", payload_cmd.command);
+    info!("executing main task {:?}...", payload_cmd);
     let mut command = payload_cmd.command;
     let cgroup_path = cgroup_config.map(|c| format!("/sys/fs/cgroup/{}/cgroup.procs", c.name));
 
@@ -1240,6 +1267,9 @@ fn exec_task(
                     .unwrap_or_else(|_| std::process::abort());
                 nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))
                     .unwrap_or_else(|_| std::process::abort());
+            }
+            if let Some(selinux_domain) = &payload_cmd.selinux_domain {
+                setexeccon(selinux_domain).unwrap_or_else(|_| std::process::abort());
             }
             // It is OK to continue with payload execution even if the calls below fail, since
             // whether process can use a capability is controlled by the SELinux. Dropping the
