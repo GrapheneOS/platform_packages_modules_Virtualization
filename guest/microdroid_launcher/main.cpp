@@ -55,6 +55,15 @@ extern struct android_namespace_t* android_get_exported_namespace(const char* na
 static Result<void*> load(const std::string& libname);
 
 constexpr char entrypoint_name[] = "AVmPayload_main";
+#if defined(__aarch64__)
+constexpr char kEncryptedAssetsLibs[] = "/mnt/encrypted_assets/lib/arm64-v8a";
+#elif defined(__x86_64__)
+constexpr char kEncryptedAssetsLibs[] = "/mnt/encrypted_assets/lib/x86_64";
+#else
+constexpr char kEncryptedAssetsLibs[] = "/mnt/encrypted_assets/lib/unsupported";
+// Such directory doesn't exist, the namespace registration will fail,
+// but not crashing the main function.
+#endif
 
 static constexpr const char* kAllowedLibs[] = {
         "libc.so",   "libm.so",          "libdl.so",         "libdl_android.so",
@@ -95,7 +104,8 @@ Result<void*> load(const std::string& libname) {
     // The search paths of the new namespace are isolated to restrict system private libraries.
     const uint64_t type = ANDROID_NAMESPACE_TYPE_ISOLATED;
     // The directory of the library is appended to the search paths
-    const std::string libdir = libname.substr(0, libname.find_last_of("/"));
+    const std::string libdir =
+            libname.substr(0, libname.find_last_of("/")) + ":" + kEncryptedAssetsLibs;
     const char* ld_library_path = libdir.c_str();
     const char* default_library_path = libdir.c_str();
 
