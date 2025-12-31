@@ -50,6 +50,14 @@ on init
     mkdir /mnt/extra-apk 0755 root root
     mkdir /mnt/tenant-apk 0755 root root
 
+    # Prepare beforehand the directory to be registered to Android libdl.
+    # If the directory doesn't exist, then libdl library namespace registration
+    # will be ignored.
+    # 6000 is microdroid_payload user.
+    mkdir /mnt/encrypted_assets 0550 root 6000
+    mkdir /mnt/encrypted_assets/lib 0550 root 6000
+    mkdir /mnt/encrypted_assets/lib/${ro.product.cpu.abi} 0550 root 6000
+
     # Allow the payload access to the console (default is 0600)
     chmod 0666 /dev/console
     mkdir /dev/socket/microdroid_managed 0777 root root
