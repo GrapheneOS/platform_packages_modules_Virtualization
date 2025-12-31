@@ -18,6 +18,7 @@ package com.android.virtualization.terminal
 import android.content.Context
 import android.system.virtualmachine.VirtualMachine
 import android.util.AttributeSet
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.SurfaceView
@@ -45,6 +46,34 @@ class DisplaySurfaceView(context: Context, attrs: AttributeSet?) : SurfaceView(c
     fun hideSoftInput() {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(windowToken, 0)
+    }
+
+    /**
+     * Sends a synthetic mouse movement event to the VM to force a display refresh. This is useful
+     * when the SurfaceView is recreated and the VM might not update the screen immediately.
+     */
+    fun refreshDisplay() {
+        try {
+            if (::virtualMachine.isInitialized) {
+                val now = android.os.SystemClock.uptimeMillis()
+                val event = MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, 0f, 0f, 0)
+                event.source = InputDevice.SOURCE_MOUSE
+                try {
+                    // Note that sendMouseEvent interprets x, y coordinates in MotionEvent as
+                    // relative offset, because that is the case for mouse capture mode. We make use
+                    // of it here.
+                    virtualMachine.sendMouseEvent(event)
+                    event.setLocation(1f, 0f)
+                    virtualMachine.sendMouseEvent(event)
+                    event.setLocation(0f, 0f)
+                    virtualMachine.sendMouseEvent(event)
+                } finally {
+                    event.recycle()
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore exceptions during refresh attempt
+        }
     }
 
     fun convertAndroidKeyCodeToEvdevScanCode(androidKeyCode: Int): Short {
