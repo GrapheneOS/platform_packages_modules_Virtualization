@@ -342,9 +342,10 @@ fun TerminalScreen(
                             ttydView.enableCtrlKey()
                         }
                     } else {
-                        key.keyCode?.let { code ->
-                            ttydView.dispatchKeyEvent(KeyEvent(action, code))
-                        }
+                        // Many terminal emulators send esc for alt for historical reason. We should
+                        // do the same.
+                        val code = if (key == ExtraKey.ALT) KeyEvent.KEYCODE_ESCAPE else key.keyCode
+                        code?.let { ttydView.dispatchKeyEvent(KeyEvent(action, it)) }
                     }
                 }
             )

@@ -29,6 +29,7 @@ import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -80,7 +81,7 @@ enum class ExtraKey(val label: String, val icon: ImageVector? = null, val keyCod
     END("End", keyCode = KeyEvent.KEYCODE_MOVE_END),
     PGUP("PgUp", keyCode = KeyEvent.KEYCODE_PAGE_UP),
     CTRL("Ctrl"),
-    ALT("Alt", keyCode = KeyEvent.KEYCODE_ESCAPE),
+    ALT("Alt", keyCode = KeyEvent.KEYCODE_ALT_LEFT),
     LEFT("Left", icon = Icons.AutoMirrored.Filled.ArrowBack, keyCode = KeyEvent.KEYCODE_DPAD_LEFT),
     DOWN("Down", icon = Icons.Default.KeyboardArrowDown, keyCode = KeyEvent.KEYCODE_DPAD_DOWN),
     RIGHT(
@@ -104,7 +105,7 @@ enum class ExtraKey(val label: String, val icon: ImageVector? = null, val keyCod
 }
 
 @Composable
-fun ModifierKeys(onKeyAction: (ExtraKey, Int) -> Unit) {
+fun ModifierKeys(onKeyAction: (ExtraKey, action: Int) -> Unit) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val page1Keys =
@@ -188,32 +189,44 @@ fun ModifierKeys(onKeyAction: (ExtraKey, Int) -> Unit) {
         }
 
         // Left Arrow
-        AnimatedVisibility(
+        PagerArrow(
             visible = arrowsVisible && pagerState.currentPage > 0,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Previous Page",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = "Previous Page",
+            alignment = Alignment.CenterStart,
+            modifier = Modifier.padding(start = 4.dp),
+        )
 
         // Right Arrow
-        AnimatedVisibility(
+        PagerArrow(
             visible = arrowsVisible && pagerState.currentPage < pages.size - 1,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Next Page",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Next Page",
+            alignment = Alignment.CenterEnd,
+            modifier = Modifier.padding(end = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.PagerArrow(
+    visible: Boolean,
+    icon: ImageVector,
+    contentDescription: String,
+    alignment: Alignment,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier.align(alignment),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -272,6 +285,13 @@ private fun ModifierKeyButton(
     }
 }
 
+/**
+ * A custom clickable modifier that supports repeating key events while handling swipe gestures.
+ *
+ * This modifier distinguishes between a tap (single key press), a swipe (page navigation), and a
+ * long press (repeating key press). It ensures that swipe gestures on the key area are properly
+ * handled by the parent pager instead of being treated as key presses.
+ */
 fun Modifier.repeatingClickable(
     interactionSource: MutableInteractionSource,
     enabled: Boolean,
@@ -300,7 +320,9 @@ fun Modifier.repeatingClickable(
                 val pressInteraction = PressInteraction.Press(down.position)
                 scope.launch { interactionSource.emit(pressInteraction) }
 
-                val timeout = 150L // Slight delay to detect swipe
+                // Slight delay to detect swipe. We wait a bit to see if the user moves their finger
+                // (indicating a swipe) before deciding it's a tap or long press.
+                val timeout = 150L
 
                 try {
                     withTimeout(timeout) {
