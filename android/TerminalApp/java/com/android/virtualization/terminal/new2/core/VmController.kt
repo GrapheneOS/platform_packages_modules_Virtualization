@@ -21,6 +21,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.SystemProperties
+import android.system.virtualizationcommon.IGuestAgent
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCallback
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -162,6 +163,13 @@ object VmController {
                                     )
                             }
                             guestAgentController?.stop()
+                        }
+
+                        override fun onGuestAgentRegistered(
+                            vm: VirtualMachine,
+                            guestAgent: IGuestAgent,
+                        ) {
+                            Log.d("VmController", "Guest agent ready")
                         }
                     }
 

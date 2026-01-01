@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal
 
 import android.content.Context
+import android.system.virtualizationcommon.IGuestAgent
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCallback
 import android.system.virtualmachine.VirtualMachineConfig
@@ -57,6 +58,10 @@ internal class Runner private constructor(val vm: VirtualMachine, callback: Call
         override fun onStopped(vm: VirtualMachine, reason: Int) {
             Log.d(TAG, "VM stopped. Reason: $reason")
             finishedSuccessfully.complete(true)
+        }
+
+        override fun onGuestAgentRegistered(vm: VirtualMachine, guestAgent: IGuestAgent) {
+            Log.d(TAG, "Guest agent ready")
         }
     }
 

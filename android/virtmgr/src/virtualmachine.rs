@@ -2196,8 +2196,10 @@ impl aidl::IVirtualMachineService for VirtualMachineService {
         let vm = &self.vm_instance;
         let cid = vm.cid;
         info!("VM with CID {cid} has registered guest agent");
-        vm.set_guest_agent(guest_agent);
-        vm.callbacks.notify_guest_agent_registered(cid, guest_agent);
+        let wrapper = GuestAgentWrapper::new(guest_agent);
+        let wrapped_agent = aidl::BnGuestAgent::new_binder(wrapper, BinderFeatures::default());
+        vm.set_guest_agent(&wrapped_agent);
+        vm.callbacks.notify_guest_agent_registered(cid, &wrapped_agent);
         Ok(())
     }
 
@@ -2247,6 +2249,37 @@ impl aidl::IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
 
     fn onKEKCreated(&self, kek: &[u8]) -> binder::Result<()> {
         self.wrapped_kek.onKEKCreated(kek)
+    }
+}
+
+// We need a wrapper for IGuestAgent because of the same reason as IEncryptedStoreKEKWrapper.
+struct GuestAgentWrapper {
+    wrapped: Strong<dyn aidl::IGuestAgent>,
+}
+
+impl GuestAgentWrapper {
+    fn new(agent: &Strong<dyn aidl::IGuestAgent>) -> Self {
+        Self { wrapped: agent.clone() }
+    }
+}
+
+impl Interface for GuestAgentWrapper {}
+
+impl aidl::IGuestAgent for GuestAgentWrapper {
+    fn shutdownAsync(&self) -> binder::Result<()> {
+        self.wrapped.shutdownAsync()
+    }
+
+    fn startDumpVsockServer(&self, args: &[String]) -> binder::Result<i32> {
+        self.wrapped.startDumpVsockServer(args)
+    }
+
+    fn startOrStopTracedRelayService(&self, start: bool) -> binder::Result<()> {
+        self.wrapped.startOrStopTracedRelayService(start)
+    }
+
+    fn trimAsync(&self) -> binder::Result<()> {
+        self.wrapped.trimAsync()
     }
 }
 

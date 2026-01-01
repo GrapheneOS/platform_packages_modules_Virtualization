@@ -23,7 +23,7 @@ pub use android_system_virtualizationcommon::aidl::android::system::virtualizati
     DeathReason::DeathReason,
     ErrorCode::ErrorCode,
     IEncryptedStoreKEK::{BnEncryptedStoreKEK, IEncryptedStoreKEK},
-    IGuestAgent::IGuestAgent,
+    IGuestAgent::{BnGuestAgent, IGuestAgent},
 };
 pub use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     AssignableDevice::AssignableDevice,
