@@ -167,9 +167,12 @@ object VmController {
 
                         override fun onGuestAgentRegistered(
                             vm: VirtualMachine,
-                            guestAgent: IGuestAgent,
+                            _guestAgent: IGuestAgent,
                         ) {
                             Log.d("VmController", "Guest agent ready")
+                            val GUEST_AGENT_PORT = 4000
+                            val binder = vm.connectToVsockServer(GUEST_AGENT_PORT.toLong())
+                            val guestAgent = IGuestAgent.Stub.asInterface(binder.getExtension())
                         }
                     }
 

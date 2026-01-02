@@ -20,9 +20,12 @@ use android_system_virtualizationcommon_non_microdroid::aidl::android::system::v
 use android_system_virtualmachineservice_non_microdroid::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use anyhow::{Context, Result};
 use binder::{BinderFeatures, Interface, Strong};
+use rpcbinder::RpcServer;
 use rpcbinder::RpcSession;
 use std::process::Command;
-use vsock::VMADDR_CID_HOST;
+use vsock::{VMADDR_CID_ANY, VMADDR_CID_HOST};
+
+const GUEST_AGENT_SERVICE_PORT: u32 = 4000;
 
 /// Implementation of `IGuestAgent`
 #[derive(Debug, Default)]
@@ -68,12 +71,11 @@ fn get_vms_rpc_binder() -> Result<Strong<dyn IVirtualMachineService>> {
 fn main() -> Result<()> {
     let service = get_vms_rpc_binder().context("Failed to connect to VirtualizationService")?;
     let guest_agent = GuestAgent::new_binder();
+
+    let (server, _) =
+        RpcServer::new_vsock(guest_agent.as_binder(), VMADDR_CID_ANY, GUEST_AGENT_SERVICE_PORT)?;
     service.registerGuestAgent(&guest_agent).context("Failed to register GuestAgent")?;
-
     println!("linux_vm_manager started and registered");
-
-    // Keep the process alive
-    loop {
-        std::thread::park();
-    }
+    server.join();
+    Ok(())
 }

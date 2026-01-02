@@ -62,6 +62,9 @@ internal class Runner private constructor(val vm: VirtualMachine, callback: Call
 
         override fun onGuestAgentRegistered(vm: VirtualMachine, guestAgent: IGuestAgent) {
             Log.d(TAG, "Guest agent ready")
+            val GUEST_AGENT_PORT = 4000
+            val binder = vm.connectToVsockServer(GUEST_AGENT_PORT.toLong())
+            val guestAgent = IGuestAgent.Stub.asInterface(binder.getExtension())
         }
     }
 
