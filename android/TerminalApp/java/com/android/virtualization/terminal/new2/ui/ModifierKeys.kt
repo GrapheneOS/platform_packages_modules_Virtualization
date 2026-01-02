@@ -80,7 +80,7 @@ enum class ExtraKey(val label: String, val icon: ImageVector? = null, val keyCod
     UP("Up", icon = Icons.Default.KeyboardArrowUp, keyCode = KeyEvent.KEYCODE_DPAD_UP),
     END("End", keyCode = KeyEvent.KEYCODE_MOVE_END),
     PGUP("PgUp", keyCode = KeyEvent.KEYCODE_PAGE_UP),
-    CTRL("Ctrl"),
+    CTRL("Ctrl", keyCode = KeyEvent.KEYCODE_CTRL_LEFT),
     ALT("Alt", keyCode = KeyEvent.KEYCODE_ALT_LEFT),
     LEFT("Left", icon = Icons.AutoMirrored.Filled.ArrowBack, keyCode = KeyEvent.KEYCODE_DPAD_LEFT),
     DOWN("Down", icon = Icons.Default.KeyboardArrowDown, keyCode = KeyEvent.KEYCODE_DPAD_DOWN),
