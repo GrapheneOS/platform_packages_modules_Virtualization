@@ -75,6 +75,8 @@ import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
 import com.android.virtualization.terminal.new2.ui.main.TerminalViewModel
 import kotlinx.coroutines.delay
 
+val TAB_BAR_HEIGHT = 50.dp
+
 @Composable
 fun TerminalTabBar(
     tabs: List<TerminalSession>,
@@ -85,7 +87,10 @@ fun TerminalTabBar(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(TAB_BAR_HEIGHT)
+                .background(MaterialTheme.colorScheme.surface),
     ) {
         key(tabs.size) {
             val selectedTabIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
@@ -337,9 +342,10 @@ fun TerminalScreen(
                             ttydView.enableCtrlKey()
                         }
                     } else {
-                        key.keyCode?.let { code ->
-                            ttydView.dispatchKeyEvent(KeyEvent(action, code))
-                        }
+                        // Many terminal emulators send esc for alt for historical reason. We should
+                        // do the same.
+                        val code = if (key == ExtraKey.ALT) KeyEvent.KEYCODE_ESCAPE else key.keyCode
+                        code?.let { ttydView.dispatchKeyEvent(KeyEvent(action, it)) }
                     }
                 }
             )

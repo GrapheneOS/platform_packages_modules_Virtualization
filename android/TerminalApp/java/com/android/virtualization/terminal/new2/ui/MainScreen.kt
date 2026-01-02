@@ -17,16 +17,13 @@ package com.android.virtualization.terminal.new2.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.provider.Settings
-import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,10 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.BetterBugLauncher
 import com.android.virtualization.terminal.R
@@ -107,41 +100,8 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
 
-    LaunchedEffect(displayState) {
-        val state = displayState
-        val window = activity.window
-        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        if (state is DisplayState.Fullscreen) {
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            window.attributes =
-                window.attributes.apply {
-                    layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
-            insetsController.hide(WindowInsetsCompat.Type.systemBars())
-            insetsController.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            activity.requestedOrientation =
-                if (state.landscape) {
-                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                } else {
-                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                }
-        } else {
-            WindowCompat.setDecorFitsSystemWindows(window, true)
-            window.attributes =
-                window.attributes.apply {
-                    layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
-                }
-            insetsController.show(WindowInsetsCompat.Type.systemBars())
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
-        val padding =
-            if (displayState is DisplayState.Fullscreen) PaddingValues(0.dp) else innerPadding
+        val padding = innerPadding
 
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -177,51 +137,34 @@ fun MainScreen(viewModel: MainViewModel) {
                         val currentDisplayState = displayState
 
                         Column {
-                            if (currentDisplayState !is DisplayState.Fullscreen) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.surface),
-                                ) {
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        TerminalTabBar(
-                                            tabs = tabs,
-                                            selectedTabId =
-                                                if (currentDisplayState == DisplayState.Normal) null
-                                                else selectedTabId,
-                                            onTabSelected = { viewModel.selectTab(it) },
-                                            onTabClosed = { viewModel.closeTab(it) },
-                                            onAddTab = { viewModel.addTab() },
-                                        )
-                                    }
-                                    DisplayController(
-                                        isDisplayActive =
-                                            currentDisplayState == DisplayState.Normal,
-                                        onDisplayToggle = { viewModel.toggleDisplay() },
-                                        onFullscreenToggle = { viewModel.switchToFullscreen() },
-                                        isFullscreen = false,
-                                        onKeyboardToggle = {
-                                            viewModel.setIsImeVisible(!viewModel.isImeVisible.value)
-                                        },
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surface),
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TerminalTabBar(
+                                        tabs = tabs,
+                                        selectedTabId =
+                                            if (currentDisplayState == DisplayState.Normal) null
+                                            else selectedTabId,
+                                        onTabSelected = { viewModel.selectTab(it) },
+                                        onTabClosed = { viewModel.closeTab(it) },
+                                        onAddTab = { viewModel.addTab() },
                                     )
-                                    IconButton(
-                                        onClick = {
-                                            showSettings = true
-                                            viewModel.setIsImeVisible(false)
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Settings,
-                                            contentDescription = "Settings",
-                                        )
+                                }
+                                DisplayController(viewModel = viewModel)
+                                IconButton(
+                                    onClick = {
+                                        showSettings = true
+                                        viewModel.setIsImeVisible(false)
                                     }
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
                                 }
                             }
-                            if (
-                                currentDisplayState == DisplayState.Normal ||
-                                    currentDisplayState is DisplayState.Fullscreen
-                            ) {
+                            if (currentDisplayState == DisplayState.Normal) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     DisplayScreen(viewModel = viewModel)
                                 }
