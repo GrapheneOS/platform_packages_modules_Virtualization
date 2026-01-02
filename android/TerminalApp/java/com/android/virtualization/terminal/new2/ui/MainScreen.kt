@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.android.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,6 +75,8 @@ fun MainScreen(viewModel: MainViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var settingsInitialDestination by remember { mutableStateOf<SettingsDestination?>(null) }
 
+    PermissionChecker(viewModel, snackbarHostState)
+
     LaunchedEffect(viewModel) {
         viewModel.settingsRequest.collect { destination ->
             if (destination != null) {
@@ -87,7 +89,10 @@ fun MainScreen(viewModel: MainViewModel) {
     LaunchedEffect(uiState) {
         val state = uiState
         when (state) {
-            is MainUiState.Ready -> viewModel.startVm()
+            is MainUiState.Ready -> {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                viewModel.startVm()
+            }
             is MainUiState.Stopped -> activity.finish()
             is MainUiState.NotInstalled,
             is MainUiState.Checking,
