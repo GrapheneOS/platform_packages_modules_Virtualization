@@ -23,6 +23,7 @@ pub use android_system_virtualizationcommon::aidl::android::system::virtualizati
     DeathReason::DeathReason,
     ErrorCode::ErrorCode,
     IEncryptedStoreKEK::{BnEncryptedStoreKEK, IEncryptedStoreKEK},
+    IGuestAgent::{BnGuestAgent, IGuestAgent},
 };
 pub use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
     AssignableDevice::AssignableDevice,
@@ -45,7 +46,6 @@ pub use android_system_virtualizationservice::aidl::android::system::virtualizat
     VirtualMachineState::VirtualMachineState,
 };
 pub use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::{
-    IGuestAgent::IGuestAgent,
     IVirtualMachineService::{BnVirtualMachineService, IVirtualMachineService},
 };
 pub use android_system_virtualizationservice_internal::aidl::android::system::virtualizationservice_internal::IVirtualizationServiceInternal::IVirtualizationServiceInternal;

@@ -15,6 +15,7 @@
  */
 package android.system.virtualizationservice;
 
+import android.system.virtualizationcommon.IGuestAgent;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.VirtualMachineDebugInfo;
 import android.system.virtualizationservice.VirtualMachineState;
@@ -99,4 +100,7 @@ interface IVirtualMachine {
      * ARM_SMCCC_MEM_RELIQUINSH hypercall.
      */
     void removeMemoryFromGuest(int memory_id);
+
+    /** Returns guest agent */
+    @nullable IGuestAgent getGuestAgent();
 }

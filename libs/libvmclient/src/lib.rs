@@ -25,6 +25,7 @@ pub use crate::errors::VmWaitError;
 use crate::sync::Monitor;
 use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::{
     DeathReason::DeathReason as AidlDeathReason, ErrorCode::ErrorCode as AidlErrorCode,
+    IGuestAgent::IGuestAgent,
 };
 use android_system_virtualizationservice::{
     aidl::android::system::virtualizationservice::{
@@ -495,6 +496,15 @@ impl IVirtualMachineCallback for VirtualMachineCallback {
         if let Some(ref callback) = self.client_callback {
             callback.on_died(cid, reason);
         }
+        Ok(())
+    }
+
+    fn onGuestAgentRegistered(
+        &self,
+        _cid: i32,
+        _guest_agent: &Strong<dyn IGuestAgent>,
+    ) -> BinderResult<()> {
+        // Nothing to do.. for now.
         Ok(())
     }
 }

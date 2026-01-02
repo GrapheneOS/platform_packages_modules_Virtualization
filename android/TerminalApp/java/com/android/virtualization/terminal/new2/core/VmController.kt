@@ -21,6 +21,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.SystemProperties
+import android.system.virtualizationcommon.IGuestAgent
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCallback
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -164,6 +165,16 @@ object VmController {
                                     )
                             }
                             guestAgentController?.stop()
+                        }
+
+                        override fun onGuestAgentRegistered(
+                            vm: VirtualMachine,
+                            _guestAgent: IGuestAgent,
+                        ) {
+                            Log.d("VmController", "Guest agent ready")
+                            val GUEST_AGENT_PORT = 4000
+                            val binder = vm.connectToVsockServer(GUEST_AGENT_PORT.toLong())
+                            val guestAgent = IGuestAgent.Stub.asInterface(binder.getExtension())
                         }
                     }
 

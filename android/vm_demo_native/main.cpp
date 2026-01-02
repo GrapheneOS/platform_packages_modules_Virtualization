@@ -59,6 +59,7 @@ using ndk::SpAIBinder;
 
 using aidl::android::system::virtualizationcommon::DeathReason;
 using aidl::android::system::virtualizationcommon::ErrorCode;
+using aidl::android::system::virtualizationcommon::IGuestAgent;
 using aidl::android::system::virtualizationservice::BnVirtualMachineCallback;
 using aidl::android::system::virtualizationservice::IVirtualizationService;
 using aidl::android::system::virtualizationservice::IVirtualMachine;
@@ -478,6 +479,10 @@ public:
     ScopedAStatus onDied(int32_t, DeathReason) {
         std::unique_lock lock(mMutex);
         mCv.notify_all();
+        return ScopedAStatus::ok();
+    }
+
+    ScopedAStatus onGuestAgentRegistered(int32_t, const std::shared_ptr<IGuestAgent>&) {
         return ScopedAStatus::ok();
     }
 
