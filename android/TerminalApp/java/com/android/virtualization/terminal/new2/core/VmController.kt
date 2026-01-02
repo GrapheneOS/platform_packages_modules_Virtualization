@@ -35,6 +35,7 @@ import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
+import com.android.virtualization.terminal.Logger
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import java.nio.file.Files
@@ -133,6 +134,7 @@ object VmController {
 
                 val vm = vmm.create(vmName, config)
                 virtualMachine = vm
+                Logger.setup(context, vm, Executors.newSingleThreadExecutor())
 
                 val callback =
                     object : VirtualMachineCallback {
