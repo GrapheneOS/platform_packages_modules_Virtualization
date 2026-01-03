@@ -10,6 +10,7 @@ rust_binary_host {
     prefer_rlib: true,
     rustlibs: [
         "android.system.virtualmachineservice_non_microdroid-rust",
+        "android.system.virtualizationcommon_non_microdroid-rust",
         "libanyhow",
         "libbinder_rs",
         "liblog_rust",

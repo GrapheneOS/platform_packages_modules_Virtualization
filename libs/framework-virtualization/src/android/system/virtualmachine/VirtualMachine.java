@@ -68,6 +68,7 @@ import android.system.OsConstants;
 import android.system.virtualizationcommon.DeathReason;
 import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationcommon.IEncryptedStoreKEK;
+import android.system.virtualizationcommon.IGuestAgent;
 import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.IVirtualizationService;
@@ -111,9 +112,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Objects;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -2192,6 +2193,21 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
 
+    /** @hide */
+    @Nullable
+    public IGuestAgent getGuestAgent() throws VirtualMachineException {
+        synchronized (mLock) {
+            try {
+                if (mVirtualMachine != null) {
+                    return mVirtualMachine.getGuestAgent();
+                }
+            } catch (RemoteException e) {
+                Log.d(TAG, "Failed to get guest agent");
+            }
+        }
+        return null;
+    }
+
     /**
      * Connect to a VM's binder service via vsock and return the root IBinder object. Guest VMs are
      * expected to set up vsock servers in their payload. After the host app receives the {@link
@@ -2709,6 +2725,11 @@ public class VirtualMachine implements AutoCloseable {
                         vm.handleStopped(translatedReason, cid);
                         cb.onStopped(vm, reason);
                     });
+        }
+
+        @Override
+        public void onGuestAgentRegistered(int cid, IGuestAgent guestAgent) {
+            executeCallback((cb, vm) -> cb.onGuestAgentRegistered(vm, guestAgent));
         }
 
         @VirtualMachineCallback.ErrorCode

@@ -21,6 +21,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.SystemProperties
+import android.system.virtualizationcommon.IGuestAgent
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCallback
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -35,6 +36,7 @@ import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
+import com.android.virtualization.terminal.Logger
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import java.nio.file.Files
@@ -133,6 +135,7 @@ object VmController {
 
                 val vm = vmm.create(vmName, config)
                 virtualMachine = vm
+                Logger.setup(context, vm, Executors.newSingleThreadExecutor())
 
                 val callback =
                     object : VirtualMachineCallback {
@@ -162,6 +165,16 @@ object VmController {
                                     )
                             }
                             guestAgentController?.stop()
+                        }
+
+                        override fun onGuestAgentRegistered(
+                            vm: VirtualMachine,
+                            _guestAgent: IGuestAgent,
+                        ) {
+                            Log.d("VmController", "Guest agent ready")
+                            val GUEST_AGENT_PORT = 4000
+                            val binder = vm.connectToVsockServer(GUEST_AGENT_PORT.toLong())
+                            val guestAgent = IGuestAgent.Stub.asInterface(binder.getExtension())
                         }
                     }
 

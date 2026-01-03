@@ -95,6 +95,9 @@ internal class DisplayProvider(
                 // TODO: don't consume exceptions here too
                 Log.e(TAG, "Failed to configure surface $surfaceKind", e)
             }
+            if (surfaceKind == SurfaceKind.MAIN && mainView is DisplaySurfaceView) {
+                mainView.refreshDisplay()
+            }
         }
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {

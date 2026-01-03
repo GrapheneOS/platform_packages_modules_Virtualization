@@ -804,13 +804,12 @@ mod tests {
             util::open_dir(system_path_buf.as_path()).expect("Problem opening system dir");
         // Mock paths to avoid filesystem errors
         let paths_ctx = mock_paths::root_rebase_context();
-        let mut temp_pathbuf = temp_dir.path().to_path_buf();
-        paths_ctx.expect().withf(|system_dir| system_dir == "/system").return_once(
-            move |sys_dir| {
-                temp_pathbuf.push(pop_first_char(sys_dir));
-                temp_pathbuf
-            },
-        );
+        let temp_pathbuf = temp_dir.path().to_path_buf();
+        paths_ctx.expect().returning(move |sys_dir| {
+            let mut rebased_dir = temp_pathbuf.clone();
+            rebased_dir.push(pop_first_char(sys_dir));
+            rebased_dir
+        });
         let parcel_fds = vec![
             new_ro_parcel_fd(temp_path, "ro_file with verity".to_owned(), true),
             new_ro_parcel_fd(temp_path, "ro file w/o verity".to_owned(), false),
@@ -872,7 +871,8 @@ mod tests {
                 *guard = Some(fserver_config);
                 Ok(mock_fd_server)
             });
-        let mock_guard = MockLazyServiceGuard::default();
+        let mut mock_guard = MockLazyServiceGuard::default();
+        mock_guard.expect_drop().once().return_once(|| ());
         let mock_guard_new_context = MockLazyServiceGuard::new_context();
         mock_guard_new_context.expect().return_once(move || mock_guard);
         let mut mock_instance_manager = MockIInstanceManager::new();

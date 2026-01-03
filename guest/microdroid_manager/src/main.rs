@@ -33,6 +33,7 @@ use android_system_virtualizationcommon::aidl::android::system::virtualizationco
     ErrorCode::ErrorCode,
     Atom::Atom,
     Atom::StaleEncryptedstoreDetected::StaleEncryptedstoreDetected,
+    IGuestAgent::BnGuestAgent, IGuestAgent::IGuestAgent,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use android_system_virtualization_internal::aidl::android::system::virtualization::internal::IVmInternalService::{
@@ -43,9 +44,6 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
     VM_APK_CONTENTS_PATH,
     VM_PAYLOAD_SERVICE_SOCKET_NAME,
     ENCRYPTEDSTORE_MOUNTPOINT,
-};
-use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IGuestAgent::{
-    BnGuestAgent, IGuestAgent,
 };
 
 use crate::cgroup_monitor::start_cgroup_monitor;

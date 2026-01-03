@@ -21,7 +21,7 @@ import android.system.virtualizationcommon.Atom;
 import android.system.virtualizationcommon.Certificate;
 import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationcommon.IEncryptedStoreKEK;
-import android.system.virtualmachineservice.IGuestAgent;
+import android.system.virtualizationcommon.IGuestAgent;
 
 /** @hide */
 interface IVirtualMachineService {

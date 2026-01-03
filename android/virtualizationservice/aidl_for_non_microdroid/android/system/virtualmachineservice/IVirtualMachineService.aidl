@@ -15,7 +15,7 @@
  */
 package android.system.virtualmachineservice;
 
-import android.system.virtualmachineservice.IGuestAgent;
+import android.system.virtualizationcommon.IGuestAgent;
 
 /**
  * Reduced version of virtualmachineservice/IVirtualMachineService.aidl for non-microdroid target

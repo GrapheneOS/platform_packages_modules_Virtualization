@@ -18,10 +18,14 @@ package com.android.virtualization.terminal.new2.ui.main
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.util.DisplayMetrics
+import android.view.Display
+import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.DisplayInfo
@@ -32,6 +36,7 @@ import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.core.VmState
 import com.android.virtualization.terminal.new2.ui.MainActivity
 import com.android.virtualization.terminal.new2.ui.SettingsDestination
+import com.android.virtualization.terminal.new2.ui.TAB_BAR_HEIGHT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,8 +82,6 @@ sealed interface DisplayState {
 
     data object Normal : DisplayState
 
-    data class Fullscreen(val landscape: Boolean, val controller: Boolean) : DisplayState
-
     data object Minimized : DisplayState
 }
 
@@ -96,6 +99,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isImeVisible = MutableStateFlow(false)
     val isImeVisible: StateFlow<Boolean> = _isImeVisible.asStateFlow()
+
+    private val _isPanZoomMode = MutableStateFlow(false)
+    val isPanZoomMode: StateFlow<Boolean> = _isPanZoomMode.asStateFlow()
+
+    private val _isMouseLocked = MutableStateFlow(false)
+    val isMouseLocked: StateFlow<Boolean> = _isMouseLocked.asStateFlow()
 
     private val _hasBackup = MutableStateFlow(false)
     val hasBackup: StateFlow<Boolean> = _hasBackup.asStateFlow()
@@ -118,19 +127,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    fun switchToFullscreen() {
-        val context = getApplication<Application>()
-        val displayInfo = getDisplayInfo(context)
-        val landscape = displayInfo.width > displayInfo.height
-        _displayState.value = DisplayState.Fullscreen(landscape, controller = true)
-    }
-
-    fun exitFullscreen() {
-        _displayState.value = DisplayState.Normal
-    }
-
     fun setIsImeVisible(visible: Boolean) {
         _isImeVisible.value = visible
+    }
+
+    fun setPanZoomMode(enabled: Boolean) {
+        _isPanZoomMode.value = enabled
+    }
+
+    fun setMouseLocked(locked: Boolean) {
+        _isMouseLocked.value = locked
     }
 
     private val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
@@ -293,13 +299,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun getDisplayInfo(context: Context): DisplayInfo {
-        val wm = context.getSystemService(WindowManager::class.java)
-        // For now, display size is fixed.(1280x720)
-        val width = 1280
-        val height = 720
-        val dpi =
-            (DisplayMetrics.DENSITY_DEFAULT * context.resources.displayMetrics.density).toInt()
-        val refreshRate = 60 // Simple default
+        val dm = context.getSystemService(DisplayManager::class.java)
+        val display = dm.getDisplay(Display.DEFAULT_DISPLAY)
+        val windowContext =
+            context.createDisplayContext(display).createWindowContext(TYPE_APPLICATION, null)
+        val wm = windowContext.getSystemService(WindowManager::class.java)
+        val metrics = wm.currentWindowMetrics
+        val insets = metrics.windowInsets.getInsets(WindowInsets.Type.systemBars())
+
+        var width = metrics.bounds.width() - insets.left - insets.right
+        val density = context.resources.displayMetrics.density
+        var height =
+            metrics.bounds.height() -
+                insets.top -
+                insets.bottom -
+                (TAB_BAR_HEIGHT.value * density).toInt()
+
+        val maxDim = 1280
+        if (width > maxDim || height > maxDim) {
+            if (width > height) {
+                height = (height * maxDim.toFloat() / width).toInt()
+                width = maxDim
+            } else {
+                width = (width * maxDim.toFloat() / height).toInt()
+                height = maxDim
+            }
+        }
+
+        val dpi = (DisplayMetrics.DENSITY_DEFAULT * density).toInt()
+        val refreshRate = display.refreshRate.toInt()
         return DisplayInfo(width, height, dpi, refreshRate)
     }
 }
