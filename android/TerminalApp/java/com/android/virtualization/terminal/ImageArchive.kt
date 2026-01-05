@@ -102,16 +102,30 @@ internal class ImageArchive {
         }
     }
 
+    /**
+     * Returns an input stream for reading the archive, starting from the specified [offset]. If the
+     * source is a URL, it uses the HTTP "Range" header to request the data. If the source is a
+     * local file, it skips to the specified offset.
+     */
     @Throws(IOException::class)
-    private fun getInputStream(filter: Function<InputStream, InputStream>?): InputStream? {
-        val bufStream =
-            BufferedInputStream(
-                when (source) {
-                    is UrlSource -> source.value.openStream()
-                    is PathSource -> FileInputStream(source.value.toFile())
+    internal fun getInputStream(offset: Long = 0L): InputStream {
+        check(exists()) { "Cannot get input stream of non existing archive" }
+        return when (source) {
+            is UrlSource -> {
+                val conn = source.value.openConnection() as HttpURLConnection
+                if (offset > 0) {
+                    conn.setRequestProperty("Range", "bytes=$offset-")
                 }
-            )
-        return filter?.apply(bufStream) ?: bufStream
+                conn.inputStream
+            }
+            is PathSource -> {
+                val stream = FileInputStream(source.value.toFile())
+                if (offset > 0) {
+                    stream.skip(offset)
+                }
+                stream
+            }
+        }
     }
 
     /**
