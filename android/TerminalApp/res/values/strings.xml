@@ -17,8 +17,19 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 
+    <!-- ================================================================= -->
+    <!-- App & Common                                                      -->
+    <!-- ================================================================= -->
+
     <!-- Application name of this terminal app shown in the launcher. This app provides computer terminal to connect to virtual machine. [CHAR LIMIT=16] -->
     <string name="app_name">Terminal</string>
+    <!-- Action bar icon name for the settings view CHAR LIMIT=none] -->
+    <string name="action_settings">Settings</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Terminal View                                                     -->
+    <!-- ================================================================= -->
 
     <!-- Description of the entire terminal display showing texts. This is read by talkback. [CHAR LIMIT=none] -->
     <string name="terminal_display">Terminal display</string>
@@ -28,6 +39,19 @@
     <string name="empty_line">Empty line</string>
     <!-- Description of the hint supported by the terminal UI elements. This is read by talkback. [CHAR LIMIT=none] -->
     <string name="double_tap_to_edit_text">Double-tap to type input</string>
+    <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
+    <string name="tab_default_title">Tab</string>
+    <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
+    <string name="ttyd_connection_error">Session is lost due to an internal error.</string>
+    <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
+    <string name="vm_creation_message">Preparing terminal</string>
+    <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
+    <string name="vm_error_message">Terminal crashed</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Installer                                                         -->
+    <!-- ================================================================= -->
 
     <!-- Installer activity title [CHAR LIMIT=none] -->
     <string name="installer_title_text">Install Linux terminal</string>
@@ -50,13 +74,32 @@
     <!-- Toast error message for install failure due to the unidentified issue [CHAR LIMIT=none] -->
     <string name="installer_error_unknown">Failed to install. Please try again</string>
 
-    <!-- Action bar icon name for the settings view CHAR LIMIT=none] -->
-    <string name="action_settings">Settings</string>
 
-    <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
-    <string name="vm_creation_message">Preparing terminal</string>
-    <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
-    <string name="vm_error_message">Terminal crashed</string>
+    <!-- ================================================================= -->
+    <!-- Service & Notifications                                           -->
+    <!-- ================================================================= -->
+
+    <!-- Notification action button for settings [CHAR LIMIT=20] -->
+    <string name="service_notification_settings">Settings</string>
+    <!-- Notification title for foreground service notification [CHAR LIMIT=none] -->
+    <string name="service_notification_title">Terminal is running</string>
+    <!-- Notification content for foreground service notification [CHAR LIMIT=none] -->
+    <string name="service_notification_content">Click to open terminal</string>
+    <!-- Notification action button for closing the virtual machine [CHAR LIMIT=20] -->
+    <string name="service_notification_quit_action">Close</string>
+    <!-- Notification title for foreground service notification during closing [CHAR LIMIT=none] -->
+    <string name="service_notification_close_title">Terminal is closing</string>
+    <!-- Notification action button for force-closing the virtual machine [CHAR LIMIT=30] -->
+    <string name="service_notification_force_quit_action">Force close</string>
+    <!-- This is the name of the notification channel for long-runnint tasks [CHAR LIMIT=none] -->
+    <string name="notification_channel_long_running_name">Long running tasks</string>
+    <!-- This is the name of the notification channel for system events [CHAR LIMIT=none] -->
+    <string name="notification_channel_system_events_name">System events</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Settings - Disk Resize                                            -->
+    <!-- ================================================================= -->
 
     <!-- Settings memu title for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_title">Disk resize</string>
@@ -77,6 +120,11 @@
     <!-- Dialog confirmation button for restarting the terminal [CHAR LIMIT=16] -->
     <string name="settings_disk_resize_resize_confirm_dialog_confirm">Confirm</string>
 
+
+    <!-- ================================================================= -->
+    <!-- Settings - Port Forwarding                                        -->
+    <!-- ================================================================= -->
+
     <!-- Settings menu title for port forwarding [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_title">Port control</string>
     <!-- Settings menu subtitle for port forwarding [CHAR LIMIT=none] -->
@@ -91,7 +139,6 @@
     <string name="settings_port_forwarding_other_enabled_port_add_button">Add</string>
     <!-- Description of close button for other enabled ports. Used for talkback. [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_other_enabled_port_close_button">Delete <xliff:g id="port_number" example="8000">%d</xliff:g></string>
-
     <!-- Dialog title for enabling a new port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_dialog_title">Allow a new port</string>
     <!-- Dialog hint for enabling a new port [CHAR LIMIT=none] -->
@@ -106,7 +153,6 @@
     <string name="settings_port_forwarding_dialog_error_invalid_port_range">Invalid port number</string>
     <!-- Dialog error message for existing port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_dialog_error_existing_port">Port already exists</string>
-
     <!-- Notification title for a new active port [CHAR LIMIT=none] -->
     <string name="settings_port_forwarding_notification_title">Terminal is requesting to open a new port</string>
     <!-- Notification content for a new active port [CHAR LIMIT=none] -->
@@ -115,6 +161,11 @@
     <string name="settings_port_forwarding_notification_accept">Accept</string>
     <!-- Notification action deny [CHAR LIMIT=16] -->
     <string name="settings_port_forwarding_notification_deny">Deny</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Settings - Recovery                                               -->
+    <!-- ================================================================= -->
 
     <!-- Settings menu title for recoverying image [CHAR LIMIT=none] -->
     <string name="settings_recovery_title">Recovery</string>
@@ -143,46 +194,10 @@
     <!-- Settings menu sub title for removing backup data(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
     <string name="settings_recovery_remove_backup_sub_title">Remove <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
 
-    <!-- Error page that shows error page [CHAR LIMIT=none] -->
-    <string name="error_title">Unrecoverable error</string>
-    <!-- Error page that shows error page [CHAR LIMIT=none] -->
-    <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
-    <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
-    <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
-    <!-- Button at the error activity for bugreport [CHAR LIMIT=16] -->
-    <string name="error_button_report_bug">Report bug</string>
 
-    <!-- Upgrade page's title. Tells users that you'll need to upgrade [CHAR LIMIT=none] -->
-    <string name="upgrade_title">Upgrade to newer terminal</string>
-    <!-- Upgrade page's description. Tell users that can't use as-is, and also explains next step. (/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
-    <string name="upgrade_desc">Linux terminal you were using is out of date. Please upgrade to proceed.\nData will be backed at <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
-    <!-- Upgrade page's button to start upgrade. [CHAR LIMIT=16] -->
-    <string name="upgrade_button">Upgrade</string>
-    <!-- Upgrade page's error toast message when upgrade failed. [CHAR LIMIT=none] -->
-    <string name="upgrade_error">Upgrade failed</string>
-
-    <!-- Notification action button for settings [CHAR LIMIT=20] -->
-    <string name="service_notification_settings">Settings</string>
-    <!-- Notification title for foreground service notification [CHAR LIMIT=none] -->
-    <string name="service_notification_title">Terminal is running</string>
-    <!-- Notification content for foreground service notification [CHAR LIMIT=none] -->
-    <string name="service_notification_content">Click to open terminal</string>
-    <!-- Notification action button for closing the virtual machine [CHAR LIMIT=20] -->
-    <string name="service_notification_quit_action">Close</string>
-
-    <!-- Notification title for foreground service notification during closing [CHAR LIMIT=none] -->
-    <string name="service_notification_close_title">Terminal is closing</string>
-    <!-- Notification action button for force-closing the virtual machine [CHAR LIMIT=30] -->
-    <string name="service_notification_force_quit_action">Force close</string>
-
-    <!-- This is the name of the notification channel for long-runnint tasks [CHAR LIMIT=none] -->
-    <string name="notification_channel_long_running_name">Long running tasks</string>
-
-    <!-- This is the name of the notification channel for system events [CHAR LIMIT=none] -->
-    <string name="notification_channel_system_events_name">System events</string>
-
-    <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
-    <string name="tab_default_title">Tab</string>
+    <!-- ================================================================= -->
+    <!-- Settings - Graphics                                               -->
+    <!-- ================================================================= -->
 
     <!-- Settings menu title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
     <string name="settings_graphics_acceleration_title">Graphics Acceleration</string>
@@ -195,6 +210,31 @@
     <!-- Hardware-based renderer [CHAR LIMIT=none] -->
     <string name="settings_graphics_acceleration_hardware_renderer">GPU-accelerated renderer</string>
 
-    <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
-    <string name="ttyd_connection_error">Session is lost due to an internal error.</string>
+
+    <!-- ================================================================= -->
+    <!-- Error Screen                                                      -->
+    <!-- ================================================================= -->
+
+    <!-- Error page that shows error page [CHAR LIMIT=none] -->
+    <string name="error_title">Unrecoverable error</string>
+    <!-- Error page that shows error page [CHAR LIMIT=none] -->
+    <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
+    <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
+    <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
+    <!-- Button at the error activity for bugreport [CHAR LIMIT=16] -->
+    <string name="error_button_report_bug">Report bug</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Upgrade Screen                                                    -->
+    <!-- ================================================================= -->
+
+    <!-- Upgrade page's title. Tells users that you'll need to upgrade [CHAR LIMIT=none] -->
+    <string name="upgrade_title">Upgrade to newer terminal</string>
+    <!-- Upgrade page's description. Tell users that can't use as-is, and also explains next step. (/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
+    <string name="upgrade_desc">Linux terminal you were using is out of date. Please upgrade to proceed.\nData will be backed at <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <!-- Upgrade page's button to start upgrade. [CHAR LIMIT=16] -->
+    <string name="upgrade_button">Upgrade</string>
+    <!-- Upgrade page's error toast message when upgrade failed. [CHAR LIMIT=none] -->
+    <string name="upgrade_error">Upgrade failed</string>
 </resources>
