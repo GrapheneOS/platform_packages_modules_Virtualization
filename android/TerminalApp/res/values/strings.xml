@@ -28,25 +28,15 @@
 
 
     <!-- ================================================================= -->
-    <!-- Terminal View                                                     -->
+    <!-- Permissions                                                       -->
     <!-- ================================================================= -->
 
-    <!-- Description of the entire terminal display showing texts. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="terminal_hint_display">Terminal display</string>
-    <!-- Description of the edit box accepting user input. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="terminal_hint_input">Cursor</string>
-    <!-- Description of an empty line in the terminal. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="terminal_hint_empty_line">Empty line</string>
-    <!-- Description of the hint supported by the terminal UI elements. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="terminal_hint_double_tap_to_edit">Double-tap to type input</string>
-    <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
-    <string name="terminal_tab_title_default">Tab</string>
-    <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
-    <string name="terminal_toast_connection_error">Session is lost due to an internal error.</string>
-    <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
-    <string name="terminal_message_vm_creation">Preparing terminal</string>
-    <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
-    <string name="terminal_message_vm_error">Terminal crashed</string>
+    <!-- Title of the dialog explaining why permissions are needed. [CHAR LIMIT=none] -->
+    <string name="permission_dlg_title_required">Permission Required</string>
+    <!-- Message explaining required permissions. [CHAR LIMIT=none] -->
+    <string name="permission_dlg_message_required">Terminal requires the following permissions to function correctly: <xliff:g id="permission_list" example="Notification, Local Network">%s</xliff:g></string>
+    <!-- Message shown when mandatory permissions are missing. [CHAR LIMIT=none] -->
+    <string name="permission_snkbar_message_missing">The following permissions are missing. Please grant them in Settings: <xliff:g id="permission_list" example="Notification, Local Network">%s</xliff:g></string>
 
 
     <!-- ================================================================= -->
@@ -69,6 +59,78 @@
     <string name="installer_snkbar_error_no_wifi">Failed to install because Wi-Fi is not available</string>
     <!-- Toast error message for install failure due to the unidentified issue [CHAR LIMIT=none] -->
     <string name="installer_snkbar_error_unknown">Failed to install. Please try again</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Terminal View                                                     -->
+    <!-- ================================================================= -->
+
+    <!-- Description of the entire terminal display showing texts. This is read by talkback. [CHAR LIMIT=none] -->
+    <string name="terminal_hint_display">Terminal display</string>
+    <!-- Description of the edit box accepting user input. This is read by talkback. [CHAR LIMIT=none] -->
+    <string name="terminal_hint_input">Cursor</string>
+    <!-- Description of an empty line in the terminal. This is read by talkback. [CHAR LIMIT=none] -->
+    <string name="terminal_hint_empty_line">Empty line</string>
+    <!-- Description of the hint supported by the terminal UI elements. This is read by talkback. [CHAR LIMIT=none] -->
+    <string name="terminal_hint_double_tap_to_edit">Double-tap to type input</string>
+    <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
+    <string name="terminal_tab_title_default">Tab</string>
+    <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
+    <string name="terminal_toast_connection_error">Session is lost due to an internal error.</string>
+    <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
+    <string name="terminal_message_vm_creation">Preparing terminal</string>
+    <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
+    <string name="terminal_message_vm_error">Terminal crashed</string>
+    <!-- Message shown while connecting to the terminal service. [CHAR LIMIT=none] -->
+    <string name="terminal_message_connecting">Connecting to terminal...</string>
+    <!-- Message shown when the terminal session is disconnected. [CHAR LIMIT=none] -->
+    <string name="terminal_message_disconnected">Terminal disconnected.</string>
+    <!-- Message shown while initializing the terminal view. [CHAR LIMIT=none] -->
+    <string name="terminal_message_initializing">Initializing terminal...</string>
+    <!-- Content description for the close button on a terminal tab. [CHAR LIMIT=16] -->
+    <string name="terminal_hint_btn_close_tab">Close tab</string>
+    <!-- Content description for the add tab button. [CHAR LIMIT=16] -->
+    <string name="terminal_hint_btn_add_tab">Add tab</string>
+    <!-- Title of the confirmation dialog when closing a tab. [CHAR LIMIT=none] -->
+    <string name="terminal_dlg_title_close_tab">Close Tab?</string>
+    <!-- Message of the confirmation dialog when closing a tab. [CHAR LIMIT=none] -->
+    <string name="terminal_dlg_message_close_tab">Are you sure you want to close this tab?</string>
+    <!-- Button text to confirm closing a tab. [CHAR LIMIT=16] -->
+    <string name="terminal_dlg_btn_close">Close</string>
+    <!-- Content description for the settings button in the terminal screen. [CHAR LIMIT=20] -->
+    <string name="terminal_hint_btn_settings">Settings</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Display Control                                                   -->
+    <!-- ================================================================= -->
+
+    <!-- Content description for the button to exit zoom/pan mode. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_exit_zoom">Exit Zoom/Pan Mode</string>
+    <!-- Content description for the button to enter zoom/pan mode. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_enter_zoom">Enter Zoom/Pan Mode</string>
+    <!-- Content description for the button to hide the keyboard. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_hide_keyboard">Hide Keyboard</string>
+    <!-- Content description for the button to show the keyboard. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_show_keyboard">Show Keyboard</string>
+    <!-- Content description for the button to release mouse capture. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_release_mouse">Release Mouse</string>
+    <!-- Content description for the button to lock mouse capture. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_lock_mouse">Lock Mouse</string>
+    <!-- Content description for the button to close display controls. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_close">Close display controls</string>
+    <!-- Content description for the button to open display options. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_options">Display options</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Modifier Keys                                                     -->
+    <!-- ================================================================= -->
+
+    <!-- Content description for the previous page arrow in modifier keys. [CHAR LIMIT=16] -->
+    <string name="modifierkeys_hint_prev_page">Previous Page</string>
+    <!-- Content description for the next page arrow in modifier keys. [CHAR LIMIT=16] -->
+    <string name="modifierkeys_hint_next_page">Next Page</string>
 
 
     <!-- ================================================================= -->
@@ -105,6 +167,21 @@
     <string name="notif_port_action_accept">Accept</string>
     <!-- Notification action deny [CHAR LIMIT=16] -->
     <string name="notif_port_action_deny">Deny</string>
+
+    <!-- Action label to retry a failed operation. [CHAR LIMIT=16] -->
+    <string name="notif_btn_retry">Retry</string>
+
+
+    <!-- ================================================================= -->
+    <!-- Settings - Main                                                   -->
+    <!-- ================================================================= -->
+
+    <!-- Title for the settings screen. [CHAR LIMIT=none] -->
+    <string name="settings_title">Settings</string>
+    <!-- Content description for the back button in settings. [CHAR LIMIT=16] -->
+    <string name="settings_btn_back_desc">Back</string>
+    <!-- Placeholder text when no setting is selected in the detail pane. [CHAR LIMIT=none] -->
+    <string name="settings_placeholder_select">Select a setting</string>
 
 
     <!-- ================================================================= -->
@@ -163,6 +240,8 @@
     <string name="settings_port_dlg_error_invalid_range">Invalid port number</string>
     <!-- Dialog error message for existing port [CHAR LIMIT=none] -->
     <string name="settings_port_dlg_error_existing">Port already exists</string>
+    <!-- Message displayed when there are no active listening ports. [CHAR LIMIT=none] -->
+    <string name="settings_port_message_empty">No port is opened</string>
 
 
     <!-- ================================================================= -->
@@ -185,6 +264,10 @@
     <string name="settings_recovery_dlg_btn_cancel">Cancel</string>
     <!-- Dialog option to back up previous image(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
     <string name="settings_recovery_dlg_option_backup">Back up data to <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <!-- Title of the confirmation dialog to remove backup data. [CHAR LIMIT=none] -->
+    <string name="settings_recovery_dlg_title_remove_backup">Remove backup data</string>
+    <!-- Message of the confirmation dialog to remove backup data. [CHAR LIMIT=none] -->
+    <string name="settings_recovery_dlg_message_remove_backup">Remove <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
     <!-- Snankbar to indicate recovery error due to backup [CHAR LIMIT=none] -->
     <string name="settings_recovery_snkbar_error_backup">Failed to recover due to a backup error</string>
     <!-- Snankbar to indicate recovery error [CHAR LIMIT=none] -->
@@ -195,6 +278,13 @@
     <string name="settings_recovery_title_remove_backup">Remove backup data</string>
     <!-- Settings menu sub title for removing backup data(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
     <string name="settings_recovery_subtitle_remove_backup">Remove <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+
+    <!-- Title of the confirmation dialog before resetting. [CHAR LIMIT=none] -->
+    <string name="settings_recovery_dlg_title_reset_confirm">Reset Terminal?</string>
+    <!-- Message asking for confirmation to reset the terminal. [CHAR LIMIT=none] -->
+    <string name="settings_recovery_dlg_message_reset_confirm">Are you sure you want to reset Terminal to its initial version?</string>
+    <!-- Warning about re-downloading the image after reset. [CHAR LIMIT=none] -->
+    <string name="settings_recovery_dlg_message_reset_warning">You will have to download the Terminal image again.</string>
 
 
     <!-- ================================================================= -->
@@ -211,6 +301,15 @@
     <string name="settings_graphics_renderer_software">Software renderer</string>
     <!-- Hardware-based renderer [CHAR LIMIT=none] -->
     <string name="settings_graphics_renderer_gpu">GPU-accelerated renderer</string>
+
+    <!-- Title for the restart confirmation dialog. [CHAR LIMIT=none] -->
+    <string name="settings_graphics_dlg_title_restart">Restart Required</string>
+    <!-- Message explaining why a restart is needed. [CHAR LIMIT=none] -->
+    <string name="settings_graphics_dlg_message_restart">To apply, terminal must be restarted.</string>
+    <!-- Button to restart the terminal immediately. [CHAR LIMIT=20] -->
+    <string name="settings_graphics_dlg_btn_restart">Restart Now</string>
+    <!-- Button to postpone the restart. [CHAR LIMIT=20] -->
+    <string name="settings_graphics_dlg_btn_later">Later</string>
 
 
     <!-- ================================================================= -->

@@ -35,9 +35,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,14 +51,14 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         ListItem(
-            headlineContent = { Text("Reset to initial version") },
+            headlineContent = { Text(stringResource(R.string.settings_recovery_title_reset)) },
             modifier = Modifier.fillMaxWidth().clickable { showResetConfirmationDialog = true },
         )
         HorizontalDivider()
 
         if (hasBackup) {
             ListItem(
-                headlineContent = { Text("Remove backup data") },
+                headlineContent = { Text(stringResource(R.string.settings_recovery_title_remove_backup)) },
                 modifier = Modifier.fillMaxWidth().clickable { showRemoveBackupDialog = true },
             )
             HorizontalDivider()
@@ -67,11 +69,11 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
         var backupDataChecked by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showResetConfirmationDialog = false },
-            title = { Text("Reset Terminal?") },
+            title = { Text(stringResource(R.string.settings_recovery_dlg_title_reset_confirm)) },
             text = {
                 Column {
-                    Text("Are you sure you want to reset Terminal to its initial version?")
-                    Text("You will have to download the Terminal image again.")
+                    Text(stringResource(R.string.settings_recovery_dlg_message_reset_confirm))
+                    Text(stringResource(R.string.settings_recovery_dlg_message_reset_warning))
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -81,7 +83,7 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
                             onCheckedChange = { backupDataChecked = it },
                         )
                         Text(
-                            text = "Backup data to /mnt/backup",
+                            text = stringResource(R.string.settings_recovery_dlg_option_backup),
                             modifier = Modifier.clickable { backupDataChecked = !backupDataChecked },
                         )
                     }
@@ -94,11 +96,11 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
                         showResetConfirmationDialog = false
                     }
                 ) {
-                    Text("Reset")
+                    Text(stringResource(R.string.settings_recovery_dlg_btn_reset))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirmationDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showResetConfirmationDialog = false }) { Text(stringResource(android.R.string.cancel)) }
             },
         )
     }
@@ -106,8 +108,8 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
     if (showRemoveBackupDialog) {
         AlertDialog(
             onDismissRequest = { showRemoveBackupDialog = false },
-            title = { Text("Remove backup data") },
-            text = { Text("Remove /mnt/backup") },
+            title = { Text(stringResource(R.string.settings_recovery_dlg_title_remove_backup)) },
+            text = { Text(stringResource(R.string.settings_recovery_dlg_message_remove_backup)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -115,11 +117,11 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
                         showRemoveBackupDialog = false
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveBackupDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRemoveBackupDialog = false }) { Text(stringResource(android.R.string.cancel)) }
             },
         )
     }

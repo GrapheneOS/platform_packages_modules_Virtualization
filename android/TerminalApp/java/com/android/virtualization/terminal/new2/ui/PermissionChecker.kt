@@ -37,7 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.launch
@@ -82,8 +84,8 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
                     val result =
                         snackbarHostState.showSnackbar(
                             message =
-                                "The following permissions are missing. Please grant them in Settings: $deniedLabels",
-                            actionLabel = "Settings",
+                                context.getString(R.string.permission_snkbar_message_missing, deniedLabels),
+                            actionLabel = context.getString(R.string.action_settings),
                             duration = SnackbarDuration.Long,
                         )
                     if (result == SnackbarResult.ActionPerformed) {
@@ -119,10 +121,10 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
                 showPermissionRationale = false
                 viewModel.onPermissionDenied()
             },
-            title = { Text("Permission Required") },
+            title = { Text(stringResource(R.string.permission_dlg_title_required)) },
             text = {
                 Text(
-                    "Terminal requires the following permissions to function correctly: $permissionLabels"
+                    stringResource(R.string.permission_dlg_message_required, permissionLabels)
                 )
             },
             confirmButton = {
@@ -132,7 +134,7 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
                         permissionLauncher.launch(PERMISSIONS)
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(android.R.string.ok))
                 }
             },
         )

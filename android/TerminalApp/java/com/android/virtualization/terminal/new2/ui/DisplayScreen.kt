@@ -85,6 +85,7 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -92,6 +93,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.DisplayProvider
 import com.android.virtualization.terminal.DisplaySurfaceView
 import com.android.virtualization.terminal.InputForwarder
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
@@ -254,24 +256,24 @@ fun DisplayController(viewModel: MainViewModel) {
                         onCheckedChange = { viewModel.setPanZoomMode(!isPanZoomMode) },
                         pressedIcon = Icons.Filled.PanTool,
                         unpressedIcon = Icons.Outlined.PanTool,
-                        pressedContentDescription = "Exit Zoom/Pan Mode",
-                        unpressedContentDescription = "Enter Zoom/Pan Mode",
+                        pressedContentDescription = stringResource(R.string.dispctrl_hint_exit_zoom),
+                        unpressedContentDescription = stringResource(R.string.dispctrl_hint_enter_zoom),
                     )
                     DisplayControllerButton(
                         checked = isImeVisible,
                         onCheckedChange = { viewModel.setIsImeVisible(!isImeVisible) },
                         pressedIcon = Icons.Filled.Keyboard,
                         unpressedIcon = Icons.Outlined.Keyboard,
-                        pressedContentDescription = "Hide Keyboard",
-                        unpressedContentDescription = "Show Keyboard",
+                        pressedContentDescription = stringResource(R.string.dispctrl_hint_hide_keyboard),
+                        unpressedContentDescription = stringResource(R.string.dispctrl_hint_show_keyboard),
                     )
                     DisplayControllerButton(
                         checked = isMouseLocked,
                         onCheckedChange = { viewModel.setMouseLocked(!isMouseLocked) },
                         pressedIcon = Icons.Filled.Mouse,
                         unpressedIcon = Icons.Outlined.Mouse,
-                        pressedContentDescription = "Release Mouse",
-                        unpressedContentDescription = "Lock Mouse",
+                        pressedContentDescription = stringResource(R.string.dispctrl_hint_release_mouse),
+                        unpressedContentDescription = stringResource(R.string.dispctrl_hint_lock_mouse),
                     )
                 }
             }
@@ -281,8 +283,8 @@ fun DisplayController(viewModel: MainViewModel) {
                 onCheckedChange = { viewModel.toggleDisplay() },
                 pressedIcon = Icons.Filled.Close,
                 unpressedIcon = Icons.Outlined.Monitor,
-                pressedContentDescription = "Close display controls",
-                unpressedContentDescription = "Display options",
+                pressedContentDescription = stringResource(R.string.dispctrl_hint_close),
+                unpressedContentDescription = stringResource(R.string.dispctrl_hint_options),
             )
         }
     }

@@ -232,7 +232,7 @@ private suspend fun handleError(
                     { activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
                 )
             MainUiState.ErrorHandler.Retry ->
-                Triple(R.string.installer_snkbar_error_unknown, "Retry", { viewModel.retryCheck() })
+                Triple(R.string.installer_snkbar_error_unknown, activity.getString(R.string.notif_btn_retry), { viewModel.retryCheck() })
             is MainUiState.ErrorHandler.ReportBug ->
                 Triple(
                     R.string.terminal_message_vm_error,

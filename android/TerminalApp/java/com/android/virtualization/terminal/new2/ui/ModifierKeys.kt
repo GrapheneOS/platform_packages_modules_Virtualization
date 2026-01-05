@@ -68,7 +68,9 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.android.virtualization.terminal.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -192,7 +194,7 @@ fun ModifierKeys(onKeyAction: (ExtraKey, action: Int) -> Unit) {
         PagerArrow(
             visible = arrowsVisible && pagerState.currentPage > 0,
             icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-            contentDescription = "Previous Page",
+            contentDescription = stringResource(R.string.modifierkeys_hint_prev_page),
             alignment = Alignment.CenterStart,
             modifier = Modifier.padding(start = 4.dp),
         )
@@ -201,7 +203,7 @@ fun ModifierKeys(onKeyAction: (ExtraKey, action: Int) -> Unit) {
         PagerArrow(
             visible = arrowsVisible && pagerState.currentPage < pages.size - 1,
             icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Next Page",
+            contentDescription = stringResource(R.string.modifierkeys_hint_next_page),
             alignment = Alignment.CenterEnd,
             modifier = Modifier.padding(end = 4.dp),
         )

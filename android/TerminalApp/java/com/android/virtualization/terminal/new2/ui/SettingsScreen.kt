@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.android.virtualization.terminal.GraphicsManager
@@ -69,10 +70,10 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
 import kotlinx.coroutines.launch
 
-enum class SettingsDestination(val title: String, val icon: Int) {
-    PortControl("Port Control", R.drawable.baseline_call_missed_outgoing_24),
-    Graphics("Graphics", R.drawable.ic_display),
-    Recovery("Recovery", R.drawable.baseline_settings_backup_restore_24),
+enum class SettingsDestination(val title: Int, val icon: Int) {
+    PortControl(R.string.settings_port_title, R.drawable.baseline_call_missed_outgoing_24),
+    Graphics(R.string.settings_graphics_title, R.drawable.ic_display),
+    Recovery(R.string.settings_recovery_title, R.drawable.baseline_settings_backup_restore_24),
 }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -131,7 +132,7 @@ fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? 
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.surface,
                         ) {
-                            Box(contentAlignment = Alignment.Center) { Text("Select a setting") }
+                            Box(contentAlignment = Alignment.Center) { Text(stringResource(R.string.settings_placeholder_select)) }
                         }
                     }
                 }
@@ -150,10 +151,10 @@ fun SettingsListPane(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_btn_back_desc))
                     }
                 },
             )
@@ -167,7 +168,7 @@ fun SettingsListPane(
             items(destinations) { item ->
                 val isSelected = selectedItem == item
                 ListItem(
-                    headlineContent = { Text(item.title) },
+                    headlineContent = { Text(stringResource(item.title)) },
                     leadingContent = {
                         Icon(painter = painterResource(item.icon), contentDescription = null)
                     },
@@ -196,11 +197,11 @@ fun SettingsDetailPane(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(destination.title) },
+                title = { Text(stringResource(destination.title)) },
                 navigationIcon = {
                     if (isMobileMode) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_btn_back_desc))
                         }
                     }
                 },
@@ -226,14 +227,14 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
 
     val typeToName =
         mapOf(
-            GraphicsManager.AccelerationType.Lavapipe to "Software rendering",
-            GraphicsManager.AccelerationType.Gfxstream to "GPU-accelerated rendering",
+            GraphicsManager.AccelerationType.Lavapipe to stringResource(R.string.settings_graphics_renderer_software),
+            GraphicsManager.AccelerationType.Gfxstream to stringResource(R.string.settings_graphics_renderer_gpu),
         )
 
     if (showSelectionDialog) {
         AlertDialog(
             onDismissRequest = { showSelectionDialog = false },
-            title = { Text("Graphics Acceleration") },
+            title = { Text(stringResource(R.string.settings_graphics_title)) },
             text = {
                 Column(Modifier.selectableGroup()) {
                     GraphicsManager.AccelerationType.values().forEach { type ->
@@ -268,11 +269,11 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
                         }
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSelectionDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showSelectionDialog = false }) { Text(stringResource(android.R.string.cancel)) }
             },
         )
     }
@@ -280,8 +281,8 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
     if (showRebootDialog) {
         AlertDialog(
             onDismissRequest = { showRebootDialog = false },
-            title = { Text("Restart Required") },
-            text = { Text("To apply, terminal must be restarted.") },
+            title = { Text(stringResource(R.string.settings_graphics_dlg_title_restart)) },
+            text = { Text(stringResource(R.string.settings_graphics_dlg_message_restart)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -290,17 +291,17 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
                         onCloseSettings()
                     }
                 ) {
-                    Text("Restart Now")
+                    Text(stringResource(R.string.settings_graphics_dlg_btn_restart))
                 }
             },
-            dismissButton = { TextButton(onClick = { showRebootDialog = false }) { Text("Later") } },
+            dismissButton = { TextButton(onClick = { showRebootDialog = false }) { Text(stringResource(R.string.settings_graphics_dlg_btn_later)) } },
         )
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             ListItem(
-                headlineContent = { Text("Graphics Acceleration") },
+                headlineContent = { Text(stringResource(R.string.settings_graphics_title)) },
                 supportingContent = { Text(typeToName[currentType] ?: "") },
                 modifier =
                     Modifier.clickable {
@@ -318,13 +319,13 @@ fun PortControlPage() {
 
     if (ports.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No port is opened")
+            Text(stringResource(R.string.settings_port_message_empty))
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
                 Text(
-                    text = "Listening ports",
+                    text = stringResource(R.string.settings_port_title_active_ports),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp),
                 )
