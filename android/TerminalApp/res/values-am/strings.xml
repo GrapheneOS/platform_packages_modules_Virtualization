@@ -26,20 +26,16 @@
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi ብቻ በመጠቀም አውርድ"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ጫን"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"በመጫን ላይ"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"በአውታረ መረብ ስሕተት ምክንያት መጫን አልተሳካም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።"</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ተርሚናልን በመጫን ላይ"</string>
     <string name="installer_notif_desc_text" msgid="2353770076549425837">"ጭነቱ ከተጠናቀቀ በኋላ Linux ተርሚናል ይጀምራል።"</string>
     <string name="installer_error_network" msgid="5627330072955876676">"በአውታረ መረቡ ችግር ምክንያት መጫን አልተሳካም"</string>
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi ስለማይገኝ መጫን አልተሳካም"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"መጫን አልተሳካም። እባክዎ እንደገና ይሞክሩ"</string>
     <string name="action_settings" msgid="5729342767795123227">"ቅንብሮች"</string>
-    <string name="action_display" msgid="8487008779926038139">"ማሳያ"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ተርሚናልን በማዘጋጀት ላይ"</string>
-    <string name="vm_stop_message" msgid="3978349856095529255">"ተርሚናልን በማቆም ላይ"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ተርሚናል ተበላሽቷል"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"የዲስክ መጠንን ቀይር"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"የስር ክፍልፋይ መጠንን ቀይር"</string>
-    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"የዲስክ መጠን ተቀናብሯል"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ተመድቧል"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> ከፍተኛ"</string>
     <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"የዲስክ መጠን ለመቀየር በመሣሪያው ላይ በቂ ቦታ የለም"</string>
@@ -70,7 +66,6 @@
     <string name="settings_recovery_reset_title" msgid="5388842560910568731">"ወደ የመጀመሪያ ሥሪት ዳግም አስጀምር"</string>
     <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"ሁሉንም ውሂብ አስወግድ"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ተርሚናልን ዳግም አስጀምር"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"ውሂብ ይወገዳል"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"ዳግም አስጀምር"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ይቅር"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"ውሂብን ወደ <xliff:g id="PATH">/mnt/backup</xliff:g> ምትኬ አስቀምጥ"</string>
@@ -83,7 +78,6 @@
     <string name="error_desc" msgid="4588252235686826721">"ከስሕተት መልሶ ማግኘት አልተሳካም።\nተርሚናልን እንደገና ማስጀመርን መሞከር ወይም ከመልሶ ማግኛ አማራጮች አንዱን መሞከር ይችላሉ።\nሁሉም ሙከራዎች ካልተሳኩ Linux ተርሚናልን ከገንቢ አማራጮች ላይ በማብራት/ማጥፋት ሁሉንም ውሂብ ይጥረጉ።"</string>
     <string name="error_code" msgid="3585291676855383649">"የስሕተት ኮድ፦ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="error_button_report_bug" msgid="5559616952618650716">"ስህተት ሪፖርት አድርግ"</string>
-    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"ምዝግብ ማስታወሻዎችን በመሰብሰብ ላይ"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"ወደ አዲሱ ተርሚናል ያሻሽሉ"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"እርስዎ እየተጠቀሙበት የነበረው የLinux ተርሚናል ጊዜው ያለፈበት ነው። ለመቀጠል እባክዎን ያሻሽሉ።\nውሂቡ <xliff:g id="PATH">/mnt/backup</xliff:g> ላይ ምትኬ ይቀመጥለታል"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"አሻሽል"</string>
@@ -94,7 +88,6 @@
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ዝጋ"</string>
     <string name="service_notification_close_title" msgid="1442526433361428844">"ተርሚናል በመዝጋት ላይ ነው"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"በግድ ዝጋ"</string>
-    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> ነቅቷል"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ረዥም የሚያሄዱ ተግባሮች"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"የሥርዓት ክስተቶች"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ትር"</string>

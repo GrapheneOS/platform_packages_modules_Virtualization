@@ -26,20 +26,16 @@
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Shkarko duke përdorur vetëm Wi-Fi"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Instalo"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Po instalohet"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Instalimi dështoi për shkak të një problemi të rrjetit. Kontrollo lidhjen tënde dhe provo përsëri."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Terminali i Linux po instalohet"</string>
     <string name="installer_notif_desc_text" msgid="2353770076549425837">"Terminali i Linux do të niset pas përfundimit të instalimit"</string>
     <string name="installer_error_network" msgid="5627330072955876676">"Instalimi dështoi për shkak të një problemi të rrjetit"</string>
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Instalimi dështoi për shkak se Wi-Fi nuk ofrohet"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Instalimi dështoi. Provo përsëri"</string>
     <string name="action_settings" msgid="5729342767795123227">"Cilësimet"</string>
-    <string name="action_display" msgid="8487008779926038139">"Ekrani"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Terminali po përgatitet"</string>
-    <string name="vm_stop_message" msgid="3978349856095529255">"Terminali po ndalohet"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Terminali u ndërpre aksidentalisht"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Ndryshimi i përmasave të diskut"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Ndrysho madhësinë e ndarjes rrënjë"</string>
-    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Madhësia e diskut u caktua"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"Caktuar: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Maksimumi: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Nuk ka hapësirë të mjaftueshme në pajisje për të ndryshuar madhësinë e diskut"</string>
@@ -70,7 +66,6 @@
     <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Rivendos në versionin fillestar"</string>
     <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Hiq të gjitha të dhënat"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Rivendos terminalin"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Të dhënat do të hiqen"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Rivendos"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Anulo"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Rezervo të dhënat te <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
@@ -83,7 +78,6 @@
     <string name="error_desc" msgid="4588252235686826721">"Rikuperimi nga një gabim dështoi.\nMund të provosh ta rinisësh terminalin ose provo një nga opsionet e rikuperimit.\nNëse dështojnë të gjitha përpjekjet, pastro të gjitha të dhënat duke aktivizuar/çaktivizuar terminalin e Linux nga opsionet e zhvilluesit."</string>
     <string name="error_code" msgid="3585291676855383649">"Kodi i gabimit: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="error_button_report_bug" msgid="5559616952618650716">"Raporto një defekt në kod"</string>
-    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Po mblidhen evidencat"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Përmirësoje në një terminal të ri"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Terminali Linux që po përdorje është i papërditësuar. Përmirësoje për të vazhduar.\nTë dhënat do të rezervohen në <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Përmirëso"</string>
@@ -94,7 +88,6 @@
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Mbyll"</string>
     <string name="service_notification_close_title" msgid="1442526433361428844">"\"Terminali\" po mbyllet"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Ndalo me forcë"</string>
-    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> është aktivizuar"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Detyrat afatgjata"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Ngjarjet e sistemit"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Tab"</string>

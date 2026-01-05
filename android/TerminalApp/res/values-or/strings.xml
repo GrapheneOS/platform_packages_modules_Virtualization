@@ -26,20 +26,16 @@
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"କେବଳ ୱାଇ-ଫାଇ ବ୍ୟବହାର କରି ଡାଉନଲୋଡ କରନ୍ତୁ"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"ଇନଷ୍ଟଲ କରନ୍ତୁ"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"ଇନଷ୍ଟଲ କରାଯାଉଛି"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"ଏକ ନେଟୱାର୍କ ତ୍ରୁଟି ଯୋଗୁଁ ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି। ଆପଣଙ୍କ କନେକ୍ସନ ଯାଞ୍ଚ କରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux ଟର୍ମିନାଲକୁ ଇନଷ୍ଟଲ କରାଯାଉଛି"</string>
     <string name="installer_notif_desc_text" msgid="2353770076549425837">"ଇନଷ୍ଟଲେସନ ସମ୍ପୂର୍ଣ୍ଣ ହେବା ପରେ Linux ଟର୍ମିନାଲ ଷ୍ଟାର୍ଟ ହେବ"</string>
     <string name="installer_error_network" msgid="5627330072955876676">"ଏକ ନେଟୱାର୍କ ସମସ୍ୟା ଯୋଗୁଁ ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି"</string>
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"ୱାଇ-ଫାଇ ଉପଲବ୍ଧ ନଥିବା ଯୋଗୁଁ ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"ଇନଷ୍ଟଲ କରିବାରେ ବିଫଳ ହୋଇଛି। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ"</string>
     <string name="action_settings" msgid="5729342767795123227">"ସେଟିଂସ"</string>
-    <string name="action_display" msgid="8487008779926038139">"ଡିସପ୍ଲେ"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"ଟର୍ମିନାଲକୁ ପ୍ରସ୍ତୁତ କରାଯାଉଛି"</string>
-    <string name="vm_stop_message" msgid="3978349856095529255">"Terminalକୁ ବନ୍ଦ କରାଯାଉଛି"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"ଟର୍ମିନାଲ କ୍ରାସ ହୋଇଛି"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"ଡିସ୍କକୁ ରିସାଇଜ କରନ୍ତୁ"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"ରୁଟ ପାର୍ଟିସନ ସାଇଜକୁ ରିସାଇଜ କରନ୍ତୁ"</string>
-    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"ଡିସ୍କ ସାଇଜ ସେଟ ହୋଇଛି"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ଆସାଇନ କରାଯାଇଛି"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"ସର୍ବାଧିକ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"ଡିସ୍କ ରିସାଇଜ କରିବାକୁ ଡିଭାଇସରେ ପର୍ଯ୍ୟାପ୍ତ ସ୍ପେସ ନାହିଁ"</string>
@@ -70,7 +66,6 @@
     <string name="settings_recovery_reset_title" msgid="5388842560910568731">"ପ୍ରାରମ୍ଭିକ ଭର୍ସନରେ ରିସେଟ କରନ୍ତୁ"</string>
     <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"ସମସ୍ତ ଡାଟାକୁ କାଢ଼ି ଦିଅନ୍ତୁ"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"ଟର୍ମିନାଲ ରିସେଟ କରନ୍ତୁ"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"ଡାଟାକୁ କାଢ଼ି ଦିଆଯିବ"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"ରିସେଟ କରନ୍ତୁ"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"ବାତିଲ କରନ୍ତୁ"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"<xliff:g id="PATH">/mnt/backup</xliff:g>ରେ ଡାଟାର ବେକଅପ ନିଅନ୍ତୁ"</string>
@@ -83,7 +78,6 @@
     <string name="error_desc" msgid="4588252235686826721">"ଏକ ତ୍ରୁଟିରୁ ରିକଭର କରିବାରେ ବିଫଳ ହୋଇଛି।\nଆପଣ ଟର୍ମିନାଲ ରିଷ୍ଟାର୍ଟ କରିବାକୁ ଚେଷ୍ଟା କରିପାରିବେ କିମ୍ବା ରିକଭରି ବିକଳ୍ପଗୁଡ଼ିକ ମଧ୍ୟରୁ ଗୋଟିଏ ବିକଳ୍ପ ଚେଷ୍ଟା କରିପାରିବେ।\nଯଦି ସମସ୍ତ ପ୍ରଚେଷ୍ଟା ବିଫଳ ହୁଏ, ତେବେ ଡେଭେଲପର ବିକଳ୍ପରୁ Linux ଟର୍ମିନାଲକୁ ଚାଲୁ/ବନ୍ଦ କରି ସମସ୍ତ ଡାଟା ୱାଇପ କରନ୍ତୁ।"</string>
     <string name="error_code" msgid="3585291676855383649">"ତ୍ରୁଟି କୋଡ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="error_button_report_bug" msgid="5559616952618650716">"ବଗ ରିପୋର୍ଟ କର"</string>
-    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"ଲଗଗୁଡ଼ିକୁ ସଂଗ୍ରହ କରାଯାଉଛି"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"ନୂଆ ଟର୍ମିନାଲକୁ ଅପଗ୍ରେଡ କରନ୍ତୁ"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"ଆପଣ ବ୍ୟବହାର କରୁଥିବା Linux ଟର୍ମିନାଲଟି ପୁରୁଣା ଅଟେ। ଆଗକୁ ବଢ଼ିବାକୁ ଦୟାକରି ଅପଗ୍ରେଡ କରନ୍ତୁ।\n<xliff:g id="PATH">/mnt/backup</xliff:g>ରେ ଡାଟାର ବେକଅପ ନିଆଯିବ"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"ଅପଗ୍ରେଡ କରନ୍ତୁ"</string>
@@ -94,7 +88,6 @@
     <string name="service_notification_quit_action" msgid="4888327875869277455">"ବନ୍ଦ କରନ୍ତୁ"</string>
     <string name="service_notification_close_title" msgid="1442526433361428844">"ଟର୍ମିନାଲ ବନ୍ଦ ହେବାକୁ ଯାଉଛି"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"ଫୋର୍ସ କ୍ଲୋଜ କରନ୍ତୁ"</string>
-    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g>କୁ ସକ୍ଷମ କରାଯାଇଛି"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"ଅଧିକ ସମୟ ଚାଲୁଥିବା ଟାସ୍କ"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"ସିଷ୍ଟମ ଇଭେଣ୍ଟ"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"ଟାବ"</string>

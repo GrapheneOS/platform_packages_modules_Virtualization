@@ -26,20 +26,16 @@
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Wi-Fi аркылуу гана жүктөп алуу"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Орнотуу"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Орнотулууда"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Тармак катасынан улам орнотулбай калды. Байланышыңызды текшерип, кайталап көрүңүз."</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"Linux терминалы орнотулууда"</string>
     <string name="installer_notif_desc_text" msgid="2353770076549425837">"Linux терминалы орнотуу процесси аяктагандан кийин иштеп баштайт"</string>
     <string name="installer_error_network" msgid="5627330072955876676">"Тармактагы маселеден улам орнотулбай калды"</string>
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"Wi-Fi жеткиликсиз болгондуктан, орнотулбай калды"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"Орнотулган жок. Кайталап көрүңүз"</string>
     <string name="action_settings" msgid="5729342767795123227">"Параметрлер"</string>
-    <string name="action_display" msgid="8487008779926038139">"Экран"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"Терминал даярдалууда"</string>
-    <string name="vm_stop_message" msgid="3978349856095529255">"Терминал токтотулууда"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"Терминал бузулду"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"Дисктин өлчөмүн өзгөртүү"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Катуу дисктин негизги бөлүгүнүн өлчөмүн өзгөртүү"</string>
-    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Дисктин өлчөмү коюлду"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> дайындалды"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"Эң көп <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Дисктин өлчөмүн өзгөртүү үчүн түзмөктө орун жетишсиз"</string>
@@ -70,7 +66,6 @@
     <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Баштапкы версияга кайтаруу"</string>
     <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Бардык маалыматты өчүрүү"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Терминалды баштапкы абалга келтирүү"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Маалымат өчүрүлөт"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Кайра коюу"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Жокко чыгаруу"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Маалыматтын камдык көчүрмөсүн төмөнкүгө сактоо: <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
@@ -83,7 +78,6 @@
     <string name="error_desc" msgid="4588252235686826721">"Катадан кийин калыбына келтирилген жок.\nТерминалды өчүрүп күйгүзүп же калыбына келтирүү жолдорунун бирин колдонуп көрүңүз.\nЭгер бардык аракеттер ишке ашпай калса, Linux терминалын иштеп чыгуучунун параметрлеринен күйгүзүп/өчүрүп, бардык маалыматты тазалаңыз."</string>
     <string name="error_code" msgid="3585291676855383649">"Ката коду: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="error_button_report_bug" msgid="5559616952618650716">"Мүчүлүштүк жөнүндө кабарлоо"</string>
-    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Таржымалдар жыйналууда"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Жаңы терминалга жаңыртыңыз"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Сиз колдонуп жаткан Linux терминалы эскирип калды. Улантуу үчүн аны жаңыртыңыз.\nМаалыматтардын камдык көчүрмөсү <xliff:g id="PATH">/mnt/backup</xliff:g> дарегинде сакталат"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"Жаңыртуу"</string>
@@ -94,7 +88,6 @@
     <string name="service_notification_quit_action" msgid="4888327875869277455">"Жабуу"</string>
     <string name="service_notification_close_title" msgid="1442526433361428844">"Терминал жабылып жатат"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Мажбурлап жабуу"</string>
-    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> иштетилди"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Узак тапшырмалар"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Тутумдук иш-чаралар"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"Өтмөк"</string>

@@ -39,8 +39,6 @@
     <string name="installer_install_button_enabled_text">Install</string>
     <!-- Button at the installer activity to when installation is already in progress [CHAR LIMIT=16] -->
     <string name="installer_install_button_disabled_text">Installing</string>
-    <!-- Toast message at installer activity when network doesn't meet[CHAR LIMIT=none] -->
-    <string name="installer_install_network_error_message">Failed to install due to a network error. Check your connection and try again.</string>
     <!-- Notification title for installer [CHAR LIMIT=64] -->
     <string name="installer_notif_title_text">Installing Linux terminal</string>
     <!-- Notification description for installer [CHAR LIMIT=none] -->
@@ -55,13 +53,8 @@
     <!-- Action bar icon name for the settings view CHAR LIMIT=none] -->
     <string name="action_settings">Settings</string>
 
-    <!-- Action bar icon name for showing the display activity CHAR LIMIT=none] -->
-    <string name="action_display">Display</string>
-
     <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
     <string name="vm_creation_message">Preparing terminal</string>
-    <!-- Toast message to notify that terminal is stopping [CHAR LIMIT=none] -->
-    <string name="vm_stop_message">Stopping terminal</string>
     <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
     <string name="vm_error_message">Terminal crashed</string>
 
@@ -69,8 +62,6 @@
     <string name="settings_disk_resize_title">Disk resize</string>
     <!-- Settings memu subtitle for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_sub_title">Resize the root partition size</string>
-    <!-- Toast message after new disk size is set. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_resize_message">Disk size set</string>
     <!-- Settings menu option description format of the current disk size. [CHAR LIMIT=none] -->
     <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
     <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
@@ -135,8 +126,6 @@
     <string name="settings_recovery_reset_sub_title">Remove all data</string>
     <!-- Dialog title for resetting the terminal [CHAR LIMIT=none] -->
     <string name="settings_recovery_reset_dialog_title">Reset terminal</string>
-    <!-- Dialog message for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_dialog_message">Data will be removed</string>
     <!-- Dialog button confirm for resetting the terminal [CHAR LIMIT=16] -->
     <string name="settings_recovery_reset_dialog_confirm">Reset</string>
     <!-- Dialog button cancel for resetting the terminal [CHAR LIMIT=16] -->
@@ -162,8 +151,6 @@
     <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
     <!-- Button at the error activity for bugreport [CHAR LIMIT=16] -->
     <string name="error_button_report_bug">Report bug</string>
-    <!-- Snackbar to indicate collecting logs [CHAR LIMIT=none] -->
-    <string name="error_snackbar_report_bug">Collecting logs</string>
 
     <!-- Upgrade page's title. Tells users that you'll need to upgrade [CHAR LIMIT=none] -->
     <string name="upgrade_title">Upgrade to newer terminal</string>
@@ -187,9 +174,6 @@
     <string name="service_notification_close_title">Terminal is closing</string>
     <!-- Notification action button for force-closing the virtual machine [CHAR LIMIT=30] -->
     <string name="service_notification_force_quit_action">Force close</string>
-
-    <!-- This string is for toast message to notify that VirGL is enabled. [CHAR LIMIT=40] -->
-    <string name="virgl_enabled"><xliff:g>VirGL</xliff:g> is enabled</string>
 
     <!-- This is the name of the notification channel for long-runnint tasks [CHAR LIMIT=none] -->
     <string name="notification_channel_long_running_name">Long running tasks</string>

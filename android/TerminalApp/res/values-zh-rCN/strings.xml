@@ -26,20 +26,16 @@
     <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"仅通过 WLAN 下载"</string>
     <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"安装"</string>
     <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"正在安装"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"由于网络连接错误，安装失败。请检查网络连接状态，然后重试。"</string>
     <string name="installer_notif_title_text" msgid="471160690081159042">"正在安装 Linux 终端"</string>
     <string name="installer_notif_desc_text" msgid="2353770076549425837">"安装完成后将启动 Linux 终端"</string>
     <string name="installer_error_network" msgid="5627330072955876676">"由于网络问题，安装失败"</string>
     <string name="installer_error_no_wifi" msgid="1180164894845030969">"由于 WLAN 不可用，安装失败"</string>
     <string name="installer_error_unknown" msgid="5657920711470180224">"安装失败，请重试"</string>
     <string name="action_settings" msgid="5729342767795123227">"设置"</string>
-    <string name="action_display" msgid="8487008779926038139">"显示"</string>
     <string name="vm_creation_message" msgid="6594953532721367502">"正在准备终端"</string>
-    <string name="vm_stop_message" msgid="3978349856095529255">"正在停止终端"</string>
     <string name="vm_error_message" msgid="5231867246177661525">"终端已崩溃"</string>
     <string name="settings_disk_resize_title" msgid="8648082439414122069">"调整磁盘大小"</string>
     <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"调整根分区的大小"</string>
-    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"已设置磁盘大小"</string>
     <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
     <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"无法调整磁盘大小，因为设备上的空间不足"</string>
@@ -70,7 +66,6 @@
     <string name="settings_recovery_reset_title" msgid="5388842560910568731">"重置为初始版本"</string>
     <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"移除所有数据"</string>
     <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"重置终端"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"数据将被移除"</string>
     <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"重置"</string>
     <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"取消"</string>
     <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"将数据备份到 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
@@ -83,7 +78,6 @@
     <string name="error_desc" msgid="4588252235686826721">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。\n如果所有尝试都失败，请通过在“开发者选项”中开启/关闭 Linux 终端来擦除所有数据。"</string>
     <string name="error_code" msgid="3585291676855383649">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
     <string name="error_button_report_bug" msgid="5559616952618650716">"报告错误"</string>
-    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"正在收集日志"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"升级到较新的终端"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"您使用的 Linux 终端版本过旧。请升级以继续操作。\n数据将在 <xliff:g id="PATH">/mnt/backup</xliff:g> 备份"</string>
     <string name="upgrade_button" msgid="2118716848859611704">"升级"</string>
@@ -94,7 +88,6 @@
     <string name="service_notification_quit_action" msgid="4888327875869277455">"关闭"</string>
     <string name="service_notification_close_title" msgid="1442526433361428844">"终端即将关闭"</string>
     <string name="service_notification_force_quit_action" msgid="3462226330416157775">"强行关闭"</string>
-    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> 已启用"</string>
     <string name="notification_channel_long_running_name" msgid="7916541360369402952">"长时间运行的任务"</string>
     <string name="notification_channel_system_events_name" msgid="1004951444029742137">"系统事件"</string>
     <string name="tab_default_title" msgid="2300417689389397930">"标签页"</string>
