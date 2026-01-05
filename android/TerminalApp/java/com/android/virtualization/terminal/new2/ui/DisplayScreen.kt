@@ -256,24 +256,30 @@ fun DisplayController(viewModel: MainViewModel) {
                         onCheckedChange = { viewModel.setPanZoomMode(!isPanZoomMode) },
                         pressedIcon = Icons.Filled.PanTool,
                         unpressedIcon = Icons.Outlined.PanTool,
-                        pressedContentDescription = stringResource(R.string.dispctrl_hint_exit_zoom),
-                        unpressedContentDescription = stringResource(R.string.dispctrl_hint_enter_zoom),
+                        pressedContentDescription =
+                            stringResource(R.string.dispctrl_hint_exit_zoom),
+                        unpressedContentDescription =
+                            stringResource(R.string.dispctrl_hint_enter_zoom),
                     )
                     DisplayControllerButton(
                         checked = isImeVisible,
                         onCheckedChange = { viewModel.setIsImeVisible(!isImeVisible) },
                         pressedIcon = Icons.Filled.Keyboard,
                         unpressedIcon = Icons.Outlined.Keyboard,
-                        pressedContentDescription = stringResource(R.string.dispctrl_hint_hide_keyboard),
-                        unpressedContentDescription = stringResource(R.string.dispctrl_hint_show_keyboard),
+                        pressedContentDescription =
+                            stringResource(R.string.dispctrl_hint_hide_keyboard),
+                        unpressedContentDescription =
+                            stringResource(R.string.dispctrl_hint_show_keyboard),
                     )
                     DisplayControllerButton(
                         checked = isMouseLocked,
                         onCheckedChange = { viewModel.setMouseLocked(!isMouseLocked) },
                         pressedIcon = Icons.Filled.Mouse,
                         unpressedIcon = Icons.Outlined.Mouse,
-                        pressedContentDescription = stringResource(R.string.dispctrl_hint_release_mouse),
-                        unpressedContentDescription = stringResource(R.string.dispctrl_hint_lock_mouse),
+                        pressedContentDescription =
+                            stringResource(R.string.dispctrl_hint_release_mouse),
+                        unpressedContentDescription =
+                            stringResource(R.string.dispctrl_hint_lock_mouse),
                     )
                 }
             }

@@ -132,7 +132,8 @@ fun TerminalTabBar(
                             IconButton(onClick = onAddTab) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = stringResource(R.string.terminal_hint_btn_add_tab),
+                                    contentDescription =
+                                        stringResource(R.string.terminal_hint_btn_add_tab),
                                     modifier = Modifier.size(24.dp),
                                 )
                             }
@@ -173,7 +174,11 @@ private fun TerminalTab(
                     Text(stringResource(R.string.terminal_dlg_btn_close))
                 }
             },
-            dismissButton = { TextButton(onClick = { showCloseDialog = false }) { Text(stringResource(android.R.string.cancel)) } },
+            dismissButton = {
+                TextButton(onClick = { showCloseDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
         )
     }
 
@@ -225,7 +230,10 @@ private fun TerminalTab(
                 onClick = { showCloseDialog = true },
                 modifier = Modifier.size(24.dp).padding(start = 4.dp),
             ) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.terminal_hint_btn_close_tab))
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.terminal_hint_btn_close_tab),
+                )
             }
         }
     }

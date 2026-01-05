@@ -57,8 +57,7 @@ class SettingsRecoveryActivity : AppCompatActivity() {
                         // finishing removing or not is acceptable behavior.
                         runInBackgroundAndRestartApp { uninstall(backupRootfs) }
                     }
-                    .setNegativeButton(R.string.settings_recovery_dlg_btn_cancel) { dialog, _
-                        ->
+                    .setNegativeButton(R.string.settings_recovery_dlg_btn_cancel) { dialog, _ ->
                         dialog.dismiss()
                     }
                     .create()
@@ -76,8 +75,7 @@ class SettingsRecoveryActivity : AppCompatActivity() {
                     .setPositiveButton(R.string.settings_recovery_dlg_btn_reset) { _, _ ->
                         runInBackgroundAndRestartApp { removeBackup() }
                     }
-                    .setNegativeButton(R.string.settings_recovery_dlg_btn_cancel) { dialog, _
-                        ->
+                    .setNegativeButton(R.string.settings_recovery_dlg_btn_cancel) { dialog, _ ->
                         dialog.dismiss()
                     }
                     .create()

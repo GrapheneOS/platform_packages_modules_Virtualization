@@ -58,7 +58,9 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
 
         if (hasBackup) {
             ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_recovery_title_remove_backup)) },
+                headlineContent = {
+                    Text(stringResource(R.string.settings_recovery_title_remove_backup))
+                },
                 modifier = Modifier.fillMaxWidth().clickable { showRemoveBackupDialog = true },
             )
             HorizontalDivider()
@@ -100,7 +102,9 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirmationDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showResetConfirmationDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
             },
         )
     }
@@ -121,7 +125,9 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveBackupDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showRemoveBackupDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
             },
         )
     }

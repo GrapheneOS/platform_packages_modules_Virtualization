@@ -132,7 +132,9 @@ fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? 
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.surface,
                         ) {
-                            Box(contentAlignment = Alignment.Center) { Text(stringResource(R.string.settings_placeholder_select)) }
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(stringResource(R.string.settings_placeholder_select))
+                            }
                         }
                     }
                 }
@@ -154,7 +156,10 @@ fun SettingsListPane(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_btn_back_desc))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.settings_btn_back_desc),
+                        )
                     }
                 },
             )
@@ -201,7 +206,10 @@ fun SettingsDetailPane(
                 navigationIcon = {
                     if (isMobileMode) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_btn_back_desc))
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.settings_btn_back_desc),
+                            )
                         }
                     }
                 },
@@ -227,8 +235,10 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
 
     val typeToName =
         mapOf(
-            GraphicsManager.AccelerationType.Lavapipe to stringResource(R.string.settings_graphics_renderer_software),
-            GraphicsManager.AccelerationType.Gfxstream to stringResource(R.string.settings_graphics_renderer_gpu),
+            GraphicsManager.AccelerationType.Lavapipe to
+                stringResource(R.string.settings_graphics_renderer_software),
+            GraphicsManager.AccelerationType.Gfxstream to
+                stringResource(R.string.settings_graphics_renderer_gpu),
         )
 
     if (showSelectionDialog) {
@@ -273,7 +283,9 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSelectionDialog = false }) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { showSelectionDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
             },
         )
     }
@@ -294,7 +306,11 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
                     Text(stringResource(R.string.settings_graphics_dlg_btn_restart))
                 }
             },
-            dismissButton = { TextButton(onClick = { showRebootDialog = false }) { Text(stringResource(R.string.settings_graphics_dlg_btn_later)) } },
+            dismissButton = {
+                TextButton(onClick = { showRebootDialog = false }) {
+                    Text(stringResource(R.string.settings_graphics_dlg_btn_later))
+                }
+            },
         )
     }
 

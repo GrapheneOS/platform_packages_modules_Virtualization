@@ -53,10 +53,7 @@ class SettingsPortForwardingInactiveAdapter(
         val port = items[position].port
         viewHolder.port.text = port.toString()
         viewHolder.closeButton.contentDescription =
-            context.getString(
-                R.string.settings_port_btn_delete,
-                port,
-            )
+            context.getString(R.string.settings_port_btn_delete, port)
         viewHolder.closeButton.setOnClickListener { _ ->
             portsStateManager.updateEnabledPort(port, false)
         }

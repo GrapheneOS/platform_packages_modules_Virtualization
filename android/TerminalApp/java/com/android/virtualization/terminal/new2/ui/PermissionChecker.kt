@@ -84,7 +84,10 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
                     val result =
                         snackbarHostState.showSnackbar(
                             message =
-                                context.getString(R.string.permission_snkbar_message_missing, deniedLabels),
+                                context.getString(
+                                    R.string.permission_snkbar_message_missing,
+                                    deniedLabels,
+                                ),
                             actionLabel = context.getString(R.string.action_settings),
                             duration = SnackbarDuration.Long,
                         )
@@ -123,9 +126,7 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
             },
             title = { Text(stringResource(R.string.permission_dlg_title_required)) },
             text = {
-                Text(
-                    stringResource(R.string.permission_dlg_message_required, permissionLabels)
-                )
+                Text(stringResource(R.string.permission_dlg_message_required, permissionLabels))
             },
             confirmButton = {
                 TextButton(

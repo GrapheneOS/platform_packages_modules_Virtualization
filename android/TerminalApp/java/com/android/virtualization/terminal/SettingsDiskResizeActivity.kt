@@ -139,10 +139,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.settings_disk_title)
             .setMessage(R.string.settings_disk_dlg_message_confirm)
-            .setPositiveButton(R.string.settings_disk_dlg_btn_confirm) { _, _
-                ->
-                resize()
-            }
+            .setPositiveButton(R.string.settings_disk_dlg_btn_confirm) { _, _ -> resize() }
             .setNegativeButton(R.string.settings_disk_btn_cancel) { _, _ -> cancel() }
             .create()
             .show()
