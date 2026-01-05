@@ -54,7 +54,7 @@ class SettingsPortForwardingInactiveAdapter(
         viewHolder.port.text = port.toString()
         viewHolder.closeButton.contentDescription =
             context.getString(
-                R.string.settings_port_forwarding_other_enabled_port_close_button,
+                R.string.settings_port_btn_delete,
                 port,
             )
         viewHolder.closeButton.setOnClickListener { _ ->

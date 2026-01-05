@@ -49,7 +49,7 @@ class ErrorActivity : BaseActivity() {
         if (error != null) {
             Log.e(TAG, "Unrecoverable error", error)
             val cause = findViewById<TextView>(R.id.cause)
-            cause.text = getString(R.string.error_code, getStackTrace(error))
+            cause.text = getString(R.string.error_text_code, getStackTrace(error))
         }
 
         val recovery = findViewById<View>(R.id.recovery)

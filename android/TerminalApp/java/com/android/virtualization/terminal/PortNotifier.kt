@@ -78,15 +78,15 @@ internal class PortNotifier(val context: Context) {
         val tapPendingIntent =
             PendingIntent.getActivity(context, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val title = getString(R.string.settings_port_forwarding_notification_title)
+        val title = getString(R.string.notif_port_title_request)
         val content =
             context.getString(
-                R.string.settings_port_forwarding_notification_content,
+                R.string.notif_port_content_request,
                 port,
                 portsStateManager.getActivePortInfo(port)?.comm,
             )
-        val acceptText = getString(R.string.settings_port_forwarding_notification_accept)
-        val denyText = getString(R.string.settings_port_forwarding_notification_deny)
+        val acceptText = getString(R.string.notif_port_action_accept)
+        val denyText = getString(R.string.notif_port_action_deny)
         val icon = Icon.createWithResource(context, R.drawable.ic_launcher_foreground)
 
         val acceptAction: Notification.Action =

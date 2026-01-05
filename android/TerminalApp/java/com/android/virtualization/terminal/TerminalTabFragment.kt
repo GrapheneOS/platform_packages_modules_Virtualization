@@ -177,7 +177,7 @@ class TerminalTabFragment() : Fragment() {
         fun showError() {
             activity?.runOnUiThread {
                 if (activity != null) {
-                    Toast.makeText(activity!!, R.string.ttyd_connection_error, Toast.LENGTH_SHORT)
+                    Toast.makeText(activity!!, R.string.terminal_toast_connection_error, Toast.LENGTH_SHORT)
                         .show()
                 }
             }

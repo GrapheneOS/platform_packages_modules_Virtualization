@@ -34,8 +34,8 @@ private constructor(context: Context, private val sharedPref: SharedPreferences)
     private val lock = Any()
 
     enum class AccelerationType(val descriptionId: Int) {
-        Lavapipe(R.string.settings_graphics_acceleration_software_renderer),
-        Gfxstream(R.string.settings_graphics_acceleration_hardware_renderer),
+        Lavapipe(R.string.settings_graphics_renderer_software),
+        Gfxstream(R.string.settings_graphics_renderer_gpu),
     }
 
     var accelerationType: AccelerationType

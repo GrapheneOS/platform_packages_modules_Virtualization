@@ -227,16 +227,16 @@ private suspend fun handleError(
         when (val handler = state.handler) {
             MainUiState.ErrorHandler.CheckNetwork ->
                 Triple(
-                    R.string.installer_error_no_wifi,
+                    R.string.installer_snkbar_error_no_wifi,
                     activity.getString(R.string.action_settings),
                     { activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
                 )
             MainUiState.ErrorHandler.Retry ->
-                Triple(R.string.installer_error_unknown, "Retry", { viewModel.retryCheck() })
+                Triple(R.string.installer_snkbar_error_unknown, "Retry", { viewModel.retryCheck() })
             is MainUiState.ErrorHandler.ReportBug ->
                 Triple(
-                    R.string.vm_error_message,
-                    activity.getString(R.string.error_button_report_bug),
+                    R.string.terminal_message_vm_error,
+                    activity.getString(R.string.error_btn_report_bug),
                     {
                         val error = handler.error
                         val exception = error as? Exception ?: Exception(error)

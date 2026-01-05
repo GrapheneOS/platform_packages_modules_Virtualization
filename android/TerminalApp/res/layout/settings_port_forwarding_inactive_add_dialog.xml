@@ -22,7 +22,7 @@
 
     <EditText
         android:id="@+id/settings_port_forwarding_inactive_add_dialog_text"
-        android:hint="@string/settings_port_forwarding_dialog_textview_hint"
+        android:hint="@string/settings_port_dlg_hint_port_number"
         android:importantForAutofill="no"
         android:inputType="number"
         android:layout_width="match_parent"

@@ -75,6 +75,6 @@
         android:layout_alignParentStart="true"
         android:layout_marginBottom="32dp"
         android:layout_marginHorizontal="40dp"
-        android:text="@string/error_button_report_bug" />
+        android:text="@string/error_btn_report_bug" />
 
 </RelativeLayout>

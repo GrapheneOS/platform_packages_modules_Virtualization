@@ -407,14 +407,14 @@ public class MainActivity :
             Notification.Builder(this, Application.CHANNEL_LONG_RUNNING_ID)
                 .setSilent(true)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(resources.getString(R.string.service_notification_title))
-                .setContentText(resources.getString(R.string.service_notification_content))
+                .setContentTitle(resources.getString(R.string.notif_title_running))
+                .setContentText(resources.getString(R.string.notif_content_running))
                 .setContentIntent(tapPendingIntent)
                 .setOngoing(true)
                 .addAction(
                     Notification.Action.Builder(
                             icon,
-                            resources.getString(R.string.service_notification_settings),
+                            resources.getString(R.string.notif_action_settings),
                             settingsPendingIntent,
                         )
                         .build()
@@ -422,7 +422,7 @@ public class MainActivity :
                 .addAction(
                     Notification.Action.Builder(
                             icon,
-                            resources.getString(R.string.service_notification_quit_action),
+                            resources.getString(R.string.notif_action_close),
                             stopPendingIntent,
                         )
                         .build()

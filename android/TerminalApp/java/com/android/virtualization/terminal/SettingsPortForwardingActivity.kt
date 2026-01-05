@@ -60,9 +60,9 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
         addButton.setOnClickListener {
             val dialog =
                 MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.settings_port_forwarding_dialog_title)
+                    .setTitle(R.string.settings_port_dlg_title_add)
                     .setView(R.layout.settings_port_forwarding_inactive_add_dialog)
-                    .setPositiveButton(R.string.settings_port_forwarding_dialog_save) {
+                    .setPositiveButton(R.string.settings_port_dlg_btn_save) {
                         dialogInterface,
                         _ ->
                         val alertDialog = dialogInterface as AlertDialog
@@ -73,7 +73,7 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
                         val port = editText.text.toString().toInt()
                         portsStateManager.updateEnabledPort(port, true)
                     }
-                    .setNegativeButton(R.string.settings_port_forwarding_dialog_cancel, null)
+                    .setNegativeButton(R.string.settings_port_dlg_btn_cancel, null)
                     .create()
             dialog.show()
 
@@ -106,7 +106,7 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
                             } catch (e: NumberFormatException) {
                                 editText.setError(
                                     getString(
-                                        R.string.settings_port_forwarding_dialog_error_invalid_input
+                                        R.string.settings_port_dlg_error_invalid_input
                                     )
                                 )
                                 positiveButton.setEnabled(false)
@@ -116,7 +116,7 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
                             editText.setError(
                                 getString(
                                     R.string
-                                        .settings_port_forwarding_dialog_error_invalid_port_range
+                                        .settings_port_dlg_error_invalid_range
                                 )
                             )
                             positiveButton.setEnabled(false)
@@ -126,7 +126,7 @@ class SettingsPortForwardingActivity : AppCompatActivity() {
                         ) {
                             editText.setError(
                                 getString(
-                                    R.string.settings_port_forwarding_dialog_error_existing_port
+                                    R.string.settings_port_dlg_error_existing
                                 )
                             )
                             positiveButton.setEnabled(false)

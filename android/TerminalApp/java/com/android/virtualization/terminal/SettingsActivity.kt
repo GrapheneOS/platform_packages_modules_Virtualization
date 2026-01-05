@@ -34,8 +34,8 @@ class SettingsActivity : AppCompatActivity() {
         if (!Flags.terminalStorageBalloon()) {
             settingsItems.add(
                 SettingsItem(
-                    resources.getString(R.string.settings_disk_resize_title),
-                    resources.getString(R.string.settings_disk_resize_sub_title),
+                    resources.getString(R.string.settings_disk_title),
+                    resources.getString(R.string.settings_disk_subtitle),
                     R.drawable.baseline_storage_24,
                     SettingsItemEnum.DiskResize,
                 )
@@ -43,8 +43,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         settingsItems.add(
             SettingsItem(
-                resources.getString(R.string.settings_port_forwarding_title),
-                resources.getString(R.string.settings_port_forwarding_sub_title),
+                resources.getString(R.string.settings_port_title),
+                resources.getString(R.string.settings_port_subtitle),
                 R.drawable.baseline_call_missed_outgoing_24,
                 SettingsItemEnum.PortForwarding,
             )
@@ -52,7 +52,7 @@ class SettingsActivity : AppCompatActivity() {
         settingsItems.add(
             SettingsItem(
                 resources.getString(R.string.settings_recovery_title),
-                resources.getString(R.string.settings_recovery_sub_title),
+                resources.getString(R.string.settings_recovery_subtitle),
                 R.drawable.baseline_settings_backup_restore_24,
                 SettingsItemEnum.Recovery,
             )
@@ -61,8 +61,8 @@ class SettingsActivity : AppCompatActivity() {
         if (GraphicsManager.getInstance(this).availableAccelerationTypes.size > 1) {
             settingsItems.add(
                 SettingsItem(
-                    resources.getString(R.string.settings_graphics_acceleration_title),
-                    resources.getString(R.string.settings_graphics_acceleration_subtitle),
+                    resources.getString(R.string.settings_graphics_title),
+                    resources.getString(R.string.settings_graphics_subtitle),
                     R.drawable.ic_display,
                     SettingsItemEnum.GraphicAcceleration,
                 )

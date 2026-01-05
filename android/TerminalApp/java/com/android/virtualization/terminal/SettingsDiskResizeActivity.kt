@@ -93,7 +93,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         diskMaxSizeText = findViewById<TextView>(R.id.settings_disk_resize_resize_gb_max)
         diskMaxSizeText.text =
             getString(
-                R.string.settings_disk_resize_resize_gb_max_format,
+                R.string.settings_disk_text_max_format,
                 localizedFileSize(maxDiskSizeMb, /* isShort= */ true),
             )
 
@@ -137,13 +137,13 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
 
     fun showConfirmationDialog() {
         MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.settings_disk_resize_title)
-            .setMessage(R.string.settings_disk_resize_resize_confirm_dialog_message)
-            .setPositiveButton(R.string.settings_disk_resize_resize_confirm_dialog_confirm) { _, _
+            .setTitle(R.string.settings_disk_title)
+            .setMessage(R.string.settings_disk_dlg_message_confirm)
+            .setPositiveButton(R.string.settings_disk_dlg_btn_confirm) { _, _
                 ->
                 resize()
             }
-            .setNegativeButton(R.string.settings_disk_resize_resize_cancel) { _, _ -> cancel() }
+            .setNegativeButton(R.string.settings_disk_btn_cancel) { _, _ -> cancel() }
             .create()
             .show()
     }
@@ -154,7 +154,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         if (availableSizeMb < desiredDiskSizeMb) {
             Snackbar.make(
                     findViewById(android.R.id.content),
-                    R.string.settings_disk_resize_not_enough_space_message,
+                    R.string.settings_disk_snkbar_not_enough_space,
                     Snackbar.LENGTH_SHORT,
                 )
                 .show()
@@ -203,13 +203,13 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
         diskSizeText.text =
             enlargeFontOfNumber(
                 getString(
-                    R.string.settings_disk_resize_resize_gb_assigned_format,
+                    R.string.settings_disk_text_assigned_format,
                     localizedFileSize(sizeMb, /* isShort= */ true),
                 )
             )
         diskSizeSlider.stateDescription =
             getString(
-                R.string.settings_disk_resize_resize_gb_assigned_format,
+                R.string.settings_disk_text_assigned_format,
                 localizedFileSize(sizeMb, /* isShort= */ false),
             )
     }
@@ -217,7 +217,7 @@ class SettingsDiskResizeActivity : AppCompatActivity() {
     fun updateMaxSizeText(sizeMb: Long) {
         diskMaxSizeText.text =
             getString(
-                R.string.settings_disk_resize_resize_gb_max_format,
+                R.string.settings_disk_text_max_format,
                 localizedFileSize(sizeMb, /* isShort= */ true),
             )
     }

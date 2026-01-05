@@ -53,7 +53,7 @@ class SettingsPortForwardingActiveAdapter(
         val port = items[position].port
         viewHolder.port.text =
             context.getString(
-                R.string.settings_port_forwarding_active_ports_content,
+                R.string.settings_port_text_active_ports_format,
                 port,
                 portsStateManager.getActivePortInfo(port)?.comm,
             )

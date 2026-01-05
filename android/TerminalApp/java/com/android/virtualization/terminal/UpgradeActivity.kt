@@ -56,7 +56,7 @@ class UpgradeActivity : BaseActivity() {
             } catch (e: IOException) {
                 Snackbar.make(
                         findViewById<View>(android.R.id.content),
-                        R.string.upgrade_error,
+                        R.string.upgrade_snkbar_error,
                         Snackbar.LENGTH_SHORT,
                     )
                     .show()

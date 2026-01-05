@@ -45,19 +45,19 @@ class SettingsRecoveryActivity : AppCompatActivity() {
             var backupRootfs = false
             val dialog =
                 MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.settings_recovery_reset_dialog_title)
+                    .setTitle(R.string.settings_recovery_dlg_title_reset)
                     .setMultiChoiceItems(
-                        arrayOf(getString(R.string.settings_recovery_reset_dialog_backup_option)),
+                        arrayOf(getString(R.string.settings_recovery_dlg_option_backup)),
                         booleanArrayOf(backupRootfs),
                     ) { _, _, checked ->
                         backupRootfs = checked
                     }
-                    .setPositiveButton(R.string.settings_recovery_reset_dialog_confirm) { _, _ ->
+                    .setPositiveButton(R.string.settings_recovery_dlg_btn_reset) { _, _ ->
                         // This coroutine will be killed when the activity is killed. Either
                         // finishing removing or not is acceptable behavior.
                         runInBackgroundAndRestartApp { uninstall(backupRootfs) }
                     }
-                    .setNegativeButton(R.string.settings_recovery_reset_dialog_cancel) { dialog, _
+                    .setNegativeButton(R.string.settings_recovery_dlg_btn_cancel) { dialog, _
                         ->
                         dialog.dismiss()
                     }
@@ -71,12 +71,12 @@ class SettingsRecoveryActivity : AppCompatActivity() {
         resetBackupCard.setOnClickListener {
             val dialog =
                 MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.settings_recovery_remove_backup_title)
-                    .setMessage(R.string.settings_recovery_remove_backup_sub_title)
-                    .setPositiveButton(R.string.settings_recovery_reset_dialog_confirm) { _, _ ->
+                    .setTitle(R.string.settings_recovery_title_remove_backup)
+                    .setMessage(R.string.settings_recovery_subtitle_remove_backup)
+                    .setPositiveButton(R.string.settings_recovery_dlg_btn_reset) { _, _ ->
                         runInBackgroundAndRestartApp { removeBackup() }
                     }
-                    .setNegativeButton(R.string.settings_recovery_reset_dialog_cancel) { dialog, _
+                    .setNegativeButton(R.string.settings_recovery_dlg_btn_cancel) { dialog, _
                         ->
                         dialog.dismiss()
                     }
@@ -97,7 +97,7 @@ class SettingsRecoveryActivity : AppCompatActivity() {
         } catch (e: IOException) {
             Snackbar.make(
                     findViewById(android.R.id.content),
-                    R.string.settings_recovery_error_during_removing_backup,
+                    R.string.settings_recovery_snkbar_error_remove_backup,
                     Snackbar.LENGTH_SHORT,
                 )
                 .show()
@@ -118,8 +118,8 @@ class SettingsRecoveryActivity : AppCompatActivity() {
             }
         } catch (e: IOException) {
             val errorMsgId =
-                if (backupRootfs && !backupDone) R.string.settings_recovery_error_due_to_backup
-                else R.string.settings_recovery_error
+                if (backupRootfs && !backupDone) R.string.settings_recovery_snkbar_error_backup
+                else R.string.settings_recovery_snkbar_error_generic
             Snackbar.make(findViewById(android.R.id.content), errorMsgId, Snackbar.LENGTH_SHORT)
                 .show()
             Log.e(TAG, "cannot recovery ", e)

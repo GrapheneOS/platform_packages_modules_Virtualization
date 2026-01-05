@@ -32,21 +32,21 @@
     <!-- ================================================================= -->
 
     <!-- Description of the entire terminal display showing texts. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="terminal_display">Terminal display</string>
+    <string name="terminal_hint_display">Terminal display</string>
     <!-- Description of the edit box accepting user input. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="terminal_input">Cursor</string>
+    <string name="terminal_hint_input">Cursor</string>
     <!-- Description of an empty line in the terminal. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="empty_line">Empty line</string>
+    <string name="terminal_hint_empty_line">Empty line</string>
     <!-- Description of the hint supported by the terminal UI elements. This is read by talkback. [CHAR LIMIT=none] -->
-    <string name="double_tap_to_edit_text">Double-tap to type input</string>
+    <string name="terminal_hint_double_tap_to_edit">Double-tap to type input</string>
     <!-- Default title of a terminal tab [CHAR LIMIT=10] -->
-    <string name="tab_default_title">Tab</string>
+    <string name="terminal_tab_title_default">Tab</string>
     <!-- Toast message to notify that terminal connection is failed due to an internal error [CHAR LIMIT=none] -->
-    <string name="ttyd_connection_error">Session is lost due to an internal error.</string>
+    <string name="terminal_toast_connection_error">Session is lost due to an internal error.</string>
     <!-- Toast message to notify that preparing terminal to start [CHAR LIMIT=none] -->
-    <string name="vm_creation_message">Preparing terminal</string>
+    <string name="terminal_message_vm_creation">Preparing terminal</string>
     <!-- Toast message to notify that terminal is crashed [CHAR LIMIT=none] -->
-    <string name="vm_error_message">Terminal crashed</string>
+    <string name="terminal_message_vm_error">Terminal crashed</string>
 
 
     <!-- ================================================================= -->
@@ -54,25 +54,21 @@
     <!-- ================================================================= -->
 
     <!-- Installer activity title [CHAR LIMIT=none] -->
-    <string name="installer_title_text">Install Linux terminal</string>
+    <string name="installer_title">Install Linux terminal</string>
     <!-- Installer activity description format [CHAR LIMIT=none] -->
-    <string name="installer_desc_text_format">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">\u200E%1$s\u200E</xliff:g> of data over the network.\nWould you like to proceed?</string>
+    <string name="installer_desc">To launch Linux terminal, you need to download roughly <xliff:g id="expected_size" example="350GB">\u200E%1$s\u200E</xliff:g> of data over the network.\nWould you like to proceed?</string>
     <!-- Checkbox at the installer activity to download when Wi-Fi is available to prevent from paying network traffic [CHAR LIMIT=none] -->
-    <string name="installer_wait_for_wifi_checkbox_text">Download using Wi-Fi only</string>
+    <string name="installer_chkbox_wifi_only">Download using Wi-Fi only</string>
     <!-- Button at the installer activity to confirm installation [CHAR LIMIT=16] -->
-    <string name="installer_install_button_enabled_text">Install</string>
+    <string name="installer_btn_install">Install</string>
     <!-- Button at the installer activity to when installation is already in progress [CHAR LIMIT=16] -->
-    <string name="installer_install_button_disabled_text">Installing</string>
-    <!-- Notification title for installer [CHAR LIMIT=64] -->
-    <string name="installer_notif_title_text">Installing Linux terminal</string>
-    <!-- Notification description for installer [CHAR LIMIT=none] -->
-    <string name="installer_notif_desc_text">Linux terminal will start after the installation is finished</string>
+    <string name="installer_btn_installing">Installing</string>
     <!-- Toast error message for install failure due to the network issue [CHAR LIMIT=none] -->
-    <string name="installer_error_network">Failed to install due to a network issue</string>
+    <string name="installer_snkbar_error_network">Failed to install due to a network issue</string>
     <!-- Toast error message for install failure because Wi-Fi isn't available although required [CHAR LIMIT=none] -->
-    <string name="installer_error_no_wifi">Failed to install because Wi-Fi is not available</string>
+    <string name="installer_snkbar_error_no_wifi">Failed to install because Wi-Fi is not available</string>
     <!-- Toast error message for install failure due to the unidentified issue [CHAR LIMIT=none] -->
-    <string name="installer_error_unknown">Failed to install. Please try again</string>
+    <string name="installer_snkbar_error_unknown">Failed to install. Please try again</string>
 
 
     <!-- ================================================================= -->
@@ -80,87 +76,93 @@
     <!-- ================================================================= -->
 
     <!-- Notification action button for settings [CHAR LIMIT=20] -->
-    <string name="service_notification_settings">Settings</string>
+    <string name="notif_action_settings">Settings</string>
     <!-- Notification title for foreground service notification [CHAR LIMIT=none] -->
-    <string name="service_notification_title">Terminal is running</string>
+    <string name="notif_title_running">Terminal is running</string>
     <!-- Notification content for foreground service notification [CHAR LIMIT=none] -->
-    <string name="service_notification_content">Click to open terminal</string>
+    <string name="notif_content_running">Click to open terminal</string>
     <!-- Notification action button for closing the virtual machine [CHAR LIMIT=20] -->
-    <string name="service_notification_quit_action">Close</string>
+    <string name="notif_action_close">Close</string>
     <!-- Notification title for foreground service notification during closing [CHAR LIMIT=none] -->
-    <string name="service_notification_close_title">Terminal is closing</string>
+    <string name="notif_title_closing">Terminal is closing</string>
     <!-- Notification action button for force-closing the virtual machine [CHAR LIMIT=30] -->
-    <string name="service_notification_force_quit_action">Force close</string>
+    <string name="notif_action_force_close">Force close</string>
     <!-- This is the name of the notification channel for long-runnint tasks [CHAR LIMIT=none] -->
-    <string name="notification_channel_long_running_name">Long running tasks</string>
+    <string name="notif_channel_long_running">Long running tasks</string>
     <!-- This is the name of the notification channel for system events [CHAR LIMIT=none] -->
-    <string name="notification_channel_system_events_name">System events</string>
+    <string name="notif_channel_system_events">System events</string>
+
+    <!-- Notification title for installer [CHAR LIMIT=64] -->
+    <string name="notif_installer_title">Installing Linux terminal</string>
+    <!-- Notification description for installer [CHAR LIMIT=none] -->
+    <string name="notif_installer_desc">Linux terminal will start after the installation is finished</string>
+
+    <!-- Notification title for a new active port [CHAR LIMIT=none] -->
+    <string name="notif_port_title_request">Terminal is requesting to open a new port</string>
+    <!-- Notification content for a new active port [CHAR LIMIT=none] -->
+    <string name="notif_port_content_request">Port requested: <xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
+    <!-- Notification action accept [CHAR LIMIT=16] -->
+    <string name="notif_port_action_accept">Accept</string>
+    <!-- Notification action deny [CHAR LIMIT=16] -->
+    <string name="notif_port_action_deny">Deny</string>
 
 
     <!-- ================================================================= -->
-    <!-- Settings - Disk Resize                                            -->
+    <!-- Settings - Disk                                                   -->
     <!-- ================================================================= -->
 
     <!-- Settings memu title for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_title">Disk resize</string>
+    <string name="settings_disk_title">Disk resize</string>
     <!-- Settings memu subtitle for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_sub_title">Resize the root partition size</string>
+    <string name="settings_disk_subtitle">Resize the root partition size</string>
     <!-- Settings menu option description format of the current disk size. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_resize_gb_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
+    <string name="settings_disk_text_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
     <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_resize_gb_max_format"><xliff:g id="max_size" example="256GB">\u200E%1$s\u200E</xliff:g> max</string>
+    <string name="settings_disk_text_max_format"><xliff:g id="max_size" example="256GB">\u200E%1$s\u200E</xliff:g> max</string>
     <!-- Snackbar message for showing not enough space error. [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_not_enough_space_message">Not enough space on the device to resize disk</string>
+    <string name="settings_disk_snkbar_not_enough_space">Not enough space on the device to resize disk</string>
     <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=16] -->
-    <string name="settings_disk_resize_resize_cancel">Cancel</string>
+    <string name="settings_disk_btn_cancel">Cancel</string>
     <!-- Settings menu button to apply change Terminal app. This will launch a confirmation dialog [CHAR LIMIT=16] -->
-    <string name="settings_disk_resize_resize_restart_vm_to_apply">Apply</string>
+    <string name="settings_disk_btn_apply">Apply</string>
     <!-- Dialog description for applying disk resize Terminal app, which requires to restart the terminal [CHAR LIMIT=none] -->
-    <string name="settings_disk_resize_resize_confirm_dialog_message">Terminal will be restarted to resize disk</string>
+    <string name="settings_disk_dlg_message_confirm">Terminal will be restarted to resize disk</string>
     <!-- Dialog confirmation button for restarting the terminal [CHAR LIMIT=16] -->
-    <string name="settings_disk_resize_resize_confirm_dialog_confirm">Confirm</string>
+    <string name="settings_disk_dlg_btn_confirm">Confirm</string>
 
 
     <!-- ================================================================= -->
-    <!-- Settings - Port Forwarding                                        -->
+    <!-- Settings - Port                                                   -->
     <!-- ================================================================= -->
 
     <!-- Settings menu title for port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_title">Port control</string>
+    <string name="settings_port_title">Port control</string>
     <!-- Settings menu subtitle for port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_sub_title">Allow/deny listening ports</string>
+    <string name="settings_port_subtitle">Allow/deny listening ports</string>
     <!-- Title for active ports setting in port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_active_ports_title">Listening ports</string>
+    <string name="settings_port_title_active_ports">Listening ports</string>
     <!-- Text content for active ports setting in port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_active_ports_content"><xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
+    <string name="settings_port_text_active_ports_format"><xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
     <!-- Title for other enabled ports setting in port forwarding [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_other_enabled_ports_title">Saved allowed ports</string>
+    <string name="settings_port_title_saved_ports">Saved allowed ports</string>
     <!-- Description of add button for other enabled ports. Used for talkback. [CHAR LIMIT=16] -->
-    <string name="settings_port_forwarding_other_enabled_port_add_button">Add</string>
+    <string name="settings_port_btn_add">Add</string>
     <!-- Description of close button for other enabled ports. Used for talkback. [CHAR LIMIT=16] -->
-    <string name="settings_port_forwarding_other_enabled_port_close_button">Delete <xliff:g id="port_number" example="8000">%d</xliff:g></string>
+    <string name="settings_port_btn_delete">Delete <xliff:g id="port_number" example="8000">%d</xliff:g></string>
     <!-- Dialog title for enabling a new port [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_dialog_title">Allow a new port</string>
+    <string name="settings_port_dlg_title_add">Allow a new port</string>
     <!-- Dialog hint for enabling a new port [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_dialog_textview_hint">Enter a new port number</string>
+    <string name="settings_port_dlg_hint_port_number">Enter a new port number</string>
     <!-- Dialog save action for enabling a new port [CHAR LIMIT=16] -->
-    <string name="settings_port_forwarding_dialog_save">Save</string>
+    <string name="settings_port_dlg_btn_save">Save</string>
     <!-- Dialog cancel action for enabling a new port [CHAR LIMIT=16] -->
-    <string name="settings_port_forwarding_dialog_cancel">Cancel</string>
+    <string name="settings_port_dlg_btn_cancel">Cancel</string>
     <!-- Dialog error message for non number format input [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_dialog_error_invalid_input">Please enter a number</string>
+    <string name="settings_port_dlg_error_invalid_input">Please enter a number</string>
     <!-- Dialog error message for invalid port number [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_dialog_error_invalid_port_range">Invalid port number</string>
+    <string name="settings_port_dlg_error_invalid_range">Invalid port number</string>
     <!-- Dialog error message for existing port [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_dialog_error_existing_port">Port already exists</string>
-    <!-- Notification title for a new active port [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_notification_title">Terminal is requesting to open a new port</string>
-    <!-- Notification content for a new active port [CHAR LIMIT=none] -->
-    <string name="settings_port_forwarding_notification_content">Port requested: <xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
-    <!-- Notification action accept [CHAR LIMIT=16] -->
-    <string name="settings_port_forwarding_notification_accept">Accept</string>
-    <!-- Notification action deny [CHAR LIMIT=16] -->
-    <string name="settings_port_forwarding_notification_deny">Deny</string>
+    <string name="settings_port_dlg_error_existing">Port already exists</string>
 
 
     <!-- ================================================================= -->
@@ -170,29 +172,29 @@
     <!-- Settings menu title for recoverying image [CHAR LIMIT=none] -->
     <string name="settings_recovery_title">Recovery</string>
     <!-- Settings menu subtitle for recoverying image [CHAR LIMIT=none] -->
-    <string name="settings_recovery_sub_title">Partition recovery options</string>
+    <string name="settings_recovery_subtitle">Partition recovery options</string>
     <!-- Settings menu title for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_title">Reset to initial version</string>
+    <string name="settings_recovery_title_reset">Reset to initial version</string>
     <!-- Settings menu subtitle for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_sub_title">Remove all data</string>
+    <string name="settings_recovery_subtitle_reset">Remove all data</string>
     <!-- Dialog title for resetting the terminal [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_dialog_title">Reset terminal</string>
+    <string name="settings_recovery_dlg_title_reset">Reset terminal</string>
     <!-- Dialog button confirm for resetting the terminal [CHAR LIMIT=16] -->
-    <string name="settings_recovery_reset_dialog_confirm">Reset</string>
+    <string name="settings_recovery_dlg_btn_reset">Reset</string>
     <!-- Dialog button cancel for resetting the terminal [CHAR LIMIT=16] -->
-    <string name="settings_recovery_reset_dialog_cancel">Cancel</string>
+    <string name="settings_recovery_dlg_btn_cancel">Cancel</string>
     <!-- Dialog option to back up previous image(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
-    <string name="settings_recovery_reset_dialog_backup_option">Back up data to <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <string name="settings_recovery_dlg_option_backup">Back up data to <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
     <!-- Snankbar to indicate recovery error due to backup [CHAR LIMIT=none] -->
-    <string name="settings_recovery_error_due_to_backup">Failed to recover due to a backup error</string>
+    <string name="settings_recovery_snkbar_error_backup">Failed to recover due to a backup error</string>
     <!-- Snankbar to indicate recovery error [CHAR LIMIT=none] -->
-    <string name="settings_recovery_error">Recovery failed</string>
+    <string name="settings_recovery_snkbar_error_generic">Recovery failed</string>
     <!-- Snankbar to indicate recovery error during removing backup [CHAR LIMIT=none] -->
-    <string name="settings_recovery_error_during_removing_backup">Failed to remove backup data</string>
+    <string name="settings_recovery_snkbar_error_remove_backup">Failed to remove backup data</string>
     <!-- Settings menu title for removing backup data [CHAR LIMIT=none] -->
-    <string name="settings_recovery_remove_backup_title">Remove backup data</string>
+    <string name="settings_recovery_title_remove_backup">Remove backup data</string>
     <!-- Settings menu sub title for removing backup data(/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
-    <string name="settings_recovery_remove_backup_sub_title">Remove <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
+    <string name="settings_recovery_subtitle_remove_backup">Remove <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
 
 
     <!-- ================================================================= -->
@@ -200,15 +202,15 @@
     <!-- ================================================================= -->
 
     <!-- Settings menu title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
-    <string name="settings_graphics_acceleration_title">Graphics Acceleration</string>
+    <string name="settings_graphics_title">Graphics Acceleration</string>
     <!-- Settings menu sub title for selecting the graphics acceleration type [CHAR LIMIT=none] -->
-    <string name="settings_graphics_acceleration_subtitle">Change the renderer for graphics acceleration.</string>
+    <string name="settings_graphics_subtitle">Change the renderer for graphics acceleration.</string>
     <!-- Toast after selecting the graphics acceleration type [CHAR LIMIT=none] -->
-    <string name="settings_graphics_acceleration_toast_reboot_required">Please restart Terminal app to apply the change.</string>
+    <string name="settings_graphics_toast_reboot_required">Please restart Terminal app to apply the change.</string>
     <!-- Software-based renderer [CHAR LIMIT=none] -->
-    <string name="settings_graphics_acceleration_software_renderer">Software renderer</string>
+    <string name="settings_graphics_renderer_software">Software renderer</string>
     <!-- Hardware-based renderer [CHAR LIMIT=none] -->
-    <string name="settings_graphics_acceleration_hardware_renderer">GPU-accelerated renderer</string>
+    <string name="settings_graphics_renderer_gpu">GPU-accelerated renderer</string>
 
 
     <!-- ================================================================= -->
@@ -220,9 +222,9 @@
     <!-- Error page that shows error page [CHAR LIMIT=none] -->
     <string name="error_desc">Failed to recover from an error.\nYou can try restarting terminal or try one of the recovery options.\nIf all attempts fail, wipe all data by turning on/off Linux terminal from developer options."</string>
     <!-- Error page that shows detailed error code (error reason) for bugreport. [CHAR LIMIT=none] -->
-    <string name="error_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
+    <string name="error_text_code">Error code: <xliff:g id="error_code" example="ACCESS_DENIED">%s</xliff:g></string>
     <!-- Button at the error activity for bugreport [CHAR LIMIT=16] -->
-    <string name="error_button_report_bug">Report bug</string>
+    <string name="error_btn_report_bug">Report bug</string>
 
 
     <!-- ================================================================= -->
@@ -234,7 +236,7 @@
     <!-- Upgrade page's description. Tell users that can't use as-is, and also explains next step. (/mnt/backup is the path which is supposed not to be translated) [CHAR LIMIT=none] -->
     <string name="upgrade_desc">Linux terminal you were using is out of date. Please upgrade to proceed.\nData will be backed at <xliff:g id="path" example="/mnt/backup">/mnt/backup</xliff:g></string>
     <!-- Upgrade page's button to start upgrade. [CHAR LIMIT=16] -->
-    <string name="upgrade_button">Upgrade</string>
+    <string name="upgrade_btn_upgrade">Upgrade</string>
     <!-- Upgrade page's error toast message when upgrade failed. [CHAR LIMIT=none] -->
-    <string name="upgrade_error">Upgrade failed</string>
+    <string name="upgrade_snkbar_error">Upgrade failed</string>
 </resources>

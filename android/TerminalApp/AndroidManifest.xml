@@ -74,9 +74,9 @@
         <activity android:name=".SettingsActivity"
             android:label="@string/action_settings" />
         <activity android:name=".SettingsDiskResizeActivity"
-            android:label="@string/settings_disk_resize_title" />
+            android:label="@string/settings_disk_title" />
         <activity android:name=".SettingsPortForwardingActivity"
-            android:label="@string/settings_port_forwarding_title" />
+            android:label="@string/settings_port_title" />
         <activity android:name=".SettingsRecoveryActivity"
             android:label="@string/settings_recovery_title" />
         <activity android:name=".ErrorActivity"

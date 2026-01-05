@@ -62,25 +62,25 @@
                     android:layout_marginEnd="16dp"
                     android:layout_marginStart="24dp">
                     <TextView
-                        android:id="@+id/settings_recovery_reset_title"
+                        android:id="@+id/settings_recovery_title_reset"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
                         android:layout_marginStart="24dp"
                         android:textSize="20sp"
-                        android:text="@string/settings_recovery_reset_title"
+                        android:text="@string/settings_recovery_title_reset"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toTopOf="@+id/settings_recovery_reset_sub_title"
+                        app:layout_constraintBottom_toTopOf="@+id/settings_recovery_subtitle_reset"
                         app:layout_constraintStart_toStartOf="parent" />
                     <TextView
-                        android:id="@+id/settings_recovery_reset_sub_title"
+                        android:id="@+id/settings_recovery_subtitle_reset"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:layout_marginBottom="20dp"
                         android:layout_marginStart="24dp"
-                        android:text="@string/settings_recovery_reset_sub_title"
-                        app:layout_constraintTop_toBottomOf="@+id/settings_recovery_reset_title"
+                        android:text="@string/settings_recovery_subtitle_reset"
+                        app:layout_constraintTop_toBottomOf="@+id/settings_recovery_title_reset"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -106,7 +106,7 @@
                         android:layout_marginTop="20dp"
                         android:layout_marginStart="24dp"
                         android:textSize="20sp"
-                        android:text="@string/settings_recovery_remove_backup_title"
+                        android:text="@string/settings_recovery_title_remove_backup"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toTopOf="@+id/settings_recovery_reset_backup_sub_title"
                         app:layout_constraintStart_toStartOf="parent" />
@@ -117,7 +117,7 @@
                         android:textSize="14sp"
                         android:layout_marginBottom="20dp"
                         android:layout_marginStart="24dp"
-                        android:text="@string/settings_recovery_remove_backup_sub_title"
+                        android:text="@string/settings_recovery_subtitle_remove_backup"
                         app:layout_constraintTop_toBottomOf="@+id/settings_recovery_reset_backup_title"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent" />
