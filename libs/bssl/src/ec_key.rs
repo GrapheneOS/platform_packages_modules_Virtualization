@@ -136,7 +136,7 @@ impl EcKey {
 
     /// Performs several checks on the key. See BoringSSL doc for more details:
     ///
-    /// https://commondatastorage.googleapis.com/chromium-boringssl-docs/ec_key.h.html#EC_KEY_check_key
+    /// <https://commondatastorage.googleapis.com/chromium-boringssl-docs/ec_key.h.html#EC_KEY_check_key>
     pub fn check_key(&self) -> Result<()> {
         // SAFETY: This function only reads the `EC_KEY` pointer, the non-null check is performed
         // within the function.
@@ -323,7 +323,7 @@ impl EcKey {
 
     /// Returns the DER-encoded ECPrivateKey structure described in RFC 5915 Section 3:
     ///
-    /// https://datatracker.ietf.org/doc/html/rfc5915#section-3
+    /// <https://datatracker.ietf.org/doc/html/rfc5915#section-3>
     pub fn ec_private_key(&self) -> Result<ZVec> {
         const CAPACITY: usize = 256;
         let mut buf = Zeroizing::new([0u8; CAPACITY]);

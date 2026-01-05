@@ -25,7 +25,7 @@ use core::ptr::NonNull;
 
 /// BoringSSL spec recommends to use 12-byte nonces.
 ///
-/// https://commondatastorage.googleapis.com/chromium-boringssl-docs/aead.h.html#EVP_aead_aes_256_gcm
+/// <https://commondatastorage.googleapis.com/chromium-boringssl-docs/aead.h.html#EVP_aead_aes_256_gcm>
 pub const AES_GCM_NONCE_LENGTH: usize = 12;
 
 /// Magic value indicating that the default tag length for an AEAD should be used to
@@ -41,7 +41,7 @@ impl Aead {
     /// AES-GCM should only be used with 12-byte (96-bit) nonces as suggested in the
     /// BoringSSL spec:
     ///
-    /// https://commondatastorage.googleapis.com/chromium-boringssl-docs/aead.h.html
+    /// <https://commondatastorage.googleapis.com/chromium-boringssl-docs/aead.h.html>
     pub fn aes_256_gcm() -> Self {
         // SAFETY: This function does not access any Rust variables and simply returns
         // a pointer to the static variable in BoringSSL.
