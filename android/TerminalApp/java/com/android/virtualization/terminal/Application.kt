@@ -39,7 +39,7 @@ public class Application : AndroidApplication() {
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_LONG_RUNNING_ID,
-                getString(R.string.notification_channel_long_running_name),
+                getString(R.string.notif_channel_long_running),
                 NotificationManager.IMPORTANCE_DEFAULT,
             )
         )
@@ -47,7 +47,7 @@ public class Application : AndroidApplication() {
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_SYSTEM_EVENTS_ID,
-                getString(R.string.notification_channel_system_events_name),
+                getString(R.string.notif_channel_system_events),
                 NotificationManager.IMPORTANCE_HIGH,
             )
         )

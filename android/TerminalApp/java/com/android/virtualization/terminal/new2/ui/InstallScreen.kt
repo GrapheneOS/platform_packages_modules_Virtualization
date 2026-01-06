@@ -63,15 +63,15 @@ fun InstallStartScreen(totalSizeBytes: Long, onInstallClick: (Boolean) -> Unit) 
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = stringResource(R.string.installer_desc_text_format, formattedSize))
+        Text(text = stringResource(R.string.installer_desc, formattedSize))
         Spacer(modifier = Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = wifiOnly, onCheckedChange = { wifiOnly = it })
-            Text(text = stringResource(R.string.installer_wait_for_wifi_checkbox_text))
+            Text(text = stringResource(R.string.installer_chkbox_wifi_only))
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { onInstallClick(wifiOnly) }) {
-            Text(text = stringResource(R.string.installer_install_button_enabled_text))
+            Text(text = stringResource(R.string.installer_btn_install))
         }
     }
 }
@@ -106,7 +106,7 @@ fun onInstallClick(
         scope.launch {
             val result =
                 snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.installer_error_no_wifi),
+                    message = context.getString(R.string.installer_snkbar_error_no_wifi),
                     actionLabel = context.getString(R.string.action_settings),
                     duration = SnackbarDuration.Short,
                 )

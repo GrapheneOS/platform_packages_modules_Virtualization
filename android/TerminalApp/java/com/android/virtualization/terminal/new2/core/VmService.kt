@@ -248,7 +248,7 @@ class VmService : LifecycleService() {
                 .addAction(
                     Notification.Action.Builder(
                             R.drawable.ic_close,
-                            getString(R.string.service_notification_quit_action),
+                            getString(R.string.notif_action_close),
                             stopPending,
                         )
                         .build()

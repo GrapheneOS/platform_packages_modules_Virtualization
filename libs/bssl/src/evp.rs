@@ -77,7 +77,7 @@ impl PKey {
     /// Returns a DER-encoded SubjectPublicKeyInfo structure as specified
     /// in RFC 5280 s4.1.2.7:
     ///
-    /// https://www.rfc-editor.org/rfc/rfc5280.html#section-4.1.2.7
+    /// <https://www.rfc-editor.org/rfc/rfc5280.html#section-4.1.2.7>
     pub fn subject_public_key_info(&self) -> Result<Vec<u8>> {
         const CAPACITY: usize = 256;
         let mut buf = [0u8; CAPACITY];

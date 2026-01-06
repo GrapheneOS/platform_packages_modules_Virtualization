@@ -190,9 +190,9 @@ open class TerminalView @JvmOverloads constructor(context: Context, attrs: Attri
                         // "Terminal display".
                         if (id != NO_ID) {
                             info.setText(null)
-                            info.setContentDescription(getString(R.string.terminal_display))
+                            info.setContentDescription(getString(R.string.terminal_hint_display))
                             // b/376827536
-                            info.setHintText(getString(R.string.double_tap_to_edit_text))
+                            info.setHintText(getString(R.string.terminal_hint_double_tap_to_edit))
                         }
 
                         // These two lines below are to prevent this WebView element from being
@@ -209,9 +209,9 @@ open class TerminalView @JvmOverloads constructor(context: Context, attrs: Attri
                         // Empty line was announced as "space" (via the NBSP character).
                         // Localize the spoken text.
                         if (isEmptyLine(info)) {
-                            info.setContentDescription(getString(R.string.empty_line))
+                            info.setContentDescription(getString(R.string.terminal_hint_empty_line))
                             // b/376827536
-                            info.setHintText(getString(R.string.double_tap_to_edit_text))
+                            info.setHintText(getString(R.string.terminal_hint_double_tap_to_edit))
                         }
 
                     "android.widget.TextView" -> {
@@ -226,7 +226,7 @@ open class TerminalView @JvmOverloads constructor(context: Context, attrs: Attri
                         info.getBoundsInScreen(rect)
                         if (rect.width() == 0) {
                             info.setText(null)
-                            info.setContentDescription(getString(R.string.empty_line))
+                            info.setContentDescription(getString(R.string.terminal_hint_empty_line))
                         }
                         info.isScreenReaderFocusable = false
                     }
@@ -236,8 +236,8 @@ open class TerminalView @JvmOverloads constructor(context: Context, attrs: Attri
                         // ttyd name it as "Terminal input" but it's not i18n'ed. Override it
                         // here for better i18n.
                         info.setText(null)
-                        info.setHintText(getString(R.string.double_tap_to_edit_text))
-                        info.setContentDescription(getString(R.string.terminal_input))
+                        info.setHintText(getString(R.string.terminal_hint_double_tap_to_edit))
+                        info.setContentDescription(getString(R.string.terminal_hint_input))
                         info.isScreenReaderFocusable = true
                         info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_FOCUS)
                     }

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.android.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,6 +75,8 @@ fun MainScreen(viewModel: MainViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var settingsInitialDestination by remember { mutableStateOf<SettingsDestination?>(null) }
 
+    PermissionChecker(viewModel, snackbarHostState)
+
     LaunchedEffect(viewModel) {
         viewModel.settingsRequest.collect { destination ->
             if (destination != null) {
@@ -87,7 +89,10 @@ fun MainScreen(viewModel: MainViewModel) {
     LaunchedEffect(uiState) {
         val state = uiState
         when (state) {
-            is MainUiState.Ready -> viewModel.startVm()
+            is MainUiState.Ready -> {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                viewModel.startVm()
+            }
             is MainUiState.Stopped -> activity.finish()
             is MainUiState.NotInstalled,
             is MainUiState.Checking,
@@ -222,16 +227,20 @@ private suspend fun handleError(
         when (val handler = state.handler) {
             MainUiState.ErrorHandler.CheckNetwork ->
                 Triple(
-                    R.string.installer_error_no_wifi,
+                    R.string.installer_snkbar_error_no_wifi,
                     activity.getString(R.string.action_settings),
                     { activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
                 )
             MainUiState.ErrorHandler.Retry ->
-                Triple(R.string.installer_error_unknown, "Retry", { viewModel.retryCheck() })
+                Triple(
+                    R.string.installer_snkbar_error_unknown,
+                    activity.getString(R.string.notif_btn_retry),
+                    { viewModel.retryCheck() },
+                )
             is MainUiState.ErrorHandler.ReportBug ->
                 Triple(
-                    R.string.vm_error_message,
-                    activity.getString(R.string.error_button_report_bug),
+                    R.string.terminal_message_vm_error,
+                    activity.getString(R.string.error_btn_report_bug),
                     {
                         val error = handler.error
                         val exception = error as? Exception ?: Exception(error)

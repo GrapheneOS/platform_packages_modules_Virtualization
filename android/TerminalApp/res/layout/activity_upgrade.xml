@@ -60,6 +60,6 @@
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="32dp"
         android:layout_marginHorizontal="40dp"
-        android:text="@string/upgrade_button" />
+        android:text="@string/upgrade_btn_upgrade" />
 
 </RelativeLayout>

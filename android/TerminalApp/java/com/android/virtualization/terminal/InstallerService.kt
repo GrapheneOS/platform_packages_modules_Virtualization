@@ -76,8 +76,8 @@ class InstallerService : Service() {
             Notification.Builder(this, Application.CHANNEL_LONG_RUNNING_ID)
                 .setSilent(true)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(getString(R.string.installer_notif_title_text))
-                .setContentText(getString(R.string.installer_notif_desc_text))
+                .setContentTitle(getString(R.string.notif_installer_title))
+                .setContentText(getString(R.string.notif_installer_desc))
                 .setOngoing(true)
                 .setContentIntent(pendingIntent)
                 .build()
@@ -190,7 +190,7 @@ class InstallerService : Service() {
     private fun downloadFromUrl(isWifiOnly: Boolean): Boolean {
         if (!checkForWifiOnly(isWifiOnly)) {
             Log.e(TAG, "Install isn't started because Wifi isn't available")
-            notifyError(getString(R.string.installer_error_no_wifi))
+            notifyError(getString(R.string.installer_snkbar_error_no_wifi))
             return false
         }
 
@@ -207,20 +207,20 @@ class InstallerService : Service() {
             }
         } catch (e: NoWifiException) {
             Log.e(TAG, "Install failed because of Wi-Fi is gone")
-            notifyError(getString(R.string.installer_error_no_wifi))
+            notifyError(getString(R.string.installer_snkbar_error_no_wifi))
             return false
         } catch (e: UnknownHostException) {
             // Log.e() doesn't print stack trace for UnknownHostException
             Log.e(TAG, "Install failed: " + e.message, e)
-            notifyError(getString(R.string.installer_error_network))
+            notifyError(getString(R.string.installer_snkbar_error_network))
             return false
         } catch (e: SocketException) {
             Log.e(TAG, "Install failed: " + e.message, e)
-            notifyError(getString(R.string.installer_error_network))
+            notifyError(getString(R.string.installer_snkbar_error_network))
             return false
         } catch (e: IOException) {
             Log.e(TAG, "Installation failed", e)
-            notifyError(getString(R.string.installer_error_unknown))
+            notifyError(getString(R.string.installer_snkbar_error_unknown))
             return false
         }
         return true

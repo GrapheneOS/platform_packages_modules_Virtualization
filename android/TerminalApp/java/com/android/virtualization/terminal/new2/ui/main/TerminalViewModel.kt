@@ -22,6 +22,7 @@ import android.util.Log
 import android.view.Display.DEFAULT_DISPLAY
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import androidx.lifecycle.AndroidViewModel
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.TtydView
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +47,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         )
     val uiState: StateFlow<TerminalUiState> = _uiState.asStateFlow()
 
-    private val _title = MutableStateFlow<String>("Terminal")
+    private val _title = MutableStateFlow<String>(application.getString(R.string.app_name))
     val title: StateFlow<String> = _title.asStateFlow()
 
     // TODO: explain reason for this

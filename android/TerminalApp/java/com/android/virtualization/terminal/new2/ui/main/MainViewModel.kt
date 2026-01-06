@@ -18,6 +18,7 @@ package com.android.virtualization.terminal.new2.ui.main
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.net.ConnectivityManager
 import android.net.Network
@@ -35,6 +36,7 @@ import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.core.VmState
 import com.android.virtualization.terminal.new2.ui.MainActivity
+import com.android.virtualization.terminal.new2.ui.PERMISSIONS
 import com.android.virtualization.terminal.new2.ui.SettingsDestination
 import com.android.virtualization.terminal.new2.ui.TAB_BAR_HEIGHT
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +59,8 @@ sealed interface MainUiState {
     data class Installing(val progress: StateFlow<Long>, val totalBytes: Long) : MainUiState
 
     data object Ready : MainUiState
+
+    data object PermissionRequired : MainUiState
 
     data object Stopped : MainUiState
 
@@ -111,6 +115,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _settingsRequest = MutableSharedFlow<SettingsDestination?>()
     val settingsRequest: SharedFlow<SettingsDestination?> = _settingsRequest.asSharedFlow()
+
+    private val _permissionRequired = MutableStateFlow(false)
 
     fun handleIntent(intent: Intent) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
@@ -200,7 +206,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val uiState: StateFlow<MainUiState> =
-        combine(Installer.installState, VmController.vmState) { installState, vmState ->
+        combine(Installer.installState, VmController.vmState, _permissionRequired) {
+                installState,
+                vmState,
+                permissionRequired ->
                 when (installState) {
                     is InstallState.Checking -> MainUiState.Checking
                     is InstallState.NotInstalled ->
@@ -209,7 +218,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         MainUiState.Installing(installState.progress, installState.totalBytes)
                     is InstallState.Installed -> {
                         when (vmState) {
-                            is VmState.Ready -> MainUiState.Ready
+                            is VmState.Ready -> {
+                                if (permissionRequired) {
+                                    MainUiState.PermissionRequired
+                                } else {
+                                    MainUiState.Ready
+                                }
+                            }
                             is VmState.Starting -> {
                                 hasVmEverStarted = true
                                 MainUiState.Booting
@@ -264,8 +279,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startVm() {
-        val displayInfo = getDisplayInfo(getApplication())
+        val context = getApplication<Application>()
+        if (
+            PERMISSIONS.any { context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        ) {
+            _permissionRequired.value = true
+            return
+        }
+        _permissionRequired.value = false
+        val displayInfo = getDisplayInfo(context)
         viewModelScope.launch { VmController.start(displayInfo) }
+    }
+
+    fun onPermissionGranted() {
+        _permissionRequired.value = false
+        startVm()
+    }
+
+    fun onPermissionDenied() {
+        _permissionRequired.value = false
     }
 
     fun stopVm() {

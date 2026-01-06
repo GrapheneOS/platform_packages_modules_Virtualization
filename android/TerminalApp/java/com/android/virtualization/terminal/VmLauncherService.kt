@@ -359,10 +359,8 @@ class VmLauncherService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         val icon = Icon.createWithResource(resources, R.drawable.ic_launcher_foreground)
-        val stopActionText: String? =
-            resources.getString(R.string.service_notification_force_quit_action)
-        val stopNotificationTitle: String? =
-            resources.getString(R.string.service_notification_close_title)
+        val stopActionText: String? = resources.getString(R.string.notif_action_force_close)
+        val stopNotificationTitle: String? = resources.getString(R.string.notif_title_closing)
         return Notification.Builder(this, Application.CHANNEL_SYSTEM_EVENTS_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(stopNotificationTitle)

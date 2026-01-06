@@ -17,91 +17,84 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
-    <string name="terminal_display" msgid="4810127497644015237">"Affichage du terminal"</string>
-    <string name="terminal_input" msgid="4602512831433433551">"Curseur"</string>
-    <string name="empty_line" msgid="5012067143408427178">"Ligne vide"</string>
-    <string name="double_tap_to_edit_text" msgid="2344363097580051316">"Appuyez deux fois pour saisir une entrée"</string>
-    <string name="installer_title_text" msgid="500663060973466805">"Installer le terminal Linux"</string>
-    <string name="installer_desc_text_format" msgid="5935117404303982823">"Pour lancer le terminal Linux, vous devez télécharger environ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> de données via le réseau.\nVoulez-vous continuer ?"</string>
-    <string name="installer_wait_for_wifi_checkbox_text" msgid="5812378362605046639">"Télécharger uniquement via le Wi-Fi"</string>
-    <string name="installer_install_button_enabled_text" msgid="6142090640081511103">"Installer"</string>
-    <string name="installer_install_button_disabled_text" msgid="8651445004125422467">"Installation…"</string>
-    <string name="installer_install_network_error_message" msgid="6483202005746623398">"Échec de l\'installation en raison d\'une erreur réseau. Vérifiez la connexion, puis réessayez."</string>
-    <string name="installer_notif_title_text" msgid="471160690081159042">"Installation du terminal Linux…"</string>
-    <string name="installer_notif_desc_text" msgid="2353770076549425837">"Le terminal Linux sera lancé une fois l\'installation terminée"</string>
-    <string name="installer_error_network" msgid="5627330072955876676">"Échec de l\'installation en raison d\'un problème réseau"</string>
-    <string name="installer_error_no_wifi" msgid="1180164894845030969">"Échec de l\'installation, car le Wi-Fi n\'est pas disponible"</string>
-    <string name="installer_error_unknown" msgid="5657920711470180224">"Échec de l\'installation. Veuillez réessayer."</string>
+    <string name="terminal_hint_display" msgid="4810127497644015237">"Affichage du terminal"</string>
+    <string name="terminal_hint_input" msgid="4602512831433433551">"Curseur"</string>
+    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"Ligne vide"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"Appuyez deux fois pour saisir une entrée"</string>
+    <string name="installer_title" msgid="500663060973466805">"Installer le terminal Linux"</string>
+    <string name="installer_desc" msgid="5935117404303982823">"Pour lancer le terminal Linux, vous devez télécharger environ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> de données via le réseau.\nVoulez-vous continuer ?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"Télécharger uniquement via le Wi-Fi"</string>
+    <string name="installer_btn_install" msgid="6142090640081511103">"Installer"</string>
+    <string name="installer_btn_installing" msgid="8651445004125422467">"Installation…"</string>
+    <string name="notif_installer_title" msgid="471160690081159042">"Installation du terminal Linux…"</string>
+    <string name="notif_installer_desc" msgid="2353770076549425837">"Le terminal Linux sera lancé une fois l\'installation terminée"</string>
+    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"Échec de l\'installation en raison d\'un problème réseau"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"Échec de l\'installation, car le Wi-Fi n\'est pas disponible"</string>
+    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"Échec de l\'installation. Veuillez réessayer."</string>
     <string name="action_settings" msgid="5729342767795123227">"Paramètres"</string>
-    <string name="action_display" msgid="8487008779926038139">"Écran"</string>
-    <string name="vm_creation_message" msgid="6594953532721367502">"Préparation du terminal"</string>
-    <string name="vm_stop_message" msgid="3978349856095529255">"Arrêt du terminal"</string>
-    <string name="vm_error_message" msgid="5231867246177661525">"Le terminal a planté"</string>
-    <string name="settings_disk_resize_title" msgid="8648082439414122069">"Redimensionnement du disque"</string>
-    <string name="settings_disk_resize_sub_title" msgid="568100064927028058">"Redimensionner la partition racine"</string>
-    <string name="settings_disk_resize_resize_message" msgid="5990475712303845087">"Taille du disque définie"</string>
-    <string name="settings_disk_resize_resize_gb_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> attribués"</string>
-    <string name="settings_disk_resize_resize_gb_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maximum"</string>
-    <string name="settings_disk_resize_not_enough_space_message" msgid="6977611919841042576">"Espace insuffisant sur l\'appareil pour redimensionner le disque"</string>
-    <string name="settings_disk_resize_resize_cancel" msgid="2182388126941686562">"Annuler"</string>
-    <string name="settings_disk_resize_resize_restart_vm_to_apply" msgid="6651018335906339973">"Appliquer"</string>
-    <string name="settings_disk_resize_resize_confirm_dialog_message" msgid="6906352501525496328">"Le terminal sera redémarré pour redimensionner le disque"</string>
-    <string name="settings_disk_resize_resize_confirm_dialog_confirm" msgid="7347432999245803583">"Confirmer"</string>
-    <string name="settings_port_forwarding_title" msgid="4971368519093858377">"Contrôle de port"</string>
-    <string name="settings_port_forwarding_sub_title" msgid="6547942778715654953">"Autoriser/refuser les ports d\'écoute"</string>
-    <string name="settings_port_forwarding_active_ports_title" msgid="1841436780635889858">"Ports d\'écoute"</string>
-    <string name="settings_port_forwarding_active_ports_content" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_forwarding_other_enabled_ports_title" msgid="2644381842623436676">"Ports autorisés enregistrés"</string>
-    <string name="settings_port_forwarding_other_enabled_port_add_button" msgid="4402301203801949152">"Ajouter"</string>
-    <string name="settings_port_forwarding_other_enabled_port_close_button" msgid="8475029060852721339">"Supprimer <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
-    <string name="settings_port_forwarding_dialog_title" msgid="2734992099990516463">"Autoriser un nouveau port"</string>
-    <string name="settings_port_forwarding_dialog_textview_hint" msgid="3514035855169269600">"Saisissez le numéro du nouveau port"</string>
-    <string name="settings_port_forwarding_dialog_save" msgid="1097831033824718393">"Enregistrer"</string>
-    <string name="settings_port_forwarding_dialog_cancel" msgid="1972597831318470889">"Annuler"</string>
-    <string name="settings_port_forwarding_dialog_error_invalid_input" msgid="7589299096002468249">"Veuillez saisir un numéro"</string>
-    <string name="settings_port_forwarding_dialog_error_invalid_port_range" msgid="6682935312557379651">"Numéro de port incorrect"</string>
-    <string name="settings_port_forwarding_dialog_error_existing_port" msgid="768426750758769928">"Le port existe déjà"</string>
-    <string name="settings_port_forwarding_notification_title" msgid="6950621555592547524">"Le terminal demande l\'ouverture d\'un nouveau port"</string>
-    <string name="settings_port_forwarding_notification_content" msgid="779450349212040908">"Port demandé : <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_forwarding_notification_accept" msgid="3571520986524038185">"Accepter"</string>
-    <string name="settings_port_forwarding_notification_deny" msgid="636848749634710403">"Refuser"</string>
+    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"Préparation du terminal"</string>
+    <string name="terminal_message_vm_error" msgid="5231867246177661525">"Le terminal a planté"</string>
+    <string name="settings_disk_title" msgid="8648082439414122069">"Redimensionnement du disque"</string>
+    <string name="settings_disk_subtitle" msgid="568100064927028058">"Redimensionner la partition racine"</string>
+    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> attribués"</string>
+    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maximum"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"Espace insuffisant sur l\'appareil pour redimensionner le disque"</string>
+    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"Annuler"</string>
+    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"Appliquer"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"Le terminal sera redémarré pour redimensionner le disque"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"Confirmer"</string>
+    <string name="settings_port_title" msgid="4971368519093858377">"Contrôle de port"</string>
+    <string name="settings_port_subtitle" msgid="6547942778715654953">"Autoriser/refuser les ports d\'écoute"</string>
+    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"Ports d\'écoute"</string>
+    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"Ports autorisés enregistrés"</string>
+    <string name="settings_port_btn_add" msgid="4402301203801949152">"Ajouter"</string>
+    <string name="settings_port_btn_delete" msgid="8475029060852721339">"Supprimer <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"Autoriser un nouveau port"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"Saisissez le numéro du nouveau port"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"Enregistrer"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"Annuler"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"Veuillez saisir un numéro"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"Numéro de port incorrect"</string>
+    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"Le port existe déjà"</string>
+    <string name="notif_port_title_request" msgid="6950621555592547524">"Le terminal demande l\'ouverture d\'un nouveau port"</string>
+    <string name="notif_port_content_request" msgid="779450349212040908">"Port demandé : <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3571520986524038185">"Accepter"</string>
+    <string name="notif_port_action_deny" msgid="636848749634710403">"Refuser"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Récupération"</string>
-    <string name="settings_recovery_sub_title" msgid="3906996270508262595">"Options de récupération de la partition"</string>
-    <string name="settings_recovery_reset_title" msgid="5388842560910568731">"Revenir à la version initiale"</string>
-    <string name="settings_recovery_reset_sub_title" msgid="1079896907344675995">"Supprimer toutes les données"</string>
-    <string name="settings_recovery_reset_dialog_title" msgid="874946981716251094">"Réinitialiser le terminal"</string>
-    <string name="settings_recovery_reset_dialog_message" msgid="851530339815113000">"Les données seront supprimées"</string>
-    <string name="settings_recovery_reset_dialog_confirm" msgid="6916237820754131902">"Réinitialiser"</string>
-    <string name="settings_recovery_reset_dialog_cancel" msgid="1666264288208459725">"Annuler"</string>
-    <string name="settings_recovery_reset_dialog_backup_option" msgid="2079431035205584614">"Sauvegarder les données dans <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_error_due_to_backup" msgid="9034741074141274096">"Échec de la récupération en raison d\'une erreur de sauvegarde"</string>
-    <string name="settings_recovery_error" msgid="2451912941535666379">"Échec de la récupération"</string>
-    <string name="settings_recovery_error_during_removing_backup" msgid="2447990797766248691">"Échec de la suppression des données de sauvegarde"</string>
-    <string name="settings_recovery_remove_backup_title" msgid="1540850288876158899">"Supprimer les données de sauvegarde"</string>
-    <string name="settings_recovery_remove_backup_sub_title" msgid="7791375988320242059">"Supprimer <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"Options de récupération de la partition"</string>
+    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"Revenir à la version initiale"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"Supprimer toutes les données"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"Réinitialiser le terminal"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"Réinitialiser"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"Annuler"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"Sauvegarder les données dans <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"Échec de la récupération en raison d\'une erreur de sauvegarde"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"Échec de la récupération"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"Échec de la suppression des données de sauvegarde"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"Supprimer les données de sauvegarde"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"Supprimer <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="error_title" msgid="405150657301906598">"Erreur irrécupérable"</string>
     <string name="error_desc" msgid="4588252235686826721">"Échec de la récupération après une erreur.\nVous pouvez essayer de redémarrer le terminal ou d\'utiliser l\'une des options de récupération.\nSi toutes les tentatives échouent, effacez toutes les données en activant/désactivant le terminal Linux à partir des options pour les développeurs."</string>
-    <string name="error_code" msgid="3585291676855383649">"Code d\'erreur : <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_button_report_bug" msgid="5559616952618650716">"Signaler un bug"</string>
-    <string name="error_snackbar_report_bug" msgid="8432010448894076323">"Collecter des journaux"</string>
+    <string name="error_text_code" msgid="3585291676855383649">"Code d\'erreur : <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="5559616952618650716">"Signaler un bug"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Mettre à niveau le terminal"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Le terminal Linux que vous utilisez est obsolète. Veuillez le mettre à niveau pour continuer.\nLes données seront sauvegardées dans <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="upgrade_button" msgid="2118716848859611704">"Mettre à niveau"</string>
-    <string name="upgrade_error" msgid="8195371718626852651">"Échec de la mise à niveau"</string>
-    <string name="service_notification_settings" msgid="1437365721184401135">"Paramètres"</string>
-    <string name="service_notification_title" msgid="2918088850910713393">"Terminal en cours d\'exécution"</string>
-    <string name="service_notification_content" msgid="5772901142342308273">"Cliquez pour ouvrir le terminal"</string>
-    <string name="service_notification_quit_action" msgid="4888327875869277455">"Fermer"</string>
-    <string name="service_notification_close_title" msgid="1442526433361428844">"Terminal se ferme"</string>
-    <string name="service_notification_force_quit_action" msgid="3462226330416157775">"Forcer la fermeture"</string>
-    <string name="virgl_enabled" msgid="5242525588039698086">"<xliff:g id="ID_1">VirGL</xliff:g> est activé"</string>
-    <string name="notification_channel_long_running_name" msgid="7916541360369402952">"Tâches de longue durée"</string>
-    <string name="notification_channel_system_events_name" msgid="1004951444029742137">"Événements système"</string>
-    <string name="tab_default_title" msgid="2300417689389397930">"Onglet"</string>
-    <string name="settings_graphics_acceleration_title" msgid="2179805215574039827">"Accélération graphique"</string>
-    <string name="settings_graphics_acceleration_subtitle" msgid="1878600071238287413">"Modifiez le moteur de rendu pour l\'accélération graphique."</string>
-    <string name="settings_graphics_acceleration_toast_reboot_required" msgid="1101999250451963292">"Veuillez redémarrer l\'appli Terminal pour appliquer la modification."</string>
-    <string name="settings_graphics_acceleration_software_renderer" msgid="7443233826862412750">"Moteur de rendu logiciel"</string>
-    <string name="settings_graphics_acceleration_hardware_renderer" msgid="7414936498621308937">"Moteur de rendu accéléré par GPU"</string>
-    <string name="ttyd_connection_error" msgid="4574447133320977761">"La session est perdue en raison d\'une erreur interne."</string>
+    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"Mettre à niveau"</string>
+    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"Échec de la mise à niveau"</string>
+    <string name="notif_action_settings" msgid="1437365721184401135">"Paramètres"</string>
+    <string name="notif_title_running" msgid="2918088850910713393">"Terminal en cours d\'exécution"</string>
+    <string name="notif_content_running" msgid="5772901142342308273">"Cliquez pour ouvrir le terminal"</string>
+    <string name="notif_action_close" msgid="4888327875869277455">"Fermer"</string>
+    <string name="notif_title_closing" msgid="1442526433361428844">"Terminal se ferme"</string>
+    <string name="notif_action_force_close" msgid="3462226330416157775">"Forcer la fermeture"</string>
+    <string name="notif_channel_long_running" msgid="7916541360369402952">"Tâches de longue durée"</string>
+    <string name="notif_channel_system_events" msgid="1004951444029742137">"Événements système"</string>
+    <string name="terminal_tab_title_default" msgid="2300417689389397930">"Onglet"</string>
+    <string name="settings_graphics_title" msgid="2179805215574039827">"Accélération graphique"</string>
+    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"Modifiez le moteur de rendu pour l\'accélération graphique."</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"Veuillez redémarrer l\'appli Terminal pour appliquer la modification."</string>
+    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"Moteur de rendu logiciel"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"Moteur de rendu accéléré par GPU"</string>
+    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"La session est perdue en raison d\'une erreur interne."</string>
 </resources>

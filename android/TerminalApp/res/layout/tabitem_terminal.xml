@@ -27,7 +27,7 @@
       android:layout_toStartOf="@id/tab_close_button"
       android:gravity="center_vertical"
       android:padding="8dp"
-      android:text="@string/tab_default_title"/>
+      android:text="@string/terminal_tab_title_default"/>
 
   <Button
       style="?attr/materialIconButtonStyle"

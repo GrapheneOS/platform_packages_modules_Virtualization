@@ -79,8 +79,7 @@ public class InstallerActivity : BaseActivity() {
     }
 
     private fun updateSizeEstimation(est: Long) {
-        val desc =
-            getString(R.string.installer_desc_text_format, Formatter.formatShortFileSize(this, est))
+        val desc = getString(R.string.installer_desc, Formatter.formatShortFileSize(this, est))
         runOnUiThread {
             val view = findViewById<TextView>(R.id.installer_desc)
             view.text = desc
@@ -171,8 +170,7 @@ public class InstallerActivity : BaseActivity() {
         progressBar.visibility = if (enabled) View.INVISIBLE else View.VISIBLE
 
         val resId =
-            if (enabled) R.string.installer_install_button_enabled_text
-            else R.string.installer_install_button_disabled_text
+            if (enabled) R.string.installer_btn_install else R.string.installer_btn_installing
         installButton.text = getString(resId)
     }
 

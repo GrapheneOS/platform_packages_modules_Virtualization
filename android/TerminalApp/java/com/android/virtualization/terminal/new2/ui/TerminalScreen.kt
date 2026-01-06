@@ -65,10 +65,12 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
@@ -130,7 +132,8 @@ fun TerminalTabBar(
                             IconButton(onClick = onAddTab) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = "Add tab",
+                                    contentDescription =
+                                        stringResource(R.string.terminal_hint_btn_add_tab),
                                     modifier = Modifier.size(24.dp),
                                 )
                             }
@@ -158,8 +161,8 @@ private fun TerminalTab(
     if (showCloseDialog) {
         AlertDialog(
             onDismissRequest = { showCloseDialog = false },
-            title = { Text("Close Tab?") },
-            text = { Text("Are you sure you want to close this tab?") },
+            title = { Text(stringResource(R.string.terminal_dlg_title_close_tab)) },
+            text = { Text(stringResource(R.string.terminal_dlg_message_close_tab)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -168,10 +171,14 @@ private fun TerminalTab(
                         showCloseDialog = false
                     }
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.terminal_dlg_btn_close))
                 }
             },
-            dismissButton = { TextButton(onClick = { showCloseDialog = false }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = { showCloseDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
         )
     }
 
@@ -223,7 +230,10 @@ private fun TerminalTab(
                 onClick = { showCloseDialog = true },
                 modifier = Modifier.size(24.dp).padding(start = 4.dp),
             ) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close tab")
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.terminal_hint_btn_close_tab),
+                )
             }
         }
     }
@@ -314,11 +324,11 @@ fun TerminalScreen(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = "Connecting to terminal...")
+                        Text(text = stringResource(R.string.terminal_message_connecting))
                     }
                 }
                 is TerminalUiState.Disconnected -> {
-                    Text(text = "Terminal disconnected.")
+                    Text(text = stringResource(R.string.terminal_message_disconnected))
                 }
                 else -> {
                     Column(
@@ -328,7 +338,7 @@ fun TerminalScreen(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = "Initializing terminal...")
+                        Text(text = stringResource(R.string.terminal_message_initializing))
                     }
                 }
             }

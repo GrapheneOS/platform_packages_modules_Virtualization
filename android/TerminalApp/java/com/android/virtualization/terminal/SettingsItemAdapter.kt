@@ -63,7 +63,7 @@ class SettingsItemAdapter(private val dataSet: List<SettingsItem>) :
                 var newSelection = originalSelection
 
                 AlertDialog.Builder(view.context)
-                    .setTitle(R.string.settings_graphics_acceleration_title)
+                    .setTitle(R.string.settings_graphics_title)
                     .setPositiveButton(android.R.string.ok) { dialog, which ->
                         if (newSelection != -1) {
                             val selectedType = availableOptions[newSelection]
@@ -73,7 +73,7 @@ class SettingsItemAdapter(private val dataSet: List<SettingsItem>) :
                         if (originalSelection != newSelection) {
                             Toast.makeText(
                                     view.context,
-                                    R.string.settings_graphics_acceleration_toast_reboot_required,
+                                    R.string.settings_graphics_toast_reboot_required,
                                     Toast.LENGTH_SHORT,
                                 )
                                 .show()
