@@ -97,6 +97,13 @@ fn try_main() -> Result<()> {
         register(MAINTENANCE_SERVICE_NAME, maintenance_service)?;
     }
 
+    // Keep the accessor provider alive for the life-cycle of the process to serve callers from
+    // mod rkpvm.
+    let mut _accessor_provider: Option<binder::AccessorProvider> = None;
+    if cfg!(use_vm_attestation_service_accessor) {
+        _accessor_provider = Some(rkpvm::get_vm_attestation_accessor_provider()?);
+    }
+
     ProcessState::join_thread_pool();
     bail!("Thread pool unexpectedly ended");
 }
