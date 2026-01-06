@@ -41,6 +41,11 @@ interface IVmPayloadService {
     const String ENCRYPTEDSTORE_MOUNTPOINT = "/mnt/encryptedstore";
 
     /**
+     * Path to the per user credential encrypted folder location
+     */
+    const String ENCRYPTEDSTORE_PER_USER_FOLDERS = "/mnt/encryptedstore/users";
+
+    /**
      * Path to the microdroid managed socket directory.
      */
     const String MICRODROID_SOCKET_PATH = "/dev/socket/microdroid_managed";

@@ -1,0 +1,25 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_bindgen {
+    name: "libfs_crypt_bindgen",
+    crate_name: "fs_crypt_bindgen",
+    wrapper_src: "fs_crypt_bindgen.h",
+    source_stem: "fs_crypt_bindgen",
+    defaults: ["avf_build_flags_rust"],
+    vendor_available: true,
+    visibility: [
+        "//packages/modules/Virtualization/guest/microdroid_manager",
+    ],
+    bindgen_flags: [
+        "--flexarray-dst",
+        "--with-derive-custom=fscrypt_key_specifier=FromBytes,Immutable,KnownLayout",
+        "--with-derive-custom=fscrypt_key_specifier__bindgen_ty_1=FromBytes,Immutable,KnownLayout",
+        "--with-derive-custom=fscrypt_add_key_arg=FromBytes,Immutable,KnownLayout",
+        "--raw-line=use zerocopy::{Immutable, IntoBytes, FromBytes, KnownLayout};",
+    ],
+    rustlibs: [
+        "libzerocopy",
+    ],
+}

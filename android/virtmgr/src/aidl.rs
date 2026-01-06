@@ -22,6 +22,7 @@ pub use android_system_virtualizationcommon::aidl::android::system::virtualizati
     Certificate::Certificate,
     DeathReason::DeathReason,
     ErrorCode::ErrorCode,
+    ICEStoreKEK::{BnCEStoreKEK, ICEStoreKEK},
     IEncryptedStoreKEK::{BnEncryptedStoreKEK, IEncryptedStoreKEK},
     IGuestAgent::{BnGuestAgent, IGuestAgent},
 };
