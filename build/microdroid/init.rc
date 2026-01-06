@@ -85,8 +85,6 @@ on init && property:ro.boot.microdroid.debuggable=1
     # Mount tracefs (with GID=AID_READTRACEFS)
     mount tracefs tracefs /sys/kernel/tracing gid=3012
     setprop persist.traced_relay.machine_name ${ro.product.name}
-
-on init && property:ro.boot.microdroid.debuggable=1 && property:ro.boot.microdroid.start_traced_relay=1
     setprop persist.traced.enable 2
 
 on property:init_debug_policy.adbd.enabled=1
