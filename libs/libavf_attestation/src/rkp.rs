@@ -15,7 +15,7 @@
 //! This module contains functions related to the attestation of the
 //! service VM via the RKP (Remote Key Provisioning) server.
 
-use crate::keyblob::EncryptedKeyBlob;
+use crate::keyblob::{EncryptedKeyBlob, InMemoryKeyDerivationOps};
 use crate::pub_key::{build_maced_public_key, validate_public_key};
 use alloc::string::String;
 use alloc::vec;
@@ -53,8 +53,8 @@ pub(super) fn generate_ecdsa_p256_key_pair(
     ec_key.generate_key()?;
 
     let maced_public_key = build_maced_public_key(ec_key.cose_public_key()?, hmac_key.as_ref())?;
-    let key_blob =
-        EncryptedKeyBlob::new(ec_key.ec_private_key()?.as_slice(), dice_artifacts.cdi_seal())?;
+    let ops: InMemoryKeyDerivationOps = Zeroizing::from(dice_artifacts.cdi_seal().to_vec()).into();
+    let key_blob = EncryptedKeyBlob::new(ec_key.ec_private_key()?.as_slice(), &ops)?;
 
     let key_pair =
         EcdsaP256KeyPair { maced_public_key, key_blob: cbor_util::serialize(&key_blob)? };
