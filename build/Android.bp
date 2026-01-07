@@ -60,6 +60,9 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_FORWARD_ROOT_OF_TRUST_PROPS_TO_SECURITY_VM"), {
         true: ["forward_rot"],
         default: [],
+    }) + select(release_flag("RELEASE_AVF_USE_VM_ATTESTATION_SERVICE_ACCESSOR"), {
+        true: ["use_vm_attestation_service_accessor"],
+        default: [],
     }),
 }
 

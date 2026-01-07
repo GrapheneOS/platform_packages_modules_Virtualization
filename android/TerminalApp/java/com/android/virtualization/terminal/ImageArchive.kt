@@ -203,10 +203,9 @@ internal class ImageArchive {
         private const val DIR_IN_SDCARD = "linux"
         private const val ARCHIVE_NAME = "images.tar.gz"
         // TODO(b/403131508): externalize the version number
-        private const val VERSION_INT = 4_000_000 // v4.0.0
+        private const val VERSION_INT = 4_000_000 // 4.0.0
         private val BUILD_TAG =
-            (VERSION_INT / 1_000_000 * 1_000_000).toString() + // Use only the major version
-                "-bug451076949" // TODO(b/451076949): remove this suffix
+            (VERSION_INT / 1_000_000 * 1_000_000).toString() // Use only the major version
         private val HOST_URL = "https://dl.google.com/android/ferrochrome/$BUILD_TAG"
 
         fun getSdcardPathForTesting(): Path {
