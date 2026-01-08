@@ -358,19 +358,24 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .that(signingResult.status)
                 .isAnyOf(AttestationStatus.OK, AttestationStatus.ERROR_ATTESTATION_FAILED);
         if (signingResult.status == AttestationStatus.OK) {
-            X509Certificate[] certs =
-                    X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
-            boolean isAdvMultiTenancyEnabled =
-                    isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
-            X509Utils.verifyAvfRelatedCerts(
-                    certs,
-                    challenge,
-                    TEST_APP_PACKAGE_NAME,
-                    new String[] {},
-                    isAdvMultiTenancyEnabled);
-            X509Utils.verifySignature(
-                    certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
+            verifyAttestationResult(signingResult, challenge, new String[] {});
         }
+    }
+
+    private void verifyAttestationResult(
+            SigningResult signingResult, byte[] challenge, String[] tenantPackageNames)
+            throws Exception {
+        X509Certificate[] certs =
+                X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+        boolean isAdvMultiTenancyEnabled = isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
+        X509Utils.verifyAvfRelatedCerts(
+                certs,
+                challenge,
+                TEST_APP_PACKAGE_NAME,
+                tenantPackageNames,
+                isAdvMultiTenancyEnabled);
+        X509Utils.verifySignature(
+                certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
     }
 
     private SigningResult attestation_signing_result(byte[] challenge) throws Exception {
@@ -465,18 +470,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isNotEqualTo(AttestationStatus.ERROR_ATTESTATION_FAILED);
 
         if (signingResult.status == AttestationStatus.OK) {
-            X509Certificate[] certs =
-                    X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
-            boolean isAdvMultiTenancyEnabled =
-                    isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
-            X509Utils.verifyAvfRelatedCerts(
-                    certs,
-                    challenge,
-                    TEST_APP_PACKAGE_NAME,
-                    new String[] {TEST_TENANT_APK_NAME},
-                    isAdvMultiTenancyEnabled);
-            X509Utils.verifySignature(
-                    certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
+            verifyAttestationResult(signingResult, challenge, new String[] {TEST_TENANT_APK_NAME});
         }
     }
 
