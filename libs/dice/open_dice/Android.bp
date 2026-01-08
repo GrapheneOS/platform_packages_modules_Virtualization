@@ -343,9 +343,3 @@ rust_test {
     clippy_lints: "none",
     lints: "none",
 }
-
-dirgroup {
-    name: "trusty_dirgroup_packages_modules_virtualization_libs_open_dice",
-    visibility: ["//trusty/vendor/google/aosp/scripts"],
-    dirs: ["."],
-}
