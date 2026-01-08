@@ -2,8 +2,12 @@
 #
 # Bug component: 867125
 #
-# If you are not a member of the project please send review requests
-# to one of those listed below.
+# If you are not a member of the project, and you are not sure who the
+# appropriate reviewer is, please send review requests to one of those listed
+# below. They may provide general guidance, review simple changes, or redirect
+# you to someone who can. Typically, the best way to find the owner of a
+# specific file is to check git blame and/or recent review history to find
+# who is recently responsible for changes to the area.
 jiyong@google.com
 smoreland@google.com
 willdeacon@google.com
