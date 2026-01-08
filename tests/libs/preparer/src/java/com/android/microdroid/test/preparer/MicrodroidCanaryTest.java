@@ -92,6 +92,10 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
         long timeoutMs = isVirtualDevice(device) ? LONG_TIMEOUT_MS : TIMEOUT_MS;
 
         ITestDevice microdroid = null;
+        final String errorMessage =
+                "Failed to launch Microdroid "
+                        + (protectedVm ? "pVM" : "VM")
+                        + ". Check device logcat";
         try {
             microdroid =
                     MicrodroidBuilder.fromDevicePathWithPayloadBinaryName(
@@ -101,10 +105,13 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
                             .setAdbConnectTimeoutMs(timeoutMs)
                             .build(device);
             if (microdroid == null) {
-                throw new DeviceNotAvailableException("Failed to launch Microdroid");
+                throw new DeviceNotAvailableException(errorMessage);
             }
             // Note: MicrodroidBuilder#build() checks this, but just in case.
             microdroid.waitForBootComplete(timeoutMs);
+        } catch (Exception e) {
+            CLog.e("Failed to launch Microdroid", e);
+            throw new DeviceNotAvailableException(errorMessage);
         } finally {
             if (microdroid != null) {
                 device.shutdownMicrodroid(microdroid);
