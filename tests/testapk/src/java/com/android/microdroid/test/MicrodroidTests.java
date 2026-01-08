@@ -348,6 +348,37 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         checkVmAttestationWithValidChallenge(vm);
     }
 
+    @Test
+    @CddTest
+    @VsrTest(requirements = {"VSR-7.1-001.006"})
+    @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
+    public void vmAttestationSucceedsWithInternet() throws Exception {
+        assume().withMessage("Internet connection is required for this test")
+                .that(isNetworkConnected())
+                .isTrue();
+
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        ensureVmAttestationSupported();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary(VM_ATTESTATION_PAYLOAD_PATH)
+                        .setProtectedVm(mProtectedVm)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("cts_attestation_with_internet", config);
+
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+
+        assertWithMessage("VM attestation should succeed when network is available")
+                .that(signingResult.status)
+                .isEqualTo(AttestationStatus.OK);
+        verifyAttestationResult(signingResult, challenge, new String[] {});
+    }
+
     private void checkVmAttestationWithValidChallenge(VirtualMachine vm) throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
