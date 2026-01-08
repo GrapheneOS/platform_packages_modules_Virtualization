@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"终端"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"终端显示内容"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"光标"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"空行"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"点按两次即可输入"</string>
-    <string name="installer_title" msgid="500663060973466805">"安装 Linux 终端"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> 的数据。\n要继续吗？"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"仅通过 WLAN 下载"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"安装"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"正在安装"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"正在安装 Linux 终端"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"安装完成后将启动 Linux 终端"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"由于网络问题，安装失败"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"由于 WLAN 不可用，安装失败"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"安装失败，请重试"</string>
     <string name="action_settings" msgid="5729342767795123227">"设置"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"正在准备终端"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"终端已崩溃"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"调整磁盘大小"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"调整根分区的大小"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"无法调整磁盘大小，因为设备上的空间不足"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"取消"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"应用"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"终端将重启以调整磁盘大小"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"确认"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"端口控制"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"允许/拒绝使用监听端口"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"监听端口"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"已保存的获准端口"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"添加"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"删除“<xliff:g id="PORT_NUMBER">%d</xliff:g>”"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"允许使用新端口"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"输入新端口号"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"保存"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"取消"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"请输入数字"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"端口号无效"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"端口已存在"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"终端正在请求打开新端口"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"请求的端口：<xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"接受"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"拒绝"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"需要权限"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"终端需要以下权限才能正常运行：<xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"缺少以下权限，请在“设置”中授予权限：<xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"安装 Linux 终端"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"如需启动 Linux 终端，您需要联网下载大约 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> 的数据。\n要继续吗？"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"仅通过 WLAN 下载"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"安装"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"正在安装"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"由于网络问题，安装失败"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"由于 WLAN 不可用，安装失败"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"安装失败，请重试"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"终端显示内容"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"光标"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"空行"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"点按两次即可输入"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"标签页"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"由于出现内部错误，会话已丢失。"</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"正在准备终端"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"终端已崩溃"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"正在连接到终端…"</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"终端已断开连接。"</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"正在初始化终端…"</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"关闭标签页"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"添加标签页"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"要关闭标签页吗？"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"确定要关闭此标签页吗？"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"关闭"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"设置"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"退出缩放/平移模式"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"进入缩放/平移模式"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"隐藏键盘"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"显示键盘"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"解除鼠标锁定"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"锁定鼠标"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"关闭显示控件"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"显示选项"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"上一页"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"下一页"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"设置"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"终端正在运行"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"点击即可打开终端"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"关闭"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"终端即将关闭"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"强行关闭"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"长时间运行的任务"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"系统事件"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"正在安装 Linux 终端"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"安装完成后将启动 Linux 终端"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"终端正在请求打开新端口"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"请求的端口：<xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"接受"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"拒绝"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"重试"</string>
+    <string name="settings_title" msgid="3035373808103055663">"设置"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"返回"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"选择相应设置"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"调整磁盘大小"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"调整根分区的大小"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"已分配 <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"最大为 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"无法调整磁盘大小，因为设备上的空间不足"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"取消"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"应用"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"终端将重启以调整磁盘大小"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"确认"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"端口控制"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"允许/拒绝使用监听端口"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"监听端口"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"已保存的获准端口"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"添加"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"删除“<xliff:g id="PORT_NUMBER">%d</xliff:g>”"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"允许使用新端口"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"输入新端口号"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"保存"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"取消"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"请输入一个数字"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"端口号无效"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"端口已存在"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"未打开任何端口"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"恢复"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"分区恢复选项"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"重置为初始版本"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"移除所有数据"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"重置终端"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"重置"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"取消"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"将数据备份到 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"由于备份错误，无法恢复"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"恢复失败"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"未能移除备份数据"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"移除备份数据"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"移除 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"分区恢复选项"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"重置为初始版本"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"移除所有数据"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"重置终端"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"重置"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"取消"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"将数据备份到 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"移除备份数据"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"移除 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"由于备份错误，无法恢复"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"恢复失败"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"未能移除备份数据"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"移除备份数据"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"移除 <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"是否重置终端？"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"确定要将终端重置为其初始版本吗？"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"您将需要重新下载终端映像。"</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"图形加速"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"更改图形加速的渲染程序。"</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"请重启终端应用以应用更改。"</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"软件渲染程序"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"GPU 加速渲染程序"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"需要重启"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"必须重启终端才能应用更改。"</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"立即重启"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"以后再说"</string>
     <string name="error_title" msgid="405150657301906598">"不可恢复的错误"</string>
     <string name="error_desc" msgid="4588252235686826721">"未能从错误中恢复。\n您可以尝试重启终端，或尝试某一恢复选项。\n如果所有尝试都失败，请通过在“开发者选项”中开启/关闭 Linux 终端来擦除所有数据。"</string>
-    <string name="error_text_code" msgid="3585291676855383649">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"报告错误"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"错误代码：<xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"报告错误"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"升级到较新的终端"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"您使用的 Linux 终端版本过旧。请升级以继续操作。\n数据将在 <xliff:g id="PATH">/mnt/backup</xliff:g> 备份"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"升级"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"升级失败"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"设置"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"终端正在运行"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"点击即可打开终端"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"关闭"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"终端即将关闭"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"强行关闭"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"长时间运行的任务"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"系统事件"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"标签页"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"图形加速"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"更改图形加速的渲染程序。"</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"请重启终端应用以应用更改。"</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"软件渲染程序"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"GPU 加速的渲染程序"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"由于出现内部错误，会话已丢失。"</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"升级"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"升级失败"</string>
 </resources>

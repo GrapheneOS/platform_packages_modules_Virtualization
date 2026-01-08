@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminaal"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"Terminaalskerm"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"Skermpyltjie"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"Leë reël"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"Dubbeltik om invoer te tik"</string>
-    <string name="installer_title" msgid="500663060973466805">"Installeer Linux-terminaal"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"Jy sal omtrent <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> se data oor die netwerk moet aflaai om Linux Terminaal te begin.\nWil jy voortgaan?"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"Laai net oor wi-fi af"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"Installeer"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"Installeer tans"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"Linus-terminaal word tans geïnstalleer"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"Linux Terminaal sal begin nadat die installasie voltooi is"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"Kon weens ’n netwerkkwessie nie installeer nie"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"Kon nie installeer nie omdat wi-fi nie beskikbaar is nie"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"Kon nie installeer nie. Probeer asseblief weer"</string>
     <string name="action_settings" msgid="5729342767795123227">"Instellings"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"Maak terminaal gereed"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"Terminaal het omgeval"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"Verander grootte van skyf"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"Verander die grootte van die kernafdeling"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> toegewys"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maks."</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"Daar is nie genoeg spasie op die toestel om die skyfgrootte te verander nie"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"Kanselleer"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"Pas toe"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"Terminaal sal herbegin word om die skyf se grootte te verander"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"Bevestig"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"Poortkontrole"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"Laat luisterpoorte toe of weier hulle"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"Luisterpoorte"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"Het toegelate poorte gestoor"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"Voeg by"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"Vee <xliff:g id="PORT_NUMBER">%d</xliff:g> uit"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"Laat ’n nuwe poort toe"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"Voer ’n nuwe poortnommer in"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"Stoor"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"Kanselleer"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"Voer ’n nommer in"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"Ongeldige poortnommer"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"Poort bestaan reeds"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"Terminaal probeer om ’n nuwe poort oop te maak"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"Poort versoek: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"Aanvaar"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"Weier"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"Toestemming word vereis"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminaal vereis die volgende toestemmings om reg te werk: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Die volgende toestemmings ontbreek. Verleen dit in Instellings: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"Installeer Linux-terminaal"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"Jy sal omtrent <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> se data oor die netwerk moet aflaai om Linux-terminaal te begin.\nWil jy voortgaan?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Laai net oor wi-fi af"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"Installeer"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"Installeer tans"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Kon weens ’n netwerkkwessie nie installeer nie"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Kon nie installeer nie omdat wi-fi nie beskikbaar is nie"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Kon nie installeer nie. Probeer asseblief weer"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"Terminaalskerm"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"Skermpyltjie"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Leë reël"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"Dubbeltik om invoer in te tik"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"Oortjie"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"Sessie is weens ’n interne fout verlore."</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"Maak terminaal gereed"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"Terminaal het omgeval"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"Koppel tans aan terminaal …"</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"Terminaal is ontkoppel."</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"Inisieer tans terminaal …"</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"Maak oortjie toe"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"Voeg oortjie by"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"Maak oortjie toe?"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"Is jy seker jy wil hierdie oortjie toemaak?"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"Maak toe"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"Instellings"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"Gaan uit Zoem-/Beeldrolmodus"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"Gaan in Zoem-/Beeldrolmodus"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"Versteek sleutelbord"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Wys sleutelbord"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Laat gaan muis"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Sluit muis"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"Maak skermkontroles toe"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"Skermopsies"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Vorige bladsy"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"Volgende bladsy"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"Instellings"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"Terminaal loop tans"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"Klik om terminaal oop te maak"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"Maak toe"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"Terminaal maak toe"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"Verplig toemaak"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"Take wat lank neem"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"Stelselgevalle"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"Installeer tans Linux-terminaal"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"Linux-terminaal sal begin nadat die installasie voltooi is"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"Terminaal versoek om ’n nuwe poort oop te maak"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"Poort versoek: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"Aanvaar"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"Weier"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"Herprobeer"</string>
+    <string name="settings_title" msgid="3035373808103055663">"Instellings"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"Terug"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"Kies ’n instelling"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"Verander grootte van skyf"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"Verander die grootte van die kernafdeling"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> is toegewys"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maks."</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"Daar is nie genoeg spasie op die toestel om die grootte van die skyf te verander nie"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Kanselleer"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Pas toe"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminaal sal herbegin word om die grootte van die skyf te verander"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Bevestig"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"Poortkontrole"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"Laat luisterpoorte toe of weier dit"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Luisterpoorte"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"Het toegelate poorte gestoor"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"Voeg by"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"Vee <xliff:g id="PORT_NUMBER">%d</xliff:g> uit"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"Laat ’n nuwe poort toe"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"Voer ’n nuwe poortnommer in"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"Stoor"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"Kanselleer"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"Voer ’n nommer in"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"Ongeldige poortnommer"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"Poort bestaan reeds"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"Geen poort is oopgemaak nie"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Herwin"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"Afdelingherwinningopsies"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"Stel terug na aanvanklike weergawe"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"Verwyder alle -data"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"Stel terminaal terug"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"Stel terug"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"Kanselleer"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"Rugsteun data na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"Kon weens ’n rugsteunfout nie terugstel nie"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"Kon nie terugstel nie"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"Kon nie rugsteundata verwyder nie"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"Verwyder rugsteundata"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"Verwyder <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"Afdelingherwinningopsies"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"Stel terug na oorspronklike weergawe"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"Verwyder alle -data"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"Stel terminaal terug"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"Stel terug"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"Kanselleer"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"Rugsteun data na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"Verwyder rugsteundata"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"Verwyder <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"Kon weens ’n rugsteunfout nie terugstel nie"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"Kon nie terugstel nie"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"Kon nie rugsteundata verwyder nie"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"Verwyder rugsteundata"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"Verwyder <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"Stel terminaal terug?"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"Is jy seker jy wil Terminaal na die oorspronklike weergawe terugstel?"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"Jy sal die Terminaal-stelselkopie weer moet aflaai."</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"Versnelling van prentgenerering"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"Verander die leweraar vir die versnelling van prentgenerering."</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"Herbegin die Terminaal-app om die verandering toe te pas."</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"Sagtewareleweraar"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"GPU-versnelde leweraar"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"Herbegin word vereis"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"Terminaal moet herbegin word om dit toe te pas."</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"Herbegin nou"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"Later"</string>
     <string name="error_title" msgid="405150657301906598">"Onterugstelbare fout"</string>
     <string name="error_desc" msgid="4588252235686826721">"Kon nie ná ’n fout terugstel nie.\nJy kan probeer om die terminaal te herbegin of een van die herwinningopsies probeer.\nAs alle pogings misluk, vee alle data skoon deur Linux-terminaal in ontwikkelaaropsies aan/af te skakel."</string>
-    <string name="error_text_code" msgid="3585291676855383649">"Foutkode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"Rapporteer fout"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"Foutkode: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"Gee fout aan"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Gradeer op na ’n nuwer terminaal"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Die Linux-terminaal wat jy gebruik het, is verouderd. Gradeer op om voort te gaan.\nData sal gerugsteun word by <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"Gradeer op"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"Opgradering het misluk"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"Instellings"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"Terminaal loop tans"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"Klik om Terminaal oop te maak"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"Maak toe"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"Terminaal maak toe"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"Verplig toemaak"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"Take wat lank neem"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"Stelselgebeurtenisse"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"Tab"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"Grafikaversnelling"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"Verander die leweraar vir grafikaversnelling."</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"Herbegin die Terminaal-app om die verandering toe te pas."</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"Sagtewareleweraar"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"GPU-versnelde leweraar"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"Sessie het weens ’n interne fout verlore gegaan."</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"Gradeer op"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"Opgradering het misluk"</string>
 </resources>
