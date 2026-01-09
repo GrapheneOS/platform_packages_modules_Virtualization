@@ -20,10 +20,6 @@ import static android.system.virtualmachine.VirtualMachineConfig.DEBUG_LEVEL_FUL
 
 import static com.google.common.truth.TruthJUnit.assume;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineConfig;
 
@@ -84,7 +80,7 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
     @Before
     public void setUp() throws Exception {
         assume().withMessage("RKP Integration tests rely on network availability.")
-                .that(isNetworkConnected(getContext()))
+                .that(isNetworkConnected())
                 .isTrue();
         ensureVmAttestationSupported();
 
@@ -131,12 +127,4 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
         X509Utils.verifySignature(certs[0], MESSAGE.getBytes(), signingResult.signature);
     }
 
-    private static boolean isNetworkConnected(Context context) {
-        ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
-        Network network = cm.getActiveNetwork();
-        NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
-        return capabilities != null
-                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
-    }
 }

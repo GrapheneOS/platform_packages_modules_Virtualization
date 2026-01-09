@@ -30,6 +30,9 @@ import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.app.UiAutomation;
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemProperties;
@@ -268,6 +271,15 @@ public abstract class MicrodroidDeviceTestBase {
             Log.e(TAG, "Error getting supported OS list", e);
             throw new RuntimeException("Failed to get supported OS list.", e);
         }
+    }
+
+    protected boolean isNetworkConnected() {
+        ConnectivityManager cm = mCtx.getSystemService(ConnectivityManager.class);
+        Network network = cm.getActiveNetwork();
+        NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
+        return capabilities != null
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
     }
 
     protected void assumeFeatureVirtualizationFramework() {
