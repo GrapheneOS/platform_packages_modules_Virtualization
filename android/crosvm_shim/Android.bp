@@ -1,0 +1,19 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_binary {
+    name: "crosvm_vu_fs",
+    crate_name: "crosvm_shim",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    rustlibs: [
+        "libanyhow",
+    ],
+    apex_available: ["com.android.virt"],
+    target: {
+        android64: {
+            compile_multilib: "64",
+        },
+    },
+}

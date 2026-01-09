@@ -61,6 +61,7 @@ use std::time::{Duration, SystemTime};
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 
 const CROSVM_PATH: &str = "/apex/com.android.virt/bin/crosvm";
+const CROSVM_VU_FS_PATH: &str = "/apex/com.android.virt/bin/crosvm_vu_fs";
 
 /// Version of the platform that crosvm currently implements. The format follows SemVer. This
 /// should be updated when there is a platform change in the crosvm side. Having this value here is
@@ -2242,7 +2243,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
             cfg_arg.push_str(",unmap_guest_memory_on_fork=true");
         }
 
-        let mut command = Command::new(CROSVM_PATH);
+        let mut command = Command::new(CROSVM_VU_FS_PATH);
         command
             .arg("device")
             .arg("fs")
@@ -2257,7 +2258,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
         print_crosvm_args(&command);
 
         let result = SharedChild::spawn(&mut command)?;
-        info!("Spawned virtiofs crosvm({})", result.id());
+        info!("Spawned virtiofs crosvm_vu_fs({})", result.id());
         devices.push(result);
     }
 
