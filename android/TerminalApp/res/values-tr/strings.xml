@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"Terminal ekranı"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"İmleç"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"Boş satır"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"Yazarak giriş yapmak için iki kez dokunun"</string>
-    <string name="installer_title" msgid="500663060973466805">"Linux terminalini yükleyin"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"Linux terminalini başlatmak için ağ üzerinden yaklaşık <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> veri indirmeniz gerekir.\nDevam etmek istiyor musunuz?"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"Yalnızca kablosuz bağlantıyla indir"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"Yükle"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"Yükleniyor"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"Linux terminali yükleniyor"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"Linux terminali, yükleme işlemi tamamlandıktan sonra başlatılacak"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"Ağ sorunu nedeniyle yüklenemedi"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"Kablosuz bağlantı olmadığından yükleme işlemi başarısız oldu"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"Yüklenemedi. Lütfen tekrar deneyin"</string>
     <string name="action_settings" msgid="5729342767795123227">"Ayarlar"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"Terminal hazırlanıyor"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"Terminal kilitlendi"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"Diski yeniden boyutlandır"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"Kök bölüm boyutunu yeniden ayarlayın"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> atandı"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maks."</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"Cihazda diskin boyutunu değiştirmek için yeterli alan yok"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"İptal"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"Uygula"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"Terminal, diski yeniden boyutlandırmak için yeniden başlatılacak"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"Onayla"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"Bağlantı noktası kontrolü"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"Dinelenen bağlantı noktalarına izin ver/izin verme"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"Dinlenen bağlantı noktaları"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"İzin verilen kayıtlı bağlantı noktaları"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"Ekle"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"Sil: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"Yeni bir bağlantı noktasına izin verme"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"Yeni bir bağlantı noktası numarası girin"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"Kaydet"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"İptal"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"Lütfen bir telefon numarası girin"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"Bağlantı noktası numarası geçersiz"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"Bağlantı noktası zaten mevcut"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"Terminal yeni bir bağlantı noktası açmak istiyor"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"İstenilen bağlantı noktası: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"Kabul et"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"Reddet"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"İzin Gerekli"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminalin doğru çalışması için şu izinler gerekir: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Aşağıdaki izinler eksik. Lütfen Ayarlar\'da izin verin: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"Linux terminalini yükleyin"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"Linux terminalini başlatmak için ağ üzerinden yaklaşık <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> veri indirmeniz gerekir.\nDevam etmek istiyor musunuz?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Yalnızca kablosuz bağlantıyla indir"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"Yükle"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"Yükleniyor"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Ağ sorunu nedeniyle yüklenemedi"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Kablosuz bağlantı olmadığından yüklenemedi"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Yüklenemedi. Lütfen tekrar deneyin"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"Terminal ekranı"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"İmleç"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Boş satır"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"Yazarak giriş yapmak için iki kez dokunun"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"Sekme"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"Dahili bir hata nedeniyle oturum bağlantısı kesildi."</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"Terminal hazırlanıyor"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"Terminal kilitlendi"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"Terminale bağlanılıyor..."</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"Terminal bağlantısı kesildi."</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"Terminal başlatılıyor..."</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"Sekmeyi kapat"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"Sekme ekle"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"Sekme kapatılsın mı?"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"Bu sekmeyi kapatmak istediğinizden emin misiniz?"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"Kapat"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"Ayarlar"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"Yakınlaştırma/Kaydırma modundan çık"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"Yakınlaştırma/Kaydırma moduna gir"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"Klavyeyi Gizle"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Klavyeyi Göster"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Fareyi Bırak"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Fareyi Kilitle"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"Ekran kontrollerini kapat"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"Görüntüleme seçenekleri"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Önceki Sayfa"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"Sonraki Sayfa"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"Ayarlar"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"Terminal çalışıyor"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"Terminali açmak için tıklayın"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"Kapat"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"Terminal kapanıyor"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"Kapanmaya zorla"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"Uzun süredir çalışan görevler"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"Sistem etkinlikleri"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"Linux terminali yükleniyor"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"Linux terminali, yükleme işlemi tamamlandıktan sonra başlatılacak"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"Terminal yeni bir bağlantı noktası açmak istiyor"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"İstenilen bağlantı noktası: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"Kabul et"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"Reddet"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"Yeniden dene"</string>
+    <string name="settings_title" msgid="3035373808103055663">"Ayarlar"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"Geri"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"Bir ayar seçin"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"Diski yeniden boyutlandır"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"Kök bölüm boyutunu yeniden ayarlayın"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> atandı"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> maks."</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"Cihazda diskin boyutunu değiştirmek için yeterli alan yok"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"İptal"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Uygula"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminal, diski yeniden boyutlandırmak için yeniden başlatılacak"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Onayla"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"Bağlantı noktası kontrolü"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"Dinlenen bağlantı noktalarına izin ver/izin verme"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Dinlenen bağlantı noktaları"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"İzin verilen kayıtlı bağlantı noktaları"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"Ekle"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"Sil: <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"Yeni bir bağlantı noktasına izin verin"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"Yeni bir bağlantı noktası numarası girin"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"Kaydet"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"İptal"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"Lütfen bir sayı girin"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"Bağlantı noktası numarası geçersiz"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"Bağlantı noktası zaten mevcut"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"Bağlantı noktası açılmadı"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Kurtarma"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"Bölüm kurtarma seçenekleri"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"İlk sürüme sıfırla"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"Verilerin tümünü kaldır"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"Terminali sıfırla"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"Sıfırla"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"İptal"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"Verileri <xliff:g id="PATH">/mnt/backup</xliff:g> konumuna yedekle"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"Yedekleme hatası nedeniyle kurtarılamadı"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"Kurtarma işlemi başarısız oldu"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"Yedek veriler kaldırılamadı"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"Yedek verileri kaldır"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> etiketini kaldır"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"Bölüm kurtarma seçenekleri"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"İlk sürüme sıfırla"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"Verilerin tümünü kaldır"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"Terminali sıfırlayın"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"Sıfırla"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"İptal"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"Verileri <xliff:g id="PATH">/mnt/backup</xliff:g> konumuna yedekle"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"Yedek verileri kaldırın"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"<xliff:g id="PATH">/mnt/backup</xliff:g> bilgisini kaldır"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"Yedekleme hatası nedeniyle kurtarılamadı"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"Kurtarma işlemi başarısız oldu"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"Yedek veriler kaldırılamadı"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"Yedek verileri kaldır"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"<xliff:g id="PATH">/mnt/backup</xliff:g> bilgisini kaldır"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"Terminal sıfırlansın mı?"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"Terminali ilk sürümüne sıfırlamak istediğinizden emin misiniz?"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"Terminal resmini tekrar indirmeniz gerekir."</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"Grafik Hızlandırma"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"Grafik hızlandırma için oluşturucuyu değiştirin."</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"Değişikliği uygulamak için lütfen Terminal uygulamasını yeniden başlatın."</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"Yazılım oluşturucu"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"GPU hızlandırmalı oluşturucu"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"Yeniden başlatma gerekli"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"Uygulamak için terminalin yeniden başlatılması gerekiyor."</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"Şimdi yeniden başlat"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"Daha sonra"</string>
     <string name="error_title" msgid="405150657301906598">"Düzeltilemeyen hata"</string>
     <string name="error_desc" msgid="4588252235686826721">"Bir hatayı düzeltme işlemi başarısız oldu.\nTerminali yeniden başlatmayı veya kurtarma seçeneklerinden birini uygulamayı deneyebilirsiniz.\nTüm denemeler başarısız olursa geliştirici seçeneklerinden Linux terminalini açıp kapatarak tüm verileri temizleyin."</string>
-    <string name="error_text_code" msgid="3585291676855383649">"Hata kodu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"Hata bildir"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"Hata kodu: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"Hata bildir"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Daha yeni terminale yükseltin"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Kullandığınız Linux terminali güncel değil. Devam etmek için lütfen sürümünüzü yükseltin.\nVeriler <xliff:g id="PATH">/mnt/backup</xliff:g> üzerinde yedeklenecek"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"Yükselt"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"Yükseltme işlemi başarısız oldu"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"Ayarlar"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"Terminal çalışıyor"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"Terminali açmak için tıklayın"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"Kapat"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"Terminal kapanıyor"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"Uygulamayı kapat"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"Uzun süredir çalışan görevler"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"Sistem etkinlikleri"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"Sekme"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"Grafik Hızlandırma"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"Grafik hızlandırma için oluşturucuyu değiştirin."</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"Değişikliği uygulamak için lütfen Terminal uygulamasını yeniden başlatın."</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"Yazılım oluşturucu"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"GPU hızlandırmalı oluşturucu"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"Dahili bir hata nedeniyle oturum bağlantısı kesildi."</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"Yükselt"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"Yükseltme işlemi başarısız oldu"</string>
 </resources>

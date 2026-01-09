@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ಟರ್ಮಿನಲ್‌"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"ಟರ್ಮಿನಲ್‌ ಪ್ರದರ್ಶನ"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"ಕರ್ಸರ್‌"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"ಖಾಲಿ ಸಾಲು"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"ಇನ್‌ಪುಟ್ ಟೈಪ್ ಮಾಡಲು ಡಬಲ್-ಟ್ಯಾಪ್ ಮಾಡಿ"</string>
-    <string name="installer_title" msgid="500663060973466805">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನೀವು ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಸುಮಾರು <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ಡೇಟಾವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.\nನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"ವೈ-ಫೈ ಅನ್ನು ಮಾತ್ರ ಬಳಸಿ ಡೌನ್ ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"ಇನ್‌ಸ್ಟಾಲ್"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"ಇನ್‌ಸ್ಟಾಲೇಶನ್ ಮುಗಿದ ನಂತರ Linux ಟರ್ಮಿನಲ್ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆಯಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"ವೈ-ಫೈ ಲಭ್ಯವಿಲ್ಲದ ಕಾರಣ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ಪುನಃ ಪ್ರಯತ್ನಿಸಿ"</string>
     <string name="action_settings" msgid="5729342767795123227">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"ಟರ್ಮಿನಲ್ ಕ್ರ್ಯಾಶ್ ಆಗಿದೆ"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"ರೂಟ್ ಪಾರ್ಟಿಶನ್ ಗಾತ್ರವನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಸಾಧನದಲ್ಲಿ ಸಾಕಷ್ಟು ಸ್ಥಳಾವಕಾಶವಿಲ್ಲ."</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"ರದ್ದುಮಾಡಿ"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"ಅನ್ವಯಿಸಿ"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"ದೃಢೀಕರಿಸಿ"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"ಪೋರ್ಟ್ ನಿಯಂತ್ರಣ"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"ಅನುಮತಿಸಲಾದ ಪೋರ್ಟ್‌ಗಳನ್ನು ಸೇವ್ ಮಾಡಲಾಗಿದೆ"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"ಸೇರಿಸಿ"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ಅನ್ನು ಅಳಿಸಿ"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"ಹೊಸ ಪೋರ್ಟ್ ಅನ್ನು ಅನುಮತಿಸಿ"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"ಹೊಸ ಪೋರ್ಟ್ ಸಂಖ್ಯೆವೊಂದನ್ನು ನಮೂದಿಸಿ"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"ಸೇವ್ ಮಾಡಿ"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"ರದ್ದುಮಾಡಿ"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"ಅಮಾನ್ಯ ಪೋರ್ಟ್ ಸಂಖ್ಯೆ"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"ಪೋರ್ಟ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸುತ್ತಿದೆ"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"ಪೋರ್ಟ್ ಅನ್ನು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"ಸಮ್ಮತಿಸಿ"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"ನಿರಾಕರಿಸಿ"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"ಅನುಮತಿಯ ಅಗತ್ಯವಿದೆ"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"ಟರ್ಮಿನಲ್ ಸರಿಯಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸಲು ಈ ಕೆಳಗಿನ ಅನುಮತಿಗಳ ಅಗತ್ಯವಿದೆ: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"ಈ ಕೆಳಗಿನ ಅನುಮತಿಗಳು ಕಾಣೆಯಾಗಿವೆ. ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅವುಗಳನ್ನು ಅನುಮತಿಸಿ: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನೀವು ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಸುಮಾರು <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ಡೇಟಾವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ.\nನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"ವೈ-ಫೈ ಬಳಸಿ ಮಾತ್ರ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆಯಿಂದಾಗಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"ವೈ-ಫೈ ಲಭ್ಯವಿಲ್ಲದ ಕಾರಣ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ಪುನಃ ಪ್ರಯತ್ನಿಸಿ"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"ಟರ್ಮಿನಲ್‌ ಡಿಸ್‌ಪ್ಲೇ"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"ಕರ್ಸರ್‌"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"ಖಾಲಿ ಸಾಲು"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"ಇನ್‌ಪುಟ್ ಟೈಪ್ ಮಾಡಲು ಡಬಲ್-ಟ್ಯಾಪ್ ಮಾಡಿ"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"ಟ್ಯಾಬ್"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"ಆಂತರಿಕ ದೋಷದಿಂದಾಗಿ ಸೆಶನ್ ವಿಫಲವಾಗಿದೆ."</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"ಟರ್ಮಿನಲ್ ಕ್ರ್ಯಾಶ್ ಆಗಿದೆ"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"ಟರ್ಮಿನಲ್‌ಗೆ ಕನೆಕ್ಟ್ ಮಾಡಲಾಗುತ್ತಿದೆ..."</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"ಟರ್ಮಿನಲ್ ಡಿಸ್‌ಕನೆಕ್ಟ್ ಆಗಿದೆ."</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"ಟರ್ಮಿನಲ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ..."</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"ಟ್ಯಾಬ್ ಮುಚ್ಚಿರಿ"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"ಟ್ಯಾಬ್ ಸೇರಿಸಿ"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"ಟ್ಯಾಬ್ ಅನ್ನು ಮುಚ್ಚಬೇಕೆ?"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"ನೀವು ಖಂಡಿತವಾಗಿಯೂ ಈ ಟ್ಯಾಬ್ ಅನ್ನು ಮುಚ್ಚಲು ಬಯಸುತ್ತೀರಾ?"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"ಮುಚ್ಚಿರಿ"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"ಝೂಮ್/ಪ್ಯಾನ್ ಮೋಡ್‌ನಿಂದ ನಿರ್ಗಮಿಸಿ"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"ಝೂಮ್/ಪ್ಯಾನ್ ಮೋಡ್ ಅನ್ನು ಪ್ರವೇಶಿಸಿ"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"ಕೀಬೋರ್ಡ್ ಮರೆಮಾಡಿ"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"ಕೀಬೋರ್ಡ್ ತೋರಿಸಿ"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"ಮೌಸ್ ಅನ್ನು ಬಿಡುಗಡೆ ಮಾಡಿ"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"ಮೌಸ್ ಅನ್ನು ಲಾಕ್ ಮಾಡಿ"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"ಡಿಸ್‌ಪ್ಲೇ ನಿಯಂತ್ರಣಗಳನ್ನು ಮುಚ್ಚಿರಿ"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"ಡಿಸ್‌ಪ್ಲೇ ಆಯ್ಕೆಗಳು"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"ಹಿಂದಿನ ಪುಟ"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"ಮುಂದಿನ ಪುಟ"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"ಮುಚ್ಚಿರಿ"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"ಟರ್ಮಿನಲ್ ಮುಚ್ಚಲಾಗುತ್ತಿದೆ"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"ಬಲವಂತವಾಗಿ ಮುಚ್ಚಿ"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"ದೀರ್ಘಾವಧಿಯ ಕಾರ್ಯಗಳು"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"ಸಿಸ್ಟಮ್ ಈವೆಂಟ್‌ಗಳು"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"ಇನ್‌ಸ್ಟಾಲೇಶನ್ ಮುಗಿದ ನಂತರ Linux ಟರ್ಮಿನಲ್ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"ಟರ್ಮಿನಲ್‌ ಹೊಸ ಪೋರ್ಟ್‌ ಅನ್ನು ತೆರೆಯಲು ವಿನಂತಿಸುತ್ತಿದೆ"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"ಪೋರ್ಟ್ ಅನ್ನು ವಿನಂತಿಸಲಾಗಿದೆ: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"ಸಮ್ಮತಿಸಿ"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"ನಿರಾಕರಿಸಿ"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"ಮರುಪ್ರಯತ್ನಿಸಿ"</string>
+    <string name="settings_title" msgid="3035373808103055663">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"ಹಿಂದಕ್ಕೆ"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"ಸೆಟ್ಟಿಂಗ್ ಅನ್ನು ಆಯ್ಕೆಮಾಡಿ"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"ರೂಟ್ ಪಾರ್ಟಿಶನ್ ಗಾತ್ರವನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಸಾಧನದಲ್ಲಿ ಸಾಕಷ್ಟು ಸ್ಥಳಾವಕಾಶವಿಲ್ಲ."</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"ರದ್ದುಮಾಡಿ"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"ಅನ್ವಯಿಸಿ"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"ದೃಢೀಕರಿಸಿ"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"ಪೋರ್ಟ್ ನಿಯಂತ್ರಣ"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"ಅನುಮತಿಸಲಾದ ಪೋರ್ಟ್‌ಗಳನ್ನು ಸೇವ್ ಮಾಡಲಾಗಿದೆ"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"ಸೇರಿಸಿ"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"<xliff:g id="PORT_NUMBER">%d</xliff:g> ಅನ್ನು ಅಳಿಸಿ"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"ಹೊಸ ಪೋರ್ಟ್ ಅನ್ನು ಅನುಮತಿಸಿ"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"ಹೊಸ ಪೋರ್ಟ್ ಸಂಖ್ಯೆವೊಂದನ್ನು ನಮೂದಿಸಿ"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"ಸೇವ್ ಮಾಡಿ"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"ರದ್ದುಮಾಡಿ"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"ಅಮಾನ್ಯ ಪೋರ್ಟ್ ಸಂಖ್ಯೆ"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"ಪೋರ್ಟ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"ಯಾವುದೇ ಪೋರ್ಟ್ ತೆರೆದಿಲ್ಲ"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"ರಿಕವರಿ"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"ಪಾರ್ಟಿಶನ್ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳು"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"ಆರಂಭಿಕ ಆವೃತ್ತಿಗೆ ರೀಸೆಟ್ ಮಾಡಿ"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ರೀಸೆಟ್‌ ಮಾಡಿ"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"ರೀಸೆಟ್ ಮಾಡಿ"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"ರದ್ದುಮಾಡಿ"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"ಡೇಟಾವನ್ನು <xliff:g id="PATH">/mnt/backup</xliff:g> ಗೆ ಬ್ಯಾಕಪ್‌ ಮಾಡಿ"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"ಬ್ಯಾಕಪ್ ದೋಷದಿಂದಾಗಿ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"ರಿಕವರಿ ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"ಬ್ಯಾಕಪ್ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಲು ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"ಬ್ಯಾಕಪ್‌ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"ಪಾರ್ಟಿಶನ್ ರಿಕವರಿ ಆಯ್ಕೆಗಳು"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"ಆರಂಭಿಕ ಆವೃತ್ತಿಗೆ ರೀಸೆಟ್ ಮಾಡಿ"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ರೀಸೆಟ್‌ ಮಾಡಿ"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"ರೀಸೆಟ್ ಮಾಡಿ"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"ರದ್ದುಮಾಡಿ"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"ಡೇಟಾವನ್ನು <xliff:g id="PATH">/mnt/backup</xliff:g> ಗೆ ಬ್ಯಾಕಪ್‌ ಮಾಡಿ"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"ಬ್ಯಾಕಪ್‌ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"<xliff:g id="PATH">/mnt/backup</xliff:g> ಅನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"ಬ್ಯಾಕಪ್ ದೋಷದಿಂದಾಗಿ ರಿಕವರಿ ಆಗಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"ರಿಕವರಿ ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"ಬ್ಯಾಕಪ್ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಲು ವಿಫಲವಾಗಿದೆ"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"ಬ್ಯಾಕಪ್‌ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"<xliff:g id="PATH">/mnt/backup</xliff:g> ಅನ್ನು ತೆಗೆದುಹಾಕಿ"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ರೀಸೆಟ್‌ ಮಾಡಬೇಕೇ?"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"ಟರ್ಮಿನಲ್ ಅನ್ನು ಅದರ ಆರಂಭಿಕ ಆವೃತ್ತಿಗೆ ರೀಸೆಟ್ ಮಾಡಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುತ್ತೀರಾ?"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"ನೀವು ಟರ್ಮಿನಲ್ ಚಿತ್ರವನ್ನು ಮತ್ತೊಮ್ಮೆ ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ."</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"ಗ್ರಾಫಿಕ್ಸ್ ಆ್ಯಕ್ಸಿಲಿರೇಶನ್"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"ಗ್ರಾಫಿಕ್ಸ್ ಆ್ಯಕ್ಸಿಲಿರೇಶನ್‌ಗಾಗಿ ರೆಂಡರರ್ ಅನ್ನು ಬದಲಾಯಿಸಿ."</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"ಬದಲಾವಣೆಯನ್ನು ಅನ್ವಯಿಸಲು ಟರ್ಮಿನಲ್ ಆ್ಯಪ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ."</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"ಸಾಫ್ಟ್‌ವೇರ್ ರೆಂಡರರ್"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"GPU-ವೇಗವರ್ಧಿತ ರೆಂಡರರ್"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"ಮರುಪ್ರಾರಂಭದ ಅಗತ್ಯವಿದೆ"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"ಅನ್ವಯಿಸಲು, ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಬೇಕು."</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"ಇದೀಗ ಮರುಪ್ರಾರಂಭಿಸಿ"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"ನಂತರ"</string>
     <string name="error_title" msgid="405150657301906598">"ಮರುಪಡೆಯಲಾಗದ ದೋಷ"</string>
     <string name="error_desc" msgid="4588252235686826721">"ದೋಷದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳಲು ವಿಫಲವಾಗಿದೆ.\nನೀವು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು ಅಥವಾ ಮರುಪ್ರಾಪ್ತಿ ಆಯ್ಕೆಗಳಲ್ಲಿ ಒಂದನ್ನು ಪ್ರಯತ್ನಿಸಬಹುದು.\nಎಲ್ಲಾ ಪ್ರಯತ್ನಗಳು ವಿಫಲವಾದರೆ, ಡೆವಲಪರ್ ಆಯ್ಕೆಗಳಿಂದ Linux ಟರ್ಮಿನಲ್ ಅನ್ನು ಆನ್/ಆಫ್ ಮಾಡುವ ಮೂಲಕ ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಅಳಿಸಿಹಾಕು."</string>
-    <string name="error_text_code" msgid="3585291676855383649">"ದೋಷ ಕೋಡ್‌: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"ಬಗ್ ವರದಿ ಮಾಡಿ"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"ದೋಷ ಕೋಡ್: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"ಬಗ್ ವರದಿ ಮಾಡಿ"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"ಹೊಸ ಟರ್ಮಿನಲ್‌ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"ನೀವು ಬಳಸುತ್ತಿದ್ದ Linux ಟರ್ಮಿನಲ್ ಅವಧಿ ಮೀರಿದೆ. ಮುಂದುವರಿಯಲು ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ.\nಡೇಟಾವನ್ನು <xliff:g id="PATH">/mnt/backup</xliff:g> ನಲ್ಲಿ ಬ್ಯಾಕಪ್ ಮಾಡಲಾಗುತ್ತದೆ"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"ಅಪ್‌ಗ್ರೇಡ್ ವಿಫಲವಾಗಿದೆ"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"ಟರ್ಮಿನಲ್‌ ರನ್‌ ಆಗುತ್ತಿದೆ"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"ಟರ್ಮಿನಲ್‌ ಅನ್ನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"ಮುಚ್ಚಿರಿ"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"ಟರ್ಮಿನಲ್ ಮುಚ್ಚಲಾಗುತ್ತಿದೆ"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"ಬಲವಂತವಾಗಿ ಮುಚ್ಚಿ"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"ದೀರ್ಘಾವಧಿಯ ಕಾರ್ಯಗಳು"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"ಸಿಸ್ಟಮ್ ಈವೆಂಟ್‌ಗಳು"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"ಟ್ಯಾಬ್"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"ಗ್ರಾಫಿಕ್ಸ್ ವೇಗವರ್ಧನೆ"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"ಗ್ರಾಫಿಕ್ಸ್ ವೇಗವರ್ಧನೆಗಾಗಿ ರೆಂಡರರ್ ಅನ್ನು ಬದಲಾಯಿಸಿ."</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"ಬದಲಾವಣೆಯನ್ನು ಅನ್ವಯಿಸಲು ಟರ್ಮಿನಲ್ ಆ್ಯಪ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ."</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"ಸಾಫ್ಟ್‌ವೇರ್ ರೆಂಡರರ್"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"GPU-ವೇಗವರ್ಧಿತ ರೆಂಡರರ್"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"ಆಂತರಿಕ ದೋಷದಿಂದಾಗಿ ಸೆಶನ್ ವಿಫಲವಾಗಿದೆ."</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"ಅಪ್‌ಗ್ರೇಡ್ ವಿಫಲವಾಗಿದೆ"</string>
 </resources>

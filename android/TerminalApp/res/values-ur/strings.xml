@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ٹرمینل"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"ٹرمینل ڈسپلے"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"کرسر"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"خالی لائن"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"ان پٹ ٹائپ کرنے کے لیے دو بار تھپتھپائیں"</string>
-    <string name="installer_title" msgid="500663060973466805">"‫Linux ٹرمینل انسٹال کریں"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"‫Linux ٹرمینل شروع کرنے کے لیے، آپ کو نیٹ ورک پر تقریباً <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ڈیٹا ڈاؤن لوڈ کرنا ہوگا۔\nکیا آپ آگے بڑھنا چاہیں گے؟"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"صرف Wi-Fi کا استعمال کر کے ڈاؤن لوڈ کریں"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"انسٹال کریں"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"انسٹال کیا جا رہا ہے"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"‫Linux ٹرمینل انسٹال ہو رہا ہے"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"انسٹالیشن مکمل ہونے کے بعد Linux ٹرمینل شروع ہو جائے گا"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"نیٹ ورک کے مسئلے کی وجہ سے انسٹال نہیں کیا جا سکا"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"‫Wi-Fi دستیاب نہ ہونے کی وجہ سے انسٹال نہیں کیا جا سکا"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"انسٹال نہیں کیا جا سکا۔ براہ کرم دوبارہ کوشش کریں"</string>
     <string name="action_settings" msgid="5729342767795123227">"ترتیبات"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"ٹرمینل تیار ہو رہا ہے"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"ٹرمینل کریش ہو گیا"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"ڈسک کا سائز تبدیل کریں"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"روٹ پارٹیشن کا سائز تبدیل کریں"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> تفویض کردہ"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"زیادہ سے زیادہ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"ڈسک کا سائز تبدیل کرنے کے لیے آلہ پر کافی جگہ نہیں ہے"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"منسوخ کریں"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"لاگو کریں"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"ڈسک کا سائز تبدیل کرنے کے لیے ٹرمینل کو ری سٹارٹ کیا جائے گا"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"تصدیق کریں"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"پورٹ کنٹرول"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"لسننگ پورٹس کو اجازت دیں/مسترد کریں"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"لسننگ پورٹس"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"اجازت یافتہ پورٹس کو محفوظ کیا گیا"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"شامل کریں"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g> حذف کریں"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"نئے پورٹ کی اجازت دی"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"نیا پورٹ نمبر درج کریں"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"محفوظ کریں"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"منسوخ کریں"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"براہ کرم ایک نمبر درج کریں"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"غلط پورٹ نمبر"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"پورٹ پہلے سے موجود ہے"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"ٹرمینل ایک نیا پورٹ کھولنے کی درخواست کر رہا ہے"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"پورٹ کی درخواست کی گئی: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"قبول کریں"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"مسترد کریں"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"اجازت درکار ہے"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"ٹرمینل کو صحیح طریقے سے کام کرنے کے لیے درج ذیل اجازتوں کی ضرورت ہے: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"درج ذیل اجازتیں موجود نہیں ہیں۔ براہ کرم انہیں ترتیبات میں اجازت دیں: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"‫Linux ٹرمینل انسٹال کریں"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"‫Linux ٹرمینل شروع کرنے کے لیے، آپ کو نیٹ ورک پر تقریباً <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ڈیٹا ڈاؤن لوڈ کرنا ہوگا۔\nکیا آپ آگے بڑھنا چاہیں گے؟"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"صرف Wi-Fi کا استعمال کر کے ڈاؤن لوڈ کریں"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"انسٹال کریں"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"انسٹال کیا جا رہا ہے"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"نیٹ ورک کے مسئلے کی وجہ سے انسٹال نہیں کیا جا سکا"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"‫Wi-Fi دستیاب نہ ہونے کی وجہ سے انسٹال نہیں کیا جا سکا"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"انسٹال نہیں کیا جا سکا۔ براہ کرم دوبارہ کوشش کریں"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"ٹرمینل ڈسپلے"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"کرسر"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"خالی لائن"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"ان پٹ ٹائپ کرنے کے لیے دو بار تھپتھپائیں"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"ٹیب"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"داخلی خرابی کی وجہ سے سیشن ضائع ہو گیا ہے۔"</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"ٹرمینل تیار ہو رہا ہے"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"ٹرمینل کریش ہو گیا"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"ٹرمینل سے منسلک کیا جا رہا ہے..."</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"ٹرمینل منقطع ہو گیا۔"</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"ٹرمینل شروع ہو رہا ہے..."</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"ٹیب بند کریں"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"ٹیب شامل کریں"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"ٹیب بند کریں؟"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"کیا آپ واقعی اس ٹیب کو بند کرنا چاہتے ہیں؟"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"بند کریں"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"ترتیبات"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"زوم/پین موڈ سے باہر نکلیں"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"زوم/پین موڈ میں داخل ہوں"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"کی بورڈ چھپائیں"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"کی بورڈ دکھائیں"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"ماؤس ریلیز کریں"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"ماؤس کو مقفل کریں"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"ڈسپلے کنٹرولز بند کریں"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"ڈسپلے کے اختیارات"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"پچھلا صفحہ"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"اگلا صفحہ"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"ترتیبات"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"ٹرمینل چل رہا ہے"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"ٹرمینل کھولنے کے لیے کلک کریں"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"بند کریں"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"ٹرمینل بند ہو رہا ہے"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"زبردستی بند کریں"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"لمبے وقت تک چلنے والے ٹاسکس"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"سسٹم ایونٹس"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"‫Linux ٹرمینل انسٹال ہو رہا ہے"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"انسٹالیشن مکمل ہونے کے بعد Linux ٹرمینل شروع ہو جائے گا"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"ٹرمینل ایک نیا پورٹ کھولنے کی درخواست کر رہا ہے"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"پورٹ کی درخواست کی گئی: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"قبول کریں"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"مسترد کریں"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"دوبارہ کوشش کریں"</string>
+    <string name="settings_title" msgid="3035373808103055663">"ترتیبات"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"پیچھے"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"ایک ترتیب منتخب کریں"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"ڈسک کا سائز تبدیل کریں"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"روٹ پارٹیشن کا سائز تبدیل کریں"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"‫<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> تفویض کردہ"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"زیادہ سے زیادہ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"ڈسک کا سائز تبدیل کرنے کے لیے آلہ پر کافی جگہ نہیں ہے"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"منسوخ کریں"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"لاگو کریں"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"ڈسک کا سائز تبدیل کرنے کے لیے ٹرمینل کو ری سٹارٹ کیا جائے گا"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"تصدیق کریں"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"پورٹ کنٹرول"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"لسننگ پورٹس کو اجازت دیں/مسترد کریں"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"لسننگ پورٹس"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"اجازت یافتہ پورٹس کو محفوظ کیا گیا"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"شامل کریں"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"‫<xliff:g id="PORT_NUMBER">%d</xliff:g> حذف کریں"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"نئے پورٹ کی اجازت دیں"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"نیا پورٹ نمبر درج کریں"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"محفوظ کریں"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"منسوخ کریں"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"براہ کرم ایک نمبر درج کریں"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"غلط پورٹ نمبر"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"پورٹ پہلے سے موجود ہے"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"کوئی پورٹ نہیں کھلا ہے"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"بازیابی"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"پارٹیشن کی بازیابی کے اختیارات"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"ابتدائی ورژن پر ری سیٹ کریں"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"سبھی ڈیٹا ہٹائیں"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"ٹرمینل ری سیٹ کریں"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"ری سیٹ کریں"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"منسوخ کریں"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"‫<xliff:g id="PATH">/mnt/backup</xliff:g> پر ڈیٹا کا بیک اپ لیں"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"بیک اپ کی خرابی کی وجہ سے بازیاب نہیں کیا جا سکا"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"بازیابی ناکام ہو گئی"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"بیک اپ ڈیٹا نہیں ہٹایا جا سکا"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"بیک اپ ڈیٹا ہٹائیں"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> ہٹائیں"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"پارٹیشن کی بازیابی کے اختیارات"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"ابتدائی ورژن پر ری سیٹ کریں"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"سبھی ڈیٹا ہٹائیں"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"ٹرمینل ری سیٹ کریں"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"ری سیٹ کریں"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"منسوخ کریں"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"‫<xliff:g id="PATH">/mnt/backup</xliff:g> پر ڈیٹا کا بیک اپ لیں"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"بیک اپ ڈیٹا ہٹائیں"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"‫<xliff:g id="PATH">/mnt/backup</xliff:g> ہٹائیں"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"بیک اپ کی خرابی کی وجہ سے بازیاب نہیں کیا جا سکا"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"بازیابی نہیں ہو سکی"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"بیک اپ ڈیٹا نہیں ہٹایا جا سکا"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"بیک اپ ڈیٹا ہٹائیں"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"‫<xliff:g id="PATH">/mnt/backup</xliff:g> ہٹائیں"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"ٹرمینل ری سیٹ کریں؟"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"کیا آپ واقعی ٹرمینل کو اس کے ابتدائی ورژن پر ری سیٹ کرنا چاہتے ہیں؟"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"آپ کو ٹرمینل کی تصویر دوبارہ ڈاؤن لوڈ کرنی ہوگی۔"</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"گرافکس ایکسلریشن"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"گرافکس ایکسلریشن کے لیے رینڈرر کو تبدیل کریں۔"</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"تبدیلی کو لاگو کرنے کے لیے براہ کرم ٹرمینل ایپ ری سٹارٹ کریں۔"</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"سافٹ ویئر رینڈرر"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"‫GPU کے ذریعے ایکسلریٹ کردہ رینڈرر"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"ری سٹارٹ کرنا درکار ہے"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"لاگو کرنے کے لیے، ٹرمینل کو ری سٹارٹ کرنا ضروری ہے۔"</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"ابھی ری سٹارٹ کریں"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"بعد میں"</string>
     <string name="error_title" msgid="405150657301906598">"نا قابل بازیابی کی خرابی"</string>
     <string name="error_desc" msgid="4588252235686826721">"کسی خرابی سے بازیاب کرنے میں ناکام۔\nآپ ٹرمینل کو ری اسٹارٹ کرنے کی کوشش کر سکتے ہیں یا بازیابی کے اختیارات میں سے ایک اختیار آزما سکتے ہیں۔\nاگر تمام کوششیں ناکام ہوتی ہیں تو ڈویلپر کے اختیارات سے Linux ٹرمینل کو آن/آف کر کے تمام ڈیٹا صاف کریں۔"</string>
-    <string name="error_text_code" msgid="3585291676855383649">"خرابی کا کوڈ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"بَگ کی اطلاع دیں"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"خرابی کا کوڈ: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"بَگ کی اطلاع دیں"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"جدید تر ٹرمینل میں اپ گریڈ کریں"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"آپ جو Linux ٹرمینل استعمال کر رہے تھے وہ پرانا ہے۔ براہ کرم آگے بڑھنے کے لیے اپ گریڈ کریں۔\nڈیٹا کا بیک اپ <xliff:g id="PATH">/mnt/backup</xliff:g> پر لیا جائے گا"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"اپ گریڈ کریں"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"اپ گریڈ ناکام ہو گیا"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"ترتیبات"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"ٹرمینل چل رہا ہے"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"ٹرمینل کھولنے کے لیے کلک کریں"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"بند کریں"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"ٹرمینل بند ہو رہا ہے"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"زبردستی بند کریں"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"لمبے وقت تک چلنے والے ٹاسکس"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"سسٹم ایونٹس"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"ٹیب"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"گرافکس ایکسلریشن"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"گرافکس ایکسلریشن کے لیے رینڈرر کو تبدیل کریں۔"</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"تبدیلی کو لاگو کرنے کے لیے براہ کرم ٹرمینل ایپ کو دوبارہ شروع کریں۔"</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"سافٹ ویئر رینڈرر"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"‫GPU کے ذریعے تیز کردہ رینڈرر"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"داخلی خرابی کی وجہ سے سیشن ضائع ہو گیا ہے۔"</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"اپ گریڈ کریں"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"اپ گریڈ ناکام ہو گیا"</string>
 </resources>
