@@ -68,13 +68,23 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
         return null;
     }
 
+    private String chooseOs(TestDevice device) throws DeviceNotAvailableException {
+        CommandResult result = device.executeShellV2Command("getconf PAGE_SIZE");
+        String stdout = result.getStdout().trim();
+        if ("16384".equals(stdout)) { // 16K
+            return "microdroid_16k";
+        }
+        return "microdroid";
+    }
+
     private boolean isVirtualDevice(TestDevice device) throws DeviceNotAvailableException {
         String vendorDeviceName = device.getProperty(DeviceProperties.VARIANT);
         return vendorDeviceName != null
                 && (vendorDeviceName.startsWith("vsoc_") || vendorDeviceName.startsWith("emu64"));
     }
 
-    public void ensureMicrodroidBoot(TestDevice device, String apkPath, boolean protectedVm)
+    public void ensureMicrodroidBoot(
+            TestDevice device, String apkPath, String os, boolean protectedVm)
             throws DeviceNotAvailableException {
         try {
             if (!device.supportsMicrodroid(protectedVm)) {
@@ -99,6 +109,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
                             .debugLevel("full")
                             .protectedVm(protectedVm)
                             .setAdbConnectTimeoutMs(timeoutMs)
+                            .os(os)
                             .build(device);
             if (microdroid == null) {
                 throw new DeviceNotAvailableException("Failed to launch Microdroid");
@@ -126,7 +137,13 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
             return;
         }
 
-        ensureMicrodroidBoot(testDevice, apkPath, /* protectedVm= */ true);
-        ensureMicrodroidBoot(testDevice, apkPath, /* protectedVm= */ false);
+        String os = chooseOs(testDevice);
+        if (os == null) {
+            CLog.d("vm info returned no supported OS. Skipping microdroid canary.");
+            return;
+        }
+
+        ensureMicrodroidBoot(testDevice, apkPath, os, /* protectedVm= */ true);
+        ensureMicrodroidBoot(testDevice, apkPath, os, /* protectedVm= */ false);
     }
 }
