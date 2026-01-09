@@ -35,9 +35,3 @@ rust_library_rlib {
         },
     },
 }
-
-dirgroup {
-    name: "trusty_dirgroup_packages_modules_virtualization_libs_libhypervisor_backends",
-    visibility: ["//trusty/vendor/google/aosp/scripts"],
-    dirs: ["."],
-}
