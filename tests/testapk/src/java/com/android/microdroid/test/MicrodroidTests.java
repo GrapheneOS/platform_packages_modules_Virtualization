@@ -180,6 +180,13 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         uninstallApp(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME);
     }
 
+    private String getMultiTenantVariant() {
+        String fingerprint = SystemProperties.get("ro.build.fingerprint", "");
+        return !fingerprint.contains("google")
+                ? "aosp_dev"
+                : fingerprint.endsWith("release-keys") ? "google_release" : "google_dev";
+    }
+
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
 
     private static final String VM_SHARE_APP_PACKAGE_NAME = "com.android.microdroid.vmshare_app";
@@ -1365,20 +1372,16 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"3.1/C-0-1"})
     public void multipleTenantServices() throws Exception {
         assumeSupportedDevice();
-        // TODO(b/465728787): The signing keys used for virt apex in Cuttlefish do not match
-        // the expected public keys in TenancyConfig (vm_config_test_multi_tenants.json).
-        // Disable the test on CF till we implement robust strategy for testing different
-        // signing configuration of DUT.
-        assume().withMessage("Skip on CF, which has virt apex signed with different key")
-                .that(isCuttlefish())
-                .isFalse();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
@@ -1442,8 +1445,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
 
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
@@ -1515,8 +1520,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         installApp("MicrodroidTestHelperAppAlternateTenant.apk");
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(DEBUG_LEVEL_FULL)
                         .build();
@@ -1581,8 +1588,11 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
                         .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
@@ -1662,8 +1672,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isEqualTo("PASS");
 
         // Re-run the VM with more tenants
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
                         .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
@@ -1753,8 +1765,10 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
 
         // Re-run the VM with more tenants
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_test_multi_tenants.json")
+                newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
                         .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
                         .setDebugLevel(DEBUG_LEVEL_FULL)
@@ -1862,6 +1876,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        // TODO(b/474514807): Replace virt apex tenant from vm_config_invalid_tenant_apex_auth.json.
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(
                                 "assets/vm_config_invalid_tenant_apex_auth.json")
@@ -1883,6 +1898,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+        // TODO(b/474514807): Replace virt apex from vm_config_invalid_tenant_apex_version.json.
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(
                                 "assets/vm_config_invalid_tenant_apex_version.json")
