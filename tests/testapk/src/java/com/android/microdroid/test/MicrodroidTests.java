@@ -360,16 +360,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationSucceedsWithInternet() throws Exception {
-        assume().withMessage("Internet connection is required for this test")
-                .that(isNetworkConnected())
-                .isTrue();
-        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
-                .that(SystemProperties.get("remote_provisioning.hostname"))
-                .isNotEmpty();
-
-        // pVM remote attestation is only supported on protected VMs.
-        assumeProtectedVM();
-        ensureVmAttestationSupported();
+        assumeVmAttestationSupportedWithInternet();
 
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary(VM_ATTESTATION_PAYLOAD_PATH)
@@ -460,23 +451,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWithMultipleTenantsSucceedsWithInternet() throws Exception {
-        byte[] challenge = new byte[32];
-        Arrays.fill(challenge, (byte) 0xac);
-        assume().withMessage("Internet connection is required for this test")
-                .that(isNetworkConnected())
-                .isTrue();
-        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
-                .that(SystemProperties.get("remote_provisioning.hostname"))
-                .isNotEmpty();
-
-        // pVM remote attestation is only supported on protected VMs.
-        assumeProtectedVM();
-        ensureVmAttestationSupported();
+        assumeVmAttestationSupportedWithInternet();
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig("assets/vm_config_tenant_attestation.json")
                         .setMemoryBytes(minMemoryRequired())
