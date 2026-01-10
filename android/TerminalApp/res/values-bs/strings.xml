@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"Ekran terminala"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"Kursor"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"Prazan red"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"Unos pisanjem dvostrukim dodirom"</string>
-    <string name="installer_title" msgid="500663060973466805">"Instalirajte Linux terminal"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"Da pokrenete Linux terminal, trebate preuzeti otprilike <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> podataka putem mreže.\nŽelite li nastaviti?"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"Preuzmi koristeći isključivo WiFi"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"Instaliraj"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"Instaliranje"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"Instaliranje Linux terminala"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"Linux terminal će se pokrenuti nakon što se instalacija završi"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"Instaliranje nije uspjelo zbog problema s mrežom"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"Instaliranje nije uspjelo jer WiFi nije dostupan"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"Instaliranje nije uspjelo. Pokušajte ponovo"</string>
     <string name="action_settings" msgid="5729342767795123227">"Postavke"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"Priprema terminala"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"Terminal je pao"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"Promjena veličine diska"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"Promijenite veličinu korijenske particije"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"Dodijeljeno: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"Maksimalno <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"Nema dovoljno prostora na uređaju za promjenu veličine diska"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"Otkaži"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"Primijeni"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"Terminal će se ponovo pokrenuti radi promjene veličine diska"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"Potvrdi"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"Upravljanje priključkom"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"Dozvoli/odbij priključke za slušanje"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"Priključci za slušanje"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"Sačuvani dozvoljeni priključci"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"Dodavanje"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"Brisanje priključka <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"Dozvolite novi priključak"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"Unesite broj novog priključka"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"Sačuvaj"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"Otkaži"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"Unesite broj"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"Nevažeći broj priključka"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"Priključak već postoji"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"Terminal zahtijeva otvaranje novog priključka"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"Zatražen je priključak: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"Prihvati"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"Odbij"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"Potrebno je odobrenje"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminal zahtijeva sljedeća odobrenja da pravilno funkcionira: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Nedostaju sljedeća odobrenja. Dodijelite ih u Postavkama: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"Instalirajte Linux terminal"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"Da pokrenete Linux terminal, trebate preuzeti otprilike <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> podataka putem mreže.\nŽelite li nastaviti?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Preuzmi koristeći isključivo WiFi"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"Instaliraj"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"Instaliranje"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Instaliranje nije uspjelo zbog problema s mrežom"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Instaliranje nije uspjelo jer WiFi nije dostupan"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Instaliranje nije uspjelo. Pokušajte ponovo"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"Ekran terminala"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"Kursor"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Prazan red"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"Dvostruki dodir radi pisanja unosa"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"Kartica"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"Sesija je izgubljena zbog interne greške."</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"Priprema terminala"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"Terminal je pao"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"Povezivanje s terminalom…"</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"Prekinuta je veza s terminalom."</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"Pokretanje terminala…"</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"Zatvaranje kartice"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"Dodavanje kartice"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"Zatvoriti karticu?"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"Jeste li sigurni da želite zatvoriti karticu?"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"Zatvori"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"Postavke"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"Izlaz iz načina rada za zumiranje/pomicanje"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"Ulazak u način rada za zumiranje/pomicanje"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"Sakrivanje tastature"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Prikazivanje tastature"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Otpuštanje miša"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Zaključavanje miša"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"Zatvaranje kontrola ekrana"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"Opcije ekrana"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Prethodna stranica"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"Sljedeća stranica"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"Postavke"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"Terminal je pokrenut"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"Kliknite da otvorite terminal"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"Zatvori"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"Terminal je zatvoren"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"Prisilno zatvori"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"Dugotrajni zadaci"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"Događaji sistema"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"Instaliranje Linux terminala"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"Linux terminal će se pokrenuti nakon što se instalacija završi"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"Terminal zahtijeva otvaranje novog priključka"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"Zatražen je priključak: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"Prihvati"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"Odbij"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"Pokušaj ponovo"</string>
+    <string name="settings_title" msgid="3035373808103055663">"Postavke"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"Nazad"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"Odaberite postavku"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"Promjena veličine diska"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"Promijenite veličinu korijenske particije"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"Dodijeljeno: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"Maksimalno <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"Nema dovoljno prostora na uređaju za promjenu veličine diska"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Otkaži"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Primijeni"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminal će se ponovo pokrenuti radi promjene veličine diska"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Potvrdi"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"Upravljanje priključkom"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"Dozvolite/odbijte priključke za slušanje"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Priključci za slušanje"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"Sačuvani dozvoljeni priključci"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"Dodavanje"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"Brisanje priključka <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"Dozvolite novi priključak"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"Unesite broj novog priključka"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"Sačuvaj"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"Otkaži"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"Unesite broj"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"Nevažeći broj priključka"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"Priključak već postoji"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"Nije otvoren nijedan priključak"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Oporavak"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"Opcije za oporavak particije"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"Vrati na početnu verziju"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"Uklonite sve podatke"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"Poništite terminal"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"Vrati na zadano"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"Otkaži"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"Napravi sigurnosnu kopiju podataka na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"Oporavak nije uspio zbog greške sigurnosne kopije"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"Oporavak nije uspio"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"Uklanjanje podataka sigurnosne kopije nije uspjelo"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"Ukloni podatke sigurnosne kopije"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"Ukloni <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"Opcije za oporavak particije"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"Vrati na zadanu početnu verziju"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"Uklonite sve podatke"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"Vratite terminal na zadano"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"Vrati na zadano"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"Otkaži"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"Napravi sigurnosnu kopiju podataka na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"Uklonite podatke sigurnosne kopije"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"Uklonite <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"Oporavak nije uspio zbog greške sigurnosne kopije"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"Oporavak nije uspio"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"Uklanjanje podataka sigurnosne kopije nije uspjelo"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"Ukloni podatke sigurnosne kopije"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"Uklonite <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"Vratiti Terminal na zadano?"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"Jeste li sigurni da želite vratiti Terminal na zadanu početnu verziju?"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"Morat ćete ponovo preuzeti sliku Terminala."</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"Ubrzavanje grafike"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"Promijenite renderer radi ubrzavanja grafike."</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"Ponovo pokrenite aplikaciju Terminal da primijenite promjenu."</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"Renderer softvera"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"Renderer ubrzan grafičkim procesorom"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"Potrebno je ponovno pokretanje"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"Da primijenite, morate ponovo pokrenuti terminal."</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"Ponovo pokreni sada"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"Kasnije"</string>
     <string name="error_title" msgid="405150657301906598">"Nepopravljiva greška"</string>
     <string name="error_desc" msgid="4588252235686826721">"Oporavak od greške nije uspio.\nMožete ponovo pokrenuti terminal ili isprobati jednu od opcija za oporavak.\nAko svi pokušaji ne uspiju, uništite sve podatke uključivanjem/isključivanjem Linux terminala u opcijama za programere."</string>
-    <string name="error_text_code" msgid="3585291676855383649">"Kȏd greške: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"Prijavi grešku"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"Kȏd greške: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"Prijavi grešku"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Nadogradite na noviji terminal"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Linux terminal koji koristite je zastario. Nadogradite da nastavite.\nSigurnosna kopija podataka će se napraviti na <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"Nadogradi"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"Nadogradnja nije uspjela"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"Postavke"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"Terminal je pokrenut"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"Kliknite da otvorite terminal"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"Zatvori"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"Terminal je zatvoren"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"Prisilno zatvori"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"Dugotrajni zadaci"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"Događaji sistema"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"Kartica"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"Ubrzanje grafike"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"Promijenite renderer da ubrzate grafiku."</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"Ponovo pokrenite aplikaciju Terminal za primjenu promjene."</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"Renderer softvera"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"Renderer ubrzan grafičkim procesorom"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"Sesija je izgubljena zbog interne greške."</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"Nadogradi"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"Nadogradnja nije uspjela"</string>
 </resources>

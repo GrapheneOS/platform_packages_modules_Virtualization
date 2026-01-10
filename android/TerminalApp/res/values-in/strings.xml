@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"Terminal"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"Tampilan terminal"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"Kursor"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"Baris kosong"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"Ketuk dua kali untuk mengetik input"</string>
-    <string name="installer_title" msgid="500663060973466805">"Instal terminal Linux"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"Untuk meluncurkan terminal Linux, Anda perlu mendownload sekitar <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> data melalui jaringan.\nApakah Anda ingin melanjutkan?"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"Hanya download melalui Wi-Fi"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"Instal"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"Menginstal"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"Menginstal terminal Linux"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"Terminal Linux akan dimulai setelah penginstalan selesai"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"Gagal menginstal karena ada masalah jaringan"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"Gagal menginstal karena Wi-Fi tidak tersedia"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"Gagal menginstal. Coba lagi"</string>
     <string name="action_settings" msgid="5729342767795123227">"Setelan"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"Menyiapkan terminal"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"Terminal error"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"Ubah ukuran disk"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"Mengubah ukuran partisi root"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ditetapkan"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"Maks <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"Tidak ada cukup ruang di perangkat untuk mengubah ukuran disk"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"Batal"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"Terapkan"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"Terminal akan dimulai ulang untuk mengubah ukuran disk"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"Konfirmasi"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"Kontrol port"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"Izinkan/tolak port yang sedang dalam proses"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"Port yang sedang dalam proses"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"Port yang diizinkan tersimpan"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"Tambahkan"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"Hapus <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"Izinkan port baru"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"Masukkan nomor port baru"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"Simpan"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"Batal"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"Masukkan nomor"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"Nomor port tidak valid"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"Port sudah ada"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"Terminal meminta untuk membuka port baru"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"Port yang diminta: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"Terima"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"Tolak"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"Perlu Izin"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminal memerlukan izin berikut agar berfungsi dengan benar: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Izin berikut tidak ada. Berikan izin di Setelan: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"Instal terminal Linux"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"Untuk meluncurkan terminal Linux, Anda perlu mendownload sekitar <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> data melalui jaringan.\nApakah Anda ingin melanjutkan?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Hanya download menggunakan Wi-Fi"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"Instal"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"Menginstal"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Gagal menginstal karena ada masalah jaringan"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Gagal menginstal karena Wi-Fi tidak tersedia"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Gagal menginstal. Coba lagi"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"Tampilan terminal"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"Kursor"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Baris kosong"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"Ketuk dua kali untuk mengetik input"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"Tab"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"Sesi terhenti karena terjadi error internal."</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"Menyiapkan terminal"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"Terminal error"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"Menghubungkan ke terminal..."</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"Terminal tidak terhubung."</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"Menginisialisasi terminal..."</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"Menutup tab"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"Menambahkan tab"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"Tutup Tab?"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"Yakin ingin menutup tab ini?"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"Tutup"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"Setelan"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"Keluar dari Mode Zoom/Geser"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"Masuk ke Mode Zoom/Geser"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"Sembunyikan Keyboard"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Tampilkan Keyboard"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Lepaskan Mouse"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Kunci Mouse"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"Tutup kontrol layar"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"Opsi tampilan"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Sebelumnya"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"Berikutnya"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"Setelan"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"Terminal sedang berjalan"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"Klik untuk membuka terminal"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"Tutup"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"Terminal ditutup"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"Tutup paksa"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"Tugas yang berjalan lama"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"Peristiwa sistem"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"Menginstal terminal Linux"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"Terminal Linux akan dimulai setelah penginstalan selesai"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"Terminal meminta untuk membuka port baru"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"Port yang diminta: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"Terima"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"Tolak"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"Coba lagi"</string>
+    <string name="settings_title" msgid="3035373808103055663">"Setelan"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"Kembali"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"Pilih setelan"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"Ubah ukuran disk"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"Mengubah ukuran partisi root"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ditetapkan"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"Maks <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"Tidak ada cukup ruang di perangkat untuk mengubah ukuran disk"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Batal"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Terapkan"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminal akan dimulai ulang untuk mengubah ukuran disk"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Konfirmasi"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"Kontrol port"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"Izinkan/tolak port pemroses"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Port pemroses"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"Port yang diizinkan tersimpan"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"Tambahkan"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"Hapus <xliff:g id="PORT_NUMBER">%d</xliff:g>"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"Izinkan port baru"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"Masukkan nomor port baru"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"Simpan"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"Batal"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"Masukkan nomor"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"Nomor port tidak valid"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"Port sudah ada"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"Tidak ada port yang dibuka"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"Pemulihan"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"Opsi pemulihan partisi"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"Reset ke versi awal"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"Hapus semua data"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"Reset terminal"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"Reset"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"Batal"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"Cadangkan data ke <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"Gagal memulihkan karena ada error pencadangan"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"Pemulihan gagal"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"Gagal menghapus data cadangan"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"Hapus data cadangan"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"Hapus <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"Opsi pemulihan partisi"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"Reset ke versi awal"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"Hapus semua data"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"Reset terminal"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"Reset"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"Batal"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"Cadangkan data ke <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"Hapus data cadangan"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"Hapus <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"Gagal memulihkan karena ada error pencadangan"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"Pemulihan gagal"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"Gagal menghapus data cadangan"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"Hapus data cadangan"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"Hapus <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"Reset Terminal?"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"Yakin ingin mereset Terminal ke versi awalnya?"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"Anda harus mendownload ulang image Terminal."</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"Akselerasi Grafis"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"Ubah perender untuk akselerasi grafis."</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"Mulai ulang aplikasi Terminal untuk menerapkan perubahan."</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"Perender software"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"Perender yang diakselerasi GPU"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"Perlu Mulai Ulang"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"Untuk menerapkan, terminal harus dimulai ulang."</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"Mulai Ulang Sekarang"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"Nanti"</string>
     <string name="error_title" msgid="405150657301906598">"Error yang tidak dapat dipulihkan"</string>
     <string name="error_desc" msgid="4588252235686826721">"Gagal memulihkan dari error.\nAnda dapat mencoba memulai ulang terminal atau mencoba salah satu opsi pemulihan.\nJika semua upaya gagal, hapus semua data dengan mengaktifkan/menonaktifkan terminal Linux dari opsi developer."</string>
-    <string name="error_text_code" msgid="3585291676855383649">"Kode error: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"Laporkan bug"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"Kode error: <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"Laporkan bug"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"Upgrade ke terminal yang lebih baru"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"Terminal Linux yang Anda gunakan sudah usang. Upgrade untuk melanjutkan.\nData akan dicadangkan ke <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"Upgrade"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"Upgrade gagal"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"Setelan"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"Terminal sedang berjalan"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"Klik untuk membuka terminal"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"Tutup"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"Terminal ditutup"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"Tutup paksa"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"Tugas yang berjalan lama"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"Peristiwa sistem"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"Tab"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"Akselerasi Grafis"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"Ubah perender untuk akselerasi grafis."</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"Mulai ulang aplikasi Terminal untuk menerapkan perubahan."</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"Perender software"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"Perender yang diakselerasi GPU"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"Sesi hilang karena terjadi error internal."</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"Upgrade"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"Upgrade gagal"</string>
 </resources>

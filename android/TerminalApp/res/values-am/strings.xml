@@ -17,84 +17,120 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name" msgid="5597111707986572208">"ተርሚናል"</string>
-    <string name="terminal_hint_display" msgid="4810127497644015237">"ተርሚናል ማሳያ"</string>
-    <string name="terminal_hint_input" msgid="4602512831433433551">"ጠቋሚ"</string>
-    <string name="terminal_hint_empty_line" msgid="5012067143408427178">"ባዶ መስመር"</string>
-    <string name="terminal_hint_double_tap_to_edit" msgid="2344363097580051316">"ግብዓት ለመተየብ ሁለቴ መታ ያድርጉ"</string>
-    <string name="installer_title" msgid="500663060973466805">"Linux ተርሚናልን ይጫኑ"</string>
-    <string name="installer_desc" msgid="5935117404303982823">"Linux ተርሚናልን ለማስጀመር በአውታረ መረቡ ላይ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> የሚሆን ውሂብ ማውረድ ያስፈልግዎታል። \nመቀጠል ይፈልጋሉ?"</string>
-    <string name="installer_chkbox_wifi_only" msgid="5812378362605046639">"Wi-Fi ብቻ በመጠቀም አውርድ"</string>
-    <string name="installer_btn_install" msgid="6142090640081511103">"ጫን"</string>
-    <string name="installer_btn_installing" msgid="8651445004125422467">"በመጫን ላይ"</string>
-    <string name="notif_installer_title" msgid="471160690081159042">"Linux ተርሚናልን በመጫን ላይ"</string>
-    <string name="notif_installer_desc" msgid="2353770076549425837">"ጭነቱ ከተጠናቀቀ በኋላ Linux ተርሚናል ይጀምራል።"</string>
-    <string name="installer_snkbar_error_network" msgid="5627330072955876676">"በአውታረ መረቡ ችግር ምክንያት መጫን አልተሳካም"</string>
-    <string name="installer_snkbar_error_no_wifi" msgid="1180164894845030969">"Wi-Fi ስለማይገኝ መጫን አልተሳካም"</string>
-    <string name="installer_snkbar_error_unknown" msgid="5657920711470180224">"መጫን አልተሳካም። እባክዎ እንደገና ይሞክሩ"</string>
     <string name="action_settings" msgid="5729342767795123227">"ቅንብሮች"</string>
-    <string name="terminal_message_vm_creation" msgid="6594953532721367502">"ተርሚናልን በማዘጋጀት ላይ"</string>
-    <string name="terminal_message_vm_error" msgid="5231867246177661525">"ተርሚናል ተበላሽቷል"</string>
-    <string name="settings_disk_title" msgid="8648082439414122069">"የዲስክ መጠንን ቀይር"</string>
-    <string name="settings_disk_subtitle" msgid="568100064927028058">"የስር ክፍልፋይ መጠንን ቀይር"</string>
-    <string name="settings_disk_text_assigned_format" msgid="109301857555401579">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ተመድቧል"</string>
-    <string name="settings_disk_text_max_format" msgid="6221210151688630371">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> ከፍተኛ"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="6977611919841042576">"የዲስክ መጠን ለመቀየር በመሣሪያው ላይ በቂ ቦታ የለም"</string>
-    <string name="settings_disk_btn_cancel" msgid="2182388126941686562">"ይቅር"</string>
-    <string name="settings_disk_btn_apply" msgid="6651018335906339973">"ተግብር"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="6906352501525496328">"የዲስክ መጠንን ለመቀየር ተርሚናል እንደገና ይጀምራል"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="7347432999245803583">"አረጋግጥ"</string>
-    <string name="settings_port_title" msgid="4971368519093858377">"የወደብ ቁጥጥር"</string>
-    <string name="settings_port_subtitle" msgid="6547942778715654953">"የማዳመጫ ወደቦችን ይፍቀዱ/ይከልክሉ"</string>
-    <string name="settings_port_title_active_ports" msgid="1841436780635889858">"የማዳመጫ ወደቦች"</string>
-    <string name="settings_port_text_active_ports_format" msgid="1818090784030797758">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="settings_port_title_saved_ports" msgid="2644381842623436676">"የተቀመጡ የሚፈቀዱ ወደቦች"</string>
-    <string name="settings_port_btn_add" msgid="4402301203801949152">"አክል"</string>
-    <string name="settings_port_btn_delete" msgid="8475029060852721339">"<xliff:g id="PORT_NUMBER">%d</xliff:g>ን ሰርዝ"</string>
-    <string name="settings_port_dlg_title_add" msgid="2734992099990516463">"አዲስ ወደብ ይፍቀዱ"</string>
-    <string name="settings_port_dlg_hint_port_number" msgid="3514035855169269600">"አዲስ የወደብ ቁጥር ያስገቡ"</string>
-    <string name="settings_port_dlg_btn_save" msgid="1097831033824718393">"አስቀምጥ"</string>
-    <string name="settings_port_dlg_btn_cancel" msgid="1972597831318470889">"ይቅር"</string>
-    <string name="settings_port_dlg_error_invalid_input" msgid="7589299096002468249">"እባክዎ ቁጥር ያስገቡ"</string>
-    <string name="settings_port_dlg_error_invalid_range" msgid="6682935312557379651">"ልክ ያልሆነ የወደብ ቁጥር"</string>
-    <string name="settings_port_dlg_error_existing" msgid="768426750758769928">"ወደብ ቀድሞውኑ ይገኛል"</string>
-    <string name="notif_port_title_request" msgid="6950621555592547524">"ተርሚናል አዲስ ወደብ ለመክፈት እየጠየቀ ነው"</string>
-    <string name="notif_port_content_request" msgid="779450349212040908">"የተጠየቀ ወደብ፦ <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
-    <string name="notif_port_action_accept" msgid="3571520986524038185">"ተቀበል"</string>
-    <string name="notif_port_action_deny" msgid="636848749634710403">"ከልክል"</string>
+    <string name="permission_dlg_title_required" msgid="7330907054330473886">"ፈቃድ ያስፈልጋል"</string>
+    <string name="permission_dlg_message_required" msgid="7912498378440483592">"ተርሚናል በትክክል ለመሥራት የሚከተሉት ፈቃዶች ያስፈልጉታል፦ <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"የሚከተሉት ፈቃዶች ይጎድላሉ። እባክዎ በቅንብሮች ውስጥ ይፍቀዷቸው፦ <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="installer_title" msgid="1318592751395646215">"Linux ተርሚናልን ይጫኑ"</string>
+    <string name="installer_desc" msgid="3104802716504777741">"Linux ተርሚናልን ለማስጀመር በአውታረ መረቡ ላይ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> የሚሆን ውሂብ ማውረድ ያስፈልግዎታል። \nመቀጠል ይፈልጋሉ?"</string>
+    <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fi ብቻ በመጠቀም አውርድ"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"ጫን"</string>
+    <string name="installer_btn_installing" msgid="5333153036855770130">"በመጫን ላይ"</string>
+    <string name="installer_snkbar_error_network" msgid="4231423523038307349">"በአውታረ መረቡ ችግር ምክንያት መጫን አልተሳካም"</string>
+    <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Wi-Fi ስለማይገኝ መጫን አልተሳካም"</string>
+    <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"መጫን አልተሳካም። እባክዎ እንደገና ይሞክሩ"</string>
+    <string name="terminal_hint_display" msgid="7172326332224647219">"ተርሚናል ማሳያ"</string>
+    <string name="terminal_hint_input" msgid="1959459646864329623">"ጠቋሚ"</string>
+    <string name="terminal_hint_empty_line" msgid="8470507412532518466">"ባዶ መስመር"</string>
+    <string name="terminal_hint_double_tap_to_edit" msgid="1037121969537824275">"ግብዓት ለመተየብ ሁለቴ መታ ያድርጉ"</string>
+    <string name="terminal_tab_title_default" msgid="2298207563933215808">"ትር"</string>
+    <string name="terminal_toast_connection_error" msgid="1069884195887106767">"በውስጣዊ ስሕተት ምክንያት ክፍለ ጊዜ ጠፍቷል።"</string>
+    <string name="terminal_message_vm_creation" msgid="5459093018440897949">"ተርሚናልን በማዘጋጀት ላይ"</string>
+    <string name="terminal_message_vm_error" msgid="8124185076605626227">"ተርሚናል ተበላሽቷል"</string>
+    <string name="terminal_message_connecting" msgid="72536438793490067">"ከተርሚናል ጋር በመገናኘት ላይ..."</string>
+    <string name="terminal_message_disconnected" msgid="8719198973044940614">"ተርሚናል ግንኙነቱ ተቋርጧል።"</string>
+    <string name="terminal_message_initializing" msgid="7698390216220661908">"ተርሚናልን በማስጀመር ላይ..."</string>
+    <string name="terminal_hint_btn_close_tab" msgid="7115224975024567306">"ትርን ዝጋ"</string>
+    <string name="terminal_hint_btn_add_tab" msgid="4403197195697434349">"ትር አክል"</string>
+    <string name="terminal_dlg_title_close_tab" msgid="2050519010340063337">"ትር ይዘጋ?"</string>
+    <string name="terminal_dlg_message_close_tab" msgid="1213619281725952067">"ይህን ትር ለመዝጋት እንደሚፈልጉ እርግጠኛ ነዎት?"</string>
+    <string name="terminal_dlg_btn_close" msgid="4405346002372728095">"ዝጋ"</string>
+    <string name="terminal_hint_btn_settings" msgid="772228287207588692">"ቅንብሮች"</string>
+    <string name="dispctrl_hint_exit_zoom" msgid="7232909119093538640">"ከማጉላት/ማሸብለል ሁነታ ውጣ"</string>
+    <string name="dispctrl_hint_enter_zoom" msgid="5027238651229217214">"ወደ የማጉላት/ማሸብለል ሁነታ ግባ"</string>
+    <string name="dispctrl_hint_hide_keyboard" msgid="2504262077594922683">"የቁልፍ ሰሌዳን ደብቅ"</string>
+    <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"የቁልፍ ሰሌዳን አሳይ"</string>
+    <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"መዳፊት ለቀቅ"</string>
+    <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"መዳፊት ቆልፍ"</string>
+    <string name="dispctrl_hint_close" msgid="1033994310925288456">"የማሳያ መቆጣጠሪያዎችን ዝጋ"</string>
+    <string name="dispctrl_hint_options" msgid="2890925103856317346">"የማሳያ አማራጮች"</string>
+    <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"ቀዳሚ ገጽ"</string>
+    <string name="modifierkeys_hint_next_page" msgid="290308355838833285">"ቀጣይ ገጽ"</string>
+    <string name="notif_action_settings" msgid="158205162374999382">"ቅንብሮች"</string>
+    <string name="notif_title_running" msgid="1954614514730583070">"ተርሚናል በመሄድ ላይ ነው"</string>
+    <string name="notif_content_running" msgid="5145776582337851274">"ተርሚናልን ለመክፈት ጠቅ ያድርጉ"</string>
+    <string name="notif_action_close" msgid="4558449096473933447">"ዝጋ"</string>
+    <string name="notif_title_closing" msgid="3080672573336507749">"ተርሚናል በመዝጋት ላይ ነው"</string>
+    <string name="notif_action_force_close" msgid="8929641408869070020">"በግድ ዝጋ"</string>
+    <string name="notif_channel_long_running" msgid="185537295740208377">"ረዥም የሚያሄዱ ተግባሮች"</string>
+    <string name="notif_channel_system_events" msgid="3104042511095878110">"የሥርዓት ክስተቶች"</string>
+    <string name="notif_installer_title" msgid="6291650228407922121">"Linux ተርሚናልን በመጫን ላይ"</string>
+    <string name="notif_installer_desc" msgid="6325205637105342778">"ጭነቱ ከተጠናቀቀ በኋላ Linux ተርሚናል ይጀምራል።"</string>
+    <string name="notif_port_title_request" msgid="5905756814363533807">"ተርሚናል አዲስ ወደብ ለመክፈት እየጠየቀ ነው"</string>
+    <string name="notif_port_content_request" msgid="1467194001950592265">"የተጠየቀ ወደብ፦ <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_action_accept" msgid="3820564627354207468">"ተቀበል"</string>
+    <string name="notif_port_action_deny" msgid="8360517228582217225">"ከልክል"</string>
+    <string name="notif_btn_retry" msgid="6376023692126285362">"እንደገና ሞክር"</string>
+    <string name="settings_title" msgid="3035373808103055663">"ቅንብሮች"</string>
+    <string name="settings_btn_back_desc" msgid="6283250947670033793">"ተመለስ"</string>
+    <string name="settings_placeholder_select" msgid="4246272717471568067">"ቅንብር ይምረጡ"</string>
+    <string name="settings_disk_title" msgid="3756870708790177276">"የዲስክ መጠንን ቀይር"</string>
+    <string name="settings_disk_subtitle" msgid="595369261192580241">"የስር ክፍልፋይ መጠንን ቀይር"</string>
+    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ተመድቧል"</string>
+    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> ከፍተኛ"</string>
+    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"የዲስክ መጠን ለመቀየር በመሣሪያው ላይ በቂ ቦታ የለም"</string>
+    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"ይቅር"</string>
+    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"ተግብር"</string>
+    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"የዲስክ መጠንን ለመቀየር ተርሚናል እንደገና ይጀምራል"</string>
+    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"አረጋግጥ"</string>
+    <string name="settings_port_title" msgid="6973105037111811149">"የወደብ ቁጥጥር"</string>
+    <string name="settings_port_subtitle" msgid="8603892509810549436">"የማዳመጫ ወደቦችን ይፍቀዱ/ይከልክሉ"</string>
+    <string name="settings_port_title_active_ports" msgid="5302611451522156465">"የማዳመጫ ወደቦች"</string>
+    <string name="settings_port_text_active_ports_format" msgid="5113357101707586864">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="settings_port_title_saved_ports" msgid="5564108279395986244">"የተቀመጡ የሚፈቀዱ ወደቦች"</string>
+    <string name="settings_port_btn_add" msgid="5837833933842937774">"አክል"</string>
+    <string name="settings_port_btn_delete" msgid="6435164142887621535">"<xliff:g id="PORT_NUMBER">%d</xliff:g>ን ሰርዝ"</string>
+    <string name="settings_port_dlg_title_add" msgid="4498153850743551094">"አዲስ ወደብ ይፍቀዱ"</string>
+    <string name="settings_port_dlg_hint_port_number" msgid="2531576518648009431">"አዲስ የወደብ ቁጥር ያስገቡ"</string>
+    <string name="settings_port_dlg_btn_save" msgid="1098574146560965765">"አስቀምጥ"</string>
+    <string name="settings_port_dlg_btn_cancel" msgid="2389094302460919188">"ይቅር"</string>
+    <string name="settings_port_dlg_error_invalid_input" msgid="8547523480571131695">"እባክዎ ቁጥር ያስገቡ"</string>
+    <string name="settings_port_dlg_error_invalid_range" msgid="5104349284627455025">"ልክ ያልሆነ የወደብ ቁጥር"</string>
+    <string name="settings_port_dlg_error_existing" msgid="1821993705509289688">"ወደብ ቀድሞውኑ ይገኛል"</string>
+    <string name="settings_port_message_empty" msgid="9197003967311264281">"ምንም ወደብ አልተከፈተም"</string>
     <string name="settings_recovery_title" msgid="6586840079226383285">"መልሶ ማግኘት"</string>
-    <string name="settings_recovery_subtitle" msgid="3906996270508262595">"የክፍልፋይ መልሶ ማግኛ አማራጮች"</string>
-    <string name="settings_recovery_title_reset" msgid="5388842560910568731">"ወደ የመጀመሪያ ሥሪት ዳግም አስጀምር"</string>
-    <string name="settings_recovery_subtitle_reset" msgid="1079896907344675995">"ሁሉንም ውሂብ አስወግድ"</string>
-    <string name="settings_recovery_dlg_title_reset" msgid="874946981716251094">"ተርሚናልን ዳግም አስጀምር"</string>
-    <string name="settings_recovery_dlg_btn_reset" msgid="6916237820754131902">"ዳግም አስጀምር"</string>
-    <string name="settings_recovery_dlg_btn_cancel" msgid="1666264288208459725">"ይቅር"</string>
-    <string name="settings_recovery_dlg_option_backup" msgid="2079431035205584614">"ውሂብን ወደ <xliff:g id="PATH">/mnt/backup</xliff:g> ምትኬ አስቀምጥ"</string>
-    <string name="settings_recovery_snkbar_error_backup" msgid="9034741074141274096">"በምትኬ ስሕተት ምክንያት መልሶ ማግኘት አልተሳካም"</string>
-    <string name="settings_recovery_snkbar_error_generic" msgid="2451912941535666379">"መልሶ ማግኘት አልተሳካም"</string>
-    <string name="settings_recovery_snkbar_error_remove_backup" msgid="2447990797766248691">"የምትኬ ውሂብን ማስወገድ አልተሳካም"</string>
-    <string name="settings_recovery_title_remove_backup" msgid="1540850288876158899">"ምትኬ ውሂብን አስወግድ"</string>
-    <string name="settings_recovery_subtitle_remove_backup" msgid="7791375988320242059">"<xliff:g id="PATH">/mnt/backup</xliff:g> አስወግድ"</string>
+    <string name="settings_recovery_subtitle" msgid="2859387415348236128">"የክፍልፋይ መልሶ ማግኛ አማራጮች"</string>
+    <string name="settings_recovery_title_reset" msgid="1444631721892180834">"ወደ የመጀመሪያ ሥሪት ዳግም አስጀምር"</string>
+    <string name="settings_recovery_subtitle_reset" msgid="5058735949145969993">"ሁሉንም ውሂብ አስወግድ"</string>
+    <string name="settings_recovery_dlg_title_reset" msgid="4134032634578348207">"ተርሚናልን ዳግም አስጀምር"</string>
+    <string name="settings_recovery_dlg_btn_reset" msgid="4785899192976879993">"ዳግም አስጀምር"</string>
+    <string name="settings_recovery_dlg_btn_cancel" msgid="2827583460114727454">"ይቅር"</string>
+    <string name="settings_recovery_dlg_option_backup" msgid="6673986997439944131">"ውሂብን ወደ <xliff:g id="PATH">/mnt/backup</xliff:g> ምትኬ አስቀምጥ"</string>
+    <string name="settings_recovery_dlg_title_remove_backup" msgid="4140921418062326033">"ምትኬ ውሂብን አስወግድ"</string>
+    <string name="settings_recovery_dlg_message_remove_backup" msgid="1194814751247447332">"<xliff:g id="PATH">/mnt/backup</xliff:g>ን አስወግድ"</string>
+    <string name="settings_recovery_snkbar_error_backup" msgid="4025716504427217009">"በምትኬ ስሕተት ምክንያት መልሶ ማግኘት አልተሳካም"</string>
+    <string name="settings_recovery_snkbar_error_generic" msgid="6371428856521643554">"መልሶ ማግኘት አልተሳካም"</string>
+    <string name="settings_recovery_snkbar_error_remove_backup" msgid="7947943378755548793">"የምትኬ ውሂብን ማስወገድ አልተሳካም"</string>
+    <string name="settings_recovery_title_remove_backup" msgid="366592364579970048">"ምትኬ ውሂብን አስወግድ"</string>
+    <string name="settings_recovery_subtitle_remove_backup" msgid="5606741806157149896">"<xliff:g id="PATH">/mnt/backup</xliff:g>ን አስወግድ"</string>
+    <string name="settings_recovery_dlg_title_reset_confirm" msgid="4757660230389635241">"ተርሚናል ዳግም ይጀመር?"</string>
+    <string name="settings_recovery_dlg_message_reset_confirm" msgid="3836389956069677997">"ተርሚናሉን ወደ መጀመሪያው ሥሪት ዳግም ማስጀመር እንደሚፈልጉ እርግጠኛ ነዎት?"</string>
+    <string name="settings_recovery_dlg_message_reset_warning" msgid="4385303861371558628">"የተርሚናል ምስሉን እንደገና ማውረድ ይኖርብዎታል።"</string>
+    <string name="settings_graphics_title" msgid="6759950044864342703">"ግራፊክስ ማፋጠን"</string>
+    <string name="settings_graphics_subtitle" msgid="2653183845991407292">"ለግራፊክስ ማፋጠን ምስል ሠሪውን ይለውጡ።"</string>
+    <string name="settings_graphics_toast_reboot_required" msgid="2137707319428040603">"እባክዎ ለውጡን ለመተግበር ተርሚናል መተግበሪያውን እንደገና ያስጀምሩ።"</string>
+    <string name="settings_graphics_renderer_software" msgid="7063975624150283761">"ሶፍትዌር ምስል ሠሪ"</string>
+    <string name="settings_graphics_renderer_gpu" msgid="6477160098761221443">"በጂፒዩ-የተፋጠነ ምስል ሠሪ"</string>
+    <string name="settings_graphics_dlg_title_restart" msgid="1151250622175027452">"እንደገና ማስጀመር ያስፈልጋል"</string>
+    <string name="settings_graphics_dlg_message_restart" msgid="7214946243562378664">"ለመተግበር ተርሚናል እንደገና መጀመር አለበት።"</string>
+    <string name="settings_graphics_dlg_btn_restart" msgid="2712501905973772495">"አሁን እንደገና አስጀምር"</string>
+    <string name="settings_graphics_dlg_btn_later" msgid="2173856969571511766">"በኋላ"</string>
     <string name="error_title" msgid="405150657301906598">"ሊመለስ የማይችል ስሕተት"</string>
     <string name="error_desc" msgid="4588252235686826721">"ከስሕተት መልሶ ማግኘት አልተሳካም።\nተርሚናልን እንደገና ማስጀመርን መሞከር ወይም ከመልሶ ማግኛ አማራጮች አንዱን መሞከር ይችላሉ።\nሁሉም ሙከራዎች ካልተሳኩ Linux ተርሚናልን ከገንቢ አማራጮች ላይ በማብራት/ማጥፋት ሁሉንም ውሂብ ይጥረጉ።"</string>
-    <string name="error_text_code" msgid="3585291676855383649">"የስሕተት ኮድ፦ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
-    <string name="error_btn_report_bug" msgid="5559616952618650716">"ስህተት ሪፖርት አድርግ"</string>
+    <string name="error_text_code" msgid="7922136134602989675">"የስሕተት ኮድ፦ <xliff:g id="ERROR_CODE">%s</xliff:g>"</string>
+    <string name="error_btn_report_bug" msgid="3105758036477373014">"ሳንካን ሪፖርት አድርግ"</string>
     <string name="upgrade_title" msgid="2882073508237099774">"ወደ አዲሱ ተርሚናል ያሻሽሉ"</string>
     <string name="upgrade_desc" msgid="5082726326034764623">"እርስዎ እየተጠቀሙበት የነበረው የLinux ተርሚናል ጊዜው ያለፈበት ነው። ለመቀጠል እባክዎን ያሻሽሉ።\nውሂቡ <xliff:g id="PATH">/mnt/backup</xliff:g> ላይ ምትኬ ይቀመጥለታል"</string>
-    <string name="upgrade_btn_upgrade" msgid="2118716848859611704">"አሻሽል"</string>
-    <string name="upgrade_snkbar_error" msgid="8195371718626852651">"ማሻሻል አልተሳካም"</string>
-    <string name="notif_action_settings" msgid="1437365721184401135">"ቅንብሮች"</string>
-    <string name="notif_title_running" msgid="2918088850910713393">"ተርሚናል በመሄድ ላይ ነው"</string>
-    <string name="notif_content_running" msgid="5772901142342308273">"ተርሚናልን ለመክፈት ጠቅ ያድርጉ"</string>
-    <string name="notif_action_close" msgid="4888327875869277455">"ዝጋ"</string>
-    <string name="notif_title_closing" msgid="1442526433361428844">"ተርሚናል በመዝጋት ላይ ነው"</string>
-    <string name="notif_action_force_close" msgid="3462226330416157775">"በግድ ዝጋ"</string>
-    <string name="notif_channel_long_running" msgid="7916541360369402952">"ረዥም የሚያሄዱ ተግባሮች"</string>
-    <string name="notif_channel_system_events" msgid="1004951444029742137">"የሥርዓት ክስተቶች"</string>
-    <string name="terminal_tab_title_default" msgid="2300417689389397930">"ትር"</string>
-    <string name="settings_graphics_title" msgid="2179805215574039827">"ግራፊክስ ማፋጠን"</string>
-    <string name="settings_graphics_subtitle" msgid="1878600071238287413">"ለግራፊክስ ማፋጠን ምስል ሠሪውን ይለውጡ።"</string>
-    <string name="settings_graphics_toast_reboot_required" msgid="1101999250451963292">"እባክዎ ለውጡን ለመተግበር ተርሚናል መተግበሪያውን እንደገና ያስጀምሩ።"</string>
-    <string name="settings_graphics_renderer_software" msgid="7443233826862412750">"ሶፍትዌር ምስል ሠሪ"</string>
-    <string name="settings_graphics_renderer_gpu" msgid="7414936498621308937">"በጂፒዩ-የተፋጠነ ምስል ሠሪ"</string>
-    <string name="terminal_toast_connection_error" msgid="4574447133320977761">"በውስጣዊ ስሕተት ምክንያት ክፍለ ጊዜ ጠፍቷል።"</string>
+    <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"አልቅ"</string>
+    <string name="upgrade_snkbar_error" msgid="3298797514229673139">"ማላቅ አልተሳካም"</string>
 </resources>
