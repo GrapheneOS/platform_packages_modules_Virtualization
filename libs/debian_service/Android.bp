@@ -54,3 +54,28 @@ java_library {
         "com.android.virt",
     ],
 }
+
+aidl_interface {
+    name: "debian_aidl_interface",
+    srcs: ["aidl/**/*.aidl"],
+    unstable: true,
+    local_include_dir: "aidl",
+    backend: {
+        java: {
+            // For AIDL over vsock
+            gen_rpc: true,
+            apex_available: [
+                "//apex_available:platform",
+                "com.android.virt",
+            ],
+        },
+        rust: {
+            enabled: true,
+        },
+    },
+    host_supported: true,
+    visibility: [
+        "//system/tools/aidl/build",
+        "//packages/modules/Virtualization:__subpackages__",
+    ],
+}
