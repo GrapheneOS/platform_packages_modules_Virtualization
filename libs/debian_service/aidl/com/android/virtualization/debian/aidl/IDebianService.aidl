@@ -19,6 +19,8 @@ import com.android.virtualization.debian.aidl.IVmActivePortListener;
 
 // Controls debian guest agents from Terminal App
 oneway interface IDebianService {
+    const long VSOCK_PORT = 4000;
+
     void setVmActivePortListener(IVmActivePortListener listener);
     void requestForwarding(int guestTcpPort, int vsockPort);
     void requestStorageBalloon(long availableBytes);

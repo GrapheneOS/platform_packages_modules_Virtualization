@@ -27,6 +27,7 @@ _restart_services() {
 		ttyd.service
 		ttyd_uds.service
 		ttyd_vsock_bridge.service
+		linux_vm_manager.service
 	)
 	systemctl enable --now "${CONFIG_CHANGED_SERVICES[@]}"
 }

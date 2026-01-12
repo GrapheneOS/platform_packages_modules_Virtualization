@@ -14,15 +14,17 @@
 
 // This module is only expected to be used in Debian linux running inside the VM.
 // There's no guarantee that this module works well on the Android.
-rust_binary {
+rust_binary_host {
     name: "forwarder_guest",
     srcs: ["src/main.rs"],
     crate_name: "forwarder_guest",
     edition: "2021",
     rustlibs: [
+        "libenv_logger",
         "libclap",
         "libvmm_sys_util",
         "libforwarder",
+        "liblog_rust",
     ],
     proc_macros: [
         "libpoll_token_derive",

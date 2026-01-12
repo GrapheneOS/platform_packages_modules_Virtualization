@@ -26,5 +26,6 @@ rust_library {
         "libtokio",
         "liblinux",
     ],
+    host_supported: true,
     apex_available: ["com.android.virt"],
 }
