@@ -99,6 +99,7 @@ pub(crate) fn generate_certificate_request(
     let params = GenerateCertificateRequestParams {
         keys_to_sign: keys_to_sign.iter().map(|v| v.macedKey.to_vec()).collect(),
         challenge: challenge.to_vec(),
+        uds_certs: None,
     };
     let request = Request::GenerateCertificateRequest(params);
 

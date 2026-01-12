@@ -94,7 +94,12 @@ pub fn generate_certificate_request(
     debug!("Successfully signed the CSR payload.");
 
     // Builds `AuthenticatedRequest<CsrPayload>`.
-    let uds_certs: Value = cbor_util::deserialize(&ops.uds_certs()?)?;
+    let uds_certs_bytes = match &params.uds_certs {
+        Some(certs) if !certs.is_empty() => certs,
+        _ => &ops.uds_certs()?,
+    };
+    let uds_certs: Value = cbor_util::deserialize(uds_certs_bytes)?;
+    validate_uds_certs(&uds_certs)?;
     let dice_cert_chain: Value = cbor_util::deserialize(ops.reference_vm_dice_chain()?)?;
     let auth_req = cbor!([
         Value::Integer(AUTH_REQ_SCHEMA_V1.into()),
@@ -138,6 +143,38 @@ fn derive_hmac_key(ops: &impl AttestationOps) -> Result<Zeroizing<[u8; HMAC_KEY_
     })
 }
 
+/// Validate UdsCerts format against CDDL: { * SignerName => UdsCertChain }
+fn validate_uds_certs(uds_certs: &Value) -> Result<()> {
+    let map = uds_certs.as_map().ok_or_else(|| {
+        error!("UdsCerts is not a map");
+        RequestProcessingError::InvalidUdsCerts
+    })?;
+    for (signer_name, certs) in map {
+        let signer_name = signer_name.as_text().ok_or_else(|| {
+            error!("SignerName in UdsCerts is not a string");
+            RequestProcessingError::InvalidUdsCerts
+        })?;
+        let chain = certs.as_array().ok_or_else(|| {
+            error!("Signer '{}': UdsCertChain is not an array", signer_name);
+            RequestProcessingError::InvalidUdsCerts
+        })?;
+        if chain.is_empty() {
+            error!("Signer '{}': UdsCertChain is empty", signer_name);
+            return Err(RequestProcessingError::InvalidUdsCerts);
+        }
+        for (index, cert) in chain.iter().enumerate() {
+            if cert.as_bytes().is_none() {
+                error!(
+                    "Signer '{}', index {}: Certificate is not a byte array",
+                    signer_name, index
+                );
+                return Err(RequestProcessingError::InvalidUdsCerts);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +194,71 @@ mod tests {
         let mut sorted_keys = device_info_keys.clone();
         sorted_keys.sort_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)));
         assert_eq!(device_info_keys, sorted_keys);
+    }
+
+    #[test]
+    fn validate_uds_certs_succeeds_with_valid_certs() {
+        let valid_cbor = cbor!({
+            "signer1" => [
+                Value::Bytes(b"cert1".to_vec()),
+                Value::Bytes(b"cert2".to_vec())
+            ],
+            "signer2" => [
+                Value::Bytes(b"cert3".to_vec())
+            ],
+        })
+        .unwrap();
+        assert!(validate_uds_certs(&valid_cbor).is_ok());
+    }
+
+    #[test]
+    fn validate_uds_certs_succeeds_with_empty_map() {
+        let empty_map = cbor!({}).unwrap();
+        assert!(validate_uds_certs(&empty_map).is_ok());
+    }
+
+    #[test]
+    fn validate_uds_certs_fails_with_non_map_value() {
+        let not_map = cbor!([]).unwrap();
+        assert_eq!(
+            validate_uds_certs(&not_map).unwrap_err(),
+            RequestProcessingError::InvalidUdsCerts
+        );
+    }
+
+    #[test]
+    fn validate_uds_certs_fails_with_non_string_signer_name() {
+        let key_not_string = cbor!({ 1 => [Value::Bytes(b"cert1".to_vec())] }).unwrap();
+        assert_eq!(
+            validate_uds_certs(&key_not_string).unwrap_err(),
+            RequestProcessingError::InvalidUdsCerts
+        );
+    }
+
+    #[test]
+    fn validate_uds_certs_fails_with_non_array_uds_cert_chain() {
+        let val_not_array = cbor!({ "signer1" => Value::Bytes(b"cert1".to_vec()) }).unwrap();
+        assert_eq!(
+            validate_uds_certs(&val_not_array).unwrap_err(),
+            RequestProcessingError::InvalidUdsCerts
+        );
+    }
+
+    #[test]
+    fn validate_uds_certs_fails_with_empty_uds_cert_chain() {
+        let empty_chain = cbor!({ "signer1" => [] }).unwrap();
+        assert_eq!(
+            validate_uds_certs(&empty_chain).unwrap_err(),
+            RequestProcessingError::InvalidUdsCerts
+        );
+    }
+
+    #[test]
+    fn validate_uds_certs_fails_with_non_byte_array_certificate() {
+        let cert_not_bytes = cbor!({ "signer1" => ["not_bytes"] }).unwrap();
+        assert_eq!(
+            validate_uds_certs(&cert_not_bytes).unwrap_err(),
+            RequestProcessingError::InvalidUdsCerts
+        );
     }
 }
