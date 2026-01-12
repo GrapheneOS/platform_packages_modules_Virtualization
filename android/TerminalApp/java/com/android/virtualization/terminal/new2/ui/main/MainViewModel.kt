@@ -30,6 +30,7 @@ import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.DisplayInfo
+import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
@@ -212,8 +213,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 permissionRequired ->
                 when (installState) {
                     is InstallState.Checking -> MainUiState.Checking
-                    is InstallState.NotInstalled ->
+                    is InstallState.NotInstalled -> {
+                        if (ImageArchive.isLocalImage()) {
+                            installVm()
+                        }
                         MainUiState.NotInstalled(installState.totalSizeBytes)
+                    }
                     is InstallState.Installing ->
                         MainUiState.Installing(installState.progress, installState.totalBytes)
                     is InstallState.Installed -> {

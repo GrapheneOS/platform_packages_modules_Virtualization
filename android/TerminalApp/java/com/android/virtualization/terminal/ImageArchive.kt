@@ -168,11 +168,13 @@ internal class ImageArchive {
                         close(e)
                     }
 
-                    extra_source?.let {
-                        val src = it.toFile()
-                        if (src.exists()) {
-                            val dst = dir.resolve(it.fileName)
-                            Files.copy(it, dst, StandardCopyOption.REPLACE_EXISTING)
+                    if (Build.isDebuggable()) {
+                        extra_source?.let {
+                            val src = it.toFile()
+                            if (src.exists()) {
+                                val dst = dir.resolve(it.fileName)
+                                Files.copy(it, dst, StandardCopyOption.REPLACE_EXISTING)
+                            }
                         }
                     }
                 }
@@ -251,14 +253,18 @@ internal class ImageArchive {
             }
         }
 
+        /** Return whether sdcard image would be used for debugging purpose. */
+        fun isLocalImage(): Boolean {
+            return Build.isDebuggable() && fromSdCard().exists()
+        }
+
         /**
          * Creates ImageArchive from either SdCard or Internet. SdCard is used only when the build
          * is debuggable and the file actually exists.
          */
         fun getDefault(): ImageArchive {
-            val archive = fromSdCard()
-            return if (Build.isDebuggable() && archive.exists()) {
-                archive
+            return if (isLocalImage()) {
+                fromSdCard()
             } else {
                 fromInternet()
             }
