@@ -9,11 +9,13 @@ LOCALDEBS="${SCRIPT_DIR}/localdebs"
 LOCALFILES="${SCRIPT_DIR}/root_files"
 
 install_localdebs() {
-	dpkg -i "${LOCALDEBS}"/*.deb
+	if [ -d "$LOCALDEBS" ]; then
+		find "$LOCALDEBS" -name "*.deb" -print0 | xargs -0 -r dpkg -i
+	fi
 }
 
 _copy_files() {
-	cp -vpR "${LOCALFILES}"/* /
+	cp -vR "${LOCALFILES}"/* /
 }
 
 _restart_services() {
