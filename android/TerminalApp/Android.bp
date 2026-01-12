@@ -18,10 +18,12 @@ android_app {
     static_libs: [
         // TODO(b/330257000): will be removed when binder RPC is used
         "android.system.virtualizationservice_internal-java",
+        "android.system.virtualmachineservice_non_microdroid",
         "apache-commons-compress",
         "avf_aconfig_flags_java",
         "com.google.android.material_material",
         "debian-service-grpclib-lite",
+        "debian_aidl_interface-java",
         "gson",
         // TODO(b/331708504): will be removed when AVF framework handles surface
         "libcrosvm_android_display_service-java",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The Android Open Source Project
+ * Copyright 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.virtualization.debian.aidl;
+package com.android.virtualization.terminal
 
-import com.android.virtualization.debian.aidl.IVmActivePortListener;
+internal interface DebianServiceBase {
+    fun shutdownDebian(): Boolean
 
-// Controls debian guest agents from Terminal App
-oneway interface IDebianService {
-    const long VSOCK_PORT = 4000;
+    fun setAvailableStorageBytes(availableBytes: Long): Boolean
 
-    void setVmActivePortListener(IVmActivePortListener listener);
-    void requestForwarding(int guestTcpPort, int vsockPort);
-    void requestStorageBalloon(long availableBytes);
+    fun stop()
 }

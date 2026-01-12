@@ -28,7 +28,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
 use forwarder::forwarder::ForwarderSession;
-use jni::objects::{JIntArray, JObject, JValue};
+use jni::objects::{JClass, JIntArray, JObject, JValue};
 use jni::sys::jint;
 use jni::JNIEnv;
 use log::{debug, error, info, warn};
@@ -378,9 +378,9 @@ fn run_forwarder_host(cid: i32, jni_env: JNIEnv, jni_cb: JObject) -> Result<()> 
 
 /// JNI function for running forwarder_host.
 #[no_mangle]
-pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_runForwarderHost(
+pub extern "C" fn Java_com_android_virtualization_terminal_ForwarderHost_run(
     env: JNIEnv,
-    _class: JObject,
+    _clazz: JClass,
     cid: jint,
     callback: JObject,
 ) {
@@ -400,18 +400,18 @@ pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_run
 
 /// JNI function for terminating forwarder_host.
 #[no_mangle]
-pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_terminateForwarderHost(
+pub extern "C" fn Java_com_android_virtualization_terminal_ForwarderHost_shutdown(
     _env: JNIEnv,
-    _class: JObject,
+    _clazz: JClass,
 ) {
     SHUTDOWN_EVT.write(1).expect("Failed to write shutdown event FD");
 }
 
 /// JNI function for updating listening ports.
 #[no_mangle]
-pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_updateListeningPorts(
+pub extern "C" fn Java_com_android_virtualization_terminal_ForwarderHost_updateListeningPorts(
     env: JNIEnv,
-    _class: JObject,
+    _clazz: JClass,
     ports: JIntArray,
 ) {
     let length = env.get_array_length(&ports).expect("Failed to get length of port array");

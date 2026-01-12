@@ -73,7 +73,7 @@ class StorageBalloonWorker(appContext: Context, workerParams: WorkerParameters) 
     }
 
     companion object {
-        private var debianService: DebianServiceImpl? = null
+        private var debianService: DebianServiceBase? = null
 
         // Reserve 1GB as host-only region.
         private const val HOST_RESERVED_BYTES = 1024L * 1024 * 1024
@@ -94,7 +94,7 @@ class StorageBalloonWorker(appContext: Context, workerParams: WorkerParameters) 
         // Normal: (10GB <= storage) report every 15 minutes
         private const val NORMAL_DELAY_SECONDS = 60L * 15
 
-        internal fun start(ctx: Context, ds: DebianServiceImpl) {
+        internal fun start(ctx: Context, ds: DebianServiceBase) {
             debianService = ds
             val storageBalloonTaskRequest =
                 androidx.work.OneTimeWorkRequest.Builder(StorageBalloonWorker::class.java)

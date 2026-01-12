@@ -20,6 +20,7 @@ import android.util.Log
 import androidx.annotation.Keep
 import com.android.internal.annotations.GuardedBy
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.terminal.ForwarderHost.ForwardingCallback
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.proto.DebianServiceGrpc.DebianServiceImplBase
 import com.android.virtualization.terminal.proto.ForwardingRequestItem
@@ -33,7 +34,7 @@ import com.android.virtualization.terminal.proto.StorageBalloonRequestItem
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 
-internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
+internal class DebianServiceGrpc(context: Context) : DebianServiceImplBase(), DebianServiceBase {
     private val portsStateManager = PortsStateManager.getInstance(context)
     private var portsStateListener: PortsStateManager.Listener? = null
     private var shutdownRunnable: Runnable? = null
@@ -67,11 +68,11 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
             }
         portsStateManager.registerListener(portsStateListener!!)
         updateListeningPorts()
-        runForwarderHost(request.cid, ForwarderHostCallback(responseObserver))
+        ForwarderHost.run(request.cid, ForwarderHostCallback(responseObserver))
         responseObserver.onCompleted()
     }
 
-    fun shutdownDebian(): Boolean {
+    override fun shutdownDebian(): Boolean {
         if (shutdownRunnable == null) {
             Log.d(TAG, "mShutdownRunnable is not ready.")
             return false
@@ -114,7 +115,7 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
         }
     }
 
-    fun setAvailableStorageBytes(availableBytes: Long): Boolean {
+    override fun setAvailableStorageBytes(availableBytes: Long): Boolean {
         synchronized(mLock) {
             if (storageBalloonCallback == null) {
                 Log.d(TAG, "storageBalloonCallback is not ready.")
@@ -155,9 +156,9 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
     @Keep
     private class ForwarderHostCallback(
         private val responseObserver: StreamObserver<ForwardingRequestItem?>
-    ) {
+    ) : ForwardingCallback {
 
-        fun onForwardingRequestReceived(guestTcpPort: Int, vsockPort: Int) {
+        override fun onForwardingRequestReceived(guestTcpPort: Int, vsockPort: Int) {
             val item =
                 ForwardingRequestItem.newBuilder()
                     .setGuestTcpPort(guestTcpPort)
@@ -173,24 +174,19 @@ internal class DebianServiceImpl(context: Context) : DebianServiceImplBase() {
             portsStateManager.unregisterListener(portsStateListener!!)
             portsStateListener = null
         }
-        terminateForwarderHost()
+        ForwarderHost.shutdown()
     }
 
     private fun updateListeningPorts() {
         val activePorts: Set<Int> = portsStateManager.getActivePorts()
         val enabledPorts: Set<Int> = portsStateManager.getEnabledPorts()
-        updateListeningPorts(activePorts.filter { enabledPorts.contains(it) }.toIntArray())
+        ForwarderHost.updateListeningPorts(
+            activePorts.filter { enabledPorts.contains(it) }.toIntArray()
+        )
     }
 
-    companion object {
-        init {
-            System.loadLibrary("forwarder_host_jni")
-        }
-
-        @JvmStatic private external fun runForwarderHost(cid: Int, callback: ForwarderHostCallback?)
-
-        @JvmStatic private external fun terminateForwarderHost()
-
-        @JvmStatic private external fun updateListeningPorts(ports: IntArray?)
+    override fun stop() {
+        killForwarderHost()
+        closeStorageBalloonRequestQueue()
     }
 }

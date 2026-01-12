@@ -44,6 +44,7 @@ import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.MainActivity.Companion.PREFIX
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
+import com.android.virtualization.terminal.proto.DebianServiceGrpc.DebianServiceImplBase
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
 import io.grpc.Metadata
@@ -74,7 +75,7 @@ class VmLauncherService : Service() {
     // TODO: using lateinit for some fields to avoid null
     private var virtualMachine: VirtualMachine? = null
     private var server: Server? = null
-    private var debianService: DebianServiceImpl? = null
+    private var debianService: DebianServiceBase? = null
     private var portNotifier: PortNotifier? = null
     private var runner: Runner? = null
     private var handler: Handler? = null
@@ -460,11 +461,11 @@ class VmLauncherService : Service() {
         try {
             // TODO(b/372666638): gRPC for java doesn't support vsock for now.
             val port = 0
-            debianService = DebianServiceImpl(this)
+            debianService = DebianServiceGrpc(this)
             server =
                 OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
                     .intercept(interceptor)
-                    .addService(debianService)
+                    .addService(debianService as DebianServiceImplBase)
                     .build()
                     .start()
         } catch (e: IOException) {
@@ -533,8 +534,7 @@ class VmLauncherService : Service() {
     }
 
     private fun stopDebianServer() {
-        debianService?.killForwarderHost()
-        debianService?.closeStorageBalloonRequestQueue()
+        debianService?.stop()
         server?.shutdown()
     }
 

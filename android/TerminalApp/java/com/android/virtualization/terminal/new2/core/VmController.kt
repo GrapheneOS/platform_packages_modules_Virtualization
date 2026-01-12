@@ -20,6 +20,7 @@ import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
+import android.os.IBinder
 import android.os.SystemProperties
 import android.system.virtualizationcommon.IGuestAgent
 import android.system.virtualmachine.VirtualMachine
@@ -29,6 +30,7 @@ import android.system.virtualmachine.VirtualMachineException
 import android.system.virtualmachine.VirtualMachineManager
 import android.util.Log
 import com.android.system.virtualmachine.flags.Flags
+import com.android.virtualization.debian.aidl.IDebianService
 import com.android.virtualization.terminal.AndroidToVmBridge
 import com.android.virtualization.terminal.CertificateUtils
 import com.android.virtualization.terminal.ConfigJson
@@ -37,6 +39,7 @@ import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.Logger
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import java.nio.file.Files
@@ -52,11 +55,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 object VmController {
+    private val TAG = "VmController"
 
     private lateinit var context: Context
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val _vmState =
-        LoggingMutableStateFlow<VmState>(MutableStateFlow(VmState.Ready), "VmController")
+    private val _vmState = LoggingMutableStateFlow<VmState>(MutableStateFlow(VmState.Ready), TAG)
     val vmState: StateFlow<VmState> = _vmState.asStateFlow()
 
     private var guestAgentController: GuestAgentController? = null
@@ -123,7 +126,7 @@ object VmController {
                 try {
                     vmm.get(vmName)?.let { // Clean up existing VM if it's not stopped
                         if (it.status != VirtualMachine.STATUS_STOPPED) {
-                            Log.e("VmController", "stopping vm because it is not stopped")
+                            Log.e(TAG, "stopping vm because it is not stopped")
                             it.stop()
                         }
                         // TODO: revisit this to see if we can omit this step.
@@ -146,7 +149,7 @@ object VmController {
                         override fun onPayloadFinished(vm: VirtualMachine, exitCode: Int) {}
 
                         override fun onError(vm: VirtualMachine, errorCode: Int, message: String) {
-                            Log.e("VmController", "VM error: $message ($errorCode)")
+                            Log.e(TAG, "VM error: $message ($errorCode)")
                             _vmState.value = VmState.Error(RuntimeException("VM error: $message"))
                             guestAgentController?.stop()
                         }
@@ -169,24 +172,63 @@ object VmController {
 
                         override fun onGuestAgentRegistered(
                             vm: VirtualMachine,
-                            _guestAgent: IGuestAgent,
+                            guestAgent: IGuestAgent,
                         ) {
-                            Log.d("VmController", "Guest agent ready")
-                            val GUEST_AGENT_PORT = 4000
-                            val binder = vm.connectToVsockServer(GUEST_AGENT_PORT.toLong())
-                            val guestAgent = IGuestAgent.Stub.asInterface(binder.getExtension())
+                            Log.d(TAG, "Guest agent registered. Imply AIDL connection")
+
+                            var binder: IBinder? = null
+                            try {
+                                binder = vm.connectToVsockServer(IDebianService.VSOCK_PORT)
+                            } catch (e: Exception) {
+                                _vmState.value =
+                                    VmState.Error(
+                                        RuntimeException("Failed to connect to guest agent", e)
+                                    )
+                                return
+                            }
+                            val debian_service = IDebianService.Stub.asInterface(binder)
+
+                            val cid = vm!!.cid
+                            guestAgentController?.start(cid, guestAgent, debian_service)
+
+                            Log.d(TAG, "Guest agent ready")
                         }
                     }
 
                 vm.setCallback(Executors.newSingleThreadExecutor(), callback)
                 vm.run()
 
+                if (canUseTtydOverVsock()) {
+                    Log.i(TAG, "Connect to ttyd using vsock")
+                    val bridge = AndroidToVmBridge(virtualMachine!!.cid)
+                    val port = bridge.start()
+                    if (port == null) {
+                        Log.e(TAG, "Failed to start bridge")
+                        _vmState.value = VmState.Error(RuntimeException("Failed to start bridge"))
+                    } else {
+                        Log.d(TAG, "localhost is running with port=" + port)
+                        _vmState.value = VmState.Running("localhost", port, bridge.secretKey)
+                    }
+                }
+
                 val timeout = json.getBootTimeoutSecs() ?: 60
                 val effectiveTimeout = if (IS_EMULATOR) (timeout * 10) else timeout
 
-                startTtydDiscovery(effectiveTimeout.toLong())
+                if (context.resources.getBoolean(R.bool.soong_generated_cidata)) {
+                    repositoryScope.launch {
+                        delay(TimeUnit.SECONDS.toMillis(effectiveTimeout.toLong()))
+                        if (_vmState.value == VmState.Starting) {
+                            _vmState.value =
+                                VmState.Error(
+                                    RuntimeException("Timed out waiting for terminal service")
+                                )
+                        }
+                    }
+                } else {
+                    startTtydDiscovery(effectiveTimeout.toLong())
+                }
             } catch (e: Exception) {
-                Log.e("VmController", "Failed to start VM", e)
+                Log.e(TAG, "Failed to start VM", e)
                 _vmState.value = VmState.Error(e)
                 guestAgentController?.stop()
             }
@@ -243,22 +285,10 @@ object VmController {
         }
     }
 
+    // We still need this logic to retrieve the IP address of the VM to use it for guest agent
+    // connection
+    // It will be replaced with RpcBinder with vsock.
     private fun startTtydDiscovery(timeoutSecs: Long) {
-        if (canUseTtydOverVsock()) {
-            Log.i("VmController", "Connect to ttyd using vsock")
-            val bridge = AndroidToVmBridge(virtualMachine!!.cid)
-            val port = bridge.start()
-            if (port == null) {
-                Log.e("VmController", "Failed to start bridge")
-                _vmState.value = VmState.Error(RuntimeException("Failed to start bridge"))
-            } else {
-                _vmState.value = VmState.Running("localhost", port, bridge.secretKey)
-            }
-        }
-
-        // We still need this logic to retrieve the IP address of the VM to use it for guest agent
-        // connection
-        // It will be replaced with RpcBinder with vsock.
         val executor =
             Executors.newSingleThreadExecutor(TerminalThreadFactory(context.applicationContext))
         val nsdManager = context.getSystemService<NsdManager>(NsdManager::class.java)!!
