@@ -146,17 +146,20 @@ genuine RKP VM boot process.
 
 ### Testing
 
-To ensure the correct implementation and usage of RKP VM markers, we've
-incorporated comprehensive checks into various xTS tests (e.g.,
-`VtsHalRemotelyProvisionedComponentTargetTest`).
+To ensure the correct implementation and usage of RKP VM markers, we have
+integrated comprehensive checks into various xTS tests:
 
-These tests validate the following conditions:
+* `VtsHalRemotelyProvisionedComponentTargetTest`
+* `MicrodroidTests#vmAttestationSucceedsWithInternet`
 
-- The RKP VM DICE chain must have a continuous presence of at least two RKP VM
-  markers, extending to the leaf DICE certificate.
-- Non-RKP VM DICE chains must not have a continuous presence of two or more RKP
-  VM markers, preventing non-RKP VM chains from being incorrectly identified as
-  RKP VM chains.
+These tests validate end-to-end VM Attestation and ensure the Service VM DICE
+chain complies with the following rules:
+
+* The Service VM DICE chain must maintain a continuous presence of at least two
+RKP VM markers, extending to the leaf DICE certificate.
+* Non-compliant VM DICE chains must not have a continuous presence of two or
+more RKP VM markers, preventing non-RKP VM chains from being misidentified as
+RKP VM chains.
 
 [pvmfw]: ../guest/pvmfw/README.md
 [rkpvm-dice-chain]: img/rkpvm-dice-chain.png
