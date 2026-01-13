@@ -21,19 +21,28 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.text.format.Formatter
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,7 +52,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.ImageArchive
@@ -60,20 +71,72 @@ fun InstallStartScreen(totalSizeBytes: Long, onInstallClick: (Boolean) -> Unit) 
     val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
+        modifier =
+            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = stringResource(R.string.installer_desc, formattedSize))
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = wifiOnly, onCheckedChange = { wifiOnly = it })
-            Text(text = stringResource(R.string.installer_chkbox_wifi_only))
+        Spacer(modifier = Modifier.height(48.dp))
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shadowElevation = 2.dp,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                modifier = Modifier.padding(16.dp).size(96.dp),
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { onInstallClick(wifiOnly) }) {
-            Text(text = stringResource(R.string.installer_btn_install))
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = stringResource(R.string.installer_desc, formattedSize),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(
+                checked = wifiOnly,
+                onCheckedChange = { wifiOnly = it },
+                modifier = Modifier.size(24.dp),
+                colors =
+                    CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.outline,
+                    ),
+            )
+            Spacer(modifier = Modifier.width(32.dp))
+            Text(
+                text = stringResource(R.string.installer_chkbox_wifi_only),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { onInstallClick(wifiOnly) },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+        ) {
+            Text(
+                text = stringResource(R.string.installer_btn_install),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
