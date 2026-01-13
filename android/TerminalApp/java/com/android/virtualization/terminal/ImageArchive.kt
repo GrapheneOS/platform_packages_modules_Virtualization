@@ -55,13 +55,16 @@ internal class ImageArchive {
     private data class PathSource<out Path>(val value: Path) : Source<Nothing, Path>()
 
     private val source: Source<URL, Path>
+    private val extra_source: Path?
 
     private constructor(url: URL) {
         source = UrlSource(url)
+        extra_source = null
     }
 
-    private constructor(path: Path) {
+    private constructor(path: Path, extra_path: Path) {
         source = PathSource(path)
+        extra_source = extra_path
     }
 
     /** Tests if ImageArchive exists on the medium. */
@@ -123,6 +126,7 @@ internal class ImageArchive {
                         when (source) {
                             is PathSource -> source.value.toString()
                             is UrlSource -> source.value.toString()
+                            else -> error("Unexpected source type")
                         }
                     Log.d(TAG, "Install started. source: $sourceString, destination: $dir")
 
@@ -131,6 +135,7 @@ internal class ImageArchive {
                             when (source) {
                                 is UrlSource -> source.value.openStream()
                                 is PathSource -> FileInputStream(source.value.toFile())
+                                else -> error("Unexpected source type")
                             }
                         val bufferedStream = BufferedInputStream(rawStream)
                         val filteredStream = filter?.apply(bufferedStream) ?: bufferedStream
@@ -161,6 +166,16 @@ internal class ImageArchive {
                         close()
                     } catch (e: Exception) {
                         close(e)
+                    }
+
+                    if (Build.isDebuggable()) {
+                        extra_source?.let {
+                            val src = it.toFile()
+                            if (src.exists()) {
+                                val dst = dir.resolve(it.fileName)
+                                Files.copy(it, dst, StandardCopyOption.REPLACE_EXISTING)
+                            }
+                        }
                     }
                 }
             awaitClose { job.cancel() }
@@ -202,6 +217,7 @@ internal class ImageArchive {
     companion object {
         private const val DIR_IN_SDCARD = "linux"
         private const val ARCHIVE_NAME = "images.tar.gz"
+        private const val CIDATA_NAME = "cidata.iso"
         // TODO(b/403131508): externalize the version number
         private const val VERSION_INT = 4_000_000 // 4.0.0
         private val BUILD_TAG =
@@ -216,7 +232,10 @@ internal class ImageArchive {
          * Creates ImageArchive which is located in the sdcard. This archive is for testing only.
          */
         fun fromSdCard(): ImageArchive {
-            return ImageArchive(getSdcardPathForTesting().resolve(ARCHIVE_NAME))
+            return ImageArchive(
+                getSdcardPathForTesting().resolve(ARCHIVE_NAME),
+                getSdcardPathForTesting().resolve(CIDATA_NAME),
+            )
         }
 
         /**
@@ -234,14 +253,18 @@ internal class ImageArchive {
             }
         }
 
+        /** Return whether sdcard image would be used for debugging purpose. */
+        fun isLocalImage(): Boolean {
+            return Build.isDebuggable() && fromSdCard().exists()
+        }
+
         /**
          * Creates ImageArchive from either SdCard or Internet. SdCard is used only when the build
          * is debuggable and the file actually exists.
          */
         fun getDefault(): ImageArchive {
-            val archive = fromSdCard()
-            return if (Build.isDebuggable() && archive.exists()) {
-                archive
+            return if (isLocalImage()) {
+                fromSdCard()
             } else {
                 fromInternet()
             }

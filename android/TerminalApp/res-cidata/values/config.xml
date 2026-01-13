@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--  Copyright 2024 The Android Open Source Project
+<!--  Copyright 2025 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -15,8 +15,5 @@
  -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <bool name="terminal_portrait_only">true</bool>
-    <item name="activity_split_ratio" format="float" type="dimen">0.3</item>
-    <bool name="gfxstream_supported">false</bool>
-    <bool name="soong_generated_cidata">false</bool>
+    <bool name="soong_generated_cidata">true</bool>
 </resources>

@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -89,6 +90,10 @@ fun InstallProgressScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val progress = if (totalBytes > 0) currentBytes.toFloat() / totalBytes else 0f
+        if (ImageArchive.isLocalImage()) {
+            // No need to localization for userdebug only UX
+            Text(text = "Auto installing from /sdcard/linux")
+        }
         LinearProgressIndicator(progress = { progress })
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onCancelClick) { Text(text = stringResource(android.R.string.cancel)) }
