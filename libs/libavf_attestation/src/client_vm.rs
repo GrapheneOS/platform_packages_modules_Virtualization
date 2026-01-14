@@ -22,6 +22,7 @@ use alloc::vec::Vec;
 use bssl_avf::{rand_bytes, sha256, Digester, EcKey, PKey};
 use cbor_util::parse_value_array;
 use ciborium::value::Value;
+use core::str::FromStr;
 use coset::{AsCborValue, CborSerializable, CoseSign, CoseSign1};
 use der::{Decode, Encode};
 use diced_open_dice::DiceArtifacts;
@@ -77,7 +78,7 @@ pub(super) fn request_attestation(
     // added during the encoding to make the serial number length exceed 20 bytes.
     let mut serial_number = [0u8; 16];
     rand_bytes(&mut serial_number)?;
-    let subject = Name::encode_from_string("CN=Android Protected Virtual Machine Key")?;
+    let subject = Name::from_str("CN=Android Protected Virtual Machine Key")?.to_der()?;
     let rkp_cert = Certificate::from_der(&params.remotely_provisioned_cert)?;
 
     let vm_payload_components = client_vm_dice_chain.microdroid_payload_components()?;
@@ -89,7 +90,7 @@ pub(super) fn request_attestation(
 
     fn to_vm_components(
         components: &[crate::dice::SubComponent],
-    ) -> der::Result<Vec<cert::VmComponent>> {
+    ) -> der::Result<Vec<cert::VmComponent<'_>>> {
         components.iter().map(cert::VmComponent::new).collect()
     }
 
