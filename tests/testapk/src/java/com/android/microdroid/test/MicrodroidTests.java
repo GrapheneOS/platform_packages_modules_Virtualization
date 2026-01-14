@@ -494,9 +494,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
-    public void
-            vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceStableNetwork()
-                    throws Exception {
+    public void vmAttestationWithMultipleTenantsSucceedsWithInternet() throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
         SigningResult signingResult = attestation_signing_result(challenge);
