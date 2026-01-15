@@ -494,22 +494,15 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
-    public void
-            vmAttestationWithMultipleTenantsWhenRemoteAttestationIsSupportedDeviceStableNetwork()
-                    throws Exception {
+    public void vmAttestationWithMultipleTenantsSucceedsWithInternet() throws Exception {
         byte[] challenge = new byte[32];
         Arrays.fill(challenge, (byte) 0xac);
         SigningResult signingResult = attestation_signing_result(challenge);
 
-        assume().withMessage(
-                        "AttestationStatus is ERROR_ATTESTATION_FAILED possibly due to unstable"
-                        + " network, nothing more to test")
-                .that(signingResult)
-                .isNotEqualTo(AttestationStatus.ERROR_ATTESTATION_FAILED);
-
-        if (signingResult.status == AttestationStatus.OK) {
+        assertWithMessage("VM attestation should succeed when network is available")
+                .that(signingResult.status)
+                .isEqualTo(AttestationStatus.OK);
             verifyAttestationResult(signingResult, challenge, new String[] {TEST_TENANT_APK_NAME});
-        }
     }
 
     @Test
