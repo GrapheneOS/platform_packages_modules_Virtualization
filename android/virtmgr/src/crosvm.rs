@@ -1360,7 +1360,7 @@ fn psi_monitor(instance: &Arc<VmInstance>, psi_monitor_kill_event: &Arc<EventFd>
                 let full_triggered = full_stats.is_some() && full_stats.unwrap().avg10 > 0.0;
                 let some_triggered = some_stats.is_some() && some_stats.unwrap().avg10 > 0.0;
                 let is_rate_limited = rate_limiter.is_some()
-                    && rate_limiter.unwrap().elapsed() > Duration::from_secs(22);
+                    && rate_limiter.unwrap().elapsed() < Duration::from_secs(22);
 
                 let should_trim = if is_rate_limited {
                     !last_was_full && full_triggered
