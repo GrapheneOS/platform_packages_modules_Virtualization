@@ -34,7 +34,7 @@ import android.webkit.WebView
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
 
-open class TerminalView @JvmOverloads constructor(context: Context, attrs: AttributeSet?) :
+open class TerminalView constructor(context: Context, attrs: AttributeSet?) :
     WebView(context, attrs),
     AccessibilityManager.AccessibilityStateChangeListener,
     AccessibilityManager.TouchExplorationStateChangeListener {
@@ -123,7 +123,8 @@ open class TerminalView @JvmOverloads constructor(context: Context, attrs: Attri
                     return super.onRequestSendAccessibilityEvent(host, child, e)
                 }
                 when (e.eventType) {
-                    AccessibilityEvent.TYPE_ANNOUNCEMENT -> {
+                    // TYPE_ANNOUNCEMENT is deprecated but we use it here only for filtering.
+                    @Suppress("DEPRECATION") AccessibilityEvent.TYPE_ANNOUNCEMENT -> {
                         val text = e.text[0] // there always is a text
                         if (text.length >= TEXT_TOO_LONG_TO_ANNOUNCE) {
                             Log.i(TAG, "Announcement skipped because it's too long: $text")

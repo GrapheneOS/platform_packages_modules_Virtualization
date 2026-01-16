@@ -140,7 +140,6 @@ internal class ImageArchive {
                         when (source) {
                             is PathSource -> source.value.toString()
                             is UrlSource -> source.value.toString()
-                            else -> error("Unexpected source type")
                         }
                     Log.d(TAG, "Install started. source: $sourceString, destination: $dir")
 
@@ -149,7 +148,6 @@ internal class ImageArchive {
                             when (source) {
                                 is UrlSource -> source.value.openStream()
                                 is PathSource -> FileInputStream(source.value.toFile())
-                                else -> error("Unexpected source type")
                             }
                         val bufferedStream = BufferedInputStream(rawStream)
                         val filteredStream = filter?.apply(bufferedStream) ?: bufferedStream

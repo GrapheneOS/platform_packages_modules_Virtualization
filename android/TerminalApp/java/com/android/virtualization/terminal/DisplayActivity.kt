@@ -185,7 +185,7 @@ class DisplayActivity : BaseActivity() {
     private fun showSoftKeyboard() {
         mainView.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(mainView, InputMethodManager.SHOW_IMPLICIT)
+        imm.showSoftInput(mainView, 0)
     }
 
     private fun makeFullscreen() {

@@ -308,7 +308,7 @@ internal data class ConfigJson(
             try {
                 FileReader(jsonPath.toFile()).use { fileReader ->
                     val content = replaceKeywords(fileReader, context)
-                    return Gson().fromJson<ConfigJson?>(content, ConfigJson::class.java)
+                    return Gson().fromJson(content, ConfigJson::class.java)
                 }
             } catch (e: Exception) {
                 throw RuntimeException("Failed to parse $jsonPath", e)

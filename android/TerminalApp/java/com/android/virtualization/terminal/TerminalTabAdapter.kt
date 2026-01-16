@@ -15,7 +15,7 @@
  */
 package com.android.virtualization.terminal
 
-import androidx.core.os.bundleOf
+import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -30,7 +30,9 @@ class TerminalTabAdapter(fragmentActivity: FragmentActivity) :
     override fun createFragment(position: Int): Fragment {
         val terminalTabFragment = TerminalTabFragment()
 
-        terminalTabFragment.arguments = bundleOf("id" to tabs[position].id)
+        val args = Bundle()
+        args.putString("id", tabs[position].id)
+        terminalTabFragment.arguments = args
         return terminalTabFragment
     }
 

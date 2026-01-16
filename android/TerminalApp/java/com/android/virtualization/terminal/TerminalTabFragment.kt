@@ -132,7 +132,6 @@ class TerminalTabFragment() : Fragment() {
     }
 
     private fun initializeWebView() {
-        terminalView.settings.databaseEnabled = true
         terminalView.settings.domStorageEnabled = true
         terminalView.settings.javaScriptEnabled = true
         terminalView.settings.cacheMode = WebSettings.LOAD_DEFAULT

@@ -159,12 +159,12 @@ fun MainScreen(viewModel: MainViewModel) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     DisplayScreen(viewModel = viewModel)
                                 }
-                            } else if (selectedTabId != null) {
+                            } else {
                                 TerminalScreen(
                                     state.address,
                                     state.port,
                                     state.key,
-                                    selectedTabId!!,
+                                    selectedTabId,
                                     viewModel,
                                 )
                             }
