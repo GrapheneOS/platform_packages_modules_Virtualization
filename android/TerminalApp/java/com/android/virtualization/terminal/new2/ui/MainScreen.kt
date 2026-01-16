@@ -91,7 +91,6 @@ fun MainScreen(viewModel: MainViewModel) {
         when (state) {
             is MainUiState.Ready -> {
                 snackbarHostState.currentSnackbarData?.dismiss()
-                viewModel.startVm()
             }
             is MainUiState.Stopped -> activity.finish()
             is MainUiState.NotInstalled,
