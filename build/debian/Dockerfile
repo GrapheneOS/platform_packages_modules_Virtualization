@@ -10,8 +10,6 @@ RUN apt-get update && \
     ca-certificates \
     curl \
     gnupg
-RUN add-apt-repository -y ppa:fai/ppa && \
-    apt-get update
 
 RUN apt-get install -y --no-install-recommends \
     # Base packages
