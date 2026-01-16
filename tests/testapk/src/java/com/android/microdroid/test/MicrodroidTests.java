@@ -363,6 +363,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assume().withMessage("Internet connection is required for this test")
                 .that(isNetworkConnected())
                 .isTrue();
+        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
+                .that(SystemProperties.get("remote_provisioning.hostname"))
+                .isNotEmpty();
 
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
@@ -462,6 +465,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assume().withMessage("Internet connection is required for this test")
                 .that(isNetworkConnected())
                 .isTrue();
+        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
+                .that(SystemProperties.get("remote_provisioning.hostname"))
+                .isNotEmpty();
 
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
