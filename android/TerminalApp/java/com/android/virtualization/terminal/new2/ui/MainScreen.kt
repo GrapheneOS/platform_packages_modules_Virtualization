@@ -112,25 +112,11 @@ fun MainScreen(viewModel: MainViewModel) {
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                 when (val state = lastValidState) {
                     is MainUiState.Checking -> SplashScreen()
-                    is MainUiState.NotInstalled ->
-                        InstallStartScreen(
-                            totalSizeBytes = state.totalSizeBytes,
-                            onInstallClick = { wifiOnly ->
-                                onInstallClick(
-                                    context,
-                                    scope,
-                                    snackbarHostState,
-                                    viewModel,
-                                    wifiOnly,
-                                )
-                            },
-                        )
-                    is MainUiState.Installing ->
-                        InstallProgressScreen(
-                            progressFlow = state.progress,
-                            totalBytes = state.totalBytes,
-                            onCancelClick = { viewModel.cancelInstallVm() },
-                        )
+                    is MainUiState.NotInstalled,
+                    is MainUiState.Installing,
+                    is MainUiState.InstallSuspended -> {
+                        InstallScreen(viewModel)
+                    }
                     is MainUiState.Ready -> {
                         // VM will soon be booting
                     }
@@ -237,9 +223,15 @@ private suspend fun handleError(
                     activity.getString(R.string.notif_btn_retry),
                     { viewModel.retryCheck() },
                 )
+            MainUiState.ErrorHandler.NoSpace ->
+                Triple(
+                    R.string.installer_snkbar_error_no_space,
+                    activity.getString(R.string.installer_snkbar_action_storage),
+                    { activity.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) },
+                )
             is MainUiState.ErrorHandler.ReportBug ->
                 Triple(
-                    R.string.terminal_message_vm_error,
+                    R.string.error_title,
                     activity.getString(R.string.error_btn_report_bug),
                     {
                         val error = handler.error

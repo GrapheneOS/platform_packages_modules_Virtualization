@@ -53,12 +53,30 @@
     <string name="installer_btn_install">Install</string>
     <!-- Button at the installer activity to when installation is already in progress [CHAR LIMIT=16] -->
     <string name="installer_btn_installing">Installing</string>
+    <!-- Button to cancel installation [CHAR LIMIT=20] -->
+    <string name="installer_btn_cancel">Cancel installation</string>
+    <!-- Title of the confirmation dialog to cancel installation. [CHAR LIMIT=none] -->
+    <string name="installer_dlg_title_cancel_install">Cancel Installation?</string>
+    <!-- Message of the confirmation dialog to cancel installation. [CHAR LIMIT=none] -->
+    <string name="installer_dlg_message_cancel_install">Downloading will be stopped and progress will be lost.</string>
+    <!-- Button text to confirm canceling installation. [CHAR LIMIT=16] -->
+    <string name="installer_dlg_btn_cancel_install">Stop Download</string>
+    <!-- Button text to dismiss the cancel dialog and continue installation. [CHAR LIMIT=16] -->
+    <string name="installer_dlg_btn_continue_install">Continue</string>
     <!-- Toast error message for install failure due to the network issue [CHAR LIMIT=none] -->
     <string name="installer_snkbar_error_network">Failed to install due to a network issue</string>
     <!-- Toast error message for install failure because Wi-Fi isn't available although required [CHAR LIMIT=none] -->
     <string name="installer_snkbar_error_no_wifi">Failed to install because Wi-Fi is not available</string>
     <!-- Toast error message for install failure due to the unidentified issue [CHAR LIMIT=none] -->
     <string name="installer_snkbar_error_unknown">Failed to install. Please try again</string>
+    <!-- Snackbar message for install failure due to insufficient disk space [CHAR LIMIT=none] -->
+    <string name="installer_snkbar_error_no_space">Install failed due to insufficient disk space.</string>
+    <!-- Snackbar action label to manage storage [CHAR LIMIT=20] -->
+    <string name="installer_snkbar_action_storage">Manage Storage</string>
+    <!-- Message shown when downloading via mobile data [CHAR LIMIT=none] -->
+    <string name="installer_msg_mobile_data">Continuing download using mobile data...</string>
+    <!-- Message shown when waiting for network connection [CHAR LIMIT=none] -->
+    <string name="installer_msg_waiting_network">Waiting for network reconnection...</string>
 
 
     <!-- ================================================================= -->
