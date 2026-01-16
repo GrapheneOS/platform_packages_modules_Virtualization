@@ -29,16 +29,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -64,9 +67,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.R
+import com.android.virtualization.terminal.new2.core.OpenPort
 import com.android.virtualization.terminal.new2.core.VmController
 import kotlinx.coroutines.launch
 
@@ -329,36 +334,149 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortControlPage() {
     val ports by VmController.ports.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
 
-    if (ports.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.settings_port_message_empty))
-        }
-    } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            item {
-                Text(
-                    text = stringResource(R.string.settings_port_title_active_ports),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp),
+    val activePorts = ports.filter { !it.isSaved() }
+    val savedPorts = ports.filter { it.isSaved() }
+
+    if (showAddDialog) {
+        AddPortDialog(
+            onDismissRequest = { showAddDialog = false },
+            onConfirm = { port ->
+                VmController.enablePortForwarding(port, true)
+                showAddDialog = false
+            },
+            ports = ports,
+        )
+    }
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddDialog = true }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_add),
+                    contentDescription = stringResource(R.string.settings_port_btn_add),
                 )
             }
-            items(ports) { port ->
-                ListItem(
-                    headlineContent = { Text("${port.port} (${port.name})") },
-                    trailingContent = {
-                        Switch(
-                            checked = port.isForwarded,
-                            onCheckedChange = { isChecked ->
-                                VmController.enablePortForwarding(port.port, isChecked)
+        }
+    ) { innerPadding ->
+        if (ports.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(stringResource(R.string.settings_port_message_empty))
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                if (activePorts.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_port_title_active_ports),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    items(activePorts) { port ->
+                        ListItem(
+                            headlineContent = { Text("${port.port} (${port.name})") },
+                            trailingContent = {
+                                Switch(
+                                    checked = port.isForwarded,
+                                    onCheckedChange = { isChecked ->
+                                        VmController.enablePortForwarding(port.port, isChecked)
+                                    },
+                                )
                             },
                         )
-                    },
-                )
+                    }
+                }
+
+                if (savedPorts.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_port_title_saved_ports),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    items(savedPorts) { port ->
+                        ListItem(
+                            headlineContent = { Text(port.port.toString()) },
+                            trailingContent = {
+                                IconButton(
+                                    onClick = {
+                                        VmController.enablePortForwarding(port.port, false)
+                                    }
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_close),
+                                        contentDescription =
+                                            stringResource(
+                                                R.string.settings_port_btn_delete,
+                                                port.port,
+                                            ),
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+fun AddPortDialog(onDismissRequest: () -> Unit, onConfirm: (Int) -> Unit, ports: List<OpenPort>) {
+    var portToAdd by remember { mutableStateOf("") }
+    var portErrorResId by remember { mutableStateOf<Int?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.settings_port_dlg_title_add)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = portToAdd,
+                    onValueChange = {
+                        portToAdd = it
+                        portErrorResId = null
+                    },
+                    label = { Text(stringResource(R.string.settings_port_dlg_hint_port_number)) },
+                    isError = portErrorResId != null,
+                    supportingText = portErrorResId?.let { { Text(stringResource(it)) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val port = portToAdd.toIntOrNull()
+                    if (port == null) {
+                        portErrorResId = R.string.settings_port_dlg_error_invalid_input
+                    } else if (port < 1024 || port > 65535) {
+                        portErrorResId = R.string.settings_port_dlg_error_invalid_range
+                    } else if (ports.any { it.port == port }) {
+                        portErrorResId = R.string.settings_port_dlg_error_existing
+                    } else {
+                        onConfirm(port)
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.settings_port_dlg_btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(R.string.settings_port_dlg_btn_cancel))
+            }
+        },
+    )
 }
