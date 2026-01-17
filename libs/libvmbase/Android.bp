@@ -20,6 +20,11 @@ rust_defaults {
     prefer_rlib: true,
     host_supported: false,
     enabled: false,
+    flags: [
+        // Optimize aggressively to reduce likeliness of going over the static
+        // partition size; see b/475830028.
+        "-C opt-level=z",
+    ],
     target: {
         android: {
             // Some users set host_supported, where libcore isn't available.

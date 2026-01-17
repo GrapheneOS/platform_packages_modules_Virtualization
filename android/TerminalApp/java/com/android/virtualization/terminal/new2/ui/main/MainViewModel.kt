@@ -20,8 +20,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
-import android.net.ConnectivityManager
-import android.net.Network
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowInsets
@@ -57,7 +55,13 @@ sealed interface MainUiState {
 
     data class NotInstalled(val totalSizeBytes: Long) : MainUiState
 
-    data class Installing(val progress: StateFlow<Long>, val totalBytes: Long) : MainUiState
+    data class Installing(
+        val progress: StateFlow<Long>,
+        val totalBytes: Long,
+        val onWifi: Boolean,
+    ) : MainUiState
+
+    data class InstallSuspended(val progress: StateFlow<Long>, val totalBytes: Long) : MainUiState
 
     data object Ready : MainUiState
 
@@ -76,10 +80,25 @@ sealed interface MainUiState {
 
         data object CheckNetwork : ErrorHandler
 
+        data object NoSpace : ErrorHandler
+
         data class ReportBug(val error: Throwable) : ErrorHandler
     }
 
     data class Error(val handler: ErrorHandler) : MainUiState
+
+    fun isInstallStarted(): Boolean {
+        return this is Installing || this is InstallSuspended
+    }
+
+    fun totalImageSize(): Long {
+        return when (this) {
+            is NotInstalled -> totalSizeBytes
+            is Installing -> totalBytes
+            is InstallSuspended -> totalBytes
+            else -> 0L
+        }
+    }
 }
 
 sealed interface DisplayState {
@@ -146,29 +165,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isMouseLocked.value = locked
     }
 
-    private val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
-    private val networkCallback =
-        object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                Installer.retryCheck()
-            }
-        }
-
     init {
         VmController.reset()
-        connectivityManager?.registerDefaultNetworkCallback(networkCallback)
-
-        viewModelScope.launch {
-            Installer.installState.collect { state ->
-                if (state is InstallState.Installed) {
-                    try {
-                        connectivityManager?.unregisterNetworkCallback(networkCallback)
-                    } catch (e: IllegalArgumentException) {
-                        // Already unregistered
-                    }
-                }
-            }
-        }
         viewModelScope.launch(Dispatchers.IO) { _hasBackup.value = Installer.hasBackup() }
     }
 
@@ -220,7 +218,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         MainUiState.NotInstalled(installState.totalSizeBytes)
                     }
                     is InstallState.Installing ->
-                        MainUiState.Installing(installState.progress, installState.totalBytes)
+                        MainUiState.Installing(
+                            installState.progress,
+                            installState.totalBytes,
+                            installState.onWifi,
+                        )
+                    is InstallState.InstallSuspended ->
+                        MainUiState.InstallSuspended(installState.progress, installState.totalBytes)
                     is InstallState.Installed -> {
                         when (vmState) {
                             is VmState.Ready -> {
@@ -255,8 +259,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             when (installState.errorCause) {
                                 InstallState.ErrorCause.CheckFailed ->
                                     MainUiState.ErrorHandler.CheckNetwork
-                                InstallState.ErrorCause.InstallFailed ->
-                                    MainUiState.ErrorHandler.Retry
+                                InstallState.ErrorCause.InstallFailedUnknown ->
+                                    MainUiState.ErrorHandler.ReportBug(installState.cause)
+                                InstallState.ErrorCause.InstallFailedNoSpace ->
+                                    MainUiState.ErrorHandler.NoSpace
                                 InstallState.ErrorCause.UninstallFailed,
                                 InstallState.ErrorCause.DeleteBackupFailed ->
                                     MainUiState.ErrorHandler.ReportBug(installState.cause)
@@ -272,7 +278,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
 
     fun installVm() {
+        // Reset the flag to prevent the app from finishing immediately after re-installation.
+        // If this flag is true, the app treats the stopped state as a signal to finish the
+        // activity.
+        hasVmEverStarted = false
+
+        // Clear existing tabs
+        val newSession = TerminalSession()
+        _tabs.value = listOf(newSession)
+        _selectedTabId.value = newSession.id
+
         viewModelScope.launch { Installer.install() }
+    }
+
+    fun setWifiOnly(enabled: Boolean) {
+        Installer.setWifiOnly(enabled)
     }
 
     fun cancelInstallVm() {
@@ -328,11 +348,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
-        try {
-            connectivityManager?.unregisterNetworkCallback(networkCallback)
-        } catch (e: IllegalArgumentException) {
-            // Already unregistered
-        }
     }
 
     private fun getDisplayInfo(context: Context): DisplayInfo {

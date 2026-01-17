@@ -104,6 +104,9 @@ public class InstalledImage private constructor(val installDir: Path) {
             }
         } catch (e: IOException) {
             throw RuntimeException("Failed to read build ID", e)
+        } catch (e: IllegalArgumentException) {
+            Log.d(TAG, "Failed to parse build ID", e)
+            return null
         }
     }
 

@@ -15,15 +15,12 @@
  */
 package com.android.virtualization.terminal.new2.ui
 
-import android.content.Context
-import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.provider.Settings
 import android.text.format.Formatter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,18 +29,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -59,81 +56,46 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.R
+import com.android.virtualization.terminal.new2.core.Installer
+import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 @Composable
-fun InstallStartScreen(totalSizeBytes: Long, onInstallClick: (Boolean) -> Unit) {
-    var wifiOnly by remember { mutableStateOf(true) }
-    val context = LocalContext.current
-    val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
+fun InstallScreen(viewModel: MainViewModel) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val wifiOnly by Installer.wifiOnly.collectAsStateWithLifecycle()
+
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    if (showCancelDialog) {
+        InstallCancelDialog(
+            onConfirm = {
+                showCancelDialog = false
+                viewModel.cancelInstallVm()
+            },
+            onDismiss = { showCancelDialog = false },
+        )
+    }
 
     Column(
         modifier =
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shadowElevation = 2.dp,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.padding(16.dp).size(96.dp),
+        InstallScreenHeader(state.totalImageSize())
+
+        if (!state.isInstallStarted()) {
+            InstallScreenButtons(
+                wifiOnly = wifiOnly,
+                onWifiOnlyChange = { viewModel.setWifiOnly(it) },
+                onInstall = { viewModel.installVm() },
             )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        Text(
-            text = stringResource(R.string.installer_desc, formattedSize),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = wifiOnly,
-                onCheckedChange = { wifiOnly = it },
-                modifier = Modifier.size(24.dp),
-                colors =
-                    CheckboxDefaults.colors(
-                        checkedColor = MaterialTheme.colorScheme.primary,
-                        uncheckedColor = MaterialTheme.colorScheme.outline,
-                    ),
-            )
-            Spacer(modifier = Modifier.width(32.dp))
-            Text(
-                text = stringResource(R.string.installer_chkbox_wifi_only),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = { onInstallClick(wifiOnly) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-        ) {
-            Text(
-                text = stringResource(R.string.installer_btn_install),
-                style = MaterialTheme.typography.labelLarge,
+        } else {
+            InstallScreenProgress(
+                uiState = state,
+                wifiOnly = wifiOnly,
+                onWifiOnlyChange = { viewModel.setWifiOnly(it) },
+                onCancel = { showCancelDialog = true },
             )
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -141,56 +103,185 @@ fun InstallStartScreen(totalSizeBytes: Long, onInstallClick: (Boolean) -> Unit) 
 }
 
 @Composable
-fun InstallProgressScreen(
-    progressFlow: StateFlow<Long>,
-    totalBytes: Long,
-    onCancelClick: () -> Unit,
-) {
-    val currentBytes by progressFlow.collectAsStateWithLifecycle()
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun InstallScreenHeader(totalSizeBytes: Long) {
+    val context = LocalContext.current
+    val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
+
+    Spacer(modifier = Modifier.height(48.dp))
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shadowElevation = 2.dp,
     ) {
-        val progress = if (totalBytes > 0) currentBytes.toFloat() / totalBytes else 0f
-        if (ImageArchive.isLocalImage()) {
-            // No need to localization for userdebug only UX
-            Text(text = "Auto installing from /sdcard/linux")
-        }
-        LinearProgressIndicator(progress = { progress })
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onCancelClick) { Text(text = stringResource(android.R.string.cancel)) }
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.padding(16.dp).size(96.dp),
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = stringResource(R.string.app_name),
+        style = MaterialTheme.typography.headlineLarge,
+        color = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(modifier = Modifier.height(32.dp))
+    Text(
+        text = stringResource(R.string.installer_desc, formattedSize),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(modifier = Modifier.height(32.dp))
+}
+
+@Composable
+private fun InstallScreenButtons(
+    wifiOnly: Boolean,
+    onWifiOnlyChange: (Boolean) -> Unit,
+    onInstall: () -> Unit,
+) {
+    WifiOnlySwitch(wifiOnly = wifiOnly, onCheckedChange = onWifiOnlyChange)
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Button(
+        onClick = onInstall,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+    ) {
+        Text(
+            text = stringResource(R.string.installer_btn_install),
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 
-fun onInstallClick(
-    context: Context,
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    viewModel: MainViewModel,
+@Composable
+private fun InstallScreenProgress(
+    uiState: MainUiState,
     wifiOnly: Boolean,
+    onWifiOnlyChange: (Boolean) -> Unit,
+    onCancel: () -> Unit,
 ) {
-    if (wifiOnly && !isWifiConnected(context)) {
-        scope.launch {
-            val result =
-                snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.installer_snkbar_error_no_wifi),
-                    actionLabel = context.getString(R.string.action_settings),
-                    duration = SnackbarDuration.Short,
+    val context = LocalContext.current
+    val totalSizeBytes = uiState.totalImageSize()
+    val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
+
+    val currentBytesFlow: kotlinx.coroutines.flow.StateFlow<Long>?
+    val progressColor: Color
+    val message: Int?
+
+    if (uiState is MainUiState.Installing) {
+        currentBytesFlow = uiState.progress
+        progressColor = MaterialTheme.colorScheme.primary
+        message = if (uiState.onWifi) null else R.string.installer_msg_mobile_data
+    } else if (uiState is MainUiState.InstallSuspended) {
+        currentBytesFlow = uiState.progress
+        progressColor = Color.Gray
+        message = R.string.installer_msg_waiting_network
+    } else {
+        currentBytesFlow = null
+        progressColor = Color.Transparent
+        message = null
+    }
+
+    if (ImageArchive.isLocalImage()) {
+        // No need to localization for userdebug only UX
+        Text(text = "Auto installing from /sdcard/linux")
+    }
+
+    if (currentBytesFlow != null) {
+        val currentBytes by currentBytesFlow.collectAsStateWithLifecycle()
+        val progress = if (totalSizeBytes > 0) currentBytes.toFloat() / totalSizeBytes else 0f
+        val formattedCurrent = Formatter.formatFileSize(context, currentBytes)
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "$formattedCurrent / $formattedSize",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.align(Alignment.TopEnd),
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                    color = progressColor,
                 )
-            if (result == SnackbarResult.ActionPerformed) {
-                context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+
+                if (message != null) {
+                    Text(
+                        text = stringResource(message),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                WifiOnlySwitch(wifiOnly = wifiOnly, onCheckedChange = onWifiOnlyChange)
             }
         }
-    } else {
-        viewModel.installVm()
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    TextButton(onClick = onCancel) {
+        Text(
+            text = stringResource(R.string.installer_btn_cancel),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
-private fun isWifiConnected(context: Context): Boolean {
-    val connectivityManager =
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val network = connectivityManager.activeNetwork ?: return false
-    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-    return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+@Composable
+private fun InstallCancelDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.installer_dlg_title_cancel_install)) },
+        text = { Text(stringResource(R.string.installer_dlg_message_cancel_install)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.installer_dlg_btn_cancel_install))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.installer_dlg_btn_continue_install))
+            }
+        },
+    )
+}
+
+@Composable
+fun WifiOnlySwitch(
+    wifiOnly: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().clickable { onCheckedChange(!wifiOnly) },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = stringResource(R.string.installer_chkbox_wifi_only),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Switch(
+            checked = wifiOnly,
+            onCheckedChange = onCheckedChange,
+            colors =
+                SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+        )
+    }
 }
