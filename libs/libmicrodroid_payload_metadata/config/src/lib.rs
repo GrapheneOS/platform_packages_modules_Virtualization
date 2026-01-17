@@ -70,6 +70,10 @@ pub struct VmPayloadConfig {
     /// Whether to run the payload as root or not.
     #[serde(default)]
     pub run_as_root: bool,
+
+    /// Whether to use dm-default-key to get DE and CE storage
+    #[serde(default)]
+    pub dm_default_key: bool,
 }
 
 /// OS config

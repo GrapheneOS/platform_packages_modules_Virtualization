@@ -85,4 +85,10 @@ message PayloadConfig {
   // Whether microdroid_manager should delay setup the encrypted store until
   // payload sends the signal to do it.
   bool delay_encrypted_store_setup = 3;
+
+  // Optional.
+  // Whether to use dm_default_key for encryption.
+  // Note that changing this value after creation of guest encrypted store will
+  // lead to incompatible encrypted store format and loss of all encrypted data
+  bool dm_default_key = 4;
 }

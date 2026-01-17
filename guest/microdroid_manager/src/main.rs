@@ -126,6 +126,8 @@ const FAILURE_SERIAL_DEVICE: &str = "/dev/ttyS1";
 
 const ENCRYPTEDSTORE_BACKING_DEVICE: &str = "/dev/block/by-name/encryptedstore";
 const ENCRYPTEDSTORE_KEYSIZE: usize = 32;
+const ENCRYPTEDSTORE_DM_DEFAULT_KEYSIZE: usize = 64;
+const ENCRYPTEDSTORE_KEKSIZE: usize = 32;
 
 const DICE_CHAIN_FILE: &str = "/microdroid_resources/dice_chain.raw";
 
@@ -691,6 +693,12 @@ fn try_run_payload(
             ));
         }
 
+        let key_size = if config.dm_default_key {
+            ENCRYPTEDSTORE_DM_DEFAULT_KEYSIZE
+        } else {
+            ENCRYPTEDSTORE_KEYSIZE
+        };
+
         if config.delay_encrypted_store_setup {
             let service_clone = service.clone();
             let vm_secret_for_enc_store = vm_secret.clone();
@@ -704,7 +712,9 @@ fn try_run_payload(
                     vm_secret_for_enc_store,
                     tenant_manager_for_enc_store,
                     // Encrytedstore disk has never been setup - force provision a new KEK!
-                    disk_is_new, // provision_new_key
+                    key_size,
+                    disk_is_new, // provision_new_key,
+                    config.dm_default_key,
                 ) {
                     // Ideally we'd communicate this back to the main thread and error out in a
                     // similar manner to the `!delayed_prepare_encryptedstore` case, but, for now,
@@ -715,9 +725,12 @@ fn try_run_payload(
             None
         } else {
             info!("Preparing encryptedstore ...");
-            let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+            let mut key = ZVec::new(key_size)?;
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
-            Some(prepare_encryptedstore(&key, &tenant_manager).context("encryptedstore run")?)
+            Some(
+                prepare_encryptedstore(&key, &tenant_manager, config.dm_default_key)
+                    .context("encryptedstore run")?,
+            )
         }
     } else {
         None
@@ -1140,6 +1153,7 @@ fn load_config(payload_metadata: PayloadMetadata) -> Result<VmPayloadConfig> {
                 // Tenants are only supported through config.json files
                 tenants: vec![],
                 delay_encrypted_store_setup: payload_config.delay_encrypted_store_setup,
+                dm_default_key: payload_config.dm_default_key,
                 ..Default::default()
             })
         }
@@ -1342,7 +1356,11 @@ fn format_tenant_dir_specs(tenant_manager: &TenantManager) -> String {
         .join(",")
 }
 
-fn prepare_encryptedstore(key: &[u8], tenant_manager: &TenantManager) -> Result<Child> {
+fn prepare_encryptedstore(
+    key: &[u8],
+    tenant_manager: &TenantManager,
+    dm_default_key: bool,
+) -> Result<Child> {
     let mut cmd = Command::new(ENCRYPTEDSTORE_BIN);
     cmd.arg("--blkdevice")
         .arg(ENCRYPTEDSTORE_BACKING_DEVICE)
@@ -1353,6 +1371,10 @@ fn prepare_encryptedstore(key: &[u8], tenant_manager: &TenantManager) -> Result<
     let tenant_dir_specs = format_tenant_dir_specs(tenant_manager);
     if !tenant_dir_specs.is_empty() {
         cmd.args(["--config-dir", &tenant_dir_specs]);
+    }
+
+    if dm_default_key {
+        cmd.arg("--dm-default-key");
     }
     cmd.spawn().context("encryptedstore failed")
 }
@@ -1412,14 +1434,16 @@ fn delayed_prepare_encryptedstore(
     service: Strong<dyn IVirtualMachineService>,
     vm_secret: Arc<VmSecret>,
     tenant_manager: Arc<TenantManager>,
+    keysize: usize,
     provision_new_key: bool,
+    dm_default_key: bool,
 ) -> Result<()> {
     info!("waiting for {ENCRYPTED_STORE_SETUP_PROP} to set up encrypted store");
     wait_for_property_true(ENCRYPTED_STORE_SETUP_PROP)
         .context("failed waiting for {ENCRYPTED_STORE_SETUP_PROP}")?;
     info!("{ENCRYPTED_STORE_SETUP_PROP} is true. Preparing encryptedstore ...");
 
-    let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+    let mut key = ZVec::new(keysize)?;
     match encrypted_store_mode {
         EncryptedStoreMode::KEKsStoredOnHost => {
             encrypted_store_key(&service, &vm_secret, provision_new_key, &mut key)
@@ -1429,7 +1453,7 @@ fn delayed_prepare_encryptedstore(
             vm_secret.derive_encryptedstore_key(&mut key).context("derive encrypted store key")?;
         }
     }
-    let exitcode = prepare_encryptedstore(&key, &tenant_manager)?
+    let exitcode = prepare_encryptedstore(&key, &tenant_manager, dm_default_key)?
         .wait()
         .context("failed waiting for encryptedstore binary to finish")?;
     ensure!(exitcode.success(), "Unable to prepare encrypted storage. Exitcode={}", exitcode);
@@ -1457,7 +1481,7 @@ fn encrypted_store_key(
     };
 
     // This key is used to encrypt the key used for encrypted store setup.
-    let mut encryption_key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+    let mut encryption_key = ZVec::new(ENCRYPTEDSTORE_KEKSIZE)?;
     vm_secret
         .derive_encryptedstore_key_encryption_key(&mut encryption_key)
         .context("failed to derive encryptedstore_key encryption key")?;

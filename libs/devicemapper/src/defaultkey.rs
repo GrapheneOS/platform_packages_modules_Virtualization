@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-/// `crypt` module implements the "crypt" target in the device mapper framework. Specifically,
-/// it provides `DmCryptTargetBuilder` struct which is used to construct a `DmCryptTarget`
-/// struct which is then given to `DeviceMapper` to create a mapper device.
+/// `default-key` module implements the "default-key" target in the device mapper
+/// framework. Specifically, it provides `DmDefaultKeyTargetBuilder` struct which
+/// is used to construct a `DmDefaultKeyTarget` struct which is then given to
+/// `DeviceMapper` to create a mapper device.
+use crate::crypt::CipherType;
 use crate::DmTargetSpec;
 
 use anyhow::{ensure, Context, Result};
@@ -27,81 +29,42 @@ use zerocopy::IntoBytes;
 
 const SECTOR_SIZE: u64 = 512;
 
-// The UAPI for the crypt target is at:
-// Documentation/admin-guide/device-mapper/dm-crypt.rst
+pub struct DmDefaultKeyTarget(Box<[u8]>);
 
-/// Supported ciphers
-#[derive(Clone, Copy, Debug)]
-pub enum CipherType {
-    /// AES256 with HCTR2 mode. HCTR2 is a tweakable super-pseudorandom permutation
-    /// length-preserving encryption mode. It is the preferred mode in absence of other
-    /// dedicated integrity primitives (such as for encryptedstore in pVM) since it is less
-    /// malleable than other modes.
-    AES256HCTR2,
-    /// AES with XTS mode. This has slight performance benefits over HCTR2. In particular, XTS is
-    /// supported by inline encryption hardware. Note that (status quo) `encryptedstore` in VMs
-    /// is the only user of this module & inline encryption is not supported by guest kernel.
-    AES256XTS,
-}
-impl CipherType {
-    pub fn get_kernel_crypto_name(&self) -> &str {
-        match *self {
-            // We use "plain64" as the IV/nonce generation algorithm -
-            // which basically is the sector number.
-            CipherType::AES256HCTR2 => "aes-hctr2-plain64",
-            CipherType::AES256XTS => "aes-xts-plain64",
-        }
-    }
-
-    pub fn get_required_key_size(&self) -> usize {
-        match *self {
-            // AES-256-HCTR2 takes a 32-byte key
-            CipherType::AES256HCTR2 => 32,
-            // XTS requires key of twice the length of the underlying block cipher
-            // i.e., 64B for AES256
-            CipherType::AES256XTS => 64,
-        }
-    }
-
-    pub fn validata_key_size(&self, key_size: usize) -> bool {
-        key_size == self.get_required_key_size()
-    }
-}
-
-pub struct DmCryptTarget(Box<[u8]>);
-
-impl DmCryptTarget {
+/// Device-Mapper’s dm-default-key target is designed to be used in conjunction with
+/// file based encryption in either ext4 or f2fs and provides encryption via a default
+/// key of blocks, typically metadata blocks, that the file system does not encrypt.
+impl DmDefaultKeyTarget {
     /// Flatten into slice
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_ref()
     }
 }
 
-pub struct DmCryptTargetBuilder<'a> {
+pub struct DmDefaultKeyTargetBuilder<'a> {
     cipher: CipherType,
     key: Option<&'a [u8]>,
     iv_offset: u64,
     device_path: Option<&'a Path>,
     offset: u64,
     device_size: u64,
-    opt_params: Vec<&'a str>,
 }
 
-impl Default for DmCryptTargetBuilder<'_> {
+/// A builder that constructs `DmDefaultKeyTarget` struct.
+impl Default for DmDefaultKeyTargetBuilder<'_> {
     fn default() -> Self {
-        DmCryptTargetBuilder {
-            cipher: CipherType::AES256HCTR2,
+        DmDefaultKeyTargetBuilder {
+            cipher: CipherType::AES256XTS,
             key: None,
             iv_offset: 0,
             device_path: None,
             offset: 0,
             device_size: 0,
-            opt_params: Vec::new(),
         }
     }
 }
 
-impl<'a> DmCryptTargetBuilder<'a> {
+impl<'a> DmDefaultKeyTargetBuilder<'a> {
     /// Sets the device that will be used as the data device (i.e. providing actual data).
     pub fn data_device(&mut self, p: &'a Path, size: u64) -> &mut Self {
         self.device_path = Some(p);
@@ -133,15 +96,9 @@ impl<'a> DmCryptTargetBuilder<'a> {
         self
     }
 
-    /// Add additional optional parameter
-    pub fn opt_param(&mut self, param: &'a str) -> &mut Self {
-        self.opt_params.push(param);
-        self
-    }
-
-    /// Constructs a `DmCryptTarget`.
-    pub fn build(&self) -> Result<DmCryptTarget> {
-        // The `DmCryptTarget` struct actually is a flattened data consisting of a header and
+    /// Constructs a `DmDefaultKeyTarget`.
+    pub fn build(&self) -> Result<DmDefaultKeyTarget> {
+        // The `DmDefaultKeyTarget` struct actually is a flattened data consisting of a header and
         // body. The format of the header is `dm_target_spec` as defined in
         // include/uapi/linux/dm-ioctl.h.
         let device_path = self
@@ -160,8 +117,7 @@ impl<'a> DmCryptTargetBuilder<'a> {
 
         // Step2: serialize the information according to the spec, which is ...
         // DmTargetSpec{...}
-        // <cipher> <key> <iv_offset> <device path> \
-        // <offset> [<#opt_params> <opt_params>]
+        // <cipher> <key> <iv_offset> <device path> <offset>
         let mut body = String::new();
         use std::fmt::Write;
         write!(&mut body, "{} ", self.cipher.get_kernel_crypto_name())?;
@@ -169,14 +125,13 @@ impl<'a> DmCryptTargetBuilder<'a> {
         write!(&mut body, "{} ", self.iv_offset)?;
         write!(&mut body, "{device_path} ")?;
         write!(&mut body, "{} ", self.offset)?;
-        write!(&mut body, "{} {} ", self.opt_params.len(), self.opt_params.join(" "))?;
         write!(&mut body, "\0")?; // null terminator
 
         let size = size_of::<DmTargetSpec>() + body.len();
         let aligned_size = (size + 7) & !7; // align to 8 byte boundaries
         let padding = aligned_size - size;
 
-        let mut header = DmTargetSpec::new("crypt")?;
+        let mut header = DmTargetSpec::new("default-key")?;
         header.sector_start = 0;
         header.length = self.device_size / SECTOR_SIZE; // number of 512-byte sectors
         header.next = aligned_size as u32;
@@ -185,7 +140,6 @@ impl<'a> DmCryptTargetBuilder<'a> {
         buf.write_all(header.as_bytes())?;
         buf.write_all(body.as_bytes())?;
         buf.write_all(vec![0; padding].as_slice())?;
-
-        Ok(DmCryptTarget(buf.into_boxed_slice()))
+        Ok(DmDefaultKeyTarget(buf.into_boxed_slice()))
     }
 }

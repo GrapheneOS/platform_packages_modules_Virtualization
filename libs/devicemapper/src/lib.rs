@@ -43,6 +43,8 @@ use zerocopy::IntoBytes;
 
 /// Exposes DmCryptTarget & related builder
 pub mod crypt;
+/// Exposes DmDefaultKeyTarget & related builder
+pub mod defaultkey;
 /// Expose util functions
 pub mod util;
 /// Exposes the DmVerityTarget & related builder
@@ -52,6 +54,7 @@ pub mod loopdevice;
 
 mod sys;
 use crypt::DmCryptTarget;
+use defaultkey::DmDefaultKeyTarget;
 use sys::*;
 use util::*;
 use verity::DmVerityTarget;
@@ -156,6 +159,16 @@ impl DeviceMapper {
     /// The path to the generated device is "/dev/mapper/<name>".
     pub fn create_crypt_device(&self, name: &str, target: &DmCryptTarget) -> Result<PathBuf> {
         self.create_device(name, target.as_slice(), uuid("crypto".as_bytes())?, true)
+    }
+
+    /// Creates a (defaultkey) device and configure it according to the `target` specification.
+    /// The path to the generated device is "/dev/mapper/<name>".
+    pub fn create_default_key_device(
+        &self,
+        name: &str,
+        target: &DmDefaultKeyTarget,
+    ) -> Result<PathBuf> {
+        self.create_device(name, target.as_slice(), uuid("defkey".as_bytes())?, true)
     }
 
     /// Creates a (verity) device and configure it according to the `target` specification.
