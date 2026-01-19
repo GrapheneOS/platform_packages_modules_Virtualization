@@ -39,6 +39,8 @@ RUN apt-get install -y --no-install-recommends \
     wget \
     jq \
     eatmydata \
+    pigz \
+    aria2 \
     # AArch64 specific packages
     gcc-aarch64-linux-gnu \
     libc6-dev-arm64-cross \

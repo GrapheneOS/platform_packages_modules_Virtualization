@@ -96,6 +96,7 @@ docker build -t "$image_name" "$SCRIPT_DIR"
 
 # Ensure cache directories exist
 mkdir -p "$HOME/.cache/ferrochrome-apt"
+mkdir -p "$HOME/.cache/ferrochrome-images"
 
 docker run --privileged $interactive \
   $mount_work_dir \
@@ -105,6 +106,7 @@ docker run --privileged $interactive \
   -v "$HOME/.cargo/registry:/root/.cargo/registry" \
   -v "$HOME/.cargo/git:/root/.cargo/git" \
   -v "$HOME/.cache/ferrochrome-apt:/mnt/apt-cache" \
+  -v "$HOME/.cache/ferrochrome-images:/mnt/image-cache" \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
   bash -c "bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell"

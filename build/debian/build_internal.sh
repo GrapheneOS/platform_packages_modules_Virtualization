@@ -148,8 +148,30 @@ download_debian_cloud_image() {
 	mkdir -p "${outdir}" || true
 
 	local img=debian-13-genericcloud-${debian_arch}.tar.xz
-	local url="https://cloud.debian.org/images/cloud/${debian_version}/latest/${img}"
-	wget -O - "${url}" | tar xJ -C "${outdir}"
+	local url_base="https://cloud.debian.org/images/cloud/${debian_version}/latest"
+	local url="${url_base}/${img}"
+	local sha_url="${url_base}/SHA512SUMS"
+	local cache_dir="/mnt/image-cache"
+	local cached_img="${cache_dir}/${img}"
+	local cached_sha="${cache_dir}/SHA512SUMS"
+
+	mkdir -p "${cache_dir}" || true
+
+	# Always get the latest checksum file to know the target hash
+	wget -q -O "${cached_sha}" "${sha_url}"
+	local expected_sha=$(grep "${img}" "${cached_sha}" | awk '{print $1}')
+
+	# Use aria2c for fast download with automatic checksum verification
+	# --checksum: verify the hash
+	# -x16, -s16: use 16 connections for speed
+	# -d, -o: specify directory and output filename
+	aria2c --checksum=sha-512="${expected_sha}" \
+	       -x16 -s16 \
+	       -d "${cache_dir}" -o "${img}" \
+	       "${url}"
+
+	echo "Extracting ${cached_img} to ${outdir}..."
+	tar xJ -f "${cached_img}" -C "${outdir}"
 }
 
 build_rust_as_deb() {
@@ -269,8 +291,8 @@ generate_output_package() {
 		fi
 	fi
 
-	wget -O vmlinuz https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/${vmlinuz_name}/url
-	wget -O initrd.img https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/initramfs.img/url
+	wget -O vmlinuz "https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/${vmlinuz_name}/url"
+	wget -O initrd.img "https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/initramfs.img/url"
 
 	contents=(
 		build_id
@@ -283,8 +305,8 @@ generate_output_package() {
 
 	popd > /dev/null
 
-	# --sparse option isn't supported in apache-commons-compress
-	tar czv -f ${output} -C ${workdir} "${contents[@]}"
+	# Use pigz for parallel compression and --sparse for root_part efficiency
+	tar -I pigz -cSv -f ${output} -C ${workdir} "${contents[@]}"
 }
 
 clean_up() {
