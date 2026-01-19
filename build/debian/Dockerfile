@@ -36,6 +36,8 @@ RUN apt-get install -y --no-install-recommends \
     qemu-utils \
     sudo \
     udev \
+    wget \
+    jq \
     # AArch64 specific packages
     gcc-aarch64-linux-gnu \
     libc6-dev-arm64-cross \

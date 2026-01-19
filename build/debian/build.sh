@@ -81,7 +81,7 @@ parse_options() {
 arch="$(uname -m)"
 build_id=$(echo eng-1000000-$(date --utc +'%a %b %d %H:%M:%S %Z %Y'))
 kernel_id_flag=
-image_name="ubuntu:22.04"
+image_name="ferrochrome-builder"
 save_workdir_flag=
 shell="|| bash"
 virt_repo_top="${SCRIPT_DIR}/../../"
@@ -91,11 +91,16 @@ work_dir_flag=
 parse_options "$@"
 ensure_binfmt_misc
 
+# Build the builder image from Dockerfile. Docker will use its cache if nothing changed.
+docker build -t "$image_name" "$SCRIPT_DIR"
+
 docker run --privileged $interactive \
   $mount_work_dir \
   -v /dev:/dev \
   -v "$virt_repo_top:/root/Virtualization" \
   -v /var/log/fai:/var/log/fai \
+  -v "$HOME/.cargo/registry:/root/.cargo/registry" \
+  -v "$HOME/.cargo/git:/root/.cargo/git" \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell"
+  bash -c "bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell"

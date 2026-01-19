@@ -74,6 +74,11 @@ parse_options() {
 }
 
 install_prerequisites() {
+	if command -v cargo >/dev/null 2>&1; then
+		echo "Prerequisites already installed. Skipping..."
+		return
+	fi
+
 	apt update
 	apt install software-properties-common -y
 	apt update
