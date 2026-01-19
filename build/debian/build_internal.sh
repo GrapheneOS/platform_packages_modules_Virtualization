@@ -73,71 +73,6 @@ parse_options() {
 	fi
 }
 
-install_prerequisites() {
-	if command -v cargo >/dev/null 2>&1; then
-		echo "Prerequisites already installed. Skipping..."
-		return
-	fi
-
-	apt update
-	eatmydata apt install software-properties-common -y
-	apt update
-	packages=(
-		apt-utils
-		automake
-		binfmt-support
-		build-essential
-		ca-certificates
-		cmake
-		curl
-		debsums
-		dosfstools
-		fdisk
-		genisoimage
-		git
-		jq
-		libjson-c-dev
-		libtool
-		libwebsockets-dev
-		make
-		protobuf-compiler
-		python3
-		python3-libcloud
-		python3-marshmallow
-		python3-pytest
-		python3-yaml
-		qemu-user-static
-		qemu-utils
-		sudo
-		udev
-		wget
-	)
-	if [[ "$arch" == "aarch64" ]]; then
-		packages+=(
-			gcc-aarch64-linux-gnu
-			libc6-dev-arm64-cross
-			qemu-system-arm
-		)
-	else
-		packages+=(
-			qemu-system
-		)
-	fi
-
-	DEBIAN_FRONTEND=noninteractive \
-		eatmydata apt install --no-install-recommends --assume-yes "${packages[@]}"
-
-	if [ ! -f "$HOME"/.cargo/bin/cargo ]; then
-		git clone https://github.com/rust-lang/rustup.git ${workdir}/rustup
-		${workdir}/rustup/rustup-init.sh -y
-	fi
-
-	source "$HOME"/.cargo/env
-	rustup target add "${arch}"-unknown-linux-gnu
-	cargo install cargo-license --version 0.6.1
-	cargo install cargo-deb --version 3.3.0
-}
-
 download_debian_cloud_image() {
 	if [[ "$may_skip_build" == 1 && -f "${raw_disk_image}" ]]; then
 		echo "Skipping download_debian_cloud_image(). ${raw_disk_image} already exists"
@@ -340,7 +275,6 @@ cidata_image="cidata.iso"
 chroot_ttyd=${debian_cloud_image}/chroot_ttyd
 raw_disk_image=${debian_cloud_image}/disk.raw
 
-install_prerequisites
 download_debian_cloud_image
 copy_android_config
 build_cidata
