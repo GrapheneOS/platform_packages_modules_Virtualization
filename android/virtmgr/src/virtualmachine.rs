@@ -1204,6 +1204,10 @@ fn load_app_config(
         vm_config.memoryMib = config.memoryMib;
     }
 
+    if os_name.ends_with("_16k") && cfg!(target_arch = "x86_64") {
+        append_kernel_param("page_shift=14", &mut vm_config);
+    }
+
     vm_config.name.clone_from(&config.name);
     vm_config.protectedVm = config.protectedVm;
     vm_config.cpuOptions = config.cpuOptions.clone();
