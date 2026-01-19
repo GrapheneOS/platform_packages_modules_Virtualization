@@ -66,6 +66,19 @@ path-exclude=/usr/share/info/*
 path-exclude=/usr/share/lintian/*
 EOF
 
+  # Prevent services from starting and suppress udev triggers during installation
+  echo -e '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d
+  chmod +x /usr/sbin/policy-rc.d
+
+  # Create a dummy udevadm and systemd-hwdb via dpkg-divert to skip triggers
+  dpkg-divert --add --rename --divert /usr/bin/udevadm.real /usr/bin/udevadm
+  echo -e '#!/bin/sh\necho "Skipping udevadm $*"' > /usr/bin/udevadm
+  chmod +x /usr/bin/udevadm
+
+  dpkg-divert --add --rename --divert /usr/bin/systemd-hwdb.real /usr/bin/systemd-hwdb
+  echo -e '#!/bin/sh\necho "Skipping systemd-hwdb $*"' > /usr/bin/systemd-hwdb
+  chmod +x /usr/bin/systemd-hwdb
+
   echo "Updating package lists..."
   apt update || apt update
 
@@ -97,9 +110,10 @@ apply_custom_configs() {
   apt purge -y eatmydata
 
   # Restore udevadm/systemd-hwdb and remove temporary configs
-  mv -f /usr/bin/udevadm.real /usr/bin/udevadm || true
-  mv -f /usr/bin/systemd-hwdb.real /usr/bin/systemd-hwdb || true
-
+  rm -f /usr/bin/udevadm
+  dpkg-divert --remove --rename /usr/bin/udevadm
+  rm -f /usr/bin/systemd-hwdb
+  dpkg-divert --remove --rename /usr/bin/systemd-hwdb
   rm -f /usr/sbin/policy-rc.d
   rm -f /etc/apt/apt.conf.d/01keep-debs
   rm -f /etc/dpkg/dpkg.cfg.d/99-slim-image
