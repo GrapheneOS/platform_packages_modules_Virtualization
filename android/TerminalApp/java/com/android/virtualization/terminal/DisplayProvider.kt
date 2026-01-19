@@ -26,6 +26,7 @@ import android.util.Log
 import android.view.SurfaceControl
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.WindowManagerPolicyConstants.APPLICATION_MEDIA_OVERLAY_SUBLAYER
 import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.DisplayProvider.CursorHandler
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
@@ -57,8 +58,7 @@ internal class DisplayProvider(
         cursorView.setSurfaceLifecycle(SurfaceView.SURFACE_LIFECYCLE_FOLLOWS_ATTACHMENT)
         cursorView.holder.addCallback(Callback(SurfaceKind.CURSOR))
         cursorView.holder.setFormat(PixelFormat.RGBA_8888)
-        // TODO: do we need this z-order?
-        cursorView.setZOrderMediaOverlay(true)
+        cursorView.setCompositionOrder(APPLICATION_MEDIA_OVERLAY_SUBLAYER)
     }
 
     enum class SurfaceKind {

@@ -165,11 +165,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isMouseLocked.value = locked
     }
 
-    init {
-        VmController.reset()
-        viewModelScope.launch(Dispatchers.IO) { _hasBackup.value = Installer.hasBackup() }
-    }
-
     fun addTab() {
         val newSession = TerminalSession()
         val currentTabs = _tabs.value.toMutableList()
@@ -381,5 +376,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val dpi = (DisplayMetrics.DENSITY_DEFAULT * density).toInt()
         val refreshRate = display.refreshRate.toInt()
         return DisplayInfo(width, height, dpi, refreshRate)
+    }
+
+    init {
+        VmController.reset()
+        viewModelScope.launch(Dispatchers.IO) { _hasBackup.value = Installer.hasBackup() }
+        viewModelScope.launch {
+            uiState.collect { state ->
+                if (state is MainUiState.Ready) {
+                    startVm()
+                }
+            }
+        }
     }
 }

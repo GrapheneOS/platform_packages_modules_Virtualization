@@ -20,6 +20,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.IBinder
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -226,7 +227,7 @@ class VmService : LifecycleService() {
             .setProgress(total, current, total <= 0)
             .addAction(
                 Notification.Action.Builder(
-                        R.drawable.ic_close,
+                        Icon.createWithResource(this, R.drawable.ic_close),
                         getString(android.R.string.cancel),
                         cancelPending,
                     )
@@ -247,7 +248,7 @@ class VmService : LifecycleService() {
                 .setContentIntent(getMainActivityPendingIntent())
                 .addAction(
                     Notification.Action.Builder(
-                            R.drawable.ic_close,
+                            Icon.createWithResource(this, R.drawable.ic_close),
                             getString(R.string.notif_action_close),
                             stopPending,
                         )
