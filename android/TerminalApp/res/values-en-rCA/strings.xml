@@ -26,9 +26,18 @@
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Download using Wi-Fi only"</string>
     <string name="installer_btn_install" msgid="1249687873554194768">"Install"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"Installing"</string>
+    <string name="installer_btn_cancel" msgid="3560257458966328733">"Cancel installation"</string>
+    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"Cancel Installation?"</string>
+    <string name="installer_dlg_message_cancel_install" msgid="7122895060756794760">"Downloading will be stopped and progress will be lost."</string>
+    <string name="installer_dlg_btn_cancel_install" msgid="7061500109118550183">"Stop Download"</string>
+    <string name="installer_dlg_btn_continue_install" msgid="4038480932377540963">"Continue"</string>
     <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Failed to install due to a network issue"</string>
     <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Failed to install because Wi-Fi is not available"</string>
     <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Failed to install. Please try again"</string>
+    <string name="installer_snkbar_error_no_space" msgid="2980013654869871281">"Install failed due to insufficient disk space."</string>
+    <string name="installer_snkbar_action_storage" msgid="3154991131973261946">"Manage Storage"</string>
+    <string name="installer_msg_mobile_data" msgid="3235093415908956584">"Continuing download using mobile data..."</string>
+    <string name="installer_msg_waiting_network" msgid="5866026140340225420">"Waiting for network reconnection..."</string>
     <string name="terminal_hint_display" msgid="7172326332224647219">"Terminal display"</string>
     <string name="terminal_hint_input" msgid="1959459646864329623">"Cursor"</string>
     <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Empty line"</string>

@@ -26,9 +26,27 @@
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fi를 통해서만 다운로드"</string>
     <string name="installer_btn_install" msgid="1249687873554194768">"설치"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"설치 중"</string>
+    <!-- no translation found for installer_btn_cancel (3560257458966328733) -->
+    <skip />
+    <!-- no translation found for installer_dlg_title_cancel_install (2347901416414323603) -->
+    <skip />
+    <!-- no translation found for installer_dlg_message_cancel_install (7122895060756794760) -->
+    <skip />
+    <!-- no translation found for installer_dlg_btn_cancel_install (7061500109118550183) -->
+    <skip />
+    <!-- no translation found for installer_dlg_btn_continue_install (4038480932377540963) -->
+    <skip />
     <string name="installer_snkbar_error_network" msgid="4231423523038307349">"네트워크 문제로 인해 설치할 수 없습니다."</string>
     <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Wi-Fi를 사용할 수 없어 설치할 수 없습니다."</string>
     <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"설치할 수 없습니다. 다시 시도해 주세요"</string>
+    <!-- no translation found for installer_snkbar_error_no_space (2980013654869871281) -->
+    <skip />
+    <!-- no translation found for installer_snkbar_action_storage (3154991131973261946) -->
+    <skip />
+    <!-- no translation found for installer_msg_mobile_data (3235093415908956584) -->
+    <skip />
+    <!-- no translation found for installer_msg_waiting_network (5866026140340225420) -->
+    <skip />
     <string name="terminal_hint_display" msgid="7172326332224647219">"터미널 디스플레이"</string>
     <string name="terminal_hint_input" msgid="1959459646864329623">"커서"</string>
     <string name="terminal_hint_empty_line" msgid="8470507412532518466">"빈 줄"</string>
