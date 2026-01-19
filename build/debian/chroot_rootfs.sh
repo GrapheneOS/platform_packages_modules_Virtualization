@@ -1,129 +1,138 @@
 #!/bin/bash
+#
+# ==============================================================================
+# Ferrochrome Rootfs Chroot Utility
+# ==============================================================================
+#
+# This utility mounts a root filesystem image and enters a chroot environment
+# with optional extra directory bindings and command execution support.
+#
+# Key Features:
+# 1. Mounts the root partition to a temporary workspace.
+# 2. Binds essential system directories (/dev, /proc, /sys).
+# 3. Supports custom directory bindings via the -b option.
+# 4. Automatically handles DNS configuration via /etc/resolv.conf.
+# 5. Ensures clean unmounting on exit or error.
+#
+# Usage: sudo ./chroot_rootfs.sh [OPTIONS] ${rootfs_path}
+# ==============================================================================
 
-set -exu
+set -eo pipefail
 
-### Mount rootfs image, and chroot into with some extra setup.
-###
-### For cross-arch, configure qemu-user-static with following command:
-### $ sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+### --- Configuration & State --- ###
+
+CHROOT_MOUNT_ARGS=()
+CHROOT_WORKSPACE=$(mktemp -d)
+CHROOT_COMMAND=""
+ROOTFS_IMAGE_PATH=""
+
+### --- Utilities --- ###
+
+# Log informational messages in green
+log() { echo -e "\033[1;32m[INFO]\033[0m $1"; }
+
+# Log error messages in red and exit
+error() { echo -e "\033[1;31m[ERROR]\033[0m $1" >&2; exit 1; }
 
 check_sudo() {
-	if [ "$EUID" -ne 0 ]; then
-		echo "Please run as root." ; exit 1
-	fi
+  if [ "$EUID" -ne 0 ]; then
+    error "This script must be run as root (sudo)."
+  fi
 }
 
 show_help() {
-	echo "Usage: sudo $0 [OPTION] \${rootfs_path}"
-	echo "Mount rootfs, and chroot into it [sudo is required]"
-	echo ""
-	echo "Options:"
-	echo "-b SRC:DST   Bind extra directory. Can be repeated."
-	echo "-c COMMAND   Command to invoke via 'chroot /bin/bash -c \${your_command}'."
-	echo "             [Default: use chroot default]"
+  echo "Usage: sudo $0 [OPTION] ${rootfs_path}"
+  echo "Mount rootfs and chroot into it."
+  echo ""
+  echo "Options:"
+  echo "-b SRC:DST   Bind extra directory (can be repeated)"
+  echo "-c COMMAND   Command to invoke via /bin/bash -c"
+  echo "-h           Print usage and this help message"
 }
 
-check_sudo() {
-	if [ "$EUID" -ne 0 ]; then
-		echo "Please run as root." ; exit 1
-	fi
-}
+### --- Functions --- ###
 
+# Parse command line options
 parse_options() {
-	while getopts ":b:c:" option; do
-		case ${option} in
-			b)
-				chroot_mount+=("${OPTARG}")
-				;;
-			c)
-				chroot_command="${OPTARG}"
-				;;
-			*)
-				echo "Invalid option: $OPTARG" >&2
-				show_help
-				exit 1
-				;;
-		esac
-	done
+  while getopts "b:c:h" option; do
+    case ${option} in
+      b) CHROOT_MOUNT_ARGS+=("${OPTARG}") ;;
+      c) CHROOT_COMMAND="${OPTARG}" ;;
+      h) show_help ; exit ;;
+      *) error "Invalid option: $OPTARG" ;;
+    esac
+  done
 
-	shift $((OPTIND - 1))
-
-	if [[ "$#" -ne 1 ]]; then
-		echo "Specify rootfs path is required." >&2
-		show_help
-		exit 1
-	fi
-
-	chroot_rootfs="${1}"
+  shift $((OPTIND - 1))
+  if [[ "$#" -ne 1 ]]; then
+    show_help
+    error "Rootfs path is required."
+  fi
+  ROOTFS_IMAGE_PATH="${1}"
 }
 
-mount_rootfs() {
-	mkdir -p "${chroot_workspace}"
+# Mount the rootfs and setup the chroot environment
+mount_environment() {
+  log "Mounting rootfs to ${CHROOT_WORKSPACE}..."
+  mount "${ROOTFS_IMAGE_PATH}" "${CHROOT_WORKSPACE}"
 
-	mount "${chroot_rootfs}" "${chroot_workspace}"
+  # Process extra directory bindings
+  for arg in "${CHROOT_MOUNT_ARGS[@]}"; do
+    local src=${arg%:*}
+    local dst=${arg#*:}
+    [[ -z "${src}" || -z "${dst}" ]] && error "Invalid mount binding: ${arg}"
 
-	for arg in "${chroot_mount[@]}"; do
-		local src=${arg%:*}
-		local dst=${arg#*:}
-		if [[ -z "${src}" || -z "${dst}" ]]; then
-			echo "Failed to mount ${src} onto ${dst}" >&2
-			exit 1
-		fi
-		mkdir -p "${chroot_workspace}/${dst}"
-		mount --bind "${src}" "${chroot_workspace}/${dst}"
-	done
+    mkdir -p "${CHROOT_WORKSPACE}/${dst}"
+    mount --bind "${src}" "${CHROOT_WORKSPACE}/${dst}"
+  done
 
-	mount --rbind /dev "${chroot_workspace}/dev"
-	mount --rbind /proc "${chroot_workspace}/proc"
-	mount --rbind /sys "${chroot_workspace}/sys"
+  # Bind essential system virtual filesystems
+  mount --rbind /dev "${CHROOT_WORKSPACE}/dev"
+  mount --rbind /proc "${CHROOT_WORKSPACE}/proc"
+  mount --rbind /sys "${CHROOT_WORKSPACE}/sys"
 
-	local resolv="${chroot_workspace}/etc/resolv.conf"
-	if [[ $(ls "${chroot_workspace}/etc/resolv.conf") ]]; then
-		mv -v "${chroot_workspace}/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf.bak"
-	else
-		mkdir -p "${chroot_workspace}/etc"
-	fi
-	cp -vL "/etc/resolv.conf" "${chroot_workspace}/etc/resolv.conf"
+  # Configure DNS inside chroot
+  local target_resolv="${CHROOT_WORKSPACE}/etc/resolv.conf"
+  rm -f "${target_resolv}"
+  cp -L "/etc/resolv.conf" "${target_resolv}"
 }
 
+# Enter the chroot environment and execute command if provided
 enter_chroot() {
-	if [[ -n "${chroot_command}" ]]; then
-		chroot "${chroot_workspace}" /bin/bash -c "${chroot_command}"
-	else
-		chroot "${chroot_workspace}"
-	fi
+  if [[ -n "${CHROOT_COMMAND}" ]]; then
+    log "Executing command inside chroot: ${CHROOT_COMMAND}"
+    chroot "${CHROOT_WORKSPACE}" /bin/bash -c "${CHROOT_COMMAND}"
+  else
+    log "Entering interactive chroot session..."
+    chroot "${CHROOT_WORKSPACE}"
+  fi
 }
 
-clean_up() {
-	trap - EXIT
+# Perform cleanup: unmount all directories and restore configurations
 
-	if [[ $(ls "${chroot_workspace}/etc/resolv.conf.bak") ]]; then
-		mv -v "${chroot_workspace}/etc/resolv.conf.bak" "${chroot_workspace}/etc/resolv.conf" || true
-	fi
-	rm -d ${chroot_workspace}/etc || true
+cleanup() {
+  log "Cleaning up chroot environment..."
 
-	for arg in "${chroot_mount[@]}"; do
-		local dst=${arg#*:}
-		umount "${chroot_workspace}/${dst}" || true
-		rm -r "${chroot_workspace}/${dst}" || true
-	done
+  # Unmount extra bindings in reverse order
+  for (( i=${#CHROOT_MOUNT_ARGS[@]}-1; i>=0; i-- )); do
+    local dst=${CHROOT_MOUNT_ARGS[$i]#*:}
+    umount "${CHROOT_WORKSPACE}/${dst}" || true
+  done
 
-	if [[ -d "${chroot_workspace}" ]]; then
-		umount -R "${chroot_workspace}" || true
-	fi
+  # Unmount virtual and root filesystems
+  umount -R "${CHROOT_WORKSPACE}" || true
 
-	rm -d "${chroot_workspace}"
+  # Remove temporary workspace directory
+  rm -rf "${CHROOT_WORKSPACE}"
 }
 
-trap clean_up EXIT
-
-chroot_mount=()
-chroot_workspace=$(mktemp -d)
-chroot_command=""
-chroot_rootfs=
+### --- Main Execution --- ###
 
 check_sudo
-
 parse_options "$@"
-mount_rootfs
+
+# Setup cleanup trap to ensure unmounting happens on any exit
+trap cleanup EXIT
+
+mount_environment
 enter_chroot
