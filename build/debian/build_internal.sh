@@ -305,8 +305,8 @@ generate_output_package() {
 
 	popd > /dev/null
 
-	# Use pigz for parallel compression and --sparse for root_part efficiency
-	tar -I pigz -cSv -f ${output} -C ${workdir} "${contents[@]}"
+	# Use pigz for parallel compression, avoiding --sparse for better compatibility
+	tar -I pigz -cv -f ${output} -C ${workdir} "${contents[@]}"
 }
 
 clean_up() {
