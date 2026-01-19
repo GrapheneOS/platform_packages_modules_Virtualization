@@ -32,8 +32,9 @@ install_packages() {
 	)
 
 	apt update || apt update
-	DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
-	apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
+	DEBIAN_FRONTEND=noninteractive apt install -y eatmydata
+	DEBIAN_FRONTEND=noninteractive eatmydata apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
+	eatmydata apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
 }
 
 # TODO: Install ttyd from debian package after it picks up our patches
@@ -55,6 +56,9 @@ modify_pre_cloud_init_configs() {
 	# system doesn't need networking.
 	systemctl disable systemd-networkd-wait-online.service
 	systemctl mask systemd-networkd-wait-online.service
+
+	# Cleanup build-time tools
+	DEBIAN_FRONTEND=noninteractive apt purge -y eatmydata
 }
 
 remove_packages

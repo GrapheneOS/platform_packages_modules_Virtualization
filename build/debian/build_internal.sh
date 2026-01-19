@@ -80,7 +80,7 @@ install_prerequisites() {
 	fi
 
 	apt update
-	apt install software-properties-common -y
+	eatmydata apt install software-properties-common -y
 	apt update
 	packages=(
 		apt-utils
@@ -125,7 +125,7 @@ install_prerequisites() {
 	fi
 
 	DEBIAN_FRONTEND=noninteractive \
-		apt install --no-install-recommends --assume-yes "${packages[@]}"
+		eatmydata apt install --no-install-recommends --assume-yes "${packages[@]}"
 
 	if [ ! -f "$HOME"/.cargo/bin/cargo ]; then
 		git clone https://github.com/rust-lang/rustup.git ${workdir}/rustup
@@ -240,7 +240,7 @@ generate_output_package() {
 	local root_partition_num=1
 	if [[ "$may_skip_build" == 0 || ! -f "root_part" ]]; then
 		loop=$(losetup -f --show --partscan $raw_disk_image)
-		dd if="${loop}p$root_partition_num" of=root_part
+		dd if="${loop}p$root_partition_num" of=root_part bs=4M conv=sparse status=progress
 		losetup -d "${loop}"
 
 		${SCRIPT_DIR}/chroot_rootfs.sh \
@@ -248,6 +248,8 @@ generate_output_package() {
 			-b "${chroot_ttyd}:/mnt/ttyd" \
 			-c /mnt/build/build_rootfs_in_chroot.sh \
 			root_part
+
+		sync
 	fi
 
 	cp ${vm_config} vm_config.json

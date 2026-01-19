@@ -38,6 +38,7 @@ RUN apt-get install -y --no-install-recommends \
     udev \
     wget \
     jq \
+    eatmydata \
     # AArch64 specific packages
     gcc-aarch64-linux-gnu \
     libc6-dev-arm64-cross \
