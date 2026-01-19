@@ -94,6 +94,9 @@ ensure_binfmt_misc
 # Build the builder image from Dockerfile. Docker will use its cache if nothing changed.
 docker build -t "$image_name" "$SCRIPT_DIR"
 
+# Ensure cache directories exist
+mkdir -p "$HOME/.cache/ferrochrome-apt"
+
 docker run --privileged $interactive \
   $mount_work_dir \
   -v /dev:/dev \
@@ -101,6 +104,7 @@ docker run --privileged $interactive \
   -v /var/log/fai:/var/log/fai \
   -v "$HOME/.cargo/registry:/root/.cargo/registry" \
   -v "$HOME/.cargo/git:/root/.cargo/git" \
+  -v "$HOME/.cache/ferrochrome-apt:/mnt/apt-cache" \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
   bash -c "bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell"

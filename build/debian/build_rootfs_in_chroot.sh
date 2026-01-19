@@ -14,6 +14,9 @@ remove_packages() {
 # cloud-init requires several minutes of extra delay for installing packages,
 # Preinstall required packages here to reduce initial booting time.
 install_packages() {
+	# Prevent apt from cleaning up the cache
+	echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/01keep-debs
+
 	INSTALL_PACKAGES=(
 		kmod
 		udev
@@ -59,6 +62,9 @@ modify_pre_cloud_init_configs() {
 
 	# Cleanup build-time tools
 	DEBIAN_FRONTEND=noninteractive apt purge -y eatmydata
+
+	# Cleanup build-time optimizations
+	rm -f /etc/apt/apt.conf.d/01keep-debs
 }
 
 remove_packages

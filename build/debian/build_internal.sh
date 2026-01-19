@@ -246,6 +246,7 @@ generate_output_package() {
 		${SCRIPT_DIR}/chroot_rootfs.sh \
 			-b "${SCRIPT_DIR}:/mnt/build" \
 			-b "${chroot_ttyd}:/mnt/ttyd" \
+			-b "/mnt/apt-cache:/var/cache/apt/archives" \
 			-c /mnt/build/build_rootfs_in_chroot.sh \
 			root_part
 
