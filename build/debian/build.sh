@@ -109,4 +109,4 @@ docker run --privileged $interactive \
   -v "$HOME/.cache/ferrochrome-images:/mnt/image-cache" \
   --workdir /root/Virtualization/build/debian \
   "$image_name" \
-  bash -c "bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag $shell"
+  bash -c "set -o pipefail; bash ./build_internal.sh -a $arch $save_workdir_flag $work_dir_flag -b \"$build_id\" $kernel_id_flag 2>&1 | ts -s $shell"

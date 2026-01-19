@@ -41,6 +41,7 @@ RUN apt-get install -y --no-install-recommends \
     eatmydata \
     pigz \
     aria2 \
+    moreutils \
     # AArch64 specific packages
     gcc-aarch64-linux-gnu \
     libc6-dev-arm64-cross \
