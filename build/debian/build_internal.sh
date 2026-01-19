@@ -1,281 +1,300 @@
 #!/bin/bash
+#
+# ==============================================================================
+# Ferrochrome Internal Build Script (Container-side)
+# ==============================================================================
+#
+# This script runs inside the Docker builder container to perform the actual
+# guest image construction process.
+#
+# Key Responsibilities:
+# 1. Downloads and verifies the Debian cloud image using SHA512 checksums.
+# 2. Compiles guest-side utilities (ttyd and Rust-based agents).
+# 3. Customizes the guest root filesystem by chrooting into it.
+# 4. Integrates the Android Common Kernel and packages the final images.tar.gz.
+#
+# Usage: sudo ./build_internal.sh [OPTIONS] [OUTPUT_FILE]
+# ==============================================================================
 
-# This is a script to build a Debian image that can run in a VM created via AVF.
-# TODOs:
-# - Add Android-specific packages via a new class
-# - Use a stable release from debian-cloud-images
+set -eo pipefail
 
-set -x
+### --- Configuration & Defaults --- ###
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+DEBIAN_VERSION="trixie"
+FINAL_OUTPUT_FILE="images.tar.gz"
 
+# Default build parameters (usually overridden by build.sh)
+TARGET_ARCH="$(uname -m)"
+DEBIAN_BUILD_ID="eng-1000000-$(date --utc +'%a %b %d %H:%M:%S %Z %Y')"
+KERNEL_BUILD_ID=""
+SAVE_WORKDIR=0
+MAY_SKIP_BUILD=0
+
+# Path-related global variables (initialized in initialize_paths)
+WORKDIR=""
+DEBIAN_BASE_DIR=""
+CLOUD_INIT_DIR=""
+CIDATA_IMG_NAME="cidata.iso"
+CHROOT_TTYD_DIR=""
+RAW_DISK_IMG=""
+ROOT_PART_FILE=""
+
+### --- Utilities --- ###
+
+# Log a step title in blue
+log_step() { echo -e "\n\033[1;34m[STEP]\033[0m $1"; }
+
+# Log an informational message in green
+log_info() { echo -e "\033[1;32m[INFO]\033[0m $1"; }
+
+# Log an error message in red and exit
+error() { echo -e "\033[1;31m[ERROR]\033[0m $1" >&2; exit 1; }
+
+# Print help message
 show_help() {
-	echo "Usage: sudo $0 [OPTION]... [FILE]"
-	echo "Builds a debian image and save it to FILE. [sudo is required]"
-	echo "Options:"
-	echo "-a ARCH       Architecture of the image [default is host arch: $(uname -m)]"
-	echo "-b BUILD_ID   Set build id of the debian image [default is eng-1000000-\$(date --utc +'%a %b %d %H:%M:%S %Z %Y')]"
-	echo "-k KERNEL_ID  Build ID for kernel [default is the last known good build]"
-	echo "-h            Print usage and this help message and exit."
-	echo "-w            Save temp work directory [for debugging]"
-	echo "-W WORK_DIR   Specify work dir instead of temporarily creating. Imply -w [for debugging]"
+  echo "Usage: sudo $0 [OPTION]... [FILE]"
+  echo "Builds a debian image and saves it to FILE. [sudo is required]"
+  echo ""
+  echo "Options:"
+  echo "-a ARCH       Architecture of the image [default: $TARGET_ARCH]"
+  echo "-b BUILD_ID   Set build id of the debian image"
+  echo "-k KERNEL_ID  Build ID for kernel [default: latest from CI]"
+  echo "-w            Save temp work directory [for debugging]"
+  echo "-W WORK_DIR   Specify work dir instead of temporarily creating one."
 }
 
-check_sudo() {
-	if [ "$EUID" -ne 0 ]; then
-		echo "Please run as root." ; exit 1
-	fi
-}
+### --- Functions --- ###
 
+# Parse command line options and set architecture-specific variables
 parse_options() {
-	while getopts "a:b:k:hwW:" option; do
-		case ${option} in
-			a)
-				arch="$OPTARG"
-				;;
-			b)
-				build_id="$OPTARG"
-				;;
-			k)
-                kernel_build_id="$OPTARG"
-                ;;
-			h)
-				show_help ; exit
-				;;
-			w)
-				save_workdir=1
-				;;
-			W)
-				workdir="${OPTARG%/}"
-				save_workdir=1
-				may_skip_build=1
-				;;
-			*)
-				echo "Invalid option: $OPTARG" ; exit 1
-				;;
-		esac
-	done
-	case "$arch" in
-		aarch64)
-			debian_arch="arm64"
-			vmlinuz_name="Image"
-			;;
-		x86_64)
-			debian_arch="amd64"
-			vmlinuz_name="bzImage"
-			;;
-		*)
-			echo "Invalid architecture: $arch" ; exit 1
-			;;
-	esac
-	if [[ "${*:$OPTIND:1}" ]]; then
-		output="${*:$OPTIND:1}"
-	fi
+  while getopts "a:b:k:hwW:" option; do
+    case ${option} in
+      a) TARGET_ARCH="$OPTARG" ;;
+      b) DEBIAN_BUILD_ID="$OPTARG" ;;
+      k) KERNEL_BUILD_ID="$OPTARG" ;;
+      h) show_help ; exit ;;
+      w) SAVE_WORKDIR=1 ;;
+      W)
+        WORKDIR="${OPTARG%/}"
+        SAVE_WORKDIR=1
+        MAY_SKIP_BUILD=1
+        ;;
+      *) error "Invalid option: $OPTARG" ;;
+    esac
+  done
+
+  case "$TARGET_ARCH" in
+    aarch64) DEBIAN_ARCH="arm64"; VMLINUZ_NAME="Image" ;;
+    x86_64)  DEBIAN_ARCH="amd64"; VMLINUZ_NAME="bzImage" ;;
+    *) error "Invalid architecture: $TARGET_ARCH" ;;
+  esac
+
+  # Use optional positional argument as output filename
+  if [[ "${*:$OPTIND:1}" ]]; then
+    FINAL_OUTPUT_FILE="${*:$OPTIND:1}"
+  fi
 }
 
-download_debian_cloud_image() {
-	if [[ "$may_skip_build" == 1 && -f "${raw_disk_image}" ]]; then
-		echo "Skipping download_debian_cloud_image(). ${raw_disk_image} already exists"
-		return
-	fi
+# Initialize all global path variables
+initialize_paths() {
+  if [[ -z "${WORKDIR}" ]]; then
+    WORKDIR=$(mktemp -d)
+  else
+    mkdir -p "${WORKDIR}"
+  fi
 
-	local outdir="${debian_cloud_image}"
-	mkdir -p "${outdir}" || true
-
-	local img=debian-13-genericcloud-${debian_arch}.tar.xz
-	local url_base="https://cloud.debian.org/images/cloud/${debian_version}/latest"
-	local url="${url_base}/${img}"
-	local sha_url="${url_base}/SHA512SUMS"
-	local cache_dir="/mnt/image-cache"
-	local cached_img="${cache_dir}/${img}"
-	local cached_sha="${cache_dir}/SHA512SUMS"
-
-	mkdir -p "${cache_dir}" || true
-
-	# Always get the latest checksum file to know the target hash
-	wget -q -O "${cached_sha}" "${sha_url}"
-	local expected_sha=$(grep "${img}" "${cached_sha}" | awk '{print $1}')
-
-	# Use aria2c for fast download with automatic checksum verification
-	# --checksum: verify the hash
-	# -x16, -s16: use 16 connections for speed
-	# -d, -o: specify directory and output filename
-	aria2c --checksum=sha-512="${expected_sha}" \
-	       -x16 -s16 \
-	       -d "${cache_dir}" -o "${img}" \
-	       "${url}"
-
-	echo "Extracting ${cached_img} to ${outdir}..."
-	tar xJ -f "${cached_img}" -C "${outdir}"
+  DEBIAN_BASE_DIR="${WORKDIR}/debian_cloud_image"
+  CLOUD_INIT_DIR="${DEBIAN_BASE_DIR}/cidata"
+  CHROOT_TTYD_DIR="${DEBIAN_BASE_DIR}/chroot_ttyd"
+  RAW_DISK_IMG="${DEBIAN_BASE_DIR}/disk.raw"
+  ROOT_PART_FILE="${WORKDIR}/root_part"
 }
 
-build_rust_as_deb() {
-	local dst="${cidata}/localdebs"
+# Download the Debian cloud image and verify its integrity using SHA512
+fetch_debian_image() {
+  if [[ "$MAY_SKIP_BUILD" == 1 && -f "${RAW_DISK_IMG}" ]]; then
+    log_info "Skipping Debian image download: ${RAW_DISK_IMG} already exists."
+    return
+  fi
 
-	# deb file format: ${name}_${version}_${arch}.deb)
-	local name="${1//_/-}"
-	local old=$(find ${dst} -maxdepth 1 -name "${name}_*.deb")
-	if [[ "$may_skip_build" == 1 && -n "${old}" ]]; then
-		echo "Skipping build_rust_as_deb(${1}). ${old} already exists"
-		return
-	fi
+  log_step "Downloading and verifying Debian cloud image (${DEBIAN_ARCH})..."
 
-	pushd "$SCRIPT_DIR/../../guest/$1" > /dev/null
-	cargo deb \
-		--target "${arch}-unknown-linux-gnu" \
-		--output "${dst}"
-	popd > /dev/null
+  local remote_img_name="debian-13-genericcloud-${DEBIAN_ARCH}.tar.xz"
+  local url_base="https://cloud.debian.org/images/cloud/${DEBIAN_VERSION}/latest"
+  local url="${url_base}/${remote_img_name}"
+  local sha_url="${url_base}/SHA512SUMS"
+  local local_cache_dir="/mnt/image-cache"
+  local local_cached_img="${local_cache_dir}/${remote_img_name}"
+  local local_cached_sha="${local_cache_dir}/SHA512SUMS"
+
+  mkdir -p "${DEBIAN_BASE_DIR}" "${local_cache_dir}"
+
+  # Get the latest expected checksum
+  wget -q -O "${local_cached_sha}" "${sha_url}"
+  local expected_sha=$(grep "${remote_img_name}" "${local_cached_sha}" | awk '{print $1}')
+
+  # Use aria2c for fast download with automatic checksum verification
+  # -x16, -s16: use 16 connections for speed
+  log_info "Fetching ${remote_img_name} via aria2c..."
+  aria2c --checksum=sha-512="${expected_sha}" \
+         -x16 -s16 \
+         -d "${local_cache_dir}" -o "${remote_img_name}" \
+         "${url}"
+
+  log_info "Extracting image to workspace..."
+  tar xJ -f "${local_cached_img}" -C "${DEBIAN_BASE_DIR}"
 }
 
-build_ttyd() {
-	local install_path="${chroot_ttyd}/usr/local/bin/ttyd"
+# Compile ttyd using a pre-installed musl toolchain
+compile_ttyd() {
+  local install_path="${CHROOT_TTYD_DIR}/usr/local/bin/ttyd"
+  if [[ "$MAY_SKIP_BUILD" == 1 && -f "${install_path}" ]]; then
+    log_info "Skipping ttyd build: ${install_path} already exists."
+    return
+  fi
 
-	if [[ "$may_skip_build" == 1 && -f "${install_path}" ]]; then
-		echo "Skipping build_ttyd(). ${install_path} already exists"
-		return
-	fi
+  log_step "Compiling ttyd terminal proxy..."
+  local ttyd_version=1.7.7
+  local build_env=(
+    "BUILD_TARGET=${TARGET_ARCH}"
+    "CROSS_ROOT=/opt/musl-toolchains"
+    "STAGE_ROOT=${WORKDIR}/tmp.ttyd/stage"
+    "BUILD_ROOT=${WORKDIR}/tmp.ttyd/build"
+  )
 
-	local ttyd_version=1.7.7
-	local url="https://github.com/tsl0922/ttyd/archive/refs/tags/${ttyd_version}.tar.gz"
-	local build_env=(
-		"BUILD_TARGET=${arch}"
-		"CROSS_ROOT=${workdir}/tmp.ttyd/cross"
-		"STAGE_ROOT=${workdir}/tmp.ttyd/stage"
-		"BUILD_ROOT=${workdir}/tmp.ttyd/build"
-	)
-	local out="${workdir}/tmp.ttyd/stage/${arch}-linux-musl"
+  cp -r "$SCRIPT_DIR/ttyd/" "${WORKDIR}"
+  pushd "${WORKDIR}" > /dev/null
+  wget -qO- "https://github.com/tsl0922/ttyd/archive/refs/tags/${ttyd_version}.tar.gz" | tar xz
+  cp ttyd/* ttyd-${ttyd_version}/scripts
 
-	cp -r "$SCRIPT_DIR/ttyd/" "${workdir}"
+  pushd "ttyd-${ttyd_version}" > /dev/null
+  bash -c "env ${build_env[*]} ./scripts/cross-build.sh"
 
-	pushd "${workdir}" > /dev/null
-	wget "${url}" -O - | tar xz
-	cp ttyd/* ttyd-${ttyd_version}/scripts
-	pushd "$workdir/ttyd-${ttyd_version}" > /dev/null
-	bash -c "env ${build_env[*]} ./scripts/cross-build.sh"
-
-	mkdir -p "${chroot_ttyd}/usr/local/bin" || true
-	cp "${out}/bin/ttyd" "${chroot_ttyd}/usr/local/bin/ttyd"
-	chmod 755 "${chroot_ttyd}/usr/local/bin/ttyd"
-	mkdir -p "${chroot_ttyd}/usr/share/doc/ttyd/copyright"
-	cp LICENSE "${chroot_ttyd}/usr/share/doc/ttyd/copyright/"
-	popd > /dev/null
-	popd > /dev/null
+  mkdir -p "${CHROOT_TTYD_DIR}/usr/local/bin"
+  cp "${WORKDIR}/tmp.ttyd/stage/${TARGET_ARCH}-linux-musl/bin/ttyd" "${install_path}"
+  chmod 755 "${install_path}"
+  popd > /dev/null
+  popd > /dev/null
 }
 
-copy_android_config() {
-	mkdir -p "${cidata}/localdebs" || true
-	cp -avpR "$SCRIPT_DIR/cloud-init_config"/* "${cidata}"
-	cp -avpR "$SCRIPT_DIR/localdebs/"* "${cidata}/localdebs" || true
+# Build a guest-side Rust project as a .deb package
+compile_rust_deb() {
+  local guest_project=$1
+  local deb_output_dir="${CLOUD_INIT_DIR}/localdebs"
+  local deb_name_base="${guest_project//_/-}"
 
-	build_ttyd
-	build_rust_as_deb forwarder_guest
-	build_rust_as_deb forwarder_guest_launcher
-	build_rust_as_deb shutdown_runner
-	build_rust_as_deb storage_balloon_agent
+  if [[ "$MAY_SKIP_BUILD" == 1 && -n "$(find "${deb_output_dir}" -name "${deb_name_base}_*.deb")" ]]; then
+    log_info "Skipping Rust build for ${guest_project}: package already exists."
+    return
+  fi
+
+  log_step "Building Rust project: ${guest_project}"
+  pushd "$SCRIPT_DIR/../../guest/${guest_project}" > /dev/null
+  cargo deb --target "${TARGET_ARCH}-unknown-linux-gnu" --output "${deb_output_dir}"
+  popd > /dev/null
 }
 
-build_cidata() {
-	local dst="${workdir}/${cidata_image}"
+# Prepare Android-specific configurations and build custom components
+prepare_android_configs() {
+  log_step "Assembling Android-specific configurations..."
+  mkdir -p "${CLOUD_INIT_DIR}/localdebs"
 
-	# repo doesn't fully keep ownership nor permission, so explicitly set here.
-	chmod -R o=g "${cidata}"
-	chown -R 0:0 "${cidata}"
+  log_info "Copying cloud-init configs and local debs..."
+  cp -apR "$SCRIPT_DIR/cloud-init_config"/* "${CLOUD_INIT_DIR}"
+  cp -apR "$SCRIPT_DIR/localdebs/"* "${CLOUD_INIT_DIR}/localdebs" || true
 
-	# Build CIDATA with ISO9660.
-	# Need to clean first. otherwise try to append here.
-	rm -rf "${dst}" || true
-	genisoimage -output "${dst}" -V cidata -J -R "${cidata}"
+  compile_ttyd
+  compile_rust_deb forwarder_guest
+  compile_rust_deb forwarder_guest_launcher
+  compile_rust_deb shutdown_runner
+  compile_rust_deb storage_balloon_agent
 }
 
-generate_output_package() {
-	local vm_config="$SCRIPT_DIR/vm_config.json"
+# Create a cloud-init CIDATA ISO image
+build_cidata_iso() {
+  log_step "Building CIDATA configuration ISO..."
+  chmod -R o=g "${CLOUD_INIT_DIR}"
+  chown -R 0:0 "${CLOUD_INIT_DIR}"
 
-	pushd ${workdir} > /dev/null
-
-	echo ${build_id} > build_id
-
-	local root_partition_num=1
-	if [[ "$may_skip_build" == 0 || ! -f "root_part" ]]; then
-		loop=$(losetup -f --show --partscan $raw_disk_image)
-		dd if="${loop}p$root_partition_num" of=root_part bs=4M conv=sparse status=progress
-		losetup -d "${loop}"
-
-		${SCRIPT_DIR}/chroot_rootfs.sh \
-			-b "${SCRIPT_DIR}:/mnt/build" \
-			-b "${chroot_ttyd}:/mnt/ttyd" \
-			-b "/mnt/apt-cache:/var/cache/apt/archives" \
-			-c /mnt/build/build_rootfs_in_chroot.sh \
-			root_part
-
-		sync
-	fi
-
-	cp ${vm_config} vm_config.json
-
-	sed -i "s/{root_part_guid}/$(sfdisk --part-uuid $raw_disk_image $root_partition_num)/g" vm_config.json
-
-	if [[ -z "${kernel_build_id}" ]]; then
-		kernel_build_id=$(curl https://ci.android.com/builds/branches/aosp_kernel-common-android16-6.12/status.json | \
-			jq -r '.targets[] | select(.name == "kernel_server_'${arch}'") | .last_known_good_build')
-
-		if [[ -z "${kernel_build_id}" || "${kernel_build_id}" == "null" ]]; then
-			echo "ERROR: Failed to fetch the latest kernel build ID for ${arch}." >&2
-			echo "The CI endpoint may be down or the build is missing." >&2
-			echo "Please try specifying a build ID manually using the -k option." >&2
-			exit 1
-		fi
-	fi
-
-	wget -O vmlinuz "https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/${vmlinuz_name}/url"
-	wget -O initrd.img "https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/initramfs.img/url"
-
-	contents=(
-		build_id
-		root_part
-		vm_config.json
-		vmlinuz
-		initrd.img
-		${cidata_image}
-	)
-
-	popd > /dev/null
-
-	# Use pigz for parallel compression, avoiding --sparse for better compatibility
-	tar -I pigz -cv -f ${output} -C ${workdir} "${contents[@]}"
+  rm -f "${WORKDIR}/${CIDATA_IMG_NAME}"
+  genisoimage -output "${WORKDIR}/${CIDATA_IMG_NAME}" -V cidata -J -R "${CLOUD_INIT_DIR}"
 }
 
-clean_up() {
-	[ "$save_workdir" -eq 1 ] || rm -rf "${workdir}"
+# Extract and customize the root filesystem image using chroot
+customize_rootfs() {
+  if [[ "$MAY_SKIP_BUILD" == 1 && -f "${ROOT_PART_FILE}" ]]; then
+    log_info "Skipping rootfs customization: ${ROOT_PART_FILE} already exists."
+    return
+  fi
+
+  log_step "Extracting and customizing root filesystem..."
+  local root_partition_num=1
+  local loop_device=$(losetup -f --show --partscan "${RAW_DISK_IMG}")
+  dd if="${loop_device}p$root_partition_num" of="${ROOT_PART_FILE}" bs=4M conv=sparse status=progress
+  losetup -d "${loop_device}"
+
+  # Run customization logic inside the guest filesystem
+  "${SCRIPT_DIR}/chroot_rootfs.sh" \
+    -b "${SCRIPT_DIR}:/mnt/build" \
+    -b "${CHROOT_TTYD_DIR}:/mnt/ttyd" \
+    -b "/mnt/apt-cache:/var/cache/apt/archives" \
+    -c "/mnt/build/build_rootfs_in_chroot.sh" \
+    "${ROOT_PART_FILE}"
+
+  log_info "Synchronizing filesystem changes..."
+  sync
 }
 
-set -e
-trap clean_up EXIT
+# Package the customized filesystem with the kernel and initrd
+generate_final_package() {
+  log_step "Creating final delivery package: ${FINAL_OUTPUT_FILE}"
+  pushd "${WORKDIR}" > /dev/null
 
-check_sudo
+  echo "${DEBIAN_BUILD_ID}" > build_id
+  cp "$SCRIPT_DIR/vm_config.json" vm_config.json
 
-output=images.tar.gz
-build_id=$(echo eng-1000000-$(date --utc +'%a %b %d %H:%M:%S %Z %Y'))
-kernel_build_id=
-debian_version=trixie
-arch="$(uname -m)"
-save_workdir=0
-may_skip_build=0
+  # Sync the filesystem UUID with the VM configuration
+  local root_uuid=$(sfdisk --part-uuid "${RAW_DISK_IMG}" 1)
+  sed -i "s/{root_part_guid}/${root_uuid}/g" vm_config.json
 
-parse_options "$@"
+  # Fetch the latest Android Common Kernel from CI if not specified
+  if [[ -z "${KERNEL_BUILD_ID}" ]]; then
+    KERNEL_BUILD_ID=$(curl -s https://ci.android.com/builds/branches/aosp_kernel-common-android16-6.12/status.json | \
+      jq -r '.targets[] | select(.name == "kernel_server_'${TARGET_ARCH}'") | .last_known_good_build')
+  fi
 
-if [[ -n "${workdir}" ]]; then
-	mkdir -p "${workdir}" || true
-else
-	workdir=$(mktemp -d)
-fi
+  local kernel_url="https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${KERNEL_BUILD_ID}/kernel_server_${TARGET_ARCH}/attempts/latest/artifacts"
+  wget -q -O vmlinuz "${kernel_url}/${VMLINUZ_NAME}/url"
+  wget -q -O initrd.img "${kernel_url}/initramfs.img/url"
 
-debian_cloud_image=${workdir}/debian_cloud_image
-cidata=${debian_cloud_image}/cidata
-cidata_image="cidata.iso"
-chroot_ttyd=${debian_cloud_image}/chroot_ttyd
-raw_disk_image=${debian_cloud_image}/disk.raw
+  local bundle_contents=(build_id "${ROOT_PART_FILE##*/}" vm_config.json vmlinuz initrd.img "${CIDATA_IMG_NAME}")
+  popd > /dev/null
 
-download_debian_cloud_image
-copy_android_config
-build_cidata
-generate_output_package
+  # Compress everything into the final tarball using multi-core pigz
+  tar -I pigz -cv -f "${FINAL_OUTPUT_FILE}" -C "${WORKDIR}" "${bundle_contents[@]}"
+}
+
+# Delete the temporary work directory unless preservation is requested
+cleanup() {
+  [[ "$SAVE_WORKDIR" -eq 1 ]] || rm -rf "${WORKDIR}"
+}
+
+### --- Main Execution --- ###
+
+main() {
+  parse_options "$@"
+  initialize_paths
+
+  trap cleanup EXIT
+
+  fetch_debian_image
+  prepare_android_configs
+  build_cidata_iso
+  customize_rootfs
+  generate_final_package
+
+  log_step "Build completed successfully: ${FINAL_OUTPUT_FILE}"
+}
+
+main "$@"
