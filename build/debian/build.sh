@@ -120,7 +120,6 @@ run_builder() {
     $CUSTOM_WORKDIR_MOUNT \
     -v /dev:/dev \
     -v "$REPO_ROOT_DIR:/root/Virtualization" \
-    -v /var/log/fai:/var/log/fai \
     -v "$HOME/.cargo/registry:/root/.cargo/registry" \
     -v "$HOME/.cargo/git:/root/.cargo/git" \
     -v "$HOME/.cache/ferrochrome-apt:/mnt/apt-cache" \

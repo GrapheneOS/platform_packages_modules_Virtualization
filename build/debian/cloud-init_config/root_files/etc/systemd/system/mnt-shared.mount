@@ -1,0 +1,11 @@
+[Unit]
+Description=Virtiofs mount for Android shared folder
+
+[Mount]
+What=android
+Where=/mnt/shared
+Type=virtiofs
+Options=defaults
+
+[Install]
+WantedBy=multi-user.target

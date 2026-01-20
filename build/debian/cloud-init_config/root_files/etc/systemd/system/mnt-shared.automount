@@ -1,0 +1,8 @@
+[Unit]
+Description=Automount for Android shared folder
+
+[Automount]
+Where=/mnt/shared
+
+[Install]
+WantedBy=multi-user.target
