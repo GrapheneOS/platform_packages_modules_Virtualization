@@ -20,6 +20,7 @@ _copy_files() {
 
 _restart_services() {
 	CONFIG_CHANGED_SERVICES=(
+		attach-cidata.service
 		avahi_ttyd.service
 		backup_mount.service
 		mnt-shared.automount

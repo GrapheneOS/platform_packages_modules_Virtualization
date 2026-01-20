@@ -214,6 +214,16 @@ prepare_android_configs() {
 # Create a cloud-init CIDATA ISO image
 build_cidata_iso() {
   log_step "Building CIDATA configuration ISO..."
+
+  # Calculate a unique instance-id based on the contents of the configuration
+  # TODO (b/477208126) re-implement this in Soong
+  log_info "Generating dynamic instance-id from configuration checksum..."
+  local config_hash=$(find "${SCRIPT_DIR}/cloud-init_config" -type f -exec sha256sum {} + | sort | sha256sum | cut -d' ' -f1 | cut -c1-16)
+
+  # Inject the hash into the copied meta-data file
+  sed -i "s/{INSTANCE_ID}/${config_hash}/g" "${CLOUD_INIT_DIR}/meta-data"
+  log_info "Instance ID set to: ${config_hash}"
+
   chmod -R o=g "${CLOUD_INIT_DIR}"
   chown -R 0:0 "${CLOUD_INIT_DIR}"
 
