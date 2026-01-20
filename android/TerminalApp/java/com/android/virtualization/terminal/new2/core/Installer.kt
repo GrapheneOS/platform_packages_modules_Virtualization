@@ -224,6 +224,9 @@ object Installer {
     }
 
     private fun canInstall(): Boolean {
+        if (ImageArchive.isLocalImage()) {
+            return true;
+        }
         val monitor = networkMonitor ?: return false
         if (!monitor.isNetworkConnected.value) {
             Log.d("Installer", "cannot install because network disconnected")
