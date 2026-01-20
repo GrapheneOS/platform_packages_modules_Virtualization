@@ -27,11 +27,12 @@ use std::result;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
+use android_logger::Config;
 use forwarder::forwarder::ForwarderSession;
 use jni::objects::{JIntArray, JObject, JValue};
 use jni::sys::jint;
 use jni::JNIEnv;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, warn, LevelFilter};
 use nix::sys::eventfd::{EfdFlags, EventFd};
 use poll_token_derive::PollToken;
 use vmm_sys_util::poll::{PollContext, PollToken};
@@ -384,6 +385,10 @@ pub extern "C" fn Java_com_android_virtualization_terminal_DebianServiceImpl_run
     cid: jint,
     callback: JObject,
 ) {
+    android_logger::init_once(
+        Config::default().with_max_level(LevelFilter::Debug).with_tag("ForwarderHost"),
+    );
+
     // Clear shutdown event FD before running forwarder host.
     SHUTDOWN_EVT.write(1).expect("Failed to write shutdown event FD");
     SHUTDOWN_EVT.read().expect("Failed to consume shutdown event FD");
