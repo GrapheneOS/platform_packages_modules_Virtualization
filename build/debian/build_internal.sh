@@ -288,11 +288,14 @@ main() {
 
   trap cleanup EXIT
 
-  fetch_debian_image
-  prepare_android_configs
-  build_cidata_iso
-  customize_rootfs
-  generate_final_package
+  # Run the build process with internal timestamps
+  {
+    fetch_debian_image
+    prepare_android_configs
+    build_cidata_iso
+    customize_rootfs
+    generate_final_package
+  } 2>&1 | ts -s
 
   log_step "Build completed successfully: ${FINAL_OUTPUT_FILE}"
 }

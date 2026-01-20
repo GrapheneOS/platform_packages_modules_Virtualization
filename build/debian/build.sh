@@ -134,7 +134,7 @@ run_builder() {
                   $INTERNAL_WORKDIR_ARGS \
                   -b \"$DEBIAN_BUILD_ID\" \
                   $KERNEL_BUILD_ID_ARGS 2>&1 \
-             $POST_BUILD_SHELL" | ts -s
+             $POST_BUILD_SHELL"
 }
 
 ### --- Main Execution --- ###
