@@ -14,6 +14,24 @@ remove_packages() {
 # cloud-init requires several minutes of extra delay for installing packages,
 # Preinstall required packages here to reduce initial booting time.
 install_packages() {
+	# Prevent apt from cleaning up the cache
+	echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/01keep-debs
+
+	# Speed up dpkg by excluding unnecessary files
+	# This significantly reduces unpacking time and final image size
+	mkdir -p /etc/dpkg/dpkg.cfg.d
+	cat <<EOF > /etc/dpkg/dpkg.cfg.d/99-speedup
+path-exclude=/usr/share/doc/*
+path-exclude=/usr/share/man/*
+path-exclude=/usr/share/locale/*
+path-exclude=/usr/share/info/*
+path-exclude=/usr/share/lintian/*
+EOF
+
+	# Prevent services from starting during package installation
+	echo -e '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d
+	chmod +x /usr/sbin/policy-rc.d
+
 	INSTALL_PACKAGES=(
 		kmod
 		udev
@@ -32,8 +50,9 @@ install_packages() {
 	)
 
 	apt update || apt update
-	DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
-	apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
+	DEBIAN_FRONTEND=noninteractive apt install -y eatmydata
+	DEBIAN_FRONTEND=noninteractive eatmydata apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
+	eatmydata apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
 }
 
 # TODO: Install ttyd from debian package after it picks up our patches
@@ -55,6 +74,14 @@ modify_pre_cloud_init_configs() {
 	# system doesn't need networking.
 	systemctl disable systemd-networkd-wait-online.service
 	systemctl mask systemd-networkd-wait-online.service
+
+	# Cleanup build-time tools
+	DEBIAN_FRONTEND=noninteractive apt purge -y eatmydata
+
+	# Cleanup build-time optimizations
+	rm -f /etc/apt/apt.conf.d/01keep-debs
+	rm -f /usr/sbin/policy-rc.d
+	rm -f /etc/dpkg/dpkg.cfg.d/99-speedup
 }
 
 remove_packages

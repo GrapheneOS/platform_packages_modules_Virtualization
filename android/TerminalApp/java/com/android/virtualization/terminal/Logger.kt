@@ -88,8 +88,10 @@ internal object Logger {
             ZipOutputStream(fos).use { zos ->
                 val logDirs =
                     context.filesDir.listFiles { it.isDirectory() && it.name.endsWith(".log") }
+                        ?: return
                 for (dir in logDirs) {
-                    val logFiles = dir.listFiles { it.isFile() && it.name.endsWith(".txt") }
+                    val logFiles =
+                        dir.listFiles { it.isFile() && it.name.endsWith(".txt") } ?: continue
                     for (file in logFiles) {
                         // To prevent absolute paths in the zip
                         val entryName = file.toRelativeString(context.filesDir)

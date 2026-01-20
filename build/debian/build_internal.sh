@@ -73,67 +73,6 @@ parse_options() {
 	fi
 }
 
-install_prerequisites() {
-	apt update
-	apt install software-properties-common -y
-	add-apt-repository -y ppa:fai/ppa
-	apt update
-	packages=(
-		apt-utils
-		automake
-		binfmt-support
-		build-essential
-		ca-certificates
-		cmake
-		curl
-		debsums
-		dosfstools
-		fdisk
-		genisoimage
-		git
-		jq
-		libjson-c-dev
-		libtool
-		libwebsockets-dev
-		make
-		protobuf-compiler
-		python3
-		python3-libcloud
-		python3-marshmallow
-		python3-pytest
-		python3-yaml
-		qemu-user-static
-		qemu-utils
-		sudo
-		udev
-		wget
-	)
-	if [[ "$arch" == "aarch64" ]]; then
-		packages+=(
-			gcc-aarch64-linux-gnu
-			libc6-dev-arm64-cross
-			qemu-system-arm
-		)
-	else
-		packages+=(
-			qemu-system
-		)
-	fi
-
-	DEBIAN_FRONTEND=noninteractive \
-		apt install --no-install-recommends --assume-yes "${packages[@]}"
-
-	if [ ! -f "$HOME"/.cargo/bin/cargo ]; then
-		git clone https://github.com/rust-lang/rustup.git ${workdir}/rustup
-		${workdir}/rustup/rustup-init.sh -y
-	fi
-
-	source "$HOME"/.cargo/env
-	rustup target add "${arch}"-unknown-linux-gnu
-	cargo install cargo-license --version 0.6.1
-	cargo install cargo-deb --version 3.3.0
-}
-
 download_debian_cloud_image() {
 	if [[ "$may_skip_build" == 1 && -f "${raw_disk_image}" ]]; then
 		echo "Skipping download_debian_cloud_image(). ${raw_disk_image} already exists"
@@ -144,8 +83,30 @@ download_debian_cloud_image() {
 	mkdir -p "${outdir}" || true
 
 	local img=debian-13-genericcloud-${debian_arch}.tar.xz
-	local url="https://cloud.debian.org/images/cloud/${debian_version}/latest/${img}"
-	wget -O - "${url}" | tar xJ -C "${outdir}"
+	local url_base="https://cloud.debian.org/images/cloud/${debian_version}/latest"
+	local url="${url_base}/${img}"
+	local sha_url="${url_base}/SHA512SUMS"
+	local cache_dir="/mnt/image-cache"
+	local cached_img="${cache_dir}/${img}"
+	local cached_sha="${cache_dir}/SHA512SUMS"
+
+	mkdir -p "${cache_dir}" || true
+
+	# Always get the latest checksum file to know the target hash
+	wget -q -O "${cached_sha}" "${sha_url}"
+	local expected_sha=$(grep "${img}" "${cached_sha}" | awk '{print $1}')
+
+	# Use aria2c for fast download with automatic checksum verification
+	# --checksum: verify the hash
+	# -x16, -s16: use 16 connections for speed
+	# -d, -o: specify directory and output filename
+	aria2c --checksum=sha-512="${expected_sha}" \
+	       -x16 -s16 \
+	       -d "${cache_dir}" -o "${img}" \
+	       "${url}"
+
+	echo "Extracting ${cached_img} to ${outdir}..."
+	tar xJ -f "${cached_img}" -C "${outdir}"
 }
 
 build_rust_as_deb() {
@@ -236,14 +197,17 @@ generate_output_package() {
 	local root_partition_num=1
 	if [[ "$may_skip_build" == 0 || ! -f "root_part" ]]; then
 		loop=$(losetup -f --show --partscan $raw_disk_image)
-		dd if="${loop}p$root_partition_num" of=root_part
+		dd if="${loop}p$root_partition_num" of=root_part bs=4M conv=sparse status=progress
 		losetup -d "${loop}"
 
 		${SCRIPT_DIR}/chroot_rootfs.sh \
 			-b "${SCRIPT_DIR}:/mnt/build" \
 			-b "${chroot_ttyd}:/mnt/ttyd" \
+			-b "/mnt/apt-cache:/var/cache/apt/archives" \
 			-c /mnt/build/build_rootfs_in_chroot.sh \
 			root_part
+
+		sync
 	fi
 
 	cp ${vm_config} vm_config.json
@@ -262,8 +226,8 @@ generate_output_package() {
 		fi
 	fi
 
-	wget -O vmlinuz https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/${vmlinuz_name}/url
-	wget -O initrd.img https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/initramfs.img/url
+	wget -O vmlinuz "https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/${vmlinuz_name}/url"
+	wget -O initrd.img "https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${kernel_build_id}/kernel_server_${arch}/attempts/latest/artifacts/initramfs.img/url"
 
 	contents=(
 		build_id
@@ -276,8 +240,8 @@ generate_output_package() {
 
 	popd > /dev/null
 
-	# --sparse option isn't supported in apache-commons-compress
-	tar czv -f ${output} -C ${workdir} "${contents[@]}"
+	# Use pigz for parallel compression, avoiding --sparse for better compatibility
+	tar -I pigz -cv -f ${output} -C ${workdir} "${contents[@]}"
 }
 
 clean_up() {
@@ -311,7 +275,6 @@ cidata_image="cidata.iso"
 chroot_ttyd=${debian_cloud_image}/chroot_ttyd
 raw_disk_image=${debian_cloud_image}/disk.raw
 
-install_prerequisites
 download_debian_cloud_image
 copy_android_config
 build_cidata

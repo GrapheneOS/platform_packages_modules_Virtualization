@@ -305,7 +305,7 @@ class VmLauncherService : Service() {
 
     private fun getTerminalServiceInfo(timeout_secs: Int): CompletableFuture<NsdServiceInfo> {
         val executor = Executors.newSingleThreadExecutor(TerminalThreadFactory(applicationContext))
-        val nsdManager = getSystemService<NsdManager?>(NsdManager::class.java)
+        val nsdManager = getSystemService(NsdManager::class.java)!!
         val queryInfo = NsdServiceInfo()
         queryInfo.serviceType = "_http._tcp"
         queryInfo.serviceName = "ttyd"
@@ -503,8 +503,10 @@ class VmLauncherService : Service() {
         if (debianService != null && debianService!!.shutdownDebian()) {
             // During shutdown, change the notification content to indicate that it's closing
             val notification = createNotificationForTerminalClose()
-            getSystemService<NotificationManager?>(NotificationManager::class.java)
-                .notify(this.hashCode(), notification)
+            getSystemService(NotificationManager::class.java)!!.notify(
+                this.hashCode(),
+                notification,
+            )
 
             runner?.also { r ->
                 // For the case that shutdown from the guest agent fails.
@@ -545,7 +547,7 @@ class VmLauncherService : Service() {
             }
         })
         portNotifier?.stop()
-        getSystemService<NotificationManager?>(NotificationManager::class.java).cancelAll()
+        getSystemService(NotificationManager::class.java)!!.cancelAll()
         stopDebianServer()
         bgThreads.shutdownNow()
         mainWorkerThread.shutdown()
