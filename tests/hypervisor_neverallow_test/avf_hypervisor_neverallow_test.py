@@ -151,6 +151,15 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
             "Failed to find security context for hypervisor device in `ls` "
             f"output. err: {err}")
 
+        # Check if the *attribute* `crosvm_domain` exists. If it does, we should use
+        # it for the exclusion. If it doesn't, we use the legacy *type* `crosvm`.
+        cmd = [self._analyzer_path, policy_path, "attribute", "crosvm_domain"]
+        _, _, returncode = _RunCommand(cmd)
+        if returncode == 0:
+            exclusion = "-crosvm_domain"
+        else:
+            exclusion = "-crosvm"
+
         # `ls` outputs looks like `u:object_r:kvm_device:s0 /dev/kvm`.
         for line in out.split('\n'):
             try:
@@ -158,8 +167,8 @@ class AvfHypervisorNeverallowTest(unittest.TestCase):
                 path = line.split()[-1]
             except IndexError:
                 self.fail(f"Failed to parse: {line}")
-            rule = "neverallow {domain -crosvm} " f"{context}:chr_file " \
-                   "{open ioctl read write};"
+            rule = "neverallow {domain " f"{exclusion}" "}" f"{context}:chr_file " \
+                    "{open ioctl read write};"
             self._testNeverallowRule(policy_path, rule, path)
 
 if __name__ == "__main__":
