@@ -22,8 +22,8 @@ _restart_services() {
 	CONFIG_CHANGED_SERVICES=(
 		avahi_ttyd.service
 		backup_mount.service
-		virtiofs.service
-		virtiofs_internal.service
+		mnt-shared.automount
+		mnt-internal.automount
 		ttyd.service
 		ttyd_uds.service
 		ttyd_vsock_bridge.service
