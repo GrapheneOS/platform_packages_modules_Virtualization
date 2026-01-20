@@ -18,8 +18,6 @@ package com.android.virt.rkpd.vm_attestation.testapp;
 
 import static android.system.virtualmachine.VirtualMachineConfig.DEBUG_LEVEL_FULL;
 
-import static com.google.common.truth.TruthJUnit.assume;
-
 import android.system.virtualmachine.VirtualMachine;
 import android.system.virtualmachine.VirtualMachineConfig;
 
@@ -79,10 +77,7 @@ public class RkpdVmAttestationTest extends MicrodroidDeviceTestBase {
 
     @Before
     public void setUp() throws Exception {
-        assume().withMessage("RKP Integration tests rely on network availability.")
-                .that(isNetworkConnected())
-                .isTrue();
-        ensureVmAttestationSupported();
+        assumeVmAttestationSupportedWithInternet();
 
         if (mOs == "microdroid") {
             // We don't need this permission to use the microdroid kernel.
