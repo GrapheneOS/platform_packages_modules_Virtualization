@@ -312,8 +312,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWithVendorPartitionSucceedsWithInternet() throws Exception {
-        // pVM remote attestation is only supported on protected VMs.
-        assumeProtectedVM();
+        assumeVmAttestationSupportedWithInternet();
         assume().withMessage("Test needs Remote Attestation support")
                 .that(isRemoteAttestationSupported())
                 .isTrue();
@@ -323,8 +322,18 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 buildVmConfigWithVendor(vendorDiskImage, VM_ATTESTATION_PAYLOAD_PATH);
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("cts_attestation_with_vendor_module", config);
-        checkVmAttestationWithValidChallenge(vm);
+
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+
+        assertWithMessage("VM attestation should succeed when network is available")
+                .that(signingResult.status)
+                .isEqualTo(AttestationStatus.OK);
+        verifyAttestationResult(signingResult, challenge, new String[] {});
     }
+
 
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
