@@ -26,9 +26,27 @@
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Sækja með Wi-Fi eingöngu"</string>
     <string name="installer_btn_install" msgid="1249687873554194768">"Setja upp"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"Setur upp"</string>
+    <!-- no translation found for installer_btn_cancel (3560257458966328733) -->
+    <skip />
+    <!-- no translation found for installer_dlg_title_cancel_install (2347901416414323603) -->
+    <skip />
+    <!-- no translation found for installer_dlg_message_cancel_install (7122895060756794760) -->
+    <skip />
+    <!-- no translation found for installer_dlg_btn_cancel_install (7061500109118550183) -->
+    <skip />
+    <!-- no translation found for installer_dlg_btn_continue_install (4038480932377540963) -->
+    <skip />
     <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Uppsetning tókst ekki sökum netkerfisvillu"</string>
     <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Uppsetning tókst ekki vegna þess að Wi-Fi er ekki tiltækt"</string>
     <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Tókst ekki að setja upp. Reyndu aftur"</string>
+    <!-- no translation found for installer_snkbar_error_no_space (2980013654869871281) -->
+    <skip />
+    <!-- no translation found for installer_snkbar_action_storage (3154991131973261946) -->
+    <skip />
+    <!-- no translation found for installer_msg_mobile_data (3235093415908956584) -->
+    <skip />
+    <!-- no translation found for installer_msg_waiting_network (5866026140340225420) -->
+    <skip />
     <string name="terminal_hint_display" msgid="7172326332224647219">"Skjár útstöðvar"</string>
     <string name="terminal_hint_input" msgid="1959459646864329623">"Bendill"</string>
     <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Auð lína"</string>
