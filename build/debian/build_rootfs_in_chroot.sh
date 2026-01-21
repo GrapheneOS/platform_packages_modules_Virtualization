@@ -1,26 +1,64 @@
 #!/bin/bash
+#
+# ==============================================================================
+# Ferrochrome Rootfs Customization Script (Chroot-side)
+# ==============================================================================
+#
+# This script runs inside the guest chroot environment to perform final
+# configurations and package installations.
+#
+# Key Responsibilities:
+# 1. Removes unnecessary default kernel packages to save space.
+# 2. Pre-installs required packages to reduce initial boot time.
+# 3. Optimizes dpkg/apt performance for faster builds.
+# 4. Configures system services and network settings for AVF compatibility.
+# 5. Cleans up build-time optimizations and temporary files.
+#
+# This script is invoked by build_internal.sh via chroot_rootfs.sh.
+# ==============================================================================
 
-set -ex
+set -eo pipefail
 
-### Build raw images by proprocessing in chroot.
-### Prefer using cloud-init for customization, and modify here only when required.
+### --- Configuration --- ###
 
-SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# Essential packages for the guest environment
+GUEST_PACKAGES=(
+  kmod
+  udev
+  avahi-daemon
+  avahi-utils
+  libbpf-tools
+  libnss-mdns
+  libvulkan1
+  mesa-vulkan-drivers
+  procps
+  pulseaudio
+  systemd-zram-generator
+  vulkan-tools
+  weston
+  xwayland
+)
 
-remove_packages() {
-	apt purge -y linux-image-*
+### --- Functions --- ###
+
+# Remove default kernel packages to make room for our custom kernel
+remove_default_kernels() {
+  echo "--- Removing default kernel packages ---"
+  apt purge -y linux-image-*
 }
 
-# cloud-init requires several minutes of extra delay for installing packages,
-# Preinstall required packages here to reduce initial booting time.
+# Install required packages and optimize the process
 install_packages() {
-	# Prevent apt from cleaning up the cache
-	echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/01keep-debs
+  echo "--- Installing guest packages ---"
+  export DEBIAN_FRONTEND=noninteractive
 
-	# Speed up dpkg by excluding unnecessary files
-	# This significantly reduces unpacking time and final image size
-	mkdir -p /etc/dpkg/dpkg.cfg.d
-	cat <<EOF > /etc/dpkg/dpkg.cfg.d/99-speedup
+  # Build-time optimization: keep downloaded debs in the cache for host-side sharing
+  echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/01keep-debs
+
+  # Optimization: exclude unnecessary files to speed up unpacking and save space
+  # (Note: force-unsafe-io is omitted here as eatmydata handles it more effectively)
+  mkdir -p /etc/dpkg/dpkg.cfg.d
+  cat <<EOF > /etc/dpkg/dpkg.cfg.d/99-slim-image
 path-exclude=/usr/share/doc/*
 path-exclude=/usr/share/man/*
 path-exclude=/usr/share/locale/*
@@ -28,63 +66,72 @@ path-exclude=/usr/share/info/*
 path-exclude=/usr/share/lintian/*
 EOF
 
-	# Prevent services from starting during package installation
-	echo -e '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d
-	chmod +x /usr/sbin/policy-rc.d
+  # Prevent services from starting and suppress udev triggers during installation
+  echo -e '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d
+  chmod +x /usr/sbin/policy-rc.d
 
-	INSTALL_PACKAGES=(
-		kmod
-		udev
-		avahi-daemon
-		avahi-utils
-		libbpf-tools
-		libnss-mdns
-		libvulkan1
-		mesa-vulkan-drivers
-		procps
-		pulseaudio
-		systemd-zram-generator
-		vulkan-tools
-		weston
-		xwayland
-	)
+  # Create a dummy udevadm and systemd-hwdb via dpkg-divert to skip triggers
+  dpkg-divert --add --rename --divert /usr/bin/udevadm.real /usr/bin/udevadm
+  echo -e '#!/bin/sh\necho "Skipping udevadm $*"' > /usr/bin/udevadm
+  chmod +x /usr/bin/udevadm
 
-	apt update || apt update
-	DEBIAN_FRONTEND=noninteractive apt install -y eatmydata
-	DEBIAN_FRONTEND=noninteractive eatmydata apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
-	eatmydata apt install --no-install-recommends -y "${INSTALL_PACKAGES[@]}"
+  dpkg-divert --add --rename --divert /usr/bin/systemd-hwdb.real /usr/bin/systemd-hwdb
+  echo -e '#!/bin/sh\necho "Skipping systemd-hwdb $*"' > /usr/bin/systemd-hwdb
+  chmod +x /usr/bin/systemd-hwdb
+
+  echo "Updating package lists..."
+  apt update || apt update
+
+  echo "Installing eatmydata for faster build-time installations..."
+  apt install -y eatmydata
+
+  echo "Upgrading existing packages..."
+  eatmydata apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
+
+  echo "Installing required guest components..."
+  eatmydata apt install --no-install-recommends -y "${GUEST_PACKAGES[@]}"
 }
 
-# TODO: Install ttyd from debian package after it picks up our patches
+# Apply AVF-specific configurations and cleanup build-time tools
+apply_custom_configs() {
+  echo "--- Applying system configurations ---"
+
+  # Fix /etc/fstab: comment out EFI partition as we boot directly with custom kernel
+  sed -i '\|/boot/efi|s|^|#|' /etc/fstab
+
+  # Disable LLMNR to prevent early port notifications (port 5355)
+  sed -i 's/#LLMNR=yes/LLMNR=no/' /etc/systemd/resolved.conf
+
+  # Disable systemd-networkd-wait-online.service to prevent boot delays (2-minute timeout)
+  systemctl disable systemd-networkd-wait-online.service
+  systemctl mask systemd-networkd-wait-online.service
+
+  echo "Cleaning up build-time optimizations..."
+  apt purge -y eatmydata
+
+  # Restore udevadm/systemd-hwdb and remove temporary configs
+  rm -f /usr/bin/udevadm
+  dpkg-divert --remove --rename /usr/bin/udevadm
+  rm -f /usr/bin/systemd-hwdb
+  dpkg-divert --remove --rename /usr/bin/systemd-hwdb
+  rm -f /usr/sbin/policy-rc.d
+  rm -f /etc/apt/apt.conf.d/01keep-debs
+  rm -f /etc/dpkg/dpkg.cfg.d/99-slim-image
+}
+
+# Install ttyd from the bind-mounted directory
 install_ttyd() {
-	cp --preserve=mode -vpR /mnt/ttyd/* /
+  if [ -d "/mnt/ttyd" ]; then
+    echo "--- Installing ttyd binary ---"
+    cp --preserve=mode -vpR /mnt/ttyd/* /
+  fi
 }
 
-modify_pre_cloud_init_configs() {
-	# Since we boot directly with custom kernel, we wouldn't need EFI partition.
-	# However, boot failed because of the error from /etc/fstab, so fix here.
-	sed -i '\|/boot/efi|s|^|#|' /etc/fstab
+### --- Main Execution --- ###
 
-	# LLMNR cause port notification (5355) before cloud-init can configure.
-	# TODO: Move this to cloud-init, and add the port to the disallow-list.
-	sed -i 's/#LLMNR=yes/LLMNR=no/' /etc/systemd/resolved.conf
-
-	# Disable systemd-networkd-wait-online.service. Not only it randomly hangs
-	# for 2 minutes, but also it slows down the boot process even though this
-	# system doesn't need networking.
-	systemctl disable systemd-networkd-wait-online.service
-	systemctl mask systemd-networkd-wait-online.service
-
-	# Cleanup build-time tools
-	DEBIAN_FRONTEND=noninteractive apt purge -y eatmydata
-
-	# Cleanup build-time optimizations
-	rm -f /etc/apt/apt.conf.d/01keep-debs
-	rm -f /usr/sbin/policy-rc.d
-	rm -f /etc/dpkg/dpkg.cfg.d/99-speedup
-}
-
-remove_packages
+remove_default_kernels
 install_packages
 install_ttyd
-modify_pre_cloud_init_configs
+apply_custom_configs
+
+echo "Rootfs customization completed successfully."

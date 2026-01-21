@@ -1,0 +1,15 @@
+[Unit]
+Description=Pre-mount cidata ISO for cloud-init optimization
+DefaultDependencies=no
+After=local-fs.target
+Before=cloud-init-local.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/mkdir -p /var/lib/cloud/seed/nocloud
+ExecStart=/usr/bin/mount -o ro /dev/vdb /var/lib/cloud/seed/nocloud
+ExecStop=/usr/bin/umount /var/lib/cloud/seed/nocloud
+
+[Install]
+WantedBy=cloud-init-local.service

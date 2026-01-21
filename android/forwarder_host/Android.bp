@@ -8,6 +8,7 @@ rust_ffi_shared {
     edition: "2021",
     srcs: ["src/forwarder_host.rs"],
     rustlibs: [
+        "libandroid_logger",
         "libforwarder",
         "libjni",
         "liblog_rust",

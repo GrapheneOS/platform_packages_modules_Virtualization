@@ -890,10 +890,11 @@ fn try_run_payload(
 
 // TODO(b/434925716): Report exit status of all the tenants back to the host
 /// Wait for all processes in `pids_to_reap` to exit.
-/// It returns the `WaitStatus` of the main payload process.
-/// If there is no main payload, it returns the exit status of the first tenant
+/// It returns the `WaitStatus` of the first processes that exits unsuccessfully,
+/// if all the processes exits successfully then it returns the status of the first tenant
 fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> Result<WaitStatus> {
     let mut payload_exit_status: Option<WaitStatus> = None;
+    let mut first_failure: Option<WaitStatus> = None;
 
     let mut mask = SigSet::empty();
     mask.add(Signal::SIGCHLD);
@@ -909,17 +910,29 @@ fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> 
         // Thus, iteratively check for pids that we manage and reap the ones that have exited
         for pid in pids_to_reap.clone().into_iter() {
             match waitpid(pid, Some(WaitPidFlag::WNOHANG)) {
-                Ok(wait_status) => match wait_status {
-                    WaitStatus::Exited(..) | WaitStatus::Signaled(..) => {
+                Ok(wait_status) => {
+                    let is_failure = match wait_status {
+                        WaitStatus::Exited(_, exit_code) => Some(exit_code != 0),
+                        WaitStatus::Signaled(_, signal, _) => {
+                            // If this tenant was signaled (and it's not a SIGTERM which is a clean
+                            // shutdown)
+                            Some(signal != Signal::SIGTERM)
+                        }
+                        // StillAlive, Stopped, Continued, etc. are ignored
+                        _ => None,
+                    };
+
+                    if let Some(is_failure) = is_failure {
                         info!("Process {pid} exited with {wait_status:?}");
                         pids_to_reap.remove(&pid);
                         if pid == payload_pid {
                             payload_exit_status = Some(wait_status);
                         }
+                        if is_failure && first_failure.is_none() {
+                            first_failure = Some(wait_status);
+                        }
                     }
-                    // StillAlive, Stopped, Continued, etc. are ignored
-                    _ => continue,
-                },
+                }
                 Err(nix::errno::Errno::ECHILD) => {
                     // This can happen if another thread reaps the process
                     warn!("Tracked process {pid} was already reaped.");
@@ -933,7 +946,10 @@ fn wait_for_all_processes(pids_to_reap: &mut HashSet<Pid>, payload_pid: Pid) -> 
         }
     }
 
-    payload_exit_status.ok_or_else(|| anyhow!("Payload process hasn't exited or status not saved"))
+    // Return the first unsuccessful tenant status if any, otherwise return the payload_exit_status
+    first_failure
+        .or(payload_exit_status)
+        .ok_or_else(|| anyhow!("Payload process hasn't exited or status not saved"))
 }
 
 fn get_payload_exit_code(wait_status: WaitStatus) -> Result<i32> {

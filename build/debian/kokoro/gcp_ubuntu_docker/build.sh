@@ -27,4 +27,3 @@ sudo ./build.sh $@ -a ${arch} -t ${AVF_BUILD_TOP} -w -b "${BUILD_ID}"
 
 sudo mv images.tar.gz ${KOKORO_ARTIFACTS_DIR}
 mkdir -p ${KOKORO_ARTIFACTS_DIR}/logs
-sudo cp -r /var/log/fai/* ${KOKORO_ARTIFACTS_DIR}/logs || true
