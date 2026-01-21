@@ -234,7 +234,7 @@ fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
 }
 
 fn matches_any_kernel_code_hash(actual_code_hash: &[u8], is_debug: bool) -> bssl_avf::Result<bool> {
-    for os_hash in OS_HASHES {
+    for os_hash in &OS_HASHES {
         let mut code_hash = [0u8; KERNEL_HASH_SIZE * 2];
         code_hash[0..KERNEL_HASH_SIZE].copy_from_slice(&os_hash.kernel);
         if is_debug {
