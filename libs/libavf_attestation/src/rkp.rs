@@ -94,9 +94,7 @@ pub fn generate_certificate_request(
     debug!("Successfully signed the CSR payload.");
 
     // Builds `AuthenticatedRequest<CsrPayload>`.
-    // Currently `UdsCerts` is left empty because it is only needed for Samsung devices.
-    // Check http://b/301574013#comment3 for more information.
-    let uds_certs = Value::Map(Vec::new());
+    let uds_certs: Value = cbor_util::deserialize(&ops.uds_certs()?)?;
     let dice_cert_chain: Value = cbor_util::deserialize(ops.reference_vm_dice_chain()?)?;
     let auth_req = cbor!([
         Value::Integer(AUTH_REQ_SCHEMA_V1.into()),

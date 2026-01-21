@@ -15,6 +15,8 @@ rust_defaults {
     ],
     no_std_rlibs: [
         "libavf_attestation_nostd",
+        "libcbor_util_nostd",
+        "libciborium_nostd",
         "libcoset_nostd",
         "libbssl_avf_nostd",
         "libder_nostd",
