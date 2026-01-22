@@ -198,9 +198,6 @@
     <string name="settings_title">Settings</string>
     <!-- Content description for the back button in settings. [CHAR LIMIT=16] -->
     <string name="settings_btn_back_desc">Back</string>
-    <!-- Placeholder text when no setting is selected in the detail pane. [CHAR LIMIT=none] -->
-    <string name="settings_placeholder_select">Select a setting</string>
-
 
     <!-- ================================================================= -->
     <!-- Settings - Disk                                                   -->

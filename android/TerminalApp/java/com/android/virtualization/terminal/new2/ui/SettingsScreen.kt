@@ -55,6 +55,7 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +70,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.R
@@ -85,15 +87,26 @@ enum class SettingsDestination(val title: Int, val icon: Int) {
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? = null) {
+fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
     val navigator = rememberListDetailPaneScaffoldNavigator<SettingsDestination>()
     val scope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val isMobileMode = configuration.screenWidthDp < 600
+    val settingsRequest by viewModel.settingsRequest.collectAsStateWithLifecycle()
 
-    androidx.compose.runtime.LaunchedEffect(initialDestination) {
-        if (initialDestination != null) {
-            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, initialDestination)
+    val destinations = remember {
+        SettingsDestination.values().filter {
+            it != SettingsDestination.Graphics || VmController.isGraphicsAccelerationSupported
+        }
+    }
+
+    LaunchedEffect(settingsRequest, isMobileMode) {
+        if (settingsRequest != null) {
+            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, settingsRequest!!)
+        } else if (!isMobileMode && navigator.currentDestination == null) {
+            destinations.firstOrNull()?.let {
+                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, it)
+            }
         }
     }
 
@@ -109,8 +122,9 @@ fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? 
         NavigableListDetailPaneScaffold(
             navigator = navigator,
             listPane = {
-                AnimatedPane { // Wrapped with AnimatedPane
+                AnimatedPane {
                     SettingsListPane(
+                        destinations = destinations,
                         onItemClick = { item ->
                             scope.launch {
                                 navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, item)
@@ -123,9 +137,10 @@ fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? 
                 }
             },
             detailPane = {
-                AnimatedPane { // Wrapped with AnimatedPane
+                AnimatedPane {
                     val destination =
-                        navigator.currentDestination?.contentKey as? SettingsDestination
+                        (navigator.currentDestination?.contentKey as? SettingsDestination)
+                            ?: if (!isMobileMode) destinations.firstOrNull() else null
                     if (destination != null) {
                         SettingsDetailPane(
                             destination = destination,
@@ -133,16 +148,6 @@ fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? 
                             onBack = { scope.launch { navigator.navigateBack() } },
                             onCloseSettings = onBack,
                         )
-                    } else {
-                        // Placeholder for when no item is selected in detail pane
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surface,
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(stringResource(R.string.settings_placeholder_select))
-                            }
-                        }
                     }
                 }
             },
@@ -153,6 +158,7 @@ fun SettingsScreen(onBack: () -> Unit, initialDestination: SettingsDestination? 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsListPane(
+    destinations: List<SettingsDestination>,
     onItemClick: (SettingsDestination) -> Unit,
     selectedItem: SettingsDestination?,
     onBack: () -> Unit,
@@ -172,10 +178,6 @@ fun SettingsListPane(
             )
         }
     ) { innerPadding ->
-        val destinations =
-            SettingsDestination.values().filter {
-                it != SettingsDestination.Graphics || VmController.isGraphicsAccelerationSupported
-            }
         LazyColumn(modifier = Modifier.padding(innerPadding)) {
             items(destinations) { item ->
                 val isSelected = selectedItem == item

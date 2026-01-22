@@ -39,14 +39,10 @@ import com.android.virtualization.terminal.new2.ui.PERMISSIONS
 import com.android.virtualization.terminal.new2.ui.SettingsDestination
 import com.android.virtualization.terminal.new2.ui.TAB_BAR_HEIGHT
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -134,15 +130,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _hasBackup = MutableStateFlow(false)
     val hasBackup: StateFlow<Boolean> = _hasBackup.asStateFlow()
 
-    private val _settingsRequest = MutableSharedFlow<SettingsDestination?>()
-    val settingsRequest: SharedFlow<SettingsDestination?> = _settingsRequest.asSharedFlow()
+    private val _settingsRequest = MutableStateFlow<SettingsDestination?>(null)
+    val settingsRequest: StateFlow<SettingsDestination?> = _settingsRequest.asStateFlow()
 
     private val _permissionRequired = MutableStateFlow(false)
 
     fun handleIntent(intent: Intent) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
-            viewModelScope.launch { _settingsRequest.emit(SettingsDestination.PortControl) }
+            _settingsRequest.value = SettingsDestination.PortControl
         }
+    }
+
+    fun clearSettingsRequest() {
+        _settingsRequest.value = null
     }
 
     fun toggleDisplay() {
