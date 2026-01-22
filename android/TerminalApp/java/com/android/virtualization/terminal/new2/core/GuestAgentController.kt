@@ -16,10 +16,15 @@
 package com.android.virtualization.terminal.new2.core
 
 import android.content.Context
+import android.system.virtualizationcommon.IGuestAgent
 import android.util.Log
 import com.android.system.virtualmachine.flags.Flags
-import com.android.virtualization.terminal.DebianServiceImpl
+import com.android.virtualization.debian.aidl.IDebianService
+import com.android.virtualization.terminal.DebianService
+import com.android.virtualization.terminal.DebianServiceBase
+import com.android.virtualization.terminal.DebianServiceGrpc
 import com.android.virtualization.terminal.PortsStateManager
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.StorageBalloonWorker
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
@@ -47,7 +52,7 @@ data class OpenPort(val port: Int, val name: String, val isForwarded: Boolean) {
 
 class GuestAgentController(private val context: Context, private val scope: CoroutineScope) {
     private var server: Server? = null
-    private var debianService: DebianServiceImpl? = null
+    private var debianService: DebianServiceBase? = null
     private val portsStateManager = PortsStateManager.getInstance(context)
 
     private val _ports = MutableStateFlow<List<OpenPort>>(emptyList())
@@ -61,7 +66,31 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         }
 
     fun start(ipAddress: String?) {
-        startDebianServer(ipAddress)
+        Log.d(TAG, "Starting guest agent controller with gRPC")
+
+        if (context.resources.getBoolean(R.bool.soong_generated_cidata)) {
+            Log.w(TAG, "Ignoring gRPC setup. soong generated CIDATA implies AIDL communication.")
+            return
+        }
+        if (debianService != null) {
+            Log.w(TAG, "GuestAgentController is started again. It might had been crashed.")
+        }
+        startDebianServerGrpc(ipAddress)
+        portsStateManager.registerListener(portsListener)
+        updatePortsState()
+    }
+
+    fun start(cid: Int, guestAgent: IGuestAgent, service: IDebianService) {
+        Log.d(TAG, "Starting guest agent controller with AIDL")
+
+        if (!context.resources.getBoolean(R.bool.soong_generated_cidata)) {
+            Log.w(TAG, "Ignoring AIDL setup. soong generated CIDATA is required")
+            return
+        }
+        if (debianService != null) {
+            Log.w(TAG, "GuestAgentController is started again. It might had been crashed.")
+        }
+        debianService = DebianService(context, scope, cid, guestAgent, service)
         portsStateManager.registerListener(portsListener)
         updatePortsState()
     }
@@ -97,7 +126,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         _ports.value = openPorts
     }
 
-    private fun startDebianServer(ipAddress: String?) {
+    private fun startDebianServerGrpc(ipAddress: String?) {
         val interceptor: ServerInterceptor =
             object : ServerInterceptor {
                 override fun <ReqT, RespT> interceptCall(
@@ -120,11 +149,12 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         try {
             // TODO(b/372666638): gRPC for java doesn't support vsock for now.
             val port = 0
-            debianService = DebianServiceImpl(context)
+            val service = DebianServiceGrpc(context)
+            debianService = service
             server =
                 OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
                     .intercept(interceptor)
-                    .addService(debianService)
+                    .addService(service)
                     .build()
                     .start()
         } catch (e: IOException) {
@@ -150,8 +180,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
     }
 
     private fun stopDebianServer() {
-        debianService?.killForwarderHost()
-        debianService?.closeStorageBalloonRequestQueue()
+        debianService?.stop()
         server?.shutdown()
         server = null
         debianService = null
