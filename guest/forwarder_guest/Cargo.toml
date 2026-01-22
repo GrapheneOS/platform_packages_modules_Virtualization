@@ -6,7 +6,9 @@ license = "Apache-2.0"
 
 [dependencies]
 clap = { version = "4.5.19", features = ["derive"] }
+env_logger = "0.11.5"
 forwarder = { path = "../../libs/libforwarder" }
+log = "0.4.22"
 poll_token_derive = "0.1.0"
 remain = "0.2.14"
 vmm-sys-util = "0.12.1"
