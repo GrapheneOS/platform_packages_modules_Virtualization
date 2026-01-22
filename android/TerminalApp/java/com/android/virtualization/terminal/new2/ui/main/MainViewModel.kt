@@ -278,10 +278,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // activity.
         hasVmEverStarted = false
 
-        // Clear existing tabs
-        val newSession = TerminalSession()
-        _tabs.value = listOf(newSession)
-        _selectedTabId.value = newSession.id
+        resetTabs()
 
         viewModelScope.launch { Installer.install() }
     }
@@ -322,6 +319,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopVm() {
         VmController.stop()
+    }
+
+    fun restartVm() {
+        hasVmEverStarted = false
+        resetTabs()
+        stopVm()
+    }
+
+    private fun resetTabs() {
+        val newSession = TerminalSession()
+        _tabs.value = listOf(newSession)
+        _selectedTabId.value = newSession.id
     }
 
     fun uninstallVm(backupRootfs: Boolean) {

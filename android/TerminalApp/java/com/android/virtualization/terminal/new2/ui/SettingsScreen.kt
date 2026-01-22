@@ -69,10 +69,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.OpenPort
 import com.android.virtualization.terminal.new2.core.VmController
+import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.launch
 
 enum class SettingsDestination(val title: Int, val icon: Int) {
@@ -232,7 +234,7 @@ fun SettingsDetailPane(
 }
 
 @Composable
-fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
+fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewModel = viewModel()) {
     val currentType = VmController.graphicsAccelerationType
     var showSelectionDialog by remember { mutableStateOf(false) }
     var showRebootDialog by remember { mutableStateOf(false) }
@@ -304,7 +306,7 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit) {
                 TextButton(
                     onClick = {
                         showRebootDialog = false
-                        VmController.stop()
+                        viewModel.restartVm()
                         onCloseSettings()
                     }
                 ) {
