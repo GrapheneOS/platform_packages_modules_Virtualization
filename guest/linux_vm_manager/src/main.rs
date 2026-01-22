@@ -14,53 +14,24 @@
 
 //! Linux VM Manager
 
-use android_system_virtualizationcommon_non_microdroid::aidl::android::system::virtualizationcommon::IGuestAgent::{
-    BnGuestAgent, IGuestAgent,
-};
+mod debian_service;
+mod guest_agent;
+
+use guest_agent::GuestAgent;
+use debian_aidl_interface::binder::Strong;
 use android_system_virtualmachineservice_non_microdroid::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
+use crate::debian_service::DebianService;
 use anyhow::{Context, Result};
-use binder::{BinderFeatures, Interface, Strong};
-use rpcbinder::RpcServer;
 use rpcbinder::RpcSession;
-use std::process::Command;
-use vsock::{VMADDR_CID_ANY, VMADDR_CID_HOST};
-
-const GUEST_AGENT_SERVICE_PORT: u32 = 4000;
-
-/// Implementation of `IGuestAgent`
-#[derive(Debug, Default)]
-struct GuestAgent {}
-
-impl Interface for GuestAgent {}
-
-impl IGuestAgent for GuestAgent {
-    fn shutdownAsync(&self) -> binder::Result<()> {
-        let status = Command::new("poweroff").status().map_err(|e| {
-            binder::Status::new_service_specific_error_str(
-                -1,
-                Some(format!("Failed to execute poweroff: {}", e)),
-            )
-        })?;
-
-        if !status.success() {
-            return Err(binder::Status::new_service_specific_error_str(
-                -1,
-                Some(format!("poweroff command failed with status: {}", status)),
-            ));
-        }
-
-        Ok(())
-    }
-}
-
-impl GuestAgent {
-    fn new_binder() -> Strong<dyn IGuestAgent> {
-        BnGuestAgent::new_binder(GuestAgent {}, BinderFeatures::default())
-    }
-}
+use vsock::VMADDR_CID_HOST;
+use std::panic;
+use std::process::exit;
+use log::{error, info};
 
 fn get_vms_rpc_binder() -> Result<Strong<dyn IVirtualMachineService>> {
     let port = vsock::get_local_cid().context("Could not determine local CID")?;
+    info!("Starting service with cid={port}");
+
     let session = RpcSession::new();
     session.set_max_incoming_threads(1);
     session
@@ -69,13 +40,27 @@ fn get_vms_rpc_binder() -> Result<Strong<dyn IVirtualMachineService>> {
 }
 
 fn main() -> Result<()> {
+    env_logger::builder().filter_level(log::LevelFilter::Debug).init();
+
+    // Redirect panic messages to stderr with backtrace
+    panic::set_hook(Box::new(|panic_info| {
+        error!("Panic: {panic_info}");
+        let backtrace = std::backtrace::Backtrace::force_capture();
+        error!("Backtrace: {:#?}", backtrace);
+        exit(1);
+    }));
+
     let service = get_vms_rpc_binder().context("Failed to connect to VirtualizationService")?;
+
+    let debian_server = DebianService::new_rpc_server();
     let guest_agent = GuestAgent::new_binder();
 
-    let (server, _) =
-        RpcServer::new_vsock(guest_agent.as_binder(), VMADDR_CID_ANY, GUEST_AGENT_SERVICE_PORT)?;
     service.registerGuestAgent(&guest_agent).context("Failed to register GuestAgent")?;
-    println!("linux_vm_manager started and registered");
-    server.join();
+    info!("linux_vm_manager started and registered");
+
+    debian_server.join();
+
+    info!("linux_vm_manager is shutting down");
+
     Ok(())
 }

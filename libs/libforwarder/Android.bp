@@ -11,6 +11,7 @@ rust_library {
         "liblibc",
         "libvsock",
     ],
+    host_supported: true,
     proc_macros: ["libremain"],
     apex_available: [
         "com.android.virt",
