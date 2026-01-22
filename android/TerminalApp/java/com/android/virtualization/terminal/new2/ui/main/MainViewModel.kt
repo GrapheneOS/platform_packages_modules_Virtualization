@@ -234,6 +234,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 hasVmEverStarted = true
                                 MainUiState.Booting
                             }
+                            is VmState.Rebooting -> MainUiState.Booting
                             is VmState.Running ->
                                 MainUiState.Running(vmState.address, vmState.port, vmState.key)
                             is VmState.Stopping -> MainUiState.Stopping
@@ -325,7 +326,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun restartVm() {
         hasVmEverStarted = false
         resetTabs()
-        stopVm()
+        if (VmController.vmState.value is VmState.Rebooting) {
+            VmController.reset()
+        } else {
+            stopVm()
+        }
     }
 
     private fun resetTabs() {
@@ -399,5 +404,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         viewModelScope.launch { VmController.sessionDiscarded.collect { id -> closeTab(id) } }
+        viewModelScope.launch {
+            VmController.vmState.collect { state ->
+                if (state is VmState.Rebooting) {
+                    restartVm()
+                }
+            }
+        }
     }
 }

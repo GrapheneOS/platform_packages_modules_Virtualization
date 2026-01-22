@@ -83,7 +83,11 @@ object VmController {
     }
 
     fun reset() {
-        if (_vmState.value == VmState.Stopped || _vmState.value is VmState.Error) {
+        if (
+            _vmState.value == VmState.Stopped ||
+                _vmState.value is VmState.Error ||
+                _vmState.value == VmState.Rebooting
+        ) {
             _vmState.value = VmState.Ready
         }
     }
@@ -165,13 +169,16 @@ object VmController {
                         }
 
                         override fun onStopped(vm: VirtualMachine, reason: Int) {
-                            // TODO: b/438355564 STOP_REASON_KILLED should also be an error
+                            Log.i("VmController", "VM stopped. reason: $reason")
                             if (
                                 reason == VirtualMachineCallback.STOP_REASON_SHUTDOWN ||
                                     reason == VirtualMachineCallback.STOP_REASON_KILLED
                             ) {
                                 _vmState.value = VmState.Stopped
+                            } else if (reason == VirtualMachineCallback.STOP_REASON_REBOOT) {
+                                _vmState.value = VmState.Rebooting
                             } else {
+                                Log.e("VmController", "VM stopped unexpectedly. reason: $reason")
                                 _vmState.value =
                                     VmState.Error(
                                         RuntimeException("VM stopped unexpectedly: $reason")
@@ -371,7 +378,11 @@ object VmController {
 
         repositoryScope.launch {
             _vmState.value = VmState.Stopping
-            virtualMachine?.stop()
+            try {
+                virtualMachine?.stop()
+            } catch (e: VirtualMachineException) {
+                Log.w("VmController", "Failed to stop VM", e)
+            }
             _vmState.value = VmState.Stopped
         }
     }
