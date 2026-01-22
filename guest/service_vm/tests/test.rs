@@ -271,7 +271,10 @@ fn check_certificate_for_client_vm(
     assert!(!extension.critical);
     let attestation_ext =
         asn1::SequenceOf::<asn1::Any, 4>::from_der(extension.extn_value.as_bytes()).unwrap();
+    #[cfg(advance_multitenancy)]
     assert_eq!(4, attestation_ext.len());
+    #[cfg(not(advance_multitenancy))]
+    assert_eq!(3, attestation_ext.len());
     let challenge = attestation_ext.get(0).unwrap().decode_as::<asn1::OctetString>().unwrap();
     assert_eq!(csr_payload.challenge, challenge.as_bytes());
     let is_vm_secure = attestation_ext.get(1).unwrap().decode_as::<bool>().unwrap();
@@ -285,12 +288,14 @@ fn check_certificate_for_client_vm(
         .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 4>>()
         .unwrap();
     check_vm_payload_components(&vm_payload_components)?;
-    let vm_tenant_components = attestation_ext
-        .get(3)
-        .unwrap()
-        .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 10>>()
-        .unwrap();
-    check_vm_tenant_components(&vm_tenant_components)?;
+    if cfg!(advance_multitenancy) {
+        let vm_tenant_components = attestation_ext
+            .get(3)
+            .unwrap()
+            .decode_as::<asn1::SequenceOf<asn1::Any, /* max_limit */ 10>>()
+            .unwrap();
+        check_vm_tenant_components(&vm_tenant_components)?;
+    }
 
     // Checks other fields on the certificate
     assert_eq!(Version::V3, tbs_cert.version);
