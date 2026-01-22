@@ -61,7 +61,7 @@ const MICRODROID_PAYLOAD_COMPONENT_NAME: &str = "Microdroid payload";
 ///     + DiceChainEntry,               ; First CDI_Certificate -> Last CDI_Certificate
 /// ]
 #[derive(Debug, Clone)]
-pub(crate) struct ClientVmDiceChain {
+pub struct ClientVmDiceChain {
     /// Contains only the payloads specific to the Client VM (excluding the common prefix).
     ///
     /// The structure is either:
@@ -152,11 +152,16 @@ impl ClientVmDiceChain {
         Ok(Self { payloads })
     }
 
-    pub(crate) fn microdroid_kernel(&self) -> &DiceChainEntryPayload {
+    /// Returns the DICE chain entry describing the VM kernel.
+    pub fn kernel(&self) -> &DiceChainEntryPayload {
         &self.payloads[0]
     }
 
-    pub(crate) fn vendor_partition(&self) -> Option<&DiceChainEntryPayload> {
+    /// Returns the DICE chain entry describing the vendor module, if present.
+    ///
+    /// This entry exists only if the client VM includes a vendor partition, indicated
+    /// by a chain suffix length of 3 (structure: `[Kernel, Vendor, Payload]`).
+    pub fn vendor_module(&self) -> Option<&DiceChainEntryPayload> {
         if self.payloads.len() == 3 {
             Some(&self.payloads[1])
         } else {
@@ -266,10 +271,11 @@ impl PublicKey {
 /// hardware/interfaces/security/rkp/aidl/android/hardware/security/keymint/
 /// generateCertificateRequestV2.cddl
 #[derive(Debug, Clone)]
-pub(crate) struct DiceChainEntryPayload {
+pub struct DiceChainEntryPayload {
     pub(crate) subject_public_key: PublicKey,
     mode: DiceMode,
-    pub(crate) code_hash: Vec<u8>,
+    /// Code Hash.
+    pub code_hash: Vec<u8>,
     pub(crate) authority_hash: Vec<u8>,
     config_descriptor: ConfigDescriptor,
 }
@@ -281,21 +287,23 @@ impl DiceChainEntryPayload {
         value: Value,
         authority_public_key: &PublicKey,
     ) -> Result<Self> {
-        let cose_sign1 = CoseSign1::from_cbor_value(value)?;
+        let cose_sign1 = CoseSign1::from_cbor_value(value.clone())?;
         let aad = &[]; // AAD is not used in DICE chain entry.
         cose_sign1.verify_signature(aad, |signature, message| {
             authority_public_key.verify(signature, message)
         })?;
+        Self::from_cbor_value_unchecked(value)
+    }
 
+    /// Parses a `DiceChainEntryPayload` from a CBOR `Value` without verifying the signature
+    /// against an authority public key.
+    pub(crate) fn from_cbor_value_unchecked(value: Value) -> Result<Self> {
+        let cose_sign1 = CoseSign1::from_cbor_value(value)?;
         let payload = cose_sign1.payload.ok_or_else(|| {
             error!("No payload found in the DICE chain entry");
             RequestProcessingError::InvalidDiceChain
         })?;
-        Self::from_slice(&payload)
-    }
-
-    pub(crate) fn from_slice(data: &[u8]) -> Result<Self> {
-        let entries = value_to_map(Value::from_slice(data)?, "DiceChainEntryPayload")?;
+        let entries = value_to_map(Value::from_slice(&payload)?, "DiceChainEntryPayload")?;
         let mut builder = PayloadBuilder::default();
         for (key, value) in entries.into_iter() {
             let key: i64 = value_to_num(key, "DiceChainEntryPayload key")?;
