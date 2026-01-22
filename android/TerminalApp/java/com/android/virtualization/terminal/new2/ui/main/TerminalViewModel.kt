@@ -24,6 +24,7 @@ import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import androidx.lifecycle.AndroidViewModel
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.TtydView
+import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -58,7 +59,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
     private var ttydView: TtydView? = null
 
-    fun getOrCreateTtydView(address: String, port: Int, key: String?): TtydView {
+    fun getOrCreateTtydView(sessionId: String, address: String, port: Int, key: String?): TtydView {
         if (ttydView == null) {
             Log.d("TerminalViewModel", "Creating new TtydView")
             _uiState.value = TerminalUiState.Connecting
@@ -66,6 +67,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 TtydView(context).apply {
                     onTerminalReady = { _uiState.value = TerminalUiState.Ready }
                     onTerminalDisconnected = { _uiState.value = TerminalUiState.Disconnected }
+                    onSessionDiscard = { VmController.requestSessionDiscard(sessionId) }
                     onTitleChanged = { title -> _title.value = title }
                     load(address, port, key)
                 }

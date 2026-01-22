@@ -251,7 +251,9 @@ fun TerminalScreen(
     val terminalViewModel: TerminalViewModel = viewModel(key = tabId)
     val terminalUiState by terminalViewModel.uiState.collectAsStateWithLifecycle()
     val ttydView =
-        remember(address, port, tabId) { terminalViewModel.getOrCreateTtydView(address, port, key) }
+        remember(address, port, tabId) {
+            terminalViewModel.getOrCreateTtydView(tabId, address, port, key)
+        }
 
     val storedImeVisibility by mainViewModel.isImeVisible.collectAsStateWithLifecycle()
     val isWindowImeVisible = WindowInsets.isImeVisible

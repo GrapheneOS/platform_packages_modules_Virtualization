@@ -46,8 +46,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -58,6 +61,9 @@ object VmController {
     private val _vmState =
         LoggingMutableStateFlow<VmState>(MutableStateFlow(VmState.Ready), "VmController")
     val vmState: StateFlow<VmState> = _vmState.asStateFlow()
+
+    private val _sessionDiscarded = MutableSharedFlow<String>()
+    val sessionDiscarded: SharedFlow<String> = _sessionDiscarded.asSharedFlow()
 
     private var guestAgentController: GuestAgentController? = null
     val ports: StateFlow<List<OpenPort>>
@@ -95,6 +101,10 @@ object VmController {
 
     fun shutdownVm() {
         guestAgentController?.shutdownVm()
+    }
+
+    fun requestSessionDiscard(sessionId: String) {
+        repositoryScope.launch { _sessionDiscarded.emit(sessionId) }
     }
 
     fun start(displayInfo: DisplayInfo) {

@@ -45,6 +45,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     var onTerminalReady: (() -> Unit)? = null
     var onTerminalDisconnected: (() -> Unit)? = null
+    var onSessionDiscard: (() -> Unit)? = null
     var onTitleChanged: ((String) -> Unit)? = null
     private var fontSize = (context.resources.configuration.fontScale * 13).toInt()
 
@@ -88,8 +89,18 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 fun onTerminalDisconnected() {
                     post { this@TtydView.onTerminalDisconnected?.invoke() }
                 }
+
+                @android.webkit.JavascriptInterface
+                fun closeTab() {
+                    post { this@TtydView.onSessionDiscard?.invoke() }
+                }
+
+                @android.webkit.JavascriptInterface
+                fun showError() {
+                    // TODO: UI for showing connection error
+                }
             },
-            "android",
+            "TerminalApp",
         )
         webViewClient = TtydWebViewClient()
         layoutParams =
@@ -227,7 +238,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 (function() {
                     var notifyReady = function() {
                         window.term.focus();
-                        window.android.onTerminalReady();
+                        window.TerminalApp.onTerminalReady();
                     };
                     var check = function() {
                         var xterm = document.querySelector('.terminal.xterm');
