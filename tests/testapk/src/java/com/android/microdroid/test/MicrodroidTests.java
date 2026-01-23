@@ -323,17 +323,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("cts_attestation_with_vendor_module", config);
 
-        byte[] challenge = new byte[32];
-        Arrays.fill(challenge, (byte) 0xac);
-        SigningResult signingResult =
-                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
-
-        assertWithMessage("VM attestation should succeed when network is available")
-                .that(signingResult.status)
-                .isEqualTo(AttestationStatus.OK);
-        verifyAttestationResult(signingResult, challenge, new String[] {});
+        runAndVerifyVmAttestationSucceeds(vm, "" /* tenantPackageName */);
     }
-
 
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
@@ -378,15 +369,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine("cts_attestation_with_internet", config);
 
-        byte[] challenge = new byte[32];
-        Arrays.fill(challenge, (byte) 0xac);
-        SigningResult signingResult =
-                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
-
-        assertWithMessage("VM attestation should succeed when network is available")
-                .that(signingResult.status)
-                .isEqualTo(AttestationStatus.OK);
-        verifyAttestationResult(signingResult, challenge, new String[] {});
+        runAndVerifyVmAttestationSucceeds(vm, "" /* tenantPackageName */);
     }
 
     private void checkVmAttestationWithValidChallenge(VirtualMachine vm) throws Exception {
@@ -417,6 +400,20 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 isAdvMultiTenancyEnabled);
         X509Utils.verifySignature(
                 certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
+    }
+
+    private void runAndVerifyVmAttestationSucceeds(VirtualMachine vm, String tenantPackageName)
+            throws Exception {
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+        assertWithMessage("VM attestation should succeed when network is available")
+                .that(signingResult.status)
+                .isEqualTo(AttestationStatus.OK);
+        String[] tenantNames =
+                tenantPackageName.isEmpty() ? new String[0] : new String[] {tenantPackageName};
+        verifyAttestationResult(signingResult, challenge, tenantNames);
     }
 
     @Test
@@ -466,8 +463,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
 
-        byte[] challenge = new byte[32];
-        Arrays.fill(challenge, (byte) 0xac);
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig("assets/vm_config_tenant_attestation.json")
                         .setMemoryBytes(minMemoryRequired())
@@ -476,12 +471,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("cts_attestation_with_multitenant_payload", config);
 
-        SigningResult signingResult =
-                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
-        assertWithMessage("VM attestation should succeed when network is available")
-                .that(signingResult.status)
-                .isEqualTo(AttestationStatus.OK);
-        verifyAttestationResult(signingResult, challenge, new String[] {TEST_TENANT_APK_NAME});
+        runAndVerifyVmAttestationSucceeds(vm, TEST_TENANT_APK_NAME);
     }
 
     @Test
