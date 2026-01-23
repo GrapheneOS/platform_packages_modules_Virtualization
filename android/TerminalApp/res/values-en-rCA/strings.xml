@@ -82,7 +82,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Retry"</string>
     <string name="settings_title" msgid="3035373808103055663">"Settings"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Back"</string>
-    <string name="settings_placeholder_select" msgid="4246272717471568067">"Select a setting"</string>
     <string name="settings_disk_title" msgid="3756870708790177276">"Disk resize"</string>
     <string name="settings_disk_subtitle" msgid="595369261192580241">"Resize the root partition size"</string>
     <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> assigned"</string>

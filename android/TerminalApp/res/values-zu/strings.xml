@@ -26,27 +26,18 @@
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Dawuniloda usebenzisa i-Wi-Fi kuphela"</string>
     <string name="installer_btn_install" msgid="1249687873554194768">"Faka"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"Iyafaka"</string>
-    <!-- no translation found for installer_btn_cancel (3560257458966328733) -->
-    <skip />
-    <!-- no translation found for installer_dlg_title_cancel_install (2347901416414323603) -->
-    <skip />
-    <!-- no translation found for installer_dlg_message_cancel_install (7122895060756794760) -->
-    <skip />
-    <!-- no translation found for installer_dlg_btn_cancel_install (7061500109118550183) -->
-    <skip />
-    <!-- no translation found for installer_dlg_btn_continue_install (4038480932377540963) -->
-    <skip />
+    <string name="installer_btn_cancel" msgid="3560257458966328733">"Khansela ukufaka"</string>
+    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"Khansela Ukufaka?"</string>
+    <string name="installer_dlg_message_cancel_install" msgid="7122895060756794760">"Ukudawuniloda kuzomiswa futhi intuthuko izolahleka."</string>
+    <string name="installer_dlg_btn_cancel_install" msgid="7061500109118550183">"Misa Idawunilodi"</string>
+    <string name="installer_dlg_btn_continue_install" msgid="4038480932377540963">"Qhubeka"</string>
     <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Yehlulekile ukufaka ngenxa yenkinga yenethiwekhi"</string>
     <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Yehlulekile ukufaka ngoba i-Wi-Fi ayitholakali"</string>
     <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Yehlulekile ukufaka. Sicela uzame futhi"</string>
-    <!-- no translation found for installer_snkbar_error_no_space (2980013654869871281) -->
-    <skip />
-    <!-- no translation found for installer_snkbar_action_storage (3154991131973261946) -->
-    <skip />
-    <!-- no translation found for installer_msg_mobile_data (3235093415908956584) -->
-    <skip />
-    <!-- no translation found for installer_msg_waiting_network (5866026140340225420) -->
-    <skip />
+    <string name="installer_snkbar_error_no_space" msgid="2980013654869871281">"Ukufaka kuhlulekile ngenxa yesikhala sediski esinganele."</string>
+    <string name="installer_snkbar_action_storage" msgid="3154991131973261946">"Lawula Isitoreji"</string>
+    <string name="installer_msg_mobile_data" msgid="3235093415908956584">"Iqhubeka nokudawuniloda isebenzisa idatha yeselula..."</string>
+    <string name="installer_msg_waiting_network" msgid="5866026140340225420">"Ilinde ukuxhumeka kabusha kwenethiwekhi..."</string>
     <string name="terminal_hint_display" msgid="7172326332224647219">"Isibonisi setheminali"</string>
     <string name="terminal_hint_input" msgid="1959459646864329623">"I-cursor"</string>
     <string name="terminal_hint_empty_line" msgid="8470507412532518466">"Umugqa ongenalutho"</string>
@@ -91,7 +82,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Zama futhi"</string>
     <string name="settings_title" msgid="3035373808103055663">"Amasethingi"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Emuva"</string>
-    <string name="settings_placeholder_select" msgid="4246272717471568067">"Khetha isethingi"</string>
     <string name="settings_disk_title" msgid="3756870708790177276">"Shintsha usayizi wediski"</string>
     <string name="settings_disk_subtitle" msgid="595369261192580241">"Shintsha usayizi kasayizi wokuhlukanisa umsuka"</string>
     <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"U-<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> wabiwe"</string>
