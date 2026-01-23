@@ -60,7 +60,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.ui.main.InstallViewModel
@@ -89,18 +88,22 @@ fun InstallScreen(snackbarHostState: SnackbarHostState, viewModel: InstallViewMo
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        InstallScreenHeader(state.getTotalImageSize())
+        InstallScreenHeader(
+            totalSizeBytes = state.getTotalImageSize(),
+            showDescription = !viewModel.autoInstall,
+        )
 
-        if (!state.isStarted()) {
+        if (!state.isStarted() && !viewModel.autoInstall) {
             InstallScreenButtons(
                 wifiOnly = wifiOnly,
                 onWifiOnlyChange = { viewModel.setWifiOnly(it) },
                 onInstall = { viewModel.installVm() },
             )
-        } else {
+        } else if (state.isStarted()) {
             InstallScreenProgress(
                 state = state,
                 wifiOnly = wifiOnly,
+                autoInstall = viewModel.autoInstall,
                 onWifiOnlyChange = { viewModel.setWifiOnly(it) },
                 onCancel = { showCancelDialog = true },
             )
@@ -110,7 +113,7 @@ fun InstallScreen(snackbarHostState: SnackbarHostState, viewModel: InstallViewMo
 }
 
 @Composable
-private fun InstallScreenHeader(totalSizeBytes: Long) {
+private fun InstallScreenHeader(totalSizeBytes: Long, showDescription: Boolean) {
     val context = LocalContext.current
     val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
 
@@ -133,13 +136,15 @@ private fun InstallScreenHeader(totalSizeBytes: Long) {
         color = MaterialTheme.colorScheme.primary,
     )
     Spacer(modifier = Modifier.height(32.dp))
-    Text(
-        text = stringResource(R.string.installer_desc, formattedSize),
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-    )
-    Spacer(modifier = Modifier.height(32.dp))
+    if (showDescription) {
+        Text(
+            text = stringResource(R.string.installer_desc, formattedSize),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+    }
 }
 
 @Composable
@@ -171,6 +176,7 @@ private fun InstallScreenButtons(
 private fun InstallScreenProgress(
     state: InstallState,
     wifiOnly: Boolean,
+    autoInstall: Boolean,
     onWifiOnlyChange: (Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -180,25 +186,25 @@ private fun InstallScreenProgress(
 
     val currentBytesFlow: kotlinx.coroutines.flow.StateFlow<Long>?
     val progressColor: Color
-    val message: Int?
+    var message: String?
 
     if (state is InstallState.Installing) {
         currentBytesFlow = state.progress
         progressColor = MaterialTheme.colorScheme.primary
-        message = if (state.onWifi) null else R.string.installer_msg_mobile_data
+        message = if (state.onWifi) null else stringResource(R.string.installer_msg_mobile_data)
     } else if (state is InstallState.InstallSuspended) {
         currentBytesFlow = state.progress
         progressColor = Color.Gray
-        message = R.string.installer_msg_waiting_network
+        message = stringResource(R.string.installer_msg_waiting_network)
     } else {
         currentBytesFlow = null
         progressColor = Color.Transparent
         message = null
     }
 
-    if (ImageArchive.isLocalImage()) {
+    if (autoInstall) {
         // No need to localization for userdebug only UX
-        Text(text = "Auto installing from /sdcard/linux")
+        message = "Auto installing from /sdcard/linux"
     }
 
     if (currentBytesFlow != null) {
@@ -223,25 +229,28 @@ private fun InstallScreenProgress(
 
                 if (message != null) {
                     Text(
-                        text = stringResource(message),
+                        text = message!!,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                WifiOnlySwitch(wifiOnly = wifiOnly, onCheckedChange = onWifiOnlyChange)
+                if (!autoInstall) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    WifiOnlySwitch(wifiOnly = wifiOnly, onCheckedChange = onWifiOnlyChange)
+                }
             }
         }
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
-    TextButton(onClick = onCancel) {
-        Text(
-            text = stringResource(R.string.installer_btn_cancel),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    if (!autoInstall) {
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onCancel) {
+            Text(
+                text = stringResource(R.string.installer_btn_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

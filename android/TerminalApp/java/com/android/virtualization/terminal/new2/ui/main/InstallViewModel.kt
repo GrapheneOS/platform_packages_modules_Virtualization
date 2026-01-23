@@ -21,6 +21,7 @@ import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.BetterBugLauncher
+import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
@@ -43,8 +44,29 @@ class InstallViewModel : ViewModel() {
     /** Whether to only download/install when connected to Wi-Fi. */
     val wifiOnly: StateFlow<Boolean> = Installer.wifiOnly
 
+    /** Whether the installation should proceed automatically (e.g., from a local image). */
+    val autoInstall: Boolean
+        get() = ImageArchive.isLocalImage()
+
     init {
+        autoInstallIfNecessary()
         collectErrorEvents()
+    }
+
+    /**
+     * Automatically triggers installation if a local image is available and the VM is not yet
+     * installed.
+     */
+    private fun autoInstallIfNecessary() {
+        if (autoInstall) {
+            viewModelScope.launch {
+                installState.collect { state ->
+                    if (state is InstallState.NotInstalled) {
+                        installVm()
+                    }
+                }
+            }
+        }
     }
 
     /** Starts the installation process. */
