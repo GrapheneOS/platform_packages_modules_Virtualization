@@ -28,7 +28,6 @@ import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.DisplayInfo
-import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
@@ -38,28 +37,16 @@ import com.android.virtualization.terminal.new2.ui.MainActivity
 import com.android.virtualization.terminal.new2.ui.PERMISSIONS
 import com.android.virtualization.terminal.new2.ui.SettingsDestination
 import com.android.virtualization.terminal.new2.ui.TAB_BAR_HEIGHT
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface MainUiState {
-    data object Checking : MainUiState
-
-    data class NotInstalled(val totalSizeBytes: Long) : MainUiState
-
-    data class Installing(
-        val progress: StateFlow<Long>,
-        val totalBytes: Long,
-        val onWifi: Boolean,
-    ) : MainUiState
-
-    data class InstallSuspended(val progress: StateFlow<Long>, val totalBytes: Long) : MainUiState
-
     data object Ready : MainUiState
 
     data object PermissionRequired : MainUiState
@@ -73,29 +60,10 @@ sealed interface MainUiState {
     data object Stopping : MainUiState
 
     sealed interface ErrorHandler {
-        data object Retry : ErrorHandler
-
-        data object CheckNetwork : ErrorHandler
-
-        data object NoSpace : ErrorHandler
-
         data class ReportBug(val error: Throwable) : ErrorHandler
     }
 
     data class Error(val handler: ErrorHandler) : MainUiState
-
-    fun isInstallStarted(): Boolean {
-        return this is Installing || this is InstallSuspended
-    }
-
-    fun totalImageSize(): Long {
-        return when (this) {
-            is NotInstalled -> totalSizeBytes
-            is Installing -> totalBytes
-            is InstallSuspended -> totalBytes
-            else -> 0L
-        }
-    }
 }
 
 sealed interface DisplayState {
@@ -127,17 +95,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isMouseLocked = MutableStateFlow(false)
     val isMouseLocked: StateFlow<Boolean> = _isMouseLocked.asStateFlow()
 
-    private val _hasBackup = MutableStateFlow(false)
-    val hasBackup: StateFlow<Boolean> = _hasBackup.asStateFlow()
-
     private val _settingsRequest = MutableStateFlow<SettingsDestination?>(null)
     val settingsRequest: StateFlow<SettingsDestination?> = _settingsRequest.asStateFlow()
+
+    private val _showSettings = MutableStateFlow(false)
+    val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
 
     private val _permissionRequired = MutableStateFlow(false)
 
     fun handleIntent(intent: Intent) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
             _settingsRequest.value = SettingsDestination.PortControl
+            _showSettings.value = true
+        }
+    }
+
+    fun setShowSettings(show: Boolean) {
+        _showSettings.value = show
+        if (!show) {
+            clearSettingsRequest()
         }
     }
 
@@ -200,102 +176,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _displayState.value = DisplayState.Hidden
     }
 
+    // TODO: This combine logic should be removed as it still couples VM state with other concerns.
     val uiState: StateFlow<MainUiState> =
-        combine(Installer.installState, VmController.vmState, _permissionRequired) {
-                installState,
-                vmState,
-                permissionRequired ->
-                when (installState) {
-                    is InstallState.Checking -> MainUiState.Checking
-                    is InstallState.NotInstalled -> {
-                        if (ImageArchive.isLocalImage()) {
-                            installVm()
-                        }
-                        MainUiState.NotInstalled(installState.totalSizeBytes)
-                    }
-                    is InstallState.Installing ->
-                        MainUiState.Installing(
-                            installState.progress,
-                            installState.totalBytes,
-                            installState.onWifi,
-                        )
-                    is InstallState.InstallSuspended ->
-                        MainUiState.InstallSuspended(installState.progress, installState.totalBytes)
-                    is InstallState.Installed -> {
-                        when (vmState) {
-                            is VmState.Ready -> {
-                                if (permissionRequired) {
-                                    MainUiState.PermissionRequired
-                                } else {
-                                    MainUiState.Ready
-                                }
-                            }
-                            is VmState.Starting -> {
-                                hasVmEverStarted = true
-                                MainUiState.Booting
-                            }
-                            is VmState.Rebooting -> MainUiState.Booting
-                            is VmState.Running ->
-                                MainUiState.Running(vmState.address, vmState.port, vmState.key)
-                            is VmState.Stopping -> MainUiState.Stopping
-                            is VmState.Stopped -> {
-                                if (hasVmEverStarted) {
-                                    MainUiState.Stopped
-                                } else {
-                                    MainUiState.Ready
-                                }
-                            }
-                            is VmState.Error -> {
-                                setIsImeVisible(false)
-                                MainUiState.Error(MainUiState.ErrorHandler.ReportBug(vmState.cause))
-                            }
+        combine(VmController.vmState, _permissionRequired) { vmState, permissionRequired ->
+                when (vmState) {
+                    is VmState.Ready -> {
+                        if (permissionRequired) {
+                            MainUiState.PermissionRequired
+                        } else {
+                            MainUiState.Ready
                         }
                     }
-                    is InstallState.Error -> {
-                        val handler =
-                            when (installState.errorCause) {
-                                InstallState.ErrorCause.CheckFailed ->
-                                    MainUiState.ErrorHandler.CheckNetwork
-                                InstallState.ErrorCause.InstallFailedUnknown ->
-                                    MainUiState.ErrorHandler.ReportBug(installState.cause)
-                                InstallState.ErrorCause.InstallFailedNoSpace ->
-                                    MainUiState.ErrorHandler.NoSpace
-                                InstallState.ErrorCause.UninstallFailed,
-                                InstallState.ErrorCause.DeleteBackupFailed ->
-                                    MainUiState.ErrorHandler.ReportBug(installState.cause)
-                            }
-                        MainUiState.Error(handler)
+                    is VmState.Starting -> {
+                        hasVmEverStarted = true
+                        MainUiState.Booting
+                    }
+                    is VmState.Rebooting -> MainUiState.Booting
+                    is VmState.Running ->
+                        MainUiState.Running(vmState.address, vmState.port, vmState.key)
+                    is VmState.Stopping -> MainUiState.Stopping
+                    is VmState.Stopped -> {
+                        if (hasVmEverStarted) {
+                            MainUiState.Stopped
+                        } else {
+                            MainUiState.Ready
+                        }
+                    }
+                    is VmState.Error -> {
+                        setIsImeVisible(false)
+                        MainUiState.Error(MainUiState.ErrorHandler.ReportBug(vmState.cause))
                     }
                 }
             }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = MainUiState.Checking,
+                initialValue = MainUiState.Ready,
             )
-
-    fun installVm() {
-        // Reset the flag to prevent the app from finishing immediately after re-installation.
-        // If this flag is true, the app treats the stopped state as a signal to finish the
-        // activity.
-        hasVmEverStarted = false
-
-        resetTabs()
-
-        viewModelScope.launch { Installer.install() }
-    }
-
-    fun setWifiOnly(enabled: Boolean) {
-        Installer.setWifiOnly(enabled)
-    }
-
-    fun cancelInstallVm() {
-        Installer.cancelInstall()
-    }
-
-    fun retryCheck() {
-        Installer.retryCheck()
-    }
 
     fun startVm() {
         val context = getApplication<Application>()
@@ -339,22 +256,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedTabId.value = newSession.id
     }
 
-    fun uninstallVm(backupRootfs: Boolean) {
-        viewModelScope.launch {
-            VmController.stop()
-            Installer.uninstall(backupRootfs)
-        }
-    }
-
-    fun deleteBackup() {
-        viewModelScope.launch {
-            if (Installer.deleteBackup()) {
-                _hasBackup.value = false
-                startVm()
-            }
-        }
-    }
-
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
@@ -395,14 +296,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         VmController.reset()
-        viewModelScope.launch(Dispatchers.IO) { _hasBackup.value = Installer.hasBackup() }
+
+        // Observe installation and UI states to manage VM lifecycle.
         viewModelScope.launch {
-            uiState.collect { state ->
-                if (state is MainUiState.Ready) {
-                    startVm()
+            Installer.installState.collectLatest { installState ->
+                if (installState is InstallState.Installed) {
+                    // Once installed, start observing UI state and trigger VM startup
+                    // whenever it returns to a Ready state.
+                    uiState.collect { uiState ->
+                        if (uiState is MainUiState.Ready) {
+                            startVm()
+                        }
+                    }
+                } else {
+                    // If installation is removed or checking, reset flags and UI.
+                    hasVmEverStarted = false
+                    _showSettings.value = false
                 }
             }
         }
+
         viewModelScope.launch { VmController.sessionDiscarded.collect { id -> closeTab(id) } }
         viewModelScope.launch {
             VmController.vmState.collect { state ->

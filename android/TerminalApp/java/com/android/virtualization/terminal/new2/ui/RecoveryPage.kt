@@ -32,22 +32,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.R
-import com.android.virtualization.terminal.new2.ui.main.MainViewModel
+import com.android.virtualization.terminal.new2.core.Installer
+import com.android.virtualization.terminal.new2.core.VmController
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
+fun RecoveryPage() {
     var showResetConfirmationDialog by remember { mutableStateOf(false) }
     var showRemoveBackupDialog by remember { mutableStateOf(false) }
-    val hasBackup by viewModel.hasBackup.collectAsStateWithLifecycle()
+    // TODO: Introduce a ViewModel to manage these states and operations instead of accessing
+    // controllers and repositories directly.
+    var hasBackup by remember { mutableStateOf(Installer.hasBackup()) }
+    val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
         ListItem(
@@ -94,7 +98,12 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.uninstallVm(backupDataChecked)
+                        scope.launch {
+                            // TODO: Move this logic to a ViewModel.
+                            VmController.stop()
+                            Installer.uninstall(backupDataChecked)
+                            hasBackup = Installer.hasBackup()
+                        }
                         showResetConfirmationDialog = false
                     }
                 ) {
@@ -117,7 +126,12 @@ fun RecoveryPage(viewModel: MainViewModel = viewModel()) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteBackup()
+                        scope.launch {
+                            // TODO: Move this logic to a ViewModel.
+                            if (Installer.deleteBackup()) {
+                                hasBackup = false
+                            }
+                        }
                         showRemoveBackupDialog = false
                     }
                 ) {

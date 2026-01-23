@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.android.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,6 @@
 package com.android.virtualization.terminal.new2.ui
 
 import android.app.Activity
-import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
@@ -44,8 +43,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +50,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.BetterBugLauncher
 import com.android.virtualization.terminal.R
+import com.android.virtualization.terminal.new2.core.InstallState
+import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
@@ -60,8 +59,11 @@ import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val installState by Installer.installState.collectAsStateWithLifecycle()
     val displayState by viewModel.displayState.collectAsStateWithLifecycle()
-    var lastValidState by remember { mutableStateOf<MainUiState>(MainUiState.Checking) }
+    val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
+
+    var lastValidState by remember { mutableStateOf<MainUiState>(MainUiState.Ready) }
     if (uiState !is MainUiState.Error) {
         lastValidState = uiState
     }
@@ -71,31 +73,17 @@ fun MainScreen(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val activity = context as Activity
-    val scope = rememberCoroutineScope()
-    var showSettings by rememberSaveable { mutableStateOf(false) }
 
     PermissionChecker(viewModel, snackbarHostState)
 
-    val settingsRequest by viewModel.settingsRequest.collectAsStateWithLifecycle()
-    LaunchedEffect(settingsRequest) {
-        if (settingsRequest != null) {
-            showSettings = true
-        }
-    }
-
     LaunchedEffect(uiState) {
-        val state = uiState
-        when (state) {
+        when (val state = uiState) {
             is MainUiState.Ready -> {
                 snackbarHostState.currentSnackbarData?.dismiss()
             }
             is MainUiState.Stopped -> activity.finish()
-            is MainUiState.NotInstalled,
-            is MainUiState.Checking,
-            is MainUiState.Booting -> showSettings = false
             is MainUiState.Error -> {
-                showSettings = false
-                handleError(activity, snackbarHostState, viewModel, state)
+                handleError(activity, snackbarHostState, state.handler)
             }
             else -> {}
         }
@@ -106,69 +94,69 @@ fun MainScreen(viewModel: MainViewModel) {
 
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                when (val state = lastValidState) {
-                    is MainUiState.Checking -> SplashScreen()
-                    is MainUiState.NotInstalled,
-                    is MainUiState.Installing,
-                    is MainUiState.InstallSuspended -> {
-                        InstallScreen(viewModel)
-                    }
-                    is MainUiState.Ready -> {
-                        // VM will soon be booting
-                    }
-                    is MainUiState.Stopped -> {
-                        // Activity will finish
-                    }
-                    is MainUiState.Booting -> BootingScreen()
-                    is MainUiState.Running -> {
-                        val currentDisplayState = displayState
+                if (installState !is InstallState.Installed) {
+                    InstallScreen(snackbarHostState = snackbarHostState)
+                } else
+                    when (val state = lastValidState) {
+                        is MainUiState.Ready -> {
+                            // VM will soon be booting
+                        }
+                        is MainUiState.Stopped -> {
+                            // Activity will finish
+                        }
+                        is MainUiState.Booting -> BootingScreen()
+                        is MainUiState.Running -> {
+                            val currentDisplayState = displayState
 
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surface),
-                            ) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    TerminalTabBar(
-                                        tabs = tabs,
-                                        selectedTabId =
-                                            if (currentDisplayState == DisplayState.Normal) null
-                                            else selectedTabId,
-                                        onTabSelected = { viewModel.selectTab(it) },
-                                        onTabClosed = { viewModel.closeTab(it) },
-                                        onAddTab = { viewModel.addTab() },
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surface),
+                                ) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        TerminalTabBar(
+                                            tabs = tabs,
+                                            selectedTabId =
+                                                if (currentDisplayState == DisplayState.Normal) null
+                                                else selectedTabId,
+                                            onTabSelected = { viewModel.selectTab(it) },
+                                            onTabClosed = { viewModel.closeTab(it) },
+                                            onAddTab = { viewModel.addTab() },
+                                        )
+                                    }
+                                    DisplayController(viewModel = viewModel)
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.setShowSettings(true)
+                                            viewModel.setIsImeVisible(false)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Settings,
+                                            contentDescription = "Settings",
+                                        )
+                                    }
+                                }
+                                if (currentDisplayState == DisplayState.Normal) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        DisplayScreen(viewModel = viewModel)
+                                    }
+                                } else {
+                                    TerminalScreen(
+                                        state.address,
+                                        state.port,
+                                        state.key,
+                                        selectedTabId,
+                                        viewModel,
                                     )
                                 }
-                                DisplayController(viewModel = viewModel)
-                                IconButton(
-                                    onClick = {
-                                        showSettings = true
-                                        viewModel.setIsImeVisible(false)
-                                    }
-                                ) {
-                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
-                                }
-                            }
-                            if (currentDisplayState == DisplayState.Normal) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    DisplayScreen(viewModel = viewModel)
-                                }
-                            } else {
-                                TerminalScreen(
-                                    state.address,
-                                    state.port,
-                                    state.key,
-                                    selectedTabId,
-                                    viewModel,
-                                )
                             }
                         }
+                        is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
+                        else -> {}
                     }
-                    is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
-                    else -> {}
-                }
             }
 
             AnimatedVisibility(
@@ -176,12 +164,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 enter = slideInHorizontally(initialOffsetX = { it }),
                 exit = slideOutHorizontally(targetOffsetX = { it }),
             ) {
-                SettingsScreen(
-                    onBack = {
-                        showSettings = false
-                        viewModel.clearSettingsRequest()
-                    }
-                )
+                SettingsScreen(onBack = { viewModel.setShowSettings(false) })
             }
         }
     }
@@ -204,29 +187,10 @@ fun BootingScreen() {
 private suspend fun handleError(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
-    viewModel: MainViewModel,
-    state: MainUiState.Error,
+    handler: MainUiState.ErrorHandler,
 ) {
     val (messageId, actionLabel, action) =
-        when (val handler = state.handler) {
-            MainUiState.ErrorHandler.CheckNetwork ->
-                Triple(
-                    R.string.installer_snkbar_error_no_wifi,
-                    activity.getString(R.string.action_settings),
-                    { activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) },
-                )
-            MainUiState.ErrorHandler.Retry ->
-                Triple(
-                    R.string.installer_snkbar_error_unknown,
-                    activity.getString(R.string.notif_btn_retry),
-                    { viewModel.retryCheck() },
-                )
-            MainUiState.ErrorHandler.NoSpace ->
-                Triple(
-                    R.string.installer_snkbar_error_no_space,
-                    activity.getString(R.string.installer_snkbar_action_storage),
-                    { activity.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) },
-                )
+        when (handler) {
             is MainUiState.ErrorHandler.ReportBug ->
                 Triple(
                     R.string.error_title,
