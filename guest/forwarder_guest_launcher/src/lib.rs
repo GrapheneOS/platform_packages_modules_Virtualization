@@ -15,7 +15,7 @@
 //! A library that handles port forwarding
 
 use anyhow::{anyhow, Context, Result};
-use log::debug;
+use log::{debug, error};
 use std::collections::HashMap;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -28,12 +28,16 @@ const TCPSTATES_STATE_LISTEN: &str = "LISTEN";
 
 /// Forward tcp port over vsock for host to connect to it.
 pub fn forward_port(tcp_port: u16, vsock_port: u32) {
-    let _ = Command::new("forwarder_guest")
+    // Use std::process::Command which doesn't require Tokio context.
+    if let Err(e) = std::process::Command::new("forwarder_guest")
         .arg("--local")
         .arg(format!("127.0.0.1:{}", tcp_port))
         .arg("--remote")
         .arg(format!("vsock:2:{}", vsock_port))
-        .spawn();
+        .spawn()
+    {
+        error!("Failed to launch forwarder_guest, err={e:?}");
+    }
 }
 
 #[derive(Debug)]

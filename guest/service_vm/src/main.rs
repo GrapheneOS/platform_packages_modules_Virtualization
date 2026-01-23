@@ -28,7 +28,7 @@ use crate::communication::VsockStream;
 use crate::error::{Error, Result};
 use crate::fdt::{read_dice_range_from, read_is_strict_boot, read_vendor_hashtree_root_digest};
 use alloc::boxed::Box;
-use avf_attestation::{process_request, RequestContext};
+use avf_attestation::process_request;
 use ciborium_io::Write;
 use core::num::NonZeroUsize;
 use core::slice;
@@ -96,7 +96,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
         error!("Failed to use memory range value from DT: {memory_range:#x?}");
     })?;
 
-    let bcc_handover: Box<dyn DiceArtifacts> = match vm_type(fdt)? {
+    let bcc_handover: Box<dyn DiceArtifacts + Sync> = match vm_type(fdt)? {
         VmType::ProtectedVm => {
             let dice_range = read_dice_range_from(fdt)?;
             info!("DICE range: {dice_range:#x?}");
@@ -121,13 +121,13 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
     let socket_device = find_socket_device::<HalImpl>(&mut pci_root)?;
     debug!("Found socket device: guest cid = {:?}", socket_device.guest_cid());
     let vendor_hashtree_root_digest = read_vendor_hashtree_root_digest(fdt)?;
-    let request_context =
-        RequestContext { dice_artifacts: bcc_handover.as_ref(), vendor_hashtree_root_digest };
+    let ops =
+        service_vm_avf_attestation::Ops::new(bcc_handover.as_ref(), vendor_hashtree_root_digest)?;
 
     let mut vsock_stream = VsockStream::new(socket_device, host_addr(fdt)?)?;
     while let ServiceVmRequest::Process(req) = vsock_stream.read_request()? {
         info!("Received request: {}", req.name());
-        let response = process_request(req, &request_context);
+        let response = process_request(req, &ops);
         info!("Sending response: {}", response.name());
         vsock_stream.write_response(&response)?;
         vsock_stream.flush()?;

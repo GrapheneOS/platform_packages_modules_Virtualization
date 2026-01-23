@@ -7,5 +7,4 @@ if [[ "$USER" == "droid" && -n "$PS1" ]]; then
   else
     source /usr/local/bin/enable_display
   fi
-  echo "Display is enabled. Please open a display activity before running any GUI applications."
 fi

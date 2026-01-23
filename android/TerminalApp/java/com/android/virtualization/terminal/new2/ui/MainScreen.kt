@@ -73,16 +73,13 @@ fun MainScreen(viewModel: MainViewModel) {
     val activity = context as Activity
     val scope = rememberCoroutineScope()
     var showSettings by rememberSaveable { mutableStateOf(false) }
-    var settingsInitialDestination by remember { mutableStateOf<SettingsDestination?>(null) }
 
     PermissionChecker(viewModel, snackbarHostState)
 
-    LaunchedEffect(viewModel) {
-        viewModel.settingsRequest.collect { destination ->
-            if (destination != null) {
-                settingsInitialDestination = destination
-                showSettings = true
-            }
+    val settingsRequest by viewModel.settingsRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(settingsRequest) {
+        if (settingsRequest != null) {
+            showSettings = true
         }
     }
 
@@ -180,8 +177,10 @@ fun MainScreen(viewModel: MainViewModel) {
                 exit = slideOutHorizontally(targetOffsetX = { it }),
             ) {
                 SettingsScreen(
-                    onBack = { showSettings = false },
-                    initialDestination = settingsInitialDestination,
+                    onBack = {
+                        showSettings = false
+                        viewModel.clearSettingsRequest()
+                    }
                 )
             }
         }

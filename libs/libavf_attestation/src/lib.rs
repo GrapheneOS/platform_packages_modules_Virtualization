@@ -27,4 +27,10 @@ mod ops;
 mod pub_key;
 mod rkp;
 
-pub use api::{process_request, RequestContext};
+pub use api::process_request;
+pub use dice::{ClientVmDiceChain, DiceChainEntryPayload};
+pub use keyblob::InMemoryKeyDerivationOps;
+pub use ops::{AttestationOps, KeyDerivationOps};
+
+/// Re-export types used in traits
+pub use service_vm_comm::{RequestProcessingError, Result};

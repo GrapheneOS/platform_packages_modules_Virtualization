@@ -39,12 +39,9 @@ import com.android.virtualization.terminal.new2.ui.PERMISSIONS
 import com.android.virtualization.terminal.new2.ui.SettingsDestination
 import com.android.virtualization.terminal.new2.ui.TAB_BAR_HEIGHT
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -133,15 +130,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _hasBackup = MutableStateFlow(false)
     val hasBackup: StateFlow<Boolean> = _hasBackup.asStateFlow()
 
-    private val _settingsRequest = MutableSharedFlow<SettingsDestination?>()
-    val settingsRequest: SharedFlow<SettingsDestination?> = _settingsRequest.asSharedFlow()
+    private val _settingsRequest = MutableStateFlow<SettingsDestination?>(null)
+    val settingsRequest: StateFlow<SettingsDestination?> = _settingsRequest.asStateFlow()
 
     private val _permissionRequired = MutableStateFlow(false)
 
     fun handleIntent(intent: Intent) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
-            viewModelScope.launch { _settingsRequest.emit(SettingsDestination.PortControl) }
+            _settingsRequest.value = SettingsDestination.PortControl
         }
+    }
+
+    fun clearSettingsRequest() {
+        _settingsRequest.value = null
     }
 
     fun toggleDisplay() {
@@ -233,6 +234,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 hasVmEverStarted = true
                                 MainUiState.Booting
                             }
+                            is VmState.Rebooting -> MainUiState.Booting
                             is VmState.Running ->
                                 MainUiState.Running(vmState.address, vmState.port, vmState.key)
                             is VmState.Stopping -> MainUiState.Stopping
@@ -278,10 +280,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // activity.
         hasVmEverStarted = false
 
-        // Clear existing tabs
-        val newSession = TerminalSession()
-        _tabs.value = listOf(newSession)
-        _selectedTabId.value = newSession.id
+        resetTabs()
 
         viewModelScope.launch { Installer.install() }
     }
@@ -322,6 +321,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopVm() {
         VmController.stop()
+    }
+
+    fun restartVm() {
+        hasVmEverStarted = false
+        resetTabs()
+        if (VmController.vmState.value is VmState.Rebooting) {
+            VmController.reset()
+        } else {
+            stopVm()
+        }
+    }
+
+    private fun resetTabs() {
+        val newSession = TerminalSession()
+        _tabs.value = listOf(newSession)
+        _selectedTabId.value = newSession.id
     }
 
     fun uninstallVm(backupRootfs: Boolean) {
@@ -385,6 +400,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             uiState.collect { state ->
                 if (state is MainUiState.Ready) {
                     startVm()
+                }
+            }
+        }
+        viewModelScope.launch { VmController.sessionDiscarded.collect { id -> closeTab(id) } }
+        viewModelScope.launch {
+            VmController.vmState.collect { state ->
+                if (state is VmState.Rebooting) {
+                    restartVm()
                 }
             }
         }

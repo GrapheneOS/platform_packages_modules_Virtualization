@@ -55,7 +55,8 @@ def main(args):
             hashes[PARTITION_NAME_INITRD_NORMAL].append("")
             hashes[PARTITION_NAME_INITRD_DEBUG].append("")
 
-    print("pub const OS_HASHES: [OsHashes; " + str(num_kernel_images) + "] = [")
+    print("pub static OS_HASHES: [OsHashes; " +
+          str(num_kernel_images) + "] = [")
     for i in range(num_kernel_images):
         print("OsHashes {")
         print("    kernel: [" +

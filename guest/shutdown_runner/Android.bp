@@ -23,5 +23,6 @@ rust_library {
         "libanyhow",
         "liblog_rust",
     ],
+    host_supported: true,
     apex_available: ["com.android.virt"],
 }

@@ -23,6 +23,7 @@ use std::result;
 use clap::Parser;
 use forwarder::forwarder::{ForwarderError, ForwarderSession};
 use forwarder::stream::{StreamSocket, StreamSocketError};
+use log::{error, info};
 use poll_token_derive::PollToken;
 use vmm_sys_util::poll::{PollContext, PollToken};
 
@@ -111,13 +112,28 @@ pub struct Args {
     remote_sockaddr: String,
 }
 
-// TODO(b/370897694): Support forwarding for datagram socket
-fn main() -> Result<()> {
+fn try_main() -> Result<()> {
     let args = Args::parse();
+
+    info!(
+        "forwarder_guest is started with local={}, remote={}",
+        args.local_sockaddr, args.remote_sockaddr
+    );
 
     let local_stream = StreamSocket::connect(&args.local_sockaddr).map_err(Error::ConnectSocket)?;
     let remote_stream =
         StreamSocket::connect(&args.remote_sockaddr).map_err(Error::ConnectSocket)?;
 
     run_forwarder(local_stream, remote_stream)
+}
+
+// TODO(b/370897694): Support forwarding for datagram socket
+fn main() -> Result<()> {
+    env_logger::builder().filter_level(log::LevelFilter::Debug).init();
+
+    if let Err(e) = try_main() {
+        error!("Error in forwarder_guest, {e:?}");
+    }
+
+    Ok(())
 }

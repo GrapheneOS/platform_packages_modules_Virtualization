@@ -22,6 +22,8 @@ sealed interface VmState {
 
     data class Running(val address: String, val port: Int, val key: String? = null) : VmState
 
+    data object Rebooting : VmState
+
     data object Stopping : VmState
 
     data object Stopped : VmState
@@ -29,5 +31,5 @@ sealed interface VmState {
     data class Error(val cause: Throwable) : VmState
 
     val isAlive: Boolean
-        get() = this is Starting || this is Running || this is Stopping
+        get() = this is Starting || this is Running || this is Stopping || this is Rebooting
 }
