@@ -126,12 +126,12 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         )
     }
 
-    fun load(ipAddress: String, port: Int, key: String? = null) {
-        val ssl = key.isNullOrEmpty()
-        val url = getTerminalServiceUrl(ipAddress, port, ssl)
+    fun load(terminalAddress: TerminalAddress) {
+        val ssl = terminalAddress.key.isNullOrEmpty()
+        val url = getTerminalServiceUrl(terminalAddress, ssl)
         Log.d("TtydView", "Loading URL: ${url.toString()}")
 
-        if (key != null) {
+        terminalAddress.key?.let { key ->
             val cookieManager = android.webkit.CookieManager.getInstance()
             cookieManager.setAcceptCookie(true)
             cookieManager.setCookie(url.toString(), "access_token=$key")
@@ -153,7 +153,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
-    private fun getTerminalServiceUrl(ipAddress: String?, port: Int, ssl: Boolean): URL? {
+    private fun getTerminalServiceUrl(terminalAddress: TerminalAddress, ssl: Boolean): URL? {
         val config = resources.configuration
         val a11yManager = context.getSystemService(AccessibilityManager::class.java)
         // TODO: Always enable screenReaderMode (b/395845063)
@@ -169,7 +169,12 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 "&disableResizeOverlay=true")
 
         try {
-            return URL(if (ssl) "https" else "http", ipAddress, port, query)
+            return URL(
+                if (ssl) "https" else "http",
+                terminalAddress.ipAddress,
+                terminalAddress.port,
+                query,
+            )
         } catch (e: MalformedURLException) {
             // this cannot happen
             return null

@@ -60,7 +60,6 @@ import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val installState by Installer.installState.collectAsStateWithLifecycle()
-    val displayState by viewModel.displayState.collectAsStateWithLifecycle()
     val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
 
     var lastValidState by remember { mutableStateOf<MainUiState>(MainUiState.Ready) }
@@ -68,8 +67,6 @@ fun MainScreen(viewModel: MainViewModel) {
         lastValidState = uiState
     }
 
-    val tabs by viewModel.tabs.collectAsStateWithLifecycle()
-    val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val activity = context as Activity
@@ -105,55 +102,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             // Activity will finish
                         }
                         is MainUiState.Booting -> BootingScreen()
-                        is MainUiState.Running -> {
-                            val currentDisplayState = displayState
-
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.surface),
-                                ) {
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        TerminalTabBar(
-                                            tabs = tabs,
-                                            selectedTabId =
-                                                if (currentDisplayState == DisplayState.Normal) null
-                                                else selectedTabId,
-                                            onTabSelected = { viewModel.selectTab(it) },
-                                            onTabClosed = { viewModel.closeTab(it) },
-                                            onAddTab = { viewModel.addTab() },
-                                        )
-                                    }
-                                    DisplayController(viewModel = viewModel)
-                                    IconButton(
-                                        onClick = {
-                                            viewModel.setShowSettings(true)
-                                            viewModel.setIsImeVisible(false)
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Settings,
-                                            contentDescription = "Settings",
-                                        )
-                                    }
-                                }
-                                if (currentDisplayState == DisplayState.Normal) {
-                                    Box(modifier = Modifier.fillMaxSize()) {
-                                        DisplayScreen(viewModel = viewModel)
-                                    }
-                                } else {
-                                    TerminalScreen(
-                                        state.address,
-                                        state.port,
-                                        state.key,
-                                        selectedTabId,
-                                        viewModel,
-                                    )
-                                }
-                            }
-                        }
+                        is MainUiState.Running -> RunningScreen(state, viewModel)
                         is MainUiState.Stopping -> BootingScreen() // TODO: show the shutdown screen
                         else -> {}
                     }
@@ -181,6 +130,45 @@ fun SplashScreen() {
 fun BootingScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
+    }
+}
+
+@Composable
+fun RunningScreen(state: MainUiState.Running, viewModel: MainViewModel) {
+    val tabs by viewModel.tabs.collectAsStateWithLifecycle()
+    val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
+    val displayState by viewModel.displayState.collectAsStateWithLifecycle()
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                TerminalTabBar(
+                    tabs = tabs,
+                    selectedTabId =
+                        if (displayState == DisplayState.Normal) null else selectedTabId,
+                    onTabSelected = { viewModel.selectTab(it) },
+                    onTabClosed = { viewModel.closeTab(it) },
+                    onAddTab = { viewModel.addTab() },
+                )
+            }
+            DisplayController(viewModel = viewModel)
+            IconButton(
+                onClick = {
+                    viewModel.setShowSettings(true)
+                    viewModel.setIsImeVisible(false)
+                }
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings")
+            }
+        }
+        if (displayState == DisplayState.Normal) {
+            Box(modifier = Modifier.fillMaxSize()) { DisplayScreen(viewModel = viewModel) }
+        } else {
+            TerminalScreen(state.terminalAddress, selectedTabId, viewModel)
+        }
     }
 }
 

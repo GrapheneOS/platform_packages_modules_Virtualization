@@ -71,6 +71,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.R
+import com.android.virtualization.terminal.new2.core.TerminalAddress
 import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
@@ -241,18 +242,12 @@ private fun TerminalTab(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TerminalScreen(
-    address: String,
-    port: Int,
-    key: String?,
-    tabId: String,
-    mainViewModel: MainViewModel,
-) {
+fun TerminalScreen(terminalAddress: TerminalAddress, tabId: String, mainViewModel: MainViewModel) {
     val terminalViewModel: TerminalViewModel = viewModel(key = tabId)
     val terminalUiState by terminalViewModel.uiState.collectAsStateWithLifecycle()
     val ttydView =
-        remember(address, port, tabId) {
-            terminalViewModel.getOrCreateTtydView(tabId, address, port, key)
+        remember(terminalAddress, tabId) {
+            terminalViewModel.getOrCreateTtydView(tabId, terminalAddress)
         }
 
     val storedImeVisibility by mainViewModel.isImeVisible.collectAsStateWithLifecycle()

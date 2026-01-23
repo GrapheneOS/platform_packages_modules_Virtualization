@@ -30,6 +30,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
+import com.android.virtualization.terminal.new2.core.TerminalAddress
 import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.core.TerminalSessionRepository
 import com.android.virtualization.terminal.new2.core.VmController
@@ -56,7 +57,7 @@ sealed interface MainUiState {
 
     data object Booting : MainUiState
 
-    data class Running(val address: String, val port: Int, val key: String?) : MainUiState
+    data class Running(val terminalAddress: TerminalAddress) : MainUiState
 
     data object Stopping : MainUiState
 
@@ -169,8 +170,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         MainUiState.Booting
                     }
                     is VmState.Rebooting -> MainUiState.Booting
-                    is VmState.Running ->
-                        MainUiState.Running(vmState.address, vmState.port, vmState.key)
+                    is VmState.Running -> MainUiState.Running(vmState.terminalAddress)
                     is VmState.Stopping -> MainUiState.Stopping
                     is VmState.Stopped -> {
                         if (hasVmEverStarted) {

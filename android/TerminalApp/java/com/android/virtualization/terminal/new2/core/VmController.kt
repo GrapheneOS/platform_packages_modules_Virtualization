@@ -224,7 +224,8 @@ object VmController {
                         _vmState.value = VmState.Error(RuntimeException("Failed to start bridge"))
                     } else {
                         Log.d(TAG, "localhost is running with port=" + port)
-                        _vmState.value = VmState.Running("localhost", port, bridge.secretKey)
+                        _vmState.value =
+                            VmState.Running(TerminalAddress("localhost", port, bridge.secretKey))
                     }
                 }
 
@@ -345,7 +346,7 @@ object VmController {
                                 .hostAddress!!
                         val port = info.port
                         guestAgentController?.start(ipAddress)
-                        _vmState.value = VmState.Running(ipAddress, port)
+                        _vmState.value = VmState.Running(TerminalAddress(ipAddress, port))
                     }
                 }
             }
