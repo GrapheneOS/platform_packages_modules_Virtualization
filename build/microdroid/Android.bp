@@ -764,7 +764,10 @@ python_binary_host {
 cc_genrule {
     name: "microdroid_kernel_hashes_rs",
     compile_multilib: "first",
-    srcs: [":microdroid_kernel"],
+    srcs: [
+        "microdroid_kernel_hashes_rules.mk",
+        ":microdroid_kernel",
+    ],
     arch: {
         arm64: {
             srcs: [
@@ -776,16 +779,23 @@ cc_genrule {
             srcs: [
                 ":microdroid_gki-android15-6.6_kernel_signed",
                 ":microdroid_gki-android16-6.12_kernel_signed",
-            ],
+            ] + select(soong_config_variable("ANDROID", "avf_microdroid_guest_gki_version"), {
+                "android16_612-desktop-experimental": [":microdroid_gki-android16-6.12-desktop_kernel_signed"],
+                default: [],
+            }),
         },
     },
-    out: ["lib.rs"],
+    out: [
+        "lib.rs",
+        "rules.mk",
+    ],
     tools: [
         "extract_microdroid_kernel_hashes",
         "avbtool",
     ],
     cmd: "$(location extract_microdroid_kernel_hashes) --avbtool $(location avbtool) " +
-        "--kernel $(in) > $(out)",
+        "--kernel $(in) > $(genDir)/lib.rs;" +
+        "cp $(location microdroid_kernel_hashes_rules.mk) $(genDir)/rules.mk;",
 }
 
 rust_library_rlib {

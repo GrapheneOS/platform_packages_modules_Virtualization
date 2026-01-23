@@ -34,7 +34,8 @@ use x509_cert::{certificate::Certificate, name::Name};
 const DICE_CDI_LEAF_SIGNATURE_INDEX: usize = 0;
 const ATTESTATION_KEY_SIGNATURE_INDEX: usize = 1;
 
-pub(super) fn request_attestation(
+/// Requests an attestation certificate for a Client VM.
+pub fn request_attestation(
     params: ClientVmAttestationParams,
     ops: &impl AttestationOps,
 ) -> Result<Vec<u8>> {
