@@ -282,6 +282,21 @@ public abstract class MicrodroidDeviceTestBase {
                 && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
     }
 
+    protected void assumeVmAttestationSupportedWithInternet() throws Exception {
+        assume().withMessage("Internet connection is required for this test")
+                .that(isNetworkConnected())
+                .isTrue();
+        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
+                .that(SystemProperties.get("remote_provisioning.hostname"))
+                .isNotEmpty();
+        assume().withMessage("AVF key provisioning is not supported on CF.")
+                .that(isCuttlefish())
+                .isFalse();
+        // pVM remote attestation is only supported on protected VMs.
+        assumeProtectedVM();
+        ensureVmAttestationSupported();
+    }
+
     protected void assumeFeatureVirtualizationFramework() {
         assume().withMessage("Device doesn't support AVF")
                 .that(mCtx.getPackageManager().hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK))
