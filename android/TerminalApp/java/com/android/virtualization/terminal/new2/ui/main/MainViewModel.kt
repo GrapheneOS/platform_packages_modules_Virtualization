@@ -31,6 +31,7 @@ import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalSession
+import com.android.virtualization.terminal.new2.core.TerminalSessionRepository
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.core.VmState
 import com.android.virtualization.terminal.new2.ui.MainActivity
@@ -77,11 +78,8 @@ sealed interface DisplayState {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     var hasVmEverStarted = false
 
-    private val _tabs = MutableStateFlow<List<TerminalSession>>(listOf(TerminalSession()))
-    val tabs: StateFlow<List<TerminalSession>> = _tabs.asStateFlow()
-
-    private val _selectedTabId = MutableStateFlow(_tabs.value.first().id)
-    val selectedTabId: StateFlow<String> = _selectedTabId.asStateFlow()
+    val tabs: StateFlow<List<TerminalSession>> = TerminalSessionRepository.sessions
+    val selectedTabId: StateFlow<String> = TerminalSessionRepository.selectedSessionId
 
     private val _displayState = MutableStateFlow<DisplayState>(DisplayState.Hidden)
     val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
@@ -143,36 +141,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addTab() {
-        val newSession = TerminalSession()
-        val currentTabs = _tabs.value.toMutableList()
-        currentTabs.add(newSession)
-        _tabs.value = currentTabs
-        _selectedTabId.value = newSession.id
+        TerminalSessionRepository.addSession()
     }
 
     fun closeTab(id: String) {
-        val currentTabs = _tabs.value.toMutableList()
-
-        val index = currentTabs.indexOfFirst { it.id == id }
-        if (index == -1) return
-
-        currentTabs.removeAt(index)
-        _tabs.value = currentTabs
-
-        if (currentTabs.isEmpty()) {
-            stopVm()
-            return
-        }
-
-        if (_selectedTabId.value == id) {
-            // Select the previous tab, or the first one if we closed the first
-            val newIndex = if (index > 0) index - 1 else 0
-            _selectedTabId.value = currentTabs[newIndex].id
-        }
+        TerminalSessionRepository.removeSession(id)
     }
 
     fun selectTab(id: String) {
-        _selectedTabId.value = id
+        TerminalSessionRepository.selectSession(id)
         _displayState.value = DisplayState.Hidden
     }
 
@@ -242,18 +219,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun restartVm() {
         hasVmEverStarted = false
-        resetTabs()
+        TerminalSessionRepository.reset()
         if (VmController.vmState.value is VmState.Rebooting) {
             VmController.reset()
         } else {
             stopVm()
         }
-    }
-
-    private fun resetTabs() {
-        val newSession = TerminalSession()
-        _tabs.value = listOf(newSession)
-        _selectedTabId.value = newSession.id
     }
 
     override fun onCleared() {
@@ -301,6 +272,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             Installer.installState.collectLatest { installState ->
                 if (installState is InstallState.Installed) {
+                    // Reset sessions to start fresh upon installation completion.
+                    TerminalSessionRepository.reset()
+
                     // Once installed, start observing UI state and trigger VM startup
                     // whenever it returns to a Ready state.
                     uiState.collect { uiState ->
@@ -321,6 +295,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             VmController.vmState.collect { state ->
                 if (state is VmState.Rebooting) {
                     restartVm()
+                }
+            }
+        }
+        viewModelScope.launch {
+            TerminalSessionRepository.sessions.collect { sessions ->
+                if (sessions.isEmpty()) {
+                    stopVm()
                 }
             }
         }
