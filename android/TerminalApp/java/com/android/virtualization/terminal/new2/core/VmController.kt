@@ -21,6 +21,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.StatFs
 import android.os.SystemProperties
 import android.system.virtualizationcommon.IGuestAgent
 import android.system.virtualmachine.VirtualMachine
@@ -38,10 +39,12 @@ import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
+import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.Logger
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
+import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -126,6 +129,9 @@ object VmController {
                 val json = ConfigJson.from(context, image.configPath)
                 val configBuilder = json.toConfigBuilder(context)
                 val customImageConfigBuilder = json.toCustomImageConfigBuilder(context)
+
+                // When storage ballooning is enabled, convert rootfs disk into a sparse file.
+                truncateDiskIfNecessary(image)
 
                 // Override config for Display
                 setDisplayConfig(customImageConfigBuilder, displayInfo)
@@ -387,6 +393,34 @@ object VmController {
             _vmState.value = VmState.Stopped
         }
     }
+
+    private fun calculateSparseDiskSize(): Long {
+        // With storage ballooning enabled, we create a sparse file with 95% of the total size.
+        val statFs = StatFs(context.filesDir.absolutePath)
+        val hostSize = statFs.totalBytes
+        return roundUp(hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100)
+    }
+
+    private fun truncateDiskIfNecessary(image: InstalledImage) {
+        val curSize = image.getApparentSize()
+        val physicalSize = image.getPhysicalSize()
+
+        val expectedSize = calculateSparseDiskSize()
+        Log.d(
+            TAG,
+            "rootfs apparent size=$curSize, physical size=$physicalSize, expectedSize=$expectedSize",
+        )
+
+        if (curSize != expectedSize) {
+            try {
+                image.truncate(expectedSize)
+            } catch (e: IOException) {
+                throw RuntimeException("Failed to truncate a disk", e)
+            }
+        }
+    }
+
+    private const val GUEST_SPARSE_DISK_SIZE_PERCENTAGE = 95
 
     private val IS_EMULATOR: Boolean =
         {
