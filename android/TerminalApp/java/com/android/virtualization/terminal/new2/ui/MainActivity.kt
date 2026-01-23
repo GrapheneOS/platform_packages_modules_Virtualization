@@ -34,6 +34,12 @@ import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Ensure the app handles insets manually and the window background is black
+        // to prevent white flashes during IME animations or layout jumps.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.setBackgroundDrawableResource(android.R.color.black)
+
         setContent {
             val darkTheme = isSystemInDarkTheme()
             val context = LocalContext.current

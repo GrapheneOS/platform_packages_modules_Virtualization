@@ -24,18 +24,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -76,7 +72,6 @@ import com.android.virtualization.terminal.new2.core.TerminalSession
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.TerminalUiState
 import com.android.virtualization.terminal.new2.ui.main.TerminalViewModel
-import kotlinx.coroutines.delay
 
 val TAB_BAR_HEIGHT = 50.dp
 
@@ -252,6 +247,11 @@ fun TerminalScreen(terminalAddress: TerminalAddress, tabId: String, mainViewMode
 
     val storedImeVisibility by mainViewModel.isImeVisible.collectAsStateWithLifecycle()
     val isWindowImeVisible = WindowInsets.isImeVisible
+    // isFocused is used to track whether this tab is currently active and focused.
+    // This is necessary to gate IME visibility synchronization; only the focused tab
+    // should update the global IME state to avoid infinite loops and race conditions
+    // during tab switching.
+    var isFocused by remember { mutableStateOf(false) }
 
     // 1. Sync ViewModel state to UI (Show/Hide Keyboard)
     LaunchedEffect(tabId, storedImeVisibility, terminalUiState) {
@@ -266,35 +266,31 @@ fun TerminalScreen(terminalAddress: TerminalAddress, tabId: String, mainViewMode
         }
     }
 
-    // 2. Sync UI state to ViewModel (Update ViewModel when user changes keyboard state)
-    LaunchedEffect(tabId, isWindowImeVisible, storedImeVisibility) {
-        if (storedImeVisibility != isWindowImeVisible) {
-            if (storedImeVisibility) {
-                // ViewModel says visible, but Window says invisible.  This could be due to tab
-                // switching or keyboard animation.  Wait a bit to see if it persists (meaning user
-                // closed it).
-                delay(500)
-                // Check directly against current window state (needs recomposition to get fresh
-                // value?  No, LaunchedEffect restarts if isWindowImeVisible changes.  So if we are
-                // here, it means isWindowImeVisible didn't change to true within 500ms.  But we
-                // cannot access 'current' value inside LaunchedEffect without snapshotFlow or
-                // simple variable capture.  Actually, if isWindowImeVisible changes, this coroutine
-                // is cancelled.  So if we reached here, isWindowImeVisible is still false.
-                mainViewModel.setIsImeVisible(false)
-            } else {
-                // ViewModel says invisible, Window says visible.  User opened the keyboard.
-                delay(500)
-                mainViewModel.setIsImeVisible(true)
+    ImeAwareContainer(
+        isFocused = isFocused,
+        onImeVisibilityChanged = { visible ->
+            if (storedImeVisibility != visible) {
+                mainViewModel.setIsImeVisible(visible)
             }
-        }
-    }
-
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
-    ) {
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+        },
+        onKeyAction = { key, action ->
+            if (key == ExtraKey.CTRL) {
+                if (action == KeyEvent.ACTION_DOWN) {
+                    ttydView.mapCtrlKey()
+                    ttydView.enableCtrlKey()
+                }
+            } else {
+                // Many terminal emulators send esc for alt for historical reason. We should
+                // do the same.
+                val code = if (key == ExtraKey.ALT) KeyEvent.KEYCODE_ESCAPE else key.keyCode
+                code?.let { ttydView.dispatchKeyEvent(KeyEvent(action, it)) }
+            }
+        },
+    ) { stablePadding ->
+        Box(
+            modifier = Modifier.fillMaxSize().padding(bottom = stablePadding),
+            contentAlignment = Alignment.Center,
+        ) {
             when (terminalUiState) {
                 is TerminalUiState.Ready -> {
                     key(tabId) {
@@ -306,6 +302,7 @@ fun TerminalScreen(terminalAddress: TerminalAddress, tabId: String, mainViewMode
                             factory = {
                                 ttydView.apply {
                                     setOnFocusChangeListener { _, hasFocus ->
+                                        isFocused = hasFocus
                                         if (!hasFocus) disableCtrlKey()
                                     }
                                 }
@@ -339,23 +336,6 @@ fun TerminalScreen(terminalAddress: TerminalAddress, tabId: String, mainViewMode
                     }
                 }
             }
-        }
-        if (WindowInsets.isImeVisible) {
-            ModifierKeys(
-                onKeyAction = { key, action ->
-                    if (key == ExtraKey.CTRL) {
-                        if (action == KeyEvent.ACTION_DOWN) {
-                            ttydView.mapCtrlKey()
-                            ttydView.enableCtrlKey()
-                        }
-                    } else {
-                        // Many terminal emulators send esc for alt for historical reason. We should
-                        // do the same.
-                        val code = if (key == ExtraKey.ALT) KeyEvent.KEYCODE_ESCAPE else key.keyCode
-                        code?.let { ttydView.dispatchKeyEvent(KeyEvent(action, it)) }
-                    }
-                }
-            )
         }
     }
 }

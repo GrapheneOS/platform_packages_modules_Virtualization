@@ -110,6 +110,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             )
         isFocusable = true
         isFocusableInTouchMode = true
+        setBackgroundColor(android.graphics.Color.BLACK)
 
         enableJavascriptConsoleDebug()
     }
