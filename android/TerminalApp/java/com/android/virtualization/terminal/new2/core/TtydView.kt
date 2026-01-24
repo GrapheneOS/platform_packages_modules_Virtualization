@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal.new2.core
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.fonts.FontStyle
 import android.net.http.SslError
 import android.util.AttributeSet
@@ -205,6 +206,23 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     private inner class TtydWebViewClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(
+            view: WebView?,
+            request: WebResourceRequest?,
+        ): Boolean {
+            val intent = Intent(Intent.ACTION_VIEW, request?.url)
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // Sanitize the Intent, ensuring web pages can not bypass browser security (only access
+            // to BROWSABLE activities).
+            intent.addCategory(Intent.CATEGORY_BROWSABLE)
+            intent.setComponent(null)
+            // Intent Selectors allow intents to bypass the intent filter and potentially send apps
+            // URIs they were not expecting to handle.
+            intent.setSelector(null)
+            context.startActivity(intent)
+            return true
+        }
+
         override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
             val pke = CertificateUtils.createOrGetKey()
             val certificates = arrayOf<X509Certificate>(pke.certificate as X509Certificate)
