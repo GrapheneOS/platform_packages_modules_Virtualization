@@ -24,6 +24,7 @@ use avf_attestation::{
     KeyDerivationOps,
 };
 use bssl_avf::Digester;
+use ciborium::value::Value;
 use coset::{CoseSign1, CoseSign1Builder, HeaderBuilder};
 use diced_open_dice::{derive_cdi_leaf_priv, sign, DiceArtifacts, PrivateKey, VM_KEY_ALGORITHM};
 use log::{debug, error, info};
@@ -109,6 +110,12 @@ impl<'a> AttestationOps for Ops<'a> {
             debug!("No vendor partition present in the Client VM DICE chain.");
         }
         Ok(())
+    }
+
+    fn uds_certs(&self) -> Result<Vec<u8>> {
+        // Currently `UdsCerts` is left empty because it is only needed for Samsung devices.
+        // Check http://b/301574013#comment3 for more information.
+        Ok(cbor_util::serialize(&Value::Map(Vec::new()))?)
     }
 }
 

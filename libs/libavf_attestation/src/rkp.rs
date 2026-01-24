@@ -43,7 +43,8 @@ const HMAC_KEY_SALT: [u8; 32] = [
 const HMAC_KEY_INFO: &[u8] = b"rialto hmac wkey";
 const HMAC_KEY_LENGTH: usize = 32;
 
-pub(super) fn generate_ecdsa_p256_key_pair(ops: &impl AttestationOps) -> Result<EcdsaP256KeyPair> {
+/// Generates a new ECDSA P-256 key pair that can be attested by the remote server.
+pub fn generate_ecdsa_p256_key_pair(ops: &impl AttestationOps) -> Result<EcdsaP256KeyPair> {
     let hmac_key = derive_hmac_key(ops)?;
     let mut ec_key = EcKey::new_p256()?;
     ec_key.generate_key()?;
@@ -64,7 +65,7 @@ const CERTIFICATE_TYPE: &str = "rkp-vm";
 ///
 /// hardware/interfaces/security/rkp/aidl/android/hardware/security/keymint/
 /// generateCertificateRequestV2.cddl
-pub(super) fn generate_certificate_request(
+pub fn generate_certificate_request(
     params: GenerateCertificateRequestParams,
     ops: &impl AttestationOps,
 ) -> Result<Vec<u8>> {
@@ -93,9 +94,7 @@ pub(super) fn generate_certificate_request(
     debug!("Successfully signed the CSR payload.");
 
     // Builds `AuthenticatedRequest<CsrPayload>`.
-    // Currently `UdsCerts` is left empty because it is only needed for Samsung devices.
-    // Check http://b/301574013#comment3 for more information.
-    let uds_certs = Value::Map(Vec::new());
+    let uds_certs: Value = cbor_util::deserialize(&ops.uds_certs()?)?;
     let dice_cert_chain: Value = cbor_util::deserialize(ops.reference_vm_dice_chain()?)?;
     let auth_req = cbor!([
         Value::Integer(AUTH_REQ_SCHEMA_V1.into()),

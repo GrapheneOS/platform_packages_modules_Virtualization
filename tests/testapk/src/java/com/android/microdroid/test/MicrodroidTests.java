@@ -311,9 +311,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
-    public void vmAttestationWithVendorPartitionWhenSupported() throws Exception {
-        // pVM remote attestation is only supported on protected VMs.
-        assumeProtectedVM();
+    public void vmAttestationWithVendorPartitionSucceedsWithInternet() throws Exception {
+        assumeVmAttestationSupportedWithInternet();
         assume().withMessage("Test needs Remote Attestation support")
                 .that(isRemoteAttestationSupported())
                 .isTrue();
@@ -323,14 +322,15 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 buildVmConfigWithVendor(vendorDiskImage, VM_ATTESTATION_PAYLOAD_PATH);
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("cts_attestation_with_vendor_module", config);
-        checkVmAttestationWithValidChallenge(vm);
+
+        runAndVerifyVmAttestationSucceeds(vm, "" /* tenantPackageName */);
     }
 
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
-    public void vmAttestationWhenRemoteAttestationIsSupported() throws Exception {
+    public void vmAttestationCompletesWithOrWithoutInternet() throws Exception {
         // pVM remote attestation is only supported on protected VMs.
         assumeProtectedVM();
         ensureVmAttestationSupported();
@@ -360,16 +360,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationSucceedsWithInternet() throws Exception {
-        assume().withMessage("Internet connection is required for this test")
-                .that(isNetworkConnected())
-                .isTrue();
-        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
-                .that(SystemProperties.get("remote_provisioning.hostname"))
-                .isNotEmpty();
-
-        // pVM remote attestation is only supported on protected VMs.
-        assumeProtectedVM();
-        ensureVmAttestationSupported();
+        assumeVmAttestationSupportedWithInternet();
 
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary(VM_ATTESTATION_PAYLOAD_PATH)
@@ -378,15 +369,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .build();
         VirtualMachine vm = forceCreateNewVirtualMachine("cts_attestation_with_internet", config);
 
-        byte[] challenge = new byte[32];
-        Arrays.fill(challenge, (byte) 0xac);
-        SigningResult signingResult =
-                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
-
-        assertWithMessage("VM attestation should succeed when network is available")
-                .that(signingResult.status)
-                .isEqualTo(AttestationStatus.OK);
-        verifyAttestationResult(signingResult, challenge, new String[] {});
+        runAndVerifyVmAttestationSucceeds(vm, "" /* tenantPackageName */);
     }
 
     private void checkVmAttestationWithValidChallenge(VirtualMachine vm) throws Exception {
@@ -417,6 +400,20 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 isAdvMultiTenancyEnabled);
         X509Utils.verifySignature(
                 certs[0], VM_ATTESTATION_MESSAGE.getBytes(), signingResult.signature);
+    }
+
+    private void runAndVerifyVmAttestationSucceeds(VirtualMachine vm, String tenantPackageName)
+            throws Exception {
+        byte[] challenge = new byte[32];
+        Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
+        assertWithMessage("VM attestation should succeed when network is available")
+                .that(signingResult.status)
+                .isEqualTo(AttestationStatus.OK);
+        String[] tenantNames =
+                tenantPackageName.isEmpty() ? new String[0] : new String[] {tenantPackageName};
+        verifyAttestationResult(signingResult, challenge, tenantNames);
     }
 
     @Test
@@ -460,18 +457,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationWithMultipleTenantsSucceedsWithInternet() throws Exception {
-        byte[] challenge = new byte[32];
-        Arrays.fill(challenge, (byte) 0xac);
-        assume().withMessage("Internet connection is required for this test")
-                .that(isNetworkConnected())
-                .isTrue();
-        assume().withMessage("The RKP server hostname is not configured -- assume RKP disabled.")
-                .that(SystemProperties.get("remote_provisioning.hostname"))
-                .isNotEmpty();
-
-        // pVM remote attestation is only supported on protected VMs.
-        assumeProtectedVM();
-        ensureVmAttestationSupported();
+        assumeVmAttestationSupportedWithInternet();
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
@@ -485,12 +471,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         VirtualMachine vm =
                 forceCreateNewVirtualMachine("cts_attestation_with_multitenant_payload", config);
 
-        SigningResult signingResult =
-                runVmAttestationService(TAG, vm, challenge, VM_ATTESTATION_MESSAGE.getBytes());
-        assertWithMessage("VM attestation should succeed when network is available")
-                .that(signingResult.status)
-                .isEqualTo(AttestationStatus.OK);
-        verifyAttestationResult(signingResult, challenge, new String[] {TEST_TENANT_APK_NAME});
+        runAndVerifyVmAttestationSucceeds(vm, TEST_TENANT_APK_NAME);
     }
 
     @Test

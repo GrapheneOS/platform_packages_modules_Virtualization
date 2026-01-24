@@ -28,9 +28,13 @@ mod pub_key;
 mod rkp;
 
 pub use api::process_request;
+pub use client_vm::request_attestation;
 pub use dice::{ClientVmDiceChain, DiceChainEntryPayload};
 pub use keyblob::InMemoryKeyDerivationOps;
 pub use ops::{AttestationOps, KeyDerivationOps};
+pub use rkp::{generate_certificate_request, generate_ecdsa_p256_key_pair};
 
 /// Re-export types used in traits
-pub use service_vm_comm::{RequestProcessingError, Result};
+pub use service_vm_comm::{
+    ClientVmAttestationParams, GenerateCertificateRequestParams, RequestProcessingError, Result,
+};

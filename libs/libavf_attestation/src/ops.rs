@@ -17,6 +17,7 @@
 //! Defines the abstract operations for VM Attestation and Key Provisioning.
 
 use crate::dice::ClientVmDiceChain;
+use alloc::vec::Vec;
 use coset::CoseSign1;
 use service_vm_comm::Result;
 use zeroize::Zeroizing;
@@ -60,4 +61,17 @@ pub trait AttestationOps: KeyDerivationOps + Send + Sync {
     /// This method delegates the specific validation logic (e.g., Allow-Listing,
     /// Anti-Rollback) to the platform integrator.
     fn validate_vm(&self, client_chain_suffix: &ClientVmDiceChain) -> Result<()>;
+
+    /// Returns the UDS certificates.
+    ///
+    /// # Returns
+    /// A Vec<u8> containing the CBOR-encoded UdsCerts map, as defined in the
+    /// IRemotelyProvisionedComponent HAL CDDL:
+    ///
+    /// ```text
+    /// UdsCerts = {
+    ///     * SignerName => UdsCertChain
+    /// }
+    /// ```
+    fn uds_certs(&self) -> Result<Vec<u8>>;
 }
