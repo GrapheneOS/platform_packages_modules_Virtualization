@@ -15,12 +15,14 @@
  */
 package com.android.virtualization.terminal.new2.core
 
+data class TerminalAddress(val ipAddress: String, val port: Int, val key: String? = null)
+
 sealed interface VmState {
     data object Ready : VmState
 
     data object Starting : VmState
 
-    data class Running(val address: String, val port: Int, val key: String? = null) : VmState
+    data class Running(val terminalAddress: TerminalAddress) : VmState
 
     data object Rebooting : VmState
 

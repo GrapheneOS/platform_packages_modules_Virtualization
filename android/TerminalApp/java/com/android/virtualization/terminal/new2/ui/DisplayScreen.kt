@@ -15,7 +15,6 @@
  */
 package com.android.virtualization.terminal.new2.ui
 
-import android.content.res.Configuration
 import android.graphics.Matrix
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -38,14 +37,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -68,7 +63,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -83,7 +77,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
@@ -98,7 +91,6 @@ import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
@@ -114,21 +106,10 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val isPanZoomMode by viewModel.isPanZoomMode.collectAsStateWithLifecycle()
     val isMouseLocked by viewModel.isMouseLocked.collectAsStateWithLifecycle()
     val isWindowImeVisible = WindowInsets.isImeVisible
-
-    val density = LocalDensity.current
-    val imeHeight by
-        rememberUpdatedState(
-            (WindowInsets.ime.getBottom(density) - WindowInsets.navigationBars.getBottom(density))
-                .coerceAtLeast(0)
-                .toFloat()
-        )
-    val modifierKeysHeight =
-        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            with(density) { 40.dp.toPx() }
-        } else {
-            with(density) { 80.dp.toPx() }
-        }
-    val keyboardAreaHeight = if (imeHeight > 0) imeHeight + modifierKeysHeight else 0f
+    // isFocused is used to track whether the display surface is currently active and focused.
+    // This is necessary to gate IME visibility synchronization; only the focused view
+    // should update the global IME state to avoid infinite loops and race conditions.
+    var isFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(displaySurfaceView, isImeVisible) {
         val dsv = displaySurfaceView ?: return@LaunchedEffect
@@ -136,20 +117,6 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
             dsv.post { dsv.showSoftInput() }
         } else {
             dsv.post { dsv.hideSoftInput() }
-        }
-    }
-
-    LaunchedEffect(isWindowImeVisible, isImeVisible) {
-        if (isImeVisible != isWindowImeVisible) {
-            if (isImeVisible) {
-                // Wait for the IME animation to finish before syncing the state.
-                delay(500)
-                viewModel.setIsImeVisible(false)
-            } else {
-                // Wait for the IME animation to finish before syncing the state.
-                delay(500)
-                viewModel.setIsImeVisible(true)
-            }
         }
     }
 
@@ -162,9 +129,27 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    ImeAwareContainer(
+        modifier = Modifier.background(Color.Black),
+        isFocused = isFocused,
+        onImeVisibilityChanged = { visible ->
+            if (isImeVisible != visible) {
+                viewModel.setIsImeVisible(visible)
+            }
+        },
+        onKeyAction = { key, action ->
+            val dsv = displaySurfaceView ?: return@ImeAwareContainer
+            val down = action == KeyEvent.ACTION_DOWN
+            key.keyCode?.let {
+                val scanCode = dsv.convertAndroidKeyCodeToEvdevScanCode(it)
+                if (scanCode != (-1).toShort()) {
+                    vm.sendKeyEvent(scanCode, down)
+                }
+            }
+        },
+    ) { stablePadding ->
         Viewport(
-            keyboardAreaHeight = keyboardAreaHeight,
+            keyboardAreaHeight = with(LocalDensity.current) { stablePadding.toPx() },
             isPanZoomMode = isPanZoomMode,
             onTouchEvent = { event, contentSize ->
                 val matrix = Matrix()
@@ -188,6 +173,7 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                             layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
                             isFocusable = true
                             isFocusableInTouchMode = true
+                            setOnFocusChangeListener { _, hasFocus -> isFocused = hasFocus }
                             requestFocus()
                         }
                     val cursorView =
@@ -210,27 +196,6 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                 },
                 onRelease = { view -> (view.tag as? InputForwarder)?.cleanUp() },
             )
-        }
-
-        if (isWindowImeVisible) {
-            Box(
-                modifier =
-                    Modifier.align(Alignment.BottomCenter)
-                        .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
-            ) {
-                ModifierKeys(
-                    onKeyAction = { key, action ->
-                        val dsv = displaySurfaceView ?: return@ModifierKeys
-                        val down = action == KeyEvent.ACTION_DOWN
-                        key.keyCode?.let {
-                            val scanCode = dsv.convertAndroidKeyCodeToEvdevScanCode(it)
-                            if (scanCode != (-1).toShort()) {
-                                vm.sendKeyEvent(scanCode, down)
-                            }
-                        }
-                    }
-                )
-            }
         }
     }
 }

@@ -41,4 +41,17 @@ sealed interface InstallState {
     }
 
     data class Error(val cause: Throwable, val errorCause: ErrorCause) : InstallState
+
+    fun isStarted(): Boolean {
+        return this is Installing || this is InstallSuspended
+    }
+
+    fun getTotalImageSize(): Long {
+        return when (this) {
+            is NotInstalled -> totalSizeBytes
+            is Installing -> totalBytes
+            is InstallSuspended -> totalBytes
+            else -> 0L
+        }
+    }
 }

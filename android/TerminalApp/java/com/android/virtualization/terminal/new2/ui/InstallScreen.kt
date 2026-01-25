@@ -15,6 +15,7 @@
  */
 package com.android.virtualization.terminal.new2.ui
 
+import android.app.Activity
 import android.text.format.Formatter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -35,12 +36,16 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,18 +59,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.android.virtualization.terminal.ImageArchive
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.R
-import com.android.virtualization.terminal.new2.core.Installer
-import com.android.virtualization.terminal.new2.ui.main.MainUiState
-import com.android.virtualization.terminal.new2.ui.main.MainViewModel
+import com.android.virtualization.terminal.new2.core.InstallState
+import com.android.virtualization.terminal.new2.ui.main.InstallViewModel
 
 @Composable
-fun InstallScreen(viewModel: MainViewModel) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val wifiOnly by Installer.wifiOnly.collectAsStateWithLifecycle()
+fun InstallScreen(snackbarHostState: SnackbarHostState, viewModel: InstallViewModel = viewModel()) {
+    val state by viewModel.installState.collectAsStateWithLifecycle()
+    val wifiOnly by viewModel.wifiOnly.collectAsStateWithLifecycle()
 
     var showCancelDialog by remember { mutableStateOf(false) }
+
+    InstallErrorHandler(snackbarHostState, viewModel)
 
     if (showCancelDialog) {
         InstallCancelDialog(
@@ -82,18 +88,22 @@ fun InstallScreen(viewModel: MainViewModel) {
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        InstallScreenHeader(state.totalImageSize())
+        InstallScreenHeader(
+            totalSizeBytes = state.getTotalImageSize(),
+            showDescription = !viewModel.autoInstall,
+        )
 
-        if (!state.isInstallStarted()) {
+        if (!state.isStarted() && !viewModel.autoInstall) {
             InstallScreenButtons(
                 wifiOnly = wifiOnly,
                 onWifiOnlyChange = { viewModel.setWifiOnly(it) },
                 onInstall = { viewModel.installVm() },
             )
-        } else {
+        } else if (state.isStarted()) {
             InstallScreenProgress(
-                uiState = state,
+                state = state,
                 wifiOnly = wifiOnly,
+                autoInstall = viewModel.autoInstall,
                 onWifiOnlyChange = { viewModel.setWifiOnly(it) },
                 onCancel = { showCancelDialog = true },
             )
@@ -103,7 +113,7 @@ fun InstallScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun InstallScreenHeader(totalSizeBytes: Long) {
+private fun InstallScreenHeader(totalSizeBytes: Long, showDescription: Boolean) {
     val context = LocalContext.current
     val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
 
@@ -126,13 +136,15 @@ private fun InstallScreenHeader(totalSizeBytes: Long) {
         color = MaterialTheme.colorScheme.primary,
     )
     Spacer(modifier = Modifier.height(32.dp))
-    Text(
-        text = stringResource(R.string.installer_desc, formattedSize),
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-    )
-    Spacer(modifier = Modifier.height(32.dp))
+    if (showDescription) {
+        Text(
+            text = stringResource(R.string.installer_desc, formattedSize),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+    }
 }
 
 @Composable
@@ -162,36 +174,37 @@ private fun InstallScreenButtons(
 
 @Composable
 private fun InstallScreenProgress(
-    uiState: MainUiState,
+    state: InstallState,
     wifiOnly: Boolean,
+    autoInstall: Boolean,
     onWifiOnlyChange: (Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
-    val totalSizeBytes = uiState.totalImageSize()
+    val totalSizeBytes = state.getTotalImageSize()
     val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
 
     val currentBytesFlow: kotlinx.coroutines.flow.StateFlow<Long>?
     val progressColor: Color
-    val message: Int?
+    var message: String?
 
-    if (uiState is MainUiState.Installing) {
-        currentBytesFlow = uiState.progress
+    if (state is InstallState.Installing) {
+        currentBytesFlow = state.progress
         progressColor = MaterialTheme.colorScheme.primary
-        message = if (uiState.onWifi) null else R.string.installer_msg_mobile_data
-    } else if (uiState is MainUiState.InstallSuspended) {
-        currentBytesFlow = uiState.progress
+        message = if (state.onWifi) null else stringResource(R.string.installer_msg_mobile_data)
+    } else if (state is InstallState.InstallSuspended) {
+        currentBytesFlow = state.progress
         progressColor = Color.Gray
-        message = R.string.installer_msg_waiting_network
+        message = stringResource(R.string.installer_msg_waiting_network)
     } else {
         currentBytesFlow = null
         progressColor = Color.Transparent
         message = null
     }
 
-    if (ImageArchive.isLocalImage()) {
+    if (autoInstall) {
         // No need to localization for userdebug only UX
-        Text(text = "Auto installing from /sdcard/linux")
+        message = "Auto installing from /sdcard/linux"
     }
 
     if (currentBytesFlow != null) {
@@ -216,25 +229,28 @@ private fun InstallScreenProgress(
 
                 if (message != null) {
                     Text(
-                        text = stringResource(message),
+                        text = message!!,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                WifiOnlySwitch(wifiOnly = wifiOnly, onCheckedChange = onWifiOnlyChange)
+                if (!autoInstall) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    WifiOnlySwitch(wifiOnly = wifiOnly, onCheckedChange = onWifiOnlyChange)
+                }
             }
         }
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
-    TextButton(onClick = onCancel) {
-        Text(
-            text = stringResource(R.string.installer_btn_cancel),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    if (!autoInstall) {
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onCancel) {
+            Text(
+                text = stringResource(R.string.installer_btn_cancel),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -255,6 +271,30 @@ private fun InstallCancelDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+@Composable
+fun InstallErrorHandler(snackbarHostState: SnackbarHostState, viewModel: InstallViewModel) {
+    val context = LocalContext.current
+    val activity = context as Activity
+
+    LaunchedEffect(viewModel.uiEvents) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is InstallViewModel.InstallUiEvent.ShowSnackbar -> {
+                    val result =
+                        snackbarHostState.showSnackbar(
+                            message = activity.getString(event.messageId),
+                            actionLabel = activity.getString(event.actionLabelId),
+                            duration = SnackbarDuration.Indefinite,
+                        )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.performAction(activity, event)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
