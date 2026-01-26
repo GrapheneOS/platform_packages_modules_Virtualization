@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,4 +14,7 @@
  * limitations under the License.
  */
 
-#include "verified_dex2oat/verified_dex2oat_compilation.h"
+//! Common items used by CompOS clients.
+
+pub mod verified_dex2oat;
+pub mod wrappers;

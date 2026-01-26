@@ -50,3 +50,15 @@ rust_protobuf {
         "com.android.compos",
     ],
 }
+
+cc_library_static {
+    name: "libcompos_manifest_proto_cc",
+    srcs: ["proto/manifest.proto"],
+    proto: {
+        export_proto_headers: true,
+        type: "full",
+    },
+    apex_available: [
+        "com.android.compos",
+    ],
+}
