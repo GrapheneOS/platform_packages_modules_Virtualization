@@ -69,12 +69,14 @@ import android.system.virtualizationcommon.DeathReason;
 import android.system.virtualizationcommon.ErrorCode;
 import android.system.virtualizationcommon.IEncryptedStoreKEK;
 import android.system.virtualizationcommon.IGuestAgent;
+import android.system.virtualizationservice.DisplayConfig;
 import android.system.virtualizationservice.IVirtualMachine;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.IVirtualizationService;
 import android.system.virtualizationservice.InputDevice;
 import android.system.virtualizationservice.PartitionType;
 import android.system.virtualizationservice.VirtualMachineAppConfig;
+import android.system.virtualizationservice.VirtualMachineDisplay;
 import android.system.virtualizationservice.VirtualMachineRawConfig;
 import android.system.virtualizationservice.VirtualMachineState;
 import android.util.JsonReader;
@@ -1503,6 +1505,67 @@ public class VirtualMachine implements AutoCloseable {
                 }
             } catch (RemoteException e) {
                 Log.w(TAG, "Cannot setMemoryBalloon", e);
+            }
+        }
+    }
+
+    /**
+     * Adds a new display to the virtual machine.
+     *
+     * @param config The configuration for the new display.
+     * @throws VirtualMachineException if the display could not be added.
+     * @hide
+     */
+    public void addDisplay(@NonNull DisplayConfig config) throws VirtualMachineException {
+        synchronized (mLock) {
+            if (mVirtualMachine == null) {
+                throw new VirtualMachineException("Failed to add display: VM is not running");
+            }
+            try {
+                mVirtualMachine.addDisplay(config);
+            } catch (RemoteException | ServiceSpecificException e) {
+                throw new VirtualMachineException("Failed to add display", e);
+            }
+        }
+    }
+
+    /**
+     * Removes a display from the virtual machine.
+     *
+     * @param displayId The ID of the display to remove.
+     * @throws VirtualMachineException if the display could not be removed.
+     * @hide
+     */
+    public void removeDisplay(int displayId) throws VirtualMachineException {
+        synchronized (mLock) {
+            if (mVirtualMachine == null) {
+                throw new VirtualMachineException("Failed to remove display: VM is not running");
+            }
+            try {
+                mVirtualMachine.removeDisplay(displayId);
+            } catch (RemoteException | ServiceSpecificException e) {
+                throw new VirtualMachineException("Failed to remove display", e);
+            }
+        }
+    }
+
+    /**
+     * Returns the list of displays currently attached to the virtual machine.
+     *
+     * @return A list of {@link VirtualMachineDisplay} objects.
+     * @throws VirtualMachineException if the displays could not be retrieved.
+     * @hide
+     */
+    @NonNull
+    public List<VirtualMachineDisplay> getDisplays() throws VirtualMachineException {
+        synchronized (mLock) {
+            if (mVirtualMachine == null) {
+                throw new VirtualMachineException("Failed to get displays: VM is not running");
+            }
+            try {
+                return Arrays.asList(mVirtualMachine.getDisplays());
+            } catch (RemoteException | ServiceSpecificException e) {
+                throw new VirtualMachineException("Failed to get displays", e);
             }
         }
     }
