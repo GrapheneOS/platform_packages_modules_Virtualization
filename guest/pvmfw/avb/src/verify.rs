@@ -266,8 +266,7 @@ fn verify_initrd(
     partition_name: PartitionName,
     expected_initrd: &[u8],
 ) -> SlotVerifyNoDataResult<()> {
-    let result =
-        ops.verify_partition(partition_name.as_cstr()).map_err(|e| e.without_verify_data())?;
+    let result = ops.verify_partition(partition_name).map_err(|e| e.without_verify_data())?;
     verify_loaded_partition_has_expected_length(
         result.partition_data(),
         partition_name,
@@ -283,7 +282,7 @@ pub fn verify_payload<'a>(
 ) -> Result<VerifiedBootData<'a>, PvmfwVerifyError> {
     let payload = Payload::new(kernel, initrd, trusted_public_key);
     let mut ops = Ops::new(&payload);
-    let kernel_verify_result = ops.verify_partition(PartitionName::Kernel.as_cstr())?;
+    let kernel_verify_result = ops.verify_partition(PartitionName::Kernel)?;
 
     let vbmeta_images = kernel_verify_result.vbmeta_data();
     // TODO(b/302093437): Use explicit rollback_index_location instead of default
