@@ -24,7 +24,6 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -59,7 +58,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.SocketAddress
-import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -328,24 +326,12 @@ class VmLauncherService : Service() {
         handler!!.post(r)
     }
 
-    private fun isGfxstreamEnabled(): Boolean {
-        if (
-            Build.isDebuggable() &&
-                Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))
-        ) {
-            return true
-        }
-        return GraphicsManager.getInstance(this).accelerationType ==
-            GraphicsManager.AccelerationType.Gfxstream
-    }
-
     private fun overrideConfigIfNecessary(
         builder: VirtualMachineCustomImageConfig.Builder,
         displayInfo: DisplayInfo,
     ): Boolean {
         var changed = false
-        // TODO: use resources to check if gfxstream is supported.
-        if (isGfxstreamEnabled()) {
+        if (GraphicsManager.getInstance(this).isGfxstreamEnabled()) {
             builder.addParam("gfxstream_enabled")
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
