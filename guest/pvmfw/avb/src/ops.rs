@@ -68,13 +68,24 @@ impl<'a> Ops<'a> {
         //
         // then libavb (specifically, avb_slot_verify()) falls back to retrieving VBMeta from the
         // footer of the "boot" partition i.e. self.kernel (see PartitionName::Kernel).
-        slot_verify(
+        let result = slot_verify(
             self,
             &[partition_name.as_c_str()],
             None, // No partition slot suffix.
             SlotVerifyFlags::AVB_SLOT_VERIFY_FLAGS_NONE,
             HashtreeErrorMode::AVB_HASHTREE_ERROR_MODE_RESTART_AND_INVALIDATE,
-        )
+        )?;
+
+        // Paranoid sanity checks.
+        assert_eq!(result.partition_data().len(), 1, "too many partitions for {partition_name:?}");
+        let partition_data = result.partition_data().first().unwrap();
+        assert_eq!(partition_data.partition_name(), partition_name.as_c_str());
+
+        assert_eq!(result.vbmeta_data().len(), 1, "too many vbmetas for {partition_name:?}");
+        let vbmeta_data = result.vbmeta_data().first().unwrap();
+        assert_eq!(vbmeta_data.partition_name(), PartitionName::Kernel.as_c_str());
+
+        Ok(result)
     }
 }
 

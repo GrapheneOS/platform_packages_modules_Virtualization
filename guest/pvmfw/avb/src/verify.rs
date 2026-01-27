@@ -129,35 +129,11 @@ impl Capability {
     }
 }
 
-fn verify_only_one_vbmeta_exists(vbmeta_data: &[VbmetaData]) -> SlotVerifyNoDataResult<()> {
-    if vbmeta_data.len() == 1 {
-        Ok(())
-    } else {
-        Err(SlotVerifyError::InvalidMetadata)
-    }
-}
-
-fn verify_vbmeta_is_from_kernel_partition(vbmeta_image: &VbmetaData) -> SlotVerifyNoDataResult<()> {
-    match vbmeta_image.partition_name().try_into() {
-        Ok(PartitionName::Kernel) => Ok(()),
-        _ => Err(SlotVerifyError::InvalidMetadata),
-    }
-}
-
 fn verify_loaded_partition_has_expected_length(
     loaded_partitions: &[PartitionData],
-    partition_name: PartitionName,
     expected_len: usize,
 ) -> SlotVerifyNoDataResult<()> {
-    if loaded_partitions.len() != 1 {
-        // Only one partition should be loaded in each verify result.
-        return Err(SlotVerifyError::Io);
-    }
     let loaded_partition = &loaded_partitions[0];
-    if PartitionName::try_from(loaded_partition.partition_name()) != Ok(partition_name) {
-        // Only the requested partition should be loaded.
-        return Err(SlotVerifyError::Io);
-    }
     if loaded_partition.data().len() == expected_len {
         Ok(())
     } else {
@@ -267,11 +243,7 @@ fn verify_initrd(
     expected_initrd: &[u8],
 ) -> SlotVerifyNoDataResult<()> {
     let result = ops.verify_partition(partition_name).map_err(|e| e.without_verify_data())?;
-    verify_loaded_partition_has_expected_length(
-        result.partition_data(),
-        partition_name,
-        expected_initrd.len(),
-    )
+    verify_loaded_partition_has_expected_length(result.partition_data(), expected_initrd.len())
 }
 
 /// Verifies the payload (signed kernel + initrd) against the trusted public key.
@@ -284,14 +256,11 @@ pub fn verify_payload<'a>(
     let mut ops = Ops::new(&payload);
     let kernel_verify_result = ops.verify_partition(PartitionName::Kernel)?;
 
-    let vbmeta_images = kernel_verify_result.vbmeta_data();
     // TODO(b/302093437): Use explicit rollback_index_location instead of default
     // location (first element).
     let rollback_index =
         *kernel_verify_result.rollback_indexes().first().unwrap_or(&DEFAULT_ROLLBACK_INDEX);
-    verify_only_one_vbmeta_exists(vbmeta_images)?;
-    let vbmeta_image = &vbmeta_images[0];
-    verify_vbmeta_is_from_kernel_partition(vbmeta_image)?;
+    let vbmeta_image = kernel_verify_result.vbmeta_data().first().unwrap();
     let descriptors = vbmeta_image.descriptors()?;
     let hash_descriptors = HashDescriptors::get(&descriptors)?;
     let capabilities = Capability::get_capabilities(vbmeta_image)?;
