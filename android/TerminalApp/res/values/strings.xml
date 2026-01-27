@@ -200,30 +200,6 @@
     <string name="settings_btn_back_desc">Back</string>
 
     <!-- ================================================================= -->
-    <!-- Settings - Disk                                                   -->
-    <!-- ================================================================= -->
-
-    <!-- Settings memu title for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
-    <string name="settings_disk_title">Disk resize</string>
-    <!-- Settings memu subtitle for resizing disk of the virtual machine. [CHAR LIMIT=none] -->
-    <string name="settings_disk_subtitle">Resize the root partition size</string>
-    <!-- Settings menu option description format of the current disk size. [CHAR LIMIT=none] -->
-    <string name="settings_disk_text_assigned_format"><xliff:g id="assigned_size" example="10GB">\u200E%1$s\u200E</xliff:g> assigned</string>
-    <!-- Settings menu option description format of the maximum resizable disk size. [CHAR LIMIT=none] -->
-    <string name="settings_disk_text_max_format"><xliff:g id="max_size" example="256GB">\u200E%1$s\u200E</xliff:g> max</string>
-    <!-- Snackbar message for showing not enough space error. [CHAR LIMIT=none] -->
-    <string name="settings_disk_snkbar_not_enough_space">Not enough space on the device to resize disk</string>
-    <!-- Settings menu button to cancel disk resize. [CHAR LIMIT=16] -->
-    <string name="settings_disk_btn_cancel">Cancel</string>
-    <!-- Settings menu button to apply change Terminal app. This will launch a confirmation dialog [CHAR LIMIT=16] -->
-    <string name="settings_disk_btn_apply">Apply</string>
-    <!-- Dialog description for applying disk resize Terminal app, which requires to restart the terminal [CHAR LIMIT=none] -->
-    <string name="settings_disk_dlg_message_confirm">Terminal will be restarted to resize disk</string>
-    <!-- Dialog confirmation button for restarting the terminal [CHAR LIMIT=16] -->
-    <string name="settings_disk_dlg_btn_confirm">Confirm</string>
-
-
-    <!-- ================================================================= -->
     <!-- Settings - Port                                                   -->
     <!-- ================================================================= -->
 

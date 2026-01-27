@@ -123,12 +123,7 @@ class VmLauncherService : Service() {
                 val displayInfo =
                     intent.getParcelableExtra(EXTRA_DISPLAY_INFO, DisplayInfo::class.java)!!
 
-                // Note: this doesn't always do the resizing. If the current image size is the same
-                // as the requested size which is rounded up to the page alignment, resizing is not
-                // done.
-                val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
-
-                mainWorkerThread.execute({ doStart(displayInfo, diskSize, resultReceiver!!) })
+                mainWorkerThread.execute({ doStart(displayInfo, resultReceiver!!) })
 
                 // Do this outside of the main worker thread, so that we don't cause
                 // ForegroundServiceDidNotStartInTimeException
@@ -145,7 +140,7 @@ class VmLauncherService : Service() {
     }
 
     private fun calculateSparseDiskSize(): Long {
-        // With storage ballooning enabled, we create a sparse file with 95% of the total size.
+        // Create a sparse file with 95% of the total size for storage ballooning.
         val statFs = StatFs(filesDir.absolutePath)
         val hostSize = statFs.totalBytes
         return roundUp(hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100)
@@ -170,58 +165,16 @@ class VmLauncherService : Service() {
         }
     }
 
-    // Convert the rootfs disk to a non-sparse file.
-    private fun convertToNonSparseDiskIfNecessary(image: InstalledImage) {
-        try {
-            val curApparentSize = image.getApparentSize()
-            val curPhysicalSize = image.getPhysicalSize()
-            Log.d(TAG, "Current disk size: apparent=$curApparentSize, physical=$curPhysicalSize")
-
-            // If storage ballooning was enabled via Flags.terminalStorageBalloon() before but it's
-            // now disabled, the disk is still a sparse file whose apparent size is too large.
-            // We need to shrink it to the minimum size.
-            //
-            // The disk file is considered sparse if its apparent disk size matches the expected
-            // sparse disk size.
-            // In addition, we consider it sparse if the physical size is clearly smaller than its
-            // apparent size. This additional condition is a fallback for cases
-            // where the logic of calculating the expected sparse disk size since the disk is
-            // created.
-            if (
-                curApparentSize == calculateSparseDiskSize() ||
-                    curPhysicalSize <
-                        curApparentSize * EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE / 100
-            ) {
-                Log.d(TAG, "A sparse disk is detected. Shrink it to the minimum size.")
-                val newSize = image.shrinkToMinimumSize()
-                Log.d(TAG, "Shrink the disk image: $curApparentSize -> $newSize")
-            }
-        } catch (e: IOException) {
-            throw RuntimeException("Failed to shrink rootfs disk", e)
-            return
-        }
-    }
-
     @WorkerThread
-    private fun doStart(displayInfo: DisplayInfo, diskSize: Long, resultReceiver: ResultReceiver) {
+    private fun doStart(displayInfo: DisplayInfo, resultReceiver: ResultReceiver) {
         val image = InstalledImage.getDefault(this)
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
         val timeout_secs = json.getBootTimeoutSecs() * (if (IS_EMULATOR) 5 else 1)
 
-        if (Flags.terminalStorageBalloon()) {
-            // When storage ballooning flag is enabled, convert rootfs disk into a sparse file.
-            truncateDiskIfNecessary(image)
-        } else {
-            // Convert rootfs disk into a sparse file if storage ballooning flag had been enabled
-            // and then disabled.
-            convertToNonSparseDiskIfNecessary(image)
-
-            // Note: this doesn't always do the resizing. If the current image size is the same as
-            // the requested size which is rounded up to the page alignment, resizing is not done.
-            image.resize(diskSize)
-        }
+        // Convert rootfs disk into a sparse file for storage ballooning.
+        truncateDiskIfNecessary(image)
 
         customImageConfigBuilder.setAudioConfig(
             AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
@@ -487,9 +440,7 @@ class VmLauncherService : Service() {
             }
         )
 
-        if (Flags.terminalStorageBalloon()) {
-            StorageBalloonWorker.start(this, debianService!!)
-        }
+        StorageBalloonWorker.start(this, debianService!!)
     }
 
     @WorkerThread
@@ -559,7 +510,6 @@ class VmLauncherService : Service() {
         private const val ACTION_START_VM: String = PREFIX + "ACTION_START_VM"
         private const val EXTRA_NOTIFICATION = PREFIX + "EXTRA_NOTIFICATION"
         private const val EXTRA_DISPLAY_INFO = PREFIX + "EXTRA_DISPLAY_INFO"
-        private const val EXTRA_DISK_SIZE = PREFIX + "EXTRA_DISK_SIZE"
 
         private const val ACTION_SHUTDOWN_VM: String = PREFIX + "ACTION_SHUTDOWN_VM"
 
@@ -576,7 +526,6 @@ class VmLauncherService : Service() {
         private const val SHUTDOWN_TIMEOUT_SECONDS = 3L
 
         private const val GUEST_SPARSE_DISK_SIZE_PERCENTAGE = 95
-        private const val EXPECTED_PHYSICAL_SIZE_PERCENTAGE_FOR_NON_SPARSE = 90
 
         private val IS_EMULATOR: Boolean =
             {
@@ -623,15 +572,11 @@ class VmLauncherService : Service() {
             callback: VmLauncherServiceCallback,
             notification: Notification?,
             displayInfo: DisplayInfo,
-            diskSize: Long?,
         ): Intent {
             val i = prepareIntent(context, callback)
             i.setAction(ACTION_START_VM)
             i.putExtra(EXTRA_NOTIFICATION, notification)
             i.putExtra(EXTRA_DISPLAY_INFO, displayInfo)
-            if (diskSize != null) {
-                i.putExtra(EXTRA_DISK_SIZE, diskSize)
-            }
             return i
         }
 

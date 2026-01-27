@@ -429,16 +429,7 @@ public class MainActivity :
                 )
                 .build()
 
-        val diskSize = intent.getLongExtra(EXTRA_DISK_SIZE, image.getApparentSize())
-
-        val intent =
-            VmLauncherService.getIntentForStart(
-                this,
-                this,
-                notification,
-                getDisplayInfo(),
-                diskSize,
-            )
+        val intent = VmLauncherService.getIntentForStart(this, this, notification, getDisplayInfo())
         try {
             startForegroundService(intent)
         } catch (e: ForegroundServiceStartNotAllowedException) {
@@ -459,7 +450,6 @@ public class MainActivity :
     companion object {
         const val TAG: String = "VmTerminalApp"
         const val PREFIX: String = "com.android.virtualization.terminal."
-        const val EXTRA_DISK_SIZE: String = PREFIX + "EXTRA_DISK_SIZE"
         private val TERMINAL_CONNECTION_TIMEOUT_MS: Int
         private const val REQUEST_CODE_INSTALLER = 0x33
         private const val FONT_SIZE_DEFAULT = 13

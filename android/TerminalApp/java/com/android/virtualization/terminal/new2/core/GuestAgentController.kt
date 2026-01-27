@@ -18,7 +18,6 @@ package com.android.virtualization.terminal.new2.core
 import android.content.Context
 import android.system.virtualizationcommon.IGuestAgent
 import android.util.Log
-import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.debian.aidl.IDebianService
 import com.android.virtualization.terminal.DebianService
 import com.android.virtualization.terminal.DebianServiceBase
@@ -174,9 +173,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
             }
         }
 
-        if (Flags.terminalStorageBalloon()) {
-            StorageBalloonWorker.start(context, debianService!!)
-        }
+        StorageBalloonWorker.start(context, debianService!!)
     }
 
     private fun stopDebianServer() {

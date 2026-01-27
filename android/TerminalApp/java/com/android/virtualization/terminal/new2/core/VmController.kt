@@ -130,7 +130,7 @@ object VmController {
                 val configBuilder = json.toConfigBuilder(context)
                 val customImageConfigBuilder = json.toCustomImageConfigBuilder(context)
 
-                // When storage ballooning is enabled, convert rootfs disk into a sparse file.
+                // Convert rootfs disk into a sparse file for storage ballooning.
                 truncateDiskIfNecessary(image)
 
                 // Override config for Display
@@ -395,7 +395,7 @@ object VmController {
     }
 
     private fun calculateSparseDiskSize(): Long {
-        // With storage ballooning enabled, we create a sparse file with 95% of the total size.
+        // Create a sparse file with 95% of the total size for storage ballooning.
         val statFs = StatFs(context.filesDir.absolutePath)
         val hostSize = statFs.totalBytes
         return roundUp(hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100)
