@@ -341,7 +341,7 @@ class VmLauncherService : Service() {
 
     private fun overrideConfigIfNecessary(
         builder: VirtualMachineCustomImageConfig.Builder,
-        displayInfo: DisplayInfo?,
+        displayInfo: DisplayInfo,
     ): Boolean {
         var changed = false
         // TODO: use resources to check if gfxstream is supported.
@@ -364,22 +364,20 @@ class VmLauncherService : Service() {
 
         // Set the initial display size
         // TODO(jeongik): set up the display size on demand
-        if (Flags.terminalGuiSupport() && displayInfo != null) {
-            builder
-                .setDisplayConfig(
-                    VirtualMachineCustomImageConfig.DisplayConfig.Builder()
-                        .setWidth(displayInfo.width)
-                        .setHeight(displayInfo.height)
-                        .setHorizontalDpi(displayInfo.dpi)
-                        .setVerticalDpi(displayInfo.dpi)
-                        .setRefreshRate(displayInfo.refreshRate)
-                        .build()
-                )
-                .useKeyboard(true)
-                .useMouse(true)
-                .useTouch(true)
-            changed = true
-        }
+        builder
+            .setDisplayConfig(
+                VirtualMachineCustomImageConfig.DisplayConfig.Builder()
+                    .setWidth(displayInfo.width)
+                    .setHeight(displayInfo.height)
+                    .setHorizontalDpi(displayInfo.dpi)
+                    .setVerticalDpi(displayInfo.dpi)
+                    .setRefreshRate(displayInfo.refreshRate)
+                    .build()
+            )
+            .useKeyboard(true)
+            .useMouse(true)
+            .useTouch(true)
+        changed = true
 
         val image = InstalledImage.getDefault(this)
         if (image.hasBackup()) {

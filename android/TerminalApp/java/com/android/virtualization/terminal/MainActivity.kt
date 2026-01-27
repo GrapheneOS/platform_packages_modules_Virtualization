@@ -50,7 +50,6 @@ import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.android.internal.annotations.VisibleForTesting
 import com.android.microdroid.test.common.DeviceProperties
-import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.BetterBugLauncher.Companion.launchBetterBugActivity
 import com.android.virtualization.terminal.ErrorActivity.Companion.start
 import com.android.virtualization.terminal.VmLauncherService.VmLauncherServiceCallback
@@ -77,7 +76,7 @@ public class MainActivity :
     private lateinit var terminalTabAdapter: TerminalTabAdapter
     private val terminalInfo = CompletableFuture<TerminalInfo>()
     private val terminalViewModel: TerminalViewModel by viewModels()
-    private var displayMenu: Button? = null
+    private lateinit var displayMenu: Button
     private var tabAddButton: Button? = null
     private val bootCompleted = ConditionVariable()
     private var isVmRunning = false
@@ -145,16 +144,13 @@ public class MainActivity :
             this.startActivity(intent)
         }
 
-        displayMenu?.also {
-            it.visibility = if (Flags.terminalGuiSupport()) View.VISIBLE else View.GONE
-            it.setEnabled(false)
-            if (Flags.terminalGuiSupport()) {
-                it.setOnClickListener {
-                    val intent = Intent(this, DisplayActivity::class.java)
-                    intent.flags = intent.flags or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    this.startActivity(intent)
-                }
-            }
+        displayMenu = findViewById(R.id.display_button)
+        displayMenu.visibility = View.VISIBLE
+        displayMenu.isEnabled = false
+        displayMenu.setOnClickListener {
+            val intent = Intent(this, DisplayActivity::class.java)
+            intent.flags = intent.flags or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            this.startActivity(intent)
         }
 
         modifierKeysController = ModifierKeysController(this, modifierKeysContainerView)
@@ -338,10 +334,7 @@ public class MainActivity :
     }
 
     fun onTtydConnected() {
-        if (Flags.terminalGuiSupport()) {
-            displayMenu!!.visibility = View.VISIBLE
-            displayMenu!!.isEnabled = true
-        }
+        displayMenu.isEnabled = true
         tabAddButton!!.isEnabled = true
         isTtydConnected = true
         bootCompleted.open()

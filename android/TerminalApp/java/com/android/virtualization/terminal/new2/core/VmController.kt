@@ -292,21 +292,19 @@ object VmController {
         builder: VirtualMachineCustomImageConfig.Builder,
         displayInfo: DisplayInfo,
     ) {
-        if (Flags.terminalGuiSupport()) {
-            builder
-                .setDisplayConfig(
-                    VirtualMachineCustomImageConfig.DisplayConfig.Builder()
-                        .setWidth(displayInfo.width)
-                        .setHeight(displayInfo.height)
-                        .setHorizontalDpi(displayInfo.dpi)
-                        .setVerticalDpi(displayInfo.dpi)
-                        .setRefreshRate(displayInfo.refreshRate)
-                        .build()
-                )
-                .useKeyboard(true)
-                .useMouse(true)
-                .useTouch(true)
-        }
+        builder
+            .setDisplayConfig(
+                VirtualMachineCustomImageConfig.DisplayConfig.Builder()
+                    .setWidth(displayInfo.width)
+                    .setHeight(displayInfo.height)
+                    .setHorizontalDpi(displayInfo.dpi)
+                    .setVerticalDpi(displayInfo.dpi)
+                    .setRefreshRate(displayInfo.refreshRate)
+                    .build()
+            )
+            .useKeyboard(true)
+            .useMouse(true)
+            .useTouch(true)
     }
 
     // We still need this logic to retrieve the IP address of the VM to use it for guest agent
