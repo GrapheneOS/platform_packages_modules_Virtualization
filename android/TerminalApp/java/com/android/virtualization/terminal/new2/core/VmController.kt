@@ -19,7 +19,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.os.Build
 import android.os.IBinder
 import android.os.StatFs
 import android.os.SystemProperties
@@ -37,7 +36,6 @@ import com.android.virtualization.terminal.CertificateUtils
 import com.android.virtualization.terminal.ConfigJson
 import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.GraphicsManager
-import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.Logger
@@ -45,7 +43,6 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import java.io.IOException
-import java.nio.file.Files
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -259,19 +256,8 @@ object VmController {
         }
     }
 
-    private fun isGfxstreamEnabled(context: Context): Boolean {
-        if (
-            Build.isDebuggable() &&
-                Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))
-        ) {
-            return true
-        }
-        return GraphicsManager.getInstance(context).accelerationType ==
-            GraphicsManager.AccelerationType.Gfxstream
-    }
-
     private fun setGpuConfig(context: Context, builder: VirtualMachineCustomImageConfig.Builder) {
-        if (isGfxstreamEnabled(context)) {
+        if (GraphicsManager.getInstance(context).isGfxstreamEnabled()) {
             builder.addParam("gfxstream_enabled")
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
