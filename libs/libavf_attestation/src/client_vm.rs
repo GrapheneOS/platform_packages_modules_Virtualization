@@ -220,6 +220,8 @@ fn ensure_same_authority(
 /// embedded during the build time.
 fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
     let kernel = dice_chain.kernel();
+    // TODO(b/479094783): Enforce Anti-Rollback policy
+    let _security_version = kernel.security_version();
     if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ false)? {
         return Ok(());
     }
