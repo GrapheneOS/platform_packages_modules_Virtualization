@@ -14,12 +14,12 @@
 
 //! This module handles the pvmfw payload verification.
 
-use crate::ops::{Ops, Payload};
+use crate::ops::PvmfwAvbVerifier;
 use crate::partition::PartitionName;
 use crate::PvmfwVerifyError;
 use alloc::{string::String, vec::Vec};
 use avb::{
-    Descriptor, DescriptorError, DescriptorResult, HashDescriptor, PartitionData, SlotVerifyError,
+    Descriptor, DescriptorError, DescriptorResult, HashDescriptor, SlotVerifyError,
     SlotVerifyNoDataResult, VbmetaData,
 };
 use core::str;
@@ -129,18 +129,6 @@ impl Capability {
     }
 }
 
-fn verify_loaded_partition_has_expected_length(
-    loaded_partitions: &[PartitionData],
-    expected_len: usize,
-) -> SlotVerifyNoDataResult<()> {
-    let loaded_partition = &loaded_partitions[0];
-    if loaded_partition.data().len() == expected_len {
-        Ok(())
-    } else {
-        Err(SlotVerifyError::Verification(None))
-    }
-}
-
 /// Hash descriptors extracted from a vbmeta image.
 ///
 /// We always have a kernel hash descriptor and may have initrd normal or debug descriptors.
@@ -236,25 +224,14 @@ fn read_name(vbmeta_data: &VbmetaData) -> Result<Option<String>, PvmfwVerifyErro
     Ok(Some(name.into()))
 }
 
-/// Verifies the given initrd partition, and checks that the resulting contents looks like expected.
-fn verify_initrd(
-    ops: &mut Ops,
-    partition_name: PartitionName,
-    expected_initrd: &[u8],
-) -> SlotVerifyNoDataResult<()> {
-    let result = ops.verify_partition(partition_name).map_err(|e| e.without_verify_data())?;
-    verify_loaded_partition_has_expected_length(result.partition_data(), expected_initrd.len())
-}
-
 /// Verifies the payload (signed kernel + initrd) against the trusted public key.
 pub fn verify_payload<'a>(
     kernel: &[u8],
     initrd: Option<&[u8]>,
     trusted_public_key: &'a [u8],
 ) -> Result<VerifiedBootData<'a>, PvmfwVerifyError> {
-    let payload = Payload::new(kernel, initrd, trusted_public_key);
-    let mut ops = Ops::new(&payload);
-    let kernel_verify_result = ops.verify_partition(PartitionName::Kernel)?;
+    let mut verifier = PvmfwAvbVerifier::new(kernel, initrd, trusted_public_key);
+    let kernel_verify_result = verifier.verify_partition(PartitionName::Kernel)?;
 
     // TODO(b/302093437): Use explicit rollback_index_location instead of default
     // location (first element).
@@ -275,7 +252,7 @@ pub fn verify_payload<'a>(
             kernel_digest: copy_digest(hash_descriptors.kernel)?,
             initrd_digest: None,
             vbmeta_digest,
-            public_key: trusted_public_key,
+            public_key: verifier.get_validated_vbmeta_key().unwrap(),
             capabilities,
             rollback_index,
             page_size,
@@ -284,10 +261,11 @@ pub fn verify_payload<'a>(
     }
 
     let initrd = initrd.unwrap();
+    let size = initrd.len();
     let (debug_level, initrd_descriptor) =
-        if verify_initrd(&mut ops, PartitionName::InitrdNormal, initrd).is_ok() {
+        if verifier.verify_sized_partition(PartitionName::InitrdNormal, size).is_ok() {
             (DebugLevel::None, hash_descriptors.initrd_normal)
-        } else if verify_initrd(&mut ops, PartitionName::InitrdDebug, initrd).is_ok() {
+        } else if verifier.verify_sized_partition(PartitionName::InitrdDebug, size).is_ok() {
             (DebugLevel::Full, hash_descriptors.initrd_debug)
         } else {
             return Err(SlotVerifyError::Verification(None).into());
@@ -297,7 +275,7 @@ pub fn verify_payload<'a>(
         debug_level,
         kernel_digest: copy_digest(hash_descriptors.kernel)?,
         initrd_digest: Some(copy_digest(initrd_descriptor)?),
-        public_key: trusted_public_key,
+        public_key: verifier.get_validated_vbmeta_key().unwrap(),
         vbmeta_digest,
         capabilities,
         rollback_index,
