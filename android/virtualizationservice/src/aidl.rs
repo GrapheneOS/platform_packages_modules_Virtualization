@@ -56,7 +56,7 @@ use std::os::fd::{AsFd, OwnedFd};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::raw::uid_t;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, LazyLock, Mutex, OnceLock};
+use std::sync::{Arc, Condvar, LazyLock, Mutex, OnceLock, Weak};
 use std::thread::JoinHandle;
 use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 use virtualizationcommon::{Atom::Atom, Certificate::Certificate};
@@ -422,10 +422,11 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         vm: &Strong<dyn IVirtualMachine>,
     ) -> binder::Result<()> {
         check_manage_access()?;
+        let state_weak = Arc::downgrade(&self.state);
         self.state
             .lock()
             .unwrap()
-            .register_virtual_machine(cid as Cid, vm)
+            .register_virtual_machine(cid as Cid, vm, state_weak)
             .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
     }
 
@@ -880,8 +881,27 @@ impl GlobalState {
         &mut self,
         cid: Cid,
         vm: &Strong<dyn IVirtualMachine>,
+        state_weak: Weak<Mutex<GlobalState>>,
     ) -> Result<()> {
+        let vm_clone = vm.clone();
         let mut dr = DeathRecipient::new(move || {
+            let Some(state) = state_weak.upgrade() else { return };
+            let mut state = state.lock().unwrap();
+            // Check if the VM stored in the map is still the one that just died.
+            // It's possible that the CID was already reused for a new VM registration
+            // before this death recipient was executed.
+            let is_same = state
+                .virtual_machines
+                .get(&cid)
+                .map(|(v, _)| v.as_binder() == vm_clone.as_binder())
+                .unwrap_or(false);
+            if !is_same {
+                return;
+            }
+
+            state.virtual_machines.remove(&cid);
+            info!("Virtual machine with CID {cid} unregistered due to death");
+
             let temp_dir = format!("{TEMPORARY_DIRECTORY}/{cid}").into();
             remove_temporary_dir(&temp_dir).unwrap_or_else(|e| {
                 warn!("Could not delete temporary directory {temp_dir:?}: {e}");
@@ -900,6 +920,10 @@ impl GlobalState {
     fn unregister_virtual_machine(&mut self, cid: Cid) -> Result<()> {
         if self.virtual_machines.remove(&cid).is_some() {
             info!("Virtual machine with CID {cid} unregistered");
+            let temp_dir = format!("{TEMPORARY_DIRECTORY}/{cid}").into();
+            remove_temporary_dir(&temp_dir).unwrap_or_else(|e| {
+                warn!("Could not delete temporary directory {temp_dir:?}: {e}");
+            });
             Ok(())
         } else {
             Err(anyhow!("Unknown CID {cid}"))

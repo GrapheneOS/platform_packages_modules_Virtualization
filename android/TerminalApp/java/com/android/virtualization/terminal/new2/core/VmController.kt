@@ -19,7 +19,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.os.Build
 import android.os.IBinder
 import android.os.StatFs
 import android.os.SystemProperties
@@ -37,7 +36,6 @@ import com.android.virtualization.terminal.CertificateUtils
 import com.android.virtualization.terminal.ConfigJson
 import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.GraphicsManager
-import com.android.virtualization.terminal.ImageArchive
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.Logger
@@ -45,7 +43,6 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import java.io.IOException
-import java.nio.file.Files
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -130,7 +127,7 @@ object VmController {
                 val configBuilder = json.toConfigBuilder(context)
                 val customImageConfigBuilder = json.toCustomImageConfigBuilder(context)
 
-                // When storage ballooning is enabled, convert rootfs disk into a sparse file.
+                // Convert rootfs disk into a sparse file for storage ballooning.
                 truncateDiskIfNecessary(image)
 
                 // Override config for Display
@@ -259,19 +256,8 @@ object VmController {
         }
     }
 
-    private fun isGfxstreamEnabled(context: Context): Boolean {
-        if (
-            Build.isDebuggable() &&
-                Files.exists(ImageArchive.getSdcardPathForTesting().resolve("gfxstream"))
-        ) {
-            return true
-        }
-        return GraphicsManager.getInstance(context).accelerationType ==
-            GraphicsManager.AccelerationType.Gfxstream
-    }
-
     private fun setGpuConfig(context: Context, builder: VirtualMachineCustomImageConfig.Builder) {
-        if (isGfxstreamEnabled(context)) {
+        if (GraphicsManager.getInstance(context).isGfxstreamEnabled()) {
             builder.addParam("gfxstream_enabled")
             builder.setGpuConfig(
                 VirtualMachineCustomImageConfig.GpuConfig.Builder()
@@ -292,21 +278,19 @@ object VmController {
         builder: VirtualMachineCustomImageConfig.Builder,
         displayInfo: DisplayInfo,
     ) {
-        if (Flags.terminalGuiSupport()) {
-            builder
-                .setDisplayConfig(
-                    VirtualMachineCustomImageConfig.DisplayConfig.Builder()
-                        .setWidth(displayInfo.width)
-                        .setHeight(displayInfo.height)
-                        .setHorizontalDpi(displayInfo.dpi)
-                        .setVerticalDpi(displayInfo.dpi)
-                        .setRefreshRate(displayInfo.refreshRate)
-                        .build()
-                )
-                .useKeyboard(true)
-                .useMouse(true)
-                .useTouch(true)
-        }
+        builder
+            .setDisplayConfig(
+                VirtualMachineCustomImageConfig.DisplayConfig.Builder()
+                    .setWidth(displayInfo.width)
+                    .setHeight(displayInfo.height)
+                    .setHorizontalDpi(displayInfo.dpi)
+                    .setVerticalDpi(displayInfo.dpi)
+                    .setRefreshRate(displayInfo.refreshRate)
+                    .build()
+            )
+            .useKeyboard(true)
+            .useMouse(true)
+            .useTouch(true)
     }
 
     // We still need this logic to retrieve the IP address of the VM to use it for guest agent
@@ -395,7 +379,7 @@ object VmController {
     }
 
     private fun calculateSparseDiskSize(): Long {
-        // With storage ballooning enabled, we create a sparse file with 95% of the total size.
+        // Create a sparse file with 95% of the total size for storage ballooning.
         val statFs = StatFs(context.filesDir.absolutePath)
         val hostSize = statFs.totalBytes
         return roundUp(hostSize * GUEST_SPARSE_DISK_SIZE_PERCENTAGE / 100)

@@ -73,7 +73,11 @@ internal class DisplayProvider(
 
         override fun surfaceCreated(holder: SurfaceHolder) {
             // Legacy UI with gfxstream requires this
-            if (!Flags.terminalNewuiJetpack()) {
+            // Also required for New UI if gfxstream is enabled.
+            if (
+                !Flags.terminalNewuiJetpack() ||
+                    GraphicsManager.getInstance(mainView.context).isGfxstreamEnabled()
+            ) {
                 if (surfaceKind == SurfaceKind.MAIN) {
                     holder.setFixedSize(width, height)
                 }

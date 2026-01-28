@@ -16,7 +16,6 @@
 package com.android.virtualization.terminal
 
 enum class SettingsItemEnum {
-    DiskResize,
     PortForwarding,
     Recovery,
     GraphicAcceleration,

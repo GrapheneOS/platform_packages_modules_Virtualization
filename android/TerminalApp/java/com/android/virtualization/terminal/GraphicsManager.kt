@@ -56,6 +56,18 @@ private constructor(context: Context, private val sharedPref: SharedPreferences)
                 sharedPref.edit().putString(ACCELERATION_TYPE_KEY, value.name).apply()
             }
 
+    fun isGfxstreamEnabled(): Boolean {
+        if (
+            android.os.Build.isDebuggable() &&
+                java.nio.file.Files.exists(
+                    ImageArchive.getSdcardPathForTesting().resolve("gfxstream")
+                )
+        ) {
+            return true
+        }
+        return accelerationType == AccelerationType.Gfxstream
+    }
+
     companion object {
         private const val PREFS_NAME = ".GRAPHICS"
         private const val ACCELERATION_TYPE_KEY = "acceleration_type"

@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.R
-import com.android.virtualization.terminal.new2.ui.main.MainUiState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -53,7 +52,7 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
     val activity = context as Activity
     val scope = rememberCoroutineScope()
     var showPermissionRationale by remember { mutableStateOf(false) }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val permissionRequired by viewModel.permissionRequired.collectAsStateWithLifecycle()
 
     fun getPermissionLabel(permission: String): String {
         return try {
@@ -66,7 +65,7 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
 
     val settingsLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            viewModel.startVm()
+            viewModel.onPermissionGranted()
         }
 
     val permissionLauncher =
@@ -102,8 +101,8 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
             }
         }
 
-    LaunchedEffect(uiState) {
-        if (uiState is MainUiState.PermissionRequired) {
+    LaunchedEffect(permissionRequired) {
+        if (permissionRequired) {
             if (PERMISSIONS.any { activity.shouldShowRequestPermissionRationale(it) }) {
                 showPermissionRationale = true
             } else {

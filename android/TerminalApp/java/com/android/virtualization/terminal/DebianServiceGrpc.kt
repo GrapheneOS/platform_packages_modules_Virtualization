@@ -19,7 +19,6 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.Keep
 import com.android.internal.annotations.GuardedBy
-import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.ForwarderHost.ForwardingCallback
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.proto.DebianServiceGrpc.DebianServiceImplBase
@@ -130,9 +129,6 @@ internal class DebianServiceGrpc(context: Context) : DebianServiceImplBase(), De
         request: StorageBalloonQueueOpeningRequest?,
         responseObserver: StreamObserver<StorageBalloonRequestItem?>,
     ) {
-        if (!Flags.terminalStorageBalloon()) {
-            return
-        }
         Log.d(TAG, "openStorageRequestQueue")
         synchronized(mLock) {
             if (storageBalloonCallback != null) {

@@ -98,7 +98,6 @@ class SettingsItemAdapter(private val dataSet: List<SettingsItem>) :
                 Intent(
                     viewHolder.itemView.context,
                     when (type) {
-                        SettingsItemEnum.DiskResize -> SettingsDiskResizeActivity::class.java
                         SettingsItemEnum.PortForwarding ->
                             SettingsPortForwardingActivity::class.java
                         SettingsItemEnum.Recovery -> SettingsRecoveryActivity::class.java

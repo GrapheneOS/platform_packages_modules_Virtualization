@@ -27,7 +27,6 @@ import androidx.window.embedding.SplitPairFilter
 import androidx.window.embedding.SplitPairRule
 import androidx.window.embedding.SplitPlaceholderRule
 import androidx.window.embedding.SplitRule
-import com.android.system.virtualmachine.flags.Flags
 
 class SplitInitializer : Initializer<RuleController> {
 
@@ -40,16 +39,6 @@ class SplitInitializer : Initializer<RuleController> {
                     null,
                 )
             )
-
-        if (Flags.terminalStorageBalloon()) {
-            filters.add(
-                SplitPairFilter(
-                    ComponentName(context, SettingsActivity::class.java),
-                    ComponentName(context, SettingsDiskResizeActivity::class.java),
-                    null,
-                )
-            )
-        }
 
         filters.add(
             SplitPairFilter(
@@ -77,12 +66,7 @@ class SplitInitializer : Initializer<RuleController> {
                 .setMinWidthDp(context.resources.getInteger(R.integer.split_min_width))
                 .build()
 
-        val placeholderIntent =
-            if (Flags.terminalStorageBalloon()) {
-                Intent(context, SettingsPortForwardingActivity::class.java)
-            } else {
-                Intent(context, SettingsDiskResizeActivity::class.java)
-            }
+        val placeholderIntent = Intent(context, SettingsPortForwardingActivity::class.java)
 
         val placeholderRule =
             SplitPlaceholderRule.Builder(

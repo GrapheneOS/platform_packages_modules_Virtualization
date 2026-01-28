@@ -44,14 +44,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface MainUiState {
     data object Ready : MainUiState
-
-    data object PermissionRequired : MainUiState
 
     data object Stopped : MainUiState
 
@@ -101,6 +99,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
 
     private val _permissionRequired = MutableStateFlow(false)
+    val permissionRequired: StateFlow<Boolean> = _permissionRequired.asStateFlow()
 
     fun handleIntent(intent: Intent) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
@@ -154,13 +153,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _displayState.value = DisplayState.Hidden
     }
 
-    // TODO: This combine logic should be removed as it still couples VM state with other concerns.
     val uiState: StateFlow<MainUiState> =
-        combine(VmController.vmState, _permissionRequired) { vmState, permissionRequired ->
+        VmController.vmState
+            .map { vmState ->
                 when (vmState) {
                     is VmState.Ready -> {
-                        if (permissionRequired) {
-                            MainUiState.PermissionRequired
+                        if (hasVmEverStarted) {
+                            MainUiState.Stopped
                         } else {
                             MainUiState.Ready
                         }
@@ -206,7 +205,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onPermissionGranted() {
         _permissionRequired.value = false
-        startVm()
     }
 
     fun onPermissionDenied() {
@@ -268,40 +266,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         VmController.reset()
 
+        val context = getApplication<Application>()
+        _permissionRequired.value =
+            PERMISSIONS.any { context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+
         // Observe installation and UI states to manage VM lifecycle.
         viewModelScope.launch {
-            Installer.installState.collectLatest { installState ->
-                if (installState is InstallState.Installed) {
-                    // Reset sessions to start fresh upon installation completion.
-                    TerminalSessionRepository.reset()
+            permissionRequired.collectLatest { required ->
+                if (!required) {
+                    launch {
+                        Installer.installState.collectLatest { installState ->
+                            if (installState is InstallState.Installed) {
+                                // Reset sessions to start fresh upon installation completion.
+                                TerminalSessionRepository.reset()
 
-                    // Once installed, start observing UI state and trigger VM startup
-                    // whenever it returns to a Ready state.
-                    uiState.collect { uiState ->
-                        if (uiState is MainUiState.Ready) {
-                            startVm()
+                                // Once installed, start observing UI state and trigger VM startup
+                                // whenever it returns to a Ready state.
+                                uiState.collect { state ->
+                                    if (state is MainUiState.Ready) {
+                                        startVm()
+                                    }
+                                }
+                            } else {
+                                // If installation is removed or checking, reset flags and UI.
+                                hasVmEverStarted = false
+                                _showSettings.value = false
+                            }
                         }
                     }
-                } else {
-                    // If installation is removed or checking, reset flags and UI.
-                    hasVmEverStarted = false
-                    _showSettings.value = false
-                }
-            }
-        }
 
-        viewModelScope.launch { VmController.sessionDiscarded.collect { id -> closeTab(id) } }
-        viewModelScope.launch {
-            VmController.vmState.collect { state ->
-                if (state is VmState.Rebooting) {
-                    restartVm()
-                }
-            }
-        }
-        viewModelScope.launch {
-            TerminalSessionRepository.sessions.collect { sessions ->
-                if (sessions.isEmpty()) {
-                    stopVm()
+                    launch { VmController.sessionDiscarded.collect { id -> closeTab(id) } }
+                    launch {
+                        VmController.vmState.collect { state ->
+                            if (state is VmState.Rebooting) {
+                                restartVm()
+                            }
+                        }
+                    }
+                    launch {
+                        TerminalSessionRepository.sessions.collect { sessions ->
+                            if (sessions.isEmpty()) {
+                                stopVm()
+                            }
+                        }
+                    }
                 }
             }
         }

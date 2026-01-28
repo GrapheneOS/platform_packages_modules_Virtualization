@@ -121,11 +121,11 @@ impl ClientVmDiceChain {
 
     fn build(payloads: Vec<DiceChainEntryPayload>) -> Result<Self> {
         let check_name = |payload: &DiceChainEntryPayload, expected: &str| -> Result<()> {
-            let actual = payload.config_descriptor.component_name.as_deref();
-            if actual != Some(expected) {
+            if payload.component_name() != Some(expected) {
                 error!(
                     "DICE chain entry component expected to be named '{expected}'. \
-                        Got '{actual:?}'"
+                        Got '{:?}'",
+                    payload.component_name()
                 );
                 return Err(RequestProcessingError::InvalidDiceChain);
             }
@@ -333,6 +333,11 @@ impl DiceChainEntryPayload {
             }
         }
         builder.build()
+    }
+
+    /// Returns the component name from the configuration descriptor.
+    pub(crate) fn component_name(&self) -> Option<&str> {
+        self.config_descriptor.component_name.as_deref()
     }
 }
 /// Represents a partially decoded `ConfigurationDescriptor`.
