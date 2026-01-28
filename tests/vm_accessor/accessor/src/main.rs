@@ -38,7 +38,8 @@ fn main() -> Result<(), Error> {
     );
 
     let vm = run_vm()?;
-    vm.wait_until_ready(Duration::from_secs(20)).unwrap();
+    let timeout_multiplier = hw_timeout_multiplier::vm_timeout_multiplier();
+    vm.wait_until_ready(Duration::from_secs(20 * timeout_multiplier)).unwrap();
     let accessor = vm.vm.createAccessorBinder(SERVICE_NAME, PORT).unwrap();
 
     let accessor_delegator = binder::delegate_accessor(SERVICE_NAME, accessor).unwrap();

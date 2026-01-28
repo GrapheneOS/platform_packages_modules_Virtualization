@@ -19,6 +19,7 @@ rust_binary {
         "libbinder_rs",
         "libenv_logger",
         "libglob",
+        "libhw_timeout_multiplier",
         "libhypervisor_props",
         "liblog_rust",
         "libmicrodroid_payload_config",
