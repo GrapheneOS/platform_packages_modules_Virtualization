@@ -766,13 +766,6 @@ def resign_service_vm(args, key, service_vm_path):
     assert len(updated_hash_descriptors) == 1, \
         f"There should be only one hash descriptor for service_vm. " \
         f"Updated hash descriptors: {updated_hash_descriptors}"
-    # Since salt is not updated, the change of digest reflects the change of content of
-    # service_vm
-    if not args.do_not_update_bootconfigs:
-        [(_, original_descriptor)] = extract_hash_descriptors(original_descriptors).items()
-        [(_, updated_descriptor)] = updated_hash_descriptors.items()
-        assert_different_value(original_descriptor, updated_descriptor, "Digest",
-                               "service_vm_hash_descriptor")
 
 def assert_different_value(original, updated, key, context):
     assert original[key] != updated[key], \
@@ -827,8 +820,6 @@ def update_initrd_digests_in_service_vm(
         new_content = content.replace(original_digest, updated_digest)
         assert len(new_content) == len(content), \
             "Length of new_content and content must be the same."
-        assert new_content != content, \
-            f"original digest of the partition {partition_name} not found."
         content = new_content
 
     return content

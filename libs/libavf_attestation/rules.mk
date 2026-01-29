@@ -36,10 +36,15 @@ MODULE_LIBRARY_DEPS += \
 	packages/modules/Virtualization/libs/dice/open_dice \
 	packages/modules/Virtualization/libs/libservice_vm_comm \
 	$(MICRODROID_KERNEL_HASHES_RS) \
+	$(PLATFORM_SECURITY_PATCH_TIMESTAMP_RS) \
 
 
 ifeq (true,$(call TOBOOL,$(AVF_ENABLE_ADVANCE_MULTITENANCY)))
 MODULE_RUSTFLAGS += --cfg "advance_multitenancy"
+endif
+
+ifeq (true,$(call TOBOOL,$(AVF_VALIDATE_CLIENT_VM_USING_DICE_INFO)))
+MODULE_RUSTFLAGS += --cfg "validate_client_vm_using_dice_info"
 endif
 
 include make/library.mk
