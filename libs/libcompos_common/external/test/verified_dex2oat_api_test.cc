@@ -38,7 +38,7 @@
 #include "android-base/stringprintf.h"
 #include "android-base/strings.h"
 #include "android-base/unique_fd.h"
-#include "verified_dex2oat.h"
+#include "verified_dex2oat/verified_dex2oat_compilation.h"
 
 namespace compos_api {
 namespace {

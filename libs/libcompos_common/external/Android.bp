@@ -1,17 +1,34 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 rust_defaults {
     name: "libcomposd_c_common_defaults",
     edition: "2021",
-    srcs: ["verified_dex2oat.rs"],
+    srcs: [
+        "lib.rs",
+    ],
     prefer_rlib: true,
     rustlibs: [
         "libanyhow",
+        "libandroid_logger",
+        "liblog_rust",
         "android.system.composd-rust",
         "libbinder_rs",
         "libcompos_bindgen",
+        "libcompos_manifest_proto",
+        "libfsverity_rs",
+        "libhex",
         "liblibc",
+        "libnix",
         "libparking_lot",
         "libscopeguard",
         "librustix",
+        "libprotobuf",
+        "libbssl_crypto",
+        "compos_aidl_interface-rust",
+        "libcompos_common",
+        "libcompos_wrappers",
     ],
 }
 
@@ -53,6 +70,7 @@ rust_test {
     rustlibs: [
         "libmockall",
         "libtempfile",
+        "libcompos_wrappers_with_mocks",
     ],
     flags: ["-A dead_code"],
 }
