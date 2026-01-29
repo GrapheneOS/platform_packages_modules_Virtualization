@@ -165,21 +165,13 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
         RebootReason::InvalidConfig
     })?;
 
-    let config_entries = appended.get_entries();
+    let mut config_entries = appended.get_entries();
 
     let mut slices = MemorySlices::new(boot_args)?;
 
     // This wrapper allows main() to be blissfully ignorant of platform details.
-    let (preserved_memory, debuggable_payload) = crate::main(
-        slices.fdt,
-        slices.kernel,
-        slices.ramdisk,
-        config_entries.dice_handover.as_deref(),
-        config_entries.debug_policy,
-        config_entries.vm_dtbo,
-        config_entries.vm_ref_dt,
-        config_entries.reserved_mem.as_deref(),
-    )?;
+    let (preserved_memory, debuggable_payload) =
+        crate::main(slices.fdt, slices.kernel, slices.ramdisk, &mut config_entries)?;
     if !preserved_memory.is_empty() {
         flush(preserved_memory);
         slices.add_preserved_memory(preserved_memory);
