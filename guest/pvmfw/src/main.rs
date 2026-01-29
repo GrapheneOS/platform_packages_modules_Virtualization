@@ -33,12 +33,14 @@ mod rollback;
 
 use crate::config::reserved_mem::{ResMem, ResMemEntryInfo};
 use crate::config::Entries;
+use crate::config::TrustedKeysConfig;
 use crate::dice::{DiceChainInfo, PartialInputs};
 use crate::entry::RebootReason;
 use crate::fdt::{modify_for_next_stage, read_instance_id, sanitize_device_tree};
 use crate::rollback::perform_rollback_protection;
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
+use alloc::vec;
 use alloc::vec::Vec;
 use bssl_crypto::digest::Sha512;
 use core::slice::ChunksMut;
@@ -87,7 +89,19 @@ fn main<'a>(
         None
     };
 
-    let trusted_keys = [PUBLIC_KEY];
+    let trusted_keys_config = if let Some(keys) = config.trusted_keys {
+        TrustedKeysConfig::try_from_bytes(keys)
+            .map_err(|e| {
+                warn!("Failed to parse trusted keys config: {e}");
+                warn!("Ignoring trusted keys config");
+            })
+            .ok()
+    } else {
+        None
+    };
+    let extra_keys = trusted_keys_config.as_ref().map(|c| c.trusted_keys()).unwrap_or(&[]);
+    let mut trusted_keys = vec![PUBLIC_KEY];
+    trusted_keys.extend_from_slice(extra_keys);
 
     // Policy/Hidden ABI: If the pvmfw loader (typically ABL) didn't pass a DICE handover (which is
     // technically still mandatory, as per the config data specification), skip DICE, AVB, and RBP.
