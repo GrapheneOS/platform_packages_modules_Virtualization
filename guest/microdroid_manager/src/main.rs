@@ -1422,22 +1422,6 @@ impl IGuestAgent for GuestAgent {
         start_dump_service().or_service_specific_exception(-1)
     }
 
-    fn startOrStopTracedRelayService(&self, start: bool) -> binder::Result<()> {
-        if start {
-            info!("Requested to start traced_relay service");
-        } else {
-            info!("Requested to stop traced_relay service");
-        }
-        if !is_debuggable() {
-            return Err(anyhow!("traced_relay is only supported for debuggable VMs"))
-                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
-        }
-        let value = if start { "2" } else { "0" };
-        system_properties::write("persist.traced.enable", value)
-            .context("failed to start traced_relay service")
-            .or_service_specific_exception(-1)
-    }
-
     fn shutdownAsync(&self) -> binder::Result<()> {
         info!("Shutdown requested.");
         if let Err(e) = system_properties::write("sys.powerctl", "shutdown") {
