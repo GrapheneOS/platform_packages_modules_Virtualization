@@ -1,7 +1,6 @@
 [Unit]
 Description=Mount backup rootfs
 After=network.target
-After=virtiofs_internal.service
 
 [Service]
 Type=oneshot

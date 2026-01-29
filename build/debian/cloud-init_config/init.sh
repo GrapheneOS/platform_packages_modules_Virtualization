@@ -24,8 +24,6 @@ _restart_services() {
 		avahi_ttyd.service
 		backup_mount.service
 		mnt-shared.automount
-		mnt-internal.automount
-		ttyd.service
 		ttyd_uds.service
 		ttyd_vsock_bridge.service
 		linux_vm_manager.service
