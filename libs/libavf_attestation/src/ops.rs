@@ -65,7 +65,7 @@ pub trait AttestationOps: KeyDerivationOps + Send + Sync {
     /// Returns the UDS certificates.
     ///
     /// # Returns
-    /// A Vec<u8> containing the CBOR-encoded UdsCerts map, as defined in the
+    /// A `Vec<u8>` containing the CBOR-encoded UdsCerts map, as defined in the
     /// IRemotelyProvisionedComponent HAL CDDL:
     ///
     /// ```text
