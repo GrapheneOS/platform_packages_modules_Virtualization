@@ -34,16 +34,12 @@ import io.grpc.ServerCallHandler
 import io.grpc.ServerInterceptor
 import io.grpc.Status
 import io.grpc.okhttp.OkHttpServerBuilder
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class OpenPort(val port: Int, val name: String, val isForwarded: Boolean) {
     fun isSaved() = name.isEmpty()
@@ -167,18 +163,6 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         } catch (e: IOException) {
             Log.d(TAG, "grpc server error", e)
             throw RuntimeException("cannot start grpc server", e)
-        }
-
-        scope.launch(Dispatchers.IO) {
-            // TODO(b/373533555): we can use mDNS for that.
-            val debianServicePortFile = File(context.filesDir, "debian_service_port")
-            try {
-                FileOutputStream(debianServicePortFile).use { writer ->
-                    writer.write(server!!.port.toString().toByteArray())
-                }
-            } catch (e: IOException) {
-                Log.d(TAG, "cannot write grpc port number", e)
-            }
         }
 
         StorageBalloonWorker.start(context, debianService!!)

@@ -37,7 +37,6 @@ import java.io.IOException
 import java.io.Reader
 import java.lang.Exception
 import java.lang.RuntimeException
-import java.nio.file.Files
 import java.nio.file.Path
 
 /** This class and its inner classes model vm_config.json. */
@@ -158,25 +157,9 @@ internal data class ConfigJson(
                             "",
                         )
                     }
-                    return null
                 }
-                val socketPath = context.getFilesDir().toPath().resolve("internal.virtiofs")
-                Files.deleteIfExists(socketPath)
-                return VirtualMachineCustomImageConfig.SharedPath(
-                    sharedPath,
-                    terminalUid,
-                    terminalUid,
-                    0,
-                    0,
-                    7,
-                    "internal",
-                    "internal",
-                    true, /* app domain is set to true so that crosvm is spin up from app context */
-                    socketPath.toString(),
-                )
-            } catch (e: PackageManager.NameNotFoundException) {
                 return null
-            } catch (e: IOException) {
+            } catch (e: PackageManager.NameNotFoundException) {
                 return null
             }
         }

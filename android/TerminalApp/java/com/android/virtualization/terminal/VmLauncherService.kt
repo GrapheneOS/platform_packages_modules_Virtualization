@@ -53,8 +53,6 @@ import io.grpc.ServerCallHandler
 import io.grpc.ServerInterceptor
 import io.grpc.Status
 import io.grpc.okhttp.OkHttpServerBuilder
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.SocketAddress
@@ -415,20 +413,6 @@ class VmLauncherService : Service() {
             Log.d(TAG, "grpc server error", e)
             throw RuntimeException("cannot start grpc server", e)
         }
-
-        bgThreads.execute(
-            Runnable {
-                // TODO(b/373533555): we can use mDNS for that.
-                val debianServicePortFile = File(filesDir, "debian_service_port")
-                try {
-                    FileOutputStream(debianServicePortFile).use { writer ->
-                        writer.write(server!!.port.toString().toByteArray())
-                    }
-                } catch (e: IOException) {
-                    Log.d(TAG, "cannot write grpc port number", e)
-                }
-            }
-        )
 
         return server!!.port
     }
