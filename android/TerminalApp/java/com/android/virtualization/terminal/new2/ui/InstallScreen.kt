@@ -68,6 +68,7 @@ import com.android.virtualization.terminal.new2.ui.main.InstallViewModel
 fun InstallScreen(snackbarHostState: SnackbarHostState, viewModel: InstallViewModel = viewModel()) {
     val state by viewModel.installState.collectAsStateWithLifecycle()
     val wifiOnly by viewModel.wifiOnly.collectAsStateWithLifecycle()
+    val isUpgrade by viewModel.isUpgrade.collectAsStateWithLifecycle()
 
     var showCancelDialog by remember { mutableStateOf(false) }
 
@@ -90,14 +91,16 @@ fun InstallScreen(snackbarHostState: SnackbarHostState, viewModel: InstallViewMo
     ) {
         InstallScreenHeader(
             totalSizeBytes = state.getTotalImageSize(),
-            showDescription = !viewModel.autoInstall,
+            showDescription = !viewModel.autoInstall && !state.isStarted(),
+            isUpgrade = isUpgrade,
         )
 
         if (!state.isStarted() && !viewModel.autoInstall) {
             InstallScreenButtons(
                 wifiOnly = wifiOnly,
+                isUpgrade = isUpgrade,
                 onWifiOnlyChange = { viewModel.setWifiOnly(it) },
-                onInstall = { viewModel.installVm() },
+                onInstall = { if (isUpgrade) viewModel.upgradeVm() else viewModel.installVm() },
             )
         } else if (state.isStarted()) {
             InstallScreenProgress(
@@ -113,7 +116,11 @@ fun InstallScreen(snackbarHostState: SnackbarHostState, viewModel: InstallViewMo
 }
 
 @Composable
-private fun InstallScreenHeader(totalSizeBytes: Long, showDescription: Boolean) {
+private fun InstallScreenHeader(
+    totalSizeBytes: Long,
+    showDescription: Boolean,
+    isUpgrade: Boolean,
+) {
     val context = LocalContext.current
     val formattedSize = Formatter.formatFileSize(context, totalSizeBytes)
 
@@ -137,8 +144,14 @@ private fun InstallScreenHeader(totalSizeBytes: Long, showDescription: Boolean) 
     )
     Spacer(modifier = Modifier.height(32.dp))
     if (showDescription) {
+        val desc =
+            if (isUpgrade) {
+                stringResource(R.string.upgrade_desc, "/mnt/backup")
+            } else {
+                stringResource(R.string.installer_desc, formattedSize)
+            }
         Text(
-            text = stringResource(R.string.installer_desc, formattedSize),
+            text = desc,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -150,6 +163,7 @@ private fun InstallScreenHeader(totalSizeBytes: Long, showDescription: Boolean) 
 @Composable
 private fun InstallScreenButtons(
     wifiOnly: Boolean,
+    isUpgrade: Boolean,
     onWifiOnlyChange: (Boolean) -> Unit,
     onInstall: () -> Unit,
 ) {
@@ -165,10 +179,9 @@ private fun InstallScreenButtons(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
     ) {
-        Text(
-            text = stringResource(R.string.installer_btn_install),
-            style = MaterialTheme.typography.labelLarge,
-        )
+        val textResId =
+            if (isUpgrade) R.string.upgrade_btn_upgrade else R.string.installer_btn_install
+        Text(text = stringResource(textResId), style = MaterialTheme.typography.labelLarge)
     }
 }
 

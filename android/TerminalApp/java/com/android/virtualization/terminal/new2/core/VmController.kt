@@ -130,6 +130,12 @@ object VmController {
                 // Convert rootfs disk into a sparse file for storage ballooning.
                 truncateDiskIfNecessary(image)
 
+                if (image.hasBackup()) {
+                    customImageConfigBuilder.addDisk(
+                        VirtualMachineCustomImageConfig.Disk.RWDisk(image.backupFile.toString())
+                    )
+                }
+
                 // Override config for Display
                 setDisplayConfig(customImageConfigBuilder, displayInfo)
                 setGpuConfig(context, customImageConfigBuilder)
