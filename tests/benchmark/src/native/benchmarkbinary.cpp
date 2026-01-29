@@ -204,6 +204,9 @@ private:
         if (fd.get() == -1) {
             return ErrnoError() << "Write: opening " << filename << " failed";
         }
+        if (fsync(fd) == -1) {
+            return ErrnoError() << "Failed to fsync after file creation " << filename;
+        }
         if (stat(filename.c_str(), &file_stats) == -1) {
             return Error() << "failed to get file stats";
         }

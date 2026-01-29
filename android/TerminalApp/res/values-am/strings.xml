@@ -26,27 +26,18 @@
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fi ብቻ በመጠቀም አውርድ"</string>
     <string name="installer_btn_install" msgid="1249687873554194768">"ጫን"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"በመጫን ላይ"</string>
-    <!-- no translation found for installer_btn_cancel (3560257458966328733) -->
-    <skip />
-    <!-- no translation found for installer_dlg_title_cancel_install (2347901416414323603) -->
-    <skip />
-    <!-- no translation found for installer_dlg_message_cancel_install (7122895060756794760) -->
-    <skip />
-    <!-- no translation found for installer_dlg_btn_cancel_install (7061500109118550183) -->
-    <skip />
-    <!-- no translation found for installer_dlg_btn_continue_install (4038480932377540963) -->
-    <skip />
+    <string name="installer_btn_cancel" msgid="3560257458966328733">"መጫኑን ሰርዝ"</string>
+    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"መጫን ይሰረዝ?"</string>
+    <string name="installer_dlg_message_cancel_install" msgid="7122895060756794760">"ማውረድ ይቆማል እና ሂደት ይጠፋል።"</string>
+    <string name="installer_dlg_btn_cancel_install" msgid="7061500109118550183">"ማውረድ አቁም"</string>
+    <string name="installer_dlg_btn_continue_install" msgid="4038480932377540963">"ቀጥል"</string>
     <string name="installer_snkbar_error_network" msgid="4231423523038307349">"በአውታረ መረቡ ችግር ምክንያት መጫን አልተሳካም"</string>
     <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Wi-Fi ስለማይገኝ መጫን አልተሳካም"</string>
     <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"መጫን አልተሳካም። እባክዎ እንደገና ይሞክሩ"</string>
-    <!-- no translation found for installer_snkbar_error_no_space (2980013654869871281) -->
-    <skip />
-    <!-- no translation found for installer_snkbar_action_storage (3154991131973261946) -->
-    <skip />
-    <!-- no translation found for installer_msg_mobile_data (3235093415908956584) -->
-    <skip />
-    <!-- no translation found for installer_msg_waiting_network (5866026140340225420) -->
-    <skip />
+    <string name="installer_snkbar_error_no_space" msgid="2980013654869871281">"በቂ ባልሆነ የዲስክ ቦታ ምክንያት መጫን አልተሳካም።"</string>
+    <string name="installer_snkbar_action_storage" msgid="3154991131973261946">"ማከማቻን ያስተዳድሩ"</string>
+    <string name="installer_msg_mobile_data" msgid="3235093415908956584">"የተንቀሳቃሽ ስልክ ውሂብን በመጠቀም ማውረድን በመቀጠል ላይ..."</string>
+    <string name="installer_msg_waiting_network" msgid="5866026140340225420">"የአውታረ መረብ ዳግም ግንኙነትን በመጠበቅ ላይ..."</string>
     <string name="terminal_hint_display" msgid="7172326332224647219">"ተርሚናል ማሳያ"</string>
     <string name="terminal_hint_input" msgid="1959459646864329623">"ጠቋሚ"</string>
     <string name="terminal_hint_empty_line" msgid="8470507412532518466">"ባዶ መስመር"</string>
@@ -91,7 +82,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"እንደገና ሞክር"</string>
     <string name="settings_title" msgid="3035373808103055663">"ቅንብሮች"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ተመለስ"</string>
-    <string name="settings_placeholder_select" msgid="4246272717471568067">"ቅንብር ይምረጡ"</string>
     <string name="settings_disk_title" msgid="3756870708790177276">"የዲስክ መጠንን ቀይር"</string>
     <string name="settings_disk_subtitle" msgid="595369261192580241">"የስር ክፍልፋይ መጠንን ቀይር"</string>
     <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ተመድቧል"</string>
