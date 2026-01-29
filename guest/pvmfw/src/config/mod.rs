@@ -14,6 +14,7 @@
 
 //! Support for the pvmfw configuration data format.
 
+mod rollback;
 mod trusted_keys;
 
 use core::fmt;
@@ -22,6 +23,10 @@ use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::result;
 use log::{info, warn};
+pub use rollback::RollbackConfig;
+pub use rollback::RollbackConfigEntry;
+pub use rollback::RollbackConfigKeyId;
+pub use rollback::RollbackConfigPolicy;
 use static_assertions::const_assert_eq;
 pub use trusted_keys::TrustedKeysConfig;
 use vmbase::util::RangeExt;
@@ -107,7 +112,7 @@ impl Header {
             Self::VERSION_1_1 => Entry::VmDtbo,
             Self::VERSION_1_2 => Entry::VmBaseDtbo,
             Self::VERSION_1_3 => Entry::ReservedMem,
-            Self::VERSION_1_4 => Entry::TrustedKeys,
+            Self::VERSION_1_4 => Entry::ExtraRollback,
             v @ Version { major: 1, .. } => {
                 const LATEST: Version = Header::VERSION_1_4;
                 warn!("Parsing unknown config data version {v} as version {LATEST}");
@@ -127,6 +132,7 @@ pub enum Entry {
     VmDtbo,
     VmBaseDtbo,
     ReservedMem,
+    ExtraRollback,
     TrustedKeys,
     #[allow(non_camel_case_types)] // TODO: Use mem::variant_count once stable.
     _VARIANT_COUNT,
@@ -141,6 +147,7 @@ impl Entry {
         Self::VmDtbo,
         Self::VmBaseDtbo,
         Self::ReservedMem,
+        Self::ExtraRollback,
         Self::TrustedKeys,
     ];
 }
@@ -153,6 +160,7 @@ pub struct Entries<'a> {
     pub vm_ref_dt: Option<&'a [u8]>,
     pub reserved_mem: Option<&'a mut [u8]>,
     pub trusted_keys: Option<&'a [u8]>,
+    pub extra_rollback: Option<&'a [u8]>,
 }
 
 #[repr(C, packed)]
@@ -299,13 +307,23 @@ impl<'a> Config<'a> {
                 entries[i] = Some(chunk);
             }
         }
-        let [dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem, trusted_keys] = entries;
+        let [dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem, trusted_keys, extra_rollback] =
+            entries;
 
         // We have no reason to mutate so drop the `mut`.
         let debug_policy = debug_policy.map(|x| &*x);
         let vm_ref_dt = vm_ref_dt.map(|x| &*x);
         let trusted_keys = trusted_keys.map(|x| &*x);
+        let extra_rollback = extra_rollback.map(|x| &*x);
 
-        Entries { dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem, trusted_keys }
+        Entries {
+            dice_handover,
+            debug_policy,
+            vm_dtbo,
+            vm_ref_dt,
+            reserved_mem,
+            trusted_keys,
+            extra_rollback,
+        }
     }
 }

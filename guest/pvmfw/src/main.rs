@@ -33,6 +33,7 @@ mod rollback;
 
 use crate::config::reserved_mem::{ResMem, ResMemEntryInfo};
 use crate::config::Entries;
+use crate::config::RollbackConfig;
 use crate::config::TrustedKeysConfig;
 use crate::dice::{DiceChainInfo, PartialInputs};
 use crate::entry::RebootReason;
@@ -173,8 +174,24 @@ fn main<'a>(
         })?;
         let (dice_handover_bytes, dice_cdi_seal, dice_context) =
             parsed_dice.expect("Missing DICE values with VB data");
-        let (new_instance, salt, defer_rollback_protection) =
-            perform_rollback_protection(fdt, data, &dice_inputs, &dice_cdi_seal)?;
+        let extra_rollback = if let Some(bytes) = config.extra_rollback {
+            RollbackConfig::try_from_bytes(bytes)
+                .map_err(|e| {
+                    warn!("Failed to parse rollback config: {e}");
+                    warn!("Ignoring rollback config");
+                })
+                .ok()
+        } else {
+            None
+        };
+        let (new_instance, salt, defer_rollback_protection) = perform_rollback_protection(
+            fdt,
+            data,
+            &dice_inputs,
+            &dice_cdi_seal,
+            extra_rollback.as_ref(),
+            extra_keys,
+        )?;
         trace!("Got salt for instance: {salt:x?}");
 
         let next_dice_handover = preserved_pages.next().unwrap();
