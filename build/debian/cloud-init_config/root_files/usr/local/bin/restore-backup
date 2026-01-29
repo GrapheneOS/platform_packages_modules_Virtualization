@@ -1,0 +1,468 @@
+#!/usr/bin/env python3
+import os
+import sys
+import curses
+import subprocess
+import shutil
+from pathlib import Path
+from datetime import datetime
+
+# Constants
+HOME_DIR = "/home/droid"
+RESTORE_COMPLETE_FILENAME = ".restore_complete"
+RESTORE_COMPLETE_MARKER = os.path.join(HOME_DIR, RESTORE_COMPLETE_FILENAME)
+BACKUP_MOUNT = "/mnt/backup"
+BACKUP_USED_MARKER = os.path.join(BACKUP_MOUNT, ".backup_used")
+LOG_FILE = "/var/log/restore-backup.log"
+
+
+class RestoreBackupUI:
+    """Manages the Terminal User Interface using the curses library."""
+
+    def __init__(self, stdscr):
+        self.stdscr = stdscr
+        try:
+            # Hide cursor for a cleaner UI
+            curses.curs_set(0)
+        except curses.error:
+            pass
+
+        # Setup logging to file with a timestamp
+        try:
+            self.log_f = open(LOG_FILE, "a")
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.log_f.write(f"\n--- Restoration Session started at {now} ---\n")
+        except Exception:
+            self.log_f = None
+
+        # Initialize color system if the terminal supports it
+        self.color_enabled = False
+        if curses.has_colors():
+            try:
+                curses.start_color()
+                # Use -1 for background to respect terminal's transparency
+                curses.use_default_colors()
+                curses.init_pair(1, curses.COLOR_GREEN, -1)   # Success/Command
+                curses.init_pair(2, curses.COLOR_CYAN, -1)    # Headers
+                curses.init_pair(3, curses.COLOR_YELLOW, -1)  # Status/Items
+                curses.init_pair(4, curses.COLOR_RED, -1)     # Errors
+                curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Selected
+                self.color_enabled = True
+            except curses.error:
+                pass
+
+        self.height, self.width = stdscr.getmaxyx()
+        # Non-blocking mode allows us to refresh the UI while subprocesses run
+        self.stdscr.nodelay(True)
+
+        # UI Layout partitions
+        header_h = 3
+        progress_h = 5
+        self.log_h = max(1, self.height - header_h - progress_h)
+
+        self.header_win = curses.newwin(header_h, self.width, 0, 0)
+        self.progress_win = curses.newwin(progress_h, self.width, header_h, 0)
+        self.log_win = curses.newwin(self.log_h, self.width, header_h + progress_h, 0)
+
+        self.all_logs = []
+        self.log_offset = 0
+        self.auto_scroll = True
+
+        self.current_step = ""
+        self.current_item = ""
+        self.percentage = 0
+
+    def get_attr(self, pair_num, bold=False):
+        """Helper to get curses attributes with fallback if colors are disabled."""
+        attr = curses.color_pair(pair_num) if self.color_enabled else curses.A_NORMAL
+        if bold:
+            attr |= curses.A_BOLD
+        return attr
+
+    def draw_all(self):
+        """Redraws the entire UI hierarchy."""
+        self.draw_header()
+        self.draw_progress()
+        self.draw_logs()
+        self.stdscr.refresh()
+
+    def draw_header(self):
+        self.header_win.erase()
+        self.header_win.attron(self.get_attr(2))
+        self.header_win.box()
+        title = f" Phase: {self.current_step} "
+        self.header_win.addstr(1, 2, title[: self.width - 4], self.get_attr(2, True))
+        self.header_win.attroff(self.get_attr(2))
+        self.header_win.refresh()
+
+    def draw_progress(self):
+        self.progress_win.erase()
+        self.progress_win.box()
+        item_display = self.current_item[: max(0, self.width - 20)]
+        if self.width > 20:
+            self.progress_win.addstr(1, 2, "Processing: ")
+            self.progress_win.addstr(item_display, self.get_attr(3))
+        if self.width > 15:
+            bar_width = self.width - 12
+            filled = int(bar_width * (self.percentage / 100))
+            self.progress_win.addstr(2, 2, "[")
+            self.progress_win.addstr("#" * filled, self.get_attr(1))
+            self.progress_win.addstr("-" * (bar_width - filled))
+            self.progress_win.addstr("]")
+            self.progress_win.addstr(
+                2, self.width - 8, f"{self.percentage:3}%", self.get_attr(3, True)
+            )
+        self.progress_win.refresh()
+
+    def draw_logs(self):
+        """Renders the visible portion of the log buffer with safety offsets."""
+        self.log_win.erase()
+        visible_logs = self.all_logs[self.log_offset : self.log_offset + self.log_h]
+        for i, (text, attr) in enumerate(visible_logs):
+            if i >= self.log_h:
+                break
+            try:
+                # Truncate string to avoid hitting the terminal edge which triggers curses ERR
+                self.log_win.addstr(i, 0, text[: self.width - 2], attr)
+            except curses.error:
+                pass
+        self.log_win.refresh()
+
+    def add_log(self, text):
+        """Adds a log entry, persists to file, and handles auto-scrolling."""
+        if self.log_f:
+            self.log_f.write(text + "\n")
+            self.log_f.flush()
+
+        attr = curses.A_NORMAL
+        if text.startswith("$"):
+            attr = self.get_attr(1)
+        elif "error" in text.lower() or "failed" in text.lower():
+            attr = self.get_attr(4)
+
+        self.all_logs.append((text, attr))
+        if self.auto_scroll:
+            self.log_offset = max(0, len(self.all_logs) - self.log_h)
+        self.draw_logs()
+
+    def handle_input(self):
+        """Processes navigation keys for scrolling the log history."""
+        key = self.stdscr.getch()
+        if key == curses.KEY_PPAGE:  # Page Up
+            self.auto_scroll = False
+            self.log_offset = max(0, self.log_offset - self.log_h)
+            self.draw_logs()
+        elif key == curses.KEY_NPAGE:  # Page Down
+            self.log_offset = min(
+                max(0, len(self.all_logs) - self.log_h), self.log_offset + self.log_h
+            )
+            if self.log_offset >= len(self.all_logs) - self.log_h:
+                self.auto_scroll = True
+            self.draw_logs()
+        elif key in [ord("e"), ord("E")]:  # End / Resume follow
+            self.auto_scroll = True
+            self.log_offset = max(0, len(self.all_logs) - self.log_h)
+            self.draw_logs()
+
+    def set_step(self, step):
+        self.current_step = step
+        self.draw_header()
+
+    def update_progress(self, item, percentage):
+        self.current_item = item
+        self.percentage = percentage
+        self.draw_progress()
+
+    def show_dialog(self, title, message, options=None):
+        """Displays a modal centered popup dialog. Temporarily enters blocking mode."""
+        self.stdscr.nodelay(False)  # Blocking input is safer for modal dialogs
+        if options is None:
+            options = [("Y", "Yes"), ("N", "No")]
+
+        dialog_w = min(self.width - 2, 60)
+        msg_lines = message.split("\n")
+        dialog_h = min(self.height - 2, max(len(msg_lines) + 6, 8))
+        dialog_y, dialog_x = (self.height - dialog_h) // 2, (self.width - dialog_w) // 2
+
+        win = curses.newwin(dialog_h, dialog_w, dialog_y, dialog_x)
+        win.keypad(True)
+        win.nodelay(False)  # Ensure window itself is blocking to avoid busy-loops
+
+        win.erase()
+        win.attron(self.get_attr(2))
+        win.box()
+        win.addstr(
+            1,
+            max(1, (dialog_w - len(title)) // 2),
+            title[: dialog_w - 2],
+            self.get_attr(2, True),
+        )
+        for i, line in enumerate(msg_lines):
+            if i < dialog_h - 4:
+                win.addstr(3 + i, 2, line[: dialog_w - 4])
+
+        opt_str_len = sum(len(opt[1]) + 5 for opt in options)
+        curr_x = max(2, (dialog_w - opt_str_len) // 2)
+        for key_char, label in options:
+            win.addstr(dialog_h - 2, curr_x, f"[{key_char}]", self.get_attr(1, True))
+            win.addstr(f" {label}  ")
+            curr_x += len(label) + 6
+
+        win.touchwin()  # Force curses to repaint this area
+        win.refresh()
+        curses.flushinp()
+
+        result = None
+        while result is None:
+            key = win.getch()
+            if key == -1:
+                continue
+            for key_char, _ in options:
+                if key in [ord(key_char.lower()), ord(key_char.upper())]:
+                    result = key_char.upper()
+                    break
+
+        del win
+        self.stdscr.nodelay(True)  # Restore non-blocking mode for background tasks
+        self.draw_all()
+        return result
+
+    def show_package_selector(self, packages):
+        """Displays a scrollable list of packages with toggleable selection."""
+        self.stdscr.nodelay(False)
+        selector_h = self.height - 2
+        selector_w = self.width - 4
+        win = curses.newwin(selector_h, selector_w, 1, 2)
+        win.keypad(True)
+        selected = {pkg: True for pkg in packages}
+        cursor = 0
+        scroll_top = 0
+        while True:
+            win.erase()
+            win.box()
+            win.addstr(0, 2, " Select Packages to Restore ", self.get_attr(2, True))
+            list_h = selector_h - 6
+            for i in range(list_h):
+                idx = i + scroll_top
+                if idx >= len(packages):
+                    break
+                pkg = packages[idx]
+                prefix = "[X]" if selected[pkg] else "[ ]"
+                attr = self.get_attr(5) if idx == cursor else curses.A_NORMAL
+                win.addstr(2 + i, 2, f"{prefix} {pkg[: selector_w - 10]}", attr)
+            footer = " [Space] Toggle  [A] All  [N] None  [Enter] Restore "
+            win.addstr(selector_h - 2, 2, footer[: selector_w - 4], self.get_attr(2))
+            win.refresh()
+            key = win.getch()
+            if key == curses.KEY_UP:
+                if cursor > 0:
+                    cursor -= 1
+                    if cursor < scroll_top:
+                        scroll_top = cursor
+            elif key == curses.KEY_DOWN:
+                if cursor < len(packages) - 1:
+                    cursor += 1
+                    if cursor >= scroll_top + list_h:
+                        scroll_top = cursor - list_h + 1
+            elif key == ord(" "):
+                selected[packages[cursor]] = not selected[packages[cursor]]
+            elif key in [ord("a"), ord("A")]:
+                for pkg in packages:
+                    selected[pkg] = True
+            elif key in [ord("n"), ord("N")]:
+                for pkg in packages:
+                    selected[pkg] = False
+            elif key in [10, 13]:
+                break
+        self.stdscr.nodelay(True)
+        self.draw_all()
+        return [pkg for pkg in packages if selected[pkg]]
+
+
+def run_command(ui, cmd, check=True, on_line=None):
+    """Executes a shell command and captures its output in real-time."""
+    ui.add_log(f"$ {' '.join(cmd)}")
+    # Force non-interactive frontend to prevent apt-get from hanging on prompts
+    env = os.environ.copy()
+    env["DEBIAN_FRONTEND"] = "noninteractive"
+    process = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
+    )
+    if process.stdout:
+        for line in process.stdout:
+            line = line.strip()
+            if line:
+                ui.add_log(line)
+                if on_line:
+                    on_line(line)
+            # Allow user to scroll log during long-running tasks
+            ui.handle_input()
+    process.wait()
+    return process.returncode == 0
+
+
+def count_files_fast(path, exclude=None):
+    """Counts files quickly using the 'find' command instead of walking manually."""
+    if exclude is None:
+        exclude = []
+    try:
+        cmd = ["find", path, "-maxdepth", "10"]
+        for e in exclude:
+            cmd.extend(["-not", "-name", e])
+        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+        return len(output.splitlines())
+    except Exception:
+        return 100
+
+
+def mark_complete():
+    """Creates a hidden marker file to indicate restoration attempt is finished."""
+    try:
+        with open(RESTORE_COMPLETE_MARKER, "w") as f:
+            f.write("done")
+        return True
+    except Exception:
+        return False
+
+
+def confirm_restoration_intent(ui):
+    """Asks the user if they want to proceed with restoration."""
+    ui.set_step("Restoration Confirmation")
+    options = [("R", "Restore"), ("L", "Later"), ("N", "Never")]
+    while True:
+        ui.draw_all()
+        choice = ui.show_dialog(
+            "Start Data Restoration?",
+            "Found backup data. Do you want to restore your files and packages?",
+            options,
+        )
+        if choice == "R":
+            return "PROCEED"
+        if choice == "L":
+            return "EXIT"
+        if choice == "N":
+            if (
+                ui.show_dialog(
+                    "Are you sure?",
+                    "Never ask again for this backup.",
+                    [("Y", "Yes"), ("C", "Cancel")],
+                )
+                == "Y"
+            ):
+                mark_complete()
+                return "EXIT"
+
+
+def restore_user_home_files(ui):
+    """Restores user files from backup, filtering out internal marker files."""
+    ui.set_step("Step 1/3: Restoring Home Directory")
+    src_home = os.path.join(BACKUP_MOUNT, HOME_DIR.lstrip("/"))
+    if not os.path.exists(src_home):
+        return
+
+    exclude_markers = [RESTORE_COMPLETE_FILENAME]
+    total_files = count_files_fast(src_home, exclude=exclude_markers)
+    ui.add_log(f"Found ~{total_files} items to restore.")
+
+    copied = [0]
+
+    def on_copy_line(line):
+        if not any(m in line for m in exclude_markers):
+            copied[0] += 1
+            percent = min(int((copied[0] / max(1, total_files)) * 100), 100)
+            ui.update_progress(line, percent)
+
+    if shutil.which("rsync"):
+        cmd = ["rsync", "-av", "--info=name"]
+        for m in exclude_markers:
+            cmd.append(f"--exclude={m}")
+        cmd.extend([src_home + "/", HOME_DIR + "/"])
+        run_command(ui, cmd, on_line=on_copy_line)
+    else:
+        run_command(ui, ["cp", "-av", src_home + "/.", HOME_DIR + "/"], on_line=on_copy_line)
+    ui.update_progress("Home directory restored.", 100)
+
+
+def restore_installed_packages(ui):
+    """Identifies and installs packages that were in the old system but not the new one."""
+    ui.set_step("Step 2/3: Restoring Packages")
+    ui.update_progress("Scanning packages...", 0)
+    failed_pkgs = []
+
+    try:
+        # Scan backup rootfs using chroot to find previously installed packages
+        backup_raw = subprocess.check_output(
+            ["chroot", BACKUP_MOUNT, "dpkg-query", "-W", "-f=${Package}\n"], text=True
+        )
+        backup_pkgs = set(backup_raw.splitlines())
+        current_raw = subprocess.check_output(
+            ["dpkg-query", "-W", "-f=${Package}\n"], text=True
+        )
+        current_pkgs = set(current_raw.splitlines())
+    except Exception:
+        return []
+
+    missing = sorted(list(backup_pkgs - current_pkgs))
+    if not missing:
+        ui.update_progress("Done", 100)
+        return []
+
+    selected = ui.show_package_selector(missing)
+    if not selected:
+        return []
+
+    run_command(ui, ["apt-get", "update"])
+    for i, pkg in enumerate(selected):
+        ui.update_progress(f"Installing {pkg}", 10 + int((i / len(selected)) * 90))
+        if not run_command(ui, ["apt-get", "install", "-y", pkg]):
+            failed_pkgs.append(pkg)
+
+    ui.update_progress("Done", 100)
+    return failed_pkgs
+
+
+def finish_restoration_and_cleanup(ui):
+    """Cleans up backup markers and handles the final completion screen."""
+    ui.set_step("Step 3/3: Finalizing")
+    if ui.show_dialog("Restoration Finished", "Mark backup as used?") == "Y":
+        try:
+            with open(BACKUP_USED_MARKER, "w") as f:
+                f.write("used")
+        except Exception:
+            pass
+    mark_complete()
+    ui.update_progress("Done", 100)
+    ui.show_dialog("Success", "Restoration successful.\nPress [O] to exit.", [("O", "OK")])
+
+
+def main(stdscr):
+    """Main UI orchestration loop."""
+    ui = RestoreBackupUI(stdscr)
+    ui.draw_all()
+    if confirm_restoration_intent(ui) == "EXIT":
+        return []
+    restore_user_home_files(ui)
+    failed = restore_installed_packages(ui)
+    finish_restoration_and_cleanup(ui)
+    return failed
+
+
+if __name__ == "__main__":
+    # Ensure backup is mounted and script is not re-running needlessly
+    if os.path.exists(RESTORE_COMPLETE_MARKER) or not os.path.ismount(BACKUP_MOUNT):
+        sys.exit(0)
+    if os.geteuid() != 0:
+        print("Error: Restoration must be run as root (sudo).")
+        sys.exit(1)
+
+    # Wrap main in curses context
+    failed_packages = curses.wrapper(main)
+
+    # Final summary for any packages that couldn't be automatically reinstalled
+    if failed_packages:
+        print("\n\033[91m" + "=" * 50)
+        print("THE FOLLOWING PACKAGES FAILED TO RESTORE:")
+        for pkg in failed_packages:
+            print(f" - {pkg}")
+        print("=" * 50 + "\033[0m\n")
+        print(f"Full details are available in {LOG_FILE}\n")
