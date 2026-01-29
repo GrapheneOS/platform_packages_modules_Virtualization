@@ -136,6 +136,9 @@ object VmController {
                     )
                 }
 
+                val port = guestAgentController!!.startServer()
+                customImageConfigBuilder.addParam("debian_server_port=$port")
+
                 // Override config for Display
                 setDisplayConfig(customImageConfigBuilder, displayInfo)
                 setGpuConfig(context, customImageConfigBuilder)
@@ -341,8 +344,13 @@ object VmController {
                                 .firstOrNull { !it.isLinkLocalAddress }!!
                                 .hostAddress!!
                         val port = info.port
-                        guestAgentController?.start(ipAddress)
-                        _vmState.value = VmState.Running(TerminalAddress(ipAddress, port))
+                        guestAgentController?.setAllowedGuestIp(ipAddress)
+
+                        // If we are using vsock bridge, we already set the state to Running with
+                        // localhost and the secret key. Don't overwrite it.
+                        if (!canUseTtydOverVsock()) {
+                            _vmState.value = VmState.Running(TerminalAddress(ipAddress, port))
+                        }
                     }
                 }
             }

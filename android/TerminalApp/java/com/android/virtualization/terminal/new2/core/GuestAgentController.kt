@@ -54,6 +54,8 @@ class GuestAgentController(private val context: Context, private val scope: Coro
     private var debianService: DebianServiceBase? = null
     private val portsStateManager = PortsStateManager.getInstance(context)
 
+    @Volatile private var allowedIpAddress: String? = null
+
     private val _ports = MutableStateFlow<List<OpenPort>>(emptyList())
     val ports: StateFlow<List<OpenPort>> = _ports.asStateFlow()
 
@@ -64,19 +66,24 @@ class GuestAgentController(private val context: Context, private val scope: Coro
             }
         }
 
-    fun start(ipAddress: String?) {
-        Log.d(TAG, "Starting guest agent controller with gRPC")
-
+    fun startServer(): Int {
         if (context.resources.getBoolean(R.bool.soong_generated_cidata)) {
             Log.w(TAG, "Ignoring gRPC setup. soong generated CIDATA implies AIDL communication.")
-            return
+            return 0
         }
         if (debianService != null) {
             Log.w(TAG, "GuestAgentController is started again. It might had been crashed.")
+            stop()
         }
-        startDebianServerGrpc(ipAddress)
+        val port = startDebianServerGrpc()
         portsStateManager.registerListener(portsListener)
         updatePortsState()
+        return port
+    }
+
+    fun setAllowedGuestIp(ip: String) {
+        Log.d(TAG, "Setting allowed guest IP: $ip")
+        allowedIpAddress = ip
     }
 
     fun start(cid: Int, guestAgent: IGuestAgent, service: IDebianService) {
@@ -125,7 +132,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         _ports.value = openPorts
     }
 
-    private fun startDebianServerGrpc(ipAddress: String?) {
+    private fun startDebianServerGrpc(): Int {
         val interceptor: ServerInterceptor =
             object : ServerInterceptor {
                 override fun <ReqT, RespT> interceptCall(
@@ -136,11 +143,12 @@ class GuestAgentController(private val context: Context, private val scope: Coro
                     val remoteAddr =
                         call.attributes.get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR) as? InetSocketAddress
 
-                    if (ipAddress == null || remoteAddr?.address?.hostAddress == ipAddress) {
-                        // Allow the request only if it is from VM (or if ipAddress is null/unknown)
+                    val ip = allowedIpAddress
+                    if (ip != null && remoteAddr?.address?.hostAddress == ip) {
+                        // Allow the request only if it is from VM
                         return next.startCall(call, headers)
                     }
-                    Log.d(TAG, "blocked grpc request from $remoteAddr")
+                    Log.d(TAG, "blocked grpc request from $remoteAddr (allowed: $ip)")
                     call.close(Status.Code.PERMISSION_DENIED.toStatus(), Metadata())
                     return object : ServerCall.Listener<ReqT?>() {}
                 }
@@ -158,7 +166,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
                     .start()
         } catch (e: IOException) {
             Log.d(TAG, "grpc server error", e)
-            return
+            throw RuntimeException("cannot start grpc server", e)
         }
 
         scope.launch(Dispatchers.IO) {
@@ -174,6 +182,8 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         }
 
         StorageBalloonWorker.start(context, debianService!!)
+
+        return server!!.port
     }
 
     private fun stopDebianServer() {
@@ -181,6 +191,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         server?.shutdown()
         server = null
         debianService = null
+        allowedIpAddress = null
     }
 
     companion object {
