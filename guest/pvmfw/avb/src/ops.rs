@@ -24,17 +24,17 @@ use core::ffi::CStr;
 pub(crate) struct PvmfwAvbVerifier<'a, 'key> {
     kernel: &'a [u8],
     initrd: Option<&'a [u8]>,
-    trusted_public_key: &'key [u8],
-    validated_key: bool,
+    trusted_keys: &'a [&'key [u8]],
+    validated_key: Option<&'key [u8]>,
 }
 
 impl<'a, 'key> PvmfwAvbVerifier<'a, 'key> {
     pub(crate) fn new(
         kernel: &'a [u8],
         initrd: Option<&'a [u8]>,
-        trusted_public_key: &'key [u8],
+        trusted_keys: &'a [&'key [u8]],
     ) -> Self {
-        Self { kernel, initrd, trusted_public_key, validated_key: false }
+        Self { kernel, initrd, trusted_keys, validated_key: None }
     }
 
     fn get_partition(&self, partition_name: &CStr) -> IoResult<&'a [u8]> {
@@ -46,10 +46,9 @@ impl<'a, 'key> PvmfwAvbVerifier<'a, 'key> {
         }
     }
 
-    /// Returns the key used during the last verification if it matched the public key embedded in
-    /// the vbmeta, else `None`.
+    /// Returns the key used during the last verification, if any.
     pub(crate) fn get_validated_vbmeta_key(&self) -> Option<&'key [u8]> {
-        self.validated_key.then_some(self.trusted_public_key)
+        self.validated_key
     }
 
     pub(crate) fn verify_partition(
@@ -134,13 +133,8 @@ impl<'a, 'key> avb::Ops<'a> for PvmfwAvbVerifier<'a, 'key> {
     ) -> IoResult<bool> {
         // AVF payloads are signed without pubkey metadata so ignore the argument.
         let _ = public_key_metadata;
-
-        if public_key == self.trusted_public_key {
-            self.validated_key = true;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        self.validated_key = self.trusted_keys.iter().find(|&k| public_key == *k).map(|v| &**v);
+        Ok(self.validated_key.is_some())
     }
 
     fn read_rollback_index(&mut self, _rollback_index_location: usize) -> IoResult<u64> {

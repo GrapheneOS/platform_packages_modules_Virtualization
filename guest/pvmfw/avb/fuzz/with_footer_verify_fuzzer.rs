@@ -55,5 +55,5 @@ fuzz_target!(|kernel_and_vbmeta: &[u8]| {
         .copy_from_slice(&AVB_MAGIC[..(AVB_MAGIC_LEN as usize)]);
     modified_kernel[kernel_and_vbmeta.len()..].copy_from_slice(&avb_footer);
 
-    let _ = verify_payload(&modified_kernel, /* initrd= */ None, &[0u8; 64]);
+    let _ = verify_payload(&modified_kernel, /* initrd= */ None, &[&[0u8; 64]]);
 });

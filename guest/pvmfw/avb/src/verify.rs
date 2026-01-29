@@ -224,13 +224,13 @@ fn read_name(vbmeta_data: &VbmetaData) -> Result<Option<String>, PvmfwVerifyErro
     Ok(Some(name.into()))
 }
 
-/// Verifies the payload (signed kernel + initrd) against the trusted public key.
+/// Verifies the payload (signed kernel + initrd) against the trusted public keys.
 pub fn verify_payload<'a>(
     kernel: &[u8],
     initrd: Option<&[u8]>,
-    trusted_public_key: &'a [u8],
+    trusted_keys: &[&'a [u8]],
 ) -> Result<VerifiedBootData<'a>, PvmfwVerifyError> {
-    let mut verifier = PvmfwAvbVerifier::new(kernel, initrd, trusted_public_key);
+    let mut verifier = PvmfwAvbVerifier::new(kernel, initrd, trusted_keys);
     let kernel_verify_result = verifier.verify_partition(PartitionName::Kernel)?;
 
     // TODO(b/302093437): Use explicit rollback_index_location instead of default

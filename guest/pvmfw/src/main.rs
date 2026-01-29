@@ -87,6 +87,8 @@ fn main<'a>(
         None
     };
 
+    let trusted_keys = [PUBLIC_KEY];
+
     // Policy/Hidden ABI: If the pvmfw loader (typically ABL) didn't pass a DICE handover (which is
     // technically still mandatory, as per the config data specification), skip DICE, AVB, and RBP.
     // This is to support Qualcomm QTVMs, which perform guest image verification in TrustZone.
@@ -94,7 +96,7 @@ fn main<'a>(
         warn!("Verified boot is disabled!");
         (None, false, SIZE_4KB)
     } else {
-        let (dat, debug, sz) = perform_verified_boot(signed_kernel, ramdisk)?;
+        let (dat, debug, sz) = perform_verified_boot(signed_kernel, ramdisk, &trusted_keys)?;
         (Some(dat), debug, sz)
     };
 
@@ -275,8 +277,9 @@ fn perform_dice_derivation(
 fn perform_verified_boot<'a>(
     signed_kernel: &[u8],
     ramdisk: Option<&[u8]>,
+    trusted_keys: &'a [&'a [u8]],
 ) -> Result<(VerifiedBootData<'a>, bool, usize), RebootReason> {
-    let verified_boot_data = verify_payload(signed_kernel, ramdisk, PUBLIC_KEY).map_err(|e| {
+    let verified_boot_data = verify_payload(signed_kernel, ramdisk, trusted_keys).map_err(|e| {
         error!("Failed to verify the payload: {e}");
         RebootReason::PayloadVerificationError
     })?;

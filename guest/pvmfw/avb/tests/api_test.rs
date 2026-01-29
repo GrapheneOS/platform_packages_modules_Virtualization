@@ -86,10 +86,41 @@ fn latest_debug_payload_passes_verification() -> Result<()> {
 }
 
 #[test]
+fn payload_with_multiple_trusted_public_keys_passes_verification() -> Result<()> {
+    let public_key = load_trusted_public_key()?;
+    let other_key = vec![0u8; 512];
+    let payload = fs::read(TEST_IMG_WITH_ONE_HASHDESC_PATH)?;
+
+    let verified_boot_data = verify_payload(&payload, None, &[&public_key, &other_key])
+        .map_err(|e| anyhow!("Verification failed with correct key first. Error: {e}"))?;
+    assert_eq!(verified_boot_data.public_key, public_key);
+
+    let verified_boot_data = verify_payload(&payload, None, &[&other_key, &public_key])
+        .map_err(|e| anyhow!("Verification failed with correct key last. Error: {e}"))?;
+    assert_eq!(verified_boot_data.public_key, public_key);
+
+    Ok(())
+}
+
+#[test]
+fn payload_with_multiple_invalid_public_keys_fails_verification() -> Result<()> {
+    let other_key1 = fs::read(PUBLIC_KEY_RSA2048_PATH)?;
+    let other_key2 = vec![0u8; 512];
+    let payload = fs::read(TEST_IMG_WITH_ONE_HASHDESC_PATH)?;
+
+    assert_payload_verification_fails(
+        &payload,
+        None,
+        &[&other_key1, &other_key2],
+        SlotVerifyError::PublicKeyRejected(None).into(),
+    )
+}
+
+#[test]
 fn payload_expecting_no_initrd_passes_verification_with_no_initrd() -> Result<()> {
     let public_key = load_trusted_public_key()?;
     let payload = fs::read(TEST_IMG_WITH_ONE_HASHDESC_PATH)?;
-    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &public_key)
+    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &[&public_key])
         .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let kernel_digest = hash(&[&hex::decode("1111")?, &fs::read(UNSIGNED_TEST_IMG_PATH)?]);
@@ -115,7 +146,7 @@ fn payload_with_non_initrd_descriptor_fails_verification_with_no_initrd() -> Res
     assert_payload_verification_fails(
         &fs::read(TEST_IMG_WITH_NON_INITRD_HASHDESC_PATH)?,
         /* initrd= */ None,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         PvmfwVerifyError::InvalidDescriptors(DescriptorError::InvalidContents),
     )
 }
@@ -125,7 +156,7 @@ fn payload_with_non_initrd_descriptor_fails_verification_with_initrd() -> Result
     assert_payload_verification_with_initrd_fails(
         &fs::read(TEST_IMG_WITH_INITRD_AND_NON_INITRD_DESC_PATH)?,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         PvmfwVerifyError::InvalidDescriptors(DescriptorError::InvalidContents),
     )
 }
@@ -134,7 +165,7 @@ fn payload_with_non_initrd_descriptor_fails_verification_with_initrd() -> Result
 fn payload_expecting_no_initrd_passes_verification_with_service_vm_name() -> Result<()> {
     let public_key = load_trusted_public_key()?;
     let payload = fs::read(TEST_IMG_WITH_SERVICE_VM_NAME_PATH)?;
-    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &public_key)
+    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &[&public_key])
         .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let kernel_digest = hash(&[&hex::decode("2131")?, &fs::read(UNSIGNED_TEST_IMG_PATH)?]);
@@ -160,7 +191,7 @@ fn payload_with_unknown_vm_type_fails_verification_with_no_initrd() -> Result<()
     assert_payload_verification_fails(
         &fs::read(TEST_IMG_WITH_UNKNOWN_VM_TYPE_PROP_PATH)?,
         /* initrd= */ None,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         PvmfwVerifyError::UnknownVbmetaProperty,
     )
 }
@@ -170,7 +201,7 @@ fn payload_with_duplicated_capability_fails_verification_with_no_initrd() -> Res
     assert_payload_verification_fails(
         &fs::read(TEST_IMG_WITH_DUPLICATED_CAP_PATH)?,
         /* initrd= */ None,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::InvalidMetadata.into(),
     )
 }
@@ -180,7 +211,7 @@ fn payload_expecting_initrd_fails_verification_with_no_initrd() -> Result<()> {
     assert_payload_verification_fails(
         &load_latest_signed_kernel()?,
         /* initrd= */ None,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::InvalidMetadata.into(),
     )
 }
@@ -190,7 +221,7 @@ fn payload_with_empty_public_key_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         &load_latest_initrd_normal()?,
-        /* trusted_public_key= */ &[0u8; 0],
+        /* trusted_public_key= */ &[&[0u8; 0]],
         SlotVerifyError::PublicKeyRejected(None).into(),
     )
 }
@@ -200,7 +231,7 @@ fn payload_with_an_invalid_public_key_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         &load_latest_initrd_normal()?,
-        /* trusted_public_key= */ &[0u8; 512],
+        /* trusted_public_key= */ &[&[0u8; 512]],
         SlotVerifyError::PublicKeyRejected(None).into(),
     )
 }
@@ -210,7 +241,7 @@ fn payload_with_a_different_valid_public_key_fails_verification() -> Result<()> 
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         &load_latest_initrd_normal()?,
-        &fs::read(PUBLIC_KEY_RSA2048_PATH)?,
+        &[&fs::read(PUBLIC_KEY_RSA2048_PATH)?],
         SlotVerifyError::PublicKeyRejected(None).into(),
     )
 }
@@ -220,7 +251,7 @@ fn payload_with_an_invalid_initrd_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         /* initrd= */ &fs::read(UNSIGNED_TEST_IMG_PATH)?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -230,7 +261,7 @@ fn unsigned_kernel_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &fs::read(UNSIGNED_TEST_IMG_PATH)?,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Io.into(),
     )
 }
@@ -243,7 +274,7 @@ fn tampered_kernel_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &kernel,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -341,7 +372,7 @@ fn kernel_footer_with_vbmeta_offset_overwritten_fails_verification() -> Result<(
         assert_payload_verification_with_initrd_fails(
             &kernel,
             &load_latest_initrd_normal()?,
-            &load_trusted_public_key()?,
+            &[&load_trusted_public_key()?],
             SlotVerifyError::Io.into(),
         )?;
     }
@@ -357,7 +388,7 @@ fn tampered_kernel_footer_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &kernel,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::InvalidMetadata.into(),
     )
 }
@@ -370,7 +401,7 @@ fn extended_initrd_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         &initrd,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -383,7 +414,7 @@ fn tampered_normal_initrd_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         &initrd,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -396,7 +427,7 @@ fn tampered_debug_initrd_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &load_latest_signed_kernel()?,
         &initrd,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -412,7 +443,7 @@ fn tampered_vbmeta_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &kernel,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::InvalidMetadata.into(),
     )
 }
@@ -435,13 +466,13 @@ fn vbmeta_with_public_key_overwritten_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &kernel,
         &load_latest_initrd_normal()?,
-        &empty_public_key,
+        &[&empty_public_key],
         SlotVerifyError::Verification(None).into(),
     )?;
     assert_payload_verification_with_initrd_fails(
         &kernel,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -479,7 +510,7 @@ fn vbmeta_with_verification_flag_disabled_fails_verification() -> Result<()> {
     assert_payload_verification_with_initrd_fails(
         &kernel,
         &load_latest_initrd_normal()?,
-        &load_trusted_public_key()?,
+        &[&load_trusted_public_key()?],
         SlotVerifyError::Verification(None).into(),
     )
 }
@@ -488,7 +519,7 @@ fn vbmeta_with_verification_flag_disabled_fails_verification() -> Result<()> {
 fn payload_with_rollback_index() -> Result<()> {
     let public_key = load_trusted_public_key()?;
     let payload = fs::read(TEST_IMG_WITH_ROLLBACK_INDEX_5)?;
-    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &public_key)
+    let verified_boot_data = verify_payload(&payload, /* initrd= */ None, &[&public_key])
         .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let kernel_digest = hash(&[&hex::decode("1211")?, &fs::read(UNSIGNED_TEST_IMG_PATH)?]);
@@ -514,7 +545,7 @@ fn payload_with_multiple_capabilities() -> Result<()> {
     let verified_boot_data = verify_payload(
         &fs::read(TEST_IMG_WITH_MULTIPLE_CAPABILITIES)?,
         /* initrd= */ None,
-        &public_key,
+        &[&public_key],
     )
     .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
@@ -529,7 +560,7 @@ fn payload_with_all_capabilities() -> Result<()> {
     let verified_boot_data = verify_payload(
         &fs::read(TEST_IMG_WITH_ALL_CAPABILITIES)?,
         /* initrd= */ None,
-        &public_key,
+        &[&public_key],
     )
     .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 

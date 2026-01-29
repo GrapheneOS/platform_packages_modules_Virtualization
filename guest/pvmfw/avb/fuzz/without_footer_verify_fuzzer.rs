@@ -24,5 +24,5 @@ fuzz_target!(|kernel: &[u8]| {
     // kernel can pass the kernel verification, so the value of `initrd`
     // is not so important as we won't reach initrd verification with
     // this fuzzer.
-    let _ = verify_payload(kernel, /* initrd= */ None, &[0u8; 64]);
+    let _ = verify_payload(kernel, /* initrd= */ None, &[&[0u8; 64]]);
 });
