@@ -27,24 +27,20 @@ pub(crate) enum PartitionName {
 }
 
 impl PartitionName {
-    const KERNEL_PARTITION_NAME: &'static [u8] = b"boot\0";
-    const INITRD_NORMAL_PARTITION_NAME: &'static [u8] = b"initrd_normal\0";
-    const INITRD_DEBUG_PARTITION_NAME: &'static [u8] = b"initrd_debug\0";
-
-    pub(crate) fn as_cstr(&self) -> &CStr {
-        CStr::from_bytes_with_nul(self.as_bytes()).unwrap()
+    pub(crate) fn new_from_bytes(bytes: &[u8]) -> Option<Self> {
+        match bytes {
+            x if x == Self::Kernel.as_c_str().to_bytes() => Some(Self::Kernel),
+            x if x == Self::InitrdNormal.as_c_str().to_bytes() => Some(Self::InitrdNormal),
+            x if x == Self::InitrdDebug.as_c_str().to_bytes() => Some(Self::InitrdDebug),
+            _ => None,
+        }
     }
 
-    fn as_non_null_terminated_bytes(&self) -> &[u8] {
-        let partition_name = self.as_bytes();
-        &partition_name[..partition_name.len() - 1]
-    }
-
-    fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_c_str(&self) -> &'static CStr {
         match self {
-            Self::Kernel => Self::KERNEL_PARTITION_NAME,
-            Self::InitrdNormal => Self::INITRD_NORMAL_PARTITION_NAME,
-            Self::InitrdDebug => Self::INITRD_DEBUG_PARTITION_NAME,
+            Self::Kernel => c"boot",
+            Self::InitrdNormal => c"initrd_normal",
+            Self::InitrdDebug => c"initrd_debug",
         }
     }
 }
@@ -53,12 +49,7 @@ impl TryFrom<&CStr> for PartitionName {
     type Error = IoError;
 
     fn try_from(partition_name: &CStr) -> Result<Self, Self::Error> {
-        match partition_name.to_bytes_with_nul() {
-            Self::KERNEL_PARTITION_NAME => Ok(Self::Kernel),
-            Self::INITRD_NORMAL_PARTITION_NAME => Ok(Self::InitrdNormal),
-            Self::INITRD_DEBUG_PARTITION_NAME => Ok(Self::InitrdDebug),
-            _ => Err(IoError::NoSuchPartition),
-        }
+        Self::new_from_bytes(partition_name.to_bytes()).ok_or(IoError::NoSuchPartition)
     }
 }
 
@@ -66,11 +57,6 @@ impl TryFrom<&[u8]> for PartitionName {
     type Error = IoError;
 
     fn try_from(non_null_terminated_name: &[u8]) -> Result<Self, Self::Error> {
-        match non_null_terminated_name {
-            x if x == Self::Kernel.as_non_null_terminated_bytes() => Ok(Self::Kernel),
-            x if x == Self::InitrdNormal.as_non_null_terminated_bytes() => Ok(Self::InitrdNormal),
-            x if x == Self::InitrdDebug.as_non_null_terminated_bytes() => Ok(Self::InitrdDebug),
-            _ => Err(IoError::NoSuchPartition),
-        }
+        Self::new_from_bytes(non_null_terminated_name).ok_or(IoError::NoSuchPartition)
     }
 }
