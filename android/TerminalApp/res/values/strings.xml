@@ -135,6 +135,10 @@
     <string name="dispctrl_hint_release_mouse">Release Mouse</string>
     <!-- Content description for the button to lock mouse capture. [CHAR LIMIT=none] -->
     <string name="dispctrl_hint_lock_mouse">Lock Mouse</string>
+    <!-- Content description for the button to turn off trackpad mode. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_trackpad_mode_off">Turn off trackpad mode</string>
+    <!-- Content description for the button to turn on trackpad mode. [CHAR LIMIT=none] -->
+    <string name="dispctrl_hint_trackpad_mode_on">Turn on trackpad mode</string>
     <!-- Content description for the button to close display controls. [CHAR LIMIT=none] -->
     <string name="dispctrl_hint_close">Close display controls</string>
     <!-- Content description for the button to open display options. [CHAR LIMIT=none] -->

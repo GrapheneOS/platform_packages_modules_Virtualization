@@ -48,10 +48,12 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.Monitor
 import androidx.compose.material.icons.outlined.Mouse
 import androidx.compose.material.icons.outlined.PanTool
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
@@ -207,6 +209,7 @@ fun DisplayController(viewModel: MainViewModel) {
     val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
     val isPanZoomMode by viewModel.isPanZoomMode.collectAsStateWithLifecycle()
     val isMouseLocked by viewModel.isMouseLocked.collectAsStateWithLifecycle()
+    val hasMouse by viewModel.hasMouse.collectAsStateWithLifecycle()
 
     Surface(
         modifier = Modifier.padding(end = 8.dp),
@@ -236,15 +239,29 @@ fun DisplayController(viewModel: MainViewModel) {
                         unpressedContentDescription =
                             stringResource(R.string.dispctrl_hint_show_keyboard),
                     )
+
+                    val mouseControlIcons =
+                        if (hasMouse) {
+                            Icons.Filled.Mouse to Icons.Outlined.Mouse
+                        } else {
+                            Icons.Filled.TouchApp to Icons.Outlined.TouchApp
+                        }
+                    val mouseControlDescriptions =
+                        if (hasMouse) {
+                            stringResource(R.string.dispctrl_hint_release_mouse) to
+                                stringResource(R.string.dispctrl_hint_lock_mouse)
+                        } else {
+                            stringResource(R.string.dispctrl_hint_trackpad_mode_off) to
+                                stringResource(R.string.dispctrl_hint_trackpad_mode_on)
+                        }
+
                     DisplayControllerButton(
                         checked = isMouseLocked,
                         onCheckedChange = { viewModel.setMouseLocked(!isMouseLocked) },
-                        pressedIcon = Icons.Filled.Mouse,
-                        unpressedIcon = Icons.Outlined.Mouse,
-                        pressedContentDescription =
-                            stringResource(R.string.dispctrl_hint_release_mouse),
-                        unpressedContentDescription =
-                            stringResource(R.string.dispctrl_hint_lock_mouse),
+                        pressedIcon = mouseControlIcons.first,
+                        unpressedIcon = mouseControlIcons.second,
+                        pressedContentDescription = mouseControlDescriptions.first,
+                        unpressedContentDescription = mouseControlDescriptions.second,
                     )
                 }
             }
