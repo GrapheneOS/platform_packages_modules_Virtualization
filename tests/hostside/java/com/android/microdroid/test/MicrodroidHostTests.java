@@ -1567,7 +1567,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
 
         CommandRunner android = new CommandRunner(device);
         String dumpsysOutput = android.run("dumpsys", "android.system.virtualizationservice");
-        assertThat(dumpsysOutput).isNotEmpty();
+        assertThat(dumpsysOutput).contains("---- /proc/meminfo begin ----");
         checkSmapsRollupEntries(dumpsysOutput);
 
         if (disableRoot) {
