@@ -285,12 +285,15 @@ impl Interface for VirtualizationServiceInternal {
     fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), StatusCode> {
         check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
 
-        let vms = self.debug_list_vms_unchecked();
-        writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
+        let vm_count = self.state.lock().unwrap().virtual_machines.len();
+        writeln!(writer, "Running {} VMs:", vm_count).or(Err(StatusCode::UNKNOWN_ERROR))?;
+        writer.flush().or(Err(StatusCode::UNKNOWN_ERROR))?;
 
+        let vms = self.debug_list_vms_unchecked();
         let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
 
-        for vm in vms {
+        const MAX_VMS_TO_DUMP: usize = 100;
+        for vm in vms.iter().take(MAX_VMS_TO_DUMP) {
             writeln!(writer, "VM CID: {}", vm.1.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
             writeln!(writer, "\tname: {}", &vm.1.name).or(Err(StatusCode::UNKNOWN_ERROR))?;
             writeln!(writer, "\ttemporary_directory: {}", &vm.1.temporaryDirectory)
@@ -327,6 +330,11 @@ impl Interface for VirtualizationServiceInternal {
                     .or(Err(StatusCode::UNKNOWN_ERROR))?;
             }
             writeln!(writer, "\n\tVM dump end").or(Err(StatusCode::UNKNOWN_ERROR))?;
+            writer.flush().or(Err(StatusCode::UNKNOWN_ERROR))?;
+        }
+        if vms.len() > MAX_VMS_TO_DUMP {
+            writeln!(writer, "... (truncated {} VMs)", vms.len() - MAX_VMS_TO_DUMP)
+                .or(Err(StatusCode::UNKNOWN_ERROR))?;
         }
         Ok(())
     }
