@@ -132,3 +132,8 @@ pub fn get_label_value(key: &CoseKey, label: Label) -> Result<&Value> {
         .ok_or(CoseError::UnexpectedItem("", "Label not found in CoseKey"))?
         .1)
 }
+
+/// Parses the given CBOR-encoded byte slice as a map.
+pub fn parse_value_map(data: &[u8], context: &'static str) -> Result<Vec<(Value, Value)>> {
+    value_to_map(Value::from_slice(data)?, context)
+}
