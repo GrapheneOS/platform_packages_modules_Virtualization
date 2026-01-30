@@ -285,53 +285,62 @@ impl Interface for VirtualizationServiceInternal {
     fn dump(&self, writer: &mut dyn Write, args: &[&CStr]) -> Result<(), StatusCode> {
         check_permission("android.permission.DUMP").or(Err(StatusCode::PERMISSION_DENIED))?;
 
-        let vms = self.debug_list_vms_unchecked();
-        writeln!(writer, "Running {0} VMs:", vms.len()).or(Err(StatusCode::UNKNOWN_ERROR))?;
+        let mut dump_internal = || -> Result<()> {
+            let vm_count = self.state.lock().unwrap().virtual_machines.len();
+            writeln!(writer, "Running {} VMs:", vm_count)?;
+            writer.flush()?;
 
-        let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
+            let vms = self.debug_list_vms_unchecked();
+            let args = args.iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
 
-        for vm in vms {
-            writeln!(writer, "VM CID: {}", vm.1.cid).or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\tname: {}", &vm.1.name).or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\ttemporary_directory: {}", &vm.1.temporaryDirectory)
-                .or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\trequester_uid: {}", vm.1.requesterUid)
-                .or(Err(StatusCode::UNKNOWN_ERROR))?;
-            writeln!(writer, "\trequester_debug_pid: {}", vm.1.requesterPid)
-                .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            const MAX_VMS_TO_DUMP: usize = 100;
+            for vm in vms.iter().take(MAX_VMS_TO_DUMP) {
+                writeln!(writer, "VM CID: {}", vm.1.cid)?;
+                writeln!(writer, "\tname: {}", &vm.1.name)?;
+                writeln!(writer, "\ttemporary_directory: {}", &vm.1.temporaryDirectory)?;
+                writeln!(writer, "\trequester_uid: {}", vm.1.requesterUid)?;
+                writeln!(writer, "\trequester_debug_pid: {}", vm.1.requesterPid)?;
 
-            writeln!(writer, "\tVM dump begin").or(Err(StatusCode::UNKNOWN_ERROR))?;
+                writeln!(writer, "\tVM dump begin")?;
 
-            // For whatever reason, calling vm.dump() directly doesn't work.
-            // Workaround it by calling vm.as_binder().dump() instead.
-            // TODO(b/429048207): Use vm.dump().
-            let (read_fd, write_fd) = pipe2(OFlag::O_CLOEXEC).or(Err(StatusCode::UNKNOWN_ERROR))?;
-            let args = args.clone();
-            let mut vm_binder = vm.0.as_binder();
-            // Spawn a thread for vm_binder.dump() call, so std::io::copy(...) can be done
-            // simultaneously. If read_fd isn't consumed by std::io::copy, writing to write_fd may
-            // be blocked.
-            let handle = std::thread::Builder::new()
-                .name(format!("dumper_{}", vm.1.cid))
-                .spawn(move || {
-                    let args = args.iter().map(|x| x.as_str()).collect::<Vec<_>>();
-                    vm_binder.dump(&ParcelFileDescriptor::new(write_fd), &args)
-                })
-                .expect("Failed to create dumper thread");
-            if let Err(e) = std::io::copy(&mut File::from(read_fd), writer) {
-                writeln!(writer, "\tskipping dump: io copy failed: {e:?}")
-                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+                // For whatever reason, calling vm.dump() directly doesn't work.
+                // Workaround it by calling vm.as_binder().dump() instead.
+                // TODO(b/429048207): Use vm.dump().
+                let (read_fd, write_fd) =
+                    pipe2(OFlag::O_CLOEXEC).map_err(|e| anyhow!("pipe2 failed: {e:?}"))?;
+                let args = args.clone();
+                let mut vm_binder = vm.0.as_binder();
+                // Spawn a thread for vm_binder.dump() call, so std::io::copy(...) can be done
+                // simultaneously. If read_fd isn't consumed by std::io::copy, writing to write_fd
+                // may be blocked.
+                let handle = std::thread::Builder::new()
+                    .name(format!("dumper_{}", vm.1.cid))
+                    .spawn(move || {
+                        let args = args.iter().map(|x| x.as_str()).collect::<Vec<_>>();
+                        vm_binder.dump(&ParcelFileDescriptor::new(write_fd), &args)
+                    })
+                    .map_err(|e| anyhow!("Failed to create dumper thread: {e:?}"))?;
+                if let Err(e) = std::io::copy(&mut File::from(read_fd), writer) {
+                    writeln!(writer, "\tskipping dump: io copy failed: {e:?}")?;
+                }
+                if let Err(e) = handle.join() {
+                    writeln!(writer, "\tskipping dump: dump request failed: {e:?}")?;
+                }
+                writeln!(writer, "\n\tVM dump end")?;
+                writer.flush()?;
             }
-            if let Err(e) = handle.join() {
-                writeln!(writer, "\tskipping dump: dump request failed: {e:?}")
-                    .or(Err(StatusCode::UNKNOWN_ERROR))?;
+            if vms.len() > MAX_VMS_TO_DUMP {
+                writeln!(writer, "... (truncated {} VMs)", vms.len() - MAX_VMS_TO_DUMP)?;
             }
-            writeln!(writer, "\n\tVM dump end").or(Err(StatusCode::UNKNOWN_ERROR))?;
-        }
-        Ok(())
+            Ok(())
+        };
+
+        dump_internal().map_err(|e| {
+            error!("Dump failed: {e:?}");
+            StatusCode::UNKNOWN_ERROR
+        })
     }
 }
-
 impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     fn setDisplayService(
         &self,
