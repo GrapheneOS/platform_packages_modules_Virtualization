@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal.new2.ui
 
 import android.graphics.Matrix
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.SurfaceView
@@ -107,6 +108,8 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
     val isPanZoomMode by viewModel.isPanZoomMode.collectAsStateWithLifecycle()
     val isMouseLocked by viewModel.isMouseLocked.collectAsStateWithLifecycle()
+    val useDisplayAsTouchpad by viewModel.useDisplayAsTouchpad.collectAsStateWithLifecycle()
+    val hasMouse by viewModel.hasMouse.collectAsStateWithLifecycle()
     val isWindowImeVisible = WindowInsets.isImeVisible
     // isFocused is used to track whether the display surface is currently active and focused.
     // This is necessary to gate IME visibility synchronization; only the focused view
@@ -125,6 +128,8 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(isMouseLocked, displaySurfaceView) {
         val dsv = displaySurfaceView ?: return@LaunchedEffect
         if (isMouseLocked) {
+            // Focus is required for pointer capture to succeed.
+            dsv.requestFocus()
             dsv.requestPointerCapture()
         } else {
             dsv.releasePointerCapture()
@@ -153,14 +158,20 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         Viewport(
             keyboardAreaHeight = with(LocalDensity.current) { stablePadding.toPx() },
             isPanZoomMode = isPanZoomMode,
+            isMouseLocked = isMouseLocked,
+            hasMouse = hasMouse,
             onTouchEvent = { event, contentSize ->
-                val matrix = Matrix()
-                matrix.setScale(
-                    vmDisplayWidth.toFloat() / contentSize.width,
-                    vmDisplayHeight.toFloat() / contentSize.height,
-                )
-                event.transform(matrix)
-                vm.sendMultiTouchEvent(event)
+                if (useDisplayAsTouchpad) {
+                    vm.sendTrackpadEvent(event)
+                } else {
+                    val matrix = Matrix()
+                    matrix.setScale(
+                        vmDisplayWidth.toFloat() / contentSize.width,
+                        vmDisplayHeight.toFloat() / contentSize.height,
+                    )
+                    event.transform(matrix)
+                    vm.sendMultiTouchEvent(event)
+                }
             },
         ) {
             AndroidView(
@@ -209,6 +220,7 @@ fun DisplayController(viewModel: MainViewModel) {
     val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
     val isPanZoomMode by viewModel.isPanZoomMode.collectAsStateWithLifecycle()
     val isMouseLocked by viewModel.isMouseLocked.collectAsStateWithLifecycle()
+    val useDisplayAsTouchpad by viewModel.useDisplayAsTouchpad.collectAsStateWithLifecycle()
     val hasMouse by viewModel.hasMouse.collectAsStateWithLifecycle()
 
     Surface(
@@ -256,8 +268,14 @@ fun DisplayController(viewModel: MainViewModel) {
                         }
 
                     DisplayControllerButton(
-                        checked = isMouseLocked,
-                        onCheckedChange = { viewModel.setMouseLocked(!isMouseLocked) },
+                        checked = if (hasMouse) isMouseLocked else useDisplayAsTouchpad,
+                        onCheckedChange = {
+                            if (hasMouse) {
+                                viewModel.setMouseLocked(!isMouseLocked)
+                            } else {
+                                viewModel.setUseDisplayAsTouchpad(!useDisplayAsTouchpad)
+                            }
+                        },
                         pressedIcon = mouseControlIcons.first,
                         unpressedIcon = mouseControlIcons.second,
                         pressedContentDescription = mouseControlDescriptions.first,
@@ -309,6 +327,8 @@ fun DisplayControllerButton(
 fun Viewport(
     keyboardAreaHeight: Float,
     isPanZoomMode: Boolean,
+    isMouseLocked: Boolean,
+    hasMouse: Boolean,
     onTouchEvent: (MotionEvent, IntSize) -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -394,7 +414,11 @@ fun Viewport(
      * space.
      */
     val touchHandler = { event: MotionEvent ->
-        if (!isPanZoomMode) {
+        if (event.isFromSource(InputDevice.SOURCE_MOUSE) && isMouseLocked && hasMouse) {
+            // When pointer is captured, mouse events should be handled by the underlying view's
+            // OnCapturedPointerListener (InputForwarder) instead of this touch handler.
+            false
+        } else if (!isPanZoomMode) {
             val centerX = size.width / 2f
             val centerY = size.height / 2f
 

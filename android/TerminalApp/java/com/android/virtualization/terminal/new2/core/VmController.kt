@@ -300,6 +300,7 @@ object VmController {
             .useKeyboard(true)
             .useMouse(true)
             .useTouch(true)
+            .useTrackpad(true)
     }
 
     // We still need this logic to retrieve the IP address of the VM to use it for guest agent

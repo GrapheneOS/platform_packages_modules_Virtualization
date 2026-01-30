@@ -100,6 +100,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         combine(_isMouseLocked, _hasMouse) { locked, hasMouse -> locked && hasMouse }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    private val _useDisplayAsTouchpad = MutableStateFlow(false)
+    val useDisplayAsTouchpad: StateFlow<Boolean> = _useDisplayAsTouchpad.asStateFlow()
+
     private val _settingsRequest = MutableStateFlow<SettingsDestination?>(null)
     val settingsRequest: StateFlow<SettingsDestination?> = _settingsRequest.asStateFlow()
 
@@ -146,6 +149,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setMouseLocked(locked: Boolean) {
         _isMouseLocked.value = locked
+    }
+
+    fun setUseDisplayAsTouchpad(enabled: Boolean) {
+        _useDisplayAsTouchpad.value = enabled
     }
 
     fun addTab() {
@@ -301,11 +308,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateMouseStatus()
         inputManager.registerInputDeviceListener(
             object : InputManager.InputDeviceListener {
-                override fun onInputDeviceAdded(deviceId: Int) = updateMouseStatus()
+                override fun onInputDeviceAdded(deviceId: Int) {
+                    updateMouseStatus()
+                }
 
-                override fun onInputDeviceRemoved(deviceId: Int) = updateMouseStatus()
+                override fun onInputDeviceRemoved(deviceId: Int) {
+                    updateMouseStatus()
+                }
 
-                override fun onInputDeviceChanged(deviceId: Int) = updateMouseStatus()
+                override fun onInputDeviceChanged(deviceId: Int) {
+                    updateMouseStatus()
+                }
             },
             null,
         )

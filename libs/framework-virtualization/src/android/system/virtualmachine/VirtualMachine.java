@@ -240,6 +240,19 @@ public class VirtualMachine implements AutoCloseable {
     /** Size of the instance image. 10 MB. */
     private static final long INSTANCE_FILE_SIZE = 10 * 1024 * 1024;
 
+    /**
+     * Fixed pressure value to be sent for trackpad events when pressed.
+     *
+     * <p>1. The value of MotionEvent.getPressure() varies by device. For example, it is [0, 1] on
+     * some devices, but not always. 2. Even for devices that send values between [0, 1], some only
+     * send 0 for not pressed and 1 for pressed. In such cases, if we send the maximum pressure
+     * (e.g., 255), libraries like libinput on the guest side might perceive it as an abnormal touch
+     * (like a palm) and trigger palm rejection, ignoring the input. 3. Therefore, 50 is a sweet
+     * spot that ensures reliable input without triggering rejection. We ignore the actual pressure
+     * from the event and always send this fixed value.
+     */
+    private static final int TRACKPAD_PRESSURE_PRESSED = 50;
+
     /** Name of the file backing the encrypted storage */
     private static final String ENCRYPTED_STORE_FILE = "storage.img";
 
@@ -1050,8 +1063,10 @@ public class VirtualMachine implements AutoCloseable {
                 mTrackpadSock = pfds[0];
                 InputDevice.Trackpad t = new InputDevice.Trackpad();
                 // TODO(b/347253952): make it configurable
-                t.width = 2380;
-                t.height = 1369;
+                // Set a large square area to avoid aspect ratio distortion.
+                // We only use a portion of this area (mapped from the screen).
+                t.width = 3000;
+                t.height = 3000;
                 t.pfd = pfds[1];
                 inputDevices.add(InputDevice.trackpad(t));
             }
@@ -1365,7 +1380,7 @@ public class VirtualMachine implements AutoCloseable {
                         return false;
                 }
                 return writeEventsToSock(
-                        mMouseSock,
+                        mTrackpadSock,
                         Arrays.asList(
                                 new InputEvent(
                                         EV_KEY,
@@ -1380,9 +1395,10 @@ public class VirtualMachine implements AutoCloseable {
                                 event.getPointerCount() * 10 /*InputEvent per a pointer*/
                                         + 1 /*SYN*/);
                 for (int actionIdx = 0; actionIdx < event.getPointerCount(); actionIdx++) {
-                    int pointerId = event.getPointerId(actionIdx);
-                    int x = (int) event.getRawX(actionIdx);
-                    int y = (int) event.getRawY(actionIdx);
+                    // Linux expects pointerId to be positive.
+                    int pointerId = event.getPointerId(actionIdx) + 1;
+                    int x = (int) event.getX(actionIdx);
+                    int y = (int) event.getY(actionIdx);
                     events.add(new InputEvent(EV_ABS, ABS_MT_SLOT, pointerId));
                     events.add(new InputEvent(EV_ABS, ABS_MT_TRACKING_ID, pointerId));
                     events.add(new InputEvent(EV_ABS, ABS_MT_POSITION_X, x));
@@ -1399,16 +1415,8 @@ public class VirtualMachine implements AutoCloseable {
                                     (short) event.getTouchMinor(actionIdx)));
                     events.add(new InputEvent(EV_ABS, ABS_X, x));
                     events.add(new InputEvent(EV_ABS, ABS_Y, y));
-                    events.add(
-                            new InputEvent(
-                                    EV_ABS,
-                                    ABS_PRESSURE,
-                                    (short) (255 * event.getPressure(actionIdx))));
-                    events.add(
-                            new InputEvent(
-                                    EV_ABS,
-                                    ABS_MT_PRESSURE,
-                                    (short) (255 * event.getPressure(actionIdx))));
+                    events.add(new InputEvent(EV_ABS, ABS_PRESSURE, TRACKPAD_PRESSURE_PRESSED));
+                    events.add(new InputEvent(EV_ABS, ABS_MT_PRESSURE, TRACKPAD_PRESSURE_PRESSED));
                 }
                 events.add(new InputEvent(EV_SYN, SYN_REPORT, 0));
                 return writeEventsToSock(mTrackpadSock, events);
@@ -1425,9 +1433,10 @@ public class VirtualMachine implements AutoCloseable {
                 event.getActionMasked() == MotionEvent.ACTION_DOWN
                         || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN;
         int actionIdx = event.getActionIndex();
-        int pointerId = event.getPointerId(actionIdx);
-        int x = (int) event.getRawX(actionIdx);
-        int y = (int) event.getRawY(actionIdx);
+        // Linux expects pointerId to be positive.
+        int pointerId = event.getPointerId(actionIdx) + 1;
+        int x = (int) event.getX(actionIdx);
+        int y = (int) event.getY(actionIdx);
         return writeEventsToSock(
                 mTrackpadSock,
                 Arrays.asList(
@@ -1453,12 +1462,8 @@ public class VirtualMachine implements AutoCloseable {
                                 EV_ABS, ABS_MT_TOUCH_MINOR, (short) event.getTouchMinor(actionIdx)),
                         new InputEvent(EV_ABS, ABS_X, x),
                         new InputEvent(EV_ABS, ABS_Y, y),
-                        new InputEvent(
-                                EV_ABS, ABS_PRESSURE, (short) (255 * event.getPressure(actionIdx))),
-                        new InputEvent(
-                                EV_ABS,
-                                ABS_MT_PRESSURE,
-                                (short) (255 * event.getPressure(actionIdx))),
+                        new InputEvent(EV_ABS, ABS_PRESSURE, TRACKPAD_PRESSURE_PRESSED),
+                        new InputEvent(EV_ABS, ABS_MT_PRESSURE, TRACKPAD_PRESSURE_PRESSED),
                         new InputEvent(EV_SYN, SYN_REPORT, 0)));
     }
 
