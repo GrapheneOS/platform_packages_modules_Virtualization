@@ -19,8 +19,6 @@
 //! specific arguments, and cancel it if needed. The results of the compilation are
 //! reported asynchronously via the caller provided C-style callbacks.
 
-mod wrappers;
-
 #[cfg(not(test))]
 use crate::wrappers::binder::wait_for_composd_interface;
 #[cfg(test)]
@@ -77,24 +75,6 @@ use std::{
 
 const COMPILATION_STATE_MUTEX_TIMEOUT: Duration = Duration::from_millis(500);
 const COMPILATION_STATE_MUTEX_TIMEOUT_LONG: Duration = Duration::from_millis(2500);
-
-// Returns the number of unescaped `!` in a string.
-fn count_placeholders(fmt_str: &str) -> u32 {
-    let mut placeholder_count = 0;
-    let mut escaped = false;
-    for c in fmt_str.chars() {
-        if escaped {
-            escaped = false;
-            continue;
-        }
-        if c == '\\' {
-            escaped = true;
-        } else if c == '!' {
-            placeholder_count += 1;
-        }
-    }
-    placeholder_count
-}
 
 /// Represents a single argument for the dex2oat compiler.
 ///
@@ -424,7 +404,7 @@ pub unsafe extern "C" fn AVerifiedDex2Oat_CompilationContext_addArg(
         Err(_) => return FFISTATUS_BAD_ARGS_FORMAT_STRING_NOT_UTF8,
     };
 
-    let placeholder_count = count_placeholders(fmt_str);
+    let placeholder_count = crate::wrappers::count_placeholders(fmt_str);
     if placeholder_count != fd_count {
         return FFISTATUS_BAD_ARGS_UNEXPECTED_NUMBER_OF_FDS;
     }

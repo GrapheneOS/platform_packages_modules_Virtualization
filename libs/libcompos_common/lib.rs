@@ -24,6 +24,9 @@ pub mod timeouts;
 use anyhow::{bail, Result};
 use compos_client::{CompOsType, VmParameters};
 
+/// The magic word that is prepended to the secure compilation manifest.
+pub const COMPOS_MANIFEST_MAGIC_PREFIX: &str = "compos_secure_compilation";
+
 /// VSock port that the CompOS server listens on for RPC binder connections. This should be out of
 /// future port range (if happens) that microdroid may reserve for system components.
 pub const COMPOS_VSOCK_PORT: u32 = 6432;
