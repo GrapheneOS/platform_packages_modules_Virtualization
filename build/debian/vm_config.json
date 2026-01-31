@@ -19,9 +19,6 @@
     "sharedPath": [
         {
             "sharedPath": "/storage/emulated"
-        },
-        {
-            "sharedPath": "$APP_DATA_DIR/files"
         }
     ],
     "kernel": "$PAYLOAD_DIR/vmlinuz",

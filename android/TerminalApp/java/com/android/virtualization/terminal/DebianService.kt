@@ -80,6 +80,8 @@ internal class DebianService(
         }
     }
 
+    override fun setAllowedGuestIp(ip: String) {}
+
     override fun stop() {
         ForwarderHost.shutdown()
     }

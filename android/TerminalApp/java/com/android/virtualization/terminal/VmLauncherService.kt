@@ -53,8 +53,6 @@ import io.grpc.ServerCallHandler
 import io.grpc.ServerInterceptor
 import io.grpc.Status
 import io.grpc.okhttp.OkHttpServerBuilder
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.SocketAddress
@@ -174,6 +172,9 @@ class VmLauncherService : Service() {
         // Convert rootfs disk into a sparse file for storage ballooning.
         truncateDiskIfNecessary(image)
 
+        val port = startDebianServer()
+        customImageConfigBuilder.addParam("debian_server_port=$port")
+
         customImageConfigBuilder.setAudioConfig(
             AudioConfig.Builder().setUseSpeaker(true).setUseMicrophone(true).build()
         )
@@ -210,7 +211,9 @@ class VmLauncherService : Service() {
                 { info ->
                     // It must exist because it is checked in `getTerminalServiceInfo`
                     val guestIpAddress =
-                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress
+                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress!!
+
+                    debianService!!.setAllowedGuestIp(guestIpAddress)
 
                     if (canUseTtydOverVsock()) {
                         val bridge = AndroidToVmBridge(virtualMachine.getCid())
@@ -225,14 +228,12 @@ class VmLauncherService : Service() {
                             bundle.putInt(KEY_TERMINAL_PORT, port)
                             bundle.putString(KEY_TERMINAL_KEY, bridge.secretKey)
                             resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-                            startDebianServer(guestIpAddress)
                         }
                     } else {
                         val bundle = Bundle()
                         bundle.putString(KEY_TERMINAL_IPADDRESS, guestIpAddress)
                         bundle.putInt(KEY_TERMINAL_PORT, info.port)
                         resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-                        startDebianServer(guestIpAddress)
                     }
                 },
                 bgThreads,
@@ -374,7 +375,7 @@ class VmLauncherService : Service() {
         return changed
     }
 
-    private fun startDebianServer(ipAddress: String?) {
+    private fun startDebianServer(): Int {
         val interceptor: ServerInterceptor =
             object : ServerInterceptor {
                 override fun <ReqT, RespT> interceptCall(
@@ -386,11 +387,14 @@ class VmLauncherService : Service() {
                         call.attributes.get<SocketAddress?>(Grpc.TRANSPORT_ATTR_REMOTE_ADDR)
                             as InetSocketAddress?
 
-                    if (remoteAddr?.address?.hostAddress == ipAddress) {
+                    val service = debianService as? DebianServiceGrpc
+                    val allowedIp = service?.allowedIpAddress
+
+                    if (allowedIp != null && remoteAddr?.address?.hostAddress == allowedIp) {
                         // Allow the request only if it is from VM
                         return next.startCall(call, headers)
                     }
-                    Log.d(TAG, "blocked grpc request from $remoteAddr")
+                    Log.d(TAG, "blocked grpc request from $remoteAddr (allowed: $allowedIp)")
                     call.close(Status.Code.PERMISSION_DENIED.toStatus(), Metadata())
                     return object : ServerCall.Listener<ReqT?>() {}
                 }
@@ -407,24 +411,10 @@ class VmLauncherService : Service() {
                     .start()
         } catch (e: IOException) {
             Log.d(TAG, "grpc server error", e)
-            return
+            throw RuntimeException("cannot start grpc server", e)
         }
 
-        bgThreads.execute(
-            Runnable {
-                // TODO(b/373533555): we can use mDNS for that.
-                val debianServicePortFile = File(filesDir, "debian_service_port")
-                try {
-                    FileOutputStream(debianServicePortFile).use { writer ->
-                        writer.write(server!!.port.toString().toByteArray())
-                    }
-                } catch (e: IOException) {
-                    Log.d(TAG, "cannot write grpc port number", e)
-                }
-            }
-        )
-
-        StorageBalloonWorker.start(this, debianService!!)
+        return server!!.port
     }
 
     @WorkerThread

@@ -67,32 +67,45 @@ object Installer {
     fun install() {
         val intent = Intent(context, VmService::class.java)
         context.startForegroundService(intent)
+        installJob = repositoryScope.launch { installInternal() }
+    }
+
+    fun upgrade() {
+        val intent = Intent(context, VmService::class.java)
+        context.startForegroundService(intent)
         installJob =
             repositoryScope.launch {
-                val monitor =
-                    networkMonitor ?: throw IllegalStateException("NetworkMonitor not initialized")
-                val progressFlow = MutableStateFlow(0L)
-                _installState.value =
-                    InstallState.Installing(
-                        0L,
-                        progressFlow.asStateFlow(),
-                        monitor.isWifiConnected.value,
-                    )
                 try {
-                    downloadAndInstall(monitor, progressFlow)
-                    _installState.value = InstallState.Installed
+                    _installState.value = InstallState.Checking
+                    installedImage.uninstallAndBackup()
+                    installInternal()
                 } catch (e: IOException) {
-                    val cause =
-                        if (e.message?.contains("No space left on device") == true) {
-                            InstallState.ErrorCause.InstallFailedNoSpace
-                        } else {
-                            InstallState.ErrorCause.InstallFailedUnknown
-                        }
-                    _installState.value = InstallState.Error(e, cause)
-                } catch (e: CancellationException) {
-                    handleCancellation()
+                    _installState.value =
+                        InstallState.Error(e, InstallState.ErrorCause.UninstallFailed)
                 }
             }
+    }
+
+    private suspend fun installInternal() {
+        val monitor =
+            networkMonitor ?: throw IllegalStateException("NetworkMonitor not initialized")
+        val progressFlow = MutableStateFlow(0L)
+        _installState.value =
+            InstallState.Installing(0L, progressFlow.asStateFlow(), monitor.isWifiConnected.value)
+        try {
+            downloadAndInstall(monitor, progressFlow)
+            _installState.value = InstallState.Installed
+        } catch (e: IOException) {
+            val cause =
+                if (e.message?.contains("No space left on device") == true) {
+                    InstallState.ErrorCause.InstallFailedNoSpace
+                } else {
+                    InstallState.ErrorCause.InstallFailedUnknown
+                }
+            _installState.value = InstallState.Error(e, cause)
+        } catch (e: CancellationException) {
+            handleCancellation()
+        }
     }
 
     fun cancelInstall() {
@@ -201,7 +214,16 @@ object Installer {
     private suspend fun checkInstallStatus() {
         _installState.value = InstallState.Checking
         if (installedImage.isInstalled()) {
-            _installState.value = InstallState.Installed
+            if (installedImage.isCompatible()) {
+                _installState.value = InstallState.Installed
+            } else {
+                try {
+                    val downloadSize = ImageArchive.getDefault().getSize()
+                    _installState.value = InstallState.NeedsUpgrade(downloadSize)
+                } catch (e: IOException) {
+                    _installState.value = InstallState.NeedsUpgrade(ESTIMATED_DOWNLOAD_SIZE)
+                }
+            }
             return
         }
 
@@ -225,7 +247,7 @@ object Installer {
 
     private fun canInstall(): Boolean {
         if (ImageArchive.isLocalImage()) {
-            return true;
+            return true
         }
         val monitor = networkMonitor ?: return false
         if (!monitor.isNetworkConnected.value) {

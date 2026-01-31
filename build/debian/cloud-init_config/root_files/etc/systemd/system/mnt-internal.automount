@@ -1,8 +1,0 @@
-[Unit]
-Description=Mount virtiofs terminal app internal file path
-
-[Automount]
-Where=/mnt/internal
-
-[Install]
-WantedBy=multi-user.target

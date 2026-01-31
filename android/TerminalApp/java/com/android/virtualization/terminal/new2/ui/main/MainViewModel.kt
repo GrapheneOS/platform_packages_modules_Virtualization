@@ -20,8 +20,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
+import android.hardware.input.InputManager
 import android.util.DisplayMetrics
 import android.view.Display
+import android.view.InputDevice
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -89,8 +92,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isPanZoomMode = MutableStateFlow(false)
     val isPanZoomMode: StateFlow<Boolean> = _isPanZoomMode.asStateFlow()
 
+    private val _hasMouse = MutableStateFlow(false)
+    val hasMouse: StateFlow<Boolean> = _hasMouse.asStateFlow()
+
     private val _isMouseLocked = MutableStateFlow(false)
-    val isMouseLocked: StateFlow<Boolean> = _isMouseLocked.asStateFlow()
+    val isMouseLocked: StateFlow<Boolean> =
+        combine(_isMouseLocked, _hasMouse) { locked, hasMouse -> locked && hasMouse }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val _useDisplayAsTouchpad = MutableStateFlow(false)
+    val useDisplayAsTouchpad: StateFlow<Boolean> = _useDisplayAsTouchpad.asStateFlow()
 
     private val _settingsRequest = MutableStateFlow<SettingsDestination?>(null)
     val settingsRequest: StateFlow<SettingsDestination?> = _settingsRequest.asStateFlow()
@@ -138,6 +149,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setMouseLocked(locked: Boolean) {
         _isMouseLocked.value = locked
+    }
+
+    fun setUseDisplayAsTouchpad(enabled: Boolean) {
+        _useDisplayAsTouchpad.value = enabled
     }
 
     fun addTab() {
@@ -269,6 +284,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         _permissionRequired.value =
             PERMISSIONS.any { context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+
+        val inputManager = context.getSystemService(InputManager::class.java)
+        val mouseDeviceIds = mutableSetOf<Int>()
+        val updateMouseStatus = {
+            val currentIds = inputManager.inputDeviceIds.toSet()
+            // Remove devices that are no longer connected
+            mouseDeviceIds.retainAll(currentIds)
+
+            // Add devices that are currently identified as a mouse
+            for (id in currentIds) {
+                val device = inputManager.getInputDevice(id)
+                if (
+                    device != null &&
+                        !device.isVirtual &&
+                        (device.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE)
+                ) {
+                    mouseDeviceIds.add(id)
+                }
+            }
+            _hasMouse.value = mouseDeviceIds.isNotEmpty()
+        }
+        updateMouseStatus()
+        inputManager.registerInputDeviceListener(
+            object : InputManager.InputDeviceListener {
+                override fun onInputDeviceAdded(deviceId: Int) {
+                    updateMouseStatus()
+                }
+
+                override fun onInputDeviceRemoved(deviceId: Int) {
+                    updateMouseStatus()
+                }
+
+                override fun onInputDeviceChanged(deviceId: Int) {
+                    updateMouseStatus()
+                }
+            },
+            null,
+        )
 
         // Observe installation and UI states to manage VM lifecycle.
         viewModelScope.launch {

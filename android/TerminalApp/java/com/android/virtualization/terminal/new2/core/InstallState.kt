@@ -22,6 +22,8 @@ sealed interface InstallState {
 
     data class NotInstalled(val totalSizeBytes: Long) : InstallState
 
+    data class NeedsUpgrade(val totalSizeBytes: Long) : InstallState
+
     data class Installing(
         val totalBytes: Long,
         val progress: StateFlow<Long>,
@@ -49,6 +51,7 @@ sealed interface InstallState {
     fun getTotalImageSize(): Long {
         return when (this) {
             is NotInstalled -> totalSizeBytes
+            is NeedsUpgrade -> totalSizeBytes
             is Installing -> totalBytes
             is InstallSuspended -> totalBytes
             else -> 0L

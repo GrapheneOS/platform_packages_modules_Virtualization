@@ -31,9 +31,9 @@ mod debian_service {
 #[derive(Parser)]
 /// Flags for running command
 pub struct Args {
-    /// path to a file where grpc port number is written
+    /// grpc port number
     #[arg(long)]
-    grpc_port_file: String,
+    grpc_port: u16,
 }
 
 async fn process_forwarding_request_queue(mut client: DebianServiceClient<Channel>) -> Result<()> {
@@ -94,16 +94,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let gateway_ip_addr = linux::net::get_default_gateway()?;
 
-    // Wait for `grpc_port_file` becomes available.
-    const GRPC_PORT_MAX_RETRY_COUNT: u32 = 10;
-    for _ in 0..GRPC_PORT_MAX_RETRY_COUNT {
-        if std::path::Path::new(&args.grpc_port_file).exists() {
-            break;
-        }
-        debug!("{} does not exist. Wait 1 second", args.grpc_port_file);
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    }
-    let grpc_port = std::fs::read_to_string(&args.grpc_port_file)?.trim().to_string();
+    let grpc_port = args.grpc_port.to_string();
 
     let addr = format!("https://{}:{}", gateway_ip_addr.to_string(), grpc_port);
     let channel = Endpoint::from_shared(addr)?.connect().await?;

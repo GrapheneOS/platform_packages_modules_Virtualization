@@ -20,5 +20,7 @@ internal interface DebianServiceBase {
 
     fun setAvailableStorageBytes(availableBytes: Long): Boolean
 
+    fun setAllowedGuestIp(ip: String)
+
     fun stop()
 }

@@ -27,8 +27,11 @@ import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -40,6 +43,12 @@ import kotlinx.coroutines.launch
 class InstallViewModel : ViewModel() {
     /** Current state of the installation process. */
     val installState: StateFlow<InstallState> = Installer.installState
+
+    /** Whether the current installation process is an upgrade. */
+    val isUpgrade: StateFlow<Boolean> =
+        installState
+            .map { it is InstallState.NeedsUpgrade }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** Whether to only download/install when connected to Wi-Fi. */
     val wifiOnly: StateFlow<Boolean> = Installer.wifiOnly
@@ -61,8 +70,10 @@ class InstallViewModel : ViewModel() {
         if (autoInstall) {
             viewModelScope.launch {
                 installState.collect { state ->
-                    if (state is InstallState.NotInstalled) {
-                        installVm()
+                    when (state) {
+                        is InstallState.NotInstalled -> installVm()
+                        is InstallState.NeedsUpgrade -> upgradeVm()
+                        else -> {}
                     }
                 }
             }
@@ -72,6 +83,11 @@ class InstallViewModel : ViewModel() {
     /** Starts the installation process. */
     fun installVm() {
         Installer.install()
+    }
+
+    /** Starts the upgrade process. */
+    fun upgradeVm() {
+        Installer.upgrade()
     }
 
     /** Updates the preference for Wi-Fi only installation. */

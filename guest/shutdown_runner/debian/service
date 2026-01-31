@@ -1,10 +1,10 @@
 [Unit]
 After=syslog.target
 After=network.target
-After=virtiofs_internal.service
 
 [Service]
-ExecStart=/usr/bin/bash -c '/usr/bin/shutdown_runner --grpc-port-file /mnt/internal/debian_service_port'
+PassEnvironment=debian_server_port
+ExecStart=/usr/bin/bash -c '/usr/bin/shutdown_runner --grpc-port $debian_server_port'
 Type=simple
 Restart=on-failure
 RestartSec=1

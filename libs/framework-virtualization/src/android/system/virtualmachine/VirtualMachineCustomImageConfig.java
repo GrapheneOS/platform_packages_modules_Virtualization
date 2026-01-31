@@ -126,7 +126,7 @@ public class VirtualMachineCustomImageConfig {
     }
 
     public boolean useTrackpad() {
-        return mouse;
+        return trackpad;
     }
 
     public boolean useAutoMemoryBalloon() {
