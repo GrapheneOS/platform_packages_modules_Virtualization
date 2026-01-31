@@ -58,7 +58,7 @@ impl<'a> Ops<'a> {
 
     pub(crate) fn verify_partition(
         &mut self,
-        partition_name: &CStr,
+        partition_name: PartitionName,
     ) -> SlotVerifyResult<SlotVerifyData<'a>> {
         // Note that this call manages to verify the initrd images using hashes contained in the
         // (unique) VBMeta from the end of self.kernel because if
@@ -70,7 +70,7 @@ impl<'a> Ops<'a> {
         // footer of the "boot" partition i.e. self.kernel (see PartitionName::Kernel).
         slot_verify(
             self,
-            &[partition_name],
+            &[partition_name.as_c_str()],
             None, // No partition slot suffix.
             SlotVerifyFlags::AVB_SLOT_VERIFY_FLAGS_NONE,
             HashtreeErrorMode::AVB_HASHTREE_ERROR_MODE_RESTART_AND_INVALIDATE,
