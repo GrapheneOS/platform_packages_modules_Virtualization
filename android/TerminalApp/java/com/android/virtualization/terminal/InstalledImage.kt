@@ -110,9 +110,16 @@ public class InstalledImage private constructor(val installDir: Path) {
         }
     }
 
+    fun isCompatible(): Boolean {
+        if (Files.exists(java.nio.file.Paths.get("/sdcard/linux/force_upgrade"))) {
+            return false
+        }
+        val info = buildInfo ?: return false
+        return info.timestamp.year >= RELEASE_YEAR
+    }
+
     fun isOlderThanCurrentVersion(): Boolean {
-        val year = buildInfo?.timestamp?.year ?: return false
-        return year < RELEASE_YEAR
+        return !isCompatible()
     }
 
     @Throws(IOException::class)
