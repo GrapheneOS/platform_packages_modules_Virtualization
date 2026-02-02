@@ -41,7 +41,6 @@ const MODE: i64 = -4670551;
 const SUBJECT_PUBLIC_KEY: i64 = -4670552;
 
 const CONFIG_DESC_COMPONENT_NAME: i64 = -70002;
-const CONFIG_DESC_SECURITY_VERSION: i64 = -70005;
 const CONFIG_DESC_PAYLOAD_DESCRIPTORS: i64 = -71002;
 const CONFIG_DESC_TENANT_DESCRIPTORS: i64 = -71004;
 
@@ -340,11 +339,6 @@ impl DiceChainEntryPayload {
     pub(crate) fn component_name(&self) -> Option<&str> {
         self.config_descriptor.component_name.as_deref()
     }
-
-    /// Returns the security version from the configuration descriptor.
-    pub(crate) fn security_version(&self) -> Option<u64> {
-        self.config_descriptor.security_version
-    }
 }
 /// Represents a partially decoded `ConfigurationDescriptor`.
 ///
@@ -355,7 +349,6 @@ impl DiceChainEntryPayload {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ConfigDescriptor {
     component_name: Option<String>,
-    security_version: Option<u64>,
     payload_descriptors: Option<Value>,
     tenant_descriptors: Option<Value>,
 }
@@ -377,10 +370,6 @@ impl ConfigDescriptor {
                 CONFIG_DESC_COMPONENT_NAME => {
                     let name = value_to_text(value, "ConfigDescriptor component_name")?;
                     builder.component_name(name)?;
-                }
-                CONFIG_DESC_SECURITY_VERSION => {
-                    let version: u64 = value_to_num(value, "ConfigDescriptor security_version")?;
-                    builder.security_version(version)?;
                 }
                 CONFIG_DESC_PAYLOAD_DESCRIPTORS => {
                     // If this is the Microdroid payload node then these are the subcomponents. But
@@ -419,7 +408,6 @@ impl ConfigDescriptor {
 #[derive(Debug, Clone, Default)]
 struct ConfigDescriptorBuilder {
     component_name: OnceCell<String>,
-    security_version: OnceCell<u64>,
     payload_descriptors: OnceCell<Value>,
     tenant_descriptors: OnceCell<Value>,
 }
@@ -427,10 +415,6 @@ struct ConfigDescriptorBuilder {
 impl ConfigDescriptorBuilder {
     fn component_name(&mut self, component_name: String) -> Result<()> {
         set_once(&self.component_name, component_name, "ConfigDescriptor component_name")
-    }
-
-    fn security_version(&mut self, security_version: u64) -> Result<()> {
-        set_once(&self.security_version, security_version, "ConfigDescriptor security_version")
     }
 
     fn payload_sub_components(&mut self, payload_descriptors: Value) -> Result<()> {
@@ -451,15 +435,9 @@ impl ConfigDescriptorBuilder {
 
     fn build(mut self) -> Result<ConfigDescriptor> {
         let component_name = self.component_name.take();
-        let security_version = self.security_version.take();
         let payload_descriptors = self.payload_descriptors.take();
         let tenant_descriptors = self.tenant_descriptors.take();
-        Ok(ConfigDescriptor {
-            component_name,
-            security_version,
-            payload_descriptors,
-            tenant_descriptors,
-        })
+        Ok(ConfigDescriptor { component_name, payload_descriptors, tenant_descriptors })
     }
 }
 

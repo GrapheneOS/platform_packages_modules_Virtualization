@@ -20,13 +20,14 @@ use crate::dice::{ClientVmDiceChain, DiceChainEntryPayload};
 use crate::keyblob::decrypt_private_key;
 use crate::ops::AttestationOps;
 use alloc::vec::Vec;
-use bssl_avf::{rand_bytes, sha256, EcKey, PKey};
+use bssl_avf::{rand_bytes, sha256, Digester, EcKey, PKey};
 use cbor_util::parse_value_array;
 use ciborium::value::Value;
 use core::str::FromStr;
 use coset::{CborSerializable, CoseSign};
 use der::{Decode, Encode};
 use log::{error, info};
+use microdroid_kernel_hashes::{HASH_SIZE as KERNEL_HASH_SIZE, OS_HASHES};
 use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError, Result};
 use x509_cert::{certificate::Certificate, name::Name};
 
@@ -190,11 +191,7 @@ fn validate_client_vm_dice_chain(
     let reference_authority_payload =
         DiceChainEntryPayload::from_cbor_value_unchecked(reference_authority_entry.clone())?;
     ensure_same_authority(client_vm_dice_chain.kernel(), &reference_authority_payload)?;
-
-    #[cfg(not(validate_client_vm_using_dice_info))]
     validate_kernel_code_hash(&client_vm_dice_chain)?;
-    #[cfg(validate_client_vm_using_dice_info)]
-    validate_kernel_dice_info(&client_vm_dice_chain)?;
 
     ops.validate_vm(&client_vm_dice_chain)?;
 
@@ -221,32 +218,8 @@ fn ensure_same_authority(
 
 /// Validates that the kernel code hash in the Client VM DICE chain matches the code hashes
 /// embedded during the build time.
-#[cfg(not(validate_client_vm_using_dice_info))]
 fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
-    fn matches_any_kernel_code_hash(
-        actual_code_hash: &[u8],
-        is_debug: bool,
-    ) -> bssl_avf::Result<bool> {
-        for os_hash in &microdroid_kernel_hashes::OS_HASHES {
-            let mut code_hash = [0u8; microdroid_kernel_hashes::HASH_SIZE * 2];
-            code_hash[0..microdroid_kernel_hashes::HASH_SIZE].copy_from_slice(&os_hash.kernel);
-            if is_debug {
-                code_hash[microdroid_kernel_hashes::HASH_SIZE..]
-                    .copy_from_slice(&os_hash.initrd_debug);
-            } else {
-                code_hash[microdroid_kernel_hashes::HASH_SIZE..]
-                    .copy_from_slice(&os_hash.initrd_normal);
-            }
-            if bssl_avf::Digester::sha512().digest(&code_hash)? == actual_code_hash {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
     let kernel = dice_chain.kernel();
-    // TODO(b/479094783): Enforce Anti-Rollback policy
-    let _security_version = kernel.security_version();
     if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ false)? {
         return Ok(());
     }
@@ -261,41 +234,20 @@ fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
     Err(RequestProcessingError::InvalidDiceChain)
 }
 
-#[cfg(validate_client_vm_using_dice_info)]
-fn validate_kernel_dice_info(dice_chain: &ClientVmDiceChain) -> Result<()> {
-    const AUTHORIZED_KERNEL_COMPONENT_NAMES: &[&str; 1] = &[
-        "vm_entry", // Microdroid VM
-    ];
-
-    let kernel = dice_chain.kernel();
-
-    // 1. Check if the kernel component name is present and authorized.
-    let kernel_component_name = kernel.component_name().ok_or_else(|| {
-        error!("Kernel component name missing in DICE chain");
-        RequestProcessingError::InvalidDiceChain
-    })?;
-    if !AUTHORIZED_KERNEL_COMPONENT_NAMES.contains(&kernel_component_name) {
-        error!("Unauthorized kernel component name: {}", kernel_component_name);
-        return Err(RequestProcessingError::InvalidDiceChain);
+fn matches_any_kernel_code_hash(actual_code_hash: &[u8], is_debug: bool) -> bssl_avf::Result<bool> {
+    for os_hash in &OS_HASHES {
+        let mut code_hash = [0u8; KERNEL_HASH_SIZE * 2];
+        code_hash[0..KERNEL_HASH_SIZE].copy_from_slice(&os_hash.kernel);
+        if is_debug {
+            code_hash[KERNEL_HASH_SIZE..].copy_from_slice(&os_hash.initrd_debug);
+        } else {
+            code_hash[KERNEL_HASH_SIZE..].copy_from_slice(&os_hash.initrd_normal);
+        }
+        if Digester::sha512().digest(&code_hash)? == actual_code_hash {
+            return Ok(true);
+        }
     }
-
-    // 2. Enforce Anti-Rollback policy: The kernel's security version must not be older than the
-    //    platform's security patch timestamp.
-    let kernel_security_version = kernel.security_version().ok_or_else(|| {
-        error!("Kernel security version missing in DICE chain");
-        RequestProcessingError::InvalidDiceChain
-    })?;
-
-    if kernel_security_version < platform_security_patch_timestamp::TIMESTAMP {
-        error!(
-            "Kernel security version too old. Kernel version: {}, Platform version: {}",
-            kernel_security_version,
-            platform_security_patch_timestamp::TIMESTAMP
-        );
-        return Err(RequestProcessingError::InvalidDiceChain);
-    }
-
-    Ok(())
+    Ok(false)
 }
 
 fn validate_common_prefix(client_chain: &[Value], common_chain: &[Value]) -> Result<()> {
