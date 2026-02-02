@@ -63,9 +63,6 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_USE_VM_ATTESTATION_SERVICE_ACCESSOR"), {
         true: ["use_vm_attestation_service_accessor"],
         default: [],
-    }) + select(release_flag("RELEASE_AVF_VALIDATE_CLIENT_VM_USING_DICE_INFO"), {
-        true: ["validate_client_vm_using_dice_info"],
-        default: [],
     }),
 }
 
