@@ -32,6 +32,7 @@ mod memory;
 mod rollback;
 
 use crate::config::reserved_mem::{ResMem, ResMemEntryInfo};
+use crate::config::Entries;
 use crate::dice::{DiceChainInfo, PartialInputs};
 use crate::entry::RebootReason;
 use crate::fdt::{modify_for_next_stage, read_instance_id, sanitize_device_tree};
@@ -57,16 +58,11 @@ use zeroize::Zeroize;
 /// Trusted public key, used during verification of the signed kernel & ramdisk.
 const PUBLIC_KEY: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/pvmfw_embedded_key_pub.bin"));
 
-#[allow(clippy::too_many_arguments)]
 fn main<'a>(
     untrusted_fdt: &mut Fdt,
     signed_kernel: &[u8],
     ramdisk: Option<&[u8]>,
-    current_dice_handover: Option<&[u8]>,
-    mut debug_policy: Option<&[u8]>,
-    vm_dtbo: Option<&mut [u8]>,
-    vm_ref_dt: Option<&[u8]>,
-    reserved_mem: Option<&[u8]>,
+    config: &mut Entries,
 ) -> Result<(&'a [u8], bool), RebootReason> {
     info!("pVM firmware");
     debug!("FDT: {:?}", untrusted_fdt.as_ptr());
@@ -78,43 +74,55 @@ fn main<'a>(
         debug!("Ramdisk: None");
     }
 
-    let (parsed_dice, dice_debug_mode) = parse_dice_handover(current_dice_handover)?;
+    let (parsed_dice, dice_debug_mode) = parse_dice_handover(config.dice_handover.as_deref())?;
 
     // The bootloader should never pass us a debug policy when the boot is secure (the bootloader
     // is locked). If it gets it wrong, disregard it & log it, to avoid it causing problems.
-    if debug_policy.is_some() && !dice_debug_mode {
+    let debug_policy = if dice_debug_mode {
+        config.debug_policy
+    } else if config.debug_policy.is_some() {
         warn!("Ignoring debug policy, DICE handover does not indicate Debug mode");
-        debug_policy = None;
-    }
+        None
+    } else {
+        None
+    };
+
+    let trusted_keys = [PUBLIC_KEY];
 
     // Policy/Hidden ABI: If the pvmfw loader (typically ABL) didn't pass a DICE handover (which is
     // technically still mandatory, as per the config data specification), skip DICE, AVB, and RBP.
     // This is to support Qualcomm QTVMs, which perform guest image verification in TrustZone.
-    let (verified_boot_data, debuggable, guest_page_size) = if current_dice_handover.is_none() {
+    let (verified_boot_data, debuggable, guest_page_size) = if config.dice_handover.is_none() {
         warn!("Verified boot is disabled!");
         (None, false, SIZE_4KB)
     } else {
-        let (dat, debug, sz) = perform_verified_boot(signed_kernel, ramdisk)?;
+        let (dat, debug, sz) = perform_verified_boot(signed_kernel, ramdisk, &trusted_keys)?;
         (Some(dat), debug, sz)
     };
 
     let hyp_page_size = hypervisor_backends::get_granule_size();
-    let fdt =
-        sanitize_device_tree(untrusted_fdt, vm_dtbo, vm_ref_dt, guest_page_size, hyp_page_size)?;
+    let fdt = sanitize_device_tree(
+        untrusted_fdt,
+        config.vm_dtbo.as_deref_mut(),
+        config.vm_ref_dt,
+        guest_page_size,
+        hyp_page_size,
+    )?;
 
-    let mut reserved_mem_info: Vec<ResMemEntryInfo> =
-        if let (Some(vb_data), Some(reserved_mem)) = (&verified_boot_data, reserved_mem) {
-            ResMem::new(reserved_mem, guest_page_size)
-                .map_err(|e| {
-                    error!("Failed to parse reserved memory: {e}");
-                    RebootReason::InvalidConfig
-                })?
-                .into_iter()
-                .filter(|x| Some(x.vm_name.to_str().unwrap()) == vb_data.name.as_deref())
-                .collect::<Vec<_>>()
-        } else {
-            Vec::new()
-        };
+    let mut reserved_mem_info: Vec<ResMemEntryInfo> = if let (Some(vb_data), Some(reserved_mem)) =
+        (&verified_boot_data, config.reserved_mem.as_deref())
+    {
+        ResMem::new(reserved_mem, guest_page_size)
+            .map_err(|e| {
+                error!("Failed to parse reserved memory: {e}");
+                RebootReason::InvalidConfig
+            })?
+            .into_iter()
+            .filter(|x| Some(x.vm_name.to_str().unwrap()) == vb_data.name.as_deref())
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     let next_dice_handover_pages = if verified_boot_data.is_some() { 1 } else { 0 };
     let preserved_memory_pages = reserved_mem_info.len() + next_dice_handover_pages;
@@ -269,8 +277,9 @@ fn perform_dice_derivation(
 fn perform_verified_boot<'a>(
     signed_kernel: &[u8],
     ramdisk: Option<&[u8]>,
+    trusted_keys: &'a [&'a [u8]],
 ) -> Result<(VerifiedBootData<'a>, bool, usize), RebootReason> {
-    let verified_boot_data = verify_payload(signed_kernel, ramdisk, PUBLIC_KEY).map_err(|e| {
+    let verified_boot_data = verify_payload(signed_kernel, ramdisk, trusted_keys).map_err(|e| {
         error!("Failed to verify the payload: {e}");
         RebootReason::PayloadVerificationError
     })?;

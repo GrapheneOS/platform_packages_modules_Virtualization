@@ -36,15 +36,15 @@ use vmbase::fdt::pci::initialize_from_fdt;
 use vmbase::rand;
 
 /// Criteria hard-coded into pvmfw, to perform fixed image verification.
-enum FixedRollbackCriterion {
+pub(crate) enum FixedRollbackCriterion<'a> {
     #[cfg_attr(not(feature = "platform_has_desktop_trusty"), allow(dead_code))]
     /// Image must match the exact kernel hash.
-    KernelHash { digests: &'static [Digest] },
+    KernelHash { digests: &'a [Digest] },
     /// Image must match the exact rollback index and have been signed with the given public key.
-    RollbackIndexPublicKey { index: u64, public_key: &'static [u8] },
+    RollbackIndexPublicKey { index: u64, public_key: &'a [u8] },
     #[cfg_attr(feature = "platform_has_desktop_trusty", allow(dead_code))]
     /// Image identifier is reserved but not supported on this platform so must be rejected.
-    Reserved { name: &'static str },
+    Reserved { name: &'a str },
 }
 
 /// Performs RBP based on the input payload, current DICE chain, and host-controlled platform.
@@ -100,9 +100,9 @@ fn perform_deferred_rollback_protection(
     }
 }
 
-fn get_fixed_rollback_protection(
+fn get_fixed_rollback_protection<'a>(
     verified_boot_data: &VerifiedBootData,
-) -> Option<FixedRollbackCriterion> {
+) -> Option<FixedRollbackCriterion<'a>> {
     match verified_boot_data.name.as_deref()? {
         VerifiedBootData::RKP_VM_NAME => Some(FixedRollbackCriterion::RollbackIndexPublicKey {
             index: platform_security_patch_timestamp::TIMESTAMP,

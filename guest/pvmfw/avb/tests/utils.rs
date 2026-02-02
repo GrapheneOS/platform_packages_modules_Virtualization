@@ -42,19 +42,19 @@ pub const PUBLIC_KEY_RSA2048_PATH: &str = "data/testkey_rsa2048_pub.bin";
 pub fn assert_payload_verification_with_initrd_fails(
     kernel: &[u8],
     initrd: &[u8],
-    trusted_public_key: &[u8],
+    trusted_public_keys: &[&[u8]],
     expected_error: PvmfwVerifyError,
 ) -> Result<()> {
-    assert_payload_verification_fails(kernel, Some(initrd), trusted_public_key, expected_error)
+    assert_payload_verification_fails(kernel, Some(initrd), trusted_public_keys, expected_error)
 }
 
 pub fn assert_payload_verification_fails(
     kernel: &[u8],
     initrd: Option<&[u8]>,
-    trusted_public_key: &[u8],
+    trusted_public_keys: &[&[u8]],
     expected_error: PvmfwVerifyError,
 ) -> Result<()> {
-    assert_eq!(expected_error, verify_payload(kernel, initrd, trusted_public_key).unwrap_err());
+    assert_eq!(expected_error, verify_payload(kernel, initrd, trusted_public_keys).unwrap_err());
     Ok(())
 }
 
@@ -131,7 +131,7 @@ pub fn assert_latest_payload_verification_passes(
 ) -> Result<()> {
     let public_key = load_trusted_public_key()?;
     let kernel = load_latest_signed_kernel()?;
-    let verified_boot_data = verify_payload(&kernel, Some(initrd), &public_key)
+    let verified_boot_data = verify_payload(&kernel, Some(initrd), &[&public_key])
         .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
     let footer = extract_avb_footer(&kernel)?;
@@ -168,7 +168,7 @@ pub fn assert_payload_without_initrd_passes_verification(
     let verified_boot_data = verify_payload(
         kernel,
         None, // initrd
-        &public_key,
+        &[&public_key],
     )
     .map_err(|e| anyhow!("Verification failed. Error: {}", e))?;
 
@@ -197,7 +197,7 @@ pub fn read_name(kernel: &[u8]) -> Result<Option<String>, PvmfwVerifyError> {
     let verified_boot_data = verify_payload(
         kernel,
         None, // initrd
-        &public_key,
+        &[&public_key],
     )?;
     Ok(verified_boot_data.name)
 }
@@ -207,7 +207,7 @@ pub fn read_page_size(kernel: &[u8]) -> Result<Option<usize>, PvmfwVerifyError> 
     let verified_boot_data = verify_payload(
         kernel,
         None, // initrd
-        &public_key,
+        &[&public_key],
     )?;
     Ok(verified_boot_data.page_size)
 }
