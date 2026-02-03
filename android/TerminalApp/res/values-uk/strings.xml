@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Показати клавіатуру"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Розблокувати мишу"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Заблокувати мишу"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Вимкнути режим сенсорної панелі"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Увімкнути режим сенсорної панелі"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Закрити елементи керування екраном"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Параметри відображення"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Попередня сторінка"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Повторити"</string>
     <string name="settings_title" msgid="3035373808103055663">"Налаштування"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Назад"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"Зміна розміру диска"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"Змінити розмір кореневого розділу"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"Виділено <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"Максимальний розмір: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"На пристрої недостатньо місця, щоб змінити розмір диска"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Скасувати"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Застосувати"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Термінал буде перезапущено, щоб змінити розмір диска"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Підтвердити"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Керування портами"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Дозволити/заборонити порти прослуховування"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Порти прослуховування"</string>

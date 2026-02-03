@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Prikaz tipkovnice"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Sprostitev miške"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Zaklepanje miške"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Izklop načina sledilne ploščice"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Vklop načina sledilne ploščice"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Zapiranje kontrolnikov prikaza"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Možnosti prikaza"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Prejšnja stran"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Poskusi znova"</string>
     <string name="settings_title" msgid="3035373808103055663">"Nastavitve"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Nazaj"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"Sprememba velikosti diska"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"Sprememba velikosti korenske particije"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"Dodeljeno: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"Največja velikost: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"V napravi ni dovolj prostora za spremembo velikosti diska"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Prekliči"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Uporabi"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminal se bo znova zagnal, da se bo izvedla sprememba velikosti diska"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Potrdi"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Nadzor vrat"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Dovoli/zavrni vrata za poslušanje"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Vrata za poslušanje"</string>

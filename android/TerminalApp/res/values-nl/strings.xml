@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Toetsenbord tonen"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Muis loslaten"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Muis vergrendelen"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Trackpadmodus uitzetten"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Trackpadmodus aanzetten"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Weergavebediening sluiten"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Weergaveopties"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Vorige pagina"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Opnieuw proberen"</string>
     <string name="settings_title" msgid="3035373808103055663">"Instellingen"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Terug"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"Formaat van schijf aanpassen"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"De grootte van de rootpartitie aanpassen"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> toegewezen"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"<xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g> max."</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"Onvoldoende ruimte op het apparaat om de schijfgrootte te wijzigen"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Annuleren"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Toepassen"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminal wordt opnieuw opgestart om de schijfgrootte aan te passen"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Bevestigen"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Poortcontrole"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Luisterende poorten toestaan/weigeren"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Luisterende poorten"</string>
