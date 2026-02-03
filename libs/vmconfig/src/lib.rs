@@ -53,6 +53,9 @@ pub struct VmConfig {
     /// The bootloader to use. If this is supplied then the kernel and initrd must not be supplied;
     /// the bootloader is instead responsibly for loading the kernel from one of the disks.
     pub bootloader: Option<PathBuf>,
+    /// The pflash images to use.
+    #[serde(default)]
+    pub pflash: Vec<PathBuf>,
     /// Disk images to be made available to the VM.
     #[serde(default)]
     pub disks: Vec<DiskImage>,
@@ -130,6 +133,11 @@ impl VmConfig {
             initrd: maybe_open_parcel_file(self.initrd.as_ref(), false)?,
             params: self.params.clone(),
             bootloader: maybe_open_parcel_file(self.bootloader.as_ref(), false)?,
+            pflash: self
+                .pflash
+                .iter()
+                .map(|p| open_parcel_file(p, true))
+                .collect::<Result<Vec<_>, Error>>()?,
             disks: self.disks.iter().map(DiskImage::to_parcelable).collect::<Result<_, Error>>()?,
             protectedVm: self.protected,
             memoryMib: memory_mib,

@@ -189,6 +189,7 @@ impl CrosvmCommand {
         command.add_name_arg(context);
         command.add_pvm_arg(context)?;
         command.add_kernel_arg(context)?;
+        command.add_pflash_arg(context)?;
         command.add_cpu_arg(context)?;
         #[cfg(target_arch = "aarch64")]
         command.add_aarch64_specific_args(context);
@@ -335,6 +336,14 @@ impl CrosvmCommand {
         if let Some(initrd) = &config.initrd {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
+        }
+        Ok(())
+    }
+
+    fn add_pflash_arg(&mut self, context: &RunContext) -> Result<()> {
+        for pflash in &context.config.pflash {
+            let file = self.add_preserved_fd(pflash.as_ref().try_clone()?);
+            self.args(["--pflash", &file]);
         }
         Ok(())
     }

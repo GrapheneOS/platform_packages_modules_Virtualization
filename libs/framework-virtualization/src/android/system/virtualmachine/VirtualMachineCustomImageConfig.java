@@ -30,6 +30,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_KERNEL = "kernel";
     private static final String KEY_INITRD = "initrd";
     private static final String KEY_BOOTLOADER = "bootloader";
+    private static final String KEY_PFLASH = "pflash";
     private static final String KEY_PARAMS = "params";
     private static final String KEY_DISK_WRITABLES = "disk_writables";
     private static final String KEY_DISK_IMAGES = "disk_images";
@@ -54,6 +55,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final String kernelPath;
     @Nullable private final String initrdPath;
     @Nullable private final String bootloaderPath;
+    @Nullable private final String[] pflashPaths;
     @Nullable private final String[] params;
     @Nullable private final Disk[] disks;
     @Nullable private final SharedPath[] sharedPaths;
@@ -77,6 +79,11 @@ public class VirtualMachineCustomImageConfig {
     @Nullable
     public String getBootloaderPath() {
         return bootloaderPath;
+    }
+
+    @Nullable
+    public String[] getPflashPaths() {
+        return pflashPaths;
     }
 
     @Nullable
@@ -144,6 +151,7 @@ public class VirtualMachineCustomImageConfig {
             String kernelPath,
             String initrdPath,
             String bootloaderPath,
+            String[] pflashPaths,
             String[] params,
             Disk[] disks,
             SharedPath[] sharedPaths,
@@ -163,6 +171,7 @@ public class VirtualMachineCustomImageConfig {
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
         this.bootloaderPath = bootloaderPath;
+        this.pflashPaths = pflashPaths;
         this.params = params;
         this.disks = disks;
         this.sharedPaths = sharedPaths;
@@ -186,6 +195,7 @@ public class VirtualMachineCustomImageConfig {
         builder.setKernelPath(customImageConfigBundle.getString(KEY_KERNEL));
         builder.setInitrdPath(customImageConfigBundle.getString(KEY_INITRD));
         builder.setBootloaderPath(customImageConfigBundle.getString(KEY_BOOTLOADER));
+        builder.setPflashPaths(customImageConfigBundle.getStringArray(KEY_PFLASH));
         String[] params = customImageConfigBundle.getStringArray(KEY_PARAMS);
         if (params != null) {
             for (String param : params) {
@@ -242,6 +252,7 @@ public class VirtualMachineCustomImageConfig {
         pb.putString(KEY_OS_NAME, this.osName);
         pb.putString(KEY_KERNEL, this.kernelPath);
         pb.putString(KEY_BOOTLOADER, this.bootloaderPath);
+        pb.putStringArray(KEY_PFLASH, this.pflashPaths);
         pb.putString(KEY_INITRD, this.initrdPath);
         pb.putStringArray(KEY_PARAMS, this.params);
 
@@ -486,6 +497,7 @@ public class VirtualMachineCustomImageConfig {
         private String kernelPath;
         private String initrdPath;
         private String bootloaderPath;
+        private String[] pflashPaths;
         private List<String> params = new ArrayList<>();
         private List<Disk> disks = new ArrayList<>();
         private List<SharedPath> sharedPaths = new ArrayList<>();
@@ -525,6 +537,12 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public Builder setBootloaderPath(String bootloaderPath) {
             this.bootloaderPath = bootloaderPath;
+            return this;
+        }
+
+        /** @hide */
+        public Builder setPflashPaths(String[] pflashPaths) {
+            this.pflashPaths = pflashPaths;
             return this;
         }
 
@@ -626,6 +644,7 @@ public class VirtualMachineCustomImageConfig {
                     this.kernelPath,
                     this.initrdPath,
                     this.bootloaderPath,
+                    this.pflashPaths,
                     this.params.toArray(new String[0]),
                     this.disks.toArray(new Disk[0]),
                     this.sharedPaths.toArray(new SharedPath[0]),

@@ -805,6 +805,16 @@ public final class VirtualMachineConfig {
                         .map((path) -> openOrNull(new File(path), MODE_READ_ONLY))
                         .orElse(null);
 
+        String[] pflashPaths = customImageConfig.getPflashPaths();
+        if (pflashPaths != null) {
+            config.pflash = new ParcelFileDescriptor[pflashPaths.length];
+            for (int i = 0; i < pflashPaths.length; i++) {
+                config.pflash[i] = openOrNull(new File(pflashPaths[i]), MODE_READ_WRITE);
+            }
+        } else {
+            config.pflash = new ParcelFileDescriptor[0];
+        }
+
         if (config.kernel == null && config.bootloader == null) {
           if (Arrays.stream(Build.SUPPORTED_ABIS).anyMatch("x86_64"::equals)) {
             config.bootloader = openOrNull(new File(U_BOOT_PREBUILT_PATH_X86), MODE_READ_ONLY);

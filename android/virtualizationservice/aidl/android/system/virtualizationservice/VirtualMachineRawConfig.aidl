@@ -59,6 +59,9 @@ parcelable VirtualMachineRawConfig {
      */
     @nullable ParcelFileDescriptor bootloader;
 
+    /** The pflash images, if any. */
+    ParcelFileDescriptor[] pflash;
+
     /** Disk images to be made available to the VM. */
     DiskImage[] disks;
 
