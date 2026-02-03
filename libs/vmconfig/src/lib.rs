@@ -79,6 +79,8 @@ pub struct VmConfig {
     pub usb_config: Option<UsbConfig>,
     /// VM Instance ID
     pub instance_id: Option<PathBuf>,
+    /// SMBIOS configuration
+    pub smbios: Option<SmbiosConfig>,
 }
 
 impl VmConfig {
@@ -157,6 +159,7 @@ impl VmConfig {
             usbConfig: usb_config,
             balloon: true,
             instanceId: instance_id,
+            smbiosOptions: self.smbios.as_ref().map(|x| x.to_parcelable()),
             ..Default::default()
         })
     }
@@ -254,6 +257,43 @@ pub struct UsbConfig {
 impl UsbConfig {
     fn to_parcelable(&self) -> Result<AidlUsbConfig> {
         Ok(AidlUsbConfig { controller: self.controller })
+    }
+}
+
+/// SMBIOS configuration
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SmbiosConfig {
+    /// BIOS vendor name.
+    pub bios_vendor: Option<String>,
+    /// BIOS version number (free-form string).
+    pub bios_version: Option<String>,
+    /// System manufacturer name.
+    pub manufacturer: Option<String>,
+    /// System product name.
+    pub product_name: Option<String>,
+    /// System serial number.
+    pub serial_number: Option<String>,
+    /// System UUID.
+    pub uuid: Option<String>,
+    /// Free-form OEM strings (SMBIOS type 11).
+    #[serde(default)]
+    pub oem_strings: Vec<String>,
+}
+
+impl SmbiosConfig {
+    fn to_parcelable(
+        &self,
+    ) -> android_system_virtualizationservice::aidl::android::system::virtualizationservice::SmbiosOptions::SmbiosOptions
+    {
+        android_system_virtualizationservice::aidl::android::system::virtualizationservice::SmbiosOptions::SmbiosOptions {
+            biosVendor: self.bios_vendor.clone(),
+            biosVersion: self.bios_version.clone(),
+            manufacturer: self.manufacturer.clone(),
+            productName: self.product_name.clone(),
+            serialNumber: self.serial_number.clone(),
+            uuid: self.uuid.clone(),
+            oemStrings: self.oem_strings.clone(),
+        }
     }
 }
 

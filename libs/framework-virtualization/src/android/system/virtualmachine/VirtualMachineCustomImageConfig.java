@@ -49,6 +49,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_TRACKPAD = "trackpad";
     private static final String KEY_AUTO_MEMORY_BALLOON = "auto_memory_balloon";
     private static final String KEY_USB_CONFIG = "usb_config";
+    private static final String KEY_SMBIOS = "smbios";
 
     @Nullable private final String name;
     @Nullable private final String osName;
@@ -61,6 +62,7 @@ public class VirtualMachineCustomImageConfig {
     @Nullable private final SharedPath[] sharedPaths;
     @Nullable private final DisplayConfig displayConfig;
     @Nullable private final AudioConfig audioConfig;
+    @Nullable private final SmbiosOptions smbiosOptions;
     private final boolean touch;
     private final boolean keyboard;
     private final boolean mouse;
@@ -165,7 +167,8 @@ public class VirtualMachineCustomImageConfig {
             AudioConfig audioConfig,
             boolean trackpad,
             boolean autoMemoryBalloon,
-            UsbConfig usbConfig) {
+            UsbConfig usbConfig,
+            SmbiosOptions smbiosOptions) {
         this.name = name;
         this.osName = osName;
         this.kernelPath = kernelPath;
@@ -186,6 +189,7 @@ public class VirtualMachineCustomImageConfig {
         this.trackpad = trackpad;
         this.autoMemoryBalloon = autoMemoryBalloon;
         this.usbConfig = usbConfig;
+        this.smbiosOptions = smbiosOptions;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -243,6 +247,9 @@ public class VirtualMachineCustomImageConfig {
         PersistableBundle usbConfigPb =
                 customImageConfigBundle.getPersistableBundle(KEY_USB_CONFIG);
         builder.setUsbConfig(UsbConfig.from(usbConfigPb));
+        PersistableBundle smbiosOptionsPb =
+                customImageConfigBundle.getPersistableBundle(KEY_SMBIOS);
+        builder.setSmbiosOptions(SmbiosOptions.from(smbiosOptionsPb));
         return builder.build();
     }
 
@@ -306,6 +313,11 @@ public class VirtualMachineCustomImageConfig {
         pb.putPersistableBundle(
                 KEY_USB_CONFIG,
                 Optional.ofNullable(usbConfig).map(uc -> uc.toPersistableBundle()).orElse(null));
+        pb.putPersistableBundle(
+                KEY_SMBIOS,
+                Optional.ofNullable(smbiosOptions)
+                        .map(so -> so.toPersistableBundle())
+                        .orElse(null));
         return pb;
     }
 
@@ -327,6 +339,78 @@ public class VirtualMachineCustomImageConfig {
     @Nullable
     public UsbConfig getUsbConfig() {
         return usbConfig;
+    }
+
+    @Nullable
+    public SmbiosOptions getSmbiosOptions() {
+        return smbiosOptions;
+    }
+
+    /** @hide */
+    public static final class SmbiosOptions {
+        @Nullable public final String biosVendor;
+        @Nullable public final String biosVersion;
+        @Nullable public final String manufacturer;
+        @Nullable public final String productName;
+        @Nullable public final String serialNumber;
+        @Nullable public final String uuid;
+        @NonNull public final String[] oemStrings;
+
+        public SmbiosOptions(
+                String biosVendor,
+                String biosVersion,
+                String manufacturer,
+                String productName,
+                String serialNumber,
+                String uuid,
+                String[] oemStrings) {
+            this.biosVendor = biosVendor;
+            this.biosVersion = biosVersion;
+            this.manufacturer = manufacturer;
+            this.productName = productName;
+            this.serialNumber = serialNumber;
+            this.uuid = uuid;
+            this.oemStrings = (oemStrings != null) ? oemStrings : new String[0];
+        }
+
+        android.system.virtualizationservice.SmbiosOptions toParcelable() {
+            android.system.virtualizationservice.SmbiosOptions parcelable =
+                    new android.system.virtualizationservice.SmbiosOptions();
+            parcelable.biosVendor = this.biosVendor;
+            parcelable.biosVersion = this.biosVersion;
+            parcelable.manufacturer = this.manufacturer;
+            parcelable.productName = this.productName;
+            parcelable.serialNumber = this.serialNumber;
+            parcelable.uuid = this.uuid;
+            parcelable.oemStrings = this.oemStrings;
+            return parcelable;
+        }
+
+        private static SmbiosOptions from(PersistableBundle pb) {
+            if (pb == null) {
+                return null;
+            }
+            return new SmbiosOptions(
+                    pb.getString("bios_vendor"),
+                    pb.getString("bios_version"),
+                    pb.getString("manufacturer"),
+                    pb.getString("product_name"),
+                    pb.getString("serial_number"),
+                    pb.getString("uuid"),
+                    pb.getStringArray("oem_strings"));
+        }
+
+        private PersistableBundle toPersistableBundle() {
+            PersistableBundle pb = new PersistableBundle();
+            pb.putString("bios_vendor", biosVendor);
+            pb.putString("bios_version", biosVersion);
+            pb.putString("manufacturer", manufacturer);
+            pb.putString("product_name", productName);
+            pb.putString("serial_number", serialNumber);
+            pb.putString("uuid", uuid);
+            pb.putStringArray("oem_strings", oemStrings);
+            return pb;
+        }
     }
 
     /** @hide */
@@ -512,6 +596,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean trackpad;
         private boolean autoMemoryBalloon = false;
         private UsbConfig usbConfig;
+        private SmbiosOptions smbiosOptions;
 
         /** @hide */
         public Builder() {}
@@ -637,6 +722,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder setSmbiosOptions(SmbiosOptions smbiosOptions) {
+            this.smbiosOptions = smbiosOptions;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -658,7 +749,8 @@ public class VirtualMachineCustomImageConfig {
                     audioConfig,
                     trackpad,
                     autoMemoryBalloon,
-                    usbConfig);
+                    usbConfig,
+                    smbiosOptions);
         }
     }
 

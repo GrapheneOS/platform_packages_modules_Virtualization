@@ -938,6 +938,10 @@ public final class VirtualMachineConfig {
                                     return usbConfig;
                                 })
                         .orElse(null);
+        config.smbiosOptions =
+                Optional.ofNullable(customImageConfig.getSmbiosOptions())
+                        .map(so -> so.toParcelable())
+                        .orElse(null);
         config.teeServices = EMPTY_STRING_ARRAY;
         config.customMemoryBackingFiles = new CustomMemoryBackingFile[0];
         config.hostServices = EMPTY_STRING_ARRAY;

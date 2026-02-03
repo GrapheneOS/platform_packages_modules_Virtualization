@@ -209,6 +209,7 @@ impl CrosvmCommand {
         command.add_assigned_devices_arg(context)?;
         command.add_dump_dtb_arg(context)?;
         command.add_gdb_arg(context)?;
+        command.add_smbios_arg(context)?;
         command.add_gunyah_specific_arg(context)?;
         command.add_teeservices_arg(context)?;
         Ok(command)
@@ -1122,6 +1123,39 @@ impl CrosvmCommand {
 
             self.args(["--gdb", &gdb_port.to_string()]);
             self.args(["-p", "nokaslr"]);
+        }
+        Ok(())
+    }
+
+    fn add_smbios_arg(&mut self, _context: &RunContext) -> Result<()> {
+        // SMBIOS is currently only supported by crosvm on x86_64.
+        #[cfg(target_arch = "x86_64")]
+        if let Some(smbios) = &_context.config.smbiosOptions {
+            let mut params = Vec::new();
+            if let Some(bios_vendor) = &smbios.biosVendor {
+                params.push(format!("bios-vendor={bios_vendor}"));
+            }
+            if let Some(bios_version) = &smbios.biosVersion {
+                params.push(format!("bios-version={bios_version}"));
+            }
+            if let Some(manufacturer) = &smbios.manufacturer {
+                params.push(format!("manufacturer={manufacturer}"));
+            }
+            if let Some(product_name) = &smbios.productName {
+                params.push(format!("product-name={product_name}"));
+            }
+            if let Some(serial_number) = &smbios.serialNumber {
+                params.push(format!("serial-number={serial_number}"));
+            }
+            if let Some(uuid) = &smbios.uuid {
+                params.push(format!("uuid={uuid}"));
+            }
+            if !smbios.oemStrings.is_empty() {
+                params.push(format!("oem-strings=[{}]", smbios.oemStrings.join(",")));
+            }
+            if !params.is_empty() {
+                self.args(["--smbios", &params.join(",")]);
+            }
         }
         Ok(())
     }
