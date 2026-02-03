@@ -835,6 +835,7 @@ public final class VirtualMachineConfig {
         for (int i = 0; i < config.disks.length; i++) {
             config.disks[i] = new DiskImage();
             config.disks[i].writable = customImageConfig.getDisks()[i].isWritable();
+            config.disks[i].id = customImageConfig.getDisks()[i].getId();
             String diskImagePath = customImageConfig.getDisks()[i].getImagePath();
             if (diskImagePath != null) {
                 config.disks[i].image =

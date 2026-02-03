@@ -207,6 +207,8 @@ pub struct DiskImage {
     pub partitions: Vec<Partition>,
     /// Whether this disk should be writable by the VM.
     pub writable: bool,
+    /// Identifier for the disk device.
+    pub id: Option<String>,
 }
 
 impl DiskImage {
@@ -217,6 +219,7 @@ impl DiskImage {
             image: maybe_open_parcel_file(self.image.as_ref(), self.writable)?,
             writable: self.writable,
             partitions,
+            id: self.id.clone(),
         })
     }
 }

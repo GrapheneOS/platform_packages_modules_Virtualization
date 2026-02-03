@@ -16,6 +16,7 @@
 
 package android.system.virtualmachine;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.PersistableBundle;
 
@@ -34,6 +35,7 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_PARAMS = "params";
     private static final String KEY_DISK_WRITABLES = "disk_writables";
     private static final String KEY_DISK_IMAGES = "disk_images";
+    private static final String KEY_DISK_IDS = "disk_ids";
     private static final String KEY_PARTITION_LABELS = "partition_labels_";
     private static final String KEY_PARTITION_IMAGES = "partition_images_";
     private static final String KEY_PARTITION_WRITABLES = "partition_writables_";
@@ -208,12 +210,15 @@ public class VirtualMachineCustomImageConfig {
         }
         boolean[] writables = customImageConfigBundle.getBooleanArray(KEY_DISK_WRITABLES);
         String[] diskImages = customImageConfigBundle.getStringArray(KEY_DISK_IMAGES);
+        String[] diskIds = customImageConfigBundle.getStringArray(KEY_DISK_IDS);
         if (writables != null && diskImages != null) {
             if (writables.length == diskImages.length) {
                 for (int i = 0; i < writables.length; i++) {
                     String diskImage = diskImages[i];
                     diskImage = diskImage.equals("") ? null : diskImage;
-                    Disk disk = writables[i] ? Disk.RWDisk(diskImage) : Disk.RODisk(diskImage);
+                    String diskId = (diskIds != null && i < diskIds.length) ? diskIds[i] : "";
+                    diskId = diskId.equals("") ? null : diskId;
+                    Disk disk = new Disk(writables[i], diskImage, diskId);
                     String[] labels =
                             customImageConfigBundle.getStringArray(KEY_PARTITION_LABELS + i);
                     String[] images =
@@ -266,10 +271,13 @@ public class VirtualMachineCustomImageConfig {
         if (disks != null) {
             boolean[] writables = new boolean[disks.length];
             String[] images = new String[disks.length];
+            String[] ids = new String[disks.length];
             for (int i = 0; i < disks.length; i++) {
                 writables[i] = disks[i].writable;
                 String imagePath = disks[i].imagePath;
                 images[i] = imagePath == null ? "" : imagePath;
+                String id = disks[i].id;
+                ids[i] = id == null ? "" : id;
 
                 int numPartitions = disks[i].getPartitions().size();
                 String[] partitionLabels = new String[numPartitions];
@@ -291,6 +299,7 @@ public class VirtualMachineCustomImageConfig {
             }
             pb.putBooleanArray(KEY_DISK_WRITABLES, writables);
             pb.putStringArray(KEY_DISK_IMAGES, images);
+            pb.putStringArray(KEY_DISK_IDS, ids);
         }
         pb.putPersistableBundle(
                 KEY_DISPLAY_CONFIG,
@@ -519,22 +528,34 @@ public class VirtualMachineCustomImageConfig {
     public static final class Disk {
         private final boolean writable;
         private final String imagePath;
+        @Nullable private final String id;
         private final List<Partition> partitions;
 
-        private Disk(boolean writable, String imagePath) {
+        private Disk(boolean writable, String imagePath, @Nullable String id) {
             this.writable = writable;
             this.imagePath = imagePath;
+            this.id = id;
             this.partitions = new ArrayList<>();
         }
 
         /** @hide */
         public static Disk RWDisk(String imagePath) {
-            return new Disk(true, imagePath);
+            return new Disk(true, imagePath, null);
         }
 
         /** @hide */
         public static Disk RODisk(String imagePath) {
-            return new Disk(false, imagePath);
+            return new Disk(false, imagePath, null);
+        }
+
+        /** @hide */
+        public static Disk RWDisk(String imagePath, String id) {
+            return new Disk(true, imagePath, id);
+        }
+
+        /** @hide */
+        public static Disk RODisk(String imagePath, String id) {
+            return new Disk(false, imagePath, id);
         }
 
         /** @hide */
@@ -545,6 +566,12 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public String getImagePath() {
             return imagePath;
+        }
+
+        /** @hide */
+        @Nullable
+        public String getId() {
+            return id;
         }
 
         /** @hide */

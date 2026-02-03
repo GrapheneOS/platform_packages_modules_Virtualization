@@ -29,4 +29,7 @@ parcelable DiskImage {
 
     /** Partition images to be assembled into a composite image. */
     Partition[] partitions;
+
+    /** Identifier for the disk device. */
+    @nullable String id;
 }

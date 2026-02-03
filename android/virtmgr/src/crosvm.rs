@@ -804,7 +804,11 @@ impl CrosvmCommand {
             };
 
             let path = self.add_preserved_fd(image);
-            self.args(["--block", &format!("path={},ro={},lock=false", path, !disk.writable)]);
+            let mut block_arg = format!("path={},ro={},lock=false", path, !disk.writable);
+            if let Some(id) = &disk.id {
+                block_arg.push_str(&format!(",id={}", id));
+            }
+            self.args(["--block", &block_arg]);
         }
         Ok(())
     }

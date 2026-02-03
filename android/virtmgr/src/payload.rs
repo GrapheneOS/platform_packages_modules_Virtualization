@@ -464,7 +464,7 @@ fn make_payload_disk(
             guid: None,
         });
     }
-    Ok(aidl::DiskImage { image: None, partitions, writable: false })
+    Ok(aidl::DiskImage { image: None, partitions, writable: false, id: None })
 }
 
 fn run_derive_classpath() -> Result<String> {
@@ -578,6 +578,7 @@ pub fn add_microdroid_vendor_image(
             writable: false,
             guid: None,
         }],
+        id: None,
     })
 }
 
@@ -616,6 +617,7 @@ pub fn add_microdroid_system_images(
         image: None,
         partitions: writable_partitions,
         writable: true,
+        id: None,
     });
 
     Ok(())
