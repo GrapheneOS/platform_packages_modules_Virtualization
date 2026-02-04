@@ -32,6 +32,7 @@ use crate::selinux::{
     check_host_service_permission, check_tee_service_permission, getfilecon, getprevcon, SeContext,
 };
 use crate::{get_calling_pid, get_calling_uid};
+use android_system_virtualizationcommon::aidl::android::system::virtualizationcommon::ICEStoreKEK::ICEStoreKEK;
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use apkverify::{HashAlgorithm, V4Signature};
 use avflog::LogResult;
@@ -2251,6 +2252,29 @@ impl aidl::IEncryptedStoreKEK for EncryptedStoreKEKWrapper {
     }
 }
 
+// We need a wrapper for ICEStoreWrapper because of the same reason as IEncryptedStoreKEKWrapper.
+struct CEStoreKEKWrapper {
+    wrapped_kek: Strong<dyn aidl::ICEStoreKEK>,
+}
+
+impl CEStoreKEKWrapper {
+    fn new(kek: &Strong<dyn aidl::ICEStoreKEK>) -> Self {
+        Self { wrapped_kek: kek.clone() }
+    }
+}
+
+impl Interface for CEStoreKEKWrapper {}
+
+impl aidl::ICEStoreKEK for CEStoreKEKWrapper {
+    fn getKEK(&self) -> binder::Result<Option<Vec<u8>>> {
+        self.wrapped_kek.getKEK()
+    }
+
+    fn onKEKCreated(&self, kek: &[u8]) -> binder::Result<()> {
+        self.wrapped_kek.onKEKCreated(kek)
+    }
+}
+
 // We need a wrapper for IGuestAgent because of the same reason as IEncryptedStoreKEKWrapper.
 struct GuestAgentWrapper {
     wrapped: Strong<dyn aidl::IGuestAgent>,
@@ -2279,6 +2303,12 @@ impl aidl::IGuestAgent for GuestAgentWrapper {
 
     fn trimAsync(&self) -> binder::Result<()> {
         self.wrapped.trimAsync()
+    }
+
+    fn userUnlocked(&self, user_id: i32, kek: &Strong<dyn ICEStoreKEK>) -> binder::Result<()> {
+        let kek_wrapper =
+            aidl::BnCEStoreKEK::new_binder(CEStoreKEKWrapper::new(kek), BinderFeatures::default());
+        self.wrapped.userUnlocked(user_id, &kek_wrapper)
     }
 }
 

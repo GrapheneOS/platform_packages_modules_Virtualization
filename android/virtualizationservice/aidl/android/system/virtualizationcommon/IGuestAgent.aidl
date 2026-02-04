@@ -15,6 +15,8 @@
  */
 package android.system.virtualizationcommon;
 
+import android.system.virtualizationcommon.ICEStoreKEK;
+
 interface IGuestAgent {
     /**
      * Shuts the VM down gracefully.
@@ -45,4 +47,7 @@ interface IGuestAgent {
 
     /** Requests the VM to trim its memory usage. */
     @SuppressWarnings(value={"mixed-oneway"}) oneway void trimAsync() = 4;
+
+    /** Called when a user is unlocked. */
+    void userUnlocked(in int user_id, ICEStoreKEK per_user_kek) = 5;
 }
