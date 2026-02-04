@@ -17,19 +17,29 @@ PLATFORM_SECURITY_PATCH_TIMESTAMP_STRING = select(soong_config_variable("ANDROID
 
 genrule {
     name: "platform_security_patch_timestamp_rs",
-    out: ["lib.rs"],
+    srcs: ["platform_security_patch_timestamp_rules.mk"],
+    out: [
+        "lib.rs",
+        "rules.mk",
+    ],
     cmd: "(" +
         "    echo '#![no_std]';" +
         "    echo '#![allow(missing_docs)]';" +
         "    echo 'pub const TIMESTAMP: u64 = " + PLATFORM_SECURITY_PATCH_TIMESTAMP_STRING + ";'" +
-        ") > $(out)",
+        ") > $(genDir)/lib.rs;" +
+        "cp $(location platform_security_patch_timestamp_rules.mk) $(genDir)/rules.mk;",
 }
 
 rust_library_rlib {
     name: "libplatform_security_patch_timestamp",
     crate_name: "platform_security_patch_timestamp",
-    defaults: ["vmbase_rlib_defaults"],
     srcs: [":platform_security_patch_timestamp_rs"],
+    prefer_rlib: true,
+    no_stdlibs: true,
+    stdlibs: [
+        "libcompiler_builtins.rust_sysroot",
+        "libcore.rust_sysroot",
+    ],
 }
 
 rust_defaults {
