@@ -69,12 +69,19 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
     }
 
     private String chooseOs(TestDevice device) throws DeviceNotAvailableException {
-        CommandResult result = device.executeShellV2Command("getconf PAGE_SIZE");
-        String stdout = result.getStdout().trim();
-        if ("16384".equals(stdout)) { // 16K
-            return "microdroid_16k";
+        int apiLevel = device.getApiLevel();
+        if (device.getApiLevel() < 36) {
+            // No `--os` support on older device.
+            return "";
+        } else {
+            // 16K is supported since API level 35, so check if the device is capable.
+            CommandResult result = device.executeShellV2Command("getconf PAGE_SIZE");
+            String stdout = result.getStdout().trim();
+            if ("16384".equals(stdout)) { // 16K
+                return "microdroid_16k";
+            }
+            return "microdroid";
         }
-        return "microdroid";
     }
 
     private boolean isVirtualDevice(TestDevice device) throws DeviceNotAvailableException {
@@ -121,8 +128,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
             // Note: MicrodroidBuilder#build() checks this, but just in case.
             microdroid.waitForBootComplete(timeoutMs);
         } catch (Exception e) {
-            CLog.e("Failed to launch Microdroid", e);
-            throw new DeviceNotAvailableException(errorMessage);
+            throw new RuntimeException(errorMessage, e);
         } finally {
             if (microdroid != null) {
                 device.shutdownMicrodroid(microdroid);
@@ -145,11 +151,6 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
         }
 
         String os = chooseOs(testDevice);
-        if (os == null) {
-            CLog.d("vm info returned no supported OS. Skipping microdroid canary.");
-            return;
-        }
-
         ensureMicrodroidBoot(testDevice, apkPath, os, /* protectedVm= */ true);
         ensureMicrodroidBoot(testDevice, apkPath, os, /* protectedVm= */ false);
     }
