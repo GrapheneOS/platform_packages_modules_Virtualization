@@ -61,6 +61,10 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"कीबोर्ड दाखवा"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"माउस रिलीझ करा"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"माउस लॉक करा"</string>
+    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
+    <skip />
+    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
+    <skip />
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"डिस्प्ले नियंत्रणे बंद करा"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"डिस्प्ले पर्याय"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"मागील पेज"</string>
@@ -82,15 +86,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"पुन्हा प्रयत्न करा"</string>
     <string name="settings_title" msgid="3035373808103055663">"सेटिंग्ज"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"मागे जा"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"डिस्कचा आकार बदला"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"रूट पार्टिशनचा आकार बदला"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> असाइन केले आहे"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"कमाल <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"डिस्कचा आकार बदलण्यासाठी डिव्हाइसवर पुरेशी जागा नाही"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"रद्द करा"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"लागू करा"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"डिस्कचा आकार बदलण्यासाठी टर्मिनल रीस्टार्ट केले जाईल"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"कन्फर्म करा"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"पोर्ट नियंत्रण"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"ऐकण्याच्या पोर्टना अनुमती द्या/नाकारा"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"ऐकण्याचे पोर्ट"</string>

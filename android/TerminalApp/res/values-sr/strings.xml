@@ -27,7 +27,7 @@
     <string name="installer_btn_install" msgid="1249687873554194768">"Инсталирај"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"Инсталира се"</string>
     <string name="installer_btn_cancel" msgid="3560257458966328733">"Откажи инсталацију"</string>
-    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"Желите да зауставите инсталирање?"</string>
+    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"Желите да откажете инсталирање?"</string>
     <string name="installer_dlg_message_cancel_install" msgid="7122895060756794760">"Преузимање ће бити заустављено и изгубићете напредак."</string>
     <string name="installer_dlg_btn_cancel_install" msgid="7061500109118550183">"Заустави преуз."</string>
     <string name="installer_dlg_btn_continue_install" msgid="4038480932377540963">"Настави"</string>
@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Прикажи тастатуру"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Пусти миш"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Закључај миш"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Искључи режим додирне табле"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Укључи режим додирне табле"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Затвори контроле приказа"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Опције приказа"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Претходна страница"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Пробај поново"</string>
     <string name="settings_title" msgid="3035373808103055663">"Подешавања"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Назад"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"Промена величине диска"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"Промените величину основне партиције"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"Додељено: <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"Максимално: <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"Нема довољно простора на уређају да би се променила величина диска"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Откажи"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Примени"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Терминал ће се рестартовати да би се променила величина диска"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Потврди"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Контрола порта"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Дозволите или забраните портове за слушање"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Портови за слушање"</string>

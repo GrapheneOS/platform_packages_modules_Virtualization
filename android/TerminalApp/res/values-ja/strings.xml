@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"キーボードを表示する"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"マウスを離す"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"マウスをロックする"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"トラックパッド モードを OFF にする"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"トラックパッド モードを ON にする"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"ディスプレイ コントロールを閉じる"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"表示オプション"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"前のページ"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"再試行"</string>
     <string name="settings_title" msgid="3035373808103055663">"設定"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"戻る"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"ディスクサイズの変更"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"ルート パーティションのサイズを変更する"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> 割り当て済み"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"最大 <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"デバイスの空き容量が足りないため、ディスクのサイズを変更できません"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"キャンセル"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"適用"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"ディスクのサイズを変更するためにターミナルが再起動します"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"確定"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"ポートの管理"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"リスニング ポートの許可 / 拒否"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"リスニング ポート"</string>

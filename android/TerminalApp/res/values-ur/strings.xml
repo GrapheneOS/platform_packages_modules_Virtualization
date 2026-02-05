@@ -61,6 +61,10 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"کی بورڈ دکھائیں"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"ماؤس ریلیز کریں"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"ماؤس کو مقفل کریں"</string>
+    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
+    <skip />
+    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
+    <skip />
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"ڈسپلے کنٹرولز بند کریں"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"ڈسپلے کے اختیارات"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"پچھلا صفحہ"</string>
@@ -82,15 +86,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"دوبارہ کوشش کریں"</string>
     <string name="settings_title" msgid="3035373808103055663">"ترتیبات"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"پیچھے"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"ڈسک کا سائز تبدیل کریں"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"روٹ پارٹیشن کا سائز تبدیل کریں"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"‫<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> تفویض کردہ"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"زیادہ سے زیادہ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"ڈسک کا سائز تبدیل کرنے کے لیے آلہ پر کافی جگہ نہیں ہے"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"منسوخ کریں"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"لاگو کریں"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"ڈسک کا سائز تبدیل کرنے کے لیے ٹرمینل کو ری سٹارٹ کیا جائے گا"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"تصدیق کریں"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"پورٹ کنٹرول"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"لسننگ پورٹس کو اجازت دیں/مسترد کریں"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"لسننگ پورٹس"</string>

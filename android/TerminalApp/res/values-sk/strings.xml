@@ -26,16 +26,16 @@
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Sťahovať iba cez Wi‑Fi"</string>
     <string name="installer_btn_install" msgid="1249687873554194768">"Inštalovať"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"Inštaluje sa"</string>
-    <string name="installer_btn_cancel" msgid="3560257458966328733">"Zrušiť montáž"</string>
-    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"Zrušiť montáž"</string>
-    <string name="installer_dlg_message_cancel_install" msgid="7122895060756794760">"Sťahovanie bude zastavené a prídete o postup."</string>
+    <string name="installer_btn_cancel" msgid="3560257458966328733">"Zrušiť inštaláciu"</string>
+    <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"Chcete inštaláciu zrušiť?"</string>
+    <string name="installer_dlg_message_cancel_install" msgid="7122895060756794760">"Sťahovanie bude zastavené a prídete o vykonané kroky."</string>
     <string name="installer_dlg_btn_cancel_install" msgid="7061500109118550183">"Zastaviť sťahovanie"</string>
     <string name="installer_dlg_btn_continue_install" msgid="4038480932377540963">"Pokračovať"</string>
     <string name="installer_snkbar_error_network" msgid="4231423523038307349">"Nepodarilo sa nainštalovať pre problém so sieťou"</string>
     <string name="installer_snkbar_error_no_wifi" msgid="152342982965575969">"Inštalácia sa nepodarila, pretože nie je k dispozícii Wi‑Fi"</string>
     <string name="installer_snkbar_error_unknown" msgid="2448220084258837513">"Nepodarilo sa nainštalovať. Skúste to znova"</string>
     <string name="installer_snkbar_error_no_space" msgid="2980013654869871281">"Nepodarilo sa nainštalovať pre nedostatok priestoru na disku."</string>
-    <string name="installer_snkbar_action_storage" msgid="3154991131973261946">"Správa úložiska"</string>
+    <string name="installer_snkbar_action_storage" msgid="3154991131973261946">"Správa ukladacieho priestoru"</string>
     <string name="installer_msg_mobile_data" msgid="3235093415908956584">"Pokračuje sa v sťahovaní pomocou mobilných dát…"</string>
     <string name="installer_msg_waiting_network" msgid="5866026140340225420">"Čaká sa na opätovné pripojenie k sieti…"</string>
     <string name="terminal_hint_display" msgid="7172326332224647219">"Zobrazenie terminálu"</string>
@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Zobraziť klávesnicu"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Uvoľniť myš"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Uzamknúť myš"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Vypnúť režim trackpadu"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Zapnúť režim trackpadu"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Zavrieť ovládanie obrazovky"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Možnosti zobrazenia"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Predchádzajúca stránka"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Skúsiť znova"</string>
     <string name="settings_title" msgid="3035373808103055663">"Nastavenia"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Späť"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"Zmena veľkosti disku"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"Zmena veľkosti koreňového oddielu"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"Pridelené <xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"Max. <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"V zariadení nie je dostatok miesta na zmenu veľkosti disku"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"Zrušiť"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"Použiť"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"Terminál sa reštartuje, aby sa zmenila veľkosť disku"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"Potvrdiť"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Ovládanie portov"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Povoliť alebo zakázať porty počúvania"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Porty počúvania"</string>

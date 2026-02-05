@@ -61,6 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"கீபோர்டைக் காட்டும்"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"மவுஸை விடுவிக்கும்"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"மவுஸைப் பூட்டும்"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"டிராக்பேட் மோடை ஆஃப் செய்யும்"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"டிராக்பேட் மோடை ஆன் செய்யும்"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"டிஸ்பிளே கட்டுப்பாடுகளை மூடும்"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"டிஸ்பிளே விருப்பங்கள்"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"முந்தைய பக்கம்"</string>
@@ -82,15 +84,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"மீண்டும் முயல்க"</string>
     <string name="settings_title" msgid="3035373808103055663">"அமைப்புகள்"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"பின்செல்லும்"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"டிஸ்க் அளவை மாற்றுதல்"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"ரூட் பார்டிஷன் அளவை மாற்றலாம்"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ஒதுக்கப்பட்டது"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"அதிகபட்சம் <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"டிஸ்க் அளவை மாற்ற சாதனத்தில் போதுமான இடம் இல்லை"</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"ரத்துசெய்"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"பயன்படுத்து"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"டிஸ்க் அளவை மாற்ற டெர்மினல் மீண்டும் தொடங்கப்படும்"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"உறுதிசெய்"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"போர்ட் கட்டுப்பாடு"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"லிஸனிங் போர்ட்டுகளை அனுமதிக்கலாம்/நிராகரிக்கலாம்"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"லிஸனிங் போர்ட்டுகள்"</string>
