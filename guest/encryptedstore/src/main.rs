@@ -251,7 +251,7 @@ fn encryptedstore_init(
     // We might need to format it with filesystem if this is a "seen-for-the-first-time" device.
     if needs_formatting {
         info!("Freshly formatting the crypt device");
-        format_ext4(&crypt_device)?;
+        format_ext4(&crypt_device, dm_default_key)?;
     } else {
         info!("Running e2fsck before potential resize");
         e2fsck(&crypt_device).context("e2fsck failed before potential resize")?;
@@ -348,7 +348,7 @@ fn zeroize_header(data_device: &Path) -> Result<()> {
     Ok(())
 }
 
-fn format_ext4(device: &Path) -> Result<()> {
+fn format_ext4(device: &Path, dm_default_key: bool) -> Result<()> {
     let root_dir_uid_gid = format!(
         "root_owner={}:{}",
         microdroid_uids::ROOT_UID,
@@ -360,7 +360,8 @@ fn format_ext4(device: &Path) -> Result<()> {
          * extents: Not enabling extents reduces the coverage of metadata checksumming.
          * 64bit: larger fields afforded by this feature enable full-strength checksumming.
          */
-        "-O metadata_csum, extents, 64bit",
+        &("-O metadata_csum, extents, 64bit".to_owned()
+            + if dm_default_key { ", encrypt" } else { "" }),
         "-b 4096", // block size in the filesystem,
         "-E",
         &root_dir_uid_gid,

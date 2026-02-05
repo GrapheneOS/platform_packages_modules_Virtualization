@@ -17,6 +17,7 @@
 mod cgroup_monitor;
 mod dice;
 mod encrypted_assets;
+mod encrypted_folders;
 mod encrypted_store_kek;
 mod instance;
 mod ioutil;
@@ -33,6 +34,7 @@ use android_system_virtualizationcommon::aidl::android::system::virtualizationco
     ErrorCode::ErrorCode,
     Atom::Atom,
     Atom::StaleEncryptedstoreDetected::StaleEncryptedstoreDetected,
+    ICEStoreKEK::ICEStoreKEK,
     IGuestAgent::BnGuestAgent, IGuestAgent::IGuestAgent,
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
@@ -44,10 +46,12 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
     VM_APK_CONTENTS_PATH,
     VM_PAYLOAD_SERVICE_SOCKET_NAME,
     ENCRYPTEDSTORE_MOUNTPOINT,
+    ENCRYPTEDSTORE_PER_USER_FOLDERS
 };
 
 use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
+use crate::encrypted_folders::set_encryption_key;
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{ApexData, EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::tenant::{TenantAttribute, TenantManager};
@@ -86,7 +90,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::collections::HashSet;
 use std::env;
 use std::ffi::{CStr, CString};
-use std::fs::{self, create_dir, File, OpenOptions};
+use std::fs::{self, create_dir, create_dir_all, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
 use std::os::fd::AsRawFd;
@@ -372,9 +376,6 @@ fn try_main() -> Result<()> {
         .context("cannot connect to VirtualMachineService")
         .map_err(|e| MicrodroidError::FailedToConnectToVirtualizationService(e.to_string()))?;
 
-    let guest_agent = GuestAgent::new_binder();
-    service.registerGuestAgent(&guest_agent)?;
-
     #[cfg(vm_to_host_services)]
     register_rpc_servicemanager(
         service
@@ -575,6 +576,9 @@ fn try_run_payload(
     let (vm_secret, is_new_instance) =
         VmSecret::new(dice_artifacts, service, state).context("Failed to create VM secrets")?;
     let vm_secret = Arc::new(vm_secret);
+
+    let guest_agent = GuestAgent::new_binder(vm_secret.clone());
+    service.registerGuestAgent(&guest_agent)?;
 
     let mut zipfuse = Zipfuse::default();
 
@@ -1396,8 +1400,9 @@ fn prepare_encryptedstore(
 }
 
 /// Implementation of `IGuestAgent`
-#[derive(Debug, Default)]
-struct GuestAgent {}
+struct GuestAgent {
+    vm_secret: Arc<VmSecret>,
+}
 
 impl Interface for GuestAgent {}
 
@@ -1437,11 +1442,50 @@ impl IGuestAgent for GuestAgent {
         }
         Ok(())
     }
+
+    fn userUnlocked(&self, user_id: i32, kek: &Strong<dyn ICEStoreKEK>) -> binder::Result<()> {
+        let user_path = format!("{}/{user_id}", ENCRYPTEDSTORE_PER_USER_FOLDERS);
+        let user_path = Path::new(&user_path);
+        if let Err(e) = create_dir_all(user_path) {
+            return Err(anyhow!("Cannot create {} {e}", user_path.display()))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+
+        set_encrypted_store_per_user_key(kek, &self.vm_secret, user_path)
+            .context("Failed to set per user key")
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+    }
+}
+
+fn set_encrypted_store_per_user_key(
+    es_kek: &Strong<dyn ICEStoreKEK>,
+    vm_secret: &VmSecret,
+    user_path: &Path,
+) -> Result<()> {
+    let mut encryption_key = ZVec::new(ENCRYPTEDSTORE_KEKSIZE)?;
+    vm_secret
+        .derive_encryptedstore_key_encryption_key(&mut encryption_key)
+        .context("failed to derive encryptedstore_key encryption key")?;
+
+    let key = match es_kek.getKEK().context("failed to get KEK blob")? {
+        Some(kek) => decrypt_kek(&kek, &encryption_key).context("failed to decrypt KEK blob")?,
+        None => {
+            let mut key = ZVec::new(ENCRYPTEDSTORE_KEYSIZE)?;
+            vm_secret.derive_random_key(&mut key).context("derive random key")?;
+            let encrypted_kek =
+                encrypt_kek(&key, &encryption_key).context("failed to encrypt KEK")?;
+            es_kek.onKEKCreated(&encrypted_kek).context("failed to send KEK blob to host")?;
+            key
+        }
+    };
+    set_encryption_key(user_path, &key)?;
+    info!("Successfully unlocked per-user path {}", user_path.display());
+    Ok(())
 }
 
 impl GuestAgent {
-    fn new_binder() -> Strong<dyn IGuestAgent> {
-        BnGuestAgent::new_binder(GuestAgent {}, BinderFeatures::default())
+    fn new_binder(vm_secret: Arc<VmSecret>) -> Strong<dyn IGuestAgent> {
+        BnGuestAgent::new_binder(GuestAgent { vm_secret }, BinderFeatures::default())
     }
 }
 
