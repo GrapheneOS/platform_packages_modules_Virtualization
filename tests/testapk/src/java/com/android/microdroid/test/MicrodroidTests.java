@@ -356,7 +356,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
-    @CddTest
+    @CddTest(requirements = {"3.1/C-0-1"})
     @VsrTest(requirements = {"VSR-7.1-001.006"})
     @GmsTest(requirements = {"GMS-VSR-7.1-001.005"})
     public void vmAttestationSucceedsWithInternet() throws Exception {
