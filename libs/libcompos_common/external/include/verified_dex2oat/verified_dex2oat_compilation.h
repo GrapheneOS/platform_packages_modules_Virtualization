@@ -345,7 +345,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_CompilationContext_create(
  * `AVerifiedDex2Oat_createCompilationContext`
  */
 void AVerifiedDex2Oat_CompilationContext_destroy(
-        const AVerifiedDex2Oat_CompilationContext* _Nonnull compCtx) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_CompilationContext* _Nullable compCtx) __INTRODUCED_IN(37);
 
 /**
  * Add a dex2oat argument to the compilation context.

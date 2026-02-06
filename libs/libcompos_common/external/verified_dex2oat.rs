@@ -662,15 +662,14 @@ pub extern "C" fn AVerifiedDex2Oat_Status_toString(status: FFIStatus) -> *const 
 ///
 /// # Safety
 /// The caller must guarantee:
-/// - `comp_ctx` points to a pointer that points to a `CompilationContext`
+/// - `comp_ctx` points to a pointer that points to a `CompilationContext` or is null.
 #[no_mangle]
 pub unsafe extern "C" fn AVerifiedDex2Oat_CompilationContext_destroy(
     comp_ctx: *const FFICompilationContext,
 ) {
-    assert!(
-        !comp_ctx.is_null(),
-        "AVerifiedDex2Oat_CompilationContext_release called with a null compilation context"
-    );
+    if comp_ctx.is_null() {
+        return;
+    }
     // SAFETY: Caller guarantees that comp_ctx points to a FFICompilationContext created by
     // `AVerifiedDex2Oat_CompilationContext_create`. This decrements the ref count which
     // will result it in being dropped.
@@ -693,7 +692,7 @@ pub unsafe extern "C" fn AVerifiedDex2Oat_start(
     success_user_data: *mut c_void,
     on_failure_c_cb: FFIOnFailureCallback,
     failure_user_data: *mut c_void,
-    recorded_compiler_args_fd: i32,
+    recorded_compiler_args_fd: c_int,
     timeout_seconds: u32,
 ) -> FFIStatus {
     assert!(!comp_ctx.is_null(), "AVerifiedDex2Oat_start called with a null compilation context");
