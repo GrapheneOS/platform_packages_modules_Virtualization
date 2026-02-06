@@ -53,4 +53,6 @@ enum DeathReason {
     HANGUP = 16,
     /** The VCPU stalled */
     WATCHDOG_REBOOT = 17,
+    /** Host is shutting down */
+    HOST_SHUTDOWN = 18,
 }
