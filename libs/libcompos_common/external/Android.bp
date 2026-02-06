@@ -37,9 +37,10 @@ rust_ffi {
     crate_name: "com_android_compos_ffi_c",
     defaults: ["libcomposd_c_common_defaults"],
     export_include_dirs: ["include"],
+    version_script: "libcom_android_compos_ffi_c.map.txt",
     stubs: {
         symbol_file: "libcom_android_compos_ffi_c.map.txt",
-        versions: ["37"],
+        versions: ["38"],
     },
     apex_available: [
         "com.android.compos",

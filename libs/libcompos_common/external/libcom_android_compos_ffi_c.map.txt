@@ -1,4 +1,4 @@
-VERIFIED_DEX2OAT{
+VERIFIED_DEX2OAT{ # introduced=38
     global:
         AVerifiedDex2Oat_SuccessData_getCpuClockTimeMs; # apex
         AVerifiedDex2Oat_SuccessData_getWallClockTimeMs; # apex
