@@ -61,6 +61,10 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"ಕೀಬೋರ್ಡ್ ತೋರಿಸಿ"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"ಮೌಸ್ ಅನ್ನು ಬಿಡುಗಡೆ ಮಾಡಿ"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"ಮೌಸ್ ಅನ್ನು ಲಾಕ್ ಮಾಡಿ"</string>
+    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
+    <skip />
+    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
+    <skip />
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"ಡಿಸ್‌ಪ್ಲೇ ನಿಯಂತ್ರಣಗಳನ್ನು ಮುಚ್ಚಿರಿ"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"ಡಿಸ್‌ಪ್ಲೇ ಆಯ್ಕೆಗಳು"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"ಹಿಂದಿನ ಪುಟ"</string>
@@ -82,15 +86,6 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"ಮರುಪ್ರಯತ್ನಿಸಿ"</string>
     <string name="settings_title" msgid="3035373808103055663">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ಹಿಂದಕ್ಕೆ"</string>
-    <string name="settings_disk_title" msgid="3756870708790177276">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
-    <string name="settings_disk_subtitle" msgid="595369261192580241">"ರೂಟ್ ಪಾರ್ಟಿಶನ್ ಗಾತ್ರವನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಿ"</string>
-    <string name="settings_disk_text_assigned_format" msgid="4946762877185576649">"<xliff:g id="ASSIGNED_SIZE">‎%1$s‎</xliff:g> ನಿಯೋಜಿಸಲಾಗಿದೆ"</string>
-    <string name="settings_disk_text_max_format" msgid="8342716081541104846">"ಗರಿಷ್ಠ <xliff:g id="MAX_SIZE">‎%1$s‎</xliff:g>"</string>
-    <string name="settings_disk_snkbar_not_enough_space" msgid="7333211237394330491">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಸಾಧನದಲ್ಲಿ ಸಾಕಷ್ಟು ಸ್ಥಳಾವಕಾಶವಿಲ್ಲ."</string>
-    <string name="settings_disk_btn_cancel" msgid="4887962532514746941">"ರದ್ದುಮಾಡಿ"</string>
-    <string name="settings_disk_btn_apply" msgid="6013641190196702000">"ಅನ್ವಯಿಸಿ"</string>
-    <string name="settings_disk_dlg_message_confirm" msgid="4252548840179750338">"ಡಿಸ್ಕ್ ಅನ್ನು ಮರುಗಾತ್ರಗೊಳಿಸಲು ಟರ್ಮಿನಲ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಲಾಗುತ್ತದೆ"</string>
-    <string name="settings_disk_dlg_btn_confirm" msgid="6263856208058004670">"ದೃಢೀಕರಿಸಿ"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"ಪೋರ್ಟ್ ನಿಯಂತ್ರಣ"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>

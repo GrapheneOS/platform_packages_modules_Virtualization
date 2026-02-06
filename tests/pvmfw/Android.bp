@@ -2,48 +2,6 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-genrule {
-    name: "test_avf_debug_policy_with_ramdump",
-    defaults: ["dts_to_dtb"],
-    srcs: ["assets/avf_debug_policy_with_ramdump.dts"],
-    out: ["avf_debug_policy_with_ramdump.dtbo"],
-}
-
-genrule {
-    name: "test_avf_debug_policy_without_ramdump",
-    defaults: ["dts_to_dtb"],
-    srcs: ["assets/avf_debug_policy_without_ramdump.dts"],
-    out: ["avf_debug_policy_without_ramdump.dtbo"],
-}
-
-genrule {
-    name: "test_avf_debug_policy_with_adb",
-    defaults: ["dts_to_dtb"],
-    srcs: ["assets/avf_debug_policy_with_adb.dts"],
-    out: ["avf_debug_policy_with_adb.dtbo"],
-}
-
-genrule {
-    name: "test_avf_debug_policy_without_adb",
-    defaults: ["dts_to_dtb"],
-    srcs: ["assets/avf_debug_policy_without_adb.dts"],
-    out: ["avf_debug_policy_without_adb.dtbo"],
-}
-
-genrule {
-    name: "test_avf_debug_policy_with_log",
-    defaults: ["dts_to_dtb"],
-    srcs: ["assets/avf_debug_policy_with_log.dts"],
-    out: ["avf_debug_policy_with_log.dtbo"],
-}
-
-genrule {
-    name: "test_avf_debug_policy_without_log",
-    defaults: ["dts_to_dtb"],
-    srcs: ["assets/avf_debug_policy_without_log.dts"],
-    out: ["avf_debug_policy_without_log.dtbo"],
-}
-
 java_test_host {
     name: "CustomPvmfwHostTestCases",
     srcs: ["java/**/*.java"],
@@ -75,11 +33,4 @@ java_test_host {
         ":pvmfw_test",
     ],
     data_device_bins_first: ["dtc_static"],
-}
-
-filegroup {
-    name: "test_avf_bcc_dat",
-    srcs: [
-        "assets/dice.dat",
-    ],
 }
