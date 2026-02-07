@@ -25,7 +25,7 @@ INSTANCE_ID_SCHEMA: Dict[str, Dict[str, Any]] = {
     'vm_partition': {
         'type': str,
         'required': True,
-        'allowed_values': ['system'],
+        'allowed_values': ['system', 'vendor'],
     },
     'vm_primary_uuid': {
         'type': uuid.UUID,
@@ -117,14 +117,18 @@ def generate_instance_id(config: InstanceIdConfig) -> bytearray:
     instance_id = bytearray(64)
 
     # --- Bytes 0-15: AVF Reserved Space ---
-    # TODO(b/441000033): Adjust the value and support other partitions once
-    # the plan about definition is finalized.
-    assert config['vm_partition'] == 'system', \
-        "Only 'system' partition is supported."
+    # TODO(b/441000033): We will need to modify this code a little further
+    # once we finish aligning on how to represent persistent/non persistent
+    # VMs on system and vendor partitions.
+    assert config['vm_partition'] in ['system', 'vendor'], \
+        "Only 'system' or 'vendor' partitions are supported."
 
     if config['is_vm_persistent']:
         # Set the Most Significant Bit (MSB) of the first byte to 1.
         instance_id[0] |= 0x80
+
+    if config['vm_partition'] == 'vendor':
+        instance_id[0:4] = b'\xff\xff\xff\xff'
 
     # --- Bytes 16-63: UUIDs ---
     # The config is assumed to be valid at this point.
