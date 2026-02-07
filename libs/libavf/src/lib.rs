@@ -174,7 +174,8 @@ pub unsafe extern "C" fn AVirtualMachineRawConfig_addDisk(
             config.disks.push(DiskImage {
                 image: Some(ParcelFileDescriptor::new(file)),
                 writable,
-                ..Default::default()
+                partitions: vec![],
+                id: None,
             });
             0
         }

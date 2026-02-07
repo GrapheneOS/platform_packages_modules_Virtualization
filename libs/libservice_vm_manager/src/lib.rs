@@ -242,7 +242,12 @@ pub fn protected_vm_instance(instance_img_path: PathBuf) -> Result<VmInstance> {
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: String::from("service_vm"),
         kernel: Some(ParcelFileDescriptor::new(service_vm)),
-        disks: vec![DiskImage { image: None, partitions: writable_partitions, writable: true }],
+        disks: vec![DiskImage {
+            image: None,
+            partitions: writable_partitions,
+            writable: true,
+            id: None,
+        }],
         instanceId: instance_id,
         protectedVm: true,
         memoryMib: VM_MEMORY_MB,

@@ -53,6 +53,9 @@ pub struct VmConfig {
     /// The bootloader to use. If this is supplied then the kernel and initrd must not be supplied;
     /// the bootloader is instead responsibly for loading the kernel from one of the disks.
     pub bootloader: Option<PathBuf>,
+    /// The pflash images to use.
+    #[serde(default)]
+    pub pflash: Vec<PathBuf>,
     /// Disk images to be made available to the VM.
     #[serde(default)]
     pub disks: Vec<DiskImage>,
@@ -76,6 +79,8 @@ pub struct VmConfig {
     pub usb_config: Option<UsbConfig>,
     /// VM Instance ID
     pub instance_id: Option<PathBuf>,
+    /// SMBIOS configuration
+    pub smbios: Option<SmbiosConfig>,
 }
 
 impl VmConfig {
@@ -130,6 +135,11 @@ impl VmConfig {
             initrd: maybe_open_parcel_file(self.initrd.as_ref(), false)?,
             params: self.params.clone(),
             bootloader: maybe_open_parcel_file(self.bootloader.as_ref(), false)?,
+            pflash: self
+                .pflash
+                .iter()
+                .map(|p| open_parcel_file(p, true))
+                .collect::<Result<Vec<_>, Error>>()?,
             disks: self.disks.iter().map(DiskImage::to_parcelable).collect::<Result<_, Error>>()?,
             protectedVm: self.protected,
             memoryMib: memory_mib,
@@ -149,6 +159,7 @@ impl VmConfig {
             usbConfig: usb_config,
             balloon: true,
             instanceId: instance_id,
+            smbiosOptions: self.smbios.as_ref().map(|x| x.to_parcelable()),
             ..Default::default()
         })
     }
@@ -196,6 +207,8 @@ pub struct DiskImage {
     pub partitions: Vec<Partition>,
     /// Whether this disk should be writable by the VM.
     pub writable: bool,
+    /// Identifier for the disk device.
+    pub id: Option<String>,
 }
 
 impl DiskImage {
@@ -206,6 +219,7 @@ impl DiskImage {
             image: maybe_open_parcel_file(self.image.as_ref(), self.writable)?,
             writable: self.writable,
             partitions,
+            id: self.id.clone(),
         })
     }
 }
@@ -246,6 +260,43 @@ pub struct UsbConfig {
 impl UsbConfig {
     fn to_parcelable(&self) -> Result<AidlUsbConfig> {
         Ok(AidlUsbConfig { controller: self.controller })
+    }
+}
+
+/// SMBIOS configuration
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SmbiosConfig {
+    /// BIOS vendor name.
+    pub bios_vendor: Option<String>,
+    /// BIOS version number (free-form string).
+    pub bios_version: Option<String>,
+    /// System manufacturer name.
+    pub manufacturer: Option<String>,
+    /// System product name.
+    pub product_name: Option<String>,
+    /// System serial number.
+    pub serial_number: Option<String>,
+    /// System UUID.
+    pub uuid: Option<String>,
+    /// Free-form OEM strings (SMBIOS type 11).
+    #[serde(default)]
+    pub oem_strings: Vec<String>,
+}
+
+impl SmbiosConfig {
+    fn to_parcelable(
+        &self,
+    ) -> android_system_virtualizationservice::aidl::android::system::virtualizationservice::SmbiosOptions::SmbiosOptions
+    {
+        android_system_virtualizationservice::aidl::android::system::virtualizationservice::SmbiosOptions::SmbiosOptions {
+            biosVendor: self.bios_vendor.clone(),
+            biosVersion: self.bios_version.clone(),
+            manufacturer: self.manufacturer.clone(),
+            productName: self.product_name.clone(),
+            serialNumber: self.serial_number.clone(),
+            uuid: self.uuid.clone(),
+            oemStrings: self.oem_strings.clone(),
+        }
     }
 }
 

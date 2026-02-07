@@ -189,6 +189,7 @@ impl CrosvmCommand {
         command.add_name_arg(context);
         command.add_pvm_arg(context)?;
         command.add_kernel_arg(context)?;
+        command.add_pflash_arg(context)?;
         command.add_cpu_arg(context)?;
         #[cfg(target_arch = "aarch64")]
         command.add_aarch64_specific_args(context);
@@ -208,6 +209,7 @@ impl CrosvmCommand {
         command.add_assigned_devices_arg(context)?;
         command.add_dump_dtb_arg(context)?;
         command.add_gdb_arg(context)?;
+        command.add_smbios_arg(context)?;
         command.add_gunyah_specific_arg(context)?;
         command.add_teeservices_arg(context)?;
         Ok(command)
@@ -335,6 +337,14 @@ impl CrosvmCommand {
         if let Some(initrd) = &config.initrd {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
+        }
+        Ok(())
+    }
+
+    fn add_pflash_arg(&mut self, context: &RunContext) -> Result<()> {
+        for pflash in &context.config.pflash {
+            let file = self.add_preserved_fd(pflash.as_ref().try_clone()?);
+            self.args(["--pflash", &file]);
         }
         Ok(())
     }
@@ -794,7 +804,11 @@ impl CrosvmCommand {
             };
 
             let path = self.add_preserved_fd(image);
-            self.args(["--block", &format!("path={},ro={},lock=false", path, !disk.writable)]);
+            let mut block_arg = format!("path={},ro={},lock=false", path, !disk.writable);
+            if let Some(id) = &disk.id {
+                block_arg.push_str(&format!(",id={}", id));
+            }
+            self.args(["--block", &block_arg]);
         }
         Ok(())
     }
@@ -1113,6 +1127,39 @@ impl CrosvmCommand {
 
             self.args(["--gdb", &gdb_port.to_string()]);
             self.args(["-p", "nokaslr"]);
+        }
+        Ok(())
+    }
+
+    fn add_smbios_arg(&mut self, _context: &RunContext) -> Result<()> {
+        // SMBIOS is currently only supported by crosvm on x86_64.
+        #[cfg(target_arch = "x86_64")]
+        if let Some(smbios) = &_context.config.smbiosOptions {
+            let mut params = Vec::new();
+            if let Some(bios_vendor) = &smbios.biosVendor {
+                params.push(format!("bios-vendor={bios_vendor}"));
+            }
+            if let Some(bios_version) = &smbios.biosVersion {
+                params.push(format!("bios-version={bios_version}"));
+            }
+            if let Some(manufacturer) = &smbios.manufacturer {
+                params.push(format!("manufacturer={manufacturer}"));
+            }
+            if let Some(product_name) = &smbios.productName {
+                params.push(format!("product-name={product_name}"));
+            }
+            if let Some(serial_number) = &smbios.serialNumber {
+                params.push(format!("serial-number={serial_number}"));
+            }
+            if let Some(uuid) = &smbios.uuid {
+                params.push(format!("uuid={uuid}"));
+            }
+            if !smbios.oemStrings.is_empty() {
+                params.push(format!("oem-strings=[{}]", smbios.oemStrings.join(",")));
+            }
+            if !params.is_empty() {
+                self.args(["--smbios", &params.join(",")]);
+            }
         }
         Ok(())
     }

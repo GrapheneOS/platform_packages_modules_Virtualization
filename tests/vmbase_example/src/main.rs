@@ -79,7 +79,8 @@ fn run_test(
         test_image.write_all(&i.to_le_bytes())?;
     }
     let test_image = ParcelFileDescriptor::new(test_image);
-    let disk_image = DiskImage { image: Some(test_image), writable: false, partitions: vec![] };
+    let disk_image =
+        DiskImage { image: Some(test_image), writable: false, partitions: vec![], id: None };
 
     // Make file for empty test disk image.
     let empty_image = File::options()
@@ -91,7 +92,7 @@ fn run_test(
         .with_context(|| format!("Failed to open empty disk image {}", EMPTY_DISK_IMAGE_PATH))?;
     let empty_image = ParcelFileDescriptor::new(empty_image);
     let empty_disk_image =
-        DiskImage { image: Some(empty_image), writable: false, partitions: vec![] };
+        DiskImage { image: Some(empty_image), writable: false, partitions: vec![], id: None };
 
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: String::from("VmBaseTest"),
