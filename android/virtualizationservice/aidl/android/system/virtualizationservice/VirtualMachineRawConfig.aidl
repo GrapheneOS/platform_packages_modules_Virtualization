@@ -24,6 +24,7 @@ import android.system.virtualizationservice.DisplayConfig;
 import android.system.virtualizationservice.GpuConfig;
 import android.system.virtualizationservice.InputDevice;
 import android.system.virtualizationservice.SharedPath;
+import android.system.virtualizationservice.SmbiosOptions;
 import android.system.virtualizationservice.UsbConfig;
 
 /** Raw configuration for running a VM. */
@@ -58,6 +59,9 @@ parcelable VirtualMachineRawConfig {
      * the bootloader is instead responsibly for loading the kernel from one of the disks.
      */
     @nullable ParcelFileDescriptor bootloader;
+
+    /** The pflash images, if any. */
+    ParcelFileDescriptor[] pflash;
 
     /** Disk images to be made available to the VM. */
     DiskImage[] disks;
@@ -147,4 +151,6 @@ parcelable VirtualMachineRawConfig {
 
     /** List of host services this VM wants to access */
     String[] hostServices;
+
+    @nullable SmbiosOptions smbiosOptions;
 }

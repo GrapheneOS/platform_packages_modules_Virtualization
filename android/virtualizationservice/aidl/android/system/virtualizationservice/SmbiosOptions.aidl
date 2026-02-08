@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,14 @@
  */
 package android.system.virtualizationservice;
 
-import android.system.virtualizationservice.Partition;
-
-/** A disk image to be made available to the VM. */
-parcelable DiskImage {
-    /**
-     * The disk image, if it already exists. Exactly one of this and `partitions` must be specified.
-     */
-    @nullable ParcelFileDescriptor image;
-
-    /** Whether this disk should be writable by the VM. */
-    boolean writable;
-
-    /** Partition images to be assembled into a composite image. */
-    Partition[] partitions;
-
-    /** Identifier for the disk device. */
-    @nullable String id;
+/** SMBIOS table configuration (DMI) */
+@RustDerive(Clone=true, PartialEq=true)
+parcelable SmbiosOptions {
+    @nullable String biosVendor;
+    @nullable String biosVersion;
+    @nullable String manufacturer;
+    @nullable String productName;
+    @nullable String serialNumber;
+    @nullable String uuid;
+    String[] oemStrings;
 }

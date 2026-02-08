@@ -16,6 +16,7 @@
 
 package android.system.virtualmachine;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.PersistableBundle;
 
@@ -30,9 +31,11 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_KERNEL = "kernel";
     private static final String KEY_INITRD = "initrd";
     private static final String KEY_BOOTLOADER = "bootloader";
+    private static final String KEY_PFLASH = "pflash";
     private static final String KEY_PARAMS = "params";
     private static final String KEY_DISK_WRITABLES = "disk_writables";
     private static final String KEY_DISK_IMAGES = "disk_images";
+    private static final String KEY_DISK_IDS = "disk_ids";
     private static final String KEY_PARTITION_LABELS = "partition_labels_";
     private static final String KEY_PARTITION_IMAGES = "partition_images_";
     private static final String KEY_PARTITION_WRITABLES = "partition_writables_";
@@ -48,17 +51,20 @@ public class VirtualMachineCustomImageConfig {
     private static final String KEY_TRACKPAD = "trackpad";
     private static final String KEY_AUTO_MEMORY_BALLOON = "auto_memory_balloon";
     private static final String KEY_USB_CONFIG = "usb_config";
+    private static final String KEY_SMBIOS = "smbios";
 
     @Nullable private final String name;
     @Nullable private final String osName;
     @Nullable private final String kernelPath;
     @Nullable private final String initrdPath;
     @Nullable private final String bootloaderPath;
+    @Nullable private final String[] pflashPaths;
     @Nullable private final String[] params;
     @Nullable private final Disk[] disks;
     @Nullable private final SharedPath[] sharedPaths;
     @Nullable private final DisplayConfig displayConfig;
     @Nullable private final AudioConfig audioConfig;
+    @Nullable private final SmbiosOptions smbiosOptions;
     private final boolean touch;
     private final boolean keyboard;
     private final boolean mouse;
@@ -77,6 +83,11 @@ public class VirtualMachineCustomImageConfig {
     @Nullable
     public String getBootloaderPath() {
         return bootloaderPath;
+    }
+
+    @Nullable
+    public String[] getPflashPaths() {
+        return pflashPaths;
     }
 
     @Nullable
@@ -144,6 +155,7 @@ public class VirtualMachineCustomImageConfig {
             String kernelPath,
             String initrdPath,
             String bootloaderPath,
+            String[] pflashPaths,
             String[] params,
             Disk[] disks,
             SharedPath[] sharedPaths,
@@ -157,12 +169,14 @@ public class VirtualMachineCustomImageConfig {
             AudioConfig audioConfig,
             boolean trackpad,
             boolean autoMemoryBalloon,
-            UsbConfig usbConfig) {
+            UsbConfig usbConfig,
+            SmbiosOptions smbiosOptions) {
         this.name = name;
         this.osName = osName;
         this.kernelPath = kernelPath;
         this.initrdPath = initrdPath;
         this.bootloaderPath = bootloaderPath;
+        this.pflashPaths = pflashPaths;
         this.params = params;
         this.disks = disks;
         this.sharedPaths = sharedPaths;
@@ -177,6 +191,7 @@ public class VirtualMachineCustomImageConfig {
         this.trackpad = trackpad;
         this.autoMemoryBalloon = autoMemoryBalloon;
         this.usbConfig = usbConfig;
+        this.smbiosOptions = smbiosOptions;
     }
 
     static VirtualMachineCustomImageConfig from(PersistableBundle customImageConfigBundle) {
@@ -186,6 +201,7 @@ public class VirtualMachineCustomImageConfig {
         builder.setKernelPath(customImageConfigBundle.getString(KEY_KERNEL));
         builder.setInitrdPath(customImageConfigBundle.getString(KEY_INITRD));
         builder.setBootloaderPath(customImageConfigBundle.getString(KEY_BOOTLOADER));
+        builder.setPflashPaths(customImageConfigBundle.getStringArray(KEY_PFLASH));
         String[] params = customImageConfigBundle.getStringArray(KEY_PARAMS);
         if (params != null) {
             for (String param : params) {
@@ -194,12 +210,15 @@ public class VirtualMachineCustomImageConfig {
         }
         boolean[] writables = customImageConfigBundle.getBooleanArray(KEY_DISK_WRITABLES);
         String[] diskImages = customImageConfigBundle.getStringArray(KEY_DISK_IMAGES);
+        String[] diskIds = customImageConfigBundle.getStringArray(KEY_DISK_IDS);
         if (writables != null && diskImages != null) {
             if (writables.length == diskImages.length) {
                 for (int i = 0; i < writables.length; i++) {
                     String diskImage = diskImages[i];
                     diskImage = diskImage.equals("") ? null : diskImage;
-                    Disk disk = writables[i] ? Disk.RWDisk(diskImage) : Disk.RODisk(diskImage);
+                    String diskId = (diskIds != null && i < diskIds.length) ? diskIds[i] : "";
+                    diskId = diskId.equals("") ? null : diskId;
+                    Disk disk = new Disk(writables[i], diskImage, diskId);
                     String[] labels =
                             customImageConfigBundle.getStringArray(KEY_PARTITION_LABELS + i);
                     String[] images =
@@ -233,6 +252,9 @@ public class VirtualMachineCustomImageConfig {
         PersistableBundle usbConfigPb =
                 customImageConfigBundle.getPersistableBundle(KEY_USB_CONFIG);
         builder.setUsbConfig(UsbConfig.from(usbConfigPb));
+        PersistableBundle smbiosOptionsPb =
+                customImageConfigBundle.getPersistableBundle(KEY_SMBIOS);
+        builder.setSmbiosOptions(SmbiosOptions.from(smbiosOptionsPb));
         return builder.build();
     }
 
@@ -242,16 +264,20 @@ public class VirtualMachineCustomImageConfig {
         pb.putString(KEY_OS_NAME, this.osName);
         pb.putString(KEY_KERNEL, this.kernelPath);
         pb.putString(KEY_BOOTLOADER, this.bootloaderPath);
+        pb.putStringArray(KEY_PFLASH, this.pflashPaths);
         pb.putString(KEY_INITRD, this.initrdPath);
         pb.putStringArray(KEY_PARAMS, this.params);
 
         if (disks != null) {
             boolean[] writables = new boolean[disks.length];
             String[] images = new String[disks.length];
+            String[] ids = new String[disks.length];
             for (int i = 0; i < disks.length; i++) {
                 writables[i] = disks[i].writable;
                 String imagePath = disks[i].imagePath;
                 images[i] = imagePath == null ? "" : imagePath;
+                String id = disks[i].id;
+                ids[i] = id == null ? "" : id;
 
                 int numPartitions = disks[i].getPartitions().size();
                 String[] partitionLabels = new String[numPartitions];
@@ -273,6 +299,7 @@ public class VirtualMachineCustomImageConfig {
             }
             pb.putBooleanArray(KEY_DISK_WRITABLES, writables);
             pb.putStringArray(KEY_DISK_IMAGES, images);
+            pb.putStringArray(KEY_DISK_IDS, ids);
         }
         pb.putPersistableBundle(
                 KEY_DISPLAY_CONFIG,
@@ -295,6 +322,11 @@ public class VirtualMachineCustomImageConfig {
         pb.putPersistableBundle(
                 KEY_USB_CONFIG,
                 Optional.ofNullable(usbConfig).map(uc -> uc.toPersistableBundle()).orElse(null));
+        pb.putPersistableBundle(
+                KEY_SMBIOS,
+                Optional.ofNullable(smbiosOptions)
+                        .map(so -> so.toPersistableBundle())
+                        .orElse(null));
         return pb;
     }
 
@@ -316,6 +348,78 @@ public class VirtualMachineCustomImageConfig {
     @Nullable
     public UsbConfig getUsbConfig() {
         return usbConfig;
+    }
+
+    @Nullable
+    public SmbiosOptions getSmbiosOptions() {
+        return smbiosOptions;
+    }
+
+    /** @hide */
+    public static final class SmbiosOptions {
+        @Nullable public final String biosVendor;
+        @Nullable public final String biosVersion;
+        @Nullable public final String manufacturer;
+        @Nullable public final String productName;
+        @Nullable public final String serialNumber;
+        @Nullable public final String uuid;
+        @NonNull public final String[] oemStrings;
+
+        public SmbiosOptions(
+                String biosVendor,
+                String biosVersion,
+                String manufacturer,
+                String productName,
+                String serialNumber,
+                String uuid,
+                String[] oemStrings) {
+            this.biosVendor = biosVendor;
+            this.biosVersion = biosVersion;
+            this.manufacturer = manufacturer;
+            this.productName = productName;
+            this.serialNumber = serialNumber;
+            this.uuid = uuid;
+            this.oemStrings = (oemStrings != null) ? oemStrings : new String[0];
+        }
+
+        android.system.virtualizationservice.SmbiosOptions toParcelable() {
+            android.system.virtualizationservice.SmbiosOptions parcelable =
+                    new android.system.virtualizationservice.SmbiosOptions();
+            parcelable.biosVendor = this.biosVendor;
+            parcelable.biosVersion = this.biosVersion;
+            parcelable.manufacturer = this.manufacturer;
+            parcelable.productName = this.productName;
+            parcelable.serialNumber = this.serialNumber;
+            parcelable.uuid = this.uuid;
+            parcelable.oemStrings = this.oemStrings;
+            return parcelable;
+        }
+
+        private static SmbiosOptions from(PersistableBundle pb) {
+            if (pb == null) {
+                return null;
+            }
+            return new SmbiosOptions(
+                    pb.getString("bios_vendor"),
+                    pb.getString("bios_version"),
+                    pb.getString("manufacturer"),
+                    pb.getString("product_name"),
+                    pb.getString("serial_number"),
+                    pb.getString("uuid"),
+                    pb.getStringArray("oem_strings"));
+        }
+
+        private PersistableBundle toPersistableBundle() {
+            PersistableBundle pb = new PersistableBundle();
+            pb.putString("bios_vendor", biosVendor);
+            pb.putString("bios_version", biosVersion);
+            pb.putString("manufacturer", manufacturer);
+            pb.putString("product_name", productName);
+            pb.putString("serial_number", serialNumber);
+            pb.putString("uuid", uuid);
+            pb.putStringArray("oem_strings", oemStrings);
+            return pb;
+        }
     }
 
     /** @hide */
@@ -424,22 +528,34 @@ public class VirtualMachineCustomImageConfig {
     public static final class Disk {
         private final boolean writable;
         private final String imagePath;
+        @Nullable private final String id;
         private final List<Partition> partitions;
 
-        private Disk(boolean writable, String imagePath) {
+        private Disk(boolean writable, String imagePath, @Nullable String id) {
             this.writable = writable;
             this.imagePath = imagePath;
+            this.id = id;
             this.partitions = new ArrayList<>();
         }
 
         /** @hide */
         public static Disk RWDisk(String imagePath) {
-            return new Disk(true, imagePath);
+            return new Disk(true, imagePath, null);
         }
 
         /** @hide */
         public static Disk RODisk(String imagePath) {
-            return new Disk(false, imagePath);
+            return new Disk(false, imagePath, null);
+        }
+
+        /** @hide */
+        public static Disk RWDisk(String imagePath, String id) {
+            return new Disk(true, imagePath, id);
+        }
+
+        /** @hide */
+        public static Disk RODisk(String imagePath, String id) {
+            return new Disk(false, imagePath, id);
         }
 
         /** @hide */
@@ -450,6 +566,12 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public String getImagePath() {
             return imagePath;
+        }
+
+        /** @hide */
+        @Nullable
+        public String getId() {
+            return id;
         }
 
         /** @hide */
@@ -486,6 +608,7 @@ public class VirtualMachineCustomImageConfig {
         private String kernelPath;
         private String initrdPath;
         private String bootloaderPath;
+        private String[] pflashPaths;
         private List<String> params = new ArrayList<>();
         private List<Disk> disks = new ArrayList<>();
         private List<SharedPath> sharedPaths = new ArrayList<>();
@@ -500,6 +623,7 @@ public class VirtualMachineCustomImageConfig {
         private boolean trackpad;
         private boolean autoMemoryBalloon = false;
         private UsbConfig usbConfig;
+        private SmbiosOptions smbiosOptions;
 
         /** @hide */
         public Builder() {}
@@ -525,6 +649,12 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public Builder setBootloaderPath(String bootloaderPath) {
             this.bootloaderPath = bootloaderPath;
+            return this;
+        }
+
+        /** @hide */
+        public Builder setPflashPaths(String[] pflashPaths) {
+            this.pflashPaths = pflashPaths;
             return this;
         }
 
@@ -619,6 +749,12 @@ public class VirtualMachineCustomImageConfig {
         }
 
         /** @hide */
+        public Builder setSmbiosOptions(SmbiosOptions smbiosOptions) {
+            this.smbiosOptions = smbiosOptions;
+            return this;
+        }
+
+        /** @hide */
         public VirtualMachineCustomImageConfig build() {
             return new VirtualMachineCustomImageConfig(
                     this.name,
@@ -626,6 +762,7 @@ public class VirtualMachineCustomImageConfig {
                     this.kernelPath,
                     this.initrdPath,
                     this.bootloaderPath,
+                    this.pflashPaths,
                     this.params.toArray(new String[0]),
                     this.disks.toArray(new Disk[0]),
                     this.sharedPaths.toArray(new SharedPath[0]),
@@ -639,7 +776,8 @@ public class VirtualMachineCustomImageConfig {
                     audioConfig,
                     trackpad,
                     autoMemoryBalloon,
-                    usbConfig);
+                    usbConfig,
+                    smbiosOptions);
         }
     }
 
