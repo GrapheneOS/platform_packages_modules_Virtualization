@@ -61,10 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"కీబోర్డ్‌ను చూపుతుంది"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"మౌస్‌ను రిలీజ్ చేస్తుంది"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"మౌస్‌ను లాక్ చేస్తుంది"</string>
-    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
-    <skip />
-    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
-    <skip />
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"ట్రాక్‌ప్యాడ్ మోడ్‌ను ఆఫ్ చేయండి"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"ట్రాక్‌ప్యాడ్ మోడ్‌ను ఆన్ చేయండి"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"డిస్‌ప్లే కంట్రోల్స్‌ను మూసివేస్తుంది"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"ఆప్షన్‌లను డిస్‌ప్లే చేస్తుంది"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"మునుపటి పేజీ"</string>
