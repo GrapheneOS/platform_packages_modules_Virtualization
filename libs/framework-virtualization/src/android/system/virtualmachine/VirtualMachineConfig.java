@@ -946,6 +946,7 @@ public final class VirtualMachineConfig {
         config.teeServices = EMPTY_STRING_ARRAY;
         config.customMemoryBackingFiles = new CustomMemoryBackingFile[0];
         config.hostServices = EMPTY_STRING_ARRAY;
+        config.hugePages = mShouldUseHugepages;
 
         return config;
     }
