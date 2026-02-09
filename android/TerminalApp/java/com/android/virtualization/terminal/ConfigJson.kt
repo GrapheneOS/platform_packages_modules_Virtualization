@@ -46,6 +46,7 @@ internal data class ConfigJson(
     private val cpu_topology: String?,
     private val platform_version: String?,
     private val memory_mib: Int = 1024,
+    private val hugepages: Boolean = false,
     private val console_input_device: String?,
     private val bootloader: String?,
     private val kernel: String?,
@@ -86,6 +87,7 @@ internal data class ConfigJson(
         return VirtualMachineConfig.Builder(context)
             .setProtectedVm(isProtected)
             .setMemoryBytes(memory_mib.toLong() * 1024 * 1024)
+            .setShouldUseHugepages(hugepages)
             .setConsoleInputDevice(console_input_device)
             .setCpuTopology(getCpuTopology())
             .setCustomImageConfig(toCustomImageConfigBuilder(context).build())
