@@ -58,7 +58,7 @@ use crate::tenant::{TenantAttribute, TenantManager};
 use crate::tenant_config::validate_tenants_against_tenant_config;
 use crate::verify::{integrity_protect_tenant_apks, verify_payload};
 use crate::vm_internal_service::VmInternalService;
-use crate::vm_payload_service::VmPayloadService;
+use crate::vm_payload_service::{VmPayloadService, VmPayloadServiceShared};
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binder::{self, BinderFeatures, ExceptionCode, Interface, IntoBinderResult, SpIBinder, Strong};
 use dice_driver::DiceDriver;
@@ -103,6 +103,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
+use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -750,24 +751,30 @@ fn try_run_payload(
             })
             .count();
 
-    let vm_payload_binder = BnVmPayloadService::new_binder(
-        VmPayloadService::new(
-            allow_restricted_apis,
-            service.clone(),
-            vm_secret.clone(),
-            is_new_instance,
-            total_tasks,
-            tenant_manager.clone(),
-        ),
-        BinderFeatures::default(),
-    );
+    let shared_state = Arc::new(VmPayloadServiceShared {
+        virtual_machine_service: service.clone(),
+        allow_restricted_apis,
+        secret: vm_secret.clone(),
+        is_new_instance,
+        total_tasks,
+        tasks_ready: AtomicUsize::new(0),
+        tenant_manager: tenant_manager.clone(),
+    });
 
-    spawn_binder_rpc_server(
-        vm_payload_binder.as_binder(),
-        vm_payload_service_fd,
-        VM_PAYLOAD_SERVICE_SOCKET_NAME,
-        /* enable_fd_transport */ true,
-    )?;
+    let server =
+        RpcServer::new_bound_socket_with_factory(vm_payload_service_fd, move |session, _| {
+            let client_uid = session.get_client_uid();
+            if client_uid.is_none() {
+                error!("Failed to get client UID for RpcSession.");
+            }
+
+            info!("New client connected to VmPayloadService with UID: {:?}", client_uid);
+
+            let service = VmPayloadService::new(shared_state.clone(), client_uid);
+            Some(BnVmPayloadService::new_binder(service, BinderFeatures::default()).as_binder())
+        })?;
+
+    run_rpc_server(server, VM_PAYLOAD_SERVICE_SOCKET_NAME, /* enable_fd_transport */ true);
 
     // Set export_tombstones if enabled
     if should_export_tombstones(&config) {
@@ -978,6 +985,11 @@ fn spawn_binder_rpc_server(
     enable_fd_transport: bool,
 ) -> Result<()> {
     let server = RpcServer::new_bound_socket(binder, fd)?;
+    run_rpc_server(server, name, enable_fd_transport);
+    Ok(())
+}
+
+fn run_rpc_server(server: RpcServer, name: &str, enable_fd_transport: bool) {
     info!("The RPC server '{name}' is running.");
     // Required for the FD being passed through vm_payload_service to the payloads.
     if enable_fd_transport {
@@ -986,8 +998,6 @@ fn spawn_binder_rpc_server(
     std::thread::spawn(move || {
         server.join();
     });
-
-    Ok(())
 }
 
 fn post_payload_work() -> Result<()> {
