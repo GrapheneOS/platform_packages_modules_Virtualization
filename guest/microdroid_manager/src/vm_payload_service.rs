@@ -26,6 +26,7 @@ use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
 use crate::encrypted_assets::{mount_encrypted_assets, MountError};
 use crate::tenant::TenantManager;
 use crate::vm_secret::VmSecret;
+use libc::uid_t;
 use log::{error, info};
 use microdroid_uids::MICRODROID_PAYLOAD_UID;
 use std::path::Path;
@@ -37,27 +38,39 @@ use std::sync::{
     Arc,
 };
 
-/// Implementation of `IVmPayloadService`.
+/// State shared across all VmPayloadService sessions.
+pub struct VmPayloadServiceShared {
+    pub virtual_machine_service: Strong<dyn IVirtualMachineService>,
+    pub allow_restricted_apis: bool,
+    pub secret: Arc<VmSecret>,
+    pub is_new_instance: bool,
+    pub total_tasks: usize,
+    pub tasks_ready: AtomicUsize,
+    pub tenant_manager: Arc<TenantManager>,
+}
+
+/// Implementation of `IVmPayloadService`. A new instance is created for each client.
 pub(crate) struct VmPayloadService {
-    allow_restricted_apis: bool,
-    virtual_machine_service: Strong<dyn IVirtualMachineService>,
-    secret: Arc<VmSecret>,
-    is_new_instance: bool,
-    total_tasks: usize,
-    tasks_ready: AtomicUsize,
-    tenant_manager: Arc<TenantManager>,
+    shared: Arc<VmPayloadServiceShared>,
+    client_uid: Option<uid_t>,
 }
 
 impl IVmPayloadService for VmPayloadService {
     fn notifyPayloadReady(&self) -> binder::Result<()> {
-        let tasks_ready = self.tasks_ready.fetch_add(1, Ordering::SeqCst) + 1;
-        if tasks_ready == self.total_tasks {
-            self.virtual_machine_service
+        info!("notifyPayloadReady called by client with UID: {:?}", self.client_uid);
+
+        let tasks_ready = self.shared.tasks_ready.fetch_add(1, Ordering::SeqCst) + 1;
+        if tasks_ready == self.shared.total_tasks {
+            self.shared
+                .virtual_machine_service
                 .notifyPayloadReady()
                 .inspect(|_| info!("Notified host payload ready successfully"))
                 .inspect_err(|e| error!("Failed to notify host about payload ready: {e:?}"))
         } else {
-            info!("Received {} of {} payload ready notifications.", tasks_ready, self.total_tasks);
+            info!(
+                "Received {} of {} payload ready notifications.",
+                tasks_ready, self.shared.total_tasks
+            );
             Ok(())
         }
     }
@@ -68,7 +81,8 @@ impl IVmPayloadService for VmPayloadService {
                 .or_binder_exception(ExceptionCode::ILLEGAL_ARGUMENT);
         }
         let mut instance_secret = vec![0; size.try_into().unwrap()];
-        self.secret
+        self.shared
+            .secret
             .derive_payload_sealing_key(identifier, &mut instance_secret)
             .context("Failed to derive VM instance secret")
             .with_log()
@@ -78,7 +92,7 @@ impl IVmPayloadService for VmPayloadService {
 
     fn getDiceAttestationChain(&self) -> binder::Result<Vec<u8>> {
         self.check_restricted_apis_allowed()?;
-        if let Some(bcc) = self.secret.dice_artifacts().bcc() {
+        if let Some(bcc) = self.shared.secret.dice_artifacts().bcc() {
             Ok(bcc.to_vec())
         } else {
             Err(anyhow!("bcc is none")).or_binder_exception(ExceptionCode::ILLEGAL_STATE)
@@ -87,7 +101,7 @@ impl IVmPayloadService for VmPayloadService {
 
     fn getDiceAttestationCdi(&self) -> binder::Result<Vec<u8>> {
         self.check_restricted_apis_allowed()?;
-        Ok(self.secret.dice_artifacts().cdi_attest().to_vec())
+        Ok(self.shared.secret.dice_artifacts().cdi_attest().to_vec())
     }
 
     fn requestAttestation(
@@ -96,7 +110,7 @@ impl IVmPayloadService for VmPayloadService {
         test_mode: bool,
     ) -> binder::Result<AttestationResult> {
         let ClientVmAttestationData { private_key, csr } =
-            generate_attestation_key_and_csr(challenge, self.secret.dice_artifacts())
+            generate_attestation_key_and_csr(challenge, self.shared.secret.dice_artifacts())
                 .map_err(|e| {
                     Status::new_service_specific_error_str(
                         STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
@@ -113,7 +127,7 @@ impl IVmPayloadService for VmPayloadService {
                 )
             })
             .with_log()?;
-        let cert_chain = self.virtual_machine_service.requestAttestation(&csr, test_mode)?;
+        let cert_chain = self.shared.virtual_machine_service.requestAttestation(&csr, test_mode)?;
         Ok(AttestationResult {
             privateKey: private_key.as_slice().to_vec(),
             certificateChain: cert_chain,
@@ -122,6 +136,7 @@ impl IVmPayloadService for VmPayloadService {
 
     fn readPayloadRpData(&self) -> binder::Result<Option<[u8; 32]>> {
         let data = self
+            .shared
             .secret
             .read_payload_data_rp()
             .context("Failed to read payload's rollback protected data")
@@ -131,7 +146,8 @@ impl IVmPayloadService for VmPayloadService {
     }
 
     fn writePayloadRpData(&self, data: &[u8; 32]) -> binder::Result<()> {
-        self.secret
+        self.shared
+            .secret
             .write_payload_data_rp(data)
             .context("Failed to write payload's rollback protected data")
             .with_log()
@@ -140,7 +156,7 @@ impl IVmPayloadService for VmPayloadService {
     }
 
     fn isNewInstance(&self) -> binder::Result<bool> {
-        Ok(self.is_new_instance)
+        Ok(self.shared.is_new_instance)
     }
 
     fn mountEncryptedAssets(
@@ -151,7 +167,7 @@ impl IVmPayloadService for VmPayloadService {
         key: &[u8],
         sector_size: i32,
     ) -> binder::Result<String> {
-        if self.total_tasks > 1 {
+        if self.shared.total_tasks > 1 {
             // TODO(b/425553329): Add a test for this scenario.
             return Err(anyhow!(
                 "Mounting encrypted assets is not supported in multi-tenant payloads"
@@ -182,6 +198,7 @@ impl IVmPayloadService for VmPayloadService {
                 return Ok(ENCRYPTEDSTORE_MOUNTPOINT.to_string());
             }
             let package_name = self
+                .shared
                 .tenant_manager
                 .get_tenant_package_name(uid)
                 .context("Failed to get tenant package name for encrypted storage path")
@@ -200,28 +217,16 @@ impl IVmPayloadService for VmPayloadService {
 impl Interface for VmPayloadService {}
 
 impl VmPayloadService {
-    /// Creates a new `VmPayloadService` instance from the `IVirtualMachineService` reference.
+    /// Creates a new `VmPayloadService` instance.
     pub(crate) fn new(
-        allow_restricted_apis: bool,
-        vm_service: Strong<dyn IVirtualMachineService>,
-        secret: Arc<VmSecret>,
-        is_new_instance: bool,
-        total_tasks: usize,
-        tenant_manager: Arc<TenantManager>,
+        shared: Arc<VmPayloadServiceShared>,
+        client_uid: Option<uid_t>,
     ) -> VmPayloadService {
-        Self {
-            allow_restricted_apis,
-            virtual_machine_service: vm_service,
-            secret,
-            is_new_instance,
-            total_tasks,
-            tasks_ready: AtomicUsize::new(0),
-            tenant_manager,
-        }
+        Self { shared, client_uid }
     }
 
     fn check_restricted_apis_allowed(&self) -> binder::Result<()> {
-        if self.allow_restricted_apis {
+        if self.shared.allow_restricted_apis {
             Ok(())
         } else {
             Err(anyhow!("Use of restricted APIs is not allowed"))
