@@ -25,7 +25,10 @@ import android.content.SharedPreferences
 import android.graphics.drawable.Icon
 import android.os.IBinder
 import android.os.PowerManager
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.MainActivity
@@ -43,6 +46,19 @@ class VmService : LifecycleService() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wakeLockTimeoutJob: Job? = null
     private var isAppInForeground = true
+
+    private val appLifecycleObserver =
+        object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                isAppInForeground = true
+                updateWakeLockState()
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                isAppInForeground = false
+                updateWakeLockState()
+            }
+        }
 
     private val sharedPrefListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -67,6 +83,8 @@ class VmService : LifecycleService() {
         val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
         sharedPref.registerOnSharedPreferenceChangeListener(sharedPrefListener)
 
+        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+
         monitorInstaller()
         monitorVmController()
         monitorPorts()
@@ -77,6 +95,7 @@ class VmService : LifecycleService() {
         super.onDestroy()
         val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
         sharedPref.unregisterOnSharedPreferenceChangeListener(sharedPrefListener)
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
         releaseWakeLock()
     }
 
@@ -99,18 +118,18 @@ class VmService : LifecycleService() {
     }
 
     private fun acquireWakeLock(minutes: Int) {
+        val timeoutMillis = minutes.toLong() * 60 * 1000
         if (wakeLock?.isHeld == false) {
-            wakeLock?.acquire()
+            wakeLock?.acquire(timeoutMillis)
         }
         wakeLockTimeoutJob?.cancel()
         wakeLockTimeoutJob =
             lifecycleScope.launch {
-                delay(minutes.toLong() * 60 * 1000)
-                // When timeout occurs, reset the setting to Off and release WakeLock
+                delay(timeoutMillis)
+                // When timeout occurs, reset the setting to Off
                 val sharedPref =
                     getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
                 sharedPref.edit().putInt(SettingsViewModel.KEY_KEEP_AWAKE, 0).apply()
-                // The sharedPrefListener will trigger releaseWakeLock via updateWakeLockState()
             }
     }
 
@@ -247,14 +266,6 @@ class VmService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_APP_FOREGROUND -> {
-                isAppInForeground = true
-                updateWakeLockState()
-            }
-            ACTION_APP_BACKGROUND -> {
-                isAppInForeground = false
-                updateWakeLockState()
-            }
             ACTION_CANCEL_INSTALL -> Installer.cancelInstall()
             ACTION_STOP_VM -> VmController.stop()
             ACTION_TURN_OFF_KEEP_AWAKE -> {
@@ -411,8 +422,6 @@ class VmService : LifecycleService() {
 
     companion object {
         private const val NOTIFICATION_ID = 1
-        const val ACTION_APP_FOREGROUND = "ACTION_APP_FOREGROUND"
-        const val ACTION_APP_BACKGROUND = "ACTION_APP_BACKGROUND"
         const val ACTION_TURN_OFF_KEEP_AWAKE = "ACTION_TURN_OFF_KEEP_AWAKE"
         private const val ACTION_CANCEL_INSTALL = "ACTION_CANCEL_INSTALL"
         private const val ACTION_STOP_VM = "ACTION_STOP_VM"

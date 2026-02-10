@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.virtualization.terminal.new2.core.VmService
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -69,20 +68,6 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
         viewModel.handleIntent(intent)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        val intent =
-            Intent(this, VmService::class.java).apply { action = VmService.ACTION_APP_FOREGROUND }
-        startForegroundService(intent)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        val intent =
-            Intent(this, VmService::class.java).apply { action = VmService.ACTION_APP_BACKGROUND }
-        startForegroundService(intent)
     }
 
     companion object {
