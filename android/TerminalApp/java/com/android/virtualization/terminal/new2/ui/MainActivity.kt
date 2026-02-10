@@ -88,5 +88,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_OPEN_SETTINGS_PORT =
             "android.virtualization.terminal.action.OPEN_SETTINGS_PORT"
+        const val ACTION_OPEN_SETTINGS_KEEP_AWAKE =
+            "android.virtualization.terminal.action.OPEN_SETTINGS_KEEP_AWAKE"
     }
 }

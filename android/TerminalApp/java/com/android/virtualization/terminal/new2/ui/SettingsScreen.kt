@@ -119,6 +119,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
     val configuration = LocalConfiguration.current
     val isMobileMode = configuration.screenWidthDp < 600
     val settingsRequest by viewModel.settingsRequest.collectAsStateWithLifecycle()
+    val settingsViewModel: SettingsViewModel = viewModel()
 
     val destinations = remember {
         SettingsDestination.values().filter {
@@ -128,7 +129,12 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
 
     LaunchedEffect(settingsRequest, isMobileMode) {
         if (settingsRequest != null) {
-            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, settingsRequest!!)
+            val destination = settingsRequest!!
+            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, destination)
+            if (destination == SettingsDestination.Advanced) {
+                settingsViewModel.setShowKeepAwakeDialog(true)
+            }
+            viewModel.clearSettingsRequest()
         } else if (!isMobileMode && navigator.currentDestination == null) {
             destinations.firstOrNull()?.let {
                 navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, it)
@@ -274,7 +280,7 @@ fun AdvancedPage(
     var showMemoryDialog by remember { mutableStateOf(false) }
 
     val keepAwakeMinutes by settingsViewModel.keepAwakeMinutes.collectAsStateWithLifecycle()
-    var showKeepAwakeDialog by remember { mutableStateOf(false) }
+    val showKeepAwakeDialog by settingsViewModel.showKeepAwakeDialog.collectAsStateWithLifecycle()
 
     val typeToName =
         mapOf(
@@ -350,10 +356,10 @@ fun AdvancedPage(
     if (showKeepAwakeDialog) {
         KeepAwakeDialog(
             currentMinutes = keepAwakeMinutes,
-            onDismissRequest = { showKeepAwakeDialog = false },
+            onDismissRequest = { settingsViewModel.setShowKeepAwakeDialog(false) },
             onConfirm = {
                 settingsViewModel.setKeepAwakeMinutes(it)
-                showKeepAwakeDialog = false
+                settingsViewModel.setShowKeepAwakeDialog(false)
             },
         )
     }
@@ -407,7 +413,7 @@ fun AdvancedPage(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_keep_awake_title)) },
                 supportingContent = { Text(formatKeepAwakeTime(keepAwakeMinutes)) },
-                modifier = Modifier.clickable { showKeepAwakeDialog = true },
+                modifier = Modifier.clickable { settingsViewModel.setShowKeepAwakeDialog(true) },
             )
             HorizontalDivider()
         }

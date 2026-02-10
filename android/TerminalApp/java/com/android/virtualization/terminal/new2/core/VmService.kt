@@ -257,6 +257,11 @@ class VmService : LifecycleService() {
             }
             ACTION_CANCEL_INSTALL -> Installer.cancelInstall()
             ACTION_STOP_VM -> VmController.stop()
+            ACTION_TURN_OFF_KEEP_AWAKE -> {
+                val sharedPref =
+                    getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+                sharedPref.edit().putInt(SettingsViewModel.KEY_KEEP_AWAKE, 0).apply()
+            }
             ACTION_PORT_FORWARD -> {
                 val port = intent.getIntExtra(EXTRA_PORT, -1)
                 val enable = intent.getBooleanExtra(EXTRA_ENABLE, false)
@@ -275,6 +280,15 @@ class VmService : LifecycleService() {
         val channel =
             NotificationChannel(CHANNEL_ID, "VM Service", NotificationManager.IMPORTANCE_LOW)
         manager.createNotificationChannel(channel)
+
+        val keepAwakeChannel =
+            NotificationChannel(
+                KEEP_AWAKE_CHANNEL_ID,
+                "Keep Awake",
+                NotificationManager.IMPORTANCE_HIGH,
+            )
+        manager.createNotificationChannel(keepAwakeChannel)
+
         val portChannel =
             NotificationChannel(
                 PORT_CHANNEL_ID,
@@ -322,26 +336,74 @@ class VmService : LifecycleService() {
         val stopPending =
             PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
+        val isKeepingAwake = wakeLock?.isHeld == true
+        val channelId = if (isKeepingAwake) KEEP_AWAKE_CHANNEL_ID else CHANNEL_ID
+
         val builder =
-            Notification.Builder(this, CHANNEL_ID)
+            Notification.Builder(this, channelId)
                 .setContentTitle("Terminal Service")
                 .setSmallIcon(R.drawable.ic_terminal)
                 .setContentIntent(getMainActivityPendingIntent())
+
+        if (isKeepingAwake) {
+            val turnOffIntent =
+                Intent(this, VmService::class.java).apply { action = ACTION_TURN_OFF_KEEP_AWAKE }
+            val turnOffPending =
+                PendingIntent.getService(
+                    this,
+                    3,
+                    turnOffIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            val settingsIntent =
+                Intent(this, MainActivity::class.java).apply {
+                    action = MainActivity.ACTION_OPEN_SETTINGS_KEEP_AWAKE
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+            val settingsPending =
+                PendingIntent.getActivity(
+                    this,
+                    4,
+                    settingsIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            builder
+                .setContentText(getString(R.string.notif_keep_awake_active))
                 .addAction(
                     Notification.Action.Builder(
-                            Icon.createWithResource(this, R.drawable.ic_close),
-                            getString(R.string.notif_action_close),
-                            stopPending,
+                            null,
+                            getString(R.string.notif_action_turn_off_keep_awake),
+                            turnOffPending,
                         )
                         .build()
                 )
+                .addAction(
+                    Notification.Action.Builder(
+                            null,
+                            getString(R.string.notif_action_keep_awake_settings),
+                            settingsPending,
+                        )
+                        .build()
+                )
+        } else {
+            builder.addAction(
+                Notification.Action.Builder(
+                        Icon.createWithResource(this, R.drawable.ic_close),
+                        getString(R.string.notif_action_close),
+                        stopPending,
+                    )
+                    .build()
+            )
 
-        if (state is VmState.Starting) {
-            builder.setContentText("Terminal is starting...")
-        } else if (state is VmState.Running) {
-            builder.setContentText("Terminal is running")
-        } else if (state is VmState.Stopping) {
-            builder.setContentText("Terminal is shutting down")
+            if (state is VmState.Starting) {
+                builder.setContentText("Terminal is starting...")
+            } else if (state is VmState.Running) {
+                builder.setContentText("Terminal is running")
+            } else if (state is VmState.Stopping) {
+                builder.setContentText("Terminal is shutting down")
+            }
         }
 
         return builder.build()
@@ -351,12 +413,14 @@ class VmService : LifecycleService() {
         private const val NOTIFICATION_ID = 1
         const val ACTION_APP_FOREGROUND = "ACTION_APP_FOREGROUND"
         const val ACTION_APP_BACKGROUND = "ACTION_APP_BACKGROUND"
+        const val ACTION_TURN_OFF_KEEP_AWAKE = "ACTION_TURN_OFF_KEEP_AWAKE"
         private const val ACTION_CANCEL_INSTALL = "ACTION_CANCEL_INSTALL"
         private const val ACTION_STOP_VM = "ACTION_STOP_VM"
         private const val ACTION_PORT_FORWARD = "ACTION_PORT_FORWARD"
         private const val EXTRA_PORT = "EXTRA_PORT"
         private const val EXTRA_ENABLE = "EXTRA_ENABLE"
         private const val CHANNEL_ID = "vm_service_channel"
+        private const val KEEP_AWAKE_CHANNEL_ID = "vm_keep_awake_channel"
         private const val PORT_CHANNEL_ID = "vm_port_channel"
     }
 }

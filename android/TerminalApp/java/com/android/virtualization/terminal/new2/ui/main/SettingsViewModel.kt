@@ -18,6 +18,7 @@ package com.android.virtualization.terminal.new2.ui.main
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.VmController
@@ -35,10 +36,29 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _keepAwakeMinutes = MutableStateFlow(sharedPref.getInt(KEY_KEEP_AWAKE, 0))
     val keepAwakeMinutes: StateFlow<Int> = _keepAwakeMinutes.asStateFlow()
 
+    private val sharedPrefListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                KEY_MEMORY_MIB -> {
+                    _currentMemoryMb.value = sharedPref.getInt(KEY_MEMORY_MIB, DEFAULT_MEMORY_MIB)
+                }
+                KEY_KEEP_AWAKE -> {
+                    _keepAwakeMinutes.value = sharedPref.getInt(KEY_KEEP_AWAKE, 0)
+                }
+            }
+        }
+
+    init {
+        sharedPref.registerOnSharedPreferenceChangeListener(sharedPrefListener)
+    }
+
     val maxMemoryMb: Int = calculateMaxMemoryMb(application)
 
     private val _showRebootDialog = MutableStateFlow(false)
     val showRebootDialog: StateFlow<Boolean> = _showRebootDialog.asStateFlow()
+
+    private val _showKeepAwakeDialog = MutableStateFlow(false)
+    val showKeepAwakeDialog: StateFlow<Boolean> = _showKeepAwakeDialog.asStateFlow()
 
     fun setMemoryMb(mb: Int) {
         if (mb != _currentMemoryMb.value) {
@@ -55,8 +75,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun setShowKeepAwakeDialog(show: Boolean) {
+        _showKeepAwakeDialog.value = show
+    }
+
     fun dismissRebootDialog() {
         _showRebootDialog.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        sharedPref.unregisterOnSharedPreferenceChangeListener(sharedPrefListener)
     }
 
     private fun calculateMaxMemoryMb(context: Context): Int {

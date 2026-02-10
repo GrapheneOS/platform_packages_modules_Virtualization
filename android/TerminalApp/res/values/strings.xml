@@ -235,6 +235,13 @@
     <!-- Warning message for keep awake battery impact [CHAR LIMIT=none] -->
     <string name="settings_keep_awake_battery_warning">Warning: Enabling keep awake will significantly impact battery life as it prevents the device from sleeping.</string>
 
+    <!-- Notification content when keep awake is active [CHAR LIMIT=none] -->
+    <string name="notif_keep_awake_active">Terminal is keeping the device awake</string>
+    <!-- Action label to turn off keep awake from notification [CHAR LIMIT=20] -->
+    <string name="notif_action_turn_off_keep_awake">Turn off</string>
+    <!-- Action label to open keep awake settings from notification [CHAR LIMIT=20] -->
+    <string name="notif_action_keep_awake_settings">Settings</string>
+
     <!-- ================================================================= -->
     <!-- Settings - Port                                                   -->
     <!-- ================================================================= -->
