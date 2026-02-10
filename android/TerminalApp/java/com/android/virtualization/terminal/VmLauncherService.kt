@@ -167,7 +167,7 @@ class VmLauncherService : Service() {
         val json = ConfigJson.from(this, image.configPath)
         val configBuilder = json.toConfigBuilder(this)
         val customImageConfigBuilder = json.toCustomImageConfigBuilder(this)
-        val timeout_secs = json.getBootTimeoutSecs() * (if (IS_EMULATOR) 5 else 1)
+        val timeout_secs = json.getBootTimeoutSecs() * (if (IS_EMULATOR) 20 else 1)
 
         // Convert rootfs disk into a sparse file for storage ballooning.
         truncateDiskIfNecessary(image)
