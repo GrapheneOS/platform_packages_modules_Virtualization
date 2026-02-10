@@ -38,19 +38,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.R
-import com.android.virtualization.terminal.new2.core.Installer
-import com.android.virtualization.terminal.new2.core.VmController
+import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecoveryPage() {
+fun RecoveryPage(viewModel: SettingsViewModel = viewModel()) {
     var showResetConfirmationDialog by remember { mutableStateOf(false) }
     var showRemoveBackupDialog by remember { mutableStateOf(false) }
-    // TODO: Introduce a ViewModel to manage these states and operations instead of accessing
-    // controllers and repositories directly.
-    var hasBackup by remember { mutableStateOf(Installer.hasBackup()) }
+    var hasBackup by remember { mutableStateOf(viewModel.hasBackup()) }
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -99,10 +97,8 @@ fun RecoveryPage() {
                 TextButton(
                     onClick = {
                         scope.launch {
-                            // TODO: Move this logic to a ViewModel.
-                            VmController.stop()
-                            Installer.uninstall(backupDataChecked)
-                            hasBackup = Installer.hasBackup()
+                            viewModel.resetTerminal(backupDataChecked)
+                            hasBackup = viewModel.hasBackup()
                         }
                         showResetConfirmationDialog = false
                     }
@@ -127,8 +123,7 @@ fun RecoveryPage() {
                 TextButton(
                     onClick = {
                         scope.launch {
-                            // TODO: Move this logic to a ViewModel.
-                            if (Installer.deleteBackup()) {
+                            if (viewModel.deleteBackup()) {
                                 hasBackup = false
                             }
                         }

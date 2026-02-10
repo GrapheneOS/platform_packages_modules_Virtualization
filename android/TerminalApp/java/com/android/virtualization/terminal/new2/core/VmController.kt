@@ -41,6 +41,7 @@ import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.Logger
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.TerminalThreadFactory
+import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -125,6 +126,16 @@ object VmController {
                 val image = InstalledImage.getDefault(context)
                 val json = ConfigJson.from(context, image.configPath)
                 val configBuilder = json.toConfigBuilder(context)
+
+                val sharedPref =
+                    context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+                val memoryMib =
+                    sharedPref.getInt(
+                        SettingsViewModel.KEY_MEMORY_MIB,
+                        SettingsViewModel.DEFAULT_MEMORY_MIB,
+                    )
+                configBuilder.setMemoryBytes(memoryMib.toLong() * 1024 * 1024)
+
                 val customImageConfigBuilder = json.toCustomImageConfigBuilder(context)
 
                 // Convert rootfs disk into a sparse file for storage ballooning.
