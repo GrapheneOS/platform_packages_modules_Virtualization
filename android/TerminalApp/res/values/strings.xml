@@ -212,6 +212,29 @@
     <!-- Settings menu title for memory size [CHAR LIMIT=none] -->
     <string name="settings_advanced_memory_title">Memory size</string>
 
+    <!-- Settings menu title for keep awake [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_title">Keep awake</string>
+    <!-- Option for keep awake off [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_off">Off</string>
+    <!-- Option for keep awake 1 minute [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_1m">1 minute</string>
+    <!-- Option for keep awake 5 minutes [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_5m">5 minutes</string>
+    <!-- Option for keep awake 10 minutes [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_10m">10 minutes</string>
+    <!-- Option for keep awake 30 minutes [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_30m">30 minutes</string>
+    <!-- Option for keep awake 1 hour [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_1h">1 hour</string>
+    <!-- Option for keep awake 2 hours [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_2h">2 hours</string>
+    <!-- Option for keep awake 6 hours [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_6h">6 hours</string>
+    <!-- Option for keep awake 1 day [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_1d">1 day</string>
+    <!-- Warning message for keep awake battery impact [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_battery_warning">Warning: Enabling keep awake will significantly impact battery life as it prevents the device from sleeping.</string>
+
     <!-- ================================================================= -->
     <!-- Settings - Port                                                   -->
     <!-- ================================================================= -->

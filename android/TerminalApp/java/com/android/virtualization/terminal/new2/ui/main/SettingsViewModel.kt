@@ -32,6 +32,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         MutableStateFlow(sharedPref.getInt(KEY_MEMORY_MIB, DEFAULT_MEMORY_MIB))
     val currentMemoryMb: StateFlow<Int> = _currentMemoryMb.asStateFlow()
 
+    private val _keepAwakeMinutes = MutableStateFlow(sharedPref.getInt(KEY_KEEP_AWAKE, 0))
+    val keepAwakeMinutes: StateFlow<Int> = _keepAwakeMinutes.asStateFlow()
+
     val maxMemoryMb: Int = calculateMaxMemoryMb(application)
 
     private val _showRebootDialog = MutableStateFlow(false)
@@ -42,6 +45,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             sharedPref.edit().putInt(KEY_MEMORY_MIB, mb).apply()
             _currentMemoryMb.value = mb
             _showRebootDialog.value = true
+        }
+    }
+
+    fun setKeepAwakeMinutes(minutes: Int) {
+        if (minutes != _keepAwakeMinutes.value) {
+            sharedPref.edit().putInt(KEY_KEEP_AWAKE, minutes).apply()
+            _keepAwakeMinutes.value = minutes
         }
     }
 
@@ -74,6 +84,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     companion object {
         internal const val PREFS_NAME = "terminal_settings"
         internal const val KEY_MEMORY_MIB = "memory_mib"
+        internal const val KEY_KEEP_AWAKE = "keep_awake"
         const val DEFAULT_MEMORY_MIB = 1024
         const val MIN_MEMORY_MIB = 200
     }

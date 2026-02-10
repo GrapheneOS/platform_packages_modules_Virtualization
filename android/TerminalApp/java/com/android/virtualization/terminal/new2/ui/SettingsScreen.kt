@@ -93,6 +93,24 @@ enum class SettingsDestination(val title: Int, val icon: ImageVector) {
     Recovery(R.string.settings_recovery_title, Icons.Default.Restore),
 }
 
+enum class KeepAwakeDuration(val minutes: Int, val stringRes: Int) {
+    OFF(0, R.string.settings_keep_awake_off),
+    ONE_MINUTE(1, R.string.settings_keep_awake_1m),
+    FIVE_MINUTES(5, R.string.settings_keep_awake_5m),
+    TEN_MINUTES(10, R.string.settings_keep_awake_10m),
+    THIRTY_MINUTES(30, R.string.settings_keep_awake_30m),
+    ONE_HOUR(60, R.string.settings_keep_awake_1h),
+    TWO_HOURS(120, R.string.settings_keep_awake_2h),
+    SIX_HOURS(360, R.string.settings_keep_awake_6h),
+    ONE_DAY(1440, R.string.settings_keep_awake_1d);
+
+    companion object {
+        fun fromMinutes(minutes: Int): KeepAwakeDuration {
+            return entries.find { it.minutes == minutes } ?: OFF
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
@@ -255,6 +273,9 @@ fun AdvancedPage(
     val currentMemoryMb by settingsViewModel.currentMemoryMb.collectAsStateWithLifecycle()
     var showMemoryDialog by remember { mutableStateOf(false) }
 
+    val keepAwakeMinutes by settingsViewModel.keepAwakeMinutes.collectAsStateWithLifecycle()
+    var showKeepAwakeDialog by remember { mutableStateOf(false) }
+
     val typeToName =
         mapOf(
             GraphicsManager.AccelerationType.Lavapipe to
@@ -326,6 +347,17 @@ fun AdvancedPage(
         )
     }
 
+    if (showKeepAwakeDialog) {
+        KeepAwakeDialog(
+            currentMinutes = keepAwakeMinutes,
+            onDismissRequest = { showKeepAwakeDialog = false },
+            onConfirm = {
+                settingsViewModel.setKeepAwakeMinutes(it)
+                showKeepAwakeDialog = false
+            },
+        )
+    }
+
     if (showRebootDialog) {
         AlertDialog(
             onDismissRequest = { showRebootDialog = false },
@@ -368,6 +400,14 @@ fun AdvancedPage(
                 headlineContent = { Text(stringResource(R.string.settings_advanced_memory_title)) },
                 supportingContent = { Text(formatMemorySize(currentMemoryMb)) },
                 modifier = Modifier.clickable { showMemoryDialog = true },
+            )
+            HorizontalDivider()
+        }
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_keep_awake_title)) },
+                supportingContent = { Text(formatKeepAwakeTime(keepAwakeMinutes)) },
+                modifier = Modifier.clickable { showKeepAwakeDialog = true },
             )
             HorizontalDivider()
         }
@@ -431,6 +471,65 @@ private fun formatMemorySize(mib: Int): String {
         String.format("%.1f GB", mib / 1024f)
     } else {
         "$mib MB"
+    }
+}
+
+@Composable
+fun KeepAwakeDialog(currentMinutes: Int, onDismissRequest: () -> Unit, onConfirm: (Int) -> Unit) {
+    var selectedOption by remember { mutableStateOf(KeepAwakeDuration.fromMinutes(currentMinutes)) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.settings_keep_awake_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.settings_keep_awake_battery_warning),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                Column(Modifier.selectableGroup()) {
+                    KeepAwakeDuration.entries.forEach { option ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .height(48.dp)
+                                .selectable(
+                                    selected = (option == selectedOption),
+                                    onClick = { selectedOption = option },
+                                    role = Role.RadioButton,
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = (option == selectedOption), onClick = null)
+                            Text(
+                                text = stringResource(option.stringRes),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedOption.minutes) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun formatKeepAwakeTime(minutes: Int): String {
+    val duration = KeepAwakeDuration.fromMinutes(minutes)
+    return if (duration == KeepAwakeDuration.OFF && minutes > 0) {
+        "$minutes min"
+    } else {
+        stringResource(duration.stringRes)
     }
 }
 
