@@ -33,8 +33,11 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -393,6 +396,9 @@ fun AdvancedPage(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_graphics_title)) },
                 supportingContent = { Text(typeToName[currentType] ?: "") },
+                leadingContent = {
+                    Icon(imageVector = Icons.Default.Speed, contentDescription = null)
+                },
                 modifier =
                     Modifier.clickable {
                         selectedType = currentType
@@ -405,6 +411,9 @@ fun AdvancedPage(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_advanced_memory_title)) },
                 supportingContent = { Text(formatMemorySize(currentMemoryMb)) },
+                leadingContent = {
+                    Icon(imageVector = Icons.Default.Memory, contentDescription = null)
+                },
                 modifier = Modifier.clickable { showMemoryDialog = true },
             )
             HorizontalDivider()
@@ -413,6 +422,9 @@ fun AdvancedPage(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_keep_awake_title)) },
                 supportingContent = { Text(formatKeepAwakeTime(keepAwakeMinutes)) },
+                leadingContent = {
+                    Icon(imageVector = Icons.Default.Power, contentDescription = null)
+                },
                 modifier = Modifier.clickable { settingsViewModel.setShowKeepAwakeDialog(true) },
             )
             HorizontalDivider()
