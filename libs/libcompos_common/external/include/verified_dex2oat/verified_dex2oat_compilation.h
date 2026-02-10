@@ -47,16 +47,16 @@ typedef struct AVerifiedDex2Oat_FailureResultContext AVerifiedDex2Oat_FailureDat
 
 /**
  * Represents the status codes returned by the AVerifiedDex2Oat APIs.
- * Introduced in API Level 37.
+ * Introduced in API Level 38.
  */
 typedef enum AVerifiedDex2Oat_Status : int32_t {
     /** Indicates that the `AVerifiedDex2Oat` API call completed successfully.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_SUCCESS = 0,
 
     /** Indicates that one or more arguments provided to the AVerifiedDex2Oat API were invalid.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_BAD_ARGS = 1,
 
@@ -64,36 +64,36 @@ typedef enum AVerifiedDex2Oat_Status : int32_t {
      * Indicates that the number of file descriptor placeholders in
      * `formatString` when calling `AVerifiedDex2Oat_CompilationContext_addArg`
      * does not match the number of provided file descriptors.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_BAD_ARGS_UNEXPECTED_NUMBER_OF_FDS = 2,
 
     /** Indicates that a `Dex2OatArg` format string was not valid
      * null-terminated UTF-8 string(where null is allowed only for string
      * termination)
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_BAD_ARGS_FORMAT_STRING_NOT_UTF8 = 3,
 
     /** Indicates a generic error occurred when calling into the `composd` service.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_ERROR_CALLING_COMPOS = 10,
 
     /** Indicates that the `composd` service was not available or timed out during connection.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_ERROR_COMPOS_SERVICE_UNAVAILABLE = 11,
 
     /**
      * The operation timed out.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_ERROR_TIMED_OUT = 12,
 
     /**
      * A general error.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_ERROR_GENERAL = 19,
 
@@ -102,13 +102,13 @@ typedef enum AVerifiedDex2Oat_Status : int32_t {
      * unexpected state.
      * For example, calling `AVerifiedDex2Oat_CompilationContext_cancel` before
      * `AVerifiedDex2Oat_CompilationContext_start`.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_CTX_UNEXPECTED_COMPILATION_STATE = 20,
 
     /**
      * The compilation context is missing compiler arguments.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_CTX_MISSING_ARGS = 23,
 
@@ -123,7 +123,7 @@ typedef enum AVerifiedDex2Oat_Status : int32_t {
  * status.
  */
 const char* _Nonnull AVerifiedDex2Oat_Status_toString(AVerifiedDex2Oat_Status status)
-        __INTRODUCED_IN(37);
+        __INTRODUCED_IN(38);
 
 /**
  * A callback function invoked after a successful compilation.
@@ -157,7 +157,7 @@ typedef void (*AVerifiedDex2Oat_onSuccessCallback)(
  * @return The wall clock time, in milliseconds, that it took to compile.
  */
 uint32_t AVerifiedDex2Oat_SuccessData_getWallClockTimeMs(
-        const AVerifiedDex2Oat_SuccessData* _Nonnull successData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_SuccessData* _Nonnull successData) __INTRODUCED_IN(38);
 
 /**
  * Gets the cpu time, in milliseconds, from an opaque result context.
@@ -171,33 +171,33 @@ uint32_t AVerifiedDex2Oat_SuccessData_getWallClockTimeMs(
  * @return The CPU time, in milliseconds, that it took to compile.
  */
 uint32_t AVerifiedDex2Oat_SuccessData_getCpuClockTimeMs(
-        const AVerifiedDex2Oat_SuccessData* _Nonnull successData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_SuccessData* _Nonnull successData) __INTRODUCED_IN(38);
 
 /**
  * The reason why dex2oat failed.
  */
 typedef enum AVerifiedDex2Oat_FailureReason : int32_t {
     /** An error occurred during the setup phase before dex2oat was invoked.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_COMPILATION_SETUP_FAILED = 1,
     /** The dex2oat process itself failed (e.g., exited with a non-zero status,
      * or signaled).
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_DEX2OAT_FAILED = 2,
     /** Failed to enable fs-verity on the output artifacts.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_FAILED_TO_ENABLE_FSVERITY = 3,
     /** The compilation timed out.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_TIMEOUT = 4,
     /** An unknown or unspecified error occurred.
      * This should always be the last value in the enum.
      * New values should be inserted above.
-     * Introduced in API Level 37.
+     * Introduced in API Level 38.
      */
     AVERIFIED_DEX2OAT_FAILURE_UNKNOWN = INT32_MAX
 } AVerifiedDex2Oat_FailureReason;
@@ -210,7 +210,7 @@ typedef enum AVerifiedDex2Oat_FailureReason : int32_t {
  * allowed only for string termination) representation of the reason.
  */
 const char* _Nonnull AVerifiedDex2Oat_FailureReason_toString(AVerifiedDex2Oat_FailureReason reason)
-        __INTRODUCED_IN(37);
+        __INTRODUCED_IN(38);
 
 /**
  * A callback function to be invoked upon compilation failure.
@@ -241,7 +241,7 @@ typedef void (*AVerifiedDex2Oat_onFailureCallback)(
  * @return An `AVerifiedDex2Oat_FailureReason` detailing why the compilation failed.
  */
 AVerifiedDex2Oat_FailureReason AVerifiedDex2Oat_FailureData_getReason(
-        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(38);
 
 /**
  * Gets the exit code from failure data.
@@ -255,7 +255,7 @@ AVerifiedDex2Oat_FailureReason AVerifiedDex2Oat_FailureData_getReason(
  * is returned. Otherwise, -1 is returned.
  */
 int32_t AVerifiedDex2Oat_FailureData_getExitCode(
-        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(38);
 
 /**
  * Gets the POSIX signal value that caused a compilation failure.
@@ -269,7 +269,7 @@ int32_t AVerifiedDex2Oat_FailureData_getExitCode(
  *  Otherwise 0 is returned.
  */
 uint32_t AVerifiedDex2Oat_FailureData_getSignal(
-        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(38);
 
 /**
  * Gets the cpu time, in milliseconds, before compilation failed from failure data.
@@ -281,7 +281,7 @@ uint32_t AVerifiedDex2Oat_FailureData_getSignal(
  * @return The amount of cpu time, in milliseconds, compilation ran for before failing.
  */
 uint32_t AVerifiedDex2Oat_FailureData_getCpuClockTimeMs(
-        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(38);
 
 /**
  * Gets the wall time, in milliseconds, from failure data.
@@ -293,7 +293,7 @@ uint32_t AVerifiedDex2Oat_FailureData_getCpuClockTimeMs(
  * @return The wall clock time, in milliseconds, spent compiling before failing.
  */
 uint32_t AVerifiedDex2Oat_FailureData_getWallClockTimeMs(
-        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(38);
 
 /**
  * Gets the failure message failure data.
@@ -306,7 +306,7 @@ uint32_t AVerifiedDex2Oat_FailureData_getWallClockTimeMs(
  * lifetime equal to `failureData`.
  */
 const char* _Nonnull AVerifiedDex2Oat_FailureData_getMessage(
-        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_FailureData* _Nonnull failureData) __INTRODUCED_IN(38);
 
 /**
  * Create a new compilation context.
@@ -329,7 +329,7 @@ const char* _Nonnull AVerifiedDex2Oat_FailureData_getMessage(
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_CompilationContext_create(
         AVerifiedDex2Oat_CompilationContext* _Nullable* _Nonnull compCtx, uint64_t timeoutSeconds)
-        __INTRODUCED_IN(37);
+        __INTRODUCED_IN(38);
 
 /**
  * Destroys the compilation context.
@@ -345,7 +345,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_CompilationContext_create(
  * `AVerifiedDex2Oat_createCompilationContext`
  */
 void AVerifiedDex2Oat_CompilationContext_destroy(
-        const AVerifiedDex2Oat_CompilationContext* _Nonnull compCtx) __INTRODUCED_IN(37);
+        const AVerifiedDex2Oat_CompilationContext* _Nullable compCtx) __INTRODUCED_IN(38);
 
 /**
  * Add a dex2oat argument to the compilation context.
@@ -384,7 +384,7 @@ void AVerifiedDex2Oat_CompilationContext_destroy(
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_CompilationContext_addArg(
         AVerifiedDex2Oat_CompilationContext* _Nonnull compCtx, const char* _Nonnull formatString,
-        const int* _Nullable fds, size_t fdCount) __INTRODUCED_IN(37);
+        const int* _Nullable fds, size_t fdCount) __INTRODUCED_IN(38);
 
 /**
  * Starts a dex2oat compilation within a VM.
@@ -433,7 +433,7 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_start(
         AVerifiedDex2Oat_CompilationContext* _Nonnull compCtx,
         AVerifiedDex2Oat_onSuccessCallback _Nonnull onSuccessCb, void* _Nullable successUserData,
         AVerifiedDex2Oat_onFailureCallback _Nonnull onFailureCb, void* _Nullable failureUserData,
-        int32_t recordedArgsFd, uint32_t timeoutSeconds) __INTRODUCED_IN(37);
+        int32_t recordedArgsFd, uint32_t timeoutSeconds) __INTRODUCED_IN(38);
 
 /*
  * Cancels a started dex2oat compilation.
@@ -455,6 +455,6 @@ AVerifiedDex2Oat_Status AVerifiedDex2Oat_start(
  *     failed.
  */
 AVerifiedDex2Oat_Status AVerifiedDex2Oat_cancel(
-        AVerifiedDex2Oat_CompilationContext* _Nonnull compCtx) __INTRODUCED_IN(37);
+        AVerifiedDex2Oat_CompilationContext* _Nonnull compCtx) __INTRODUCED_IN(38);
 
 __END_DECLS
