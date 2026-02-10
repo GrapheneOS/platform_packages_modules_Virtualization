@@ -25,8 +25,8 @@ use avf_attestation::{
 };
 use bssl_avf::Digester;
 use ciborium::value::Value;
-use coset::{CoseSign1, CoseSign1Builder, HeaderBuilder};
-use diced_open_dice::{derive_cdi_leaf_priv, sign, DiceArtifacts, PrivateKey, VM_KEY_ALGORITHM};
+use coset::{CborSerializable, CoseSign1};
+use diced_open_dice::{retry_sign_cose_sign1_with_cdi_leaf_priv, DiceArtifacts};
 use log::{debug, error, info};
 use service_vm_comm::{RequestProcessingError, Result};
 use zeroize::Zeroizing;
@@ -89,17 +89,19 @@ impl<'a> AttestationOps for Ops<'a> {
     }
 
     fn sign_with_cdi_leaf(&self, payload: &[u8]) -> Result<CoseSign1> {
-        let cdi_leaf_priv = derive_cdi_leaf_priv(None, self.dice_artifacts).map_err(|e| {
-            error!("Failed to derive the CDI_Leaf_Priv: {e}");
+        let dice_context = None;
+        let aad = &[];
+        let signed_data = retry_sign_cose_sign1_with_cdi_leaf_priv(
+            dice_context,
+            payload,
+            aad,
+            self.dice_artifacts,
+        )
+        .map_err(|e| {
+            error!("Failed to sign with CDI_Leaf_Priv: {e}");
             RequestProcessingError::InternalError
         })?;
-        let protected = HeaderBuilder::new().algorithm(VM_KEY_ALGORITHM.into()).build();
-        let signed_data = CoseSign1Builder::new()
-            .protected(protected)
-            .payload(payload.to_vec())
-            .try_create_signature(&[], |message| sign_message(message, &cdi_leaf_priv))?
-            .build();
-        Ok(signed_data)
+        Ok(CoseSign1::from_slice(&signed_data)?)
     }
 
     fn validate_vm(&self, client_chain_suffix: &ClientVmDiceChain) -> service_vm_comm::Result<()> {
@@ -117,13 +119,4 @@ impl<'a> AttestationOps for Ops<'a> {
         // Check http://b/301574013#comment3 for more information.
         Ok(cbor_util::serialize(&Value::Map(Vec::new()))?)
     }
-}
-
-fn sign_message(message: &[u8], private_key: &PrivateKey) -> Result<Vec<u8>> {
-    Ok(sign(message, private_key.as_array())
-        .map_err(|e| {
-            error!("Failed to sign the CSR: {e}");
-            RequestProcessingError::InternalError
-        })?
-        .to_vec())
 }
