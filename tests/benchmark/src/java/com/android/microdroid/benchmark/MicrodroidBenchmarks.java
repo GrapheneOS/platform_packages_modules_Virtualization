@@ -99,7 +99,7 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
     private static final double SIZE_MB = 1024.0 * 1024.0;
     private static final double NANO_TO_MILLI = 1_000_000.0;
     private static final double NANO_TO_MICRO = 1_000.0;
-    private static final String MICRODROID_IMG_PREFIX = "microdroid_";
+    private static final String MICRODROID_IMG_PREFIX = "microdroid";
     private static final String MICRODROID_IMG_SUFFIX = ".img";
     static final long ENCRYPTED_STORE_SIZE = 1_073_741_824; // 1G
 
@@ -352,6 +352,12 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                     name.substring(
                             MICRODROID_IMG_PREFIX.length(),
                             name.length() - MICRODROID_IMG_SUFFIX.length());
+            if (base.startsWith("_")) {
+                base = base.substring(1);
+            }
+            if (base.length() == 0) {
+                base = "system";
+            }
             String metric = METRIC_NAME_PREFIX + "img_size_" + base + "_MB";
             double size = Files.size(file.toPath()) / SIZE_MB;
             bundle.putDouble(metric, size);
