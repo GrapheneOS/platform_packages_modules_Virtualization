@@ -19,20 +19,37 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.drawable.Icon
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.MainActivity
+import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class VmService : LifecycleService() {
+
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wakeLockTimeoutJob: Job? = null
+    private var isAppInForeground = true
+
+    private val sharedPrefListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == SettingsViewModel.KEY_KEEP_AWAKE) {
+                updateWakeLockState()
+            }
+        }
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
@@ -44,9 +61,65 @@ class VmService : LifecycleService() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createRunNotification(VmState.Ready))
 
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TerminalApp:KeepAwake")
+
+        val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPref.registerOnSharedPreferenceChangeListener(sharedPrefListener)
+
         monitorInstaller()
         monitorVmController()
         monitorPorts()
+        updateWakeLockState()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPref.unregisterOnSharedPreferenceChangeListener(sharedPrefListener)
+        releaseWakeLock()
+    }
+
+    private fun updateWakeLockState() {
+        val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        val keepAwakeMinutes = sharedPref.getInt(SettingsViewModel.KEY_KEEP_AWAKE, 0)
+
+        if (isAppInForeground || keepAwakeMinutes == 0) {
+            releaseWakeLock()
+        } else {
+            acquireWakeLock(keepAwakeMinutes)
+        }
+
+        // Update the main notification to show the "Keep awake" status
+        val vmState = VmController.vmState.value
+        if (vmState.isAlive) {
+            val notification = createRunNotification(vmState)
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun acquireWakeLock(minutes: Int) {
+        if (wakeLock?.isHeld == false) {
+            wakeLock?.acquire()
+        }
+        wakeLockTimeoutJob?.cancel()
+        wakeLockTimeoutJob =
+            lifecycleScope.launch {
+                delay(minutes.toLong() * 60 * 1000)
+                // When timeout occurs, reset the setting to Off and release WakeLock
+                val sharedPref =
+                    getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+                sharedPref.edit().putInt(SettingsViewModel.KEY_KEEP_AWAKE, 0).apply()
+                // The sharedPrefListener will trigger releaseWakeLock via updateWakeLockState()
+            }
+    }
+
+    private fun releaseWakeLock() {
+        if (wakeLock?.isHeld == true) {
+            wakeLock?.release()
+        }
+        wakeLockTimeoutJob?.cancel()
+        wakeLockTimeoutJob = null
     }
 
     private fun monitorPorts() {
@@ -174,6 +247,14 @@ class VmService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_APP_FOREGROUND -> {
+                isAppInForeground = true
+                updateWakeLockState()
+            }
+            ACTION_APP_BACKGROUND -> {
+                isAppInForeground = false
+                updateWakeLockState()
+            }
             ACTION_CANCEL_INSTALL -> Installer.cancelInstall()
             ACTION_STOP_VM -> VmController.stop()
             ACTION_PORT_FORWARD -> {
@@ -268,6 +349,8 @@ class VmService : LifecycleService() {
 
     companion object {
         private const val NOTIFICATION_ID = 1
+        const val ACTION_APP_FOREGROUND = "ACTION_APP_FOREGROUND"
+        const val ACTION_APP_BACKGROUND = "ACTION_APP_BACKGROUND"
         private const val ACTION_CANCEL_INSTALL = "ACTION_CANCEL_INSTALL"
         private const val ACTION_STOP_VM = "ACTION_STOP_VM"
         private const val ACTION_PORT_FORWARD = "ACTION_PORT_FORWARD"
