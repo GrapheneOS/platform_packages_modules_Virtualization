@@ -81,7 +81,7 @@ import kotlinx.coroutines.launch
 
 enum class SettingsDestination(val title: Int, val icon: Int) {
     PortControl(R.string.settings_port_title, R.drawable.baseline_call_missed_outgoing_24),
-    Graphics(R.string.settings_graphics_title, R.drawable.ic_display),
+    Advanced(R.string.settings_advanced_title, R.drawable.ic_display),
     Recovery(R.string.settings_recovery_title, R.drawable.baseline_settings_backup_restore_24),
 }
 
@@ -96,7 +96,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
 
     val destinations = remember {
         SettingsDestination.values().filter {
-            it != SettingsDestination.Graphics || VmController.isGraphicsAccelerationSupported
+            it != SettingsDestination.Advanced || VmController.isGraphicsAccelerationSupported
         }
     }
 
@@ -228,7 +228,7 @@ fun SettingsDetailPane(
         Box(modifier = Modifier.padding(innerPadding)) {
             when (destination) {
                 SettingsDestination.PortControl -> PortControlPage()
-                SettingsDestination.Graphics -> GraphicsAccelerationPage(onCloseSettings)
+                SettingsDestination.Advanced -> AdvancedPage(onCloseSettings)
                 SettingsDestination.Recovery -> RecoveryPage()
             }
         }
@@ -236,7 +236,7 @@ fun SettingsDetailPane(
 }
 
 @Composable
-fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewModel = viewModel()) {
+fun AdvancedPage(onCloseSettings: () -> Unit, viewModel: MainViewModel = viewModel()) {
     val currentType = VmController.graphicsAccelerationType
     var showSelectionDialog by remember { mutableStateOf(false) }
     var showRebootDialog by remember { mutableStateOf(false) }
@@ -334,6 +334,7 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewMod
                         showSelectionDialog = true
                     },
             )
+            HorizontalDivider()
         }
     }
 }
