@@ -647,17 +647,6 @@ fn try_run_payload(
 
     let tenant_manager = TenantManager::initialize(&config.tenants)?;
     let tenant_manager = Arc::new(tenant_manager);
-
-    if !config.tenants.is_empty() {
-        tenant::validate_tenants_against_existing_spec_update_spec(
-            is_new_instance,
-            &mut instance_disk,
-            &tenant_manager,
-            tenant_apks,
-            tenant_apex_data,
-        )?;
-    }
-
     let tenant_apk_count =
         config.tenants.iter().filter(|t| matches!(t, TenantConfig::Apk(_))).count();
     mount_additional_apks(&mut zipfuse, tenant_apk_count, AdditionalApkType::TenantApk)
