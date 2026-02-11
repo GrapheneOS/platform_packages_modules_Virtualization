@@ -204,6 +204,15 @@
     <string name="settings_btn_back_desc">Back</string>
 
     <!-- ================================================================= -->
+    <!-- Settings - Advanced                                               -->
+    <!-- ================================================================= -->
+
+    <!-- Settings menu title for advanced options [CHAR LIMIT=none] -->
+    <string name="settings_advanced_title">Advanced</string>
+    <!-- Settings menu title for memory size [CHAR LIMIT=none] -->
+    <string name="settings_advanced_memory_title">Memory size</string>
+
+    <!-- ================================================================= -->
     <!-- Settings - Port                                                   -->
     <!-- ================================================================= -->
 

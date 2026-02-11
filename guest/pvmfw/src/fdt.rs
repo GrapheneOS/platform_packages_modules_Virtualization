@@ -311,7 +311,7 @@ struct ClusterTopology {
 }
 
 impl ClusterTopology {
-    const MAX_CORES_PER_CLUSTER: usize = 10;
+    const MAX_CORES_PER_CLUSTER: usize = 20;
 }
 
 #[derive(Debug, Default)]

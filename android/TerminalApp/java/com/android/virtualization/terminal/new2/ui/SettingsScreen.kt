@@ -18,6 +18,7 @@ package com.android.virtualization.terminal.new2.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,9 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -44,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -58,12 +63,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -77,12 +84,13 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.OpenPort
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
+import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlinx.coroutines.launch
 
-enum class SettingsDestination(val title: Int, val icon: Int) {
-    PortControl(R.string.settings_port_title, R.drawable.baseline_call_missed_outgoing_24),
-    Graphics(R.string.settings_graphics_title, R.drawable.ic_display),
-    Recovery(R.string.settings_recovery_title, R.drawable.baseline_settings_backup_restore_24),
+enum class SettingsDestination(val title: Int, val icon: ImageVector) {
+    PortControl(R.string.settings_port_title, Icons.Default.Security),
+    Advanced(R.string.settings_advanced_title, Icons.Default.Tune),
+    Recovery(R.string.settings_recovery_title, Icons.Default.Restore),
 }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -96,7 +104,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
 
     val destinations = remember {
         SettingsDestination.values().filter {
-            it != SettingsDestination.Graphics || VmController.isGraphicsAccelerationSupported
+            it != SettingsDestination.Advanced || VmController.isGraphicsAccelerationSupported
         }
     }
 
@@ -183,9 +191,7 @@ fun SettingsListPane(
                 val isSelected = selectedItem == item
                 ListItem(
                     headlineContent = { Text(stringResource(item.title)) },
-                    leadingContent = {
-                        Icon(painter = painterResource(item.icon), contentDescription = null)
-                    },
+                    leadingContent = { Icon(imageVector = item.icon, contentDescription = null) },
                     modifier = Modifier.clickable { onItemClick(item) },
                     colors =
                         ListItemDefaults.colors(
@@ -228,7 +234,7 @@ fun SettingsDetailPane(
         Box(modifier = Modifier.padding(innerPadding)) {
             when (destination) {
                 SettingsDestination.PortControl -> PortControlPage()
-                SettingsDestination.Graphics -> GraphicsAccelerationPage(onCloseSettings)
+                SettingsDestination.Advanced -> AdvancedPage(onCloseSettings)
                 SettingsDestination.Recovery -> RecoveryPage()
             }
         }
@@ -236,11 +242,18 @@ fun SettingsDetailPane(
 }
 
 @Composable
-fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewModel = viewModel()) {
+fun AdvancedPage(
+    onCloseSettings: () -> Unit,
+    mainViewModel: MainViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
+) {
     val currentType = VmController.graphicsAccelerationType
     var showSelectionDialog by remember { mutableStateOf(false) }
     var showRebootDialog by remember { mutableStateOf(false) }
     var selectedType by remember { mutableStateOf(currentType) }
+
+    val currentMemoryMb by settingsViewModel.currentMemoryMb.collectAsStateWithLifecycle()
+    var showMemoryDialog by remember { mutableStateOf(false) }
 
     val typeToName =
         mapOf(
@@ -299,6 +312,20 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewMod
         )
     }
 
+    if (showMemoryDialog) {
+        MemorySizeDialog(
+            currentMemoryMb = currentMemoryMb,
+            minMemoryMb = SettingsViewModel.MIN_MEMORY_MIB,
+            maxMemoryMb = settingsViewModel.maxMemoryMb,
+            onDismissRequest = { showMemoryDialog = false },
+            onConfirm = {
+                settingsViewModel.setMemoryMb(it)
+                showMemoryDialog = false
+                showRebootDialog = true
+            },
+        )
+    }
+
     if (showRebootDialog) {
         AlertDialog(
             onDismissRequest = { showRebootDialog = false },
@@ -308,7 +335,7 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewMod
                 TextButton(
                     onClick = {
                         showRebootDialog = false
-                        viewModel.restartVm()
+                        mainViewModel.restartVm()
                         onCloseSettings()
                     }
                 ) {
@@ -334,7 +361,76 @@ fun GraphicsAccelerationPage(onCloseSettings: () -> Unit, viewModel: MainViewMod
                         showSelectionDialog = true
                     },
             )
+            HorizontalDivider()
         }
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_advanced_memory_title)) },
+                supportingContent = { Text(formatMemorySize(currentMemoryMb)) },
+                modifier = Modifier.clickable { showMemoryDialog = true },
+            )
+            HorizontalDivider()
+        }
+    }
+}
+
+@Composable
+fun MemorySizeDialog(
+    currentMemoryMb: Int,
+    minMemoryMb: Int,
+    maxMemoryMb: Int,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Int) -> Unit,
+) {
+    var selectedMemory by remember { mutableFloatStateOf(currentMemoryMb.toFloat()) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.settings_advanced_memory_title)) },
+        text = {
+            Column {
+                Text(
+                    text = formatMemorySize(selectedMemory.toInt()),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+                Slider(
+                    value = selectedMemory,
+                    onValueChange = { selectedMemory = it },
+                    valueRange = minMemoryMb.toFloat()..maxMemoryMb.toFloat(),
+                    steps = (maxMemoryMb - minMemoryMb) / 50, // 50MB steps
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = formatMemorySize(minMemoryMb),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Text(
+                        text = formatMemorySize(maxMemoryMb),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedMemory.toInt()) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
+}
+
+private fun formatMemorySize(mib: Int): String {
+    return if (mib >= 1024) {
+        String.format("%.1f GB", mib / 1024f)
+    } else {
+        "$mib MB"
     }
 }
 
