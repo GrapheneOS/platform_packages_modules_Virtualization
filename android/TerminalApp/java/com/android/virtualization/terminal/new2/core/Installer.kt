@@ -38,6 +38,52 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * A custom [MutableStateFlow] for [InstallState] that prevents moving from a started state back to
+ * a non-started state. This ensures that background status checks don't interrupt an ongoing
+ * installation.
+ */
+private class InstallStateFlow(private val original: MutableStateFlow<InstallState>) :
+    MutableStateFlow<InstallState> by original {
+    override var value: InstallState
+        get() = original.value
+        set(newValue) {
+            if (shouldIgnore(original.value, newValue)) return
+            original.value = newValue
+        }
+
+    override suspend fun emit(value: InstallState) {
+        if (shouldIgnore(original.value, value)) return
+        original.emit(value)
+    }
+
+    override fun tryEmit(value: InstallState): Boolean {
+        if (shouldIgnore(original.value, value)) return false
+        return original.tryEmit(value)
+    }
+
+    /**
+     * Determines if a state transition should be ignored.
+     *
+     * We want to prevent background status checks (which set state to Checking or NotInstalled)
+     * from overriding an active installation process.
+     */
+    private fun shouldIgnore(current: InstallState, next: InstallState): Boolean {
+        // If installation is underway, ignore background resets UNLESS the
+        // installation job is no longer active (e.g., it was cancelled by the user).
+        if (
+            current.isStarted() &&
+                (next is InstallState.Checking || next is InstallState.NotInstalled)
+        ) {
+            if (Installer.isInstalling) {
+                Log.d("Installer", "Ignoring background update while installation is active.")
+                return true
+            }
+        }
+        return false
+    }
+}
+
 object Installer {
     private const val ESTIMATED_DOWNLOAD_SIZE = 700L * 1024 * 1024
 
@@ -46,7 +92,9 @@ object Installer {
     private lateinit var installedImage: InstalledImage
 
     private val _installState =
-        LoggingMutableStateFlow<InstallState>(MutableStateFlow(InstallState.Checking), "Installer")
+        InstallStateFlow(
+            LoggingMutableStateFlow(MutableStateFlow(InstallState.Checking), "Installer")
+        )
     val installState: StateFlow<InstallState> = _installState.asStateFlow()
 
     private val _wifiOnly = MutableStateFlow(true)
@@ -54,6 +102,10 @@ object Installer {
 
     private var networkMonitor: NetworkMonitor? = null
     private var installJob: Job? = null
+
+    /** Whether an installation or upgrade process is currently active. */
+    val isInstalling: Boolean
+        get() = installJob?.isActive == true
 
     fun initialize(context: Context) {
         this.context = context.applicationContext
@@ -65,12 +117,18 @@ object Installer {
     }
 
     fun install() {
+        if (installState.value.isStarted() || installState.value is InstallState.Installed) {
+            return
+        }
         val intent = Intent(context, VmService::class.java)
         context.startForegroundService(intent)
         installJob = repositoryScope.launch { installInternal() }
     }
 
     fun upgrade() {
+        if (installState.value.isStarted()) {
+            return
+        }
         val intent = Intent(context, VmService::class.java)
         context.startForegroundService(intent)
         installJob =
