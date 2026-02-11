@@ -129,6 +129,10 @@ internal data class ConfigJson(
             builder.setGpuConfig(gpu.toConfig())
         }
 
+        if (hugepages) {
+            builder.addParam("transparent_hugepage=always")
+        }
+
         params?.split(" ".toRegex())?.filter { it.isNotEmpty() }?.forEach { builder.addParam(it) }
 
         disks?.forEach { builder.addDisk(it.toConfig()) }
