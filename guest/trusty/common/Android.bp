@@ -3,12 +3,5 @@ prebuilt_etc {
     filename: "early_vms.xml",
     relative_install_path: "avf",
     system_ext_specific: true,
-    enabled: select(soong_config_variable("trusty_system_vm", "enabled"), {
-        true: true,
-        default: false,
-    }),
-    src: select(soong_config_variable("trusty_system_vm", "enabled"), {
-        true: "early_vms.xml",
-        default: ":empty_file",
-    }),
+    src: "early_vms.xml",
 }
