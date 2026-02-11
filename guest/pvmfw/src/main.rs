@@ -41,7 +41,6 @@ use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bssl_crypto::digest::Sha512;
-use core::slice::ChunksMut;
 use diced_open_dice::{
     bcc_handover_parse, DiceArtifacts, DiceContext, Hidden, HIDDEN_SIZE, VM_KEY_ALGORITHM,
 };
@@ -125,7 +124,10 @@ fn main<'a>(
     };
 
     let next_dice_handover_pages = if verified_boot_data.is_some() { 1 } else { 0 };
-    let preserved_memory_pages = reserved_mem_info.len() + next_dice_handover_pages;
+
+    // Regions can't share pages, each gets exactly one for simplicity.
+    let reserved_mem_pages = reserved_mem_info.len();
+    let preserved_memory_pages = reserved_mem_pages + next_dice_handover_pages;
     let preserved_memory = if preserved_memory_pages > 0 {
         let preserved_memory_size = preserved_memory_pages * guest_page_size;
         let slice =
@@ -139,9 +141,11 @@ fn main<'a>(
     } else {
         &mut []
     };
-    let mut preserved_pages: ChunksMut<'_, u8> = preserved_memory.chunks_mut(guest_page_size);
+    let (preserved_memory_for_resmem, preserved_memory_for_dice) =
+        preserved_memory.split_at_mut(reserved_mem_pages * guest_page_size);
 
     // Move reserved memory to preserved preserved_pages.
+    let mut preserved_pages = preserved_memory_for_resmem.chunks_mut(guest_page_size);
     for entry in reserved_mem_info.iter_mut() {
         let page = preserved_pages.next().unwrap();
         let (blob, rest) = page.split_at_mut(entry.blob.len());
@@ -163,17 +167,16 @@ fn main<'a>(
             perform_rollback_protection(fdt, data, &dice_inputs, &dice_cdi_seal)?;
         trace!("Got salt for instance: {salt:x?}");
 
-        let next_dice_handover = preserved_pages.next().unwrap();
         perform_dice_derivation(
             dice_handover_bytes.as_ref(),
             dice_context,
             dice_inputs,
             &salt,
             defer_rollback_protection,
-            next_dice_handover,
+            preserved_memory_for_dice,
         )?;
 
-        (Some(next_dice_handover), new_instance)
+        (Some(preserved_memory_for_dice), new_instance)
     } else {
         (None, true)
     };
