@@ -123,7 +123,15 @@ fn main<'a>(
         Vec::new()
     };
 
-    let next_dice_handover_pages = if verified_boot_data.is_some() { 1 } else { 0 };
+    let next_dice_handover_pages = if let Some((ref handover, _, _)) = parsed_dice {
+        // Based on a simple derivation, with generous error margins.
+        const EXTRA_DICE_SIZE: usize = 1024;
+        let estimated_next_size = handover.len() + EXTRA_DICE_SIZE;
+
+        estimated_next_size.div_ceil(guest_page_size)
+    } else {
+        0
+    };
 
     // Regions can't share pages, each gets exactly one for simplicity.
     let reserved_mem_pages = reserved_mem_info.len();
