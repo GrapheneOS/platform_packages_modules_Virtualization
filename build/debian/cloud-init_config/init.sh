@@ -33,6 +33,7 @@ _restart_services() {
 
 apply_avf_configs() {
 	_copy_files
+	chown -R droid:users /home/droid
 	_restart_services
 }
 
