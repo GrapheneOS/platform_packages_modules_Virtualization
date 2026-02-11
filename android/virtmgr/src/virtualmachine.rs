@@ -1084,8 +1084,6 @@ fn assemble_shared_paths(
                     .join(&path.socketPath)
                     .to_string_lossy()
                     .to_string(),
-                socket_fd: maybe_clone_file(path.socketFd.as_ref())?,
-                app_domain: path.appDomain,
             })
         })
         .collect()

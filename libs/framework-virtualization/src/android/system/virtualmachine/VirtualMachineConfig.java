@@ -868,39 +868,6 @@ public final class VirtualMachineConfig {
                                 .orElse(0)];
         for (int i = 0; i < config.sharedPaths.length; i++) {
             config.sharedPaths[i] = customImageConfig.getSharedPaths()[i].toParcelable();
-            if (config.sharedPaths[i].appDomain) {
-                try {
-                    String socketPath = customImageConfig.getSharedPaths()[i].getSocketPath();
-                    startCrosvmVirtiofs(
-                            config.sharedPaths[i].sharedPath,
-                            config.sharedPaths[i].hostUid,
-                            config.sharedPaths[i].guestUid,
-                            config.sharedPaths[i].guestGid,
-                            config.sharedPaths[i].tag,
-                            config.sharedPaths[i].mask,
-                            socketPath,
-                            config.protectedVm);
-                    long startTime = System.currentTimeMillis();
-                    long deadline = startTime + 5000;
-                    // TODO: use socketpair instead of crosvm creating the named sockets.
-                    while (!Files.exists(Path.of(socketPath))
-                            && System.currentTimeMillis() < deadline) {
-                        Thread.sleep(200);
-                    }
-                    if (!Files.exists(Path.of(socketPath))) {
-                        throw new IOException("Timeout waiting for socket: " + socketPath);
-                    }
-                    LocalSocket socket = new LocalSocket();
-                    socket.connect(
-                            new LocalSocketAddress(
-                                    socketPath, LocalSocketAddress.Namespace.FILESYSTEM));
-                    config.sharedPaths[i].socketFd =
-                            ParcelFileDescriptor.dup(socket.getFileDescriptor());
-                } catch (IOException | InterruptedException e) {
-                    Log.e(TAG, "startCrosvmVirtiofs failed", e);
-                    throw new RuntimeException(e);
-                }
-            }
         }
 
         config.displayConfig =

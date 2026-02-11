@@ -159,7 +159,6 @@ internal data class ConfigJson(
                             7,
                             "android",
                             "android",
-                            false, /* app domain is set to false so that crosvm is spin up as child of virtmgr */
                             "",
                         )
                     }
