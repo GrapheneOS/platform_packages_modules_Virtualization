@@ -90,7 +90,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::collections::HashSet;
 use std::env;
 use std::ffi::{CStr, CString};
-use std::fs::{self, create_dir, create_dir_all, File, OpenOptions};
+use std::fs::{self, create_dir, create_dir_all, remove_dir_all, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
 use std::os::fd::AsRawFd;
@@ -1443,14 +1443,13 @@ impl IGuestAgent for GuestAgent {
     }
 
     fn userUnlocked(&self, user_id: i32, kek: &Strong<dyn ICEStoreKEK>) -> binder::Result<()> {
-        let user_path = format!("{}/{user_id}", ENCRYPTEDSTORE_PER_USER_FOLDERS);
-        let user_path = Path::new(&user_path);
-        if let Err(e) = create_dir_all(user_path) {
+        let user_path = GuestAgent::get_encrypted_store(user_id);
+        if let Err(e) = create_dir_all(&user_path) {
             return Err(anyhow!("Cannot create {} {e}", user_path.display()))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
-        set_encrypted_store_per_user_key(kek, &self.vm_secret, user_path)
+        set_encrypted_store_per_user_key(kek, &self.vm_secret, &user_path)
             .context("Failed to set per user key")
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
     }
@@ -1469,6 +1468,15 @@ impl IGuestAgent for GuestAgent {
                 .context("failed to stop adbd")
                 .or_service_specific_exception(-1)
         }
+    }
+
+    fn userRemoved(&self, user_id: i32) -> binder::Result<()> {
+        let user_path = GuestAgent::get_encrypted_store(user_id);
+        if let Err(e) = remove_dir_all(&user_path) {
+            return Err(anyhow!("Cannot remove {} {e}", user_path.display()))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        Ok(())
     }
 }
 
@@ -1501,6 +1509,11 @@ fn set_encrypted_store_per_user_key(
 impl GuestAgent {
     fn new_binder(vm_secret: Arc<VmSecret>) -> Strong<dyn IGuestAgent> {
         BnGuestAgent::new_binder(GuestAgent { vm_secret }, BinderFeatures::default())
+    }
+
+    fn get_encrypted_store(user_id: i32) -> PathBuf {
+        let user_path = format!("{}/{user_id}", ENCRYPTEDSTORE_PER_USER_FOLDERS);
+        PathBuf::from(user_path)
     }
 }
 

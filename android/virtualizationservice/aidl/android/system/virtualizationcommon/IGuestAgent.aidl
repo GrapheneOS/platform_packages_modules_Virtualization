@@ -46,4 +46,7 @@ interface IGuestAgent {
      * This function is only supported for debuggable Microdroid guests.
      */
     void startOrStopAdbd(in boolean start) = 6;
+
+    /** Called when given {@code userId} is removed */
+    void userRemoved(int userId) = 7;
 }
