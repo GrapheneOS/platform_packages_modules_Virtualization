@@ -61,10 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"යතුරු පුවරුව පෙන්වන්න"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"මූසිකය මුදා හරින්න"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"මූසිකය අගුළු දමන්න"</string>
-    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
-    <skip />
-    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
-    <skip />
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"ට්‍රැක්පෑඩ් ප්‍රකාරය ක්‍රියාවිරහිත කරන්න"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"ට්‍රැක්පෑඩ් ප්‍රකාරය ක්‍රියාත්මක කරන්න"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"සංදර්ශක පාලන වසන්න"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"සංදර්ශක විකල්ප"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"පෙර පිටුව"</string>

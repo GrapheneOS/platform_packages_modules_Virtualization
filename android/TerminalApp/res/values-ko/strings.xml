@@ -61,10 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"키보드 표시"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"마우스 놓기"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"마우스 잠그기"</string>
-    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
-    <skip />
-    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
-    <skip />
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"트랙패드 모드 사용 중지"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"트랙패드 모드 사용 설정"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"표시 컨트롤 닫기"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"디스플레이 옵션"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"이전 페이지"</string>

@@ -61,10 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Ipakita ang Keyboard"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"I-release ang Mouse"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"I-lock ang Mouse"</string>
-    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
-    <skip />
-    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
-    <skip />
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"I-off ang trackpad mode"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"I-on ang trackpad mode"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Isara ang mga kontrol ng display"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Mga opsyon sa display"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Nakaraang Pahina"</string>

@@ -61,10 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"କୀବୋର୍ଡ ଦେଖାନ୍ତୁ"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"ମାଉସ ରିଲିଜ କରନ୍ତୁ"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"ମାଉସକୁ ଲକ କରନ୍ତୁ"</string>
-    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
-    <skip />
-    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
-    <skip />
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"ଟ୍ରାକପେଡ ମୋଡ ବନ୍ଦ କରନ୍ତୁ"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"ଟ୍ରାକପେଡ ମୋଡ ଚାଲୁ କରନ୍ତୁ"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"ଡିସପ୍ଲେ ନିୟନ୍ତ୍ରଣଗୁଡ଼ିକୁ ବନ୍ଦ କରନ୍ତୁ"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"ଡିସପ୍ଲେ ବିକଳ୍ପ"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"ପୂର୍ବ ପୃଷ୍ଠା"</string>
