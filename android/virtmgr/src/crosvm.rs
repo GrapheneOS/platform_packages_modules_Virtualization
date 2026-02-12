@@ -336,6 +336,23 @@ impl CrosvmCommand {
             let file = self.add_preserved_fd(initrd.as_ref().try_clone()?);
             self.args(["--initrd", &file]);
         }
+
+        // To ensure deterministic output of the microdroid image, we don't include build identity
+        // information in the image (see
+        // packages/modules/Virtualization/build/microdroid/Android.bp). Instead, we inject
+        // them as kernel parameters here.
+        if context.config.osName.starts_with("microdroid") {
+            if let Some(id) = system_properties::read("ro.build.id")? {
+                self.args(["--params", &format!("androidboot.microdroid.build_id={id}")]);
+            }
+            if let Some(version) = system_properties::read("ro.build.version.incremental")? {
+                self.args([
+                    "--params",
+                    &format!("androidboot.microdroid.build_version_incremental={version}"),
+                ]);
+            }
+        }
+
         Ok(())
     }
 
