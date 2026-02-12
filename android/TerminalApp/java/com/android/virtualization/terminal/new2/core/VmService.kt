@@ -19,20 +19,53 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.drawable.Icon
 import android.os.IBinder
+import android.os.PowerManager
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.ui.MainActivity
+import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class VmService : LifecycleService() {
+
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wakeLockTimeoutJob: Job? = null
+    private var isAppInForeground = true
+
+    private val appLifecycleObserver =
+        object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                isAppInForeground = true
+                updateWakeLockState()
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                isAppInForeground = false
+                updateWakeLockState()
+            }
+        }
+
+    private val sharedPrefListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == SettingsViewModel.KEY_KEEP_AWAKE) {
+                updateWakeLockState()
+            }
+        }
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
@@ -44,9 +77,68 @@ class VmService : LifecycleService() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createRunNotification(VmState.Ready))
 
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TerminalApp:KeepAwake")
+
+        val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPref.registerOnSharedPreferenceChangeListener(sharedPrefListener)
+
+        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+
         monitorInstaller()
         monitorVmController()
         monitorPorts()
+        updateWakeLockState()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPref.unregisterOnSharedPreferenceChangeListener(sharedPrefListener)
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
+        releaseWakeLock()
+    }
+
+    private fun updateWakeLockState() {
+        val sharedPref = getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        val keepAwakeMinutes = sharedPref.getInt(SettingsViewModel.KEY_KEEP_AWAKE, 0)
+
+        if (isAppInForeground || keepAwakeMinutes == 0) {
+            releaseWakeLock()
+        } else {
+            acquireWakeLock(keepAwakeMinutes)
+        }
+
+        // Update the main notification to show the "Keep awake" status
+        val vmState = VmController.vmState.value
+        if (vmState.isAlive) {
+            val notification = createRunNotification(vmState)
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun acquireWakeLock(minutes: Int) {
+        val timeoutMillis = minutes.toLong() * 60 * 1000
+        if (wakeLock?.isHeld == false) {
+            wakeLock?.acquire(timeoutMillis)
+        }
+        wakeLockTimeoutJob?.cancel()
+        wakeLockTimeoutJob =
+            lifecycleScope.launch {
+                delay(timeoutMillis)
+                // When timeout occurs, reset the setting to Off
+                val sharedPref =
+                    getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+                sharedPref.edit().putInt(SettingsViewModel.KEY_KEEP_AWAKE, 0).apply()
+            }
+    }
+
+    private fun releaseWakeLock() {
+        if (wakeLock?.isHeld == true) {
+            wakeLock?.release()
+        }
+        wakeLockTimeoutJob?.cancel()
+        wakeLockTimeoutJob = null
     }
 
     private fun monitorPorts() {
@@ -176,6 +268,11 @@ class VmService : LifecycleService() {
         when (intent?.action) {
             ACTION_CANCEL_INSTALL -> Installer.cancelInstall()
             ACTION_STOP_VM -> VmController.stop()
+            ACTION_TURN_OFF_KEEP_AWAKE -> {
+                val sharedPref =
+                    getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+                sharedPref.edit().putInt(SettingsViewModel.KEY_KEEP_AWAKE, 0).apply()
+            }
             ACTION_PORT_FORWARD -> {
                 val port = intent.getIntExtra(EXTRA_PORT, -1)
                 val enable = intent.getBooleanExtra(EXTRA_ENABLE, false)
@@ -194,6 +291,15 @@ class VmService : LifecycleService() {
         val channel =
             NotificationChannel(CHANNEL_ID, "VM Service", NotificationManager.IMPORTANCE_LOW)
         manager.createNotificationChannel(channel)
+
+        val keepAwakeChannel =
+            NotificationChannel(
+                KEEP_AWAKE_CHANNEL_ID,
+                "Keep Awake",
+                NotificationManager.IMPORTANCE_HIGH,
+            )
+        manager.createNotificationChannel(keepAwakeChannel)
+
         val portChannel =
             NotificationChannel(
                 PORT_CHANNEL_ID,
@@ -241,26 +347,74 @@ class VmService : LifecycleService() {
         val stopPending =
             PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
+        val isKeepingAwake = wakeLock?.isHeld == true
+        val channelId = if (isKeepingAwake) KEEP_AWAKE_CHANNEL_ID else CHANNEL_ID
+
         val builder =
-            Notification.Builder(this, CHANNEL_ID)
+            Notification.Builder(this, channelId)
                 .setContentTitle("Terminal Service")
                 .setSmallIcon(R.drawable.ic_terminal)
                 .setContentIntent(getMainActivityPendingIntent())
+
+        if (isKeepingAwake) {
+            val turnOffIntent =
+                Intent(this, VmService::class.java).apply { action = ACTION_TURN_OFF_KEEP_AWAKE }
+            val turnOffPending =
+                PendingIntent.getService(
+                    this,
+                    3,
+                    turnOffIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            val settingsIntent =
+                Intent(this, MainActivity::class.java).apply {
+                    action = MainActivity.ACTION_OPEN_SETTINGS_KEEP_AWAKE
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+            val settingsPending =
+                PendingIntent.getActivity(
+                    this,
+                    4,
+                    settingsIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            builder
+                .setContentText(getString(R.string.notif_keep_awake_active))
                 .addAction(
                     Notification.Action.Builder(
-                            Icon.createWithResource(this, R.drawable.ic_close),
-                            getString(R.string.notif_action_close),
-                            stopPending,
+                            null,
+                            getString(R.string.notif_action_turn_off_keep_awake),
+                            turnOffPending,
                         )
                         .build()
                 )
+                .addAction(
+                    Notification.Action.Builder(
+                            null,
+                            getString(R.string.notif_action_keep_awake_settings),
+                            settingsPending,
+                        )
+                        .build()
+                )
+        } else {
+            builder.addAction(
+                Notification.Action.Builder(
+                        Icon.createWithResource(this, R.drawable.ic_close),
+                        getString(R.string.notif_action_close),
+                        stopPending,
+                    )
+                    .build()
+            )
 
-        if (state is VmState.Starting) {
-            builder.setContentText("Terminal is starting...")
-        } else if (state is VmState.Running) {
-            builder.setContentText("Terminal is running")
-        } else if (state is VmState.Stopping) {
-            builder.setContentText("Terminal is shutting down")
+            if (state is VmState.Starting) {
+                builder.setContentText("Terminal is starting...")
+            } else if (state is VmState.Running) {
+                builder.setContentText("Terminal is running")
+            } else if (state is VmState.Stopping) {
+                builder.setContentText("Terminal is shutting down")
+            }
         }
 
         return builder.build()
@@ -268,12 +422,14 @@ class VmService : LifecycleService() {
 
     companion object {
         private const val NOTIFICATION_ID = 1
+        const val ACTION_TURN_OFF_KEEP_AWAKE = "ACTION_TURN_OFF_KEEP_AWAKE"
         private const val ACTION_CANCEL_INSTALL = "ACTION_CANCEL_INSTALL"
         private const val ACTION_STOP_VM = "ACTION_STOP_VM"
         private const val ACTION_PORT_FORWARD = "ACTION_PORT_FORWARD"
         private const val EXTRA_PORT = "EXTRA_PORT"
         private const val EXTRA_ENABLE = "EXTRA_ENABLE"
         private const val CHANNEL_ID = "vm_service_channel"
+        private const val KEEP_AWAKE_CHANNEL_ID = "vm_keep_awake_channel"
         private const val PORT_CHANNEL_ID = "vm_port_channel"
     }
 }

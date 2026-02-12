@@ -432,7 +432,6 @@ public class VirtualMachineCustomImageConfig {
         private final int mask;
         private final String tag;
         private final String socket;
-        private final boolean appDomain;
         private final String socketPath;
 
         public SharedPath(
@@ -444,7 +443,6 @@ public class VirtualMachineCustomImageConfig {
                 int mask,
                 String tag,
                 String socket,
-                boolean appDomain,
                 String socketPath) {
             this.path = path;
             this.hostUid = hostUid;
@@ -454,7 +452,6 @@ public class VirtualMachineCustomImageConfig {
             this.mask = mask;
             this.tag = tag;
             this.socket = socket;
-            this.appDomain = appDomain;
             this.socketPath = socketPath;
         }
 
@@ -469,7 +466,6 @@ public class VirtualMachineCustomImageConfig {
             parcelable.mask = this.mask;
             parcelable.tag = this.tag;
             parcelable.socketPath = this.socket;
-            parcelable.appDomain = this.appDomain;
             return parcelable;
         }
 
@@ -511,11 +507,6 @@ public class VirtualMachineCustomImageConfig {
         /** @hide */
         public String getSocket() {
             return socket;
-        }
-
-        /** @hide */
-        public boolean getAppDomain() {
-            return appDomain;
         }
 
         /** @hide */

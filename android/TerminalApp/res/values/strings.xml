@@ -212,6 +212,36 @@
     <!-- Settings menu title for memory size [CHAR LIMIT=none] -->
     <string name="settings_advanced_memory_title">Memory size</string>
 
+    <!-- Settings menu title for keep awake [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_title">Keep awake</string>
+    <!-- Option for keep awake off [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_off">Off</string>
+    <!-- Option for keep awake 1 minute [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_1m">1 minute</string>
+    <!-- Option for keep awake 5 minutes [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_5m">5 minutes</string>
+    <!-- Option for keep awake 10 minutes [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_10m">10 minutes</string>
+    <!-- Option for keep awake 30 minutes [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_30m">30 minutes</string>
+    <!-- Option for keep awake 1 hour [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_1h">1 hour</string>
+    <!-- Option for keep awake 2 hours [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_2h">2 hours</string>
+    <!-- Option for keep awake 6 hours [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_6h">6 hours</string>
+    <!-- Option for keep awake 1 day [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_1d">1 day</string>
+    <!-- Warning message for keep awake battery impact [CHAR LIMIT=none] -->
+    <string name="settings_keep_awake_battery_warning">Warning: Enabling keep awake will significantly impact battery life as it prevents the device from sleeping.</string>
+
+    <!-- Notification content when keep awake is active [CHAR LIMIT=none] -->
+    <string name="notif_keep_awake_active">Terminal is keeping the device awake</string>
+    <!-- Action label to turn off keep awake from notification [CHAR LIMIT=20] -->
+    <string name="notif_action_turn_off_keep_awake">Turn off</string>
+    <!-- Action label to open keep awake settings from notification [CHAR LIMIT=20] -->
+    <string name="notif_action_keep_awake_settings">Settings</string>
+
     <!-- ================================================================= -->
     <!-- Settings - Port                                                   -->
     <!-- ================================================================= -->

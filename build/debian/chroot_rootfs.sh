@@ -91,10 +91,13 @@ mount_environment() {
   mount --rbind /proc "${CHROOT_WORKSPACE}/proc"
   mount --rbind /sys "${CHROOT_WORKSPACE}/sys"
 
-  # Configure DNS inside chroot
+  # Configure DNS inside chroot via bind mount (temporary, not baked into image)
   local target_resolv="${CHROOT_WORKSPACE}/etc/resolv.conf"
-  rm -f "${target_resolv}"
-  cp -L "/etc/resolv.conf" "${target_resolv}"
+  if [[ -e "${target_resolv}" || -L "${target_resolv}" ]]; then
+    mv "${target_resolv}" "${target_resolv}.bak"
+  fi
+  touch "${target_resolv}"
+  mount --bind /etc/resolv.conf "${target_resolv}"
 }
 
 # Enter the chroot environment and execute command if provided
@@ -112,6 +115,17 @@ enter_chroot() {
 
 cleanup() {
   log "Cleaning up chroot environment..."
+
+  # Restore original DNS configuration
+  local target_resolv="${CHROOT_WORKSPACE}/etc/resolv.conf"
+  if mountpoint -q "${target_resolv}"; then
+    umount "${target_resolv}"
+  fi
+  if [[ -e "${target_resolv}.bak" || -L "${target_resolv}.bak" ]]; then
+    mv -f "${target_resolv}.bak" "${target_resolv}"
+  else
+    rm -f "${target_resolv}"
+  fi
 
   # Unmount extra bindings in reverse order
   for (( i=${#CHROOT_MOUNT_ARGS[@]}-1; i>=0; i-- )); do

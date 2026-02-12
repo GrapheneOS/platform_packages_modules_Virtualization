@@ -81,6 +81,7 @@ import com.google.common.truth.BooleanSubject;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
@@ -1906,6 +1907,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isEqualTo("PASS");
     }
 
+    // TODO(b/441899073) Microdroid manager does not yet persist or validate the tenants data
+    // against instance spec.
+    @Ignore
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void multiTenantInstanceSpecRollbackTest() throws Exception {

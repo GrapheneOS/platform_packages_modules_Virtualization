@@ -204,6 +204,9 @@ impl TenancySpec {
     }
 }
 
+// TODO(b/441899073) Microdroid manager does not yet persist or validate the tenants data against
+// instance spec.
+#[allow(dead_code)]
 pub(crate) fn validate_tenants_against_existing_spec_update_spec(
     is_new_instance: bool,
     instance_disk: &mut InstanceDisk,

@@ -129,6 +129,10 @@ internal data class ConfigJson(
             builder.setGpuConfig(gpu.toConfig())
         }
 
+        if (hugepages) {
+            builder.addParam("transparent_hugepage=always")
+        }
+
         params?.split(" ".toRegex())?.filter { it.isNotEmpty() }?.forEach { builder.addParam(it) }
 
         disks?.forEach { builder.addDisk(it.toConfig()) }
@@ -155,7 +159,6 @@ internal data class ConfigJson(
                             7,
                             "android",
                             "android",
-                            false, /* app domain is set to false so that crosvm is spin up as child of virtmgr */
                             "",
                         )
                     }

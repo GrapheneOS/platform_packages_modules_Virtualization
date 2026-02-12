@@ -116,6 +116,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
             _settingsRequest.value = SettingsDestination.PortControl
             _showSettings.value = true
+        } else if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_KEEP_AWAKE) {
+            _settingsRequest.value = SettingsDestination.Advanced
+            _showSettings.value = true
         }
     }
 
