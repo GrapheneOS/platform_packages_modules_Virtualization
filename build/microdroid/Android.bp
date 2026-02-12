@@ -219,7 +219,6 @@ prebuilt_root {
 // ro.build.id and ro.build.legacy.id may not exist depending on
 // BOARD_USE_VBMETA_DIGTEST_IN_FINGERPRINT. Accept the case by `|| true`.
 build_prop_cmd_common = "(echo '# build properties from system/build.prop' && " +
-    "grep ro\\.build\\.id= $(location :system-build.prop) || true && " +
     "grep ro\\.build\\.legacy\\.id= $(location :system-build.prop) || true && " +
     "grep ro\\.build\\.tags= $(location :system-build.prop) && " +
     "grep ro\\.build\\.type= $(location :system-build.prop) && " +
@@ -230,7 +229,6 @@ build_prop_cmd_common = "(echo '# build properties from system/build.prop' && " 
     "grep ro\\.build\\.version\\.sdk_full= $(location :system-build.prop) && " +
     "grep ro\\.build\\.version\\.security_patch= $(location :system-build.prop) && " +
     "grep ro\\.build\\.version\\.known_codenames= $(location :system-build.prop) && " +
-    "grep ro\\.build\\.version\\.incremental= $(location :system-build.prop) && " +
     "grep ro\\.product\\.system\\.brand= $(location :system-build.prop) && " +
     "grep ro\\.product\\.system\\.device= $(location :system-build.prop) && " +
     "grep ro\\.product\\.system\\.manufacturer= $(location :system-build.prop) && " +
