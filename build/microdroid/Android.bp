@@ -148,6 +148,10 @@ android_system_image {
         gen_linker_config: true,
         linker_config_srcs: ["linker.config.json"],
     },
+    type: "erofs",
+    erofs: {
+        compressor: "lz4hc,9",
+    },
     base_dir: "system",
     dirs: microdroid_rootdirs + select(release_flag("RELEASE_AVF_ENABLE_DICE_CHANGES"), {
         true: ["microdroid_resources"],
