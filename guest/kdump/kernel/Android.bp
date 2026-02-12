@@ -15,10 +15,10 @@ prebuilt_etc {
     compile_multilib: "64",
     arch: {
         arm64: {
-            src: "arm64/kernel-6.12",
+            src: "arm64/kernel-6.6",
         },
         x86_64: {
-            src: "x86_64/kernel-6.12",
+            src: "x86_64/kernel-6.6",
         },
     },
     no_full_install: true,
