@@ -2314,10 +2314,6 @@ impl aidl::IGuestAgent for GuestAgentWrapper {
         self.wrapped.startDumpVsockServer(args)
     }
 
-    fn startOrStopTracedRelayService(&self, start: bool) -> binder::Result<()> {
-        self.wrapped.startOrStopTracedRelayService(start)
-    }
-
     fn trimAsync(&self) -> binder::Result<()> {
         self.wrapped.trimAsync()
     }
