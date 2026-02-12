@@ -107,6 +107,7 @@ pub struct CrosvmConfig {
     pub cid: Cid,
     pub name: String,
     pub shared_paths: Vec<SharedPathConfig>,
+    pub audio: Option<AudioConfig>,
     pub protected: bool,
     pub detect_hangup: bool,
     pub device_tree_overlays: Vec<File>,
@@ -132,6 +133,14 @@ pub struct SharedPathConfig {
     pub socket_path: String,
     pub socket_fd: Option<File>,
     pub app_domain: bool,
+}
+
+/// Configuration for setting up a vhost-user snd device
+#[derive(Debug)]
+pub struct AudioConfig {
+    pub use_microphone: bool,
+    pub use_speaker: bool,
+    pub socket_path: String,
 }
 
 /// All information needed for running crosvm
@@ -202,7 +211,6 @@ impl CrosvmCommand {
         command.add_disk_arg(context)?;
         command.add_gpu_arg(context)?;
         command.add_input_devices_arg(context)?;
-        command.add_audio_arg(context);
         command.add_usb_arg(context);
         command.add_network_arg(context)?;
         command.add_file_backed_mapping_arg(context)?;
@@ -943,22 +951,6 @@ impl CrosvmCommand {
         Ok(())
     }
 
-    fn add_audio_arg(&mut self, context: &RunContext) {
-        let config = context.config;
-        if let Some(config) = &config.audioConfig {
-            if !cfg!(paravirtualized_devices) {
-                warn!("Audio configuration not supported. Ignoring");
-                return;
-            }
-            self.arg("--virtio-snd");
-            self.arg(format!(
-                "backend=aaudio,num_input_devices={},num_output_devices={}",
-                if config.useMicrophone { 1 } else { 0 },
-                if config.useSpeaker { 1 } else { 0 },
-            ));
-        }
-    }
-
     fn add_usb_arg(&mut self, context: &RunContext) {
         let config = context.config;
         let use_usb = if let Some(config) = &config.usbConfig { config.controller } else { false };
@@ -1257,7 +1249,9 @@ impl VmState {
             let cleaners = config.command.cleaners.take().unwrap();
             let detect_hangup = config.detect_hangup;
 
-            let vhost_fs_devices = run_virtiofs(&config)?;
+            let mut vhost_user_devices: Vec<SharedChild> = Vec::new();
+            vhost_user_devices.extend(run_virtiofs(&config)?);
+            vhost_user_devices.extend(maybe_run_virtiosnd(&config)?);
 
             // If this fails and returns an error, `self` will be left in the `Failed` state.
             let child = Arc::new(run_vm(config, &instance.crosvm_control_socket_path)?);
@@ -1317,7 +1311,7 @@ impl VmState {
                 .spawn(move || {
                     instance_clone.monitor_vm_exit(
                         child_clone,
-                        vhost_fs_devices,
+                        vhost_user_devices,
                         psi_thread_and_evt_fd,
                         cleaners,
                     );
@@ -2266,7 +2260,7 @@ fn exit_signal(result: &Result<ExitStatus, io::Error>) -> Option<i32> {
 }
 
 fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
-    let mut devices: Vec<SharedChild> = Vec::new();
+    let mut devices = Vec::new();
     for shared_path in &config.shared_paths {
         if shared_path.app_domain {
             continue;
@@ -2312,6 +2306,38 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
     Ok(devices)
 }
 
+fn maybe_run_virtiosnd(config: &CrosvmConfig) -> io::Result<Option<SharedChild>> {
+    let Some(audio) = &config.audio else {
+        return Ok(None); // Exit if None
+    };
+
+    if !cfg!(paravirtualized_devices) {
+        warn!("Audio configuration not supported. Skip running vhost user sound.");
+        return Ok(None);
+    }
+
+    let cfg_arg = format!(
+        "backend=aaudio,num_input_devices={},num_output_devices={}",
+        if audio.use_microphone { 1 } else { 0 },
+        if audio.use_speaker { 1 } else { 0 },
+    );
+
+    let mut command = Command::new(CROSVM_PATH);
+    command
+        .arg("device")
+        .arg("snd")
+        .arg(format!("--socket-path={}", &audio.socket_path))
+        .arg("--config")
+        .arg(cfg_arg.as_str());
+
+    print_crosvm_args(&command);
+
+    let result = SharedChild::spawn(&mut command)?;
+    info!("Spawned virtiosnd crosvm({})", result.id());
+
+    Ok(Some(result))
+}
+
 /// Starts an instance of `crosvm` to manage a new VM.
 fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<SharedChild, Error> {
     let mut command = Command::new(CROSVM_PATH);
@@ -2344,6 +2370,17 @@ fn run_vm(config: CrosvmConfig, crosvm_control_socket_path: &Path) -> Result<Sha
                 bail!("Error waiting for file: {}", e);
             }
             command.arg("--vhost-user").arg(format!("fs,socket={}", shared_path.socket_path));
+        }
+    }
+
+    if let Some(audio) = &config.audio {
+        if cfg!(paravirtualized_devices) {
+            if let Err(e) = wait_for_file(&audio.socket_path, 5) {
+                bail!("Error waiting for file: {}", e);
+            }
+            command.arg("--vhost-user").arg(format!("sound,socket={}", audio.socket_path));
+        } else {
+            warn!("Audio configuration not supported. Ignore sound args.");
         }
     }
 

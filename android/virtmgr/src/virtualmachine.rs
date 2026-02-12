@@ -17,7 +17,7 @@
 use crate::aidl;
 use crate::atom::{write_vm_booted_stats, write_vm_creation_stats};
 use crate::crosvm::{
-    CrosvmCommand, CrosvmConfig, PayloadState, RunContext, SharedMemoryId, SharedPathConfig,
+    AudioConfig, CrosvmCommand, CrosvmConfig, PayloadState, RunContext, SharedMemoryId, SharedPathConfig,
     VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
@@ -107,6 +107,10 @@ const ROOT_OF_TRUST_PROP_HOST_PREFIX: &str = "host.";
 
 const SECURITY_VM_INSTANCE_ID: &[u8; 64] =
     include_bytes!(concat!(env!("OUT_DIR"), "/security_vm_instance_id"));
+
+/// Socket that will be created to communicate between a vhost-user audio backend process and the
+/// main crosvm process. Does not need to be a full path.
+const AUDIO_CTRL_SOCKET: &str = "vhost_user_snd";
 
 static GLOBAL_SERVICE: Mutex<Option<Strong<dyn aidl::IVirtualizationServiceInternal>>> =
     Mutex::new(None);
@@ -751,6 +755,11 @@ impl VirtualizationService {
         check_partitions_for_files(config, calling_partition).or_service_specific_exception(-1)?;
 
         let shared_paths = assemble_shared_paths(&config.sharedPaths, &temporary_directory)?;
+        let audio = config.audioConfig.as_ref().map(|audio_config| AudioConfig {
+            use_microphone: audio_config.useMicrophone,
+            use_speaker: audio_config.useSpeaker,
+            socket_path: temporary_directory.join(AUDIO_CTRL_SOCKET).to_string_lossy().to_string(),
+        });
 
         let gdb_port = NonZeroU16::new(config.gdbPort as u16);
         let detect_hangup = is_app_config && gdb_port.is_none();
@@ -775,6 +784,7 @@ impl VirtualizationService {
             cid,
             name: config.name.clone(),
             shared_paths,
+            audio,
             protected: *is_protected,
             detect_hangup,
             device_tree_overlays,
