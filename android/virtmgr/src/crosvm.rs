@@ -2294,7 +2294,7 @@ fn run_virtiofs(config: &CrosvmConfig) -> io::Result<Vec<SharedChild>> {
         command
             .arg("device")
             .arg("fs")
-            .arg(format!("--socket={}", &shared_path.socket_path))
+            .arg(format!("--socket-path={}", &shared_path.socket_path))
             .arg(format!("--tag={}", &shared_path.tag))
             .arg(format!("--shared-dir={}", &shared_path.path))
             .arg("--cfg")
