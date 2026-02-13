@@ -124,11 +124,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel = viewModel()) {
     val settingsRequest by viewModel.settingsRequest.collectAsStateWithLifecycle()
     val settingsViewModel: SettingsViewModel = viewModel()
 
-    val destinations = remember {
-        SettingsDestination.values().filter {
-            it != SettingsDestination.Advanced || VmController.isGraphicsAccelerationSupported
-        }
-    }
+    val destinations = remember { SettingsDestination.values().toList() }
 
     LaunchedEffect(settingsRequest, isMobileMode) {
         if (settingsRequest != null) {
@@ -392,20 +388,22 @@ fun AdvancedPage(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_graphics_title)) },
-                supportingContent = { Text(typeToName[currentType] ?: "") },
-                leadingContent = {
-                    Icon(imageVector = Icons.Default.Speed, contentDescription = null)
-                },
-                modifier =
-                    Modifier.clickable {
-                        selectedType = currentType
-                        showSelectionDialog = true
+        if (VmController.isGraphicsAccelerationSupported) {
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_graphics_title)) },
+                    supportingContent = { Text(typeToName[currentType] ?: "") },
+                    leadingContent = {
+                        Icon(imageVector = Icons.Default.Speed, contentDescription = null)
                     },
-            )
-            HorizontalDivider()
+                    modifier =
+                        Modifier.clickable {
+                            selectedType = currentType
+                            showSelectionDialog = true
+                        },
+                )
+                HorizontalDivider()
+            }
         }
         item {
             ListItem(
