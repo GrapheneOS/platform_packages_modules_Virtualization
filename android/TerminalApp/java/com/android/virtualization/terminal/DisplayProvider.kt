@@ -27,7 +27,6 @@ import android.view.SurfaceControl
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.WindowManagerPolicyConstants.APPLICATION_MEDIA_OVERLAY_SUBLAYER
-import com.android.system.virtualmachine.flags.Flags
 import com.android.virtualization.terminal.DisplayProvider.CursorHandler
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.IOException
@@ -72,15 +71,8 @@ internal class DisplayProvider(
         }
 
         override fun surfaceCreated(holder: SurfaceHolder) {
-            // Legacy UI with gfxstream requires this
-            // Also required for New UI if gfxstream is enabled.
-            if (
-                !Flags.terminalNewuiJetpack() ||
-                    GraphicsManager.getInstance(mainView.context).isGfxstreamEnabled()
-            ) {
-                if (surfaceKind == SurfaceKind.MAIN) {
-                    holder.setFixedSize(width, height)
-                }
+            if (surfaceKind == SurfaceKind.MAIN) {
+                holder.setFixedSize(width, height)
             }
             try {
                 displayService.setSurface(holder.getSurface(), isForCursor())
