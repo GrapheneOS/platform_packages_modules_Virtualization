@@ -42,6 +42,8 @@ pub use android_system_virtualizationservice::aidl::android::system::virtualizat
     VirtualMachineAppConfig::{DebugLevel::DebugLevel, Payload::Payload, VirtualMachineAppConfig},
     VirtualMachineConfig::VirtualMachineConfig,
     VirtualMachineDebugInfo::VirtualMachineDebugInfo,
+    VirtualMachineDisplay::VirtualMachineDisplay,
+    DisplayConfig::DisplayConfig,
     VirtualMachinePayloadConfig::VirtualMachinePayloadConfig,
     VirtualMachineRawConfig::VirtualMachineRawConfig,
     VirtualMachineState::VirtualMachineState,
