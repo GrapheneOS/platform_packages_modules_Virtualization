@@ -38,3 +38,4 @@ How-Tos:
 * [Microdroid vendor modules](docs/microdroid_vendor_modules.md)
 * [Huge Pages](docs/hugepages.md)
 * [Shutdown](docs/shutdown.md)
+* [Multitenancy](docs/multitenancy.md)
