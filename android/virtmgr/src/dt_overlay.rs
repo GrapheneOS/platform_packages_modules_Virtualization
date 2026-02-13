@@ -91,6 +91,7 @@ pub(crate) fn create_device_tree_overlay<'a>(
 
     // Read dt_path from host DT and overlay onto fdt.
     if let Some(path) = dt_path {
+        // TODO(ioffe): add /fragment@0/__overlay__ in case untrusted_props was empty.
         fdt.overlay_onto(c"/fragment@0/__overlay__", path)?;
     }
 
@@ -262,5 +263,124 @@ mod tests {
                 .expect("Prop not found!");
             assert_eq!(prop_value_dt, prop_value, "Unexpected property value");
         }
+    }
+
+    #[test]
+    fn reference_dt_is_overlaid() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let fdt =
+            create_device_tree_overlay(&mut buffer, Some(dt_path), &untrusted_props, &[], &[])
+                .unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(value, b"this_is_test\0", "Unexpected property value");
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(value, b"this_is_test\0", "Unexpected property value");
+    }
+
+    #[test]
+    fn trusted_prop_override_reference_dt() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let trusted_props = [
+            (c"vendor_hashtree_descriptor_root_digest", c"this_is_overridden".to_bytes_with_nul()),
+            (c"secretkeeper_public_key", c"this_is_also_overridden".to_bytes_with_nul()),
+        ];
+        let fdt = create_device_tree_overlay(
+            &mut buffer,
+            Some(dt_path),
+            &untrusted_props,
+            &trusted_props,
+            &[],
+        )
+        .unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(value, b"this_is_overridden\0", "Unexpected property value");
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(value, b"this_is_also_overridden\0", "Unexpected property value");
+    }
+
+    #[test]
+    fn only_vendor_hashtree_descriptor_provided() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let trusted_props = [(
+            c"vendor_hashtree_descriptor_root_digest",
+            c"this_is_overridden".to_bytes_with_nul(),
+        )];
+        let fdt = create_device_tree_overlay(
+            &mut buffer,
+            Some(dt_path),
+            &untrusted_props,
+            &trusted_props,
+            &[],
+        )
+        .unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(value, b"this_is_overridden\0", "Unexpected property value");
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(value, b"this_is_test\0", "Unexpected property value");
+    }
+
+    #[test]
+    fn only_secretkeeper_public_key_is_provided() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let trusted_props =
+            [(c"secretkeeper_public_key", c"this_is_also_overridden".to_bytes_with_nul())];
+        let fdt = create_device_tree_overlay(
+            &mut buffer,
+            Some(dt_path),
+            &untrusted_props,
+            &trusted_props,
+            &[],
+        )
+        .unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(
+            value, b"this_is_test\0",
+            "Unexpected value for vendor_hashtree_descriptor_root_digest prop"
+        );
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(
+            value, b"this_is_also_overridden\0",
+            "Unexpected value for secretkeeper_public_key prop"
+        );
     }
 }
