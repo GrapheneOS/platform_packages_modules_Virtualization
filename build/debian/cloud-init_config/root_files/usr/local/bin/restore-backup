@@ -81,6 +81,7 @@ class RestoreBackupUI:
 
     def draw_all(self):
         """Redraws the entire UI hierarchy."""
+        self.stdscr.touchwin()
         self.draw_header()
         self.draw_progress()
         self.draw_logs()
@@ -175,6 +176,10 @@ class RestoreBackupUI:
 
     def show_dialog(self, title, message, options=None):
         """Displays a modal centered popup dialog. Temporarily enters blocking mode."""
+        # Clear any pending input to prevent accidental selection from previous screens
+        curses.napms(100)
+        curses.flushinp()
+
         self.stdscr.nodelay(False)  # Blocking input is safer for modal dialogs
         if options is None:
             options = [("Y", "Yes"), ("N", "No")]
@@ -182,11 +187,14 @@ class RestoreBackupUI:
         dialog_w = min(self.width - 2, 60)
         msg_lines = message.split("\n")
         dialog_h = min(self.height - 2, max(len(msg_lines) + 6, 8))
-        dialog_y, dialog_x = (self.height - dialog_h) // 2, (self.width - dialog_w) // 2
+
+        # Use a stable top-aligned position instead of centering to avoid coordinate issues on tall terminals
+        dialog_y = min(2, max(0, self.height - dialog_h - 1))
+        dialog_x = (self.width - dialog_w) // 2
 
         win = curses.newwin(dialog_h, dialog_w, dialog_y, dialog_x)
         win.keypad(True)
-        win.nodelay(False)  # Ensure window itself is blocking to avoid busy-loops
+        win.nodelay(False)
 
         win.erase()
         win.attron(self.get_attr(2))
@@ -208,9 +216,8 @@ class RestoreBackupUI:
             win.addstr(f" {label}  ")
             curr_x += len(label) + 6
 
-        win.touchwin()  # Force curses to repaint this area
+        win.touchwin()
         win.refresh()
-        curses.flushinp()
 
         result = None
         while result is None:
@@ -345,7 +352,7 @@ def confirm_restoration_intent(ui):
                 ui.show_dialog(
                     "Are you sure?",
                     "Never ask again for this backup.",
-                    [("Y", "Yes"), ("C", "Cancel")],
+                    [("Y", "Yes"), ("N", "No")],
                 )
                 == "Y"
             ):
@@ -379,7 +386,9 @@ def restore_user_home_files(ui):
         cmd.extend([src_home + "/", HOME_DIR + "/"])
         run_command(ui, cmd, on_line=on_copy_line)
     else:
-        run_command(ui, ["cp", "-av", src_home + "/.", HOME_DIR + "/"], on_line=on_copy_line)
+        run_command(
+            ui, ["cp", "-av", src_home + "/.", HOME_DIR + "/"], on_line=on_copy_line
+        )
     ui.update_progress("Home directory restored.", 100)
 
 
@@ -432,7 +441,9 @@ def finish_restoration_and_cleanup(ui):
             pass
     mark_complete()
     ui.update_progress("Done", 100)
-    ui.show_dialog("Success", "Restoration successful.\nPress [O] to exit.", [("O", "OK")])
+    ui.show_dialog(
+        "Success", "Restoration successful.\nPress [O] to exit.", [("O", "OK")]
+    )
 
 
 def main(stdscr):
