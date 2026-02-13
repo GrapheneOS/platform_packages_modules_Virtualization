@@ -248,6 +248,57 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    public void checkMicrodroidSystemIsErofs() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_erofs", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mFileContent = ts.readFromFile("/proc/self/mounts");
+                        });
+        testResults.assertNoException();
+        // check for /system partition mounted as erofs.
+        // In Microdroid, /system is mounted as root (/)
+        assertThat(testResults.mFileContent).matches("(?s).*\\s/\\serofs\\s.*");
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    public void checkBuildIdentityInjection() throws Exception {
+        assumeSupportedDevice();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_build_id", config);
+
+        TestResults testResults =
+                runVmTestService(
+                        TAG,
+                        vm,
+                        (ts, tr) -> {
+                            tr.mBuildId = ts.readProperty("ro.build.id");
+                            tr.mBuildVersionIncremental =
+                                    ts.readProperty("ro.build.version.incremental");
+                        });
+        testResults.assertNoException();
+        assertThat(testResults.mBuildId).isEqualTo(android.os.Build.ID);
+        assertThat(testResults.mBuildVersionIncremental)
+                .isEqualTo(android.os.Build.VERSION.INCREMENTAL);
+    }
+
+    @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void createAndConnectToVm() throws Exception {
         createAndConnectToVmHelper(CPU_TOPOLOGY_ONE_CPU, /* shouldUseHugepages= */ false);

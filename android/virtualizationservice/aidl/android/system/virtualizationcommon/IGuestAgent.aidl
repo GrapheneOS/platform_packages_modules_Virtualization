@@ -34,17 +34,6 @@ interface IGuestAgent {
      */
     int startDumpVsockServer(in String[] args) = 2;
 
-    /**
-     * Starts or stops traced_relay Perfetto service inside a VM. This process acts as a relay to
-     * send the tracing data from the VM back to the traced process on Android host.
-     * If {@code start} is {@code true} then traced_relay service is started, otherwise it is
-     * stopped.
-     *
-     * NOTE: it is recommended to only implement this API for debuggable pVMs.
-     * See Microdroid implementation for reference.
-     */
-    void startOrStopTracedRelayService(boolean start) = 3;
-
     /** Requests the VM to trim its memory usage. */
     @SuppressWarnings(value={"mixed-oneway"}) oneway void trimAsync() = 4;
 

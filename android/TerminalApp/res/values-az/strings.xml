@@ -61,10 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Klaviaturanı göstərin"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Mausu buraxın"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Mausu kilidləyin"</string>
-    <!-- no translation found for dispctrl_hint_trackpad_mode_off (7227336875637687013) -->
-    <skip />
-    <!-- no translation found for dispctrl_hint_trackpad_mode_on (4375109482589523855) -->
-    <skip />
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Trekped rejimini deaktiv edin"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Trekped rejimini aktiv edin"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Displey nizamlayıcılarını bağlayın"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Displey seçimləri"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Əvvəlki səhifə"</string>

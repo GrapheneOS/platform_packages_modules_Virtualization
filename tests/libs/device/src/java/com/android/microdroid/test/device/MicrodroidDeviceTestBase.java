@@ -753,6 +753,8 @@ public abstract class MicrodroidDeviceTestBase {
         public boolean mIsNewInstance;
         public String mHostname;
         public String mEncryptedAssetsPath;
+        public String mBuildId;
+        public String mBuildVersionIncremental;
 
         public void assertNoException() {
             if (mException != null) {
