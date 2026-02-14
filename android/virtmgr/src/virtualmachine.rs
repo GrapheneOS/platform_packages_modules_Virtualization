@@ -1795,6 +1795,21 @@ impl aidl::IVirtualMachine for VirtualMachine {
         let guest_agent = self.instance.guest_agent.lock().unwrap();
         Ok(guest_agent.clone())
     }
+
+    fn addDisplay(&self, config: &aidl::DisplayConfig) -> binder::Result<()> {
+        check_manage_access()?;
+        self.instance.add_display(config).or_service_specific_exception(-1)
+    }
+
+    fn removeDisplay(&self, display_id: i32) -> binder::Result<()> {
+        check_manage_access()?;
+        self.instance.remove_display(display_id).or_service_specific_exception(-1)
+    }
+
+    fn getDisplays(&self) -> binder::Result<Vec<aidl::VirtualMachineDisplay>> {
+        // Don't check permission.
+        self.instance.list_displays().or_service_specific_exception(-1)
+    }
 }
 
 impl Drop for VirtualMachine {

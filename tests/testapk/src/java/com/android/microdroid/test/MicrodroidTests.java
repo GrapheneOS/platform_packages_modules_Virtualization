@@ -1533,7 +1533,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeTrue(
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
-        installApp("MicrodroidTestHelperAppAlternateTenant.apk");
+        installApp("MicrodroidTestHelperAppAlternateTenant.apk", "-d");
         String variant = getMultiTenantVariant();
         String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
         VirtualMachineConfig config =
@@ -1935,7 +1935,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 "AVF Advance Multi-tenancy feature not enabled",
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
         // MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk has rollback_index:1
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk");
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk", "-d");
         // vm_config_tenant_rollback_index.json expects min_version: 2 for package
         // com.android.microdroid.test_relaxed_rollback_protection_scheme
         VirtualMachineConfig config =
@@ -1950,7 +1950,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 .isNull();
 
         // MicrodroidTestHelperAppRelaxedRollbackProtection_V7*.apk has rollback_index:2
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        installApp(
+                "MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk",
+                "-d");
         VirtualMachine vm2 = forceCreateNewVirtualMachine("tenant_rollback_index_2", config);
         CompletableFuture<String> result_rb_2 = readTenantPackagesMounted(vm2);
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted != PASS")
@@ -1971,7 +1973,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
 
         // MicrodroidTestHelperAppRelaxedRollbackProtection_V7*.apk has rollback_index:2
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        installApp(
+                "MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk",
+                "-d");
 
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(
@@ -2571,7 +2575,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeSupportedDevice();
         assumeProtectedVM();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk");
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk", "-d");
 
         Context testHelperAppCtx =
                 getContext()
@@ -2608,7 +2612,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         Files.copy(vmInstanceBackup, vmInstance, REPLACE_EXISTING);
 
         // Install an updated payload!
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        installApp(
+                "MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk",
+                "-d");
         // Now pVM shouldn't boot.
         BootResult bootResult = tryBootVm(TAG, vm);
         assertThat(bootResult.payloadStarted).isFalse();
@@ -3990,7 +3996,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeSupportedDevice();
 
         // This test requires additional test apk.
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk");
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_no_permission.apk", "-d");
 
         Context otherAppCtx =
                 getContext()
@@ -4021,7 +4027,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeSupportedDevice();
 
         // This test requires additional test apk.
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk");
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_no_rollback_index.apk", "-d");
 
         Context otherAppCtx =
                 getContext()
@@ -4052,7 +4058,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // Relaxed rollback protection scheme only makes sense if VM updates are supported.
         assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
 
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk");
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk", "-d");
 
         Context testHelperAppCtx =
                 getContext()
@@ -4102,7 +4108,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
         assumeProtectedVM();
 
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk");
+        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk", "-d");
 
         Context testHelperAppCtx =
                 getContext()
@@ -4131,7 +4137,9 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
 
-        installApp("MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk");
+        installApp(
+                "MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk",
+                "-d");
 
         testResults =
                 runVmTestService(
@@ -4184,7 +4192,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     public void encryptedStoreKekOnCe_vmIsOnDe() throws Exception {
         assumeSupportedDevice();
-        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk", "-d");
         Context ctx = getContext().createDeviceProtectedStorageContext();
         encryptedStoreKEKTest(ctx, "test_vm_enc_store_kek_on_ce_vm_on_de");
     }
@@ -4192,7 +4200,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     public void encryptedStoreKekOnCe_vmIsOnCe() throws Exception {
         assumeSupportedDevice();
-        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk", "-d");
         Context ctx = getContext().createCredentialProtectedStorageContext();
         encryptedStoreKEKTest(ctx, "test_vm_enc_store_kek_on_ce_vm_on_ce");
     }
@@ -4282,7 +4290,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     public void changingEncryptedStoreModeOnUpdateTests() throws Exception {
         assumeSupportedDevice();
 
-        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V5.apk");
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V5.apk", "-d");
         Context context =
                 getContext()
                         .createPackageContext(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME, 0)
@@ -4299,7 +4307,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         .build();
 
         // Simulate update that changes the encrypted store mode.
-        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk");
+        installApp("MicrodroidTestHelperEncStoreKEKOnCE_V6.apk", "-d");
 
         // The encrypted store mode is read from the AndroidManifest.xml of the app represented by
         // the context object passed to the builder c-tor. The V6 update installed above has the

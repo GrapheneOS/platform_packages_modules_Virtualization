@@ -292,6 +292,11 @@ fn test_run_test_vm_non_protected() -> Result<()> {
 fn test_share_dma_buf_4096_protected_vm() -> Result<()> {
     init_logger();
 
+    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
+        info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
+        return Ok(());
+    }
+
     run_test(c"vts_libavf_test_share_dma_buf_4096", VmType::Protected, |vsock_stream, vm| {
         share_dma_buf_test_impl(vsock_stream, vm, 4096, 4096)
     })
@@ -300,6 +305,11 @@ fn test_share_dma_buf_4096_protected_vm() -> Result<()> {
 #[test]
 fn test_share_dma_buf_16384_protected_vm() -> Result<()> {
     init_logger();
+
+    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
+        info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
+        return Ok(());
+    }
 
     run_test(c"vts_libavf_test_share_dma_buf_16384", VmType::Protected, |vsock_stream, vm| {
         share_dma_buf_test_impl(vsock_stream, vm, 16384, 16384)
@@ -310,6 +320,11 @@ fn test_share_dma_buf_16384_protected_vm() -> Result<()> {
 fn test_share_dma_buf_32768_protected_vm() -> Result<()> {
     init_logger();
 
+    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
+        info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
+        return Ok(());
+    }
+
     run_test(c"vts_libavf_test_share_dma_buf_32768", VmType::Protected, |vsock_stream, vm| {
         share_dma_buf_test_impl(vsock_stream, vm, 32768, 32768)
     })
@@ -318,6 +333,11 @@ fn test_share_dma_buf_32768_protected_vm() -> Result<()> {
 #[test]
 fn test_share_dma_buf_2097152_protected_vm() -> Result<()> {
     init_logger();
+
+    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
+        info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
+        return Ok(());
+    }
 
     run_test(c"vts_libavf_test_share_dma_buf_2097152", VmType::Protected, |vsock_stream, vm| {
         // Sending 2 MiBs of data in a single chunk over vsock results in a VM crash because
@@ -335,11 +355,6 @@ fn share_dma_buf_test_impl(
     size: usize,
     chunk_size: usize,
 ) -> Result<()> {
-    if !hypervisor_props::is_dynamic_zero_copy_memshare_supported()? {
-        info!("dynamic zero copy memory share is not supported by hypervisor. skipping test");
-        return Ok(());
-    }
-
     let dma_buf_fd = dma_buf_alloc(size).context("failed to allocate dma_buf_fd")?;
 
     // Fill the buffer with the test data it deserves.

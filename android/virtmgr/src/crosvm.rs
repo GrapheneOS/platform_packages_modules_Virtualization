@@ -2149,6 +2149,49 @@ impl VmInstance {
         // SAFETY: `vm_desc.descriptor.vm_fd` is a valid vm fd.
         unsafe { Ok(OwnedFd::from_raw_fd(vm_desc.descriptor.vm_fd)) }
     }
+
+    pub fn add_display(&self, config: &aidl::DisplayConfig) -> Result<()> {
+        let socket_path = &self.crosvm_control_socket_path;
+        crosvm_control::gpu_display_add(
+            socket_path,
+            config.width.try_into()?,
+            config.height.try_into()?,
+            config.refreshRate.try_into()?,
+            config.horizontalDpi.try_into()?,
+            config.verticalDpi.try_into()?,
+        )
+        .map_err(|e| anyhow!("Failed to add display: {}", e))?;
+
+        // TODO(b/427895310): Return the display ID from add_display
+        Ok(())
+    }
+
+    pub fn remove_display(&self, display_id: i32) -> Result<()> {
+        let socket_path = &self.crosvm_control_socket_path;
+        crosvm_control::gpu_display_remove(socket_path, display_id as u32)
+            .map_err(|e| anyhow!("Failed to remove display: {}", e))?;
+        Ok(())
+    }
+
+    pub fn list_displays(&self) -> Result<Vec<aidl::VirtualMachineDisplay>> {
+        let socket_path = &self.crosvm_control_socket_path;
+        let displays = crosvm_control::gpu_display_list(socket_path)
+            .map_err(|e| anyhow!("Failed to list displays: {}", e))?;
+
+        Ok(displays
+            .into_iter()
+            .map(|d| aidl::VirtualMachineDisplay {
+                id: d.id as i32,
+                config: aidl::DisplayConfig {
+                    width: d.width as i32,
+                    height: d.height as i32,
+                    horizontalDpi: d.horizontal_dpi as i32,
+                    verticalDpi: d.vertical_dpi as i32,
+                    refreshRate: d.refresh_rate as i32,
+                },
+            })
+            .collect())
+    }
 }
 
 // Get Cpus_allowed mask

@@ -16,8 +16,10 @@
 package android.system.virtualizationservice;
 
 import android.system.virtualizationcommon.IGuestAgent;
+import android.system.virtualizationservice.DisplayConfig;
 import android.system.virtualizationservice.IVirtualMachineCallback;
 import android.system.virtualizationservice.VirtualMachineDebugInfo;
+import android.system.virtualizationservice.VirtualMachineDisplay;
 import android.system.virtualizationservice.VirtualMachineState;
 
 interface IVirtualMachine {
@@ -103,4 +105,23 @@ interface IVirtualMachine {
 
     /** Returns guest agent */
     @nullable IGuestAgent getGuestAgent();
+
+    /**
+     * Adds a new display to the VM.
+     *
+     * @param config The configuration for the new display.
+     */
+    void addDisplay(in DisplayConfig config);
+
+    /**
+     * Removes a display from the VM.
+     *
+     * @param displayId The ID of the display to remove.
+     */
+    void removeDisplay(int displayId);
+
+    /**
+     * Returns the list of currently active displays.
+     */
+    VirtualMachineDisplay[] getDisplays();
 }

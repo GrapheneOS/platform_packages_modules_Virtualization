@@ -166,8 +166,8 @@ pub struct TenantConfiguration {
     #[serde(default)]
     pub min_version: Option<u64>,
     /// This is the expected authority
-    /// For APK: this is the hex encoding of the sha512 hash of the certificate.
-    /// For APEX: TODO(b/429639517) to be defined
+    /// Use the hex encoding of the sha512 hash of the certificate (for apk) & signing key
+    /// (for apex).
     #[serde(default)]
     pub expected_authority: Option<String>,
 }
