@@ -27,6 +27,4 @@ interface ICrosvmAndroidDisplayService {
     void setSurface(inout Surface surface, boolean forCursor);
     void setCursorStream(in ParcelFileDescriptor stream);
     void removeSurface(boolean forCursor);
-    void saveFrameForSurface(boolean forCursor);
-    void drawSavedFrameForSurface(boolean forCursor);
 }
