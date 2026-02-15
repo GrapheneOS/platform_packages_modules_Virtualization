@@ -73,7 +73,7 @@ impl TryFrom<BccHandover<'_>> for OwnedDiceArtifacts {
 /// Retries the given function with bigger measured buffer size.
 fn retry_with_measured_buffer<F>(mut f: F) -> Result<Vec<u8>>
 where
-    F: FnMut(&mut Vec<u8>) -> Result<usize>,
+    F: FnMut(&mut [u8]) -> Result<usize>,
 {
     let mut buffer = Vec::new();
     let final_size = match f(&mut buffer) {
