@@ -948,17 +948,7 @@ fn maybe_create_reference_dt_overlay(
         .context("Failed to extract vendor hashtree digest")
         .or_service_specific_exception(-1)?;
 
-    let mut trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
-        info!(
-            "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
-                match the trusted digest in the pvmfw config, causing the VM to fail to start."
-        );
-        vec![(c"vendor_hashtree_descriptor_root_digest", vendor_hashtree_digest.as_slice())]
-    } else {
-        vec![]
-    };
-
-    let key_material;
+    let mut key_material = None;
     let mut untrusted_props = Vec::with_capacity(2);
     untrusted_props.push((c"instance-id", &instance_id[..]));
     let want_updatable = extract_want_updatable(config);
@@ -970,8 +960,7 @@ fn maybe_create_reference_dt_overlay(
             binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
         if sk.getInterfaceVersion()? >= 2 {
             let aidl::PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
-            key_material = keyMaterial;
-            trusted_props.push((c"secretkeeper_public_key", key_material.as_slice()));
+            key_material = Some(keyMaterial);
         }
     }
 
@@ -999,7 +988,8 @@ fn maybe_create_reference_dt_overlay(
     let props = DeviceTreeOverlayProps {
         dt_path: host_ref_dt,
         untrusted_props: &untrusted_props,
-        trusted_props: &trusted_props,
+        vendor_hashtree_descriptor_root_digest: vendor_hashtree_digest.as_deref(),
+        secretkeeper_public_key: key_material.as_deref(),
         android_firmware_props: &android_firmware_props,
     };
 
