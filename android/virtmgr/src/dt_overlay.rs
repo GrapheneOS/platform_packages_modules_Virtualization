@@ -23,6 +23,31 @@ use std::path::Path;
 pub(crate) const VM_DT_OVERLAY_PATH: &str = "vm_dt_overlay.dtbo";
 pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 5000;
 
+/// Properties passed to the `create_device_tree_overlay` function.
+pub(crate) struct DeviceTreeOverlayProps<'a> {
+    /// Path to the (proc style) device tree to be include in the overlay.
+    /// NOTE: this field is deprecated and is only kept for a backward compatibility with devices
+    /// that don't have secretkeeper v2 (or higher).
+    pub dt_path: Option<&'a Path>,
+    /// Properties to be included in /avf/untrusted node. These properties won't be validated by
+    /// the pvmfw.
+    pub untrusted_props: &'a [(&'a CStr, &'a [u8])],
+    /// Properties to be included in /avf/ node. These properties will be validated by the pvmfw.
+    pub trusted_props: &'a [(&'a CStr, &'a [u8])],
+    /// Properties from android firmware. Only populated for the keymint pVM.
+    pub android_firmware_props: &'a [(&'a CStr, &'a [u8])],
+}
+
+impl DeviceTreeOverlayProps<'_> {
+    /// Returns `true` if none of the props are empty.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.dt_path.is_none()
+            && self.untrusted_props.is_empty()
+            && self.trusted_props.is_empty()
+            && self.android_firmware_props.is_empty()
+    }
+}
+
 /// Create an empty device tree overlay
 pub(crate) fn create_empty_device_tree_overlay(buffer: &mut [u8]) -> Result<&mut Fdt> {
     let fdt =
@@ -65,50 +90,43 @@ pub(crate) fn create_empty_device_tree_overlay(buffer: &mut [u8]) -> Result<&mut
 /// ```
 pub(crate) fn create_device_tree_overlay<'a>(
     buffer: &'a mut [u8],
-    dt_path: Option<&'a Path>,
-    untrusted_props: &[(&'a CStr, &'a [u8])],
-    trusted_props: &[(&'a CStr, &'a [u8])],
-    android_firmware_props: &[(&'a CStr, &'a [u8])],
+    props: DeviceTreeOverlayProps,
 ) -> Result<&'a mut Fdt> {
-    if dt_path.is_none()
-        && untrusted_props.is_empty()
-        && trusted_props.is_empty()
-        && android_firmware_props.is_empty()
-    {
+    if props.is_empty() {
         return Err(anyhow!("Expected at least one device tree addition"));
     }
 
     let fdt =
         Fdt::create_empty_tree(buffer).map_err(|e| anyhow!("Failed to create empty Fdt: {e:?}"))?;
 
-    if !untrusted_props.is_empty() {
+    if !props.untrusted_props.is_empty() {
         let path = c"/fragment@0/__overlay__/avf/untrusted";
         let mut node = fdt
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
-        add_props_to_node(untrusted_props, &mut node)?;
+        add_props_to_node(props.untrusted_props, &mut node)?;
     }
 
     // Read dt_path from host DT and overlay onto fdt.
-    if let Some(path) = dt_path {
+    if let Some(path) = props.dt_path {
         // TODO(ioffe): add /fragment@0/__overlay__ in case untrusted_props was empty.
         fdt.overlay_onto(c"/fragment@0/__overlay__", path)?;
     }
 
-    if !trusted_props.is_empty() {
+    if !props.trusted_props.is_empty() {
         let path = c"/fragment@0/__overlay__/avf";
         let mut node = fdt
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
-        add_props_to_node(trusted_props, &mut node)?;
+        add_props_to_node(props.trusted_props, &mut node)?;
     }
 
-    if !android_firmware_props.is_empty() {
+    if !props.android_firmware_props.is_empty() {
         let path = c"/fragment@0/__overlay__/firmware/android";
         let mut node = fdt
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
-        add_props_to_node(android_firmware_props, &mut node)?;
+        add_props_to_node(props.android_firmware_props, &mut node)?;
         node.setprop(c"compatible", b"android,firmware\0")
             .map_err(|e| anyhow!("Failed to set compatible property: {e:?}"))?;
     }
@@ -140,7 +158,13 @@ mod tests {
     #[test]
     fn empty_overlays_not_allowed() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let res = create_device_tree_overlay(&mut buffer, None, &[], &[], &[]);
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            trusted_props: &[],
+            android_firmware_props: &[],
+        };
+        let res = create_device_tree_overlay(&mut buffer, props);
         assert!(res.is_err());
     }
 
@@ -149,9 +173,14 @@ mod tests {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
         let prop_name = c"XOXO";
         let prop_val_input = b"OXOX";
-        let fdt =
-            create_device_tree_overlay(&mut buffer, None, &[(prop_name, prop_val_input)], &[], &[])
-                .unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[(prop_name, prop_val_input)],
+            trusted_props: &[],
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let prop_value_dt = fdt
             .node(c"/fragment@0/__overlay__/avf/untrusted")
@@ -169,9 +198,15 @@ mod tests {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
         let prop_name = c"XOXOXO";
         let prop_val_input = b"OXOXOX";
-        let fdt =
-            create_device_tree_overlay(&mut buffer, None, &[], &[(prop_name, prop_val_input)], &[])
-                .unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            trusted_props: &[(prop_name, prop_val_input)],
+            android_firmware_props: &[],
+        };
+
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let prop_value_dt = fdt
             .node(c"/fragment@0/__overlay__/avf")
@@ -199,14 +234,15 @@ mod tests {
             ),
             (c"verifiedbootstate", c"fake".to_bytes_with_nul()),
         ];
-        let fdt = create_device_tree_overlay(
-            &mut buffer,
-            None,
-            &[],
-            &[(prop_name, prop_val_input)],
-            &firmware_props,
-        )
-        .unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            trusted_props: &[(prop_name, prop_val_input)],
+            android_firmware_props: &firmware_props,
+        };
+
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let prop_value_dt = fdt
             .node(c"/fragment@0/__overlay__/avf")
@@ -242,7 +278,14 @@ mod tests {
             ),
             (c"verifiedbootstate", c"fake".to_bytes_with_nul()),
         ];
-        let fdt = create_device_tree_overlay(&mut buffer, None, &[], &[], &firmware_props).unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            trusted_props: &[],
+            android_firmware_props: &firmware_props,
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         assert_eq!(fdt.node(c"/fragment@0/__overlay__/avf"), Ok(None));
         assert!(fdt
@@ -272,9 +315,13 @@ mod tests {
         let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
         let dt_path = Path::new("testdata/fs/avf/reference");
-        let fdt =
-            create_device_tree_overlay(&mut buffer, Some(dt_path), &untrusted_props, &[], &[])
-                .unwrap();
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            trusted_props: &[],
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let avf =
             fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
@@ -298,14 +345,13 @@ mod tests {
             (c"vendor_hashtree_descriptor_root_digest", c"this_is_overridden".to_bytes_with_nul()),
             (c"secretkeeper_public_key", c"this_is_also_overridden".to_bytes_with_nul()),
         ];
-        let fdt = create_device_tree_overlay(
-            &mut buffer,
-            Some(dt_path),
-            &untrusted_props,
-            &trusted_props,
-            &[],
-        )
-        .unwrap();
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            trusted_props: &trusted_props,
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let avf =
             fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
@@ -329,14 +375,13 @@ mod tests {
             c"vendor_hashtree_descriptor_root_digest",
             c"this_is_overridden".to_bytes_with_nul(),
         )];
-        let fdt = create_device_tree_overlay(
-            &mut buffer,
-            Some(dt_path),
-            &untrusted_props,
-            &trusted_props,
-            &[],
-        )
-        .unwrap();
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            trusted_props: &trusted_props,
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let avf =
             fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
@@ -358,14 +403,13 @@ mod tests {
         let dt_path = Path::new("testdata/fs/avf/reference");
         let trusted_props =
             [(c"secretkeeper_public_key", c"this_is_also_overridden".to_bytes_with_nul())];
-        let fdt = create_device_tree_overlay(
-            &mut buffer,
-            Some(dt_path),
-            &untrusted_props,
-            &trusted_props,
-            &[],
-        )
-        .unwrap();
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            trusted_props: &trusted_props,
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let avf =
             fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");

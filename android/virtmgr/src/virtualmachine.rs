@@ -21,7 +21,7 @@ use crate::crosvm::{
     VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
-use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
+use crate::dt_overlay::{DeviceTreeOverlayProps, create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::host_services;
 use crate::payload::{
     add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image,
@@ -992,26 +992,23 @@ fn maybe_create_reference_dt_overlay(
         }
     }
 
-    let device_tree_overlay = if host_ref_dt.is_some()
-        || !untrusted_props.is_empty()
-        || !trusted_props.is_empty()
-        || !android_firmware_props_owned.is_empty()
-    {
+    let android_firmware_props = android_firmware_props_owned
+        .iter()
+        .map(|(n, v)| (n.as_c_str(), v.as_bytes_with_nul()))
+        .collect::<Vec<_>>();
+    let props = DeviceTreeOverlayProps {
+        dt_path: host_ref_dt,
+        untrusted_props: &untrusted_props,
+        trusted_props: &trusted_props,
+        android_firmware_props: &android_firmware_props,
+    };
+
+    let device_tree_overlay = if !props.is_empty() {
         let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
         let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let android_firmware_props = android_firmware_props_owned
-            .iter()
-            .map(|(n, v)| (n.as_c_str(), v.as_bytes_with_nul()))
-            .collect::<Vec<_>>();
-        let fdt = create_device_tree_overlay(
-            &mut data,
-            host_ref_dt,
-            &untrusted_props,
-            &trusted_props,
-            &android_firmware_props,
-        )
-        .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
-        .or_service_specific_exception(-1)?;
+        let fdt = create_device_tree_overlay(&mut data, props)
+            .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
+            .or_service_specific_exception(-1)?;
         fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
         Some(File::open(dt_output).or_service_specific_exception(-1)?)
     } else {
