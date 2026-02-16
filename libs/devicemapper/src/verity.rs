@@ -155,10 +155,11 @@ impl<'a> DmVerityTargetBuilder<'a> {
             bail!("root digest is not set")
         };
 
-        let salt = if self.salt.is_none() || self.salt.unwrap().is_empty() {
+        let salt = self.salt.unwrap_or([].as_slice());
+        let salt = if salt.is_empty() {
             "-".to_string() // Note. It's not an empty string!
         } else {
-            hex::encode(self.salt.unwrap())
+            hex::encode(salt)
         };
 
         // Step2: serialize the information according to the spec, which is ...
