@@ -14,6 +14,8 @@
 
 //! Support for the pvmfw configuration data format.
 
+mod trusted_keys;
+
 use core::fmt;
 use core::mem;
 use core::num::NonZeroUsize;
@@ -21,6 +23,7 @@ use core::ops::Range;
 use core::result;
 use log::{info, warn};
 use static_assertions::const_assert_eq;
+pub use trusted_keys::TrustedKeysConfig;
 use vmbase::util::RangeExt;
 use zerocopy::FromBytes;
 use zerocopy::Immutable;
@@ -80,6 +83,7 @@ impl Header {
     const VERSION_1_1: Version = Version { major: 1, minor: 1 };
     const VERSION_1_2: Version = Version { major: 1, minor: 2 };
     const VERSION_1_3: Version = Version { major: 1, minor: 3 };
+    const VERSION_1_4: Version = Version { major: 1, minor: 4 };
 
     pub fn total_size(&self) -> usize {
         self.total_size as usize
@@ -103,8 +107,9 @@ impl Header {
             Self::VERSION_1_1 => Entry::VmDtbo,
             Self::VERSION_1_2 => Entry::VmBaseDtbo,
             Self::VERSION_1_3 => Entry::ReservedMem,
+            Self::VERSION_1_4 => Entry::TrustedKeys,
             v @ Version { major: 1, .. } => {
-                const LATEST: Version = Header::VERSION_1_3;
+                const LATEST: Version = Header::VERSION_1_4;
                 warn!("Parsing unknown config data version {v} as version {LATEST}");
                 return Ok(Entry::COUNT);
             }
@@ -122,6 +127,7 @@ pub enum Entry {
     VmDtbo,
     VmBaseDtbo,
     ReservedMem,
+    TrustedKeys,
     #[allow(non_camel_case_types)] // TODO: Use mem::variant_count once stable.
     _VARIANT_COUNT,
 }
@@ -129,8 +135,14 @@ pub enum Entry {
 impl Entry {
     const COUNT: usize = Self::_VARIANT_COUNT as usize;
 
-    const ALL_ENTRIES: [Entry; Self::COUNT] =
-        [Self::DiceHandover, Self::DebugPolicy, Self::VmDtbo, Self::VmBaseDtbo, Self::ReservedMem];
+    const ALL_ENTRIES: [Entry; Self::COUNT] = [
+        Self::DiceHandover,
+        Self::DebugPolicy,
+        Self::VmDtbo,
+        Self::VmBaseDtbo,
+        Self::ReservedMem,
+        Self::TrustedKeys,
+    ];
 }
 
 #[derive(Default)]
@@ -140,6 +152,7 @@ pub struct Entries<'a> {
     pub vm_dtbo: Option<&'a mut [u8]>,
     pub vm_ref_dt: Option<&'a [u8]>,
     pub reserved_mem: Option<&'a mut [u8]>,
+    pub trusted_keys: Option<&'a [u8]>,
 }
 
 #[repr(C, packed)]
@@ -286,12 +299,13 @@ impl<'a> Config<'a> {
                 entries[i] = Some(chunk);
             }
         }
-        let [dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem] = entries;
+        let [dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem, trusted_keys] = entries;
 
         // We have no reason to mutate so drop the `mut`.
         let debug_policy = debug_policy.map(|x| &*x);
         let vm_ref_dt = vm_ref_dt.map(|x| &*x);
+        let trusted_keys = trusted_keys.map(|x| &*x);
 
-        Entries { dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem }
+        Entries { dice_handover, debug_policy, vm_dtbo, vm_ref_dt, reserved_mem, trusted_keys }
     }
 }
