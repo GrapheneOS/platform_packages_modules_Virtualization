@@ -39,9 +39,14 @@ rust_library_rlib {
 rust_test {
     name: "libfsfdt_test",
     defaults: ["libfsfdt_default"],
-    data: ["testdata/**/*"],
+    data: [":test_avf_reference_dt_fs"],
     data_bins: ["dtc_static"],
     prefer_rlib: true,
     rustlibs: ["libdts"],
     compile_multilib: "first",
+}
+
+filegroup {
+    name: "test_avf_reference_dt_fs",
+    srcs: ["testdata/**/*"],
 }

@@ -121,6 +121,7 @@ rust_test {
         ":test_avf_debug_policy_without_ramdump",
         ":test_avf_debug_policy_with_adb",
         ":test_avf_debug_policy_without_adb",
+        ":test_avf_reference_dt_fs",
     ],
     test_suites: ["general-tests"],
 }
