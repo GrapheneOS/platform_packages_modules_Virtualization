@@ -61,8 +61,8 @@
     <string name="dispctrl_hint_show_keyboard" msgid="1394238386037527248">"Mostrar teclado"</string>
     <string name="dispctrl_hint_release_mouse" msgid="1638307883312450668">"Soltar rato"</string>
     <string name="dispctrl_hint_lock_mouse" msgid="6856828666411170848">"Bloquear rato"</string>
-    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Desativar modo de trackpad"</string>
-    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Ativar modo de trackpad"</string>
+    <string name="dispctrl_hint_trackpad_mode_off" msgid="7227336875637687013">"Desativar modo trackpad"</string>
+    <string name="dispctrl_hint_trackpad_mode_on" msgid="4375109482589523855">"Ativar modo trackpad"</string>
     <string name="dispctrl_hint_close" msgid="1033994310925288456">"Fechar controlos de ecrã"</string>
     <string name="dispctrl_hint_options" msgid="2890925103856317346">"Opções de visualização"</string>
     <string name="modifierkeys_hint_prev_page" msgid="4608921241544139080">"Página anterior"</string>
@@ -84,6 +84,22 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Tentar novamente"</string>
     <string name="settings_title" msgid="3035373808103055663">"Definições"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Anterior"</string>
+    <string name="settings_advanced_title" msgid="1935607224859850897">"Avançadas"</string>
+    <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Tamanho da memória"</string>
+    <string name="settings_keep_awake_title" msgid="2658491842018373579">"Manter ativo"</string>
+    <string name="settings_keep_awake_off" msgid="1013961007629731438">"Desativado"</string>
+    <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 minuto"</string>
+    <string name="settings_keep_awake_5m" msgid="7257186967244534919">"5 minutos"</string>
+    <string name="settings_keep_awake_10m" msgid="4482250137254948195">"10 minutos"</string>
+    <string name="settings_keep_awake_30m" msgid="1416475563920477304">"30 minutos"</string>
+    <string name="settings_keep_awake_1h" msgid="1896550289890397648">"1 hora"</string>
+    <string name="settings_keep_awake_2h" msgid="5992998660827367630">"2 horas"</string>
+    <string name="settings_keep_awake_6h" msgid="5046933582122793047">"6 horas"</string>
+    <string name="settings_keep_awake_1d" msgid="7827787379531259589">"1 dia"</string>
+    <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"Aviso: ativar a opção Manter ativo afeta significativamente a autonomia da bateria, uma vez que impede que o dispositivo entre em suspensão."</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"O terminal está a manter o dispositivo ativo"</string>
+    <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"Desativar"</string>
+    <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"Definições"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Controlo de portas"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Permita/negue portas de audição"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Portas de audição"</string>

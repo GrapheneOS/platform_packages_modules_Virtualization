@@ -84,6 +84,22 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"Pokušaj ponovno"</string>
     <string name="settings_title" msgid="3035373808103055663">"Postavke"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Natrag"</string>
+    <string name="settings_advanced_title" msgid="1935607224859850897">"Napredno"</string>
+    <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Veličina memorije"</string>
+    <string name="settings_keep_awake_title" msgid="2658491842018373579">"Zadržavanje u aktivnom stanju"</string>
+    <string name="settings_keep_awake_off" msgid="1013961007629731438">"Isključeno"</string>
+    <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 min"</string>
+    <string name="settings_keep_awake_5m" msgid="7257186967244534919">"5 min"</string>
+    <string name="settings_keep_awake_10m" msgid="4482250137254948195">"10 min"</string>
+    <string name="settings_keep_awake_30m" msgid="1416475563920477304">"30 min"</string>
+    <string name="settings_keep_awake_1h" msgid="1896550289890397648">"1 h"</string>
+    <string name="settings_keep_awake_2h" msgid="5992998660827367630">"2 h"</string>
+    <string name="settings_keep_awake_6h" msgid="5046933582122793047">"6 h"</string>
+    <string name="settings_keep_awake_1d" msgid="7827787379531259589">"1 dan"</string>
+    <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"Upozorenje: omogućivanje opcije za zadržavanje u aktivnom stanju značajno će utjecati na trajanje baterije jer sprječava prelazak uređaja u stanje mirovanja."</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"Terminal zadržava uređaj u aktivnom stanju"</string>
+    <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"Isključi"</string>
+    <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"Postavke"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"Kontrola priključka"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"Dopusti/odbij priključke za slušanje"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"Priključci za slušanje"</string>

@@ -84,6 +84,22 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"மீண்டும் முயல்க"</string>
     <string name="settings_title" msgid="3035373808103055663">"அமைப்புகள்"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"பின்செல்லும்"</string>
+    <string name="settings_advanced_title" msgid="1935607224859850897">"மேம்பட்டவை"</string>
+    <string name="settings_advanced_memory_title" msgid="8796464072611711320">"நினைவக அளவு"</string>
+    <string name="settings_keep_awake_title" msgid="2658491842018373579">"செயலிலேயே வைத்திருத்தல்"</string>
+    <string name="settings_keep_awake_off" msgid="1013961007629731438">"ஆஃப்"</string>
+    <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 நிமிடம்"</string>
+    <string name="settings_keep_awake_5m" msgid="7257186967244534919">"5 நிமிடங்கள்"</string>
+    <string name="settings_keep_awake_10m" msgid="4482250137254948195">"10 நிமிடங்கள்"</string>
+    <string name="settings_keep_awake_30m" msgid="1416475563920477304">"30 நிமிடங்கள்"</string>
+    <string name="settings_keep_awake_1h" msgid="1896550289890397648">"1 மணிநேரம்"</string>
+    <string name="settings_keep_awake_2h" msgid="5992998660827367630">"2 மணிநேரம்"</string>
+    <string name="settings_keep_awake_6h" msgid="5046933582122793047">"6 மணிநேரம்"</string>
+    <string name="settings_keep_awake_1d" msgid="7827787379531259589">"1 நாள்"</string>
+    <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"எச்சரிக்கை: சாதனம் உறக்க நிலைக்குச் செல்லாமல் தடுக்க, செயலிலேயே வைத்திருத்தல் அம்சத்தை ஆன் செய்வது பேட்டரி ஆயுளைக் கணிசமாகப் பாதிக்கும்."</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"சாதனத்தை டெர்மினல் செயலிலேயே வைத்திருக்கிறது"</string>
+    <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"ஆஃப் செய்"</string>
+    <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"அமைப்புகள்"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"போர்ட் கட்டுப்பாடு"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"லிஸனிங் போர்ட்டுகளை அனுமதிக்கலாம்/நிராகரிக்கலாம்"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"லிஸனிங் போர்ட்டுகள்"</string>
