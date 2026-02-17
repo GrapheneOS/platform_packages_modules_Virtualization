@@ -18,7 +18,7 @@ LIBWEBSOCKETS_VERSION="${LIBWEBSOCKETS_VERSION:-4.3.3}"
 
 build_zlib() {
     echo "=== Building zlib-${ZLIB_VERSION} (${TARGET})..."
-    curl -fSsLo- "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar xz -C "${BUILD_DIR}"
+    curl -fSsLo- "https://github.com/madler/zlib/archive/refs/tags/v${ZLIB_VERSION}.tar.gz" | tar xz -C "${BUILD_DIR}"
     pushd "${BUILD_DIR}"/zlib-"${ZLIB_VERSION}"
         env CHOST="${TARGET}" ./configure --static --archs="-fPIC" --prefix="${STAGE_DIR}"
         make -j"$(nproc)" install
