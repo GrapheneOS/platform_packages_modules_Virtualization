@@ -15,8 +15,8 @@
 //! Implementation of the AIDL interface `IVmPayloadService`.
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload::IVmPayloadService::{
-    IVmPayloadService, AttestationResult::AttestationResult,
-    ENCRYPTEDSTORE_MOUNTPOINT, MICRODROID_SOCKET_PATH, STATUS_FAILED_TO_PREPARE_CSR_AND_KEY,
+    IVmPayloadService, AttestationResult::AttestationResult, ENCRYPTEDSTORE_MOUNTPOINT,
+    MICRODROID_SOCKET_PATH, STATUS_FAILED_TO_PREPARE_CSR_AND_KEY, VM_APK_CONTENTS_PATH
 };
 use android_system_virtualmachineservice::aidl::android::system::virtualmachineservice::IVirtualMachineService::IVirtualMachineService;
 use anyhow::{anyhow, Context, Result};
@@ -211,6 +211,20 @@ impl IVmPayloadService for VmPayloadService {
 
     fn createUnixDomainSocket(&self, name: &str) -> binder::Result<ParcelFileDescriptor> {
         self.create_unix_domain_socket_internal(name).with_log().or_service_specific_exception(-1)
+    }
+
+    fn getApkContentsPath(&self, uid: i64) -> binder::Result<String> {
+        if uid == MICRODROID_PAYLOAD_UID as i64 {
+            return Ok(VM_APK_CONTENTS_PATH.to_string());
+        }
+        let package_name = self
+            .shared
+            .tenant_manager
+            .get_tenant_package_name(uid)
+            .context("Failed to get tenant package name for APK contents path")
+            .with_log()
+            .or_service_specific_exception(-1)?;
+        Ok(format!("{}/{}", VM_APK_CONTENTS_PATH, package_name))
     }
 }
 

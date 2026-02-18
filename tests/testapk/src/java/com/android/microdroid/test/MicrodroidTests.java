@@ -124,6 +124,8 @@ import java.util.stream.Stream;
 public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String TAG = "MicrodroidTests";
     private static final String TEST_APP_PACKAGE_NAME = "com.android.microdroid.test";
+    private static final String TEST_ALTERNATE_APP_PACKAGE_NAME =
+            "com.android.microdroid.test_alternate_tenant";
     private static final String VM_ATTESTATION_PAYLOAD_PATH = "libvm_attestation_test_payload.so";
     private static final String TEST_TENANT_APK_NAME = "apk:com.android.microdroid.test";
 
@@ -1656,10 +1658,80 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
 
         assertWithMessage("Tenant 1 encrypted storage path should be specific to the tenant")
                 .that(tenant1EncryptedStoragePath.getNow(null))
-                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+                .isEqualTo("/mnt/encryptedstore/" + TEST_APP_PACKAGE_NAME);
         assertWithMessage("Tenant 2 encrypted storage path should be specific to the tenant")
                 .that(tenant2EncryptedStoragePath.getNow(null))
-                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test_alternate_tenant");
+                .isEqualTo("/mnt/encryptedstore/" + TEST_ALTERNATE_APP_PACKAGE_NAME);
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    public void multiTenantApkContentsPath() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("Missing Updatable VM support", isUpdatableVmSupported());
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+
+        assumeTrue(
+                "AVF Advance Multi-tenancy feature not enabled",
+                isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY"));
+
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(configFile)
+                        .setMemoryBytes(minMemoryRequired())
+                        .setEncryptedStorageBytes(ENCRYPTED_STORAGE_BYTES)
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm =
+                forceCreateNewVirtualMachine("test_vm_tenant_apk_contents_path", config);
+        CompletableFuture<String> tenant1ApkContentsPath = new CompletableFuture<>();
+        CompletableFuture<String> tenant2ApkContentsPath = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService tsOnAPort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            tenant1ApkContentsPath.complete(tsOnAPort.getApkContentsPath());
+
+                            ITestService tsOnAlternatePort =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            tenant2ApkContentsPath.complete(tsOnAlternatePort.getApkContentsPath());
+
+                            tsOnAPort.quit();
+                            tsOnAlternatePort.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running"
+                                + " test_vm_tenant_apk_contents_path's onPayloadReady"
+                                + " callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertWithMessage("Tenant 1 apk contents path should be specific to the tenant")
+                .that(tenant1ApkContentsPath.getNow(null))
+                .isEqualTo("/mnt/apk/" + TEST_APP_PACKAGE_NAME);
+        assertWithMessage("Tenant 2 apk contents path should be specific to the tenant")
+                .that(tenant2ApkContentsPath.getNow(null))
+                .isEqualTo("/mnt/apk/" + TEST_ALTERNATE_APP_PACKAGE_NAME);
         assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
     }
 
@@ -1776,7 +1848,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         testResults.assertNoException();
         assertThat(testResults.mEncryptedStoragePath)
-                .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
+                .isEqualTo("/mnt/encryptedstore/" + TEST_APP_PACKAGE_NAME);
 
         // Re-run the VM with more tenants
         String variant = getMultiTenantVariant();
