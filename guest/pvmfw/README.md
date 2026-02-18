@@ -282,6 +282,15 @@ In version 1.3, a fifth blob is added.
   }
   ```
 
+#### Version 1.4 {#pvmfw-data-v1-4}
+
+Adds
+
+- entry 5, if present, contains a list of trusted keys for pvmfw. This enables
+  payloads signed with keys other than the embedded "system key" to be allowed
+  to run in a protected VM. The key used for a payload is always reflected in
+  its DICE chain.
+
 #### Virtual Platform DICE Chain Handover
 
 The format of the DICE chain entry mentioned above, compatible with the

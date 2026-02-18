@@ -21,7 +21,7 @@ use crate::crosvm::{
     VmInstance, VmState,
 };
 use crate::debug_config::{DebugConfig, DebugPolicy};
-use crate::dt_overlay::{create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
+use crate::dt_overlay::{DeviceTreeOverlayProps, create_device_tree_overlay, VM_DT_OVERLAY_MAX_SIZE, VM_DT_OVERLAY_PATH};
 use crate::host_services;
 use crate::payload::{
     add_microdroid_payload_images, add_microdroid_system_images, add_microdroid_vendor_image,
@@ -948,32 +948,19 @@ fn maybe_create_reference_dt_overlay(
         .context("Failed to extract vendor hashtree digest")
         .or_service_specific_exception(-1)?;
 
-    let mut trusted_props = if let Some(ref vendor_hashtree_digest) = vendor_hashtree_digest {
-        info!(
-            "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
-                match the trusted digest in the pvmfw config, causing the VM to fail to start."
-        );
-        vec![(c"vendor_hashtree_descriptor_root_digest", vendor_hashtree_digest.as_slice())]
-    } else {
-        vec![]
-    };
-
-    let key_material;
+    let mut key_material = None;
     let mut untrusted_props = Vec::with_capacity(2);
-    if cfg!(llpvm_changes) {
-        untrusted_props.push((c"instance-id", &instance_id[..]));
-        let want_updatable = extract_want_updatable(config);
-        if want_updatable && secretkeeper::is_supported() {
-            // Let guest know that it can defer rollback protection to Secretkeeper by setting
-            // an empty property in untrusted node in DT. This enables Updatable VMs.
-            untrusted_props.push((c"defer-rollback-protection", &[]));
-            let sk: Strong<dyn aidl::ISecretkeeper> =
-                binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
-            if sk.getInterfaceVersion()? >= 2 {
-                let aidl::PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
-                key_material = keyMaterial;
-                trusted_props.push((c"secretkeeper_public_key", key_material.as_slice()));
-            }
+    untrusted_props.push((c"instance-id", &instance_id[..]));
+    let want_updatable = extract_want_updatable(config);
+    if want_updatable && secretkeeper::is_supported() {
+        // Let guest know that it can defer rollback protection to Secretkeeper by setting
+        // an empty property in untrusted node in DT. This enables Updatable VMs.
+        untrusted_props.push((c"defer-rollback-protection", &[]));
+        let sk: Strong<dyn aidl::ISecretkeeper> =
+            binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
+        if sk.getInterfaceVersion()? >= 2 {
+            let aidl::PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
+            key_material = Some(keyMaterial);
         }
     }
 
@@ -994,26 +981,24 @@ fn maybe_create_reference_dt_overlay(
         }
     }
 
-    let device_tree_overlay = if host_ref_dt.is_some()
-        || !untrusted_props.is_empty()
-        || !trusted_props.is_empty()
-        || !android_firmware_props_owned.is_empty()
-    {
+    let android_firmware_props = android_firmware_props_owned
+        .iter()
+        .map(|(n, v)| (n.as_c_str(), v.as_bytes_with_nul()))
+        .collect::<Vec<_>>();
+    let props = DeviceTreeOverlayProps {
+        dt_path: host_ref_dt,
+        untrusted_props: &untrusted_props,
+        vendor_hashtree_descriptor_root_digest: vendor_hashtree_digest.as_deref(),
+        secretkeeper_public_key: key_material.as_deref(),
+        android_firmware_props: &android_firmware_props,
+    };
+
+    let device_tree_overlay = if !props.is_empty() {
         let dt_output = temporary_directory.join(VM_DT_OVERLAY_PATH);
         let mut data = [0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let android_firmware_props = android_firmware_props_owned
-            .iter()
-            .map(|(n, v)| (n.as_c_str(), v.as_bytes_with_nul()))
-            .collect::<Vec<_>>();
-        let fdt = create_device_tree_overlay(
-            &mut data,
-            host_ref_dt,
-            &untrusted_props,
-            &trusted_props,
-            &android_firmware_props,
-        )
-        .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
-        .or_service_specific_exception(-1)?;
+        let fdt = create_device_tree_overlay(&mut data, props)
+            .map_err(|e| anyhow!("Failed to create DT overlay, {e:?}"))
+            .or_service_specific_exception(-1)?;
         fs::write(&dt_output, fdt.as_slice()).or_service_specific_exception(-1)?;
         Some(File::open(dt_output).or_service_specific_exception(-1)?)
     } else {

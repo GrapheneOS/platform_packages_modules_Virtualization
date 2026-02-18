@@ -17,11 +17,43 @@
 use anyhow::{anyhow, Result};
 use fsfdt::FsFdt;
 use libfdt::{Fdt, FdtNodeMut};
+use log::info;
 use std::ffi::CStr;
 use std::path::Path;
 
 pub(crate) const VM_DT_OVERLAY_PATH: &str = "vm_dt_overlay.dtbo";
 pub(crate) const VM_DT_OVERLAY_MAX_SIZE: usize = 5000;
+
+/// Properties passed to the `create_device_tree_overlay` function.
+pub(crate) struct DeviceTreeOverlayProps<'a> {
+    /// Path to the (proc style) device tree to be include in the overlay.
+    /// NOTE: this field is deprecated and is only kept for a backward compatibility with devices
+    /// that don't have secretkeeper v2 (or higher).
+    pub dt_path: Option<&'a Path>,
+    /// Properties to be included in /avf/untrusted node. These properties won't be validated by
+    /// the pvmfw.
+    /// TODO(ioffe): replace with the named properties.
+    pub untrusted_props: &'a [(&'a CStr, &'a [u8])],
+    /// Value for the vendor_hashtree_descriptor_root_digest property under /avf node.
+    /// NOTE: this value will be validated by the pvmfw.
+    pub vendor_hashtree_descriptor_root_digest: Option<&'a [u8]>,
+    /// Value of the secretkeeper_public_key property under /avf node.
+    /// NOTE: this value will be validated by the pvmfw.
+    pub secretkeeper_public_key: Option<&'a [u8]>,
+    /// Properties from android firmware. Only populated for the keymint pVM.
+    pub android_firmware_props: &'a [(&'a CStr, &'a [u8])],
+}
+
+impl DeviceTreeOverlayProps<'_> {
+    /// Returns `true` if none of the props are empty.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.dt_path.is_none()
+            && self.untrusted_props.is_empty()
+            && self.vendor_hashtree_descriptor_root_digest.is_none()
+            && self.secretkeeper_public_key.is_none()
+            && self.android_firmware_props.is_empty()
+    }
+}
 
 /// Create an empty device tree overlay
 pub(crate) fn create_empty_device_tree_overlay(buffer: &mut [u8]) -> Result<&mut Fdt> {
@@ -65,49 +97,62 @@ pub(crate) fn create_empty_device_tree_overlay(buffer: &mut [u8]) -> Result<&mut
 /// ```
 pub(crate) fn create_device_tree_overlay<'a>(
     buffer: &'a mut [u8],
-    dt_path: Option<&'a Path>,
-    untrusted_props: &[(&'a CStr, &'a [u8])],
-    trusted_props: &[(&'a CStr, &'a [u8])],
-    android_firmware_props: &[(&'a CStr, &'a [u8])],
+    props: DeviceTreeOverlayProps,
 ) -> Result<&'a mut Fdt> {
-    if dt_path.is_none()
-        && untrusted_props.is_empty()
-        && trusted_props.is_empty()
-        && android_firmware_props.is_empty()
-    {
+    if props.is_empty() {
         return Err(anyhow!("Expected at least one device tree addition"));
     }
 
     let fdt =
         Fdt::create_empty_tree(buffer).map_err(|e| anyhow!("Failed to create empty Fdt: {e:?}"))?;
 
-    if !untrusted_props.is_empty() {
+    if !props.untrusted_props.is_empty() {
         let path = c"/fragment@0/__overlay__/avf/untrusted";
         let mut node = fdt
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
-        add_props_to_node(untrusted_props, &mut node)?;
+        add_props_to_node(props.untrusted_props, &mut node)?;
     }
 
     // Read dt_path from host DT and overlay onto fdt.
-    if let Some(path) = dt_path {
+    if let Some(path) = props.dt_path {
+        // TODO(ioffe): add /fragment@0/__overlay__ in case untrusted_props was empty.
         fdt.overlay_onto(c"/fragment@0/__overlay__", path)?;
     }
 
-    if !trusted_props.is_empty() {
+    if let Some(val) = props.vendor_hashtree_descriptor_root_digest {
+        info!(
+            "Passing vendor hashtree digest to pvmfw. This will be rejected if it doesn't \
+                match the trusted digest in the pvmfw config, causing the pVM to fail to start."
+        );
         let path = c"/fragment@0/__overlay__/avf";
         let mut node = fdt
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
-        add_props_to_node(trusted_props, &mut node)?;
+        node.setprop(c"vendor_hashtree_descriptor_root_digest", val).map_err(|e| {
+            anyhow!("Failed to set vendor_hashtree_descriptor_root_digest property: {e:?}")
+        })?;
     }
 
-    if !android_firmware_props.is_empty() {
+    if let Some(val) = props.secretkeeper_public_key {
+        info!(
+            "Passing secretkeeper public key to pvmfw. This will be rejected if it doesn't \
+                match the value in the pvmfw config, causing the pVM to fail to start."
+        );
+        let path = c"/fragment@0/__overlay__/avf";
+        let mut node = fdt
+            .find_or_add_node_mut(path)
+            .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
+        node.setprop(c"secretkeeper_public_key", val)
+            .map_err(|e| anyhow!("Failed to set secretkeeper_public_key property: {e:?}"))?;
+    }
+
+    if !props.android_firmware_props.is_empty() {
         let path = c"/fragment@0/__overlay__/firmware/android";
         let mut node = fdt
             .find_or_add_node_mut(path)
             .map_err(|e| anyhow!("Failed to add node '{path:?}': {e:?}"))?;
-        add_props_to_node(android_firmware_props, &mut node)?;
+        add_props_to_node(props.android_firmware_props, &mut node)?;
         node.setprop(c"compatible", b"android,firmware\0")
             .map_err(|e| anyhow!("Failed to set compatible property: {e:?}"))?;
     }
@@ -139,7 +184,14 @@ mod tests {
     #[test]
     fn empty_overlays_not_allowed() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let res = create_device_tree_overlay(&mut buffer, None, &[], &[], &[]);
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            vendor_hashtree_descriptor_root_digest: None,
+            secretkeeper_public_key: None,
+            android_firmware_props: &[],
+        };
+        let res = create_device_tree_overlay(&mut buffer, props);
         assert!(res.is_err());
     }
 
@@ -148,9 +200,15 @@ mod tests {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
         let prop_name = c"XOXO";
         let prop_val_input = b"OXOX";
-        let fdt =
-            create_device_tree_overlay(&mut buffer, None, &[(prop_name, prop_val_input)], &[], &[])
-                .unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[(prop_name, prop_val_input)],
+            vendor_hashtree_descriptor_root_digest: None,
+            secretkeeper_public_key: None,
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let prop_value_dt = fdt
             .node(c"/fragment@0/__overlay__/avf/untrusted")
@@ -166,27 +224,42 @@ mod tests {
     #[test]
     fn trusted_prop_test() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let prop_name = c"XOXOXO";
         let prop_val_input = b"OXOXOX";
-        let fdt =
-            create_device_tree_overlay(&mut buffer, None, &[], &[(prop_name, prop_val_input)], &[])
-                .unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            vendor_hashtree_descriptor_root_digest: Some(prop_val_input),
+            secretkeeper_public_key: Some(prop_val_input),
+            android_firmware_props: &[],
+        };
+
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let prop_value_dt = fdt
             .node(c"/fragment@0/__overlay__/avf")
             .unwrap()
             .expect("/avf node doesn't exist")
-            .getprop(prop_name)
+            .getprop(c"secretkeeper_public_key")
             .unwrap()
             .expect("Prop not found!");
         assert_eq!(prop_value_dt, prop_val_input, "Unexpected property value");
+
+        let prop_value_dt = fdt
+            .node(c"/fragment@0/__overlay__/avf")
+            .unwrap()
+            .expect("/avf node doesn't exist")
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(prop_value_dt, prop_val_input, "Unexpected property value");
+
         assert_eq!(fdt.node(c"/fragment@0/__overlay__/firmware"), Ok(None));
     }
 
     #[test]
     fn firmware_prop_test() {
         let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
-        let prop_name = c"XOXOXO";
         let prop_val_input = b"OXOXOX";
         let firmware_props = [
             (c"vbmeta.device_state", c"locked".to_bytes_with_nul()),
@@ -198,20 +271,22 @@ mod tests {
             ),
             (c"verifiedbootstate", c"fake".to_bytes_with_nul()),
         ];
-        let fdt = create_device_tree_overlay(
-            &mut buffer,
-            None,
-            &[],
-            &[(prop_name, prop_val_input)],
-            &firmware_props,
-        )
-        .unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            secretkeeper_public_key: Some(prop_val_input),
+            vendor_hashtree_descriptor_root_digest: None,
+            android_firmware_props: &firmware_props,
+        };
+
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         let prop_value_dt = fdt
             .node(c"/fragment@0/__overlay__/avf")
             .unwrap()
             .expect("/avf node doesn't exist")
-            .getprop(prop_name)
+            .getprop(c"secretkeeper_public_key")
             .unwrap()
             .expect("Prop not found!");
         assert_eq!(prop_value_dt, prop_val_input, "Unexpected property value");
@@ -241,7 +316,15 @@ mod tests {
             ),
             (c"verifiedbootstate", c"fake".to_bytes_with_nul()),
         ];
-        let fdt = create_device_tree_overlay(&mut buffer, None, &[], &[], &firmware_props).unwrap();
+
+        let props = DeviceTreeOverlayProps {
+            dt_path: None,
+            untrusted_props: &[],
+            vendor_hashtree_descriptor_root_digest: None,
+            secretkeeper_public_key: None,
+            android_firmware_props: &firmware_props,
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
 
         assert_eq!(fdt.node(c"/fragment@0/__overlay__/avf"), Ok(None));
         assert!(fdt
@@ -262,5 +345,119 @@ mod tests {
                 .expect("Prop not found!");
             assert_eq!(prop_value_dt, prop_value, "Unexpected property value");
         }
+    }
+
+    #[test]
+    fn reference_dt_is_overlaid() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            vendor_hashtree_descriptor_root_digest: None,
+            secretkeeper_public_key: None,
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(value, b"this_is_test\0", "Unexpected property value");
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(value, b"this_is_test\0", "Unexpected property value");
+    }
+
+    #[test]
+    fn trusted_prop_override_reference_dt() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            vendor_hashtree_descriptor_root_digest: Some(c"this_is_overridden".to_bytes_with_nul()),
+            secretkeeper_public_key: Some(c"this_is_also_overridden".to_bytes_with_nul()),
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(value, b"this_is_overridden\0", "Unexpected property value");
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(value, b"this_is_also_overridden\0", "Unexpected property value");
+    }
+
+    #[test]
+    fn only_vendor_hashtree_descriptor_provided() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            vendor_hashtree_descriptor_root_digest: Some(c"this_is_overridden".to_bytes_with_nul()),
+            secretkeeper_public_key: None,
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(value, b"this_is_overridden\0", "Unexpected property value");
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(value, b"this_is_test\0", "Unexpected property value");
+    }
+
+    #[test]
+    fn only_secretkeeper_public_key_is_provided() {
+        // If untrusted_props are empty then /fragment@0/__overlay__ node won't be created.
+        // TODO(ioffe): remove this after fixing the TODO in create_device_tree_overlay.
+        let untrusted_props = [(c"ignored", c"ignored".to_bytes_with_nul())];
+        let mut buffer = vec![0_u8; VM_DT_OVERLAY_MAX_SIZE];
+        let dt_path = Path::new("testdata/fs/avf/reference");
+        let props = DeviceTreeOverlayProps {
+            dt_path: Some(dt_path),
+            untrusted_props: &untrusted_props,
+            vendor_hashtree_descriptor_root_digest: None,
+            secretkeeper_public_key: Some(c"this_is_also_overridden".to_bytes_with_nul()),
+            android_firmware_props: &[],
+        };
+        let fdt = create_device_tree_overlay(&mut buffer, props).unwrap();
+
+        let avf =
+            fdt.node(c"/fragment@0/__overlay__/avf").unwrap().expect("/avf node doesn't exist");
+        let value = avf
+            .getprop(c"vendor_hashtree_descriptor_root_digest")
+            .unwrap()
+            .expect("Prop not found!");
+        assert_eq!(
+            value, b"this_is_test\0",
+            "Unexpected value for vendor_hashtree_descriptor_root_digest prop"
+        );
+        let value = avf.getprop(c"secretkeeper_public_key").unwrap().expect("Prop not found!");
+        assert_eq!(
+            value, b"this_is_also_overridden\0",
+            "Unexpected value for secretkeeper_public_key prop"
+        );
     }
 }
