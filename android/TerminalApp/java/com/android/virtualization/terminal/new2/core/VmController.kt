@@ -185,6 +185,12 @@ object VmController {
                 // Override config for Display
                 setDisplayConfig(customImageConfigBuilder, displayInfo)
                 setGpuConfig(context, customImageConfigBuilder)
+                customImageConfigBuilder.setAudioConfig(
+                    VirtualMachineCustomImageConfig.AudioConfig.Builder()
+                        .setUseSpeaker(true)
+                        .setUseMicrophone(true)
+                        .build()
+                )
                 configBuilder.setCustomImageConfig(customImageConfigBuilder.build())
 
                 val config = configBuilder.build()

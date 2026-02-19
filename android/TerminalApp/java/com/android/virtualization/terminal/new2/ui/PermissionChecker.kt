@@ -44,7 +44,11 @@ import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import kotlinx.coroutines.launch
 
 val PERMISSIONS =
-    arrayOf(Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_LOCAL_NETWORK)
+    arrayOf(
+        Manifest.permission.POST_NOTIFICATIONS,
+        Manifest.permission.ACCESS_LOCAL_NETWORK,
+        Manifest.permission.RECORD_AUDIO,
+    )
 
 @Composable
 fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostState) {
