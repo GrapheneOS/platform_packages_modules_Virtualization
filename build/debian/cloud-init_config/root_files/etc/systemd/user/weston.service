@@ -18,7 +18,7 @@ StandardError=journal
 EnvironmentFile=-/home/droid/weston.env
 
 # add a ~/.config/weston.ini and weston will pick-it up
-ExecStart=/usr/bin/weston --modules=systemd-notify.so --xwayland --shell=kiosk-shell.so --continue-without-input
+ExecStart=/usr/bin/weston --modules=systemd-notify.so --xwayland --continue-without-input
 
 [Install]
 WantedBy=graphical-session.target

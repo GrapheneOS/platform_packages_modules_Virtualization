@@ -23,6 +23,7 @@ import android.os.IBinder
 import android.os.StatFs
 import android.os.SystemProperties
 import android.system.virtualizationcommon.IGuestAgent
+import android.system.virtualizationservice.DisplayConfig
 import android.system.virtualmachine.VirtualMachine
 import android.system.virtualmachine.VirtualMachineCallback
 import android.system.virtualmachine.VirtualMachineCustomImageConfig
@@ -113,6 +114,37 @@ object VmController {
 
     fun requestSessionDiscard(sessionId: String) {
         repositoryScope.launch { _sessionDiscarded.emit(sessionId) }
+    }
+
+    // It should add and then remove a display to reflect the change.
+    fun resizeDisplay(width: Int, height: Int, dpi: Int, refreshRate: Int) {
+        val vm = virtualMachine ?: return
+        try {
+            val displays = vm.getDisplays()
+            if (displays.isNotEmpty()) {
+                val oldDisplay = displays[0]
+                if (
+                    oldDisplay.config.width == width &&
+                        oldDisplay.config.height == height &&
+                        oldDisplay.config.refreshRate == refreshRate
+                ) {
+                    return
+                }
+            }
+            val config = DisplayConfig()
+            config.width = width
+            config.height = height
+            config.horizontalDpi = dpi
+            config.verticalDpi = dpi
+            config.refreshRate = refreshRate
+            vm.addDisplay(config)
+            if (displays.isNotEmpty()) {
+                val oldDisplay = displays[0]
+                vm.removeDisplay(oldDisplay.id)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to resize display", e)
+        }
     }
 
     fun start(displayInfo: DisplayInfo) {

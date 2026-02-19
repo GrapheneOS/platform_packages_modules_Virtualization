@@ -29,6 +29,7 @@ import android.view.SurfaceView
 import android.view.WindowManagerPolicyConstants.APPLICATION_MEDIA_OVERLAY_SUBLAYER
 import com.android.virtualization.terminal.DisplayProvider.CursorHandler
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
+import com.android.virtualization.terminal.new2.core.VmController
 import java.io.IOException
 import java.lang.Exception
 import java.lang.RuntimeException
@@ -73,6 +74,7 @@ internal class DisplayProvider(
         override fun surfaceCreated(holder: SurfaceHolder) {
             if (surfaceKind == SurfaceKind.MAIN) {
                 holder.setFixedSize(width, height)
+                updateDisplayResolution(holder)
             }
             try {
                 displayService.setSurface(holder.getSurface(), isForCursor())
@@ -97,8 +99,13 @@ internal class DisplayProvider(
         }
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-            // TODO: support resizeable display. We could actually change the display size that the
-            // VM sees, or keep the size and render it by fitting it in the new surface.
+            try {
+                if (surfaceKind == SurfaceKind.MAIN) {
+                    updateDisplayResolution(holder)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resize display", e)
+            }
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
@@ -110,6 +117,24 @@ internal class DisplayProvider(
                 throw RuntimeException("Error while destroying surface for $surfaceKind", e)
             }
         }
+    }
+
+    private fun updateDisplayResolution(holder: SurfaceHolder) {
+        val width = mainView.width
+        val height = mainView.height
+        if (width == 0 || height == 0) {
+            return
+        }
+
+        val maxSide = kotlin.math.max(width, height)
+        val scale = 1280.0f / maxSide.toFloat()
+        val scaledWidth = (width * scale).toInt()
+        val scaledHeight = (height * scale).toInt()
+
+        val dpi = mainView.resources.configuration.densityDpi
+        val refreshRate = 60
+        VmController.resizeDisplay(scaledWidth, scaledHeight, dpi, refreshRate)
+        holder.setFixedSize(scaledWidth, scaledHeight)
     }
 
     private fun createNewCursorStream(): ParcelFileDescriptor? {
