@@ -84,6 +84,22 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"ಮರುಪ್ರಯತ್ನಿಸಿ"</string>
     <string name="settings_title" msgid="3035373808103055663">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ಹಿಂದಕ್ಕೆ"</string>
+    <string name="settings_advanced_title" msgid="1935607224859850897">"ಸುಧಾರಿತ"</string>
+    <string name="settings_advanced_memory_title" msgid="8796464072611711320">"ಮೆಮೊರಿ ಗಾತ್ರ"</string>
+    <string name="settings_keep_awake_title" msgid="2658491842018373579">"ಎಚ್ಚರವಾಗಿರಿಸಿ"</string>
+    <string name="settings_keep_awake_off" msgid="1013961007629731438">"ಆಫ್ ಮಾಡಿ"</string>
+    <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 ನಿಮಿಷ"</string>
+    <string name="settings_keep_awake_5m" msgid="7257186967244534919">"5 ನಿಮಿಷಗಳು"</string>
+    <string name="settings_keep_awake_10m" msgid="4482250137254948195">"10 ನಿಮಿಷಗಳು"</string>
+    <string name="settings_keep_awake_30m" msgid="1416475563920477304">"30 ನಿಮಿಷಗಳು"</string>
+    <string name="settings_keep_awake_1h" msgid="1896550289890397648">"1 ಗಂಟೆ"</string>
+    <string name="settings_keep_awake_2h" msgid="5992998660827367630">"2 ಗಂಟೆಗಳು"</string>
+    <string name="settings_keep_awake_6h" msgid="5046933582122793047">"6 ಗಂಟೆಗಳು"</string>
+    <string name="settings_keep_awake_1d" msgid="7827787379531259589">"1 ದಿನ"</string>
+    <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"ಎಚ್ಚರಿಕೆ: \"ಎಚ್ಚರವಾಗಿರಿಸಿ\" ಫೀಚರ್‌ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸುವುದರಿಂದ ಬ್ಯಾಟರಿ ಬಾಳಿಕೆಯ ಮೇಲೆ ಗಮನಾರ್ಹ ಪರಿಣಾಮ ಬೀರುತ್ತದೆ, ಏಕೆಂದರೆ ಇದು ಸಾಧನವು ನಿದ್ರಾವಸ್ಥೆ ಮೋಡ್‌ಗೆ ಹೋಗುವುದನ್ನು ತಡೆಯುತ್ತದೆ."</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"Terminal, ಸಾಧನವನ್ನು ಸಕ್ರಿಯವಾಗಿರಿಸುತ್ತದೆ"</string>
+    <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"ಆಫ್ ಮಾಡಿ"</string>
+    <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"ಪೋರ್ಟ್ ನಿಯಂತ್ರಣ"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳನ್ನು ಅನುಮತಿಸಿ/ನಿರಾಕರಿಸಿ"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"ಆಲಿಸುವ ಪೋರ್ಟ್‌ಗಳು"</string>

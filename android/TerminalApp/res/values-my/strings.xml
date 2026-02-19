@@ -84,6 +84,22 @@
     <string name="notif_btn_retry" msgid="6376023692126285362">"ထပ်စမ်းရန်"</string>
     <string name="settings_title" msgid="3035373808103055663">"ဆက်တင်များ"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"နောက်သို့"</string>
+    <string name="settings_advanced_title" msgid="1935607224859850897">"အဆင့်မြင့်"</string>
+    <string name="settings_advanced_memory_title" msgid="8796464072611711320">"မှတ်ဉာဏ်ပမာဏ"</string>
+    <string name="settings_keep_awake_title" msgid="2658491842018373579">"ဖွင့်ထားရန်"</string>
+    <string name="settings_keep_awake_off" msgid="1013961007629731438">"ပိတ်"</string>
+    <string name="settings_keep_awake_1m" msgid="3252559467576414987">"၁ မိနစ်"</string>
+    <string name="settings_keep_awake_5m" msgid="7257186967244534919">"၅ မိနစ်"</string>
+    <string name="settings_keep_awake_10m" msgid="4482250137254948195">"၁၀ မိနစ်"</string>
+    <string name="settings_keep_awake_30m" msgid="1416475563920477304">"၃၀ မိနစ်"</string>
+    <string name="settings_keep_awake_1h" msgid="1896550289890397648">"၁ နာရီ"</string>
+    <string name="settings_keep_awake_2h" msgid="5992998660827367630">"၂ နာရီ"</string>
+    <string name="settings_keep_awake_6h" msgid="5046933582122793047">"၆ နာရီ"</string>
+    <string name="settings_keep_awake_1d" msgid="7827787379531259589">"၁ ရက်"</string>
+    <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"သတိပေးချက်- ‘ဆက်ဖွင့်ထားရန်’ ကို ဖွင့်ခြင်းသည် စက်ကို မနားအောင် တားဆီးသဖြင့် ဘက်ထရီသက်တမ်းကို သိသိသာသာ ထိခိုက်စေမည်။"</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"တာမီနယ်သည် စက်ကို ဆက်ဖွင့်ထားသည်"</string>
+    <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"ပိတ်ရန်"</string>
+    <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"ဆက်တင်များ"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"ပို့တ်ထိန်းချုပ်မှု"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"အသင့်ရှိနေသောပို့တ်များကို ခွင့်ပြုရန်/ငြင်းပယ်ရန်"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"အသင့်ရှိနေသော ပို့တ်များ"</string>
