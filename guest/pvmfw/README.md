@@ -291,6 +291,15 @@ Adds
   to run in a protected VM. The key used for a payload is always reflected in
   its DICE chain.
 
+- entry 6, if present, contains a list of rollback policies for pvmfw to enforce
+  which enables payloads that are not part of the system component (which
+  includes pvmfw and the `virt` APEX) to also benefit from boot-time rollback
+  protection, as opposed to runtime rollback protection of data provided by
+  SecretKeeper. This can be used by system integrators to specificy for every VM
+  payload (identified by name) a minimum rollback index optionally signed with
+  one of the extra keys from entry 5. Alternatively, it can be used to prohibit
+  certain VM names from being used.
+
 #### Virtual Platform DICE Chain Handover
 
 The format of the DICE chain entry mentioned above, compatible with the
