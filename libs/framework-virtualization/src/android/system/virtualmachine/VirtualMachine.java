@@ -1674,11 +1674,12 @@ public class VirtualMachine implements AutoCloseable {
     @WorkerThread
     @RequiresPermission(MANAGE_VIRTUAL_MACHINE_PERMISSION)
     public void run() throws VirtualMachineException {
-        synchronized (mLock) {
-            checkStopped();
+        synchronized (VirtualMachineManager.sCreateLock) {
+            synchronized (mLock) {
+                checkStopped();
 
-            mVirtualizationService = VirtualizationService.getInstance();
-            mStopHandled = false;
+                mVirtualizationService = VirtualizationService.getInstance();
+                mStopHandled = false;
 
             try {
                 mIdsigFilePath.createNewFile();
@@ -1821,6 +1822,7 @@ public class VirtualMachine implements AutoCloseable {
                 throw e.rethrowAsRuntimeException();
             }
         }
+    }
     }
 
     private void createIdSigsAndUpdateConfig(
@@ -2127,11 +2129,13 @@ public class VirtualMachine implements AutoCloseable {
         try {
             stop();
 
-            if (mVirtualizationService != null) {
-                mVirtualizationService
-                        .getBinder()
-                        .asBinder()
-                        .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+            synchronized (mLock) {
+                if (mVirtualizationService != null) {
+                    mVirtualizationService
+                            .getBinder()
+                            .asBinder()
+                            .unlinkToDeath(mVSDeathRecipient, /* flags= */ 0);
+                }
             }
         } catch (Exception e) {
             // Deliberately ignored; this almost certainly means the VM exited just as
@@ -2413,7 +2417,9 @@ public class VirtualMachine implements AutoCloseable {
     @RequiresPermission(USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION)
     public void enableTestAttestation() throws VirtualMachineException {
         try {
-            VirtualizationService.getInstance().getBinder().enableTestAttestation();
+            synchronized (VirtualMachineManager.sCreateLock) {
+                VirtualizationService.getInstance().getBinder().enableTestAttestation();
+            }
         } catch (RemoteException e) {
             throw e.rethrowAsRuntimeException();
         }
