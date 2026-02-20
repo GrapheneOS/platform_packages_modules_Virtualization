@@ -103,16 +103,19 @@ android_system_image {
 
         "microdroid_etc_passwd",
         "microdroid_etc_group",
-    ] + microdroid_shell_and_utilities,
+    ] + select(release_flag("RELEASE_DEPRECATE_RUNTIME_APEX"), {
+        true: ["linkerconfig"],
+        default: [],
+    }) + microdroid_shell_and_utilities,
     multilib: {
         common: {
             deps: [
-                // non-updatable & mandatory apexes
-                "com.android.runtime",
-
                 "microdroid_crashdump_initrd",
                 "microdroid_precompiled_sepolicy",
-            ],
+            ] + select(release_flag("RELEASE_DEPRECATE_RUNTIME_APEX"), {
+                true: [],
+                default: ["com.android.runtime"],
+            }),
         },
         lib64: {
             deps: [
