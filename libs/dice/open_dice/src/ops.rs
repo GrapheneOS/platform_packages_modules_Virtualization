@@ -133,9 +133,10 @@ pub fn keypair_from_seed(
 /// Refer to the following documentation for more information about CDI_Leaf_Priv:
 ///
 /// security/rkp/aidl/android/hardware/security/keymint/IRemotelyProvisionedComponent.aidl
+// TODO(b/486142507): Remove dynamic dispatch after converting all clients.
 pub fn derive_cdi_leaf_priv(
     dice_context: Option<DiceContext>,
-    dice_artifacts: &dyn DiceArtifacts,
+    dice_artifacts: &(impl DiceArtifacts + ?Sized),
 ) -> Result<PrivateKey> {
     let cdi_priv_key_seed = derive_cdi_private_key_seed(dice_artifacts.cdi_attest())?;
     let (_, private_key) = keypair_from_seed(dice_context, cdi_priv_key_seed.as_array())?;
@@ -223,11 +224,12 @@ pub fn sign_cose_sign1(
 ///   determined by the underlying `open-dice` library in this case.
 ///
 /// Returns the actual size of encoded_signature on success.
+// TODO(b/486142507): Remove dynamic dispatch after converting all clients.
 pub fn sign_cose_sign1_with_cdi_leaf_priv(
     dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
-    dice_artifacts: &dyn DiceArtifacts,
+    dice_artifacts: &(impl DiceArtifacts + ?Sized),
     encoded_signature: &mut [u8],
 ) -> Result<usize> {
     let private_key = derive_cdi_leaf_priv(dice_context, dice_artifacts)?;
