@@ -15,6 +15,7 @@ rust_library_rlib {
     defaults: ["libdiced_open_dice_defaults"],
     rustlibs: [
         "libcoset_nostd",
+        "libthiserror_nostd",
         "libopen_dice_android_bindgen_nostd",
         "libopen_dice_cbor_bindgen_nostd",
         "libzeroize_nostd",
@@ -38,6 +39,7 @@ rust_library {
     vendor_available: true,
     rustlibs: [
         "libcoset",
+        "libthiserror",
         "libopen_dice_android_bindgen",
         "libopen_dice_cbor_bindgen",
         "libserde",
@@ -73,6 +75,7 @@ rust_library {
     vendor_available: true,
     rustlibs: [
         "libcoset",
+        "libthiserror",
         "libopen_dice_android_bindgen_multialg",
         "libopen_dice_cbor_bindgen_multialg",
         "libzeroize",
@@ -109,6 +112,7 @@ rust_test {
     rustlibs: [
         "libdiced_open_dice",
         "libcoset",
+        "libthiserror",
     ],
 }
 
@@ -118,6 +122,7 @@ rust_test {
     rustlibs: [
         "libdiced_open_dice_multialg",
         "libcoset",
+        "libthiserror",
     ],
     features: [
         "multialg",
@@ -130,6 +135,7 @@ rust_test {
     rustlibs: [
         "libdiced_open_dice_nostd",
         "libcoset_nostd",
+        "libthiserror_nostd",
     ],
 }
 
