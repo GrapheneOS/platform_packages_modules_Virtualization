@@ -121,6 +121,7 @@ fn check_processing_generating_certificate_request(
     let params = GenerateCertificateRequestParams {
         keys_to_sign: vec![maced_public_key.to_vec()],
         challenge: vec![],
+        uds_certs: None,
     };
     let request = Request::GenerateCertificateRequest(params);
 

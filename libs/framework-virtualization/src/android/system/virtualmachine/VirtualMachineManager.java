@@ -71,7 +71,7 @@ public class VirtualMachineManager {
      * but is also held throughout VM creation / retrieval / deletion, to prevent these actions
      * racing with each other.
      */
-    private static final Object sCreateLock = new Object();
+    static final Object sCreateLock = new Object();
 
     @NonNull private final Context mContext;
 

@@ -15,8 +15,7 @@
 //! This module handles the interaction with virtual machine payload service.
 
 use android_system_virtualization_payload::aidl::android::system::virtualization::payload:: IVmPayloadService::{
-    IVmPayloadService, VM_APK_CONTENTS_PATH,
-    VM_PAYLOAD_SERVICE_SOCKET_NAME, AttestationResult::AttestationResult
+    IVmPayloadService, VM_PAYLOAD_SERVICE_SOCKET_NAME, AttestationResult::AttestationResult
 };
 use anyhow::{bail, ensure, Context, Result};
 use binder::{
@@ -34,7 +33,6 @@ use std::os::raw::{c_char, c_void};
 use std::ptr::{self, NonNull};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    LazyLock,
     Mutex,
 };
 use vm_payload_status_bindgen::AVmAttestationStatus;
@@ -51,8 +49,6 @@ use std::cmp::min;
 const MAX_ECDSA_P256_SIGNATURE_SIZE: usize = 72;
 const RP_DATA_SIZE: usize = 32;
 
-static VM_APK_CONTENTS_PATH_C: LazyLock<CString> =
-    LazyLock::new(|| CString::new(VM_APK_CONTENTS_PATH).expect("CString::new failed"));
 static PAYLOAD_CONNECTION: Mutex<Option<Strong<dyn IVmPayloadService>>> = Mutex::new(None);
 
 static ALREADY_NOTIFIED: AtomicBool = AtomicBool::new(false);
@@ -624,7 +620,18 @@ pub unsafe extern "C" fn AVmAttestationResult_free(res: *mut AttestationResult) 
 /// Gets the path to the APK contents.
 #[no_mangle]
 pub extern "C" fn AVmPayload_getApkContentsPath() -> *const c_char {
-    VM_APK_CONTENTS_PATH_C.as_ptr()
+    initialize_logging();
+
+    let uid = unistd::getuid().as_raw() as i64;
+    let path =
+        unwrap_or_abort(try_get_apk_contents_path(uid).context("Failed to get APK contents path"));
+    let cstr =
+        unwrap_or_abort(CString::new(path).context("Failed to create CString, path has null byte"));
+    cstr.into_raw()
+}
+
+fn try_get_apk_contents_path(uid: i64) -> Result<String> {
+    get_vm_payload_service()?.getApkContentsPath(uid).context("Failed to get APK contents path")
 }
 
 /// Gets the path to the payload's encrypted storage.

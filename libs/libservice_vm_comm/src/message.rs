@@ -167,6 +167,9 @@ pub enum RequestProcessingError {
 
     /// The vendor partition loaded by the client VM is invalid.
     InvalidVendorPartition,
+
+    /// The UDS certificate chain is invalid.
+    InvalidUdsCerts,
 }
 
 impl fmt::Display for RequestProcessingError {
@@ -200,6 +203,9 @@ impl fmt::Display for RequestProcessingError {
             }
             Self::InvalidVendorPartition => {
                 write!(f, "The vendor partition loaded by the client VM is invalid")
+            }
+            Self::InvalidUdsCerts => {
+                write!(f, "The UDS certificate chain is invalid")
             }
         }
     }
@@ -242,6 +248,9 @@ pub struct GenerateCertificateRequestParams {
     /// included in the signed data of the CSR structure.
     /// The supported sizes is between 0 and 64 bytes, inclusive.
     pub challenge: Vec<u8>,
+
+    /// Contains the UDS certificate chain.
+    pub uds_certs: Option<Vec<u8>>,
 }
 
 /// Represents an ECDSA P-256 key pair.

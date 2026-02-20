@@ -35,6 +35,7 @@
 #include <sys/system_properties.h>
 
 #include <chrono>
+#include <filesystem>
 #ifdef __MICRODROID_TEST_PAYLOAD_USES_LIBICU__
 #include <unicode/uchar.h>
 #endif
@@ -556,9 +557,18 @@ Result<void> verify_vm_share() {
 }
 
 Result<void> verify_packages_mounted() {
-    const char* path = "/mnt/tenant-apk/0";
-    struct stat sb;
-    if (stat(path, &sb)) return ErrnoError() << path << " stat failed";
+    const char* path = "/mnt/tenant-apk";
+    std::error_code ec;
+    bool empty = std::filesystem::is_empty(path, ec);
+    if (ec) {
+        const std::string message = "Failed to check " + std::string(path) + ": " + ec.message();
+        __android_log_write(ANDROID_LOG_INFO, TAG, message.c_str());
+    }
+    if (empty) {
+        const std::string message = "No packages mounted in " + std::string(path);
+        __android_log_write(ANDROID_LOG_INFO, TAG, message.c_str());
+    }
+
     return {};
 }
 

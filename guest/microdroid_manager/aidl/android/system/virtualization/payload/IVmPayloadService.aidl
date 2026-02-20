@@ -191,4 +191,12 @@ interface IVmPayloadService {
      * @return the file descriptor of the unix domain socket.
      */
     ParcelFileDescriptor createUnixDomainSocket(in @utf8InCpp String name);
+
+    /**
+     * Returns the absolute path to the APK contents path for the given tenant.
+     *
+     * @param uid The uid of the tenant.
+     * @return The path to the APK contents.
+     */
+    String getApkContentsPath(in long uid);
 }

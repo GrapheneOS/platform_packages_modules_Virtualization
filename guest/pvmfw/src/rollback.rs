@@ -14,6 +14,10 @@
 
 //! Support for guest-specific rollback protection (RBP).
 
+use crate::config::RollbackConfig;
+use crate::config::RollbackConfigEntry;
+use crate::config::RollbackConfigKeyId;
+use crate::config::RollbackConfigPolicy;
 use crate::dice::PartialInputs;
 use crate::entry::RebootReason;
 use crate::fdt::read_defer_rollback_protection;
@@ -53,14 +57,18 @@ pub(crate) enum FixedRollbackCriterion<'a> {
 /// - `new_instance`: true if the legacy instance.img solution was used and a new entry created;
 /// - `salt`: the salt representing the instance, to be used during DICE derivation;
 /// - `defer_rollback_protection`: if RBP is being deferred.
-pub fn perform_rollback_protection(
+pub fn perform_rollback_protection<'a>(
     fdt: &Fdt,
     verified_boot_data: &VerifiedBootData,
     dice_inputs: &PartialInputs,
     cdi_seal: &[u8],
+    rollback_config: Option<&RollbackConfig<'a>>,
+    extra_keys: &[&'a [u8]],
 ) -> Result<(bool, Hidden, bool), RebootReason> {
     let instance_hash = dice_inputs.instance_hash;
-    if let Some(fixed) = get_fixed_rollback_protection(verified_boot_data) {
+    if let Some(fixed) =
+        get_fixed_rollback_protection(verified_boot_data, rollback_config, extra_keys)
+    {
         // Prevent attackers from impersonating well-known images.
         perform_fixed_rollback_protection(verified_boot_data, fixed)?;
         Ok((false, instance_hash.unwrap(), false))
@@ -102,6 +110,8 @@ fn perform_deferred_rollback_protection(
 
 fn get_fixed_rollback_protection<'a>(
     verified_boot_data: &VerifiedBootData,
+    rollback_config: Option<&'a RollbackConfig<'a>>,
+    extra_keys: &[&'a [u8]],
 ) -> Option<FixedRollbackCriterion<'a>> {
     match verified_boot_data.name.as_deref()? {
         VerifiedBootData::RKP_VM_NAME => Some(FixedRollbackCriterion::RollbackIndexPublicKey {
@@ -129,8 +139,47 @@ fn get_fixed_rollback_protection<'a>(
                 }
             }
         }
-        _ => None,
+        name => {
+            if let Some(config) = rollback_config {
+                for entry in config.entries() {
+                    let criterion = criterion_for_vm_from_config_entry(name, entry, extra_keys);
+                    if criterion.is_some() {
+                        return criterion;
+                    }
+                }
+            }
+            None
+        }
     }
+}
+
+fn criterion_for_vm_from_config_entry<'a>(
+    vm_name: &str,
+    entry: &RollbackConfigEntry<'a>,
+    extra_keys: &[&'a [u8]],
+) -> Option<FixedRollbackCriterion<'a>> {
+    if entry.vm_name != vm_name {
+        return None;
+    }
+    let criterion = match entry.rollback_policy {
+        RollbackConfigPolicy::Reserved => FixedRollbackCriterion::Reserved { name: entry.vm_name },
+        RollbackConfigPolicy::MinimumRollbackIndex(
+            index,
+            RollbackConfigKeyId::EmbeddedPublicKey,
+        ) => FixedRollbackCriterion::RollbackIndexPublicKey { index, public_key: PUBLIC_KEY },
+        RollbackConfigPolicy::MinimumRollbackIndex(
+            index,
+            RollbackConfigKeyId::ExtraTrustedKey { n },
+        ) if extra_keys.get(n).is_none() => {
+            error!("Invalid key ID {n}: rejecting payload");
+            FixedRollbackCriterion::Reserved { name: entry.vm_name }
+        }
+        RollbackConfigPolicy::MinimumRollbackIndex(
+            index,
+            RollbackConfigKeyId::ExtraTrustedKey { n },
+        ) => FixedRollbackCriterion::RollbackIndexPublicKey { index, public_key: extra_keys[n] },
+    };
+    Some(criterion)
 }
 
 fn perform_fixed_rollback_protection(
