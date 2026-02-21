@@ -12,23 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This module is only expected to be used in Debian linux running inside the VM.
-// There's no guarantee that this module works well on the Android.
-genrule {
-    name: "debian_cidata",
-    srcs: [
-        "cloud-init_config/user-data", // anchor for finding config root dir
-        "cloud-init_config/**/*",
+bootstrap_go_package {
+    name: "ferrochrome-soong-rules",
+    pkgPath: "android/soong/ferrochrome",
+    deps: [
+        "blueprint",
+        "blueprint-gobtools",
+        "blueprint-proptools",
+        "soong",
+        "soong-android",
+        "soong-cc",
     ],
-    out: ["cidata.iso"],
-    tools: ["xorriso"],
-    cmd: "ROOT_DIR=$(location cloud-init_config/user-data)/..; " +
-        "chmod o=g $(in); " +
-        "$(location xorriso) -as mkisofs -V cidata -J -uid 0 -gid 0 -o $(out) -R $${ROOT_DIR}",
+    srcs: [
+        "cidata-iso-package.go",
+    ],
+    pluginFor: ["soong_build"],
 }
 
-prebuilt_etc {
-    name: "debian_cidata.iso",
-    src: ":debian_cidata",
-    filename: "cidata.iso",
+cidata_iso_package {
+    name: "debian_cidata",
+
+    iso_label: "cidata",
+    root_dir: "cloud-init_config",
+    install_dir: "root_files/usr",
+    hash_file: "meta-data",
+
+    deps: [
+        "linux_vm_manager",
+        "forwarder_guest",
+    ],
+    enabled: false,
+    target: {
+        linux_musl: {
+            enabled: true,
+        },
+    },
 }
