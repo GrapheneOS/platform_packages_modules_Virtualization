@@ -26,6 +26,7 @@ use client_vm_csr::{generate_attestation_key_and_csr, ClientVmAttestationData};
 use crate::encrypted_assets::{mount_encrypted_assets, MountError};
 use crate::tenant::TenantManager;
 use crate::vm_secret::VmSecret;
+use diced_open_dice::DiceArtifacts;
 use libc::uid_t;
 use log::{error, info};
 use microdroid_uids::MICRODROID_PAYLOAD_UID;
