@@ -15,10 +15,8 @@
 //! Errors and relating functions thrown in this library.
 
 use open_dice_cbor_bindgen::DiceResult;
-use std::{fmt, result};
-
-#[cfg(feature = "std")]
 use std::error::Error;
+use std::{fmt, result};
 
 /// Error type used by DICE.
 #[derive(Debug)]
@@ -38,7 +36,6 @@ pub enum DiceError {
 }
 
 /// This makes `DiceError` accepted by anyhow.
-#[cfg(feature = "std")]
 impl Error for DiceError {}
 
 impl fmt::Display for DiceError {

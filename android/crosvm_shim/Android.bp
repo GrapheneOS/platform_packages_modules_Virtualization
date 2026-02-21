@@ -2,9 +2,8 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-rust_binary {
-    name: "crosvm_vu_fs",
-    crate_name: "crosvm_shim",
+rust_defaults {
+    name: "crosvm_shim_defaults",
     srcs: ["src/main.rs"],
     edition: "2021",
     rustlibs: [
@@ -16,4 +15,16 @@ rust_binary {
             compile_multilib: "64",
         },
     },
+}
+
+rust_binary {
+    name: "crosvm_vu_fs",
+    crate_name: "crosvm_fs_shim",
+    defaults: ["crosvm_shim_defaults"],
+}
+
+rust_binary {
+    name: "crosvm_vu_snd",
+    crate_name: "crosvm_snd_shim",
+    defaults: ["crosvm_shim_defaults"],
 }

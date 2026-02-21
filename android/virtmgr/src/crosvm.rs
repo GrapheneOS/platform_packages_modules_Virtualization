@@ -62,6 +62,7 @@ use tombstoned_client::{DebuggerdDumpType, TombstonedConnection};
 
 const CROSVM_PATH: &str = "/apex/com.android.virt/bin/crosvm";
 const CROSVM_VU_FS_PATH: &str = "/apex/com.android.virt/bin/crosvm_vu_fs";
+const CROSVM_VU_SND_PATH: &str = "/apex/com.android.virt/bin/crosvm_vu_snd";
 
 /// Version of the platform that crosvm currently implements. The format follows SemVer. This
 /// should be updated when there is a platform change in the crosvm side. Having this value here is
@@ -2377,7 +2378,7 @@ fn maybe_run_virtiosnd(config: &CrosvmConfig) -> io::Result<Option<SharedChild>>
         if audio.use_speaker { 1 } else { 0 },
     );
 
-    let mut command = Command::new(CROSVM_PATH);
+    let mut command = Command::new(CROSVM_VU_SND_PATH);
     command
         .arg("device")
         .arg("snd")
@@ -2388,7 +2389,7 @@ fn maybe_run_virtiosnd(config: &CrosvmConfig) -> io::Result<Option<SharedChild>>
     print_crosvm_args(&command);
 
     let result = SharedChild::spawn(&mut command)?;
-    info!("Spawned virtiosnd crosvm({})", result.id());
+    info!("Spawned virtiosnd crosvm_vu_snd({})", result.id());
 
     Ok(Some(result))
 }
