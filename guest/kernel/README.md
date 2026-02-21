@@ -19,13 +19,13 @@ repo sync
 For ARM64
 ```bash
 tools/bazel clean
-tools/bazel run --config=fast //common:kernel_aarch64_microdroid_dist -- --dist_dir=out/dist
+tools/bazel run --config=fast //common:kernel_aarch64_microdroid_dist -- --destdir=out/dist
 ```
 
 For x86\_64,
 ```bash
 tools/bazel clean
-tools/bazel run --config=fast //common:kernel_x86_64_microdroid_dist -- --dist_dir=out/dist
+tools/bazel run --config=fast //common:kernel_x86_64_microdroid_dist -- --destdir=out/dist
 ```
 
 Note that
