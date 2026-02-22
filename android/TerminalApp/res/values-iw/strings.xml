@@ -86,34 +86,20 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"חזרה"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"אפשרויות מתקדמות"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"נפח זיכרון"</string>
-    <!-- no translation found for settings_keep_awake_title (2658491842018373579) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_off (1013961007629731438) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_1m (3252559467576414987) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_5m (7257186967244534919) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_10m (4482250137254948195) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_30m (1416475563920477304) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_1h (1896550289890397648) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_2h (5992998660827367630) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_6h (5046933582122793047) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_1d (7827787379531259589) -->
-    <skip />
-    <!-- no translation found for settings_keep_awake_battery_warning (5479518792086179864) -->
-    <skip />
-    <!-- no translation found for notif_keep_awake_active (7857677816675880040) -->
-    <skip />
-    <!-- no translation found for notif_action_turn_off_keep_awake (6441029303214895727) -->
-    <skip />
-    <!-- no translation found for notif_action_keep_awake_settings (8154182202183657855) -->
-    <skip />
+    <string name="settings_keep_awake_title" msgid="2658491842018373579">"שמירה במצב פעיל"</string>
+    <string name="settings_keep_awake_off" msgid="1013961007629731438">"כבוי"</string>
+    <string name="settings_keep_awake_1m" msgid="3252559467576414987">"דקה אחת"</string>
+    <string name="settings_keep_awake_5m" msgid="7257186967244534919">"‫5 דקות"</string>
+    <string name="settings_keep_awake_10m" msgid="4482250137254948195">"‫10 דקות"</string>
+    <string name="settings_keep_awake_30m" msgid="1416475563920477304">"‫30 דקות"</string>
+    <string name="settings_keep_awake_1h" msgid="1896550289890397648">"שעה אחת"</string>
+    <string name="settings_keep_awake_2h" msgid="5992998660827367630">"שעתיים"</string>
+    <string name="settings_keep_awake_6h" msgid="5046933582122793047">"‫6 שעות"</string>
+    <string name="settings_keep_awake_1d" msgid="7827787379531259589">"יום אחד"</string>
+    <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"אזהרה: הפעלת האפשרות \"שמירה על מצב פעיל\" תשפיע באופן משמעותי על חיי הסוללה, כי היא תמנע מהמכשיר לעבור למצב שינה."</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"האפליקציה \"טרמינל\" משאירה את המכשיר במצב פעיל"</string>
+    <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"השבתה"</string>
+    <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"הגדרות"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"בקרת יציאות"</string>
     <string name="settings_port_subtitle" msgid="8603892509810549436">"אישור או דחייה של יציאות להקשבה"</string>
     <string name="settings_port_title_active_ports" msgid="5302611451522156465">"יציאות להקשבה"</string>
