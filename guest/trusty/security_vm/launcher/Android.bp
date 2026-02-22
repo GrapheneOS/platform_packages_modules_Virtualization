@@ -57,10 +57,6 @@ rust_binary {
     ],
     bootstrap: true,
     system_ext_specific: true,
-    enabled: select(soong_config_variable("trusty_system_vm", "enabled"), {
-        true: true,
-        default: false,
-    }),
 }
 
 prebuilt_etc {
