@@ -192,7 +192,8 @@ private:
             return Error() << "Failed to create ASurfaceTransaction";
         }
         if (!mSurfaceControl) {
-            return Error() << "mSurfaceControl is destroyed";
+            // Silently drop the frame when the UI is in the background
+            return {};
         }
 
         sc.ASurfaceTransaction_setBuffer(transaction, mSurfaceControl, ahb,
