@@ -7,6 +7,6 @@
   {
     "port": 14,
     "accessor_name": "android.os.IAccessor/sharedsecret/security_vm_shared_secret",
-    "internal_rpc_service_name": "android.hardware.security.sharedsecret.ISharedSecret/default"
+    "internal_rpc_service_name": "android.hardware.security.sharedsecret.ISharedSecret/security_vm"
   }
 ]
