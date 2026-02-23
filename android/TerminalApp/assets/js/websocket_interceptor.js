@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,15 @@
  */
 
 (function() {
-    if (window.ttydSocket && typeof window.ttydSocket.close === 'function') {
-        console.log('[TerminalApp] Closing intercepted ttydSocket (1000)');
-        // Close with code 1000 (CLOSE_NORMAL) to prevent ttyd from reconnecting.
-        // As seen in ttyd's html/src/components/terminal/xterm/index.ts:
-        // if (event.code !== 1000 && doReconnect) { ... refreshToken().then(connect); }
-        window.ttydSocket.close(1000);
-    } else {
-        console.log('[TerminalApp] ttydSocket not found or already closed');
+    if (window.WebSocket && !window.WebSocket.isProxy) {
+        window.WebSocket = new Proxy(window.WebSocket, {
+            construct: function(target, args) {
+                var instance = Reflect.construct(target, args);
+                window.ttydSocket = instance;
+                return instance;
+            }
+        });
+        window.WebSocket.isProxy = true;
+        console.log('WebSocket intercepted via Proxy');
     }
 })();

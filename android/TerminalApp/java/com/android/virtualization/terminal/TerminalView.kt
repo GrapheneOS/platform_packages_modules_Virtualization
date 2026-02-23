@@ -45,6 +45,8 @@ open class TerminalView constructor(context: Context, attrs: AttributeSet?) :
     private val terminalDisconnectCallback: String =
         readAssetAsString(context, "js/terminal_disconnect.js")
     private val terminalClose: String = readAssetAsString(context, "js/terminal_close.js")
+    private val websocketInterceptor: String =
+        readAssetAsString(context, "js/websocket_interceptor.js")
     private val touchToMouseHandler: String =
         readAssetAsString(context, "js/touch_to_mouse_handler.js")
     private val a11yManager =
@@ -80,6 +82,10 @@ open class TerminalView constructor(context: Context, attrs: AttributeSet?) :
 
     fun terminalClose() {
         this.evaluateJavascript(terminalClose, null)
+    }
+
+    fun injectWebSocketInterceptor() {
+        this.evaluateJavascript(websocketInterceptor, null)
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
