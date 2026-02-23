@@ -104,7 +104,10 @@ android_system_image {
         "microdroid_etc_passwd",
         "microdroid_etc_group",
     ] + select(release_flag("RELEASE_DEPRECATE_RUNTIME_APEX"), {
-        true: ["linkerconfig"],
+        true: [
+            "crash_dump",
+            "linkerconfig",
+        ],
         default: [],
     }) + microdroid_shell_and_utilities,
     multilib: {
