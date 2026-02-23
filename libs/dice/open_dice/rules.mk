@@ -23,6 +23,7 @@ MODULE_CRATE_NAME := diced_open_dice
 
 MODULE_LIBRARY_DEPS += \
 	$(call FIND_CRATE,coset) \
+	$(call FIND_CRATE,thiserror) \
 	$(call FIND_CRATE,zeroize) \
 	$(LOCAL_DIR)/bindgen/android \
 	$(LOCAL_DIR)/bindgen/dice \
