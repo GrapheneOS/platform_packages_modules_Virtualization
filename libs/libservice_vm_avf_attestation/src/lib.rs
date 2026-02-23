@@ -34,16 +34,16 @@ use zeroize::Zeroizing;
 const DICE_CHAIN_SUFFIX_LEN: usize = 1;
 
 /// The Service VM implementation of attestation operations.
-pub struct Ops<'a> {
-    dice_artifacts: &'a (dyn DiceArtifacts + Sync),
+pub struct Ops<'a, T: DiceArtifacts + Sync> {
+    dice_artifacts: &'a T,
     vendor_hashtree_root_digest: Option<&'a [u8]>,
     key_derivation_ops: InMemoryKeyDerivationOps,
 }
 
-impl<'a> Ops<'a> {
+impl<'a, T: DiceArtifacts + Sync> Ops<'a, T> {
     /// Creates a new instance of `Ops`.
     pub fn new(
-        dice_artifacts: &'a (dyn DiceArtifacts + Sync),
+        dice_artifacts: &'a T,
         vendor_hashtree_root_digest: Option<&'a [u8]>,
     ) -> Result<Self> {
         let key_derivation_ops = Zeroizing::new(dice_artifacts.cdi_seal().to_vec()).into();
@@ -73,13 +73,13 @@ impl<'a> Ops<'a> {
     }
 }
 
-impl<'a> KeyDerivationOps for Ops<'a> {
+impl<'a, T: DiceArtifacts + Sync> KeyDerivationOps for Ops<'a, T> {
     fn derive_kek(&self, salt: &[u8], info: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
         self.key_derivation_ops.derive_kek(salt, info)
     }
 }
 
-impl<'a> AttestationOps for Ops<'a> {
+impl<'a, T: DiceArtifacts + Sync> AttestationOps for Ops<'a, T> {
     fn reference_vm_dice_chain(&self) -> Result<&[u8]> {
         self.dice_artifacts.bcc().ok_or(RequestProcessingError::MissingDiceChain)
     }
