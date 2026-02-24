@@ -50,6 +50,7 @@ rust_ffi {
         ":__subpackages__",
         "//packages/modules/Virtualization/tests/benchmark",
         "//packages/modules/Virtualization/tests/testapk",
+        "//packages/modules/Virtualization/tests/vm_multitenancy",
     ],
 }
 
