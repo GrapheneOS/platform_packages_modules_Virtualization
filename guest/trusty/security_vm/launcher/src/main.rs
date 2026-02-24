@@ -76,6 +76,10 @@ pub struct Args {
     /// Path to a file containing the VM instance ID.
     #[arg(long, value_name = "FILE")]
     vm_instance_id: Option<PathBuf>,
+
+    /// Whether to use the early virtmgr.
+    #[arg(long="no-early", default_value_t = true, action = clap::ArgAction::SetFalse)]
+    early: bool,
 }
 
 impl Args {
@@ -97,6 +101,7 @@ impl Args {
             vm_instance_id: self.vm_instance_id.clone(),
             console_out: Some(console_out),
             log: Some(log_out),
+            early: self.early,
         }
     }
 }
