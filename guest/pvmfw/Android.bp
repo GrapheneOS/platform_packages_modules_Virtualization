@@ -45,7 +45,10 @@ rust_library_rlib {
 rust_defaults {
     name: "libpvmfw.defaults",
     crate_name: "pvmfw",
-    defaults: ["vmbase_ffi_defaults"],
+    defaults: [
+        "vmbase_ffi_defaults",
+        "no_bti",
+    ],
     crate_root: "src/main.rs",
     features: [
         "compat-kernel-range-from-gprs",
