@@ -21,13 +21,13 @@ use crate::pub_key::{build_maced_public_key, validate_public_key};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use bssl_avf::EcKey;
+use bssl_crypto::{ec::P256, ecdsa};
 use ciborium::{
     cbor,
     value::{CanonicalValue, Value},
 };
 use core::result;
-use coset::AsCborValue;
+use coset::{iana, AsCborValue, CoseKeyBuilder};
 use log::{debug, error};
 use service_vm_comm::{EcdsaP256KeyPair, GenerateCertificateRequestParams, RequestProcessingError};
 use zeroize::Zeroizing;
@@ -46,11 +46,18 @@ const HMAC_KEY_LENGTH: usize = 32;
 /// Generates a new ECDSA P-256 key pair that can be attested by the remote server.
 pub fn generate_ecdsa_p256_key_pair(ops: &impl AttestationOps) -> Result<EcdsaP256KeyPair> {
     let hmac_key = derive_hmac_key(ops)?;
-    let mut ec_key = EcKey::new_p256()?;
-    ec_key.generate_key()?;
 
-    let maced_public_key = build_maced_public_key(ec_key.cose_public_key()?, hmac_key.as_ref())?;
-    let key_blob = EncryptedKeyBlob::new(ec_key.ec_private_key()?.as_slice(), ops)?;
+    let ec_key = ecdsa::PrivateKey::<P256>::generate();
+    let sec1 = ec_key.to_x962_uncompressed();
+    let cose_public_key = CoseKeyBuilder::new_ec2_pub_key_sec1_octet_string(
+        iana::EllipticCurve::P_256,
+        sec1.as_ref(),
+    )?
+    .algorithm(iana::Algorithm::ES256)
+    .build();
+
+    let maced_public_key = build_maced_public_key(cose_public_key, hmac_key.as_ref())?;
+    let key_blob = EncryptedKeyBlob::new(ec_key.to_der_ec_private_key().as_ref(), ops)?;
 
     let key_pair =
         EcdsaP256KeyPair { maced_public_key, key_blob: cbor_util::serialize(&key_blob)? };

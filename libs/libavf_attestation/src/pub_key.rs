@@ -15,7 +15,7 @@
 //! Handles the construction of the MACed public key.
 
 use alloc::vec::Vec;
-use bssl_avf::hmac_sha256;
+use bssl_crypto::hmac::HmacSha256;
 use core::result;
 use coset::{iana, CborSerializable, CoseKey, CoseMac0, CoseMac0Builder, HeaderBuilder};
 use service_vm_comm::RequestProcessingError;
@@ -35,8 +35,8 @@ pub fn validate_public_key(maced_public_key: &[u8], hmac_key: &[u8]) -> Result<C
 }
 
 fn verify_tag(tag: &[u8], data: &[u8], hmac_key: &[u8]) -> Result<()> {
-    let computed_tag = hmac_sha256(hmac_key, data)?;
-    if tag == computed_tag {
+    let computed_tag = HmacSha256::mac(hmac_key, data);
+    if bssl_crypto::constant_time_compare(tag, &computed_tag) {
         Ok(())
     } else {
         Err(RequestProcessingError::InvalidMac)
@@ -52,7 +52,7 @@ pub fn build_maced_public_key(public_key: CoseKey, hmac_key: &[u8]) -> Result<Ve
     let cose_mac = CoseMac0Builder::new()
         .protected(protected)
         .payload(public_key.to_vec()?)
-        .try_create_tag(external_aad, |data| hmac_sha256(hmac_key, data).map(|v| v.to_vec()))?
+        .create_tag(external_aad, |data| HmacSha256::mac(hmac_key, data).to_vec())
         .build();
     Ok(cose_mac.to_vec()?)
 }

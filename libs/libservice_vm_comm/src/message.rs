@@ -129,9 +129,6 @@ impl Response {
 /// Errors related to request processing.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RequestProcessingError {
-    /// An error happened during the interaction with BoringSSL.
-    BoringSslError(bssl_avf_error::Error),
-
     /// An error happened during the interaction with coset.
     CosetError,
 
@@ -175,9 +172,6 @@ pub enum RequestProcessingError {
 impl fmt::Display for RequestProcessingError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::BoringSslError(e) => {
-                write!(f, "An error happened during the interaction with BoringSSL: {e}")
-            }
             Self::CosetError => write!(f, "Encountered an error with coset"),
             Self::InternalError => write!(f, "An unexpected internal error occurred"),
             Self::InvalidMac => write!(f, "A key to sign lacks a valid MAC."),
@@ -211,14 +205,22 @@ impl fmt::Display for RequestProcessingError {
     }
 }
 
-impl From<bssl_avf_error::Error> for RequestProcessingError {
-    fn from(e: bssl_avf_error::Error) -> Self {
-        Self::BoringSslError(e)
+impl From<coset::CoseError> for RequestProcessingError {
+    fn from(e: coset::CoseError) -> Self {
+        error!("Coset error: {e}");
+        Self::CosetError
     }
 }
 
-impl From<coset::CoseError> for RequestProcessingError {
-    fn from(e: coset::CoseError) -> Self {
+impl From<coset::ParseSec1OctetStringError> for RequestProcessingError {
+    fn from(e: coset::ParseSec1OctetStringError) -> Self {
+        error!("Coset error: {e}");
+        Self::CosetError
+    }
+}
+
+impl From<coset::ToSec1OctetStringError> for RequestProcessingError {
+    fn from(e: coset::ToSec1OctetStringError) -> Self {
         error!("Coset error: {e}");
         Self::CosetError
     }

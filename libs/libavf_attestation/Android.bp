@@ -14,8 +14,7 @@ rust_defaults {
         "libcore.rust_sysroot",
     ],
     no_std_rlibs: [
-        "libbssl_avf_error_nostd",
-        "libbssl_avf_nostd",
+        "libbssl_crypto",
         "libcbor_util_nostd",
         "libciborium_nostd",
         "libcoset_nostd",

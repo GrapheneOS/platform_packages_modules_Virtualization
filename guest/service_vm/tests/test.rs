@@ -22,9 +22,14 @@ use android_system_virtualizationservice::{
     binder::{ParcelFileDescriptor, ProcessState},
 };
 use anyhow::{bail, Context, Result};
-use bssl_avf::{rand_bytes, sha256, EcKey, PKey};
+use bssl_crypto::{ec::P256, ecdsa};
+use cbor_util::get_label_value;
+use ciborium::value::Value;
 use client_vm_csr::generate_attestation_key_and_csr;
-use coset::{CborSerializable, CoseMac0, CoseSign};
+use coset::{
+    iana::{self, EnumI64},
+    Algorithm, CborSerializable, CoseKey, CoseMac0, CoseSign, Label,
+};
 use hwtrust::{
     rkp,
     session::{Options, RkpInstance, Session},
@@ -230,6 +235,15 @@ fn check_vm_component(vm_component: &asn1::Any, expected_component: &SubComponen
     Ok(())
 }
 
+fn check_p256_cose_key(key: &[u8]) -> ecdsa::PublicKey<P256> {
+    let key = CoseKey::from_slice(key).unwrap();
+    assert_eq!(key.alg, Some(Algorithm::Assigned(iana::Algorithm::ES256)));
+    let crv = get_label_value(&key, Label::Int(iana::Ec2KeyParameter::Crv.to_i64())).unwrap();
+    assert_eq!(crv, &Value::from(iana::EllipticCurve::P_256.to_i64()));
+    let sec1 = key.to_sec1_octet_string().unwrap();
+    ecdsa::PublicKey::<P256>::from_x962_uncompressed(&sec1).unwrap()
+}
+
 fn check_certificate_for_client_vm(
     certificate: &[u8],
     maced_public_key: &[u8],
@@ -237,8 +251,6 @@ fn check_certificate_for_client_vm(
     parent_certificate: &Certificate,
 ) -> Result<()> {
     let cose_mac = CoseMac0::from_slice(maced_public_key)?;
-    let authority_public_key =
-        EcKey::from_cose_public_key_slice(&cose_mac.payload.unwrap()).unwrap();
     let cert = Certificate::from_der(certificate).unwrap();
 
     // Checks the certificate signature against the authority public key.
@@ -247,19 +259,17 @@ fn check_certificate_for_client_vm(
     let expected_algorithm = AlgorithmIdentifier { oid: ECDSA_WITH_SHA_256, parameters: None };
     assert_eq!(expected_algorithm, cert.signature_algorithm);
     let tbs_cert = cert.tbs_certificate;
-    let digest = sha256(&tbs_cert.to_der().unwrap()).unwrap();
-    authority_public_key
-        .ecdsa_verify_der(cert.signature.raw_bytes(), &digest)
+    check_p256_cose_key(&cose_mac.payload.unwrap())
+        .verify(&tbs_cert.to_der().unwrap(), cert.signature.raw_bytes())
         .expect("Failed to verify the certificate signature with the authority public key");
 
     // Checks that the certificate's subject public key is equal to the key in the CSR.
     let cose_sign = CoseSign::from_slice(&csr.signed_csr_payload)?;
     let csr_payload =
         cose_sign.payload.as_ref().and_then(|v| CsrPayload::from_cbor_slice(v).ok()).unwrap();
-    let subject_public_key = EcKey::from_cose_public_key_slice(&csr_payload.public_key).unwrap();
-    let expected_spki_data =
-        PKey::try_from(subject_public_key).unwrap().subject_public_key_info().unwrap();
-    let expected_spki = SubjectPublicKeyInfo::from_der(&expected_spki_data).unwrap();
+    let subject_public_key = check_p256_cose_key(&csr_payload.public_key);
+    let expected_spki_data = subject_public_key.to_der_subject_public_key_info();
+    let expected_spki = SubjectPublicKeyInfo::from_der(expected_spki_data.as_ref()).unwrap();
     assert_eq!(expected_spki, tbs_cert.subject_public_key_info);
 
     // Checks the certificate extension.
@@ -349,8 +359,7 @@ fn nonprotected_vm_instance(memory_mib: i32) -> Result<VmInstance> {
     // Do not use `#allocateInstanceId` to generate the instance ID because the method
     // also adds an instance ID to the database it manages.
     // This is not necessary for this test.
-    let mut instance_id = [0u8; 64];
-    rand_bytes(&mut instance_id).unwrap();
+    let instance_id: [u8; 64] = bssl_crypto::rand_array();
     let config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
         name: format!("non_protected_service_vm_{memory_mib}MiB"),
         kernel: Some(ParcelFileDescriptor::new(service_vm)),
