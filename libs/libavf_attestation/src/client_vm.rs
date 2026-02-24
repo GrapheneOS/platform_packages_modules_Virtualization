@@ -191,10 +191,11 @@ fn validate_client_vm_dice_chain(
         DiceChainEntryPayload::from_cbor_value_unchecked(reference_authority_entry.clone())?;
     ensure_same_authority(client_vm_dice_chain.kernel(), &reference_authority_payload)?;
 
-    #[cfg(not(validate_client_vm_using_dice_info))]
-    validate_kernel_code_hash(&client_vm_dice_chain)?;
-    #[cfg(validate_client_vm_using_dice_info)]
-    validate_kernel_dice_info(&client_vm_dice_chain)?;
+    if cfg!(validate_client_vm_using_dice_info) {
+        validate_kernel_dice_info(&client_vm_dice_chain)?;
+    } else {
+        validate_kernel_code_hash(&client_vm_dice_chain)?;
+    }
 
     ops.validate_vm(&client_vm_dice_chain)?;
 
@@ -221,7 +222,6 @@ fn ensure_same_authority(
 
 /// Validates that the kernel code hash in the Client VM DICE chain matches the code hashes
 /// embedded during the build time.
-#[cfg(not(validate_client_vm_using_dice_info))]
 fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
     fn matches_any_kernel_code_hash(
         actual_code_hash: &[u8],
@@ -245,8 +245,6 @@ fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
     }
 
     let kernel = dice_chain.kernel();
-    // TODO(b/479094783): Enforce Anti-Rollback policy
-    let _security_version = kernel.security_version();
     if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ false)? {
         return Ok(());
     }
@@ -261,7 +259,6 @@ fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
     Err(RequestProcessingError::InvalidDiceChain)
 }
 
-#[cfg(validate_client_vm_using_dice_info)]
 fn validate_kernel_dice_info(dice_chain: &ClientVmDiceChain) -> Result<()> {
     const AUTHORIZED_KERNEL_COMPONENT_NAMES: &[&str; 1] = &[
         "vm_entry", // Microdroid VM

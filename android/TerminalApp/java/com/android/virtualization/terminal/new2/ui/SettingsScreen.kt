@@ -88,6 +88,9 @@ import com.android.virtualization.terminal.new2.core.OpenPort
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
+import kotlin.math.log2
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 enum class SettingsDestination(val title: Int, val icon: ImageVector) {
@@ -438,23 +441,57 @@ fun MemorySizeDialog(
     onDismissRequest: () -> Unit,
     onConfirm: (Int) -> Unit,
 ) {
-    var selectedMemory by remember { mutableFloatStateOf(currentMemoryMb.toFloat()) }
+    val minLog = log2(minMemoryMb.toFloat())
+    val maxLog = log2(maxMemoryMb.toFloat())
+
+    var textValue by remember { mutableStateOf(currentMemoryMb.toString()) }
+    var sliderValue by remember { mutableFloatStateOf(log2(currentMemoryMb.toFloat())) }
+
+    val currentParsedMemory = textValue.toIntOrNull()
+    val isError = currentParsedMemory == null || currentParsedMemory !in minMemoryMb..maxMemoryMb
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(stringResource(R.string.settings_advanced_memory_title)) },
         text = {
             Column {
-                Text(
-                    text = formatMemorySize(selectedMemory.toInt()),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                OutlinedTextField(
+                    value = textValue,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            textValue = newValue
+                            val parsed = newValue.toIntOrNull()
+                            if (parsed != null && parsed in minMemoryMb..maxMemoryMb) {
+                                sliderValue = log2(parsed.toFloat())
+                            }
+                        }
+                    },
+                    label = { Text("MB") },
+                    isError = isError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    supportingText = {
+                        if (isError) {
+                            Text(
+                                stringResource(
+                                    R.string.settings_advanced_memory_valid_range,
+                                    minMemoryMb,
+                                    maxMemoryMb,
+                                )
+                            )
+                        } else {
+                            Text(formatMemorySize(currentParsedMemory ?: currentMemoryMb))
+                        }
+                    },
                 )
                 Slider(
-                    value = selectedMemory,
-                    onValueChange = { selectedMemory = it },
-                    valueRange = minMemoryMb.toFloat()..maxMemoryMb.toFloat(),
-                    steps = (maxMemoryMb - minMemoryMb) / 50, // 50MB steps
+                    value = sliderValue,
+                    onValueChange = {
+                        sliderValue = it
+                        val memory = 2f.pow(it).roundToInt().coerceIn(minMemoryMb, maxMemoryMb)
+                        textValue = memory.toString()
+                    },
+                    valueRange = minLog..maxLog,
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -472,7 +509,10 @@ fun MemorySizeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selectedMemory.toInt()) }) {
+            TextButton(
+                onClick = { currentParsedMemory?.let { onConfirm(it) } },
+                enabled = !isError,
+            ) {
                 Text(stringResource(android.R.string.ok))
             }
         },

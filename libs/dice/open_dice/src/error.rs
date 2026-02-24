@@ -15,48 +15,32 @@
 //! Errors and relating functions thrown in this library.
 
 use open_dice_cbor_bindgen::DiceResult;
-use std::error::Error;
-use std::{fmt, result};
 
 /// Error type used by DICE.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum DiceError {
     /// Provided input was invalid.
+    #[error("Invalid input")]
     InvalidInput,
     /// Provided buffer was too small.
+    #[error("Buffer too small; need {0} bytes")]
     BufferTooSmall(usize),
     /// Platform error.
+    #[error("Platform error")]
     PlatformError,
     /// Unsupported key algorithm.
+    #[error("Unsupported key algorithm: {0:?}")]
     UnsupportedKeyAlgorithm(coset::iana::Algorithm),
     /// A failed fallible allocation. Used in no_std environments.
+    #[error("Memory allocation failed")]
     MemoryAllocationError,
     /// DICE chain not found in artifacts.
+    #[error("DICE chain not found in artifacts")]
     DiceChainNotFound,
 }
 
-/// This makes `DiceError` accepted by anyhow.
-impl Error for DiceError {}
-
-impl fmt::Display for DiceError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::InvalidInput => write!(f, "Invalid input"),
-            Self::BufferTooSmall(buffer_required_size) => {
-                write!(f, "Buffer too small; need {buffer_required_size} bytes")
-            }
-            Self::PlatformError => write!(f, "Platform error"),
-            Self::UnsupportedKeyAlgorithm(algorithm) => {
-                write!(f, "Unsupported key algorithm: {algorithm:?}")
-            }
-            Self::MemoryAllocationError => write!(f, "Memory allocation failed"),
-            Self::DiceChainNotFound => write!(f, "DICE chain not found in artifacts"),
-        }
-    }
-}
-
 /// DICE result type.
-pub type Result<T> = result::Result<T, DiceError>;
+pub type Result<T> = std::result::Result<T, DiceError>;
 
 /// Checks the given `DiceResult`. Returns an error if it's not OK.
 pub(crate) fn check_result(result: DiceResult, buffer_required_size: usize) -> Result<()> {

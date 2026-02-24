@@ -27,13 +27,14 @@ extern crate alloc;
 use crate::communication::VsockStream;
 use crate::error::{Error, Result};
 use crate::fdt::{read_dice_range_from, read_is_strict_boot, read_vendor_hashtree_root_digest};
-use alloc::boxed::Box;
 use avf_attestation::process_request;
 use ciborium_io::Write;
 use core::num::NonZeroUsize;
 use core::slice;
 use diced_open_dice::{bcc_handover_parse, DiceArtifacts};
+use libfdt::Fdt;
 use log::{debug, error, info};
+use service_vm_avf_attestation::Ops;
 use service_vm_comm::{ServiceVmRequest, VmType};
 use service_vm_fake_chain::service_vm;
 use virtio_drivers::{
@@ -96,7 +97,7 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
         error!("Failed to use memory range value from DT: {memory_range:#x?}");
     })?;
 
-    let bcc_handover: Box<dyn DiceArtifacts + Sync> = match vm_type(fdt)? {
+    match vm_type(fdt)? {
         VmType::ProtectedVm => {
             let dice_range = read_dice_range_from(fdt)?;
             info!("DICE range: {dice_range:#x?}");
@@ -110,19 +111,24 @@ unsafe fn try_main(fdt_addr: usize) -> Result<()> {
             let dice_start = dice_range.start as *const u8;
             // SAFETY: There's no memory overlap and the region is mapped as read-only data.
             let bcc_handover = unsafe { slice::from_raw_parts(dice_start, dice_range.len()) };
-            Box::new(bcc_handover_parse(bcc_handover)?)
+            process_all_requests(fdt, bcc_handover_parse(bcc_handover)?)?;
         }
         // Currently, a sample DICE data is used for non-protected VMs, as these VMs only run
         // in tests at the moment.
-        VmType::NonProtectedVm => Box::new(service_vm::fake_service_vm_dice_artifacts()?),
+        VmType::NonProtectedVm => {
+            process_all_requests(fdt, service_vm::fake_service_vm_dice_artifacts()?)?;
+        }
     };
 
+    Ok(())
+}
+
+fn process_all_requests(fdt: &Fdt, dice_artifacts: impl DiceArtifacts + Sync) -> Result<()> {
     let mut pci_root = initialize_from_fdt(fdt).map_err(Error::PciInitializationFailed)?;
     let socket_device = find_socket_device::<HalImpl>(&mut pci_root)?;
     debug!("Found socket device: guest cid = {:?}", socket_device.guest_cid());
     let vendor_hashtree_root_digest = read_vendor_hashtree_root_digest(fdt)?;
-    let ops =
-        service_vm_avf_attestation::Ops::new(bcc_handover.as_ref(), vendor_hashtree_root_digest)?;
+    let ops = Ops::new(&dice_artifacts, vendor_hashtree_root_digest)?;
 
     let mut vsock_stream = VsockStream::new(socket_device, host_addr(fdt)?)?;
     while let ServiceVmRequest::Process(req) = vsock_stream.read_request()? {
