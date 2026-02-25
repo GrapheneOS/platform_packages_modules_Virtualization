@@ -447,6 +447,16 @@ impl aidl::IVirtualizationService for VirtualizationService {
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
         }
     }
+
+    fn startOrStopAdbd(&self, cid: i32, start: bool) -> binder::Result<()> {
+        // Delegate to the global service, including checking the debug permission.
+        if let Some(service) = global_service() {
+            service.startOrStopAdbd(cid, start)
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support startOrStopAdbd"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -2332,6 +2342,10 @@ impl aidl::IGuestAgent for GuestAgentWrapper {
         let kek_wrapper =
             aidl::BnCEStoreKEK::new_binder(CEStoreKEKWrapper::new(kek), BinderFeatures::default());
         self.wrapped.userUnlocked(user_id, &kek_wrapper)
+    }
+
+    fn startOrStopAdbd(&self, start: bool) -> binder::Result<()> {
+        self.wrapped.startOrStopAdbd(start)
     }
 }
 
