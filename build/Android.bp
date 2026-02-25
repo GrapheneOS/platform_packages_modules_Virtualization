@@ -32,9 +32,6 @@ rust_defaults {
     }) + select(release_flag("RELEASE_AVF_ENABLE_NETWORK"), {
         true: ["network"],
         default: [],
-    }) + select(release_flag("RELEASE_AVF_ENABLE_REMOTE_ATTESTATION"), {
-        true: ["remote_attestation"],
-        default: [],
     }) + select(release_flag("RELEASE_AVF_ENABLE_VENDOR_MODULES"), {
         true: ["vendor_modules"],
         default: [],

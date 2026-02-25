@@ -28,7 +28,7 @@ pub fn is_feature_enabled(feature: &str) -> bool {
         FEATURE_DICE_CHANGES => cfg!(dice_changes),
         FEATURE_LLPVM_CHANGES => cfg!(llpvm_changes),
         FEATURE_NETWORK => cfg!(network),
-        FEATURE_REMOTE_ATTESTATION => cfg!(remote_attestation),
+        FEATURE_REMOTE_ATTESTATION => true,
         FEATURE_VENDOR_MODULES => cfg!(vendor_modules),
         FEATURE_ADVANCE_MULTITENANCY => cfg!(advance_multitenancy),
         _ => {
