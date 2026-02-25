@@ -17,13 +17,14 @@
 #[cfg(test)]
 mod tests {
     use coset::{CborSerializable, CoseSign1};
+    #[cfg(feature = "multialg")]
+    use diced_open_dice::KeyAlgorithm;
     use diced_open_dice::{
         derive_cdi_certificate_id, derive_cdi_private_key_seed, hash, kdf, keypair_from_seed,
         retry_sign_cose_sign1, retry_sign_cose_sign1_with_cdi_leaf_priv, sign, verify,
-        DiceArtifacts, PrivateKey, CDI_SIZE, HASH_SIZE, ID_SIZE, PRIVATE_KEY_SEED_SIZE,
+        DiceArtifacts, DiceContext, DiceError, PrivateKey, CDI_SIZE, HASH_SIZE, ID_SIZE,
+        PRIVATE_KEY_SEED_SIZE,
     };
-    #[cfg(feature = "multialg")]
-    use diced_open_dice::{DiceContext, KeyAlgorithm};
 
     // This test initialization is only required for the trusty test harness.
     #[cfg(feature = "trusty")]
@@ -62,6 +63,7 @@ mod tests {
         assert_eq!(EXPECTED_ID, derive_cdi_certificate_id(b"MyPubKey").unwrap());
     }
 
+    // hash(b"MySeedString")
     const EXPECTED_SEED: &[u8] = &[
         0xfa, 0x3c, 0x2f, 0x58, 0x37, 0xf5, 0x8e, 0x96, 0x16, 0x09, 0xf5, 0x22, 0xa1, 0xf1, 0xba,
         0xaa, 0x19, 0x95, 0x01, 0x79, 0x2e, 0x60, 0x56, 0xaf, 0xf6, 0x41, 0xe7, 0xff, 0x48, 0xf5,
@@ -133,27 +135,14 @@ mod tests {
     fn sign_cose_sign1_verify() {
         let (pub_key, priv_key) = get_test_key_pair();
 
-        let signature_res =
-            retry_sign_cose_sign1(None, b"MyMessage", b"MyAad", priv_key.as_array());
-        assert!(signature_res.is_ok());
-        let signature = signature_res.unwrap();
-        let cose_sign1_res = CoseSign1::from_slice(&signature);
-        assert!(cose_sign1_res.is_ok());
-        let mut cose_sign1 = cose_sign1_res.unwrap();
-
-        let mut verify_result =
-            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(None, data, sign, &pub_key));
-        assert!(verify_result.is_ok());
-
-        verify_result =
-            cose_sign1.verify_signature(b"BadAad", |sign, data| verify(None, data, sign, &pub_key));
-        assert!(verify_result.is_err());
-
-        // if we modify the signature, the payload should no longer verify
-        cose_sign1.signature.push(0xAA);
-        verify_result =
-            cose_sign1.verify_signature(b"MyAad", |sign, data| verify(None, data, sign, &pub_key));
-        assert!(verify_result.is_err());
+        build_cose_sign1_and_verify(
+            retry_sign_cose_sign1,
+            None,
+            b"MyMessage",
+            b"MyAad",
+            priv_key.as_array(),
+            &pub_key,
+        );
     }
 
     #[cfg(feature = "multialg")]
@@ -237,29 +226,14 @@ mod tests {
 
     #[test]
     fn sign_cose_sign1_with_cdi_leaf_priv_verify() {
-        let dice = TestArtifactsForSigning {};
-
-        let signature_res =
-            retry_sign_cose_sign1_with_cdi_leaf_priv(None, b"MyMessage", b"MyAad", &dice);
-        assert!(signature_res.is_ok());
-        let signature = signature_res.unwrap();
-        let cose_sign1_res = CoseSign1::from_slice(&signature);
-        assert!(cose_sign1_res.is_ok());
-        let mut cose_sign1 = cose_sign1_res.unwrap();
-
-        let mut verify_result = cose_sign1
-            .verify_signature(b"MyAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
-        assert!(verify_result.is_ok());
-
-        verify_result = cose_sign1
-            .verify_signature(b"BadAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
-        assert!(verify_result.is_err());
-
-        // if we modify the signature, the payload should no longer verify
-        cose_sign1.signature.push(0xAA);
-        verify_result = cose_sign1
-            .verify_signature(b"MyAad", |sign, data| verify(None, data, sign, EXPECTED_PUB_KEY));
-        assert!(verify_result.is_err());
+        build_cose_sign1_and_verify(
+            retry_sign_cose_sign1_with_cdi_leaf_priv,
+            None,
+            b"MyMessage",
+            b"MyAad",
+            &TestArtifactsForSigning {},
+            EXPECTED_PUB_KEY,
+        );
     }
 
     #[cfg(feature = "multialg")]
@@ -338,5 +312,33 @@ mod tests {
         assert_eq!(priv_key.as_array(), EXPECTED_EC_P256_PRIV_KEY);
 
         (pub_key, priv_key)
+    }
+
+    fn build_cose_sign1_and_verify<F, T>(
+        builder: F,
+        dice_context: Option<DiceContext>,
+        message: &[u8],
+        aad: &[u8],
+        key: T,
+        pub_key: &[u8],
+    ) where
+        F: FnOnce(Option<DiceContext>, &[u8], &[u8], T) -> Result<Vec<u8>, DiceError>,
+    {
+        let signature =
+            builder(dice_context, message, aad, key).expect("Couldn't create the signature");
+        let mut cose_sign1 = CoseSign1::from_slice(&signature).expect("Couldn't create CoseSign1");
+        let verifier = |cose_sign1: &CoseSign1, aad| {
+            cose_sign1.verify_signature(aad, |sign, data| verify(dice_context, data, sign, pub_key))
+        };
+
+        assert!(verifier(&cose_sign1, aad).is_ok());
+
+        let mut bad_aad = Vec::from(aad);
+        bad_aad.push(0xAA);
+        assert!(verifier(&cose_sign1, &bad_aad).is_err());
+
+        // if we modify the signature, the payload should no longer verify
+        cose_sign1.signature.push(0xAA);
+        assert!(verifier(&cose_sign1, aad).is_err());
     }
 }
