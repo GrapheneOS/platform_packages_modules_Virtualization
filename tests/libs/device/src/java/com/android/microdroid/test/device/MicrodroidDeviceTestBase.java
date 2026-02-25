@@ -54,9 +54,11 @@ import com.android.microdroid.test.common.MetricsProcessor;
 import com.android.microdroid.testservice.ITestService;
 import com.android.virt.vm_attestation.testservice.IAttestationService;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
+import com.android.virt.vm_attestation.util.X509Utils;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.security.cert.X509Certificate;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -705,6 +707,46 @@ public abstract class MicrodroidDeviceTestBase {
         }
     }
 
+    protected void installApp(String apkName, String... additionalArgs) throws Exception {
+        String apkFile = new File("/data/local/tmp/cts/microdroid/", apkName).getAbsolutePath();
+        UiAutomation uai = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        Log.i(TAG, "Installing apk " + apkFile);
+        // We read the output of the shell command not only to see if it succeeds, but also to make
+        // sure that the installation finishes. This avoids a race condition when test tries to
+        // create a context of the installed package before the installation finished.
+        String installCmd = "pm install " + String.join(" ", additionalArgs) + " " + apkFile;
+        try (ParcelFileDescriptor pfd = uai.executeShellCommand(installCmd)) {
+            try (InputStream is = new ParcelFileDescriptor.AutoCloseInputStream(pfd)) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        Log.i(TAG, line);
+                    }
+                }
+            }
+        }
+    }
+
+    protected void uninstallApp(String packageName) {
+        UiAutomation uai = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        Log.i(TAG, "Uninstalling " + packageName);
+        String uninstallCmd = "pm uninstall " + packageName;
+        try (ParcelFileDescriptor pfd = uai.executeShellCommand(uninstallCmd)) {
+            // Drain the output to make sure the command finishes
+            try (InputStream is = new ParcelFileDescriptor.AutoCloseInputStream(pfd)) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        Log.i(TAG, line);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            // Ignore for uninstall. It might have failed if the package was not installed.
+            Log.w(TAG, "Failed to uninstall " + packageName, e);
+        }
+    }
+
     // The function returns the list of pids that were killed
     protected static String kill(String tag, String processName) {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
@@ -910,5 +952,48 @@ public abstract class MicrodroidDeviceTestBase {
 
     protected void assumeNonProtectedVM() {
         assumeFalse("Skip on protected VM", mProtectedVm);
+    }
+
+    protected void verifyAttestationResult(
+            SigningResult signingResult,
+            byte[] challenge,
+            String[] tenantPackageNames,
+            String testAppPackageName,
+            byte[] vmAttestationMessage)
+            throws Exception {
+        X509Certificate[] certs =
+                X509Utils.validateAndParseX509CertChain(signingResult.certificateChain);
+        boolean isAdvMultiTenancyEnabled = isFeatureEnabled("com.android.kvm.ADVANCE_MULTITENANCY");
+        X509Utils.verifyAvfRelatedCerts(
+                certs,
+                challenge,
+                testAppPackageName,
+                tenantPackageNames,
+                isAdvMultiTenancyEnabled);
+        X509Utils.verifySignature(certs[0], vmAttestationMessage, signingResult.signature);
+    }
+
+    protected void runAndVerifyVmAttestationSucceeds(
+            VirtualMachine vm,
+            String tenantPackageName,
+            String testAppPackageName,
+            String vmAttestationMessage)
+            throws Exception {
+        byte[] challenge = new byte[32];
+        java.util.Arrays.fill(challenge, (byte) 0xac);
+        SigningResult signingResult =
+                runVmAttestationService(TAG, vm, challenge, vmAttestationMessage.getBytes());
+        assertWithMessage("VM attestation should succeed when network is available")
+                .that(signingResult.status)
+                .isEqualTo(com.android.virt.vm_attestation.testservice.IAttestationService
+                                .AttestationStatus.OK);
+        String[] tenantNames =
+                tenantPackageName.isEmpty() ? new String[0] : new String[] {tenantPackageName};
+        verifyAttestationResult(
+                signingResult,
+                challenge,
+                tenantNames,
+                testAppPackageName,
+                vmAttestationMessage.getBytes());
     }
 }

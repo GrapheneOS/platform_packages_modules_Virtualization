@@ -10,6 +10,7 @@ java_library_static {
         "androidx.test.ext.junit",
         "com.android.microdroid.testservice-java",
         "com.android.virt.vm_attestation.testservice-java",
+        "VmAttestationTestUtil",
         "MicrodroidCommonTestLib",
         "truth",
     ],

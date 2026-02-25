@@ -1,0 +1,42 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+DATA = [
+    ":MicrodroidTestApp",
+    ":MicrodroidTestHelperAppAlternateTenant",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_V6",
+    ":MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version",
+]
+java_defaults {
+    name: "vm_multitenancy_testapp_defaults",
+    test_suites: [
+        "general-tests",
+        "pts",
+    ],
+    manifest: "AndroidManifest.xml",
+    test_config: "AndroidTest.xml",
+    static_libs: [
+        "MicrodroidDeviceTestLib",
+        "androidx.test.runner",
+        "androidx.test.ext.junit",
+        "com.android.virt.vm_attestation.testservice-java",
+        "truth",
+        "VmAttestationTestUtil",
+    ],
+    jni_libs: [
+        "libvm_attestation_test_payload",
+        "MicrodroidTestNativeOnAlternatePortLib",
+    ],
+    jni_uses_platform_apis: true,
+    use_embedded_native_libs: true,
+    sdk_version: "test_current",
+    data: DATA,
+
+}
+
+android_test {
+    name: "VmMultiTenancyTests",
+    srcs: ["src/java/com/android/virt/vm_multitenancy/testapp/*.java"],
+    defaults: ["vm_multitenancy_testapp_defaults"],
+}
