@@ -123,6 +123,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
                             .setAdbConnectTimeoutMs(timeoutMs)
                             .os(os)
                             .name("microdroid_canary_test")
+                            .enableEarlycon(true)
                             .build(device);
             if (microdroid == null) {
                 throw new DeviceNotAvailableException(errorMessage);
