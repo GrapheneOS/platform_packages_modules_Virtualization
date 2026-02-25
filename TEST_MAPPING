@@ -132,9 +132,6 @@
       "path": "packages/modules/Virtualization/libs/apkverify"
     },
     {
-      "path": "packages/modules/Virtualization/libs/bssl"
-    },
-    {
       "path": "packages/modules/Virtualization/libs/capabilities"
     },
     {
