@@ -52,7 +52,10 @@ rust_defaults {
 // Used by extra cc_library_static linked into the final ELF.
 cc_defaults {
     name: "vmbase_cc_defaults",
-    defaults: ["avf_build_flags_cc"],
+    defaults: [
+        "avf_build_flags_cc",
+        "no_bti",
+    ],
     nocrt: true,
     no_libcrt: true,
     system_shared_libs: [],

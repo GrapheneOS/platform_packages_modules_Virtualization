@@ -6,7 +6,10 @@ package {
 rust_ffi {
     name: "libvm_payload",
     crate_name: "vm_payload",
-    defaults: ["avf_build_flags_rust"],
+    defaults: [
+        "avf_build_flags_rust",
+        "no_bti",
+    ],
     srcs: ["src/lib.rs"],
     include_dirs: ["include"],
     prefer_rlib: true,
