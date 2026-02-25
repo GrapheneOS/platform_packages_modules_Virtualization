@@ -112,7 +112,8 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
         final String errorMessage =
                 "Failed to launch Microdroid "
                         + (protectedVm ? "pVM" : "VM")
-                        + ". Check device logcat";
+                        + ". Check device logcat."
+                        + " You can search by name of the VM: 'microdroid_canary_test'";
         try {
             microdroid =
                     MicrodroidBuilder.fromDevicePathWithPayloadBinaryName(
@@ -121,6 +122,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
                             .protectedVm(protectedVm)
                             .setAdbConnectTimeoutMs(timeoutMs)
                             .os(os)
+                            .name("microdroid_canary_test")
                             .build(device);
             if (microdroid == null) {
                 throw new DeviceNotAvailableException(errorMessage);
