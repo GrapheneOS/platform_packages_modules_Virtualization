@@ -54,7 +54,7 @@ pub struct ClientVmAttestationData {
 /// client VM in remote attestation.
 pub fn generate_attestation_key_and_csr(
     challenge: &[u8],
-    dice_artifacts: &dyn DiceArtifacts,
+    dice_artifacts: &impl DiceArtifacts,
 ) -> Result<ClientVmAttestationData> {
     let group = EcGroup::from_curve_name(ATTESTATION_KEY_NID)?;
     let attestation_key = EcKey::generate(&group)?;
@@ -67,7 +67,7 @@ pub fn generate_attestation_key_and_csr(
 fn build_csr(
     challenge: &[u8],
     attestation_key: &EcKeyRef<Private>,
-    dice_artifacts: &dyn DiceArtifacts,
+    dice_artifacts: &impl DiceArtifacts,
 ) -> Result<Csr> {
     // Builds CSR Payload to be signed.
     let public_key =

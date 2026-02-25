@@ -27,7 +27,7 @@ use bssl_crypto::digest::{Sha256, Sha512};
 use bssl_crypto::hkdf::{self, HkdfSha256};
 use coset::{CoseKey, CborSerializable, CborOrdering};
 use dice_policy_builder::{TargetEntry, ConstraintSpec, ConstraintType, policy_for_dice_chain, MissingAction, WILDCARD_FULL_ARRAY};
-use diced_open_dice::{DiceArtifacts, OwnedDiceArtifacts};
+use diced_open_dice::{DiceArtifacts, OwnedDiceArtifacts, CDI_SIZE};
 use explicitkeydice::OwnedDiceArtifactsWithExplicitKey;
 use keystore2_crypto::ZVec;
 use secretkeeper_client::SkSession;
@@ -101,6 +101,30 @@ pub enum VmSecret {
     V1 {
         dice_artifacts: OwnedDiceArtifacts,
     },
+}
+
+// This lets clients have access to a statically typed DiceArtifacts object.
+impl DiceArtifacts for VmSecret {
+    fn cdi_attest(&self) -> &[u8; CDI_SIZE] {
+        match self {
+            Self::V1 { dice_artifacts } => dice_artifacts.cdi_attest(),
+            Self::V2 { dice_artifacts, .. } => dice_artifacts.cdi_attest(),
+        }
+    }
+
+    fn cdi_seal(&self) -> &[u8; CDI_SIZE] {
+        match self {
+            Self::V1 { dice_artifacts } => dice_artifacts.cdi_seal(),
+            Self::V2 { dice_artifacts, .. } => dice_artifacts.cdi_seal(),
+        }
+    }
+
+    fn bcc(&self) -> Option<&[u8]> {
+        match self {
+            Self::V1 { dice_artifacts } => dice_artifacts.bcc(),
+            Self::V2 { dice_artifacts, .. } => dice_artifacts.bcc(),
+        }
+    }
 }
 
 // For supporting V2 secrets, guest expects the public key to be present in the Linux device tree.
@@ -179,11 +203,8 @@ impl VmSecret {
         ))
     }
 
-    pub fn dice_artifacts(&self) -> &dyn DiceArtifacts {
-        match self {
-            Self::V2 { dice_artifacts, .. } => dice_artifacts,
-            Self::V1 { dice_artifacts } => dice_artifacts,
-        }
+    pub fn dice_artifacts(&self) -> &impl DiceArtifacts {
+        self
     }
 
     fn get_vm_secret(&self, salt: &[u8], identifier: &[u8], key: &mut [u8]) -> Result<()> {
