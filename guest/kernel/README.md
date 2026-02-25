@@ -63,6 +63,22 @@ For x86\_64,
 cp out/dist/bzImage <android_checkout>/packages/modules/Virtualization/guest/kernel/android15-6.6/x86_64/kernel-6.6
 ```
 
+### For new kernel versions added that did not exist before
+
+Make a new directory with the Android version and the kernel version.
+
+```bash
+mkdir -p <android_checkout>/packages/modules/Virtualization/guest/kernel/android17-6.18/
+```
+
+Then add a directory for each architecture (arm64 | x86_64) and copy the
+kernels.
+
+Modify the Android.bp `select` statements to include the new kernels.
+
+Finally, modify
+https://source.corp.google.com/h/googleplex-android/platform/superproject/main/+/main:build/release/flag_values/trunk_staging/RELEASE_AVF_MICRODROID_KERNEL_VERSION.textproto;l=3?q=RELEASE_AVF_MICRODROID_KERNEL_VERSION&sq=git:googleplex-android%2Fplatform%2Fsuperproject%2Fmain@refs%2Fheads%2Fmain
+
 ## Debugging microdroid using GDB
 
 Debugging documentation located at:
