@@ -139,7 +139,6 @@ public class VirtualMachineManager {
                 FEATURE_DICE_CHANGES,
                 FEATURE_LLPVM_CHANGES,
                 FEATURE_NETWORK,
-                FEATURE_REMOTE_ATTESTATION,
                 FEATURE_VENDOR_MODULES,
             })
     public @interface Features {}
@@ -158,15 +157,6 @@ public class VirtualMachineManager {
      * @hide
      */
     @TestApi public static final String FEATURE_NETWORK = IVirtualizationService.FEATURE_NETWORK;
-
-    /**
-     * Feature to allow remote attestation in Microdroid.
-     *
-     * @hide
-     */
-    @TestApi
-    public static final String FEATURE_REMOTE_ATTESTATION =
-            IVirtualizationService.FEATURE_REMOTE_ATTESTATION;
 
     /**
      * Feature to allow vendor modules in Microdroid.
