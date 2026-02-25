@@ -16,29 +16,20 @@
 //! attestation.
 
 use anyhow::{anyhow, Context, Result};
+use bssl_crypto::{ec::P256, ecdsa};
 use coset::{
     iana, CborSerializable, CoseKey, CoseKeyBuilder, CoseSign, CoseSignBuilder, CoseSignature,
     CoseSignatureBuilder, HeaderBuilder,
 };
 use diced_open_dice::{derive_cdi_leaf_priv, sign, DiceArtifacts, PrivateKey, VM_KEY_ALGORITHM};
-use openssl::{
-    bn::{BigNum, BigNumContext},
-    ec::{EcGroup, EcKey, EcKeyRef},
-    ecdsa::EcdsaSig,
-    nid::Nid,
-    pkey::Private,
-    sha::sha256,
-};
 use service_vm_comm::{Csr, CsrPayload};
 use zeroize::Zeroizing;
 
 /// Key parameters for the attestation key.
 ///
 /// See libs/libservice_vm_comm/client_vm_csr.cddl for more information about the attestation key.
-const ATTESTATION_KEY_NID: Nid = Nid::X9_62_PRIME256V1; // NIST P-256 curve
 const ATTESTATION_KEY_ALGO: iana::Algorithm = iana::Algorithm::ES256;
 const ATTESTATION_KEY_CURVE: iana::EllipticCurve = iana::EllipticCurve::P_256;
-const ATTESTATION_KEY_AFFINE_COORDINATE_SIZE: i32 = 32;
 
 /// Represents the output of generating the attestation key and CSR for the client VM.
 pub struct ClientVmAttestationData {
@@ -56,22 +47,21 @@ pub fn generate_attestation_key_and_csr(
     challenge: &[u8],
     dice_artifacts: &impl DiceArtifacts,
 ) -> Result<ClientVmAttestationData> {
-    let group = EcGroup::from_curve_name(ATTESTATION_KEY_NID)?;
-    let attestation_key = EcKey::generate(&group)?;
-
-    let csr = build_csr(challenge, attestation_key.as_ref(), dice_artifacts)?;
-    let private_key = attestation_key.private_key_to_der()?;
+    let attestation_key = ecdsa::PrivateKey::<P256>::generate();
+    let csr = build_csr(challenge, &attestation_key, dice_artifacts)?;
+    let private_key = attestation_key.to_der_ec_private_key().as_ref().to_vec();
     Ok(ClientVmAttestationData { private_key: Zeroizing::new(private_key), csr })
 }
 
 fn build_csr(
     challenge: &[u8],
-    attestation_key: &EcKeyRef<Private>,
+    attestation_key: &ecdsa::PrivateKey<P256>,
     dice_artifacts: &impl DiceArtifacts,
 ) -> Result<Csr> {
     // Builds CSR Payload to be signed.
-    let public_key =
-        to_cose_public_key(attestation_key)?.to_vec().context("Failed to serialize public key")?;
+    let public_key = to_cose_public_key(&attestation_key.to_public_key())?
+        .to_vec()
+        .context("Failed to serialize public key")?;
     let csr_payload = CsrPayload { public_key, challenge: challenge.to_vec() };
     let csr_payload = csr_payload.into_cbor_vec()?;
 
@@ -89,7 +79,7 @@ fn build_csr(
 fn build_signed_data(
     payload: Vec<u8>,
     cdi_leaf_priv: &PrivateKey,
-    attestation_key: &EcKeyRef<Private>,
+    attestation_key: &ecdsa::PrivateKey<P256>,
 ) -> Result<CoseSign> {
     let cdi_leaf_sig_headers = build_signature_headers(VM_KEY_ALGORITHM.into());
     let attestation_key_sig_headers = build_signature_headers(ATTESTATION_KEY_ALGO);
@@ -99,9 +89,9 @@ fn build_signed_data(
         .try_add_created_signature(cdi_leaf_sig_headers, aad, |message| {
             sign(message, cdi_leaf_priv.as_array()).map(|v| v.to_vec())
         })?
-        .try_add_created_signature(attestation_key_sig_headers, aad, |message| {
-            ecdsa_sign_cose(message, attestation_key)
-        })?
+        .add_created_signature(attestation_key_sig_headers, aad, |message| {
+            attestation_key.sign_p1363(message)
+        })
         .build();
     Ok(signed_data)
 }
@@ -113,33 +103,10 @@ fn build_signature_headers(alg: iana::Algorithm) -> CoseSignature {
     CoseSignatureBuilder::new().protected(protected).build()
 }
 
-fn ecdsa_sign_cose(message: &[u8], key: &EcKeyRef<Private>) -> Result<Vec<u8>> {
-    let digest = sha256(message);
-    // Passes the digest to `ECDSA_do_sign` as recommended in the spec:
-    // https://commondatastorage.googleapis.com/chromium-boringssl-docs/ecdsa.h.html#ECDSA_do_sign
-    let sig = EcdsaSig::sign::<Private>(&digest, key)?;
-    ecdsa_sig_to_cose(&sig)
-}
-
-fn ecdsa_sig_to_cose(signature: &EcdsaSig) -> Result<Vec<u8>> {
-    let mut result = signature.r().to_vec_padded(ATTESTATION_KEY_AFFINE_COORDINATE_SIZE)?;
-    result.extend_from_slice(&signature.s().to_vec_padded(ATTESTATION_KEY_AFFINE_COORDINATE_SIZE)?);
-    Ok(result)
-}
-
-fn get_affine_coordinates(key: &EcKeyRef<Private>) -> Result<(Vec<u8>, Vec<u8>)> {
-    let mut ctx = BigNumContext::new()?;
-    let mut x = BigNum::new()?;
-    let mut y = BigNum::new()?;
-    key.public_key().affine_coordinates_gfp(key.group(), &mut x, &mut y, &mut ctx)?;
-    let x = x.to_vec_padded(ATTESTATION_KEY_AFFINE_COORDINATE_SIZE)?;
-    let y = y.to_vec_padded(ATTESTATION_KEY_AFFINE_COORDINATE_SIZE)?;
-    Ok((x, y))
-}
-
-fn to_cose_public_key(key: &EcKeyRef<Private>) -> Result<CoseKey> {
-    let (x, y) = get_affine_coordinates(key)?;
-    Ok(CoseKeyBuilder::new_ec2_pub_key(ATTESTATION_KEY_CURVE, x, y)
+fn to_cose_public_key(key: &ecdsa::PublicKey<P256>) -> Result<CoseKey> {
+    let sec1 = key.to_x962_uncompressed();
+    Ok(CoseKeyBuilder::new_ec2_pub_key_sec1_octet_string(ATTESTATION_KEY_CURVE, sec1.as_ref())
+        .context("Failed to build COSE key")?
         .algorithm(ATTESTATION_KEY_ALGO)
         .build())
 }
@@ -147,11 +114,9 @@ fn to_cose_public_key(key: &EcKeyRef<Private>) -> Result<CoseKey> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::bail;
     use ciborium::Value;
     use coset::{iana::EnumI64, Label};
     use hwtrust::{dice, session::Session};
-    use openssl::pkey::Public;
 
     /// The following data was generated randomly with urandom.
     const CHALLENGE: [u8; 16] = [
@@ -165,14 +130,15 @@ mod tests {
 
         let ClientVmAttestationData { private_key, csr } =
             generate_attestation_key_and_csr(&CHALLENGE, &dice_artifacts)?;
-        let ec_private_key = EcKey::private_key_from_der(&private_key)?;
+        let ec_private_key =
+            ecdsa::PrivateKey::<P256>::from_der_ec_private_key(&private_key).unwrap();
         let cose_sign = CoseSign::from_slice(&csr.signed_csr_payload).unwrap();
         let aad = &[];
 
         // Checks CSR payload.
         let csr_payload =
             cose_sign.payload.as_ref().and_then(|v| CsrPayload::from_cbor_slice(v).ok()).unwrap();
-        let public_key = to_cose_public_key(&ec_private_key)?.to_vec().unwrap();
+        let public_key = to_cose_public_key(&ec_private_key.to_public_key())?.to_vec().unwrap();
         let expected_csr_payload = CsrPayload { challenge: CHALLENGE.to_vec(), public_key };
         assert_eq!(expected_csr_payload, csr_payload);
 
@@ -189,61 +155,28 @@ mod tests {
         let ec_public_key = to_ec_public_key(&attestation_public_key)?;
         cose_sign
             .verify_signature(1, aad, |signature, message| {
-                ecdsa_verify_cose(signature, message, &ec_public_key)
+                ec_public_key.verify_p1363(message, signature)
             })
-            .context("Verifying attestation key signature")?;
+            .map_err(|_| anyhow!("Verifying attestation key signature"))?;
 
         // Verifies that private key and the public key form a valid key pair.
         let message = b"test message";
-        let signature = ecdsa_sign_cose(message, &ec_private_key)?;
-        ecdsa_verify_cose(&signature, message, &ec_public_key)
-            .context("Verifying signature with attested key")?;
+        let signature = ec_private_key.sign(message);
+        ec_public_key
+            .verify(message, &signature)
+            .map_err(|_| anyhow!("Verifying signature with attested key"))?;
 
         Ok(())
     }
 
-    fn ecdsa_verify_cose(
-        signature: &[u8],
-        message: &[u8],
-        ec_public_key: &EcKeyRef<Public>,
-    ) -> Result<()> {
-        let coord_bytes = signature.len() / 2;
-        assert_eq!(signature.len(), coord_bytes * 2);
-
-        let r = BigNum::from_slice(&signature[..coord_bytes])?;
-        let s = BigNum::from_slice(&signature[coord_bytes..])?;
-        let sig = EcdsaSig::from_private_components(r, s)?;
-        let digest = sha256(message);
-        if sig.verify(&digest, ec_public_key)? {
-            Ok(())
-        } else {
-            bail!("Signature does not match")
-        }
-    }
-
-    fn to_ec_public_key(cose_key: &CoseKey) -> Result<EcKey<Public>> {
-        check_ec_key_params(cose_key)?;
-        let group = EcGroup::from_curve_name(ATTESTATION_KEY_NID)?;
-        let x = get_label_value_as_bignum(cose_key, Label::Int(iana::Ec2KeyParameter::X.to_i64()))?;
-        let y = get_label_value_as_bignum(cose_key, Label::Int(iana::Ec2KeyParameter::Y.to_i64()))?;
-        let key = EcKey::from_public_key_affine_coordinates(&group, &x, &y)?;
-        key.check_key()?;
-        Ok(key)
-    }
-
-    fn check_ec_key_params(cose_key: &CoseKey) -> Result<()> {
+    fn to_ec_public_key(cose_key: &CoseKey) -> Result<ecdsa::PublicKey<P256>> {
         assert_eq!(coset::KeyType::Assigned(iana::KeyType::EC2), cose_key.kty);
         assert_eq!(Some(coset::Algorithm::Assigned(ATTESTATION_KEY_ALGO)), cose_key.alg);
         let crv = get_label_value(cose_key, Label::Int(iana::Ec2KeyParameter::Crv.to_i64()))?;
         assert_eq!(&Value::from(ATTESTATION_KEY_CURVE.to_i64()), crv);
-        Ok(())
-    }
-
-    fn get_label_value_as_bignum(key: &CoseKey, label: Label) -> Result<BigNum> {
-        get_label_value(key, label)?
-            .as_bytes()
-            .map(|v| BigNum::from_slice(&v[..]).unwrap())
-            .ok_or_else(|| anyhow!("Value not a bstr."))
+        let sec1 = cose_key.to_sec1_octet_string()?;
+        ecdsa::PublicKey::<P256>::from_x962_uncompressed(&sec1)
+            .ok_or_else(|| anyhow!("Invalid public key"))
     }
 
     fn get_label_value(key: &CoseKey, label: Label) -> Result<&Value> {
