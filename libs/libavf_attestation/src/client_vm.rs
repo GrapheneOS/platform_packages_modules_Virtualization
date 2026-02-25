@@ -20,11 +20,14 @@ use crate::dice::{ClientVmDiceChain, DiceChainEntryPayload};
 use crate::keyblob::decrypt_private_key;
 use crate::ops::AttestationOps;
 use alloc::vec::Vec;
-use bssl_avf::{rand_bytes, sha256, EcKey, PKey};
-use cbor_util::parse_value_array;
+use bssl_crypto::{digest::Sha512, ec::P256, ecdsa};
+use cbor_util::{get_label_value, parse_value_array};
 use ciborium::value::Value;
 use core::str::FromStr;
-use coset::{CborSerializable, CoseSign};
+use coset::{
+    iana::{self, EnumI64},
+    Algorithm, CborSerializable, CoseKey, CoseSign, Label,
+};
 use der::{Decode, Encode};
 use log::{error, info};
 use service_vm_comm::{ClientVmAttestationParams, Csr, CsrPayload, RequestProcessingError, Result};
@@ -57,12 +60,13 @@ pub fn request_attestation(
     })?;
 
     // Verifies the second signature with the public key in the CSR payload.
-    let ec_public_key = EcKey::from_cose_public_key_slice(&csr_payload.public_key)?;
-    cose_sign.verify_signature(ATTESTATION_KEY_SIGNATURE_INDEX, aad, |signature, message| {
-        ecdsa_verify_cose(&ec_public_key, signature, message)
-    })?;
-
-    let subject_public_key_info = PKey::try_from(ec_public_key)?.subject_public_key_info()?;
+    let ec_public_key = p256_cose_public_key_from_slice(&csr_payload.public_key)?;
+    cose_sign
+        .verify_signature(ATTESTATION_KEY_SIGNATURE_INDEX, aad, |signature, message| {
+            ec_public_key.verify_p1363(message, signature)
+        })
+        .map_err(|_| RequestProcessingError::InvalidDiceChain)?;
+    let subject_public_key_info = ec_public_key.to_der_subject_public_key_info();
 
     // Builds the TBSCertificate.
     // The serial number can be up to 20 bytes according to RFC5280 s4.1.2.2.
@@ -70,8 +74,7 @@ pub fn request_attestation(
     // certificate signed by RKP VM has a unique serial number.
     // Attention: Do not use 20 bytes here as when the MSB is 1, a leading 0 byte can be
     // added during the encoding to make the serial number length exceed 20 bytes.
-    let mut serial_number = [0u8; 16];
-    rand_bytes(&mut serial_number)?;
+    let serial_number: [u8; 16] = bssl_crypto::rand_array();
     let subject = Name::from_str("CN=Android Protected Virtual Machine Key")?.to_der()?;
     let rkp_cert = Certificate::from_der(&params.remotely_provisioned_cert)?;
 
@@ -117,7 +120,7 @@ pub fn request_attestation(
         rkp_cert.tbs_certificate.subject,
         Name::from_der(&subject)?,
         rkp_cert.tbs_certificate.validity,
-        &subject_public_key_info,
+        subject_public_key_info.as_ref(),
         &attestation_ext,
     )?;
 
@@ -128,21 +131,27 @@ pub fn request_attestation(
             error!("Failed to decrypt the remotely provisioned key blob: {e}");
             RequestProcessingError::FailedToDecryptKeyBlob
         })?;
-    let ec_private_key = EcKey::from_ec_private_key(private_key.as_slice())?;
-    let signature = ecdsa_sign_der(&ec_private_key, &tbs_cert.to_der()?)?;
+    let ec_private_key = ecdsa::PrivateKey::<P256>::from_der_ec_private_key(private_key.as_slice())
+        .ok_or(RequestProcessingError::DerError)?;
+    let signature = ec_private_key.sign(&tbs_cert.to_der()?);
     let certificate = cert::build_certificate(tbs_cert, &signature)?;
     Ok(certificate.to_der()?)
 }
 
-fn ecdsa_verify_cose(key: &EcKey, signature: &[u8], message: &[u8]) -> bssl_avf::Result<()> {
-    // The message was signed with ECDSA with curve P-256 and SHA-256 at the signature generation.
-    let digest = sha256(message)?;
-    key.ecdsa_verify_cose(signature, &digest)
-}
-
-fn ecdsa_sign_der(key: &EcKey, message: &[u8]) -> bssl_avf::Result<Vec<u8>> {
-    let digest = sha256(message)?;
-    key.ecdsa_sign_der(&digest)
+fn p256_cose_public_key_from_slice(key: &[u8]) -> Result<ecdsa::PublicKey<P256>> {
+    let key = CoseKey::from_slice(key)?;
+    if key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256)) {
+        error!("Invalid algorithm in COSE key {:?}", key.alg);
+        return Err(RequestProcessingError::InvalidDiceChain);
+    };
+    let crv = get_label_value(&key, Label::Int(iana::Ec2KeyParameter::Crv.to_i64()))?;
+    if crv != &Value::from(iana::EllipticCurve::P_256.to_i64()) {
+        error!("Invalid curve in COSE key {:?}", key.alg);
+        return Err(RequestProcessingError::InvalidDiceChain);
+    }
+    let sec1 = key.to_sec1_octet_string()?;
+    ecdsa::PublicKey::<P256>::from_x962_uncompressed(&sec1)
+        .ok_or(RequestProcessingError::InvalidDiceChain)
 }
 
 /// Validates the client VM DICE chain against the Reference VM DICE chain.
@@ -223,10 +232,7 @@ fn ensure_same_authority(
 /// Validates that the kernel code hash in the Client VM DICE chain matches the code hashes
 /// embedded during the build time.
 fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
-    fn matches_any_kernel_code_hash(
-        actual_code_hash: &[u8],
-        is_debug: bool,
-    ) -> bssl_avf::Result<bool> {
+    fn matches_any_kernel_code_hash(actual_code_hash: &[u8], is_debug: bool) -> bool {
         for os_hash in &microdroid_kernel_hashes::OS_HASHES {
             let mut code_hash = [0u8; microdroid_kernel_hashes::HASH_SIZE * 2];
             code_hash[0..microdroid_kernel_hashes::HASH_SIZE].copy_from_slice(&os_hash.kernel);
@@ -237,18 +243,18 @@ fn validate_kernel_code_hash(dice_chain: &ClientVmDiceChain) -> Result<()> {
                 code_hash[microdroid_kernel_hashes::HASH_SIZE..]
                     .copy_from_slice(&os_hash.initrd_normal);
             }
-            if bssl_avf::Digester::sha512().digest(&code_hash)? == actual_code_hash {
-                return Ok(true);
+            if Sha512::hash(&code_hash) == actual_code_hash {
+                return true;
             }
         }
-        Ok(false)
+        false
     }
 
     let kernel = dice_chain.kernel();
-    if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ false)? {
+    if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ false) {
         return Ok(());
     }
-    if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ true)? {
+    if matches_any_kernel_code_hash(&kernel.code_hash, /* is_debug= */ true) {
         if dice_chain.all_entries_are_secure() {
             error!("The Microdroid kernel has debug initrd but the DICE chain is secure");
             return Err(RequestProcessingError::InvalidDiceChain);

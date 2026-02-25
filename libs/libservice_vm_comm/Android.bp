@@ -17,7 +17,6 @@ rust_library {
     name: "libservice_vm_comm",
     defaults: ["libservice_vm_comm_defaults"],
     rustlibs: [
-        "libbssl_avf_error",
         "libciborium",
         "libcbor_util",
         "libcoset",

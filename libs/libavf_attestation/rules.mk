@@ -30,11 +30,10 @@ MODULE_LIBRARY_DEPS += \
 	$(call FIND_CRATE,spki) \
 	$(call FIND_CRATE,x509-cert) \
 	$(call FIND_CRATE,zeroize) \
-	packages/modules/Virtualization/libs/bssl/error \
-	packages/modules/Virtualization/libs/bssl \
 	packages/modules/Virtualization/libs/cborutil \
 	packages/modules/Virtualization/libs/dice/open_dice \
 	packages/modules/Virtualization/libs/libservice_vm_comm \
+	trusty/user/base/lib/bssl-crypto-rust \
 	$(MICRODROID_KERNEL_HASHES_RS) \
 	$(PLATFORM_SECURITY_PATCH_TIMESTAMP_RS) \
 
