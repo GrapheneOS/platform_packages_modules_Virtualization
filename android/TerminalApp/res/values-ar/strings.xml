@@ -86,6 +86,8 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"رجوع"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"إعدادات متقدّمة"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"حجم الذاكرة"</string>
+    <!-- no translation found for settings_advanced_memory_valid_range (8930390111771410995) -->
+    <skip />
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"البقاء في الوضع النشط"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"إيقاف"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"دقيقة واحدة"</string>
@@ -97,7 +99,7 @@
     <string name="settings_keep_awake_6h" msgid="5046933582122793047">"٦ ساعات"</string>
     <string name="settings_keep_awake_1d" msgid="7827787379531259589">"يوم واحد"</string>
     <string name="settings_keep_awake_battery_warning" msgid="5479518792086179864">"تحذير: سيؤثر تفعيل \"البقاء في الوضع النشط\" بشكل كبير في عمر البطارية لأنّه يمنع الجهاز من الانتقال إلى وضع السكون."</string>
-    <string name="notif_keep_awake_active" msgid="7857677816675880040">"يُبقي تطبيق Terminal الجهاز مشغَّلاً"</string>
+    <string name="notif_keep_awake_active" msgid="7857677816675880040">"يُبقي تطبيق Terminal شاشة الجهاز نشطة"</string>
     <string name="notif_action_turn_off_keep_awake" msgid="6441029303214895727">"إيقاف"</string>
     <string name="notif_action_keep_awake_settings" msgid="8154182202183657855">"الإعدادات"</string>
     <string name="settings_port_title" msgid="6973105037111811149">"التحكّم في المنافذ"</string>

@@ -86,6 +86,7 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Назад"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Напредно"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Величина меморије"</string>
+    <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"Важећи опсег: %1$d ~ %2$d MB"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"Без спавања"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"Искључено"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 минут"</string>
