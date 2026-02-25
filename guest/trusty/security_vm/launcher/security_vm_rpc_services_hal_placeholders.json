@@ -4,21 +4,6 @@
     "accessor_name": "android.os.IAccessor/ICommService/security_vm_keymint",
     "internal_rpc_service_name": "android.trusty.commservice.ICommService/security_vm_keymint"
   },
-    {
-    "port": 13,
-    "accessor_name": "android.os.IAccessor/IGatekeeper/security_vm_gatekeeper",
-    "internal_rpc_service_name": "android.hardware.gatekeeper.IGatekeeper/default"
-  },
-  {
-    "port": 16,
-    "accessor_name": "android.os.IAccessor/IProvisioning/security_vm_keymint",
-    "internal_rpc_service_name": "android.trusty.provisioning.IProvisioning/security_vm_keymint"
-  },
-  {
-    "port": 20,
-    "accessor_name": "android.os.IAccessor/ISecureClock/security_vm_keymint",
-    "internal_rpc_service_name": "android.trusty.provisioning.ISecureClock/default"
-  },
   {
     "port": 14,
     "accessor_name": "android.os.IAccessor/sharedsecret/security_vm_shared_secret",
