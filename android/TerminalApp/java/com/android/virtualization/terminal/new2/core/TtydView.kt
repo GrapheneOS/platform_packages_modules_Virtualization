@@ -206,6 +206,15 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     private inner class TtydWebViewClient : WebViewClient() {
+        override fun onPageStarted(
+            view: WebView?,
+            url: String?,
+            favicon: android.graphics.Bitmap?,
+        ) {
+            super.onPageStarted(view, url, favicon)
+            injectWebSocketInterceptor()
+        }
+
         override fun shouldOverrideUrlLoading(
             view: WebView?,
             request: WebResourceRequest?,
