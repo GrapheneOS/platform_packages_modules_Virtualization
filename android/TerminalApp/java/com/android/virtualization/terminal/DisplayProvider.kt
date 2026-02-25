@@ -77,11 +77,8 @@ internal class DisplayProvider(
                 updateDisplayResolution(holder)
             }
             try {
-                displayService.setSurface(holder.getSurface(), isForCursor())
+                displayService.setSurface(holder.surface, isForCursor())
             } catch (e: Exception) {
-                // TODO: don't consume this exception silently. For some unknown reason, setSurface
-                // call above throws IllegalArgumentException and that fails the surface
-                // configuration.
                 Log.e(TAG, "Failed to present surface $surfaceKind to VM", e)
             }
             try {
