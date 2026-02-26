@@ -214,6 +214,21 @@
     <!-- Settings menu memory size valid range error message [CHAR LIMIT=none] -->
     <string name="settings_advanced_memory_valid_range">Valid range: %1$d ~ %2$d MB</string>
 
+    <!-- Settings menu title for display resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_title">Display resolution</string>
+    <!-- Option for full resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_full">Full</string>
+    <!-- Option for half resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_half">Half</string>
+    <!-- Option for quarter resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_quarter">Quarter</string>
+    <!-- Hint for full resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_full_hint">Performance might be degraded.</string>
+    <!-- Hint for half resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_half_hint">Recommended</string>
+    <!-- Hint for quarter resolution [CHAR LIMIT=none] -->
+    <string name="settings_display_resolution_quarter_hint">Quality might be degraded.</string>
+
     <!-- Settings menu title for keep awake [CHAR LIMIT=none] -->
     <string name="settings_keep_awake_title">Keep awake</string>
     <!-- Option for keep awake off [CHAR LIMIT=none] -->

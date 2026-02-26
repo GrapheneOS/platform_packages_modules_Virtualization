@@ -20,11 +20,21 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.VmController
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+
+enum class DisplayResolution(val scale: Float) {
+    FULL(1.0f),
+    HALF(0.5f),
+    QUARTER(0.25f),
+}
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPref = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -32,6 +42,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _currentMemoryMb =
         MutableStateFlow(sharedPref.getInt(KEY_MEMORY_MIB, DEFAULT_MEMORY_MIB))
     val currentMemoryMb: StateFlow<Int> = _currentMemoryMb.asStateFlow()
+
+    private val _displayResolution =
+        MutableStateFlow(
+            sharedPref.getString(KEY_DISPLAY_RESOLUTION, DisplayResolution.HALF.name)!!
+        )
+    val displayResolution: StateFlow<DisplayResolution> =
+        _displayResolution
+            .map { DisplayResolution.valueOf(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), DisplayResolution.HALF)
 
     private val _keepAwakeMinutes = MutableStateFlow(sharedPref.getInt(KEY_KEEP_AWAKE, 0))
     val keepAwakeMinutes: StateFlow<Int> = _keepAwakeMinutes.asStateFlow()
@@ -41,6 +60,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             when (key) {
                 KEY_MEMORY_MIB -> {
                     _currentMemoryMb.value = sharedPref.getInt(KEY_MEMORY_MIB, DEFAULT_MEMORY_MIB)
+                }
+                KEY_DISPLAY_RESOLUTION -> {
+                    _displayResolution.value =
+                        sharedPref.getString(KEY_DISPLAY_RESOLUTION, DisplayResolution.HALF.name)!!
                 }
                 KEY_KEEP_AWAKE -> {
                     _keepAwakeMinutes.value = sharedPref.getInt(KEY_KEEP_AWAKE, 0)
@@ -65,6 +88,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             sharedPref.edit().putInt(KEY_MEMORY_MIB, mb).apply()
             _currentMemoryMb.value = mb
             _showRebootDialog.value = true
+        }
+    }
+
+    fun setDisplayResolution(resolution: DisplayResolution) {
+        if (resolution.name != _displayResolution.value) {
+            sharedPref.edit().putString(KEY_DISPLAY_RESOLUTION, resolution.name).apply()
+            _displayResolution.value = resolution.name
         }
     }
 
@@ -113,6 +143,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     companion object {
         internal const val PREFS_NAME = "terminal_settings"
         internal const val KEY_MEMORY_MIB = "memory_mib"
+        internal const val KEY_DISPLAY_RESOLUTION = "display_resolution"
         internal const val KEY_KEEP_AWAKE = "keep_awake"
         const val DEFAULT_MEMORY_MIB = 1024
         const val MIN_MEMORY_MIB = 200

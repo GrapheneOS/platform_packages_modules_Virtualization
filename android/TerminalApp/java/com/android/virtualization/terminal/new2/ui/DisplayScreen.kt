@@ -90,6 +90,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.DisplayProvider
 import com.android.virtualization.terminal.DisplaySurfaceView
 import com.android.virtualization.terminal.InputForwarder
@@ -97,12 +98,15 @@ import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
+import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+    val settingsViewModel: SettingsViewModel = viewModel()
+    val resolution by settingsViewModel.displayResolution.collectAsStateWithLifecycle()
     val vm = VmController.virtualMachine ?: return
     val vmDisplayWidth = vm.config.customImageConfig?.displayConfig!!.width
     val vmDisplayHeight = vm.config.customImageConfig?.displayConfig!!.height
@@ -201,7 +205,14 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                         container.addView(mainView)
                         container.addView(cursorView)
 
-                        DisplayProvider(mainView, cursorView, vmDisplayWidth, vmDisplayHeight)
+                        val displayProvider =
+                            DisplayProvider(
+                                mainView,
+                                cursorView,
+                                vmDisplayWidth,
+                                vmDisplayHeight,
+                                resolution,
+                            )
 
                         // Use a dummy view for touch receiver to prevent InputForwarder from
                         // overwriting our listener
@@ -210,12 +221,20 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                             InputForwarder(ctx, vm, dummyView, mainView, mainView) {
                                 viewModel.setMouseLocked(false)
                             }
-                        container.tag = inputForwarder
+                        container.tag = Pair(inputForwarder, displayProvider)
                         displaySurfaceView = mainView
 
                         container
                     },
-                    onRelease = { view -> (view.tag as? InputForwarder)?.cleanUp() },
+                    update = { view ->
+                        val pair = view.tag as? Pair<*, *>
+                        val displayProvider = pair?.second as? DisplayProvider
+                        displayProvider?.setResolution(resolution)
+                    },
+                    onRelease = { view ->
+                        val pair = view.tag as? Pair<*, *>
+                        (pair?.first as? InputForwarder)?.cleanUp()
+                    },
                 )
             }
 

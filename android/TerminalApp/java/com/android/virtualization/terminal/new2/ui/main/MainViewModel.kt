@@ -268,18 +268,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 insets.bottom -
                 (TAB_BAR_HEIGHT.value * density).toInt()
 
-        val maxDim = 1280
-        if (width > maxDim || height > maxDim) {
-            if (width > height) {
-                height = (height * maxDim.toFloat() / width).toInt()
-                width = maxDim
-            } else {
-                width = (width * maxDim.toFloat() / height).toInt()
-                height = maxDim
-            }
-        }
+        val sharedPref =
+            context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        val resolutionName =
+            sharedPref.getString(
+                SettingsViewModel.KEY_DISPLAY_RESOLUTION,
+                DisplayResolution.HALF.name,
+            )
+        val resolution = DisplayResolution.valueOf(resolutionName!!)
 
-        val dpi = (DisplayMetrics.DENSITY_DEFAULT * density).toInt()
+        width = (width * resolution.scale).toInt()
+        height = (height * resolution.scale).toInt()
+
+        val dpi = (DisplayMetrics.DENSITY_DEFAULT * density * resolution.scale).toInt()
         val refreshRate = display.refreshRate.toInt()
         return DisplayInfo(width, height, dpi, refreshRate)
     }
