@@ -45,6 +45,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.Mouse
@@ -56,6 +58,7 @@ import androidx.compose.material.icons.outlined.Mouse
 import androidx.compose.material.icons.outlined.PanTool
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
@@ -237,7 +240,6 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     },
                 )
             }
-
             val hasPhysicalKeyboard by viewModel.hasPhysicalKeyboard.collectAsStateWithLifecycle()
             if (isMouseLocked && hasPhysicalKeyboard) {
                 Box(modifier = Modifier.padding(16.dp)) {
@@ -265,7 +267,26 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     )
                 }
             }
+            FullscreenToggleButton(
+                viewModel = viewModel,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            )
         }
+    }
+}
+
+@Composable
+fun FullscreenToggleButton(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+    val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
+    IconButton(onClick = { viewModel.setIsFullscreen(!isFullscreen) }, modifier = modifier) {
+        Icon(
+            imageVector =
+                if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+            contentDescription =
+                if (isFullscreen) stringResource(R.string.fullscreen_exit)
+                else stringResource(R.string.fullscreen_enter),
+            tint = Color.White.copy(alpha = 0.5f),
+        )
     }
 }
 
