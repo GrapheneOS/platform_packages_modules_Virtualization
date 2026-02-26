@@ -224,6 +224,30 @@ mod tests {
     }
 
     #[test]
+    fn sign_cose_sign1_with_cdi_leaf_priv_empty_msg() {
+        build_cose_sign1_and_verify(
+            retry_sign_cose_sign1_with_cdi_leaf_priv,
+            None,
+            b"",
+            b"MyAad",
+            &TestArtifactsForSigning,
+            EXPECTED_PUB_KEY,
+        );
+    }
+
+    #[test]
+    fn sign_cose_sign1_with_cdi_leaf_priv_empty_aad() {
+        build_cose_sign1_and_verify(
+            retry_sign_cose_sign1_with_cdi_leaf_priv,
+            None,
+            b"MyMessage",
+            b"",
+            &TestArtifactsForSigning,
+            EXPECTED_PUB_KEY,
+        );
+    }
+
+    #[test]
     fn sign_cose_sign1_with_cdi_leaf_priv_verify() {
         build_cose_sign1_and_verify(
             retry_sign_cose_sign1_with_cdi_leaf_priv,
