@@ -41,16 +41,17 @@ class AndroidDisplaySurface {
 public:
     AndroidDisplaySurface(const std::string& name) : mName(name) {}
 
-    Result<void> setNativeSurface(Surface* surface) {
+    Result<void> setNativeSurface(const Surface& surface) {
         {
             std::lock_guard lk(mSurfaceMutex);
-            mNativeSurface = std::make_unique<Surface>(surface->release());
-            Surface* surface = mNativeSurface.get();
-            if (!surface) {
+            mNativeSurface = std::make_unique<Surface>();
+            mNativeSurface->reset(surface.get());
+            Surface* native_surface = mNativeSurface.get();
+            if (!native_surface) {
                 return Error() << "Failed to get Surface";
             }
 
-            ANativeWindow* anw = surface->get();
+            ANativeWindow* anw = native_surface->get();
             auto& sc = SurfaceControl::GetInstance();
             if (sc.IsSupported()) {
                 mSurfaceControl = sc.ASurfaceControl_createFromWindow(anw, mName.c_str());
@@ -243,7 +244,7 @@ public:
     DisplayService() = default;
     virtual ~DisplayService() = default;
 
-    ndk::ScopedAStatus setSurface(Surface* surface, bool forCursor) override {
+    ndk::ScopedAStatus setSurface(const Surface& surface, bool forCursor) override {
         getSurface(forCursor).setNativeSurface(surface);
         return ::ndk::ScopedAStatus::ok();
     }

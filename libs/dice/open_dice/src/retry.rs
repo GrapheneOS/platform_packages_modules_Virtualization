@@ -190,12 +190,11 @@ pub fn retry_sign_cose_sign1(
 ///   the computation. If this is set to `None`, the KDF defaults to `Ed25519`.
 /// * **When using the non-multialg variant:** This parameter **must** be `None`. The KDF is
 ///   determined by the underlying `open-dice` library in this case.
-// TODO(b/486142507): Remove dynamic dispatch after converting all clients.
 pub fn retry_sign_cose_sign1_with_cdi_leaf_priv(
     dice_context: Option<DiceContext>,
     message: &[u8],
     aad: &[u8],
-    dice_artifacts: &(impl DiceArtifacts + ?Sized),
+    dice_artifacts: &impl DiceArtifacts,
 ) -> Result<Vec<u8>> {
     retry_with_measured_buffer(|encoded_signature| {
         sign_cose_sign1_with_cdi_leaf_priv(

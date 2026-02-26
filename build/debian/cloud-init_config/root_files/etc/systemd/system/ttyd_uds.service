@@ -4,6 +4,14 @@ Description=TTYD Server (UDS Backend)
 [Service]
 Type=simple
 
+# Simulate login environment for droid user
+Environment=HOME=/home/droid
+Environment=USER=droid
+Environment=LOGNAME=droid
+Environment=SHELL=/bin/bash
+Environment=TERM=xterm-256color
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+
 # Automatic Directory Management
 # Creates /run/ttyd/ owned by root:root before start
 # Deletes it on stop.
@@ -12,7 +20,7 @@ RuntimeDirectoryMode=0755
 
 # Command
 # -i : Bind to the socket file inside the RuntimeDirectory
-ExecStart=/usr/local/bin/ttyd -i /run/ttyd/ttyd.sock -t disableLeaveAlert=true -W /bin/bash -c "exec su - droid"
+ExecStart=/usr/local/bin/ttyd -i /run/ttyd/ttyd.sock -t disableLeaveAlert=true -W /usr/bin/setpriv --reuid=droid --regid=users --init-groups /bin/bash -l
 
 Restart=always
 RestartSec=3

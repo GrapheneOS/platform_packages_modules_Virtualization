@@ -7,6 +7,11 @@ genrule {
     srcs: [
         "security_vm_launcher-arm64.rc.base",
     ] + select(soong_config_variable("trusty_system_vm", "placeholder_trusted_hal"), {
+        true: [],
+        default: ["security_vm_launcher-arm64.rc.ffa"],
+    }) + [
+        "security_vm_launcher-arm64.rc.suffix",
+    ] + select(soong_config_variable("trusty_system_vm", "placeholder_trusted_hal"), {
         true: ["security_vm_launcher-arm64.rc.placeholder"],
         default: [],
     }),
@@ -45,10 +50,10 @@ rust_binary {
     prefer_rlib: true,
     rustlibs: [
         "android.system.virtualizationservice-rust",
+        "libvm_launcher",
         "libanyhow",
         "libclap",
         "libenv_logger",
-        "libhypervisor_props",
         "liblog_rust",
         "libserde",
         "libserde_json",
@@ -57,6 +62,20 @@ rust_binary {
     ],
     bootstrap: true,
     system_ext_specific: true,
+}
+
+rust_library {
+    name: "libvm_launcher",
+    crate_name: "vm_launcher",
+    srcs: ["src/lib.rs"],
+    edition: "2021",
+    rustlibs: [
+        "android.system.virtualizationservice-rust",
+        "libanyhow",
+        "libhypervisor_props",
+        "liblog_rust",
+        "libvmclient",
+    ],
 }
 
 prebuilt_etc {

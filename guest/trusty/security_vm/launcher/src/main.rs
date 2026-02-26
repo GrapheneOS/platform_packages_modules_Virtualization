@@ -14,28 +14,23 @@
 
 //! A client for trusty security VMs during early boot.
 
-use android_system_virtualizationservice::aidl::android::system::virtualizationservice::{
-    CpuOptions::CpuOptions, CpuOptions::CpuTopology::CpuTopology,
-    IVirtualizationService::IVirtualizationService, VirtualMachineConfig::VirtualMachineConfig,
-    VirtualMachineRawConfig::VirtualMachineRawConfig,
-};
+use android_system_virtualizationservice::aidl::android::system::virtualizationservice::CpuOptions::CpuTopology::CpuTopology;
 use android_system_virtualizationservice::binder::{
-    self, ParcelFileDescriptor, ProcessState, Strong,
+    self, ProcessState,
 };
 use anyhow::{bail, ensure, Context, Result};
 use clap::Parser;
 use env_logger::Builder;
-use hypervisor_props::is_protected_vm_supported;
-use log::{error, info, trace, warn, LevelFilter};
+use log::{error, info, trace, LevelFilter};
 use nix::fcntl::OFlag;
 use serde::Deserialize;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use vmclient::VmInstance;
+use vm_launcher::{VmConfig, run_vm};
 
 const GUEST_FFA_TEE_SERVICE: &str = "guest_ffa_tee_service";
-const INSTANCE_ID_SIZE: usize = 64;
 
 #[derive(Parser, Debug)]
 /// Collection of CLI for trusty_security_vm_launcher
@@ -83,10 +78,27 @@ pub struct Args {
     vm_instance_id: Option<PathBuf>,
 }
 
-fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
-    let virtmgr = vmclient::VirtualizationService::new_early()
-        .context("Failed to spawn VirtualizationService")?;
-    virtmgr.connect().context("Failed to connect to VirtualizationService")
+impl Args {
+    fn to_vm_config(
+        &self,
+        console_out: File,
+        log_out: File,
+        tee_services: Vec<String>,
+    ) -> VmConfig {
+        VmConfig {
+            kernel: self.kernel.clone(),
+            load_kernel_as_bootloader: self.load_kernel_as_bootloader,
+            protected: self.protected,
+            name: self.name.clone(),
+            memory_size_mib: self.memory_size_mib,
+            cpu_topology: self.cpu_topology.clone(),
+            custom_pvmfw: self.custom_pvmfw.clone(),
+            tee_services,
+            vm_instance_id: self.vm_instance_id.clone(),
+            console_out: Some(console_out),
+            log: Some(log_out),
+        }
+    }
 }
 
 fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
@@ -118,76 +130,17 @@ fn main() -> Result<()> {
         })
         .init();
 
-    let service = get_service()?;
-
-    let kernel =
-        File::open(&args.kernel).with_context(|| format!("Failed to open {:?}", &args.kernel))?;
-    let kernel = ParcelFileDescriptor::new(kernel);
-
-    // If --load-kernel-as-bootloader option is present, then load kernel as bootloader
-    let (kernel, bootloader) =
-        if args.load_kernel_as_bootloader { (None, Some(kernel)) } else { (Some(kernel), None) };
-
-    let protected_vm = if is_protected_vm_supported().unwrap_or(false) {
-        args.protected
-    } else {
-        if args.protected {
-            warn!("protected VM is not supported; launch non-protected VM");
-        }
-        false
-    };
-
-    let custom_pvmfw = if let Some(path) = args.custom_pvmfw {
-        let file = File::open(&path).with_context(|| format!("Failed to open {path:?}"))?;
-        Some(ParcelFileDescriptor::new(file))
-    } else {
-        None
-    };
-
     let tee_services = match args.allow_ffa {
         true => vec![GUEST_FFA_TEE_SERVICE.to_owned()],
         false => Vec::new(),
     };
 
-    let instance_id = if let Some(path) = args.vm_instance_id.as_ref() {
-        info!("Loading VM Instance ID from file: {path:?}");
-        load_instance_id(path)?
-    } else {
-        warn!("No VM Instance ID file provided. Using default instance ID.");
-        [0u8; INSTANCE_ID_SIZE]
-    };
-
-    let vm_config = VirtualMachineConfig::RawConfig(VirtualMachineRawConfig {
-        name: args.name.to_owned(),
-        kernel,
-        bootloader,
-        protectedVm: protected_vm,
-        customPvmfw: custom_pvmfw,
-        memoryMib: args.memory_size_mib,
-        cpuOptions: CpuOptions { cpuTopology: args.cpu_topology },
-        platformVersion: "~1.0".to_owned(),
-        teeServices: tee_services,
-        instanceId: instance_id,
-        ..Default::default()
-    });
-
-    info!("creating VM with config {:?}", &vm_config);
     let console_out = create_log_writer(&args.name)?;
     // Creates only one pipe and one thread for efficiency.
     let log_out = console_out.try_clone().context("Failed to clone console_out fd for log_out")?;
 
-    let vm = VmInstance::create(
-        service.as_ref(),
-        &vm_config,
-        // console_in, console_out, and log will be redirected to the kernel log by virtmgr
-        Some(console_out),
-        None, // console_in
-        Some(log_out),
-        None, // dump_dt
-    )
-    .context("Failed to create VM")?;
-    vm.start(None /* callback */).context("Failed to start VM")?;
-    info!("started VM");
+    let launch_vm_config = args.to_vm_config(console_out, log_out, tee_services);
+    let vm = run_vm(launch_vm_config)?;
 
     if !args.rpc_services_config.is_empty() {
         ProcessState::start_thread_pool();
@@ -214,28 +167,6 @@ fn main() -> Result<()> {
         error!("VM ended: {death_reason:?}");
         Ok(())
     }
-}
-
-fn load_instance_id(path: &Path) -> Result<[u8; INSTANCE_ID_SIZE]> {
-    let mut file =
-        File::open(path).with_context(|| format!("open VM Instance ID file: {:?}", path))?;
-
-    let metadata = file
-        .metadata()
-        .with_context(|| format!("get metadata for VM Instance ID file: {:?}", path))?;
-
-    ensure!(
-        metadata.len() == INSTANCE_ID_SIZE as u64,
-        "VM Instance ID file {:?} has incorrect size. Expected {}, Got {}",
-        path,
-        INSTANCE_ID_SIZE,
-        metadata.len()
-    );
-
-    let mut buffer = [0u8; INSTANCE_ID_SIZE];
-    file.read_exact(&mut buffer)
-        .with_context(|| format!("read VM Instance ID file: {:?}", path))?;
-    Ok(buffer)
 }
 
 /// Defines the structure of a single RPC service configuration in the JSON file.

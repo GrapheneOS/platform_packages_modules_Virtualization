@@ -468,16 +468,6 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
     fn enableTestAttestation(&self) -> binder::Result<()> {
         check_manage_access()?;
         check_use_custom_virtual_machine()?;
-        if !cfg!(remote_attestation) {
-            return Err(Status::new_exception_str(
-                ExceptionCode::UNSUPPORTED_OPERATION,
-                Some(
-                    "enableTestAttestation is not supported with the remote_attestation \
-                     feature disabled",
-                ),
-            ))
-            .with_log();
-        }
         let res = generate_ecdsa_p256_key_pair()
             .context("Failed to generate ECDSA P-256 key pair for testing")
             .with_log()
@@ -509,16 +499,6 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         test_mode: bool,
     ) -> binder::Result<Vec<Certificate>> {
         check_manage_access()?;
-        if !cfg!(remote_attestation) {
-            return Err(Status::new_exception_str(
-                ExceptionCode::UNSUPPORTED_OPERATION,
-                Some(
-                    "requestAttestation is not supported with the remote_attestation feature \
-                     disabled",
-                ),
-            ))
-            .with_log();
-        }
         if !is_remote_provisioning_hal_declared()? {
             return Err(Status::new_exception_str(
                 ExceptionCode::UNSUPPORTED_OPERATION,
