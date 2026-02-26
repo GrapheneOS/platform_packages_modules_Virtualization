@@ -374,4 +374,6 @@
     <string name="upgrade_btn_upgrade">Upgrade</string>
     <!-- Upgrade page's error toast message when upgrade failed. [CHAR LIMIT=none] -->
     <string name="upgrade_snkbar_error">Upgrade failed</string>
+    <!-- Hint for mouse lock release -->
+    <string name="mouse_lock_release_hint">Press Ctrl+Alt to release mouse lock</string>
 </resources>

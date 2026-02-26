@@ -34,6 +34,7 @@ internal class InputForwarder(
     touchReceiver: View,
     mouseReceiver: View,
     keyReceiver: DisplaySurfaceView,
+    private val onMouseLockRelease: () -> Unit,
 ) {
     private val virtualMachine: VirtualMachine = vm
     private var inputDeviceListener: InputManager.InputDeviceListener? = null
@@ -98,6 +99,9 @@ internal class InputForwarder(
                 return@setOnKeyListener false
             }
             if (event != null) {
+                if (event.isCtrlPressed && event.isAltPressed) {
+                    onMouseLockRelease()
+                }
                 virtualMachine.sendKeyEvent(
                     event.scanCode.toShort(),
                     event.action != MotionEvent.ACTION_UP,
