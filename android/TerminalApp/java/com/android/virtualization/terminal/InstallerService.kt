@@ -168,7 +168,7 @@ class InstallerService : Service() {
 
         val dest = getDefault(this).installDir
         try {
-            runBlocking { archive.installTo(dest, null).collect() }
+            runBlocking { archive.installTo(this@InstallerService, dest, null).collect() }
             Log.i(TAG, "image is installed from $archive_path")
             return true
         } catch (e: IOException) {
@@ -198,7 +198,7 @@ class InstallerService : Service() {
         try {
             runBlocking {
                 fromInternet()
-                    .installTo(dest) {
+                    .installTo(this@InstallerService, dest) {
                         val filter = WifiCheckInputStream(it)
                         filter.setWifiOnly(isWifiOnly)
                         filter
