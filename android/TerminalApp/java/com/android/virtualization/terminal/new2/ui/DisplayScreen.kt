@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.input.pointer.positionChanged
@@ -103,6 +104,7 @@ import com.android.virtualization.terminal.new2.ui.main.DisplayState
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
@@ -118,6 +120,7 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
     val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
     val isPanZoomMode by viewModel.isPanZoomMode.collectAsStateWithLifecycle()
+    val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
     val isMouseLocked by viewModel.isMouseLocked.collectAsStateWithLifecycle()
     val useDisplayAsTouchpad by viewModel.useDisplayAsTouchpad.collectAsStateWithLifecycle()
     val hasMouse by viewModel.hasMouse.collectAsStateWithLifecycle()
@@ -150,6 +153,7 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     ImeAwareContainer(
         modifier = Modifier.background(Color.Black),
         isFocused = isFocused,
+        isFullscreen = isFullscreen,
         onImeVisibilityChanged = { visible ->
             if (isImeVisible != visible) {
                 viewModel.setIsImeVisible(visible)
@@ -269,7 +273,10 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
             }
             FullscreenToggleButton(
                 viewModel = viewModel,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                modifier =
+                    Modifier.align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .padding(bottom = stablePadding),
             )
         }
     }
@@ -278,22 +285,42 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 @Composable
 fun FullscreenToggleButton(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
-    IconButton(onClick = { viewModel.setIsFullscreen(!isFullscreen) }, modifier = modifier) {
-        Icon(
-            imageVector =
-                if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-            contentDescription =
-                if (isFullscreen) stringResource(R.string.fullscreen_exit)
-                else stringResource(R.string.fullscreen_enter),
-            tint = Color.White.copy(alpha = 0.5f),
-        )
+    if (isFullscreen) {
+        Box(modifier = modifier) { DisplayController(viewModel = viewModel) }
+    } else {
+        IconButton(onClick = { viewModel.setIsFullscreen(true) }, modifier = modifier) {
+            Icon(
+                imageVector = Icons.Default.Fullscreen,
+                contentDescription = stringResource(R.string.fullscreen_enter),
+                tint = Color.White.copy(alpha = 0.5f),
+            )
+        }
     }
 }
 
 @Composable
 fun DisplayController(viewModel: MainViewModel) {
     val displayState by viewModel.displayState.collectAsStateWithLifecycle()
-    val isDisplayActive = displayState == DisplayState.Normal
+    val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
+
+    var isExpandedLocally by remember(isFullscreen) { mutableStateOf(true) }
+    var isInteracting by remember { mutableStateOf(false) }
+    val isExpanded = if (isFullscreen) isExpandedLocally else (displayState == DisplayState.Normal)
+
+    LaunchedEffect(isFullscreen, isExpandedLocally, isInteracting) {
+        if (isFullscreen && isExpandedLocally && !isInteracting) {
+            delay(2000)
+            isExpandedLocally = false
+        }
+    }
+
+    val onAction = { action: () -> Unit ->
+        action()
+        if (isFullscreen) {
+            isExpandedLocally = false
+        }
+    }
+
     val isImeVisible by viewModel.isImeVisible.collectAsStateWithLifecycle()
     val isPanZoomMode by viewModel.isPanZoomMode.collectAsStateWithLifecycle()
     val isMouseLocked by viewModel.isMouseLocked.collectAsStateWithLifecycle()
@@ -301,16 +328,34 @@ fun DisplayController(viewModel: MainViewModel) {
     val hasMouse by viewModel.hasMouse.collectAsStateWithLifecycle()
 
     Surface(
-        modifier = Modifier.padding(end = 8.dp),
+        modifier =
+            Modifier.padding(end = 8.dp).pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        when (event.type) {
+                            PointerEventType.Enter,
+                            PointerEventType.Move,
+                            PointerEventType.Press -> isInteracting = true
+                            PointerEventType.Exit,
+                            PointerEventType.Release -> {
+                                if (event.changes.none { it.pressed }) {
+                                    isInteracting = false
+                                }
+                            }
+                        }
+                    }
+                }
+            },
         shape = RoundedCornerShape(24.dp),
-        color = if (isDisplayActive) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
+        color = if (isExpanded) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AnimatedVisibility(visible = isDisplayActive) {
+            AnimatedVisibility(visible = isExpanded) {
                 Row {
                     DisplayControllerButton(
                         checked = isPanZoomMode,
-                        onCheckedChange = { viewModel.setPanZoomMode(!isPanZoomMode) },
+                        onCheckedChange = { onAction { viewModel.setPanZoomMode(!isPanZoomMode) } },
                         pressedIcon = Icons.Filled.PanTool,
                         unpressedIcon = Icons.Outlined.PanTool,
                         pressedContentDescription =
@@ -320,7 +365,7 @@ fun DisplayController(viewModel: MainViewModel) {
                     )
                     DisplayControllerButton(
                         checked = isImeVisible,
-                        onCheckedChange = { viewModel.setIsImeVisible(!isImeVisible) },
+                        onCheckedChange = { onAction { viewModel.setIsImeVisible(!isImeVisible) } },
                         pressedIcon = Icons.Filled.Keyboard,
                         unpressedIcon = Icons.Outlined.Keyboard,
                         pressedContentDescription =
@@ -347,10 +392,12 @@ fun DisplayController(viewModel: MainViewModel) {
                     DisplayControllerButton(
                         checked = if (hasMouse) isMouseLocked else useDisplayAsTouchpad,
                         onCheckedChange = {
-                            if (hasMouse) {
-                                viewModel.setMouseLocked(!isMouseLocked)
-                            } else {
-                                viewModel.setUseDisplayAsTouchpad(!useDisplayAsTouchpad)
+                            onAction {
+                                if (hasMouse) {
+                                    viewModel.setMouseLocked(!isMouseLocked)
+                                } else {
+                                    viewModel.setUseDisplayAsTouchpad(!useDisplayAsTouchpad)
+                                }
                             }
                         },
                         pressedIcon = mouseControlIcons.first,
@@ -358,12 +405,29 @@ fun DisplayController(viewModel: MainViewModel) {
                         pressedContentDescription = mouseControlDescriptions.first,
                         unpressedContentDescription = mouseControlDescriptions.second,
                     )
+
+                    if (isFullscreen) {
+                        DisplayControllerButton(
+                            checked = true,
+                            onCheckedChange = { onAction { viewModel.setIsFullscreen(false) } },
+                            pressedIcon = Icons.Filled.FullscreenExit,
+                            unpressedIcon = Icons.Filled.FullscreenExit,
+                            pressedContentDescription = stringResource(R.string.fullscreen_exit),
+                            unpressedContentDescription = stringResource(R.string.fullscreen_exit),
+                        )
+                    }
                 }
             }
 
             DisplayControllerButton(
-                checked = isDisplayActive,
-                onCheckedChange = { viewModel.toggleDisplay() },
+                checked = isExpanded,
+                onCheckedChange = {
+                    if (isFullscreen) {
+                        isExpandedLocally = !isExpandedLocally
+                    } else {
+                        viewModel.toggleDisplay()
+                    }
+                },
                 pressedIcon = Icons.Filled.Close,
                 unpressedIcon = Icons.Outlined.Monitor,
                 pressedContentDescription = stringResource(R.string.dispctrl_hint_close),
