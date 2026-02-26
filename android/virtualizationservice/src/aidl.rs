@@ -44,7 +44,7 @@ use rand::Fill;
 use rkpd_client::get_rkpd_attestation_key;
 use rustutils::android::{
     system_properties,
-    users::{multiuser_get_app_id, multiuser_get_user_id},
+    users::{multiuser_get_app_id, multiuser_get_user_id, AID_ROOT, AID_SYSTEM},
 };
 use serde::Deserialize;
 use service_vm_comm::Response;
@@ -690,6 +690,7 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
 
 impl IVirtualizationMaintenance for VirtualizationServiceInternal {
     fn appRemoved(&self, user_id: i32, app_id: i32) -> binder::Result<()> {
+        check_is_core_android_service()?;
         let state = &mut *self.state.lock().unwrap();
         if let Some(sk_state) = &mut state.sk_state {
             info!("packageRemoved(user_id={user_id}, app_id={app_id})");
@@ -701,6 +702,7 @@ impl IVirtualizationMaintenance for VirtualizationServiceInternal {
     }
 
     fn userRemoved(&self, user_id: i32) -> binder::Result<()> {
+        check_is_core_android_service()?;
         let state = &mut *self.state.lock().unwrap();
         if let Some(sk_state) = &mut state.sk_state {
             info!("userRemoved({user_id})");
@@ -715,6 +717,7 @@ impl IVirtualizationMaintenance for VirtualizationServiceInternal {
         &self,
         callback: &Strong<dyn IVirtualizationReconciliationCallback>,
     ) -> binder::Result<()> {
+        check_is_core_android_service()?;
         let state = &mut *self.state.lock().unwrap();
         if let Some(sk_state) = &mut state.sk_state {
             info!("performReconciliation()");
@@ -1053,6 +1056,17 @@ fn check_permission(perm: &str) -> binder::Result<()> {
         Ok(())
     } else {
         Err(anyhow!("does not have the {} permission", perm))
+            .or_binder_exception(ExceptionCode::SECURITY)
+    }
+}
+
+/// Checks that the caller is a core Android service (system server or root).
+fn check_is_core_android_service() -> binder::Result<()> {
+    let calling_uid = get_calling_uid();
+    if calling_uid == AID_SYSTEM || calling_uid == AID_ROOT {
+        Ok(())
+    } else {
+        Err(anyhow!("Only core Android services are allowed to call this"))
             .or_binder_exception(ExceptionCode::SECURITY)
     }
 }
