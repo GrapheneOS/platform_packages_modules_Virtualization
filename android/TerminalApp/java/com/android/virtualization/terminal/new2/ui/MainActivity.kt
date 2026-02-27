@@ -24,10 +24,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 
@@ -57,6 +62,22 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(colorScheme = colorScheme) {
                 val viewModel: MainViewModel = viewModel()
+                val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
+
+                LaunchedEffect(isFullscreen) {
+                    val window = (view.context as Activity).window
+                    val insetsController =
+                        WindowCompat.getInsetsController(window, window.decorView)
+                    if (isFullscreen) {
+                        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+                        insetsController.systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    } else {
+                        insetsController.show(WindowInsetsCompat.Type.systemBars())
+                        insetsController.isAppearanceLightStatusBars = !darkTheme
+                    }
+                }
+
                 viewModel.handleIntent(intent)
                 MainScreen(viewModel)
             }

@@ -33,6 +33,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DisplaySettings
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Restore
@@ -86,6 +87,7 @@ import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.new2.core.OpenPort
 import com.android.virtualization.terminal.new2.core.VmController
+import com.android.virtualization.terminal.new2.ui.main.DisplayResolution
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import kotlin.math.log2
@@ -281,6 +283,9 @@ fun AdvancedPage(
     val currentMemoryMb by settingsViewModel.currentMemoryMb.collectAsStateWithLifecycle()
     var showMemoryDialog by remember { mutableStateOf(false) }
 
+    val displayResolution by settingsViewModel.displayResolution.collectAsStateWithLifecycle()
+    var showResolutionDialog by remember { mutableStateOf(false) }
+
     val keepAwakeMinutes by settingsViewModel.keepAwakeMinutes.collectAsStateWithLifecycle()
     val showKeepAwakeDialog by settingsViewModel.showKeepAwakeDialog.collectAsStateWithLifecycle()
 
@@ -366,6 +371,17 @@ fun AdvancedPage(
         )
     }
 
+    if (showResolutionDialog) {
+        DisplayResolutionDialog(
+            currentResolution = displayResolution,
+            onDismissRequest = { showResolutionDialog = false },
+            onConfirm = {
+                settingsViewModel.setDisplayResolution(it)
+                showResolutionDialog = false
+            },
+        )
+    }
+
     if (showRebootDialog) {
         AlertDialog(
             onDismissRequest = { showRebootDialog = false },
@@ -391,6 +407,19 @@ fun AdvancedPage(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            ListItem(
+                headlineContent = {
+                    Text(stringResource(R.string.settings_display_resolution_title))
+                },
+                supportingContent = { Text(formatDisplayResolution(displayResolution)) },
+                leadingContent = {
+                    Icon(imageVector = Icons.Default.DisplaySettings, contentDescription = null)
+                },
+                modifier = Modifier.clickable { showResolutionDialog = true },
+            )
+            HorizontalDivider()
+        }
         if (VmController.isGraphicsAccelerationSupported) {
             item {
                 ListItem(
@@ -586,6 +615,88 @@ private fun formatKeepAwakeTime(minutes: Int): String {
         "$minutes min"
     } else {
         stringResource(duration.stringRes)
+    }
+}
+
+@Composable
+fun DisplayResolutionDialog(
+    currentResolution: DisplayResolution,
+    onDismissRequest: () -> Unit,
+    onConfirm: (DisplayResolution) -> Unit,
+) {
+    var selectedOption by remember { mutableStateOf(currentResolution) }
+
+    val resolutionToName =
+        mapOf(
+            DisplayResolution.FULL to stringResource(R.string.settings_display_resolution_full),
+            DisplayResolution.HALF to stringResource(R.string.settings_display_resolution_half),
+            DisplayResolution.QUARTER to
+                stringResource(R.string.settings_display_resolution_quarter),
+        )
+
+    val resolutionToHint =
+        mapOf(
+            DisplayResolution.FULL to
+                stringResource(R.string.settings_display_resolution_full_hint),
+            DisplayResolution.HALF to
+                stringResource(R.string.settings_display_resolution_half_hint),
+            DisplayResolution.QUARTER to
+                stringResource(R.string.settings_display_resolution_quarter_hint),
+        )
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.settings_display_resolution_title)) },
+        text = {
+            Column(Modifier.selectableGroup()) {
+                DisplayResolution.entries.forEach { option ->
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .height(64.dp)
+                            .selectable(
+                                selected = (option == selectedOption),
+                                onClick = { selectedOption = option },
+                                role = Role.RadioButton,
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = (option == selectedOption), onClick = null)
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = resolutionToName[option] ?: "",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = resolutionToHint[option] ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color =
+                                    if (option == DisplayResolution.HALF)
+                                        MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedOption) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun formatDisplayResolution(resolution: DisplayResolution): String {
+    return when (resolution) {
+        DisplayResolution.FULL -> stringResource(R.string.settings_display_resolution_full)
+        DisplayResolution.HALF -> stringResource(R.string.settings_display_resolution_half)
+        DisplayResolution.QUARTER -> stringResource(R.string.settings_display_resolution_quarter)
     }
 }
 

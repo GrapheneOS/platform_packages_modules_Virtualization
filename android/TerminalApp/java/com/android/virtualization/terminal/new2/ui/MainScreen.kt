@@ -23,6 +23,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,12 +42,14 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.BetterBugLauncher
 import com.android.virtualization.terminal.R
@@ -61,6 +64,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val installState by Installer.installState.collectAsStateWithLifecycle()
     val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
+    val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
 
     var lastValidState by remember { mutableStateOf<MainUiState>(MainUiState.Ready) }
     if (uiState !is MainUiState.Error) {
@@ -87,7 +91,7 @@ fun MainScreen(viewModel: MainViewModel) {
     }
 
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
-        val padding = innerPadding
+        val padding = if (isFullscreen) PaddingValues(0.dp) else innerPadding
 
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -138,34 +142,43 @@ fun RunningScreen(state: MainUiState.Running, viewModel: MainViewModel) {
     val tabs by viewModel.tabs.collectAsStateWithLifecycle()
     val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
     val displayState by viewModel.displayState.collectAsStateWithLifecycle()
+    val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
 
     Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                TerminalTabBar(
-                    tabs = tabs,
-                    selectedTabId =
-                        if (displayState == DisplayState.Normal) null else selectedTabId,
-                    onTabSelected = { viewModel.selectTab(it) },
-                    onTabClosed = { viewModel.closeTab(it) },
-                    onAddTab = { viewModel.addTab() },
-                )
-            }
-            DisplayController(viewModel = viewModel)
-            IconButton(
-                onClick = {
-                    viewModel.setShowSettings(true)
-                    viewModel.setIsImeVisible(false)
-                }
+        if (!isFullscreen) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings")
+                Box(modifier = Modifier.weight(1f)) {
+                    TerminalTabBar(
+                        tabs = tabs,
+                        selectedTabId =
+                            if (displayState == DisplayState.Normal) null else selectedTabId,
+                        onTabSelected = { viewModel.selectTab(it) },
+                        onTabClosed = { viewModel.closeTab(it) },
+                        onAddTab = { viewModel.addTab() },
+                    )
+                }
+                DisplayController(viewModel = viewModel)
+                IconButton(
+                    onClick = {
+                        viewModel.setShowSettings(true)
+                        viewModel.setIsImeVisible(false)
+                    }
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                }
             }
         }
         if (displayState == DisplayState.Normal) {
-            Box(modifier = Modifier.fillMaxSize()) { DisplayScreen(viewModel = viewModel) }
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Wrap with key(isFullscreen) to force recreation of DisplayScreen (and its
+                // internal SurfaceView and DisplayProvider) when toggling fullscreen.
+                // This ensures that the VM display is correctly updated to the new
+                // layout dimensions.
+                key(isFullscreen) { DisplayScreen(viewModel = viewModel) }
+            }
         } else {
             TerminalScreen(state.terminalAddress, selectedTabId, viewModel)
         }

@@ -57,6 +57,7 @@ import kotlinx.coroutines.delay
 fun ImeAwareContainer(
     modifier: Modifier = Modifier,
     isFocused: Boolean = true,
+    isFullscreen: Boolean = false,
     onImeVisibilityChanged: (Boolean) -> Unit = {},
     onKeyAction: (ExtraKey, Int) -> Unit,
     content: @Composable (stablePadding: Dp) -> Unit,
@@ -68,7 +69,7 @@ fun ImeAwareContainer(
 
     // Stable padding that only updates after animations end
     var currentBottomPadding by remember {
-        mutableStateOf(view.rootWindowInsets.getBottomPadding(density))
+        mutableStateOf(view.rootWindowInsets.getBottomPadding(density, isFullscreen))
     }
 
     // This hidden View acts as a listener for WindowInsets animations.
@@ -85,7 +86,8 @@ fun ImeAwareContainer(
 
                         override fun onEnd(animation: WindowInsetsAnimation) {
                             if (animation.typeMask and ViewWindowInsets.Type.ime() != 0) {
-                                currentBottomPadding = rootWindowInsets.getBottomPadding(density)
+                                currentBottomPadding =
+                                    rootWindowInsets.getBottomPadding(density, isFullscreen)
                             }
                         }
                     }
@@ -118,24 +120,32 @@ fun ImeAwareContainer(
 
         // Modifier Keys Layer: Follows IME animation in real-time.
         if (isWindowImeVisible) {
-            Box(
-                modifier =
-                    Modifier.align(Alignment.BottomCenter)
-                        .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
-            ) {
+            val imeInsets =
+                if (isFullscreen) {
+                    WindowInsets.ime
+                } else {
+                    WindowInsets.ime.exclude(WindowInsets.navigationBars)
+                }
+            Box(modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(imeInsets)) {
                 ModifierKeys(onKeyAction = onKeyAction)
             }
         }
     }
 }
 
-/** Calculates the bottom padding required for the IME, excluding navigation bars. */
-private fun ViewWindowInsets?.getBottomPadding(density: Density): Dp {
+/** Calculates the bottom padding required for the IME, optionally including navigation bars. */
+private fun ViewWindowInsets?.getBottomPadding(density: Density, isFullscreen: Boolean): Dp {
     val bottom =
         if (this != null) {
             val imeInsets = getInsets(ViewWindowInsets.Type.ime())
-            val navInsets = getInsets(ViewWindowInsets.Type.navigationBars())
-            (imeInsets.bottom - navInsets.bottom).coerceAtLeast(0)
+            if (isFullscreen) {
+                // In fullscreen, include navigation bars height because MainScreen doesn't provide
+                // it
+                imeInsets.bottom
+            } else {
+                val navInsets = getInsets(ViewWindowInsets.Type.navigationBars())
+                (imeInsets.bottom - navInsets.bottom).coerceAtLeast(0)
+            }
         } else {
             0
         }

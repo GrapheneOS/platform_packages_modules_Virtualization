@@ -37,6 +37,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import com.android.virtualization.terminal.new2.ui.main.DisplayResolution
 import com.google.android.material.button.MaterialButton
 
 class DisplayActivity : BaseActivity() {
@@ -72,7 +73,8 @@ class DisplayActivity : BaseActivity() {
         val width = vm.config.customImageConfig?.displayConfig!!.width
         val height = vm.config.customImageConfig?.displayConfig!!.height
         val ratio = android.util.Rational(width, height)
-        displayProvider = DisplayProvider(mainView, cursorView, width, height)
+        displayProvider =
+            DisplayProvider(mainView, cursorView, width, height, DisplayResolution.HALF)
         InputForwarder(this, vm, mainView, mainView, mainView) {
             hasPointerCapture = false
             mainView.releasePointerCapture()

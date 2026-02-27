@@ -86,6 +86,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _displayState = MutableStateFlow<DisplayState>(DisplayState.Hidden)
     val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
 
+    private val _isFullscreen = MutableStateFlow(false)
+    val isFullscreen: StateFlow<Boolean> = _isFullscreen.asStateFlow()
+
     private val _isImeVisible = MutableStateFlow(false)
     val isImeVisible: StateFlow<Boolean> = _isImeVisible.asStateFlow()
 
@@ -143,6 +146,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 DisplayState.Hidden
             }
+    }
+
+    fun setIsFullscreen(enabled: Boolean) {
+        _isFullscreen.value = enabled
     }
 
     fun setIsImeVisible(visible: Boolean) {
@@ -220,7 +227,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         _permissionRequired.value = false
-        val displayInfo = getDisplayInfo(context)
+        val displayInfo = getDisplayInfo(context, _isFullscreen.value)
         viewModelScope.launch { VmController.start(displayInfo) }
     }
 
@@ -251,35 +258,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         VmController.stop()
     }
 
-    private fun getDisplayInfo(context: Context): DisplayInfo {
+    private fun getDisplayInfo(context: Context, isFullscreen: Boolean): DisplayInfo {
         val dm = context.getSystemService(DisplayManager::class.java)
         val display = dm.getDisplay(Display.DEFAULT_DISPLAY)
         val windowContext =
             context.createDisplayContext(display).createWindowContext(TYPE_APPLICATION, null)
         val wm = windowContext.getSystemService(WindowManager::class.java)
         val metrics = wm.currentWindowMetrics
-        val insets = metrics.windowInsets.getInsets(WindowInsets.Type.systemBars())
 
-        var width = metrics.bounds.width() - insets.left - insets.right
+        var width = metrics.bounds.width()
         val density = context.resources.displayMetrics.density
-        var height =
-            metrics.bounds.height() -
-                insets.top -
-                insets.bottom -
-                (TAB_BAR_HEIGHT.value * density).toInt()
+        var height = metrics.bounds.height()
 
-        val maxDim = 1280
-        if (width > maxDim || height > maxDim) {
-            if (width > height) {
-                height = (height * maxDim.toFloat() / width).toInt()
-                width = maxDim
-            } else {
-                width = (width * maxDim.toFloat() / height).toInt()
-                height = maxDim
-            }
+        if (!isFullscreen) {
+            val insets = metrics.windowInsets.getInsets(WindowInsets.Type.systemBars())
+            width -= (insets.left + insets.right)
+            height -= (insets.top + insets.bottom + (TAB_BAR_HEIGHT.value * density).toInt())
         }
 
-        val dpi = (DisplayMetrics.DENSITY_DEFAULT * density).toInt()
+        val sharedPref =
+            context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        val resolutionName =
+            sharedPref.getString(
+                SettingsViewModel.KEY_DISPLAY_RESOLUTION,
+                DisplayResolution.HALF.name,
+            )
+        val resolution = DisplayResolution.valueOf(resolutionName!!)
+
+        width = (width * resolution.scale).toInt()
+        height = (height * resolution.scale).toInt()
+
+        val dpi = (DisplayMetrics.DENSITY_DEFAULT * density * resolution.scale).toInt()
         val refreshRate = display.refreshRate.toInt()
         return DisplayInfo(width, height, dpi, refreshRate)
     }
