@@ -273,8 +273,10 @@ cc_defaults {
     stl: "libc++_static",
     header_libs: ["vm_payload_restricted_headers"],
     shared_libs: [
+        "libbinder",
         "libbinder_ndk",
         "libcap",
+        "libutils",
         "MicrodroidTestNativeLibSub",
         "libvm_payload#current",
     ],

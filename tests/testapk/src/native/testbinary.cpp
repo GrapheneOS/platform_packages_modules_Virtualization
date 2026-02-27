@@ -15,22 +15,28 @@
  */
 
 #include <aidl/com/android/microdroid/testservice/BnTestService.h>
+#include <aidl/com/android/microdroid/testservice/BnTestTenantService.h>
 #include <aidl/com/android/microdroid/testservice/BnVmCallback.h>
 #include <aidl/com/android/microdroid/testservice/IAppCallback.h>
+#include <aidl/com/android/microdroid/testservice/ITestTenantService.h>
 #include <android-base/chrono_utils.h>
 #include <android-base/file.h>
 #include <android-base/properties.h>
 #include <android-base/result.h>
 #include <android-base/scopeguard.h>
+#include <android/binder_libbinder.h>
 #include <android/log.h>
+#include <binder/RpcSession.h>
 #include <fcntl.h>
 #include <fstab/fstab.h>
 #include <fsverity_digests.pb.h>
 #include <linux/vm_sockets.h>
+#include <poll.h>
 #include <selinux/selinux.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/capability.h>
+#include <sys/inotify.h>
 #include <sys/statvfs.h>
 #include <sys/system_properties.h>
 
@@ -60,8 +66,10 @@ using android::fs_mgr::GetEntryForMountPoint;
 using android::fs_mgr::ReadFstabFromFile;
 
 using aidl::com::android::microdroid::testservice::BnTestService;
+using aidl::com::android::microdroid::testservice::BnTestTenantService;
 using aidl::com::android::microdroid::testservice::BnVmCallback;
 using aidl::com::android::microdroid::testservice::IAppCallback;
+using aidl::com::android::microdroid::testservice::ITestTenantService;
 using ndk::ScopedAStatus;
 
 extern void testlib_sub();
@@ -514,6 +522,109 @@ Result<void> start_test_service() {
         }
 
         ScopedAStatus quit() override { exit(0); }
+
+        ScopedAStatus startUdsServerWithData(const std::string& data) override {
+            class TestTenantService : public BnTestTenantService {
+            private:
+                std::string data;
+
+            public:
+                TestTenantService(const std::string& data) { this->data = data; }
+                ScopedAStatus getData(std::string* out) override {
+                    *out = data;
+                    return ScopedAStatus::ok();
+                }
+            };
+
+            auto testTenantService = ndk::SharedRefBase::make<TestTenantService>(data);
+            auto callback = []([[maybe_unused]] void* param) { AVmPayload_notifyPayloadReady(); };
+
+            std::thread udsServerThread([testTenantService, callback] {
+                std::string descriptor = std::string(testTenantService->descriptor);
+                AVmPayload_runUnixDomainRpcServer(descriptor.c_str(),
+                                                  testTenantService->asBinder().get(), callback,
+                                                  nullptr);
+            });
+            udsServerThread.detach();
+            return ScopedAStatus::ok();
+        }
+
+        ScopedAStatus startUdsClientAndGetData(std::string* out) override {
+            auto client_session_result = startUdsClient();
+            if (!client_session_result.ok()) {
+                return ScopedAStatus::fromServiceSpecificErrorWithMessage(-1,
+                                                                          client_session_result
+                                                                                  .error()
+                                                                                  .message()
+                                                                                  .c_str());
+            }
+            auto client_session = *client_session_result;
+            auto platform_binder = client_session->getRootObject();
+            std::shared_ptr<ITestTenantService> service = ITestTenantService::fromBinder(
+                    ndk::SpAIBinder(AIBinder_fromPlatformBinder(platform_binder)));
+            ScopedAStatus get_data_status = service->getData(out);
+            if (!get_data_status.isOk()) {
+                return get_data_status;
+            }
+            return ScopedAStatus::ok();
+        }
+
+    private:
+        Result<android::sp<android::RpcSession>> startUdsClient() {
+            const std::string socket_dir = "/dev/socket/microdroid_managed";
+            std::string socket_path =
+                    socket_dir + "/" + std::string(ITestTenantService::descriptor);
+
+            constexpr std::chrono::seconds kUdsSocketTimeout = 5s;
+
+            if (access(socket_path.c_str(), F_OK) != 0) {
+                if (errno != ENOENT) {
+                    return ErrnoError() << "failed to access UDS socket " + socket_path;
+                }
+
+                unique_fd inotify_fd(inotify_init1(IN_CLOEXEC));
+                if (!inotify_fd.ok()) {
+                    return ErrnoError() << "inotify_init1 failed";
+                }
+
+                int wd = inotify_add_watch(inotify_fd.get(), socket_dir.c_str(), IN_CREATE);
+                if (wd < 0) {
+                    return ErrnoError() << "inotify_add_watch failed for " << socket_dir;
+                }
+                auto remove_watch_guard =
+                        make_scope_guard([&] { inotify_rm_watch(inotify_fd.get(), wd); });
+
+                // Check again for race
+                if (access(socket_path.c_str(), F_OK) != 0) {
+                    if (errno != ENOENT) {
+                        return ErrnoError() << "failed to access UDS socket " + socket_path;
+                    }
+
+                    pollfd pfd = {.fd = inotify_fd.get(), .events = POLLIN};
+                    int poll_ret = poll(&pfd, 1, kUdsSocketTimeout.count() * 1000);
+
+                    if (poll_ret <= 0) { // timeout or error
+                        std::string msg = "UDS socket " + socket_path +
+                                " did not become available within " +
+                                std::to_string(kUdsSocketTimeout.count()) + " seconds.";
+                        return Error() << msg;
+                    }
+                }
+            }
+
+            if (access(socket_path.c_str(), F_OK) != 0) {
+                std::string msg = "UDS socket " + socket_path +
+                        " did not become available within " +
+                        std::to_string(kUdsSocketTimeout.count()) + " seconds.";
+                return Error() << msg;
+            }
+
+            auto session = android::RpcSession::make();
+            if (session->setupUnixDomainClient(socket_path.c_str()) != android::OK) {
+                return ErrnoError() << "failed to setup Unix Domain client";
+            }
+            return session;
+        }
     };
     auto testService = ndk::SharedRefBase::make<TestService>();
 

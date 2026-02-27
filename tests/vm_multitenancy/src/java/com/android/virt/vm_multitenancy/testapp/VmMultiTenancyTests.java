@@ -355,7 +355,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
         // Assert that the second tenant got the default/fallback context
         assertWithMessage("Second tenant is using unexpected default/fallback context")
                 .that(context2.getNow(null))
-                .isEqualTo("u:r:microdroid_app:s0");
+                .isEqualTo("u:r:aiseal_agent_tenant:s0");
     }
 
     @Test
@@ -646,6 +646,64 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                 .that(prop.getNow(null))
                 .isEqualTo(EXAMPLE_STRING);
         assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+    }
+
+    @Test
+    public void interTenantCommunication() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+
+        assumeTrue(isApiLevel37Supported());
+
+        String variant = getMultiTenantVariant();
+        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(configFile)
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_inter_tenant_comm", config);
+        CompletableFuture<String> dataReceivedByClient = new CompletableFuture<>();
+        CompletableFuture<Exception> exception = new CompletableFuture<>();
+        CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService server =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            server.startUdsServerWithData(EXAMPLE_STRING);
+
+                            ITestService client =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.ALTERNATE_PORT));
+                            dataReceivedByClient.complete(client.startUdsClientAndGetData());
+
+                            server.quit();
+                            client.quit();
+                        } catch (Exception e) {
+                            exception.complete(e);
+                        }
+                    }
+
+                    @Override
+                    public void onPayloadFinished(VirtualMachine vm, int exitCode) {
+                        exitCodeFuture.complete(exitCode);
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+        assertWithMessage(
+                        "Unexpected exception while running test_vm_inter_tenant_comm's"
+                                + " onPayloadReady callback")
+                .that(exception.getNow(null))
+                .isNull();
+
+        assertThat(exitCodeFuture.getNow(500)).isEqualTo(0);
+
+        assertWithMessage("There is a mismatch in data received by client")
+                .that(dataReceivedByClient.getNow(null))
+                .isEqualTo(EXAMPLE_STRING);
     }
 
     @Test

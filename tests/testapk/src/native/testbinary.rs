@@ -154,6 +154,12 @@ impl ITestService for TestService {
     fn getselinuxdomain(&self) -> BinderResult<String> {
         unimplemented()
     }
+    fn startUdsServerWithData(&self, _: &str) -> BinderResult<()> {
+        unimplemented()
+    }
+    fn startUdsClientAndGetData(&self) -> BinderResult<String> {
+        unimplemented()
+    }
 }
 
 fn unimplemented<T>() -> BinderResult<T> {
