@@ -19,7 +19,7 @@
       "package": "apex",
       "name": "com.android.virt",
       "min_version": 1,
-      "expected_authority": "7bcf8d9d9de2afdf8ecfc6276325871cf8e24389bd560223deab693a15d0389a0544b47d0ea7ce0ff123db9ca7ea2af97a3c3b02a521be9cc1f699874d1d21f8"
+      "expected_authority": "1a54c4ac5df6040d452106b811e0f4dc967fb19f324b355488555f754e46af51bd1187f114219ff72269ee892986adfa6eba0e3a5bda6bced8b6a7ca430c1ae0"
     },
     {
       "package": "apk",
