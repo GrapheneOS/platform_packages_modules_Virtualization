@@ -103,6 +103,9 @@
     },
     {
       "name": "ComposBenchmarkApp"
+    },
+    {
+      "name": "VmMultiTenancyTests"
     }
   ],
   "presubmit": [
