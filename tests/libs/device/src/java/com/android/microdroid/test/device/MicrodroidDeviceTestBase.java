@@ -404,6 +404,10 @@ public abstract class MicrodroidDeviceTestBase {
         return Build.VERSION.SDK_INT >= 35;
     }
 
+    protected boolean isApiLevel37Supported() throws VirtualMachineException {
+        return Build.VERSION.SDK_INT >= 37;
+    }
+
     public abstract static class VmEventListener implements VirtualMachineCallback {
         private ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
         private OptionalLong mVcpuStartedNanoTime = OptionalLong.empty();
