@@ -86,6 +86,8 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ආපසු"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"උසස්"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"මතක ප්‍රමාණය"</string>
+    <!-- no translation found for settings_advanced_memory_valid_range (8930390111771410995) -->
+    <skip />
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"අවදිව සිටින්න"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"ක්‍රියාවිරහිතයි"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"මිනිත්තු 1"</string>
