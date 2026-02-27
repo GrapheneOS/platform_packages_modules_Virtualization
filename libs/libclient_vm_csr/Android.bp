@@ -8,10 +8,10 @@ rust_defaults {
     srcs: ["src/lib.rs"],
     rustlibs: [
         "libanyhow",
+        "libbssl_crypto",
         "libcbor_util",
         "libcoset",
         "libdiced_open_dice",
-        "libopenssl",
         "libservice_vm_comm",
         "libzeroize",
     ],

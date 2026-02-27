@@ -95,6 +95,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _hasMouse = MutableStateFlow(false)
     val hasMouse: StateFlow<Boolean> = _hasMouse.asStateFlow()
 
+    private val _hasPhysicalKeyboard = MutableStateFlow(false)
+    val hasPhysicalKeyboard: StateFlow<Boolean> = _hasPhysicalKeyboard.asStateFlow()
+
     private val _isMouseLocked = MutableStateFlow(false)
     val isMouseLocked: StateFlow<Boolean> =
         combine(_isMouseLocked, _hasMouse) { locked, hasMouse -> locked && hasMouse }
@@ -290,37 +293,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val inputManager = context.getSystemService(InputManager::class.java)
         val mouseDeviceIds = mutableSetOf<Int>()
-        val updateMouseStatus = {
+        val keyboardDeviceIds = mutableSetOf<Int>()
+        val updateDeviceStatus = {
             val currentIds = inputManager.inputDeviceIds.toSet()
             // Remove devices that are no longer connected
             mouseDeviceIds.retainAll(currentIds)
+            keyboardDeviceIds.retainAll(currentIds)
 
-            // Add devices that are currently identified as a mouse
+            // Add devices that are currently identified as a mouse or keyboard
             for (id in currentIds) {
-                val device = inputManager.getInputDevice(id)
-                if (
-                    device != null &&
-                        !device.isVirtual &&
-                        (device.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE)
-                ) {
+                val device = inputManager.getInputDevice(id) ?: continue
+                if (device.isVirtual) continue
+
+                if (device.sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE) {
                     mouseDeviceIds.add(id)
+                }
+                if (device.isFullKeyboard) {
+                    keyboardDeviceIds.add(id)
                 }
             }
             _hasMouse.value = mouseDeviceIds.isNotEmpty()
+            _hasPhysicalKeyboard.value = keyboardDeviceIds.isNotEmpty()
         }
-        updateMouseStatus()
+        updateDeviceStatus()
         inputManager.registerInputDeviceListener(
             object : InputManager.InputDeviceListener {
                 override fun onInputDeviceAdded(deviceId: Int) {
-                    updateMouseStatus()
+                    updateDeviceStatus()
                 }
 
                 override fun onInputDeviceRemoved(deviceId: Int) {
-                    updateMouseStatus()
+                    updateDeviceStatus()
                 }
 
                 override fun onInputDeviceChanged(deviceId: Int) {
-                    updateMouseStatus()
+                    updateDeviceStatus()
                 }
             },
             null,

@@ -64,11 +64,14 @@ pub struct VmConfig {
 
     /// File to stream logs.
     pub log: Option<File>,
+
+    /// Whether to use the early virtmgr.
+    pub early: bool,
 }
 
 /// Runs the vm and returns a VmInstance if successful
 pub fn run_vm(config: VmConfig) -> Result<VmInstance> {
-    let service = get_service()?;
+    let service = get_service(config.early)?;
 
     let kernel = File::open(&config.kernel)
         .with_context(|| format!("Failed to open {:?}", &config.kernel))?;
@@ -134,9 +137,13 @@ pub fn run_vm(config: VmConfig) -> Result<VmInstance> {
     Ok(vm)
 }
 
-fn get_service() -> Result<Strong<dyn IVirtualizationService>> {
-    let virtmgr = vmclient::VirtualizationService::new_early()
-        .context("Failed to spawn VirtualizationService")?;
+fn get_service(early: bool) -> Result<Strong<dyn IVirtualizationService>> {
+    let virtmgr = if early {
+        vmclient::VirtualizationService::new_early()
+    } else {
+        vmclient::VirtualizationService::new()
+    }
+    .context("Failed to spawn VirtualizationService")?;
     virtmgr.connect().context("Failed to connect to VirtualizationService")
 }
 

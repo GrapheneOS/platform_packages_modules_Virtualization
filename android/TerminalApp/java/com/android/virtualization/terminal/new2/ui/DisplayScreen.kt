@@ -73,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEvent
@@ -82,8 +83,11 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.virtualization.terminal.DisplayProvider
@@ -155,60 +159,93 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
             }
         },
     ) { stablePadding ->
-        Viewport(
-            keyboardAreaHeight = with(LocalDensity.current) { stablePadding.toPx() },
-            isPanZoomMode = isPanZoomMode,
-            isMouseLocked = isMouseLocked,
-            hasMouse = hasMouse,
-            onTouchEvent = { event, contentSize ->
-                if (useDisplayAsTouchpad) {
-                    vm.sendTrackpadEvent(event)
-                } else {
-                    val matrix = Matrix()
-                    matrix.setScale(
-                        vmDisplayWidth.toFloat() / contentSize.width,
-                        vmDisplayHeight.toFloat() / contentSize.height,
-                    )
-                    event.transform(matrix)
-                    vm.sendMultiTouchEvent(event)
-                }
-            },
-        ) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    val container =
-                        FrameLayout(ctx).apply {
-                            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-                        }
-                    val mainView =
-                        DisplaySurfaceView(ctx, null).apply {
-                            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                            isFocusable = true
-                            isFocusableInTouchMode = true
-                            setOnFocusChangeListener { _, hasFocus -> isFocused = hasFocus }
-                            requestFocus()
-                        }
-                    val cursorView =
-                        SurfaceView(ctx).apply {
-                            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                        }
-                    container.addView(mainView)
-                    container.addView(cursorView)
-
-                    DisplayProvider(mainView, cursorView, vmDisplayWidth, vmDisplayHeight)
-
-                    // Use a dummy view for touch receiver to prevent InputForwarder from
-                    // overwriting our listener
-                    val dummyView = View(ctx)
-                    val inputForwarder = InputForwarder(ctx, vm, dummyView, mainView, mainView)
-                    container.tag = inputForwarder
-                    displaySurfaceView = mainView
-
-                    container
+        Box(modifier = Modifier.fillMaxSize()) {
+            Viewport(
+                keyboardAreaHeight = with(LocalDensity.current) { stablePadding.toPx() },
+                isPanZoomMode = isPanZoomMode,
+                isMouseLocked = isMouseLocked,
+                hasMouse = hasMouse,
+                onTouchEvent = { event, contentSize ->
+                    if (useDisplayAsTouchpad) {
+                        vm.sendTrackpadEvent(event)
+                    } else {
+                        val matrix = Matrix()
+                        matrix.setScale(
+                            vmDisplayWidth.toFloat() / contentSize.width,
+                            vmDisplayHeight.toFloat() / contentSize.height,
+                        )
+                        event.transform(matrix)
+                        vm.sendMultiTouchEvent(event)
+                    }
                 },
-                onRelease = { view -> (view.tag as? InputForwarder)?.cleanUp() },
-            )
+            ) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { ctx ->
+                        val container =
+                            FrameLayout(ctx).apply {
+                                descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+                            }
+                        val mainView =
+                            DisplaySurfaceView(ctx, null).apply {
+                                layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                                isFocusable = true
+                                isFocusableInTouchMode = true
+                                setOnFocusChangeListener { _, hasFocus -> isFocused = hasFocus }
+                                requestFocus()
+                            }
+                        val cursorView =
+                            SurfaceView(ctx).apply {
+                                layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                            }
+                        container.addView(mainView)
+                        container.addView(cursorView)
+
+                        DisplayProvider(mainView, cursorView, vmDisplayWidth, vmDisplayHeight)
+
+                        // Use a dummy view for touch receiver to prevent InputForwarder from
+                        // overwriting our listener
+                        val dummyView = View(ctx)
+                        val inputForwarder =
+                            InputForwarder(ctx, vm, dummyView, mainView, mainView) {
+                                viewModel.setMouseLocked(false)
+                            }
+                        container.tag = inputForwarder
+                        displaySurfaceView = mainView
+
+                        container
+                    },
+                    onRelease = { view -> (view.tag as? InputForwarder)?.cleanUp() },
+                )
+            }
+
+            val hasPhysicalKeyboard by viewModel.hasPhysicalKeyboard.collectAsStateWithLifecycle()
+            if (isMouseLocked && hasPhysicalKeyboard) {
+                Box(modifier = Modifier.padding(16.dp)) {
+                    val text = stringResource(R.string.mouse_lock_release_hint)
+                    // Draw outline
+                    androidx.compose.material3.Text(
+                        text = text,
+                        style =
+                            TextStyle(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                drawStyle = Stroke(width = 2f),
+                                color = Color.Black,
+                            ),
+                    )
+                    // Draw fill
+                    androidx.compose.material3.Text(
+                        text = text,
+                        style =
+                            TextStyle(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            ),
+                    )
+                }
+            }
         }
     }
 }
