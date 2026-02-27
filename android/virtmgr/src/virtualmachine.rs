@@ -1214,6 +1214,10 @@ fn load_app_config(
         vm_config.gdbPort = custom_config.gdbPort;
     }
 
+    if config.autoStartAdbd && debug_config.debug_level == aidl::DebugLevel::FULL {
+        append_kernel_param("androidboot.microdroid.adbd.start=1", &mut vm_config);
+    }
+
     if config.memoryMib > 0 {
         vm_config.memoryMib = config.memoryMib;
     }
