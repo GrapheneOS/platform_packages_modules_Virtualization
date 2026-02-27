@@ -81,6 +81,7 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -111,6 +112,7 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val useDisplayAsTouchpad by viewModel.useDisplayAsTouchpad.collectAsStateWithLifecycle()
     val hasMouse by viewModel.hasMouse.collectAsStateWithLifecycle()
     val isWindowImeVisible = WindowInsets.isImeVisible
+    val isWindowFocused = LocalWindowInfo.current.isWindowFocused
     // isFocused is used to track whether the display surface is currently active and focused.
     // This is necessary to gate IME visibility synchronization; only the focused view
     // should update the global IME state to avoid infinite loops and race conditions.
@@ -125,13 +127,16 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(isMouseLocked, displaySurfaceView) {
+    // requestPointerCapture() requires the window to be focused. We track isWindowFocused
+    // to ensure capture is re-gained when the activity is resumed, and to avoid
+    // calling it when the window is losing focus.
+    LaunchedEffect(isMouseLocked, displaySurfaceView, isWindowFocused) {
         val dsv = displaySurfaceView ?: return@LaunchedEffect
-        if (isMouseLocked) {
+        if (isMouseLocked && isWindowFocused) {
             // Focus is required for pointer capture to succeed.
             dsv.requestFocus()
             dsv.requestPointerCapture()
-        } else {
+        } else if (!isMouseLocked) {
             dsv.releasePointerCapture()
         }
     }
