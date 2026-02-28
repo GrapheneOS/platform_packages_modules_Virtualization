@@ -86,6 +86,8 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Retour"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Avancé"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Taille de la mémoire"</string>
+    <!-- no translation found for settings_advanced_memory_valid_range (8930390111771410995) -->
+    <skip />
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"Maintenir activé"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"Désactivé"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 minute"</string>

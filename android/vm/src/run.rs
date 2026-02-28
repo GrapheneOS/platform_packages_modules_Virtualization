@@ -194,8 +194,6 @@ pub fn command_run_app(
         apk: apk_fd.into(),
         idsig: idsig_fd.into(),
         extraIdsigs: extra_idsig_fds,
-        tenantApks: vec![],
-        tenantIdsigs: vec![],
         instanceImage: open_parcel_file(&config.instance, true /* writable */)?.into(),
         instanceId: instance_id,
         encryptedStorageImage: storage,
@@ -209,8 +207,7 @@ pub fn command_run_app(
         hugePages: config.common.hugepages,
         boostUclamp: config.common.boost_uclamp,
         hostServices: host_services,
-        shouldDelayEncryptedStoreSetup: false,
-        encryptedStoreKEK: None,
+        ..Default::default()
     });
     run(
         service,

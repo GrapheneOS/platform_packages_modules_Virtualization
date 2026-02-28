@@ -86,6 +86,7 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"मागे जा"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"प्रगत"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"मेमरी साइझ"</string>
+    <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"वैध रेंज: %1$d ~ %2$d MB"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"सक्रिय ठेवा"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"बंद आहे"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"१ मिनिट"</string>

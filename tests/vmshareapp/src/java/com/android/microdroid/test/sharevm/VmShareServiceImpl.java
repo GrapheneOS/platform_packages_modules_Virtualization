@@ -321,5 +321,15 @@ public class VmShareServiceImpl extends Service {
         public String getselinuxdomain() {
             throw new UnsupportedOperationException("Not supported");
         }
+
+        @Override
+        public void startUdsServerWithData(String data) {
+            throw new UnsupportedOperationException("Not supported");
+        }
+
+        @Override
+        public String startUdsClientAndGetData() {
+            throw new UnsupportedOperationException("Not supported");
+        }
     }
 }

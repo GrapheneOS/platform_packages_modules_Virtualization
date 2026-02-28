@@ -30,6 +30,7 @@ import android.view.WindowManagerPolicyConstants.APPLICATION_MEDIA_OVERLAY_SUBLA
 import com.android.virtualization.terminal.DisplayProvider.CursorHandler
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.new2.core.VmController
+import com.android.virtualization.terminal.new2.ui.main.DisplayResolution
 import java.io.IOException
 import java.lang.Exception
 import java.lang.RuntimeException
@@ -43,6 +44,7 @@ internal class DisplayProvider(
     private val cursorView: SurfaceView,
     private val width: Int,
     private val height: Int,
+    initialResolution: DisplayResolution,
 ) {
     private var cursorHandler: CursorHandler? = null
     private val displayService: ICrosvmAndroidDisplayService by lazy {
@@ -52,6 +54,8 @@ internal class DisplayProvider(
         ICrosvmAndroidDisplayService.Stub.asInterface(b2)
     }
 
+    private var currentResolution = initialResolution
+
     init {
         mainView.setSurfaceLifecycle(SurfaceView.SURFACE_LIFECYCLE_FOLLOWS_ATTACHMENT)
         mainView.holder.addCallback(Callback(SurfaceKind.MAIN))
@@ -59,6 +63,17 @@ internal class DisplayProvider(
         cursorView.holder.addCallback(Callback(SurfaceKind.CURSOR))
         cursorView.holder.setFormat(PixelFormat.RGBA_8888)
         cursorView.setCompositionOrder(APPLICATION_MEDIA_OVERLAY_SUBLAYER)
+    }
+
+    fun setResolution(resolution: DisplayResolution) {
+        if (currentResolution != resolution) {
+            currentResolution = resolution
+            mainView.post {
+                if (mainView.holder.surface.isValid) {
+                    updateDisplayResolution(mainView.holder, resolution)
+                }
+            }
+        }
     }
 
     enum class SurfaceKind {
@@ -74,7 +89,7 @@ internal class DisplayProvider(
         override fun surfaceCreated(holder: SurfaceHolder) {
             if (surfaceKind == SurfaceKind.MAIN) {
                 holder.setFixedSize(width, height)
-                updateDisplayResolution(holder)
+                updateDisplayResolution(holder, currentResolution)
             }
             try {
                 displayService.setSurface(holder.surface, isForCursor())
@@ -98,7 +113,7 @@ internal class DisplayProvider(
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
             try {
                 if (surfaceKind == SurfaceKind.MAIN) {
-                    updateDisplayResolution(holder)
+                    updateDisplayResolution(holder, currentResolution)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to resize display", e)
@@ -116,19 +131,19 @@ internal class DisplayProvider(
         }
     }
 
-    private fun updateDisplayResolution(holder: SurfaceHolder) {
+    private fun updateDisplayResolution(holder: SurfaceHolder, resolution: DisplayResolution) {
         val width = mainView.width
         val height = mainView.height
         if (width == 0 || height == 0) {
             return
         }
 
-        val maxSide = kotlin.math.max(width, height)
-        val scale = 1280.0f / maxSide.toFloat()
+        val scale = resolution.scale
+
         val scaledWidth = (width * scale).toInt()
         val scaledHeight = (height * scale).toInt()
 
-        val dpi = mainView.resources.configuration.densityDpi
+        val dpi = (mainView.resources.configuration.densityDpi * scale).toInt()
         val refreshRate = 60
         VmController.resizeDisplay(scaledWidth, scaledHeight, dpi, refreshRate)
         holder.setFixedSize(scaledWidth, scaledHeight)

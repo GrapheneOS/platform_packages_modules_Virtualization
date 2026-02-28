@@ -139,4 +139,18 @@ interface ITestService {
 
     /* Returns the SELinux context of the process running the binary. */
     String getselinuxdomain();
+
+    /**
+     * Starts an RPC server on a Unix Domain Socket (UDS) in the payload on a separate thread.
+     *
+     * @param data The data to return when the client calls the `getMessage` method.
+     */
+    void startUdsServerWithData(String data);
+
+    /**
+     * Connects to the UDS RPC server and returns the data from it.
+     *
+     * @return The data received from the server.
+     */
+    String startUdsClientAndGetData();
 }

@@ -3,6 +3,7 @@ Description=TTYD Server (UDS Backend)
 
 [Service]
 Type=simple
+WorkingDirectory=/home/droid
 
 # Simulate login environment for droid user
 Environment=HOME=/home/droid
