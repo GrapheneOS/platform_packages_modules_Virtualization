@@ -86,7 +86,24 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Volver"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Avanzada"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Tamaño da memoria"</string>
-    <!-- no translation found for settings_advanced_memory_valid_range (8930390111771410995) -->
+    <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"Intervalo válido: %1$d ~ %2$d MB"</string>
+    <!-- no translation found for settings_display_resolution_title (2299422750697419842) -->
+    <skip />
+    <!-- no translation found for settings_display_resolution_full (1934435847075952454) -->
+    <skip />
+    <!-- no translation found for settings_display_resolution_half (8817295705374047791) -->
+    <skip />
+    <!-- no translation found for settings_display_resolution_quarter (3705900552539109641) -->
+    <skip />
+    <!-- no translation found for settings_display_resolution_full_hint (5979427185150015339) -->
+    <skip />
+    <!-- no translation found for settings_display_resolution_half_hint (7952269802485928968) -->
+    <skip />
+    <!-- no translation found for settings_display_resolution_quarter_hint (770354668663140131) -->
+    <skip />
+    <!-- no translation found for fullscreen_enter (1119690834808193718) -->
+    <skip />
+    <!-- no translation found for fullscreen_exit (2180595836197188247) -->
     <skip />
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"Manter activo"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"Desactivar"</string>
@@ -152,4 +169,6 @@
     <string name="upgrade_desc" msgid="5082726326034764623">"O terminal de Linux que utilizaches non está actualizado. Para continuar, debes actualizalo.\nFarase unha copia de seguranza dos datos en <xliff:g id="PATH">/mnt/backup</xliff:g>"</string>
     <string name="upgrade_btn_upgrade" msgid="8400565392309325924">"Actualizar"</string>
     <string name="upgrade_snkbar_error" msgid="3298797514229673139">"Produciuse un erro na actualización"</string>
+    <!-- no translation found for mouse_lock_release_hint (3568671647600437563) -->
+    <skip />
 </resources>
