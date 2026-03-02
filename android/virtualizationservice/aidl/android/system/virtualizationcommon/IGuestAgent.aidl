@@ -49,4 +49,7 @@ interface IGuestAgent {
 
     /** Called when given {@code userId} is removed */
     void userRemoved(int userId) = 7;
+
+    /** Called when given {@code userId} is locked */
+    void userLocked(int userId) = 8;
 }

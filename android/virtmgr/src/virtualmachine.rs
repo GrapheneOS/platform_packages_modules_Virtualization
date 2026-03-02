@@ -2356,6 +2356,10 @@ impl aidl::IGuestAgent for GuestAgentWrapper {
     fn userRemoved(&self, user_id: i32) -> binder::Result<()> {
         self.wrapped.userRemoved(user_id)
     }
+
+    fn userLocked(&self, user_id: i32) -> binder::Result<()> {
+        self.wrapped.userLocked(user_id)
+    }
 }
 
 fn is_vm_capabilities_hal_supported() -> bool {
