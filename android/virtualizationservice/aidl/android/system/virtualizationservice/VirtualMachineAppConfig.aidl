@@ -184,4 +184,11 @@ parcelable VirtualMachineAppConfig {
      * For non-debuggable VMs this field is ignored.
      */
     boolean autoStartAdbd = false;
+
+    /**
+     * Allow crash kernel for debuggable VMs.
+     *
+     * This is only valid if the VM debug level is higher than NONE.
+     */
+    boolean ramdump = true;
 }

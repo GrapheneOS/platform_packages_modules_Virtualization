@@ -114,6 +114,7 @@ public final class VirtualMachineConfig {
     private static final String KEY_SHOULD_BOOST_UCLAMP = "shouldBoostUclamp";
     private static final String KEY_SHOULD_USE_HUGEPAGES = "shouldUseHugepages";
     private static final String KEY_ENCRYPTED_STORE_MODE = "encryptedStoreMode";
+    private static final String KEY_SHOULD_RAMDUMP = "shouldRamdump";
 
     /** @hide */
     @Retention(RetentionPolicy.SOURCE)
@@ -224,6 +225,8 @@ public final class VirtualMachineConfig {
 
     private boolean mDisableUpdatability;
 
+    private final boolean mShouldRamdump;
+
     /**
      * Name of the {@code <property>} of the {@code AndroidManifest.xml} to specify which encrypted
      * store mode is used for the VM. If the property is not specified in the {@code
@@ -300,7 +303,8 @@ public final class VirtualMachineConfig {
             boolean shouldBoostUclamp,
             boolean shouldUseHugepages,
             @EncryptedStoreMode int encryptedStoreMode,
-            boolean disableUpdatability) {
+            boolean disableUpdatability,
+            boolean shouldRamdump) {
         // This is only called from Builder.build(); the builder handles parameter validation.
         mPackageName = packageName;
         mApkPath = apkPath;
@@ -327,6 +331,7 @@ public final class VirtualMachineConfig {
         mShouldUseHugepages = shouldUseHugepages;
         mEncryptedStoreMode = encryptedStoreMode;
         mDisableUpdatability = disableUpdatability;
+        mShouldRamdump = shouldRamdump;
     }
 
     /** Loads a config from a file. */
@@ -444,6 +449,7 @@ public final class VirtualMachineConfig {
         builder.setShouldUseHugepages(b.getBoolean(KEY_SHOULD_USE_HUGEPAGES));
         builder.setEncryptedStoreMode(
                 b.getInt(KEY_ENCRYPTED_STORE_MODE, ENCRYPTED_STORE_MODE_DEFAULT));
+        builder.setShouldRamdump(b.getBoolean(KEY_SHOULD_RAMDUMP, true));
 
         return builder.build();
     }
@@ -511,6 +517,7 @@ public final class VirtualMachineConfig {
         b.putBoolean(KEY_SHOULD_BOOST_UCLAMP, mShouldBoostUclamp);
         b.putBoolean(KEY_SHOULD_USE_HUGEPAGES, mShouldUseHugepages);
         b.putInt(KEY_ENCRYPTED_STORE_MODE, mEncryptedStoreMode);
+        b.putBoolean(KEY_SHOULD_RAMDUMP, mShouldRamdump);
         b.writeToStream(output);
     }
 
@@ -971,6 +978,7 @@ public final class VirtualMachineConfig {
         vsConfig.boostUclamp = mShouldBoostUclamp;
         vsConfig.hugePages = mShouldUseHugepages;
         vsConfig.hostServices = EMPTY_STRING_ARRAY;
+        vsConfig.ramdump = mShouldRamdump;
 
         if (mEncryptedStoreMode == ENCRYPTED_STORE_MODE_KEK_ON_CE) {
             // If non-default KEK_ON_CE mode for encrypted store is used, then we need to delay
@@ -1090,6 +1098,7 @@ public final class VirtualMachineConfig {
         private boolean mShouldUseHugepages = false;
         private int mEncryptedStoreMode = ENCRYPTED_STORE_MODE_DEFAULT;
         private boolean mDisableUpdatability = false;
+        private boolean mShouldRamdump = true;
 
         /**
          * Creates a builder for the given context.
@@ -1190,7 +1199,8 @@ public final class VirtualMachineConfig {
                     mShouldBoostUclamp,
                     mShouldUseHugepages,
                     mEncryptedStoreMode,
-                    mDisableUpdatability);
+                    mDisableUpdatability,
+                    mShouldRamdump);
         }
 
         /**
@@ -1518,6 +1528,12 @@ public final class VirtualMachineConfig {
         /** @hide */
         public Builder setShouldBoostUclamp(boolean shouldBoostUclamp) {
             mShouldBoostUclamp = shouldBoostUclamp;
+            return this;
+        }
+
+        /** @hide */
+        public Builder setShouldRamdump(boolean shouldRamdump) {
+            mShouldRamdump = shouldRamdump;
             return this;
         }
 

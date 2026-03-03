@@ -1234,6 +1234,7 @@ fn load_app_config(
     vm_config.hostServices = config.hostServices.clone();
     vm_config.osName = config.osName.clone();
     vm_config.instanceId = config.instanceId;
+    vm_config.ramdump = config.ramdump;
 
     vm_config.allowVgicItsInPvm = avf_aconfig::microdroid_pvm_gic_its();
 
