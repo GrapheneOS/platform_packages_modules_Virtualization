@@ -215,7 +215,12 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                         exitCodeFuture.complete(exitCode);
                     }
                 };
-        listener.runToFinish(TAG, vm);
+        android.os.Trace.beginSection("multitenant_vm");
+        try {
+            listener.runToFinish(TAG, vm);
+        } finally {
+            android.os.Trace.endSection();
+        }
         assertWithMessage(
                         "Unexpected exception while running test_vm_tenant_services's"
                             + " onPayloadReady callback")
