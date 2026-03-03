@@ -353,10 +353,6 @@ public abstract class MicrodroidDeviceTestBase {
                 .isFalse();
     }
 
-    protected void assumeNoUpdatableVmSupport() throws VirtualMachineException {
-        assume().withMessage("Secretkeeper not supported").that(isUpdatableVmSupported()).isFalse();
-    }
-
     protected void assumeDebuggableBuild() {
         // SystemProperties can't be used due to the sepolicy denial.
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
