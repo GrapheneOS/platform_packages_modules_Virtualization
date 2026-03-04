@@ -8,13 +8,7 @@ android_app {
         "java/**/*.java",
         "java/**/*.kt",
     ],
-    asset_dirs: [
-        "assets",
-    ] + select(product_variable("device_primary_arch"), {
-        "arm64": ["assets-arm64"],
-        "x86_64": ["assets-x86_64"],
-        default: [],
-    }),
+    asset_dirs: ["assets"],
     resource_dirs: [
         "res",
     ] + select(release_flag("RELEASE_AVF_SOONG_GENERATED_CIDATA"), {

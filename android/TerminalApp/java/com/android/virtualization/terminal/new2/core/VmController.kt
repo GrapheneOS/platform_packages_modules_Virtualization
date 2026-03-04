@@ -40,6 +40,7 @@ import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.Logger
+import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.TerminalThreadFactory
 import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
 import com.android.virtualization.terminal.new2.util.LoggingMutableStateFlow
@@ -80,6 +81,7 @@ object VmController {
         this.context = context.applicationContext
         val key = CertificateUtils.createOrGetKey()
         CertificateUtils.writeCertificateToFile(this.context, key.certificate)
+        guestAgentController = GuestAgentController(this.context, repositoryScope)
     }
 
     fun reset() {
@@ -156,8 +158,6 @@ object VmController {
                 val image = InstalledImage.getDefault(context)
                 val json = ConfigJson.from(context, image.configPath)
                 val configBuilder = json.toConfigBuilder(context)
-                guestAgentController =
-                    GuestAgentController(context, image.isAidlGuestAgent(), repositoryScope)
 
                 val sharedPref =
                     context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
@@ -293,7 +293,7 @@ object VmController {
                 val timeout = json.getBootTimeoutSecs() ?: 60
                 val effectiveTimeout = if (IS_EMULATOR) (timeout * 10) else timeout
 
-                if (image.isAidlGuestAgent()) {
+                if (context.resources.getBoolean(R.bool.soong_generated_cidata)) {
                     repositoryScope.launch {
                         delay(TimeUnit.SECONDS.toMillis(effectiveTimeout.toLong()))
                         if (_vmState.value == VmState.Starting) {
