@@ -204,28 +204,11 @@ pub struct TenantConfiguration {
     pub task: Option<Task>,
     /// The minimum acceptable rollback_index (or version_code if rollback_index is missing) of the
     /// tenant package.
-    #[serde(default)]
-    pub min_version: Option<u64>,
+    pub min_version: u64,
     /// The signing authority (e.g., certificate hash) of the tenant package.
     /// b/484251187: This field is mandatory since Microdroid does not support persisting authority
     /// data in replay protected instance spec.
     pub expected_authority: ExpectedAuthority,
-}
-
-impl TenantConfig {
-    /// Defines what constitutes a well-formed config.
-    pub fn is_wellformed(&self) -> bool {
-        match self {
-            TenantConfig::Apex(config) => {
-                // APEX configuration must have a minimum version.
-                config.min_version.is_some()
-            }
-            TenantConfig::Apk(_config) => {
-                // All APK configurations are considered valid.
-                true
-            }
-        }
-    }
 }
 
 #[cfg(test)]
