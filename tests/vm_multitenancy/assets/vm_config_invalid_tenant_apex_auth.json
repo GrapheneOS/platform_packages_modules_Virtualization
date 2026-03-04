@@ -7,7 +7,11 @@
     {
       "package": "apex",
       "name": "com.android.virt",
-      "expected_authority": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",
+      "expected_authority": {
+        "dev-keys": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",
+        "test-keys": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",
+        "release-keys": "1a54c4ac5df6040d452106b811e0f4dc967fb19f324b355488555f754e46af51bd1187f114219ff72269ee892986adfa6eba0e3a5bda6bced8b6a7ca430c1ae0"
+      },
       "task": {
         "type": "microdroid_launcher",
         "command": "MicrodroidEmptyTenant.so"

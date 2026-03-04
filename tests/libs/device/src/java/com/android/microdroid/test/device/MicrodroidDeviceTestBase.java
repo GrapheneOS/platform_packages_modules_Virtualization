@@ -20,9 +20,11 @@ import static android.content.pm.PackageManager.FEATURE_LEANBACK;
 import static android.content.pm.PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK;
 import static android.content.pm.PackageManager.FEATURE_WATCH;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
 
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
@@ -52,9 +54,12 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.android.microdroid.test.common.DeviceProperties;
 import com.android.microdroid.test.common.MetricsProcessor;
 import com.android.microdroid.testservice.ITestService;
+import com.android.system.virtualmachine.flags.Flags;
 import com.android.virt.vm_attestation.testservice.IAttestationService;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
 import com.android.virt.vm_attestation.util.X509Utils;
+
+import org.junit.function.ThrowingRunnable;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -999,5 +1004,21 @@ public abstract class MicrodroidDeviceTestBase {
                 tenantNames,
                 testAppPackageName,
                 vmAttestationMessage.getBytes());
+    }
+
+    protected BootResult tryBootVmWithConfig(VirtualMachineConfig config, String vmName)
+            throws Exception {
+        try (VirtualMachine ignored = forceCreateNewVirtualMachine(vmName, config)) {
+            return tryBootVm(TAG, vmName);
+        }
+    }
+
+    protected void assertThrowsVmException(ThrowingRunnable runnable, int code, String msg) {
+        VirtualMachineException e = assertThrows(VirtualMachineException.class, runnable);
+        if (Flags.virtualmachineexceptionCode()) {
+            assertThat(e.getCode()).isEqualTo(code);
+        } else if (msg != null) {
+            assertThat(e).hasMessageThat().contains(msg);
+        }
     }
 }

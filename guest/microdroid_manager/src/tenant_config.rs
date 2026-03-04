@@ -111,13 +111,13 @@ pub(crate) fn validate_tenants_against_tenant_config(
                 )));
             }
         }
-        if let Some(expected_auth) = &config.expected_authority {
-            if !expected_auth.is_empty() && *expected_auth != authority_hash {
-                bail!(MicrodroidError::PayloadInvalidConfig(format!(
-                    "{} ('{}') {} ('{}') mismatches expected authority ({})",
-                    type_name, &config.name, auth_name, authority_hash, expected_auth
-                )));
-            }
+
+        let expected_auth = config.expected_authority.resolve_authority();
+        if !expected_auth.is_empty() && expected_auth != authority_hash {
+            bail!(MicrodroidError::PayloadInvalidConfig(format!(
+                "{} ('{}') {} ('{}') mismatches expected authority ({})",
+                type_name, &config.name, auth_name, authority_hash, expected_auth
+            )));
         }
     }
 
@@ -128,7 +128,7 @@ pub(crate) fn validate_tenants_against_tenant_config(
 mod tests {
     use super::*;
     use crate::instance::EncryptedStoreMode;
-    use microdroid_payload_config::TenantConfiguration;
+    use microdroid_payload_config::{ExpectedAuthority, TenantConfiguration};
 
     fn create_tenant_config_apk(
         package_name: &str,
@@ -158,6 +158,11 @@ mod tests {
         }
     }
 
+    fn create_authority(expected_authority: Option<String>) -> ExpectedAuthority {
+        let auth = expected_authority.unwrap_or_default();
+        ExpectedAuthority { dev_key: auth.clone(), test_key: auth.clone(), release_key: auth }
+    }
+
     fn create_apk_config(
         name: &str,
         min_version: Option<u64>,
@@ -167,7 +172,7 @@ mod tests {
             name: name.to_string(),
             task: None,
             min_version,
-            expected_authority,
+            expected_authority: create_authority(expected_authority),
         })
     }
 
@@ -180,7 +185,7 @@ mod tests {
             name: name.to_string(),
             task: None,
             min_version,
-            expected_authority,
+            expected_authority: create_authority(expected_authority),
         })
     }
 
@@ -374,5 +379,28 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("is missing manifest_version, but min_version is specified"));
+    }
+
+    #[test]
+    fn test_apk_with_map_authority() {
+        let apk_cert_hash = [1; 32];
+        let tenant_apk = [create_tenant_config_apk("com.test.apk", 10, None, &apk_cert_hash)];
+        // To avoid flakiness depending on the host's build type (userdebug vs release),
+        // we set all keys to the matching hash. This ensures validate_tenants_against_tenant_config
+        // succeeds regardless of which key resolve_authority() selects.
+        let correct_hash = hex::encode(apk_cert_hash);
+        let authority = ExpectedAuthority {
+            dev_key: correct_hash.clone(),
+            test_key: correct_hash.clone(),
+            release_key: correct_hash,
+        };
+        let tenant_config = [TenantConfig::Apk(TenantConfiguration {
+            name: "com.test.apk".to_string(),
+            task: None,
+            min_version: Some(10),
+            expected_authority: authority,
+        })];
+
+        assert!(validate_tenants_against_tenant_config(&tenant_apk, &[], &tenant_config).is_ok());
     }
 }
