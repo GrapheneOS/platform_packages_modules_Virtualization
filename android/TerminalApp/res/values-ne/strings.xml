@@ -87,24 +87,15 @@
     <string name="settings_advanced_title" msgid="1935607224859850897">"उन्नत"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"मेमोरीको आकार"</string>
     <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"वैध दायरा: %1$d ~ %2$d एम.बि."</string>
-    <!-- no translation found for settings_display_resolution_title (2299422750697419842) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full (1934435847075952454) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half (8817295705374047791) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter (3705900552539109641) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full_hint (5979427185150015339) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half_hint (7952269802485928968) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter_hint (770354668663140131) -->
-    <skip />
-    <!-- no translation found for fullscreen_enter (1119690834808193718) -->
-    <skip />
-    <!-- no translation found for fullscreen_exit (2180595836197188247) -->
-    <skip />
+    <string name="settings_display_resolution_title" msgid="2299422750697419842">"डिस्प्लेको रिजोल्युसन"</string>
+    <string name="settings_display_resolution_full" msgid="1934435847075952454">"पूरा"</string>
+    <string name="settings_display_resolution_half" msgid="8817295705374047791">"आधा"</string>
+    <string name="settings_display_resolution_quarter" msgid="3705900552539109641">"त्रैमासिक"</string>
+    <string name="settings_display_resolution_full_hint" msgid="5979427185150015339">"पर्फर्मेन्स घट्न सक्छ।"</string>
+    <string name="settings_display_resolution_half_hint" msgid="7952269802485928968">"सिफारिस गरिएको"</string>
+    <string name="settings_display_resolution_quarter_hint" msgid="770354668663140131">"गुणस्तर घट्न सक्छ।"</string>
+    <string name="fullscreen_enter" msgid="1119690834808193718">"फुल स्क्रिन"</string>
+    <string name="fullscreen_exit" msgid="2180595836197188247">"फुल स्क्रिन मोडबाट बाहिरिनुहोस्"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"स्क्रिन अन राखिराख्नुहोस्"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"अफ छ"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"१ मिनेट"</string>
