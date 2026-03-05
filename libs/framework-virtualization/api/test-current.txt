@@ -31,7 +31,6 @@ package android.system.virtualmachine {
     field public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";
     field public static final String FEATURE_LLPVM_CHANGES = "com.android.kvm.LLPVM_CHANGES";
     field public static final String FEATURE_NETWORK = "com.android.kvm.NETWORK";
-    field public static final String FEATURE_REMOTE_ATTESTATION = "com.android.kvm.REMOTE_ATTESTATION";
     field public static final String FEATURE_VENDOR_MODULES = "com.android.kvm.VENDOR_MODULES";
   }
 
