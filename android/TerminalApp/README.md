@@ -2,17 +2,6 @@
 
 This document provides an overview of the code structure for the Android Terminal application, focusing on the new architecture located in the [`new2`] package and the application entry point.
 
-## Development features
-
-### Custom image
-
-On debuggable build, custom image can be placed at /sdcard/linux/images.tar.gz.
-The local image would be installed instead when TerminalApp needs installation.
-
-Plus, /sdcard/linux/cidata.iso can be used to install cidata.iso outside of the
-images.tar.gz. If the file is empty, bundled cidata.iso
-(a.k.a. soong-generated CIDATA or AIDL guest agent) would be installed instead.
-
 ## Entry Point
 
 ### [`LauncherActivity`]
