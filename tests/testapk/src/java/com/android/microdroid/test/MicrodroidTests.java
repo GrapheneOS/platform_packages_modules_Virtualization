@@ -1621,6 +1621,7 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
                         .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setDisableUpdatability()
                         .build();
 
         assertThat(tryBootVmWithConfig(config, vmName).payloadStarted).isTrue();
@@ -1652,16 +1653,14 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     @GmsTest(requirements = {"GMS-3-7.1-006"})
     public void bootFailsWhenMicrodroidDataIsCompromised() throws Exception {
-        // If Updatable VM is supported => No instance.img required
-        assumeNoUpdatableVmSupport();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assertThatBootFailsAfterCompromisingPartition(MICRODROID_PARTITION_UUID);
     }
 
     @Test
     @GmsTest(requirements = {"GMS-3-7.1-006"})
     public void bootFailsWhenPvmFwDataIsCompromised() throws Exception {
-        // If Updatable VM is supported => No instance.img required
-        assumeNoUpdatableVmSupport();
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         if (mProtectedVm) {
             assertThatBootFailsAfterCompromisingPartition(PVM_FW_PARTITION_UUID);
         } else {

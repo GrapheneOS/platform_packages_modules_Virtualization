@@ -33,6 +33,7 @@ import java.nio.file.StandardCopyOption
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.io.path.readText
 import kotlin.math.ceil
 
 /** Collection of files that consist of a VM image. */
@@ -43,6 +44,7 @@ public class InstalledImage private constructor(val installDir: Path) {
     /** The path to the VM config file. */
     val configPath: Path = installDir.resolve(CONFIG_FILENAME)
     private val marker: Path = installDir.resolve(MARKER_FILENAME)
+    private val cidataBuildIdPath: Path = installDir.resolve(CIDATA_BUILD_ID_FILENAME)
 
     data class BuildInfo(
         val rawString: String,
@@ -81,15 +83,27 @@ public class InstalledImage private constructor(val installDir: Path) {
     /** The build info of the installed image */
     val buildInfo: BuildInfo? by lazy { readBuildInfo() }
 
+    var cidataBuildId: String? = null
+        get() {
+            field = field ?: readCidataBuildId()
+            return field
+        }
+        private set
+
     /** Tests if this InstalledImage is actually installed. */
     @VisibleForTesting
     public fun isInstalled(): Boolean {
         return Files.exists(marker)
     }
 
+    fun isAidlGuestAgent(): Boolean {
+        return !cidataBuildId.isNullOrEmpty()
+    }
+
     /** Fully uninstall this InstalledImage by deleting everything. */
     @Throws(IOException::class)
     fun uninstallFully() {
+        cidataBuildId = null
         FileUtils.deleteContentsAndDir(installDir.toFile())
     }
 
@@ -110,6 +124,15 @@ public class InstalledImage private constructor(val installDir: Path) {
         }
     }
 
+    private fun readCidataBuildId(): String {
+        try {
+            return cidataBuildIdPath.readText()
+        } catch (e: IOException) {
+            Log.d(TAG, "Failed to read CIDATA build id", e)
+            return ""
+        }
+    }
+
     fun isCompatible(): Boolean {
         if (Files.exists(java.nio.file.Paths.get("/sdcard/linux/force_upgrade"))) {
             return false
@@ -124,6 +147,7 @@ public class InstalledImage private constructor(val installDir: Path) {
 
     @Throws(IOException::class)
     fun uninstallAndBackup(): Path {
+        cidataBuildId = null
         Files.delete(marker)
         Files.move(rootPartition, backupFile, StandardCopyOption.REPLACE_EXISTING)
         return backupFile
@@ -243,6 +267,7 @@ public class InstalledImage private constructor(val installDir: Path) {
         private const val BACKUP_FILENAME = "root_part_backup"
         private const val CONFIG_FILENAME = "vm_config.json"
         private const val BUILD_ID_FILENAME = "build_id"
+        const val CIDATA_BUILD_ID_FILENAME = "cidata.build_id"
         const val MARKER_FILENAME: String = "completed"
 
         const val RESIZE_STEP_BYTES: Long = 4 shl 20 // 4 MiB

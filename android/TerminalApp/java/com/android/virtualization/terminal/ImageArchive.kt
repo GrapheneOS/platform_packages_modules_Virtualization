@@ -15,12 +15,14 @@
  */
 package com.android.virtualization.terminal
 
+import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.util.Log
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import java.io.BufferedInputStream
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.lang.RuntimeException
@@ -32,6 +34,9 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.function.Function
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.io.path.exists
+import kotlin.io.path.fileSize
+import kotlin.io.path.writeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -128,70 +133,99 @@ internal class ImageArchive {
         }
     }
 
+    fun copyAsset(context: Context, srcAssetFileName: String, dstDir: Path) {
+        val dst = dstDir.resolve(srcAssetFileName)
+        context.assets.open(srcAssetFileName).use { input ->
+            FileOutputStream(dst.toFile()).use { os -> input.copyTo(os) }
+        }
+    }
+
     /**
      * Installs this ImageArchive to a directory pointed by path. filter can be supplied to provide
      * an additional input stream which will be used during the installation.
      */
-    fun installTo(dir: Path, filter: Function<InputStream, InputStream>?): Flow<Long> =
-        callbackFlow {
-            val job =
-                launch(Dispatchers.IO) {
-                    val sourceString =
+    fun installTo(
+        context: Context,
+        dir: Path,
+        filter: Function<InputStream, InputStream>?,
+    ): Flow<Long> = callbackFlow {
+        val job =
+            launch(Dispatchers.IO) {
+                val sourceString =
+                    when (source) {
+                        is PathSource -> source.value.toString()
+                        is UrlSource -> source.value.toString()
+                    }
+                Log.d(TAG, "Install started. source: $sourceString, destination: $dir")
+
+                try {
+                    val rawStream =
                         when (source) {
-                            is PathSource -> source.value.toString()
-                            is UrlSource -> source.value.toString()
+                            is UrlSource -> source.value.openStream()
+                            is PathSource -> FileInputStream(source.value.toFile())
                         }
-                    Log.d(TAG, "Install started. source: $sourceString, destination: $dir")
-
-                    try {
-                        val rawStream =
-                            when (source) {
-                                is UrlSource -> source.value.openStream()
-                                is PathSource -> FileInputStream(source.value.toFile())
+                    val bufferedStream = BufferedInputStream(rawStream)
+                    val filteredStream = filter?.apply(bufferedStream) ?: bufferedStream
+                    val countingStream =
+                        CountingInputStream(filteredStream) { bytes ->
+                            if (!isActive) {
+                                throw CancellationException("Installation cancelled")
                             }
-                        val bufferedStream = BufferedInputStream(rawStream)
-                        val filteredStream = filter?.apply(bufferedStream) ?: bufferedStream
-                        val countingStream =
-                            CountingInputStream(filteredStream) { bytes ->
-                                if (!isActive) {
-                                    throw CancellationException("Installation cancelled")
-                                }
-                                trySend(bytes)
-                            }
-
-                        TarArchiveInputStream(GzipCompressorInputStream(countingStream)).use {
-                            tarStream ->
-                            Files.createDirectories(dir)
-                            var entry: ArchiveEntry?
-                            while ((tarStream.nextEntry.also { entry = it }) != null) {
-                                val to = dir.resolve(entry!!.getName())
-                                if (Files.isDirectory(to)) {
-                                    Files.createDirectories(to)
-                                    continue
-                                }
-                                Log.d(TAG, "Installing " + to)
-                                Files.copy(tarStream, to, StandardCopyOption.REPLACE_EXISTING)
-                            }
+                            trySend(bytes)
                         }
-                        Log.d(TAG, "Installed")
-                        commitInstallationAt(dir)
-                        close()
-                    } catch (e: Exception) {
-                        close(e)
-                    }
 
-                    if (Build.isDebuggable()) {
-                        extra_source?.let {
-                            val src = it.toFile()
-                            if (src.exists()) {
-                                val dst = dir.resolve(it.fileName)
-                                Files.copy(it, dst, StandardCopyOption.REPLACE_EXISTING)
+                    TarArchiveInputStream(GzipCompressorInputStream(countingStream)).use { tarStream
+                        ->
+                        Files.createDirectories(dir)
+                        var entry: ArchiveEntry?
+                        while ((tarStream.nextEntry.also { entry = it }) != null) {
+                            val to = dir.resolve(entry!!.getName())
+                            if (Files.isDirectory(to)) {
+                                Files.createDirectories(to)
+                                continue
                             }
+                            Log.d(TAG, "Installing " + to)
+                            Files.copy(tarStream, to, StandardCopyOption.REPLACE_EXISTING)
                         }
                     }
+
+                    // Override cidata if necessary. Assume overridden cidata uses AIDL guest agent.
+                    if (Build.isDebuggable() && extra_source?.exists() == true) {
+                        if (
+                            extra_source.fileSize() == 0L ||
+                                context.resources.getBoolean(R.bool.soong_generated_cidata)
+                        ) {
+                            Log.d(TAG, "Installing bundled cidata.iso")
+
+                            copyAsset(context, CIDATA_NAME, dir)
+                            copyAsset(context, InstalledImage.CIDATA_BUILD_ID_FILENAME, dir)
+                        } else {
+                            Log.d(TAG, "Installing /sdcard/linux/cidata.iso")
+
+                            val cidataPath = dir.resolve(extra_source!!.fileName)
+                            Files.copy(
+                                extra_source!!,
+                                cidataPath,
+                                StandardCopyOption.REPLACE_EXISTING,
+                            )
+
+                            // Also create cidata.build_id, so it can be recognized as AIDL guest
+                            // agent.
+                            val cidataBuildIdPath =
+                                dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
+                            cidataBuildIdPath.writeText("dev")
+                        }
+                    }
+
+                    commitInstallationAt(dir)
+                    close()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Installing images.tar.gz failed", e)
+                    close(e)
                 }
-            awaitClose { job.cancel() }
-        }
+            }
+        awaitClose { job.cancel() }
+    }
 
     @Throws(IOException::class)
     private fun commitInstallationAt(dir: Path) {

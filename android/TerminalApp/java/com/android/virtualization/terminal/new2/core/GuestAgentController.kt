@@ -23,7 +23,6 @@ import com.android.virtualization.terminal.DebianService
 import com.android.virtualization.terminal.DebianServiceBase
 import com.android.virtualization.terminal.DebianServiceGrpc
 import com.android.virtualization.terminal.PortsStateManager
-import com.android.virtualization.terminal.R
 import com.android.virtualization.terminal.StorageBalloonWorker
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
@@ -45,7 +44,11 @@ data class OpenPort(val port: Int, val name: String, val isForwarded: Boolean) {
     fun isSaved() = name.isEmpty()
 }
 
-class GuestAgentController(private val context: Context, private val scope: CoroutineScope) {
+class GuestAgentController(
+    private val context: Context,
+    private val aidlGuestAgent: Boolean,
+    private val scope: CoroutineScope,
+) {
     private var server: Server? = null
     private var debianService: DebianServiceBase? = null
     private val portsStateManager = PortsStateManager.getInstance(context)
@@ -63,7 +66,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
         }
 
     fun startServer(): Int {
-        if (context.resources.getBoolean(R.bool.soong_generated_cidata)) {
+        if (aidlGuestAgent) {
             Log.w(TAG, "Ignoring gRPC setup. soong generated CIDATA implies AIDL communication.")
             return 0
         }
@@ -85,7 +88,7 @@ class GuestAgentController(private val context: Context, private val scope: Coro
     fun start(cid: Int, guestAgent: IGuestAgent, service: IDebianService) {
         Log.d(TAG, "Starting guest agent controller with AIDL")
 
-        if (!context.resources.getBoolean(R.bool.soong_generated_cidata)) {
+        if (!aidlGuestAgent) {
             Log.w(TAG, "Ignoring AIDL setup. soong generated CIDATA is required")
             return
         }
