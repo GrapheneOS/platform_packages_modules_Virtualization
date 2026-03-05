@@ -5,17 +5,23 @@
   },
   "task": {
     "type": "microdroid_launcher",
-    "command": "MicrodroidTestNativeOnAlternatePortLib.so"
+    "command": "MicrodroidTestNativeOnAlternatePortLib.so",
+    "selinux_type": "aiseal_agent_tenant"
   },
   "tenants": [
     {
       "package": "apk",
       "name": "com.android.microdroid.test",
       "min_version": 36,
-      "expected_authority": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime",
+      "expected_authority": {
+        "dev-keys": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime",
+        "test-keys": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime",
+        "release-keys": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime"
+      },
       "task": {
           "type": "microdroid_launcher",
-          "command": "MicrodroidTestNativeLib.so"
+          "command": "MicrodroidTestNativeLib.so",
+          "selinux_type": "appsearch_tenant"
       }
     }
   ],

@@ -13,6 +13,7 @@ java_library_static {
         "VmAttestationTestUtil",
         "MicrodroidCommonTestLib",
         "truth",
+        "avf_aconfig_flags_java",
     ],
     sdk_version: "test_current",
 }

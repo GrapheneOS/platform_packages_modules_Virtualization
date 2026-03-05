@@ -23,6 +23,7 @@ java_defaults {
         "com.android.virt.vm_attestation.testservice-java",
         "truth",
         "VmAttestationTestUtil",
+        "avf_aconfig_flags_java",
     ],
     jni_libs: [
         "libvm_attestation_test_payload",
