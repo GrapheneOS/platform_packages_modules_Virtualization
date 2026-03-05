@@ -106,6 +106,9 @@
     },
     {
       "name": "VmMultiTenancyTests"
+    },
+    {
+      "name": "CtsAppSearchTestCases"
     }
   ],
   "presubmit": [
