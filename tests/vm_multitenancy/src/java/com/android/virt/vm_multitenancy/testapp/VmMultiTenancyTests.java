@@ -703,6 +703,21 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    public void bootFailsWhenMinVersionIsMissing() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_missing_min_version.json")
+                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
+                        .build();
+
+        assertThrowsVmException(
+                () -> tryBootVmWithConfig(config, "test_vm_missing_min_version"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "missing field `min_version`");
+    }
+
+    @Test
     public void bootFailsWhenExpectedAuthorityIsMissing() throws Exception {
         assumeAdvanceMultiTenancySupport();
 

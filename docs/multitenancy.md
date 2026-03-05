@@ -62,6 +62,7 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
   ...
 }
 ```
-Note that for expected_authority, use the hex encoding of the sha512 hash of the certificate (for apk) & signing key(for apex).
+1. `min_version` and `expected_authority` are mandatory fields for each tenant.
+2. For `expected_authority`, use the hex encoding of the SHA-512 hash of the certificate (for APK) or the signing key (for APEX).
 
 TODO(b/483292362): Add section for configuring inter-tenant communication & SELinux domain for the tenants

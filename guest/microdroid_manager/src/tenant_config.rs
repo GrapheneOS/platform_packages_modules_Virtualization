@@ -75,16 +75,12 @@ pub(crate) fn validate_tenants_against_tenant_config(
                         config.name
                     ))
                 })?;
-                let version_res = if config.min_version.is_some() {
-                    apex_data.manifest_version.map(|v| v as u64).ok_or_else(|| {
-                        anyhow!(
-                            "APEX ('{}') is missing manifest_version, but min_version is specified",
-                            &config.name
-                        )
-                    })
-                } else {
-                    Ok(apex_data.manifest_version.map(|v| v as u64).unwrap_or(0))
-                };
+                let version_res = apex_data.manifest_version.map(|v| v as u64).ok_or_else(|| {
+                    anyhow!(
+                        "APEX ('{}') is missing manifest_version, but min_version is specified",
+                        &config.name
+                    )
+                });
                 let authority_hash = hex::encode(Sha512::hash(&apex_data.public_key));
                 (config, "APEX", version_res, authority_hash, "authority_hash")
             }
@@ -102,14 +98,12 @@ pub(crate) fn validate_tenants_against_tenant_config(
             }
         };
 
-        if let Some(min_version) = config.min_version {
-            let version = version_res?;
-            if version < min_version {
-                bail!(MicrodroidError::PayloadInvalidConfig(format!(
-                    "{} ('{}') version ({}) is less than min_version ({})",
-                    type_name, &config.name, version, min_version
-                )));
-            }
+        let version = version_res?;
+        if version < config.min_version {
+            bail!(MicrodroidError::PayloadInvalidConfig(format!(
+                "{} ('{}') version ({}) is less than min_version ({})",
+                type_name, &config.name, version, config.min_version
+            )));
         }
 
         let expected_auth = config.expected_authority.resolve_authority();
@@ -165,7 +159,7 @@ mod tests {
 
     fn create_apk_config(
         name: &str,
-        min_version: Option<u64>,
+        min_version: u64,
         expected_authority: Option<String>,
     ) -> TenantConfig {
         TenantConfig::Apk(TenantConfiguration {
@@ -178,7 +172,7 @@ mod tests {
 
     fn create_tenant_config_apex(
         name: &str,
-        min_version: Option<u64>,
+        min_version: u64,
         expected_authority: Option<String>,
     ) -> TenantConfig {
         TenantConfig::Apex(TenantConfiguration {
@@ -196,10 +190,10 @@ mod tests {
         let tenant_apk = vec![create_tenant_config_apk("com.test.apk", 3, Some(5), &apk_cert_hash)];
         let tenant_apex = vec![create_apex_data("com.test.apex", Some(20), &apex_public_key)];
         let tenant_config = vec![
-            create_apk_config("com.test.apk", Some(5), Some(hex::encode(apk_cert_hash))),
+            create_apk_config("com.test.apk", 5, Some(hex::encode(apk_cert_hash))),
             create_tenant_config_apex(
                 "com.test.apex",
-                Some(20),
+                20,
                 Some(hex::encode(Sha512::hash(&apex_public_key))),
             ),
         ];
@@ -212,7 +206,7 @@ mod tests {
     fn test_mismatched_apk_count() {
         let tenant_apk = vec![];
         let tenant_apex = vec![];
-        let tenant_config = vec![create_apk_config("com.test.apk", None, None)];
+        let tenant_config = vec![create_apk_config("com.test.apk", 0, None)];
 
         let result =
             validate_tenants_against_tenant_config(&tenant_apk, &tenant_apex, &tenant_config);
@@ -230,7 +224,7 @@ mod tests {
     fn test_mismatched_apex_count() {
         let tenant_apk = vec![];
         let tenant_apex = vec![];
-        let tenant_config = vec![create_tenant_config_apex("com.test.apex", None, None)];
+        let tenant_config = vec![create_tenant_config_apex("com.test.apex", 0, None)];
 
         let result =
             validate_tenants_against_tenant_config(&tenant_apk, &tenant_apex, &tenant_config);
@@ -247,7 +241,7 @@ mod tests {
     #[test]
     fn test_missing_apk_tenant() {
         let tenant_apk = vec![create_tenant_config_apk("com.test.apk1", 1, None, &[1])];
-        let tenant_config = vec![create_apk_config("com.test.apk2", None, None)];
+        let tenant_config = vec![create_apk_config("com.test.apk2", 0, None)];
         let result = validate_tenants_against_tenant_config(&tenant_apk, &[], &tenant_config);
         assert!(result.is_err());
         assert!(result
@@ -262,7 +256,7 @@ mod tests {
         let tenant_apk = vec![create_tenant_config_apk("com.test.apk", 9, None, &apk_cert_hash)];
         let tenant_apex = vec![];
         let tenant_config =
-            vec![create_apk_config("com.test.apk", Some(10), Some(hex::encode(apk_cert_hash)))];
+            vec![create_apk_config("com.test.apk", 10, Some(hex::encode(apk_cert_hash)))];
 
         let result =
             validate_tenants_against_tenant_config(&tenant_apk, &tenant_apex, &tenant_config);
@@ -280,7 +274,7 @@ mod tests {
             vec![create_tenant_config_apk("com.test.apk", 10, Some(4), &apk_cert_hash)];
         let tenant_apex = vec![];
         let tenant_config =
-            vec![create_apk_config("com.test.apk", Some(5), Some(hex::encode(apk_cert_hash)))];
+            vec![create_apk_config("com.test.apk", 5, Some(hex::encode(apk_cert_hash)))];
 
         let result =
             validate_tenants_against_tenant_config(&tenant_apk, &tenant_apex, &tenant_config);
@@ -298,7 +292,7 @@ mod tests {
         let tenant_apex = vec![create_apex_data("com.test.apex", Some(19), &apex_public_key)];
         let tenant_config = vec![create_tenant_config_apex(
             "com.test.apex",
-            Some(20),
+            20,
             Some(hex::encode(Sha512::hash(&apex_public_key))),
         )];
 
@@ -318,7 +312,7 @@ mod tests {
         let tenant_apk = vec![create_tenant_config_apk("com.test.apk", 10, None, &apk_cert_hash)];
         let tenant_apex = vec![];
         let tenant_config =
-            vec![create_apk_config("com.test.apk", Some(10), Some(hex::encode(wrong_hash)))];
+            vec![create_apk_config("com.test.apk", 10, Some(hex::encode(wrong_hash)))];
 
         let result =
             validate_tenants_against_tenant_config(&tenant_apk, &tenant_apex, &tenant_config);
@@ -334,7 +328,7 @@ mod tests {
         let tenant_apex = vec![create_apex_data("com.test.apex", Some(20), &apex_public_key)];
         let tenant_config = vec![create_tenant_config_apex(
             "com.test.apex",
-            Some(20),
+            20,
             Some(hex::encode(Sha512::hash(&wrong_key))),
         )];
 
@@ -348,19 +342,22 @@ mod tests {
     fn test_empty_expected_authority() {
         let apk_cert_hash = [1; 32];
         let tenant_apk = vec![create_tenant_config_apk("com.test.apk", 10, None, &apk_cert_hash)];
-        let tenant_config = vec![create_apk_config("com.test.apk", Some(10), Some("".to_string()))];
+        let tenant_config = vec![create_apk_config("com.test.apk", 10, Some("".to_string()))];
 
         assert!(validate_tenants_against_tenant_config(&tenant_apk, &[], &tenant_config).is_ok());
     }
 
     #[test]
-    fn test_no_min_version() {
-        let apk_cert_hash = [1; 32];
-        let tenant_apk = vec![create_tenant_config_apk("com.test.apk", 10, None, &apk_cert_hash)];
-        let tenant_config =
-            vec![create_apk_config("com.test.apk", None, Some(hex::encode(apk_cert_hash)))];
+    fn test_missing_min_version_fails_deserialization() {
+        let json_str = r#"{
+            "package": "apk",
+            "name": "com.test.apk",
+            "expected_authority": "some_authority"
+        }"#;
 
-        assert!(validate_tenants_against_tenant_config(&tenant_apk, &[], &tenant_config).is_ok());
+        let result: Result<TenantConfig, _> = serde_json::from_str(json_str);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("missing field `min_version`"));
     }
 
     #[test]
@@ -369,7 +366,7 @@ mod tests {
         let tenant_apex = vec![create_apex_data("com.test.apex", None, &apex_public_key)];
         let tenant_config = vec![create_tenant_config_apex(
             "com.test.apex",
-            Some(20),
+            20,
             Some(hex::encode(Sha512::hash(&apex_public_key))),
         )];
 
@@ -397,7 +394,7 @@ mod tests {
         let tenant_config = [TenantConfig::Apk(TenantConfiguration {
             name: "com.test.apk".to_string(),
             task: None,
-            min_version: Some(10),
+            min_version: 10,
             expected_authority: authority,
         })];
 

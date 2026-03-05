@@ -615,12 +615,7 @@ fn try_run_payload(
         // can't get hold of dice chain stored there.
         umount2("/microdroid_resources", MntFlags::MNT_DETACH)?;
     }
-    // TODO(b/429639517): Add a CI test to ensure ill-formed tenantConfig check robust
-    if let Some(invalid_tenant) = config.tenants.iter().find(|tenant| !tenant.is_wellformed()) {
-        bail!(MicrodroidError::PayloadInvalidConfig(format!(
-            "Invalid tenant configuration {invalid_tenant:?}"
-        )));
-    }
+
     let task = config.task.as_ref();
     if task.is_none() {
         let has_tenant_with_task = config.tenants.iter().any(|t| match t {
