@@ -168,7 +168,11 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 (FontStyle.FONT_WEIGHT_BOLD + config.fontWeightAdjustment) +
                 "&screenReaderMode=" +
                 a11yManager.isEnabled +
-                "&disableResizeOverlay=true")
+                "&disableResizeOverlay=true" +
+                // Use DOM renderer to ensure sharp text and proper anti-aliasing on all displays,
+                // especially on external monitors where the default canvas renderer might produce
+                // blurry output due to scaling or density mismatches.
+                "&rendererType=dom")
 
         try {
             return URL(
@@ -290,6 +294,15 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        display?.let { d ->
+            val lp = android.util.DisplayMetrics()
+            d.getMetrics(lp)
+            // Use logical density which represents the system's intended scaling for the display.
+            setInitialScale((lp.density * 100).toInt())
+        }
+    }
     companion object {
         private const val MIN_FONT_SIZE = 5
         private const val MAX_FONT_SIZE = 200
