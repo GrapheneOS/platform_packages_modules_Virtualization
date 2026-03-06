@@ -32,8 +32,6 @@
         <option name="cleanup" value="true" />
         <option name="push" value="test_microdroid_vendor_image.img->/data/local/tmp/cts/microdroid/test_microdroid_vendor_image.img" />
         <option name="push" value="test_microdroid_vendor_image_unsigned.img->/data/local/tmp/cts/microdroid/test_microdroid_vendor_image_unsigned.img" />
-        <option name="push" value="MicrodroidTestHelperApp.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperApp.apk" />
-        <option name="push" value="MicrodroidTestHelperAppUpdated.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppUpdated.apk" />
         <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V5.apk" />
         <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk" />
         <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk" />
