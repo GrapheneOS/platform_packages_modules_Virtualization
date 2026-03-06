@@ -236,7 +236,7 @@ object Installer {
                     )
                 waitForNetwork()
                 archive
-                    .installTo(context, installedImage.installDir) { inputStream ->
+                    .installTo(installedImage.installDir) { inputStream ->
                         SuspendableInputStream(archive, inputStream)
                     }
                     .collect { bytesRead -> progressFlow.value = bytesRead }

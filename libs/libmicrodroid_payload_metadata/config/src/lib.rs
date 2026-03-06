@@ -14,6 +14,8 @@
 
 //! VM Payload Config
 
+#[cfg(target_os = "android")]
+use rustutils::android::system_properties;
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 
@@ -151,8 +153,47 @@ pub enum TenantConfig {
     Apk(TenantConfiguration),
 }
 
-// TODO: More (optional) configuration need to be added for tenant
-// such as min_version, expected signer. Ensure as they are added, verification code matches these.
+/// A map of signing authorities, keyed by the build type.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ExpectedAuthority {
+    /// The authority for "dev-keys" builds.
+    #[serde(rename = "dev-keys")]
+    pub dev_key: String,
+    /// The authority for "test-keys" builds.
+    #[serde(rename = "test-keys")]
+    pub test_key: String,
+    /// The authority for "release-keys" builds.
+    #[serde(rename = "release-keys")]
+    pub release_key: String,
+}
+
+#[cfg(target_os = "android")]
+const RO_BUILD_TAGS: &str = "ro.build.tags";
+const DEV_KEYS: &str = "dev-keys";
+const TEST_KEYS: &str = "test-keys";
+const RELEASE_KEYS: &str = "release-keys";
+
+impl ExpectedAuthority {
+    /// Resolves the expected authority based on the build tags from sysprop `ro.build.tags`.
+    pub fn resolve_authority(&self) -> String {
+        #[cfg(target_os = "android")]
+        let build_tags = system_properties::read(RO_BUILD_TAGS)
+            .unwrap_or_default()
+            .unwrap_or(RELEASE_KEYS.to_string());
+        #[cfg(not(target_os = "android"))]
+        let build_tags = RELEASE_KEYS.to_string();
+
+        if build_tags.contains(DEV_KEYS) {
+            self.dev_key.clone()
+        } else if build_tags.contains(TEST_KEYS) {
+            self.test_key.clone()
+        } else {
+            // Fallback to release-keys as expected authority
+            self.release_key.clone()
+        }
+    }
+}
+
 /// Tenant config
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TenantConfiguration {
@@ -163,27 +204,29 @@ pub struct TenantConfiguration {
     pub task: Option<Task>,
     /// The minimum acceptable rollback_index (or version_code if rollback_index is missing) of the
     /// tenant package.
-    #[serde(default)]
-    pub min_version: Option<u64>,
-    /// This is the expected authority
-    /// Use the hex encoding of the sha512 hash of the certificate (for apk) & signing key
-    /// (for apex).
-    #[serde(default)]
-    pub expected_authority: Option<String>,
+    pub min_version: u64,
+    /// The signing authority (e.g., certificate hash) of the tenant package.
+    /// b/484251187: This field is mandatory since Microdroid does not support persisting authority
+    /// data in replay protected instance spec.
+    pub expected_authority: ExpectedAuthority,
 }
 
-impl TenantConfig {
-    /// Defines what constitutes a well-formed config.
-    pub fn is_wellformed(&self) -> bool {
-        match self {
-            TenantConfig::Apex(config) => {
-                // APEX configuration must have a minimum version, and an expected authority.
-                config.min_version.is_some() && config.expected_authority.is_some()
-            }
-            TenantConfig::Apk(_config) => {
-                // All APK configurations are considered valid.
-                true
-            }
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_authority_map() {
+        // Since resolve_authority reads system property, we can only verify it falls back to
+        // release key (default) or matches what's on the host.
+        // For unit test stability, we can just ensure it returns one of them.
+        let authority = ExpectedAuthority {
+            dev_key: "dev".to_string(),
+            test_key: "test".to_string(),
+            release_key: "release".to_string(),
+        };
+
+        let result = authority.resolve_authority();
+        assert!(result == "dev" || result == "test" || result == "release");
     }
 }

@@ -433,8 +433,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         }
     }
 
-
-
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void createAndRunNoDebugVm() throws Exception {
@@ -1291,8 +1289,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(testResults.mExtraApkTestProp).isEqualTo("PASS");
     }
 
-
-
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void extraApkInVmConfig() throws Exception {
@@ -1725,13 +1721,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                 () -> tryBootVmWithConfig(config, "test_vm_invalid_extra_apk_package"),
                 VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
                 "Extra APK package not found");
-    }
-
-    private BootResult tryBootVmWithConfig(VirtualMachineConfig config, String vmName)
-            throws Exception {
-        try (VirtualMachine ignored = forceCreateNewVirtualMachine(vmName, config)) {
-            return tryBootVm(TAG, vmName);
-        }
     }
 
     // Checks whether microdroid_launcher started but payload failed. reason must be recorded in the
@@ -3833,8 +3822,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         return filePath.toFile();
     }
 
-
-
     private void assertThrowsVmException(ThrowingRunnable runnable) {
         assertThrows(VirtualMachineException.class, runnable);
     }
@@ -3845,12 +3832,5 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(e).hasMessageThat().contains(expectedContents);
     }
 
-    private void assertThrowsVmException(ThrowingRunnable runnable, int code, String msg) {
-        VirtualMachineException e = assertThrows(VirtualMachineException.class, runnable);
-        if (com.android.system.virtualmachine.flags.Flags.virtualmachineexceptionCode()) {
-            assertThat(e.getCode()).isEqualTo(code);
-        } else if (msg != null) {
-            assertThat(e).hasMessageThat().contains(msg);
-        }
-    }
+
 }

@@ -176,6 +176,7 @@ fn main_wrapper<'a>(argv: &[usize]) -> Result<(NextStage, MemorySlices<'a>), Reb
         flush(preserved_memory);
         slices.add_preserved_memory(preserved_memory);
 
+        // Add the DICE reserved memory region to the E820 map
         if let Some(boot_params) = slices.boot_params.as_mut() {
             boot_params.push_e820_entry(
                 preserved_memory.as_ptr() as usize as u64,

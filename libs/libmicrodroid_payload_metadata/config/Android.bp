@@ -13,6 +13,7 @@ rust_library {
     rustlibs: [
         "libserde_json",
         "libserde",
+        "librustutils",
     ],
     apex_available: [
         "//apex_available:platform",

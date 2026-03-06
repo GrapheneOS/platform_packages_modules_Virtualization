@@ -17,7 +17,11 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
       "package": "apk",
       "name": "com.android.microdroid.test",
       "min_version": 36,
-      "expected_authority": "3ccdcd8908b0...",
+      "expected_authority": {
+        "dev-keys": "3ccdcd8908b0...",
+        "test-keys": "ccd8908b0d...",
+        "release-keys": "7bcf8d9d9d..."
+      },
       "task": {
         "type": "microdroid_launcher",
         "command": "MicrodroidTestNativeLib.so",
@@ -28,12 +32,37 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
       "package": "apex",
       "name": "com.android.virt",
       "min_version": 1,
-      "expected_authority": "7bcf8d9d9de2..."
+      "expected_authority": {
+        "dev-keys": "f8d9d9de2...",
+        "test-keys": "8d9d9de2f...",
+        "release-keys": "1a54c4ac..."
+      }
+    },
+    {
+      "package": "apk",
+      "name": "com.android.othertest",
+      "min_version": 1,
+      "expected_authority": {
+        "dev-keys": "a_single_key_for_all_builds",
+        "test-keys": "a_single_key_for_all_builds",
+        "release-keys": "a_single_key_for_all_builds"
+      }
+    },
+    {
+      "package": "apex",
+      "name": "com.android.anothervirt",
+      "min_version": 1,
+      "expected_authority": {
+        "dev-keys": "another_single_key_for_all_builds",
+        "test-keys": "another_single_key_for_all_builds",
+        "release-keys": "another_single_key_for_all_builds"
+      }
     }
   ],
   ...
 }
 ```
-Note that for expected_authority, use the hex encoding of the sha512 hash of the certificate (for apk) & signing key(for apex).
+1. `min_version` and `expected_authority` are mandatory fields for each tenant.
+2. For `expected_authority`, use the hex encoding of the SHA-512 hash of the certificate (for APK) or the signing key (for APEX).
 
 TODO(b/483292362): Add section for configuring inter-tenant communication & SELinux domain for the tenants

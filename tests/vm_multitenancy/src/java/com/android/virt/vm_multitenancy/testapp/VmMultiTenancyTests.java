@@ -20,31 +20,19 @@ package com.android.virt.vm_multitenancy.testapp;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.TruthJUnit.assume;
+
 import static org.junit.Assume.assumeTrue;
 
-import android.app.Instrumentation;
-import android.app.UiAutomation;
-import android.os.ParcelFileDescriptor;
-import android.os.SystemProperties;
 import android.system.virtualmachine.VirtualMachine;
-import android.system.virtualmachine.VirtualMachineConfig;
-import android.util.Log;
-
-import androidx.test.platform.app.InstrumentationRegistry;
-
 import android.system.virtualmachine.VirtualMachineCallback;
+import android.system.virtualmachine.VirtualMachineConfig;
+import android.system.virtualmachine.VirtualMachineException;
+
 import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 import com.android.microdroid.testservice.ITestService;
 import com.android.virt.vm_attestation.testservice.IAttestationService.AttestationStatus;
 import com.android.virt.vm_attestation.testservice.IAttestationService.SigningResult;
-import com.android.virt.vm_attestation.util.X509Utils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.security.cert.X509Certificate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -101,13 +89,6 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
         deleteAllExistingVMsByApp();
         revokePermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
-    }
-
-    private String getMultiTenantVariant() {
-        String fingerprint = SystemProperties.get("ro.build.fingerprint", "");
-        return !fingerprint.contains("google")
-                ? "aosp_dev"
-                : fingerprint.endsWith("release-keys") ? "google_release" : "google_dev";
     }
 
     private void assumeAdvanceMultiTenancySupport() throws Exception {
@@ -170,8 +151,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     public void multipleTenantServices() throws Exception {
         assumeAdvanceMultiTenancySupport();
 
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -237,8 +217,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     public void multipleTenantUids() throws Exception {
         assumeAdvanceMultiTenancySupport();
 
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -306,8 +285,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     public void multiTenantSelinuxDomain() throws Exception {
         assumeAdvanceMultiTenancySupport();
         installApp("MicrodroidTestHelperAppAlternateTenant.apk");
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -367,8 +345,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     public void multiTenantEncryptedStoragePath() throws Exception {
         assumeAdvanceMultiTenancySupport();
 
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -431,8 +408,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     public void multiTenantApkContentsPath() throws Exception {
         assumeAdvanceMultiTenancySupport();
 
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -508,8 +484,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                 .isEqualTo("PASS");
 
         // Re-run the VM with more tenants
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -596,8 +571,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                 .isEqualTo("/mnt/encryptedstore/com.android.microdroid.test");
 
         // Re-run the VM with more tenants
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -659,8 +633,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
 
         assumeTrue(isApiLevel37Supported());
 
-        String variant = getMultiTenantVariant();
-        String configFile = "assets/vm_config_test_multi_tenants_" + variant + ".json";
+        String configFile = "assets/vm_config_test_multi_tenants.json";
         VirtualMachineConfig config =
                 newVmConfigBuilderWithPayloadConfig(configFile)
                         .setMemoryBytes(minMemoryRequired())
@@ -727,6 +700,37 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
         assertWithMessage("debug.microdroid.test.tenant_packages_mounted should be null")
                 .that(res.getNow(null))
                 .isNull();
+    }
+
+    @Test
+    public void bootFailsWhenMinVersionIsMissing() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_missing_min_version.json")
+                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
+                        .build();
+
+        assertThrowsVmException(
+                () -> tryBootVmWithConfig(config, "test_vm_missing_min_version"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "missing field `min_version`");
+    }
+
+    @Test
+    public void bootFailsWhenExpectedAuthorityIsMissing() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig(
+                                "assets/vm_config_missing_expected_authority.json")
+                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
+                        .build();
+
+        assertThrowsVmException(
+                () -> tryBootVmWithConfig(config, "test_vm_missing_expected_authority"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "missing field `expected_authority`");
     }
 
     @Test
