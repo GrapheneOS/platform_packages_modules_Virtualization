@@ -32,6 +32,7 @@ use serde::Serialize;
 use std::io::{self, IsTerminal};
 use std::num::NonZeroU16;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use vmclient::VirtualizationService;
 
 #[derive(Args, Default)]
@@ -142,7 +143,7 @@ impl DebugConfig {
 /// Collection of flags that are Microdroid specific
 pub struct MicrodroidConfig {
     /// Size of the storage. If not specified 10MB storage is allocated to the VM.
-    #[arg(long)]
+    #[arg(long, value_parser=parse_size_into_bytes)]
     storage_size: Option<u64>,
 
     /// Path to disk image containing vendor-specific modules.
@@ -368,6 +369,21 @@ fn parse_cpu_topology(s: &str) -> Result<CpuTopology, String> {
     }
 }
 
+fn parse_size_into_bytes(s: &str) -> Result<u64, String> {
+    if let Some(val) = s.to_lowercase().strip_suffix("gb") {
+        u64::from_str(val).map(|v| v * 1024 * 1024 * 1024)
+    } else if let Some(val) = s.to_lowercase().strip_suffix("mb") {
+        u64::from_str(val).map(|v| v * 1024 * 1024)
+    } else if let Some(val) = s.to_lowercase().strip_suffix("kb") {
+        u64::from_str(val).map(|v| v * 1024)
+    } else if let Some(val) = s.to_lowercase().strip_suffix("b") {
+        u64::from_str(val)
+    } else {
+        u64::from_str(s)
+    }
+    .map_err(|e| format!("Invalid size: {e}"))
+}
+
 fn command_check_feature_enabled(feature: &str) {
     println!(
         "Feature {feature} is {}",
@@ -496,5 +512,46 @@ mod tests {
     fn verify_app() {
         // Check that the command parsing has been configured in a valid way.
         Opt::command().debug_assert();
+    }
+
+    #[test]
+    fn test_parse_size_into_bytes() {
+        let val = parse_size_into_bytes("3MB").unwrap();
+        assert_eq!(val, 3 * 1024 * 1024);
+        let val = parse_size_into_bytes("3Mb").unwrap();
+        assert_eq!(val, 3 * 1024 * 1024);
+        let val = parse_size_into_bytes("3mb").unwrap();
+        assert_eq!(val, 3 * 1024 * 1024);
+
+        let val = parse_size_into_bytes("2GB").unwrap();
+        assert_eq!(val, 2 * 1024 * 1024 * 1024);
+        let val = parse_size_into_bytes("2Gb").unwrap();
+        assert_eq!(val, 2 * 1024 * 1024 * 1024);
+        let val = parse_size_into_bytes("2gb").unwrap();
+        assert_eq!(val, 2 * 1024 * 1024 * 1024);
+
+        let val = parse_size_into_bytes("5KB").unwrap();
+        assert_eq!(val, 5 * 1024);
+        let val = parse_size_into_bytes("5Kb").unwrap();
+        assert_eq!(val, 5 * 1024);
+        let val = parse_size_into_bytes("5kb").unwrap();
+        assert_eq!(val, 5 * 1024);
+
+        let val = parse_size_into_bytes("23B").unwrap();
+        assert_eq!(val, 23);
+        let val = parse_size_into_bytes("23b").unwrap();
+        assert_eq!(val, 23);
+
+        let val = parse_size_into_bytes("23").unwrap();
+        assert_eq!(val, 23);
+
+        let val = parse_size_into_bytes("i-am-not-a-number");
+        assert!(val.is_err());
+
+        let val = parse_size_into_bytes("23NaN5Gb");
+        assert!(val.is_err());
+
+        let val = parse_size_into_bytes(r"¯\_(ツ)_/¯");
+        assert!(val.is_err());
     }
 }
