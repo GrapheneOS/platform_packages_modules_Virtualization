@@ -416,6 +416,64 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         return new VmInfo(process);
     }
 
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
+    @VsrTest(requirements = {"VSR-7.1-001.007"})
+    public void UpgradedPackageIsAcceptedWithSecretkeeper() throws Exception {
+        // Preconditions
+        assumeVmTypeSupported("microdroid", true); // Non-protected VMs may not support upgrades
+        ensureUpdatableVmSupported();
+
+        try {
+            // Boot with the default version (V5)
+            ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            cleanUpVirtualizationTestSetup(getDevice());
+
+            // Install the updated version of app (V6)
+            getDevice().installPackage(findTestFile(APK_UPDATED_NAME), /* reinstall= */ true);
+            ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+        } finally {
+            // Restore the default MicrodroidTestApp.apk for other tests.
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ false);
+        }
+    }
+
+    @Test
+    @CddTest(requirements = {"3.1/C-0-1"})
+    @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
+    @VsrTest(requirements = {"VSR-7.1-001.007"})
+    public void DowngradedPackageIsRejectedProtectedVm() throws Exception {
+        // Preconditions: Rollback protection is provided only for protected VM.
+        assumeVmTypeSupported("microdroid", true);
+
+        try {
+            // Install the latest version (V6)
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            getDevice().installPackage(findTestFile(APK_UPDATED_NAME), /* reinstall= */ true);
+            ensureProtectedMicrodroidBootsSuccessfully(INSTANCE_ID_FILE, INSTANCE_IMG);
+
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            cleanUpVirtualizationTestSetup(getDevice());
+            // Install the default version (V5)
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ true);
+
+            assertThrows(
+                    "pVM must fail to boot with downgraded payload apk",
+                    DeviceRuntimeException.class,
+                    () ->
+                            ensureProtectedMicrodroidBootsSuccessfully(
+                                    INSTANCE_ID_FILE, INSTANCE_IMG));
+        } finally {
+            // Restore the default MicrodroidTestApp.apk for other tests.
+            getDevice().uninstallPackage(PACKAGE_NAME);
+            getDevice().installPackage(findTestFile(APK_NAME), /* reinstall= */ false);
+        }
+    }
+
     private void ensureProtectedMicrodroidBootsSuccessfully(
             String instanceIdPath, String instanceImgPath) throws DeviceNotAvailableException {
         final String configPath = "assets/vm_config.json";
@@ -1596,6 +1654,18 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                 "Test skipped because VFIO platform is not supported.",
                 device.doesFileExist("/dev/vfio/vfio")
                         && device.doesFileExist("/sys/bus/platform/drivers/vfio-platform"));
+    }
+
+    private void ensureUpdatableVmSupported() throws DeviceNotAvailableException {
+        if (PropertyUtil.getVsrApiLevel(getAndroidDevice()) >= 202504) {
+            assertTrue(
+                    "Missing Updatable VM support, have you declared Secretkeeper interface?",
+                    isUpdatableVmSupported());
+        } else {
+            assumeTrue(
+                    "Vendor API lower than 202504 may not support Updatable VM",
+                    isUpdatableVmSupported());
+        }
     }
 
     // The TradeFed Dockerfile sets LD_LIBRARY_PATH to a directory with an older libc++.so, which

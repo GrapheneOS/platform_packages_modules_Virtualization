@@ -65,7 +65,6 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.compatibility.common.util.CddTest;
 import com.android.compatibility.common.util.GmsTest;
-import com.android.compatibility.common.util.PropertyUtil;
 import com.android.compatibility.common.util.VsrTest;
 import com.android.microdroid.test.device.MicrodroidDeviceTestBase;
 import com.android.microdroid.test.vmshare.IVmShareTestService;
@@ -135,12 +134,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     private static final String ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME =
             "com.android.microdroid.test_enc_store_kek_on_ce";
 
-    private static final String MICRODROID_TEST_HELPER_APP_NAME = "MicrodroidTestHelperApp.apk";
-    private static final String MICRODROID_TEST_HELPER_APP_UPDATED_NAME =
-            "MicrodroidTestHelperAppUpdated.apk";
-    private static final String MICRODROID_TEST_HELPER_APP_PACKAGE_NAME =
-            "com.android.microdroid.helper";
-
     @Rule public Timeout globalTimeout = Timeout.seconds(300);
 
     @Parameterized.Parameters(name = "protectedVm={0},os={1}")
@@ -183,7 +176,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // Some tests might install additional apks, so we need to clean them up here.
         uninstallApp(RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME);
         uninstallApp(ENCRYPTED_STORE_KEK_ON_CE_TEST_PACKAGE_NAME);
-        uninstallApp(MICRODROID_TEST_HELPER_APP_PACKAGE_NAME);
     }
 
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
@@ -440,6 +432,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                     VM_ATTESTATION_MESSAGE.getBytes());
         }
     }
+
+
 
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
@@ -1296,6 +1290,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
                         });
         assertThat(testResults.mExtraApkTestProp).isEqualTo("PASS");
     }
+
+
 
     @Test
     @CddTest(requirements = {"3.1/C-0-1"})
@@ -3813,81 +3809,6 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(onPayloadReadyExecuted.getNow(false)).isFalse();
         assertThat(onErrorExecuted.getNow(false)).isTrue();
         assertThat(errorMessage.getNow("")).contains("Detected stale encryptedstore");
-    }
-
-    @Test
-    @CddTest(requirements = {"3.1/C-0-1"})
-    @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
-    @VsrTest(requirements = {"VSR-7.1-001.007"})
-    public void upgradedPackageIsAcceptedWithSecretkeeper() throws Exception {
-        assumeSupportedDevice();
-        assume().withMessage("CF does not support updatable VM. b/431855290")
-                .that(isCuttlefish())
-                .isFalse();
-        ensureUpdatableVmSupported();
-        // Install the helper app (V5)
-        installApp(MICRODROID_TEST_HELPER_APP_NAME);
-
-        Context otherAppCtx =
-                getContext().createPackageContext(MICRODROID_TEST_HELPER_APP_PACKAGE_NAME, 0);
-        VirtualMachineConfig config =
-                new VirtualMachineConfig.Builder(otherAppCtx)
-                        .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
-                        .setProtectedVm(isProtectedVm())
-                        .setOs(os())
-                        .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_upgraded_payload", config);
-        assertThat(tryBootVm(TAG, vm).payloadStarted).isTrue();
-
-        // Install an updated payload!
-        installApp(MICRODROID_TEST_HELPER_APP_UPDATED_NAME);
-        BootResult bootResult = tryBootVm(TAG, vm);
-        assertThat(bootResult.payloadStarted).isTrue();
-    }
-
-    @Test
-    @CddTest(requirements = {"3.1/C-0-1"})
-    @GmsTest(requirements = {"GMS-3-7.1-002", "GMS-VSR-7.1-001.006"})
-    @VsrTest(requirements = {"VSR-7.1-001.007"})
-    public void downgradedPackageIsRejectedProtectedVm() throws Exception {
-        assumeSupportedDevice();
-        // Preconditions: Rollback protection is provided only for protected VM.
-        assumeProtectedVM();
-        // Install the helper app (V6)
-        installApp(MICRODROID_TEST_HELPER_APP_UPDATED_NAME);
-
-        Context otherAppCtx =
-                getContext().createPackageContext(MICRODROID_TEST_HELPER_APP_PACKAGE_NAME, 0);
-        VirtualMachineConfig config =
-                new VirtualMachineConfig.Builder(otherAppCtx)
-                        .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .setPayloadBinaryName("MicrodroidTestNativeLib.so")
-                        .setProtectedVm(isProtectedVm())
-                        .setOs(os())
-                        .build();
-        VirtualMachine vm = forceCreateNewVirtualMachine("test_downgraded_payload", config);
-        assertThat(tryBootVm(TAG, vm).payloadStarted).isTrue();
-
-        // Install an updated payload!
-        installApp(MICRODROID_TEST_HELPER_APP_NAME, "-d");
-        BootResult bootResult = tryBootVm(TAG, vm);
-        assertThat(bootResult.deathReason)
-                .isEqualTo(VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_HAS_CHANGED);
-    }
-
-    private void ensureUpdatableVmSupported() throws Exception {
-        if (PropertyUtil.getVsrApiLevel() >= 202504 && android.os.Build.VERSION.SDK_INT >= 35) {
-            assertWithMessage(
-                            "Missing Updatable VM support, have you declared Secretkeeper"
-                                + " interface?")
-                    .that(isUpdatableVmSupported())
-                    .isTrue();
-        } else {
-            assumeTrue(
-                    "Vendor API lower than 202504 may not support Updatable VM",
-                    isUpdatableVmSupported());
-        }
     }
 
     private VirtualMachineDescriptor toParcelFromParcel(VirtualMachineDescriptor descriptor) {

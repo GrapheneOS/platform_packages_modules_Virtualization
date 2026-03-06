@@ -26,7 +26,6 @@
         <package android:name="com.android.microdroid.test_relaxed_rollback_protection_scheme" />
         <package android:name="com.android.microdroid.test_enc_store_kek_on_ce" />
         <package android:name="com.android.microdroid.test_alternate_tenant" />
-        <package android:name="com.android.microdroid.helper" />
     </queries>
     <application />
     <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
