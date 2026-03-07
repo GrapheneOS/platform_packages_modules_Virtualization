@@ -524,49 +524,61 @@ Result<void> start_test_service() {
         ScopedAStatus quit() override { exit(0); }
 
         ScopedAStatus startUdsServerWithData(const std::string& data) override {
-            class TestTenantService : public BnTestTenantService {
-            private:
-                std::string data;
+            if (__builtin_available(android 37, *)) {
+                class TestTenantService : public BnTestTenantService {
+                private:
+                    std::string data;
 
-            public:
-                TestTenantService(const std::string& data) { this->data = data; }
-                ScopedAStatus getData(std::string* out) override {
-                    *out = data;
-                    return ScopedAStatus::ok();
-                }
-            };
+                public:
+                    TestTenantService(const std::string& data) { this->data = data; }
+                    ScopedAStatus getData(std::string* out) override {
+                        *out = data;
+                        return ScopedAStatus::ok();
+                    }
+                };
 
-            auto testTenantService = ndk::SharedRefBase::make<TestTenantService>(data);
-            auto callback = []([[maybe_unused]] void* param) { AVmPayload_notifyPayloadReady(); };
+                auto testTenantService = ndk::SharedRefBase::make<TestTenantService>(data);
+                auto callback = []([[maybe_unused]] void* param) {
+                    AVmPayload_notifyPayloadReady();
+                };
 
-            std::thread udsServerThread([testTenantService, callback] {
-                std::string descriptor = std::string(testTenantService->descriptor);
-                AVmPayload_runUnixDomainRpcServer(descriptor.c_str(),
-                                                  testTenantService->asBinder().get(), callback,
-                                                  nullptr);
-            });
-            udsServerThread.detach();
-            return ScopedAStatus::ok();
+                std::thread udsServerThread([testTenantService, callback] {
+                    std::string descriptor = std::string(testTenantService->descriptor);
+                    AVmPayload_runUnixDomainRpcServer(descriptor.c_str(),
+                                                      testTenantService->asBinder().get(), callback,
+                                                      nullptr);
+                });
+                udsServerThread.detach();
+                return ScopedAStatus::ok();
+            } else {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "not available before SDK 37");
+            }
         }
 
         ScopedAStatus startUdsClientAndGetData(std::string* out) override {
-            auto client_session_result = startUdsClient();
-            if (!client_session_result.ok()) {
-                return ScopedAStatus::fromServiceSpecificErrorWithMessage(-1,
-                                                                          client_session_result
-                                                                                  .error()
-                                                                                  .message()
-                                                                                  .c_str());
+            if (__builtin_available(android 37, *)) {
+                auto client_session_result = startUdsClient();
+                if (!client_session_result.ok()) {
+                    return ScopedAStatus::fromServiceSpecificErrorWithMessage(-1,
+                                                                              client_session_result
+                                                                                      .error()
+                                                                                      .message()
+                                                                                      .c_str());
+                }
+                auto client_session = *client_session_result;
+                auto platform_binder = client_session->getRootObject();
+                std::shared_ptr<ITestTenantService> service = ITestTenantService::fromBinder(
+                        ndk::SpAIBinder(AIBinder_fromPlatformBinder(platform_binder)));
+                ScopedAStatus get_data_status = service->getData(out);
+                if (!get_data_status.isOk()) {
+                    return get_data_status;
+                }
+                return ScopedAStatus::ok();
+            } else {
+                return ScopedAStatus::fromExceptionCodeWithMessage(EX_SERVICE_SPECIFIC,
+                                                                   "not available before SDK 37");
             }
-            auto client_session = *client_session_result;
-            auto platform_binder = client_session->getRootObject();
-            std::shared_ptr<ITestTenantService> service = ITestTenantService::fromBinder(
-                    ndk::SpAIBinder(AIBinder_fromPlatformBinder(platform_binder)));
-            ScopedAStatus get_data_status = service->getData(out);
-            if (!get_data_status.isOk()) {
-                return get_data_status;
-            }
-            return ScopedAStatus::ok();
         }
 
     private:

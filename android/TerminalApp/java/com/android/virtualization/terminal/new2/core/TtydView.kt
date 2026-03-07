@@ -21,6 +21,7 @@ import android.graphics.fonts.FontStyle
 import android.net.http.SslError
 import android.util.AttributeSet
 import android.util.Log
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.ViewGroup
@@ -48,7 +49,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     var onTerminalDisconnected: (() -> Unit)? = null
     var onSessionDiscard: (() -> Unit)? = null
     var onTitleChanged: ((String) -> Unit)? = null
-    private var fontSize = (context.resources.configuration.fontScale * 13).toInt()
+    private var fontSize = (context.resources.configuration.fontScale * DEFAULT_FONT_SIZE).toInt()
 
     private val scaleGestureDetector =
         ScaleGestureDetector(
@@ -121,6 +122,38 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         return super.onTouchEvent(event)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.isCtrlPressed) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_EQUALS,
+                KeyEvent.KEYCODE_PLUS -> {
+                    if (fontSize < MAX_FONT_SIZE) {
+                        fontSize++
+                        updateFontSize()
+                    }
+                    return true
+                }
+                KeyEvent.KEYCODE_MINUS -> {
+                    if (fontSize > MIN_FONT_SIZE) {
+                        fontSize--
+                        updateFontSize()
+                    }
+                    return true
+                }
+                KeyEvent.KEYCODE_0 -> {
+                    val defaultFontSize =
+                        (context.resources.configuration.fontScale * DEFAULT_FONT_SIZE).toInt()
+                    if (fontSize != defaultFontSize) {
+                        fontSize = defaultFontSize
+                        updateFontSize()
+                    }
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     private fun updateFontSize() {
         evaluateJavascript(
             "term.options.fontSize = $fontSize; window.dispatchEvent(new Event('resize'));",
@@ -161,14 +194,18 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         // TODO: Always enable screenReaderMode (b/395845063)
         val query =
             ("?fontSize=" +
-                (config.fontScale * 13).toInt() +
+                (config.fontScale * DEFAULT_FONT_SIZE).toInt() +
                 "&fontWeight=" +
                 (FontStyle.FONT_WEIGHT_NORMAL + config.fontWeightAdjustment) +
                 "&fontWeightBold=" +
                 (FontStyle.FONT_WEIGHT_BOLD + config.fontWeightAdjustment) +
                 "&screenReaderMode=" +
                 a11yManager.isEnabled +
-                "&disableResizeOverlay=true")
+                "&disableResizeOverlay=true" +
+                // Use DOM renderer to ensure sharp text and proper anti-aliasing on all displays,
+                // especially on external monitors where the default canvas renderer might produce
+                // blurry output due to scaling or density mismatches.
+                "&rendererType=dom")
 
         try {
             return URL(
@@ -290,7 +327,18 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        display?.let { d ->
+            val lp = android.util.DisplayMetrics()
+            d.getMetrics(lp)
+            // Use logical density which represents the system's intended scaling for the display.
+            setInitialScale((lp.density * 100).toInt())
+        }
+    }
+
     companion object {
+        private const val DEFAULT_FONT_SIZE = 13
         private const val MIN_FONT_SIZE = 5
         private const val MAX_FONT_SIZE = 200
     }

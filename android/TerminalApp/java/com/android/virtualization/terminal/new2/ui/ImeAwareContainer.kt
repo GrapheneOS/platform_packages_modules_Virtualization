@@ -97,7 +97,7 @@ fun ImeAwareContainer(
     )
 
     val modifierKeysHeight = if (isLandscape) 40.dp else 80.dp
-    val isWindowImeVisible = WindowInsets.isImeVisible
+    val isWindowImeVisible = WindowInsets.isImeVisible && WindowInsets.ime.getBottom(density) > 0
 
     // Notify the caller about IME visibility changes only if we are focused.
     LaunchedEffect(isWindowImeVisible, isFocused) {
