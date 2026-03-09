@@ -112,6 +112,14 @@ object VmController {
         guestAgentController?.shutdownVm()
     }
 
+    fun pullClipboardFromGuest() {
+        guestAgentController?.pullClipboardFromGuest()
+    }
+
+    fun pushClipboardToGuest() {
+        guestAgentController?.pushClipboardToGuest()
+    }
+
     fun requestSessionDiscard(sessionId: String) {
         repositoryScope.launch { _sessionDiscarded.emit(sessionId) }
     }

@@ -21,7 +21,7 @@ use debian_aidl_interface::{
     },
     binder::{BinderFeatures, Interface, Result as BinderResult, Status, Strong},
 };
-use log::{error, warn};
+use log::{debug, error, warn};
 use rpcbinder::RpcServer;
 use std::future::Future;
 use tokio::runtime::Runtime;
@@ -110,5 +110,75 @@ impl IDebianService for DebianService {
             error!("Error in storage_balloon_agent(), {e:?}");
             Status::new_service_specific_error(-1, None)
         })
+    }
+
+    fn updateClipboard(&self, text: &str) -> BinderResult<()> {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        let mut child = Command::new("sudo")
+            .args([
+                "-u",
+                "droid",
+                "XDG_RUNTIME_DIR=/run/user/1000",
+                "WAYLAND_DISPLAY=wayland-0",
+                "wl-copy",
+            ])
+            .stdin(Stdio::piped())
+            .spawn()
+            .map_err(|e| {
+                error!("Failed to spawn wl-copy: {e:?}");
+                Status::new_service_specific_error(-1, None)
+            })?;
+
+        let mut stdin = child.stdin.take().unwrap();
+        stdin.write_all(text.as_bytes()).map_err(|e| {
+            error!("Failed to write to wl-copy stdin: {e:?}");
+            Status::new_service_specific_error(-1, None)
+        })?;
+
+        drop(stdin); // Send EOF
+
+        let status = child.wait().map_err(|e| {
+            error!("Failed to wait for wl-copy: {e:?}");
+            Status::new_service_specific_error(-1, None)
+        })?;
+
+        if !status.success() {
+            error!("wl-copy failed with status: {status:?}");
+            return Err(Status::new_service_specific_error(-1, None));
+        }
+
+        Ok(())
+    }
+
+    fn readClipboard(&self) -> BinderResult<String> {
+        use std::process::Command;
+
+        debug!("Reading guest clipboard");
+
+        let output = Command::new("sudo")
+            .args([
+                "-u",
+                "droid",
+                "XDG_RUNTIME_DIR=/run/user/1000",
+                "WAYLAND_DISPLAY=wayland-0",
+                "wl-paste",
+                "--no-newline",
+            ])
+            .output()
+            .map_err(|e| {
+                error!("Failed to execute wl-paste: {e:?}");
+                Status::new_service_specific_error(-1, None)
+            })?;
+
+        if !output.status.success() {
+            // wl-paste may fail if clipboard is empty, return empty string in that case
+            debug!("wl-paste returned non-success status: {:?}", output.status);
+            return Ok(String::new());
+        }
+
+        let text = String::from_utf8_lossy(&output.stdout).into_owned();
+        Ok(text)
     }
 }

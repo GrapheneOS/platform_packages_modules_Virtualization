@@ -36,6 +36,7 @@ GUEST_PACKAGES=(
   systemd-zram-generator
   vulkan-tools
   weston
+  wl-clipboard
   xwayland
 )
 
