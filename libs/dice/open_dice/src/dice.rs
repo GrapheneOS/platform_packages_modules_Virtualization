@@ -105,15 +105,6 @@ impl KeyAlgorithm {
             KeyAlgorithm::EcdsaP384 => 96,
         }
     }
-
-    /// Returns the size of the private key.
-    pub fn private_key_size(&self) -> usize {
-        match self {
-            KeyAlgorithm::Ed25519 => 64,
-            KeyAlgorithm::EcdsaP256 => 32,
-            KeyAlgorithm::EcdsaP384 => 48,
-        }
-    }
 }
 
 impl TryFrom<iana::Algorithm> for KeyAlgorithm {
