@@ -87,24 +87,15 @@
     <string name="settings_advanced_title" msgid="1935607224859850897">"Të përparuara"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Madhësia e memories"</string>
     <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"Diapazoni i vlefshëm: %1$d ~ %2$d MB"</string>
-    <!-- no translation found for settings_display_resolution_title (2299422750697419842) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full (1934435847075952454) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half (8817295705374047791) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter (3705900552539109641) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full_hint (5979427185150015339) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half_hint (7952269802485928968) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter_hint (770354668663140131) -->
-    <skip />
-    <!-- no translation found for fullscreen_enter (1119690834808193718) -->
-    <skip />
-    <!-- no translation found for fullscreen_exit (2180595836197188247) -->
-    <skip />
+    <string name="settings_display_resolution_title" msgid="2299422750697419842">"Rezolucioni i ekranit"</string>
+    <string name="settings_display_resolution_full" msgid="1934435847075952454">"Plot"</string>
+    <string name="settings_display_resolution_half" msgid="8817295705374047791">"Gjysmë"</string>
+    <string name="settings_display_resolution_quarter" msgid="3705900552539109641">"Tremujori"</string>
+    <string name="settings_display_resolution_full_hint" msgid="5979427185150015339">"Performanca mund të jetë përkeqësuar."</string>
+    <string name="settings_display_resolution_half_hint" msgid="7952269802485928968">"Të rekomanduara"</string>
+    <string name="settings_display_resolution_quarter_hint" msgid="770354668663140131">"Cilësia mund të jetë përkeqësuar."</string>
+    <string name="fullscreen_enter" msgid="1119690834808193718">"Ekran i plotë"</string>
+    <string name="fullscreen_exit" msgid="2180595836197188247">"Dil nga ekrani i plotë"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"Mbaje të zgjuar"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"Joaktiv"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 minutë"</string>

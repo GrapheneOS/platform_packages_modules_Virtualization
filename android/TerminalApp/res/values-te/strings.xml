@@ -87,24 +87,15 @@
     <string name="settings_advanced_title" msgid="1935607224859850897">"అడ్వాన్స్‌డ్"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"మెమరీ సైజ్"</string>
     <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"చెల్లుబాటు అయ్యే పరిధి: %1$d ~ %2$d ఎమ్‌బి"</string>
-    <!-- no translation found for settings_display_resolution_title (2299422750697419842) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full (1934435847075952454) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half (8817295705374047791) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter (3705900552539109641) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full_hint (5979427185150015339) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half_hint (7952269802485928968) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter_hint (770354668663140131) -->
-    <skip />
-    <!-- no translation found for fullscreen_enter (1119690834808193718) -->
-    <skip />
-    <!-- no translation found for fullscreen_exit (2180595836197188247) -->
-    <skip />
+    <string name="settings_display_resolution_title" msgid="2299422750697419842">"డిస్‌ప్లే రిజల్యూషన్"</string>
+    <string name="settings_display_resolution_full" msgid="1934435847075952454">"పూర్తిగా"</string>
+    <string name="settings_display_resolution_half" msgid="8817295705374047791">"సగం"</string>
+    <string name="settings_display_resolution_quarter" msgid="3705900552539109641">"నాలుగో వంతు"</string>
+    <string name="settings_display_resolution_full_hint" msgid="5979427185150015339">"పనితీరు క్షీణించవచ్చు."</string>
+    <string name="settings_display_resolution_half_hint" msgid="7952269802485928968">"సిఫార్సు చేసినవి"</string>
+    <string name="settings_display_resolution_quarter_hint" msgid="770354668663140131">"క్వాలిటీ క్షీణించవచ్చు."</string>
+    <string name="fullscreen_enter" msgid="1119690834808193718">"ఫుల్ స్క్రీన్"</string>
+    <string name="fullscreen_exit" msgid="2180595836197188247">"ఫుల్ఫుల్ స్క్రీన్ నుండి నిష్క్రమించండి"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"మేల్కొనే ఉంచు"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"ఆఫ్‌లో ఉంది"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 నిమిషం"</string>
