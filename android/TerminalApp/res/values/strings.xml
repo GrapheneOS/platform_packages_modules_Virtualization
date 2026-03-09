@@ -212,7 +212,7 @@
     <!-- Settings menu title for memory size [CHAR LIMIT=none] -->
     <string name="settings_advanced_memory_title">Memory size</string>
     <!-- Settings menu memory size valid range error message [CHAR LIMIT=none] -->
-    <string name="settings_advanced_memory_valid_range">Valid range: %1$d ~ %2$d MB</string>
+    <string name="settings_advanced_memory_valid_range">Valid range: <xliff:g id="memory_range" example="100MB - 200MB">%1$s</xliff:g></string>
 
     <!-- Settings menu title for display resolution [CHAR LIMIT=none] -->
     <string name="settings_display_resolution_title">Display resolution</string>
