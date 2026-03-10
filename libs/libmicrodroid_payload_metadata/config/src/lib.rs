@@ -76,6 +76,10 @@ pub struct VmPayloadConfig {
     /// Whether to use dm-default-key to get DE and CE storage
     #[serde(default)]
     pub dm_default_key: bool,
+
+    /// Configure Cgroup
+    #[serde(default)]
+    pub cgroup_config: Option<CgroupConfig>,
 }
 
 /// OS config
@@ -209,6 +213,15 @@ pub struct TenantConfiguration {
     /// b/484251187: This field is mandatory since Microdroid does not support persisting authority
     /// data in replay protected instance spec.
     pub expected_authority: ExpectedAuthority,
+}
+
+/// Cgroup Config
+#[derive(Default, Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CgroupConfig {
+    /// Cgroup initial memory high to activate
+    pub memory_high_mib: u64,
+    /// Opt in to have memory_high_mib increase as memory gets close to initial limit
+    pub increase_high_mib: bool,
 }
 
 #[cfg(test)]

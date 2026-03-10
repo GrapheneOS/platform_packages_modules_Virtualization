@@ -69,7 +69,7 @@ use libc::{VMADDR_CID_HOST, VMADDR_PORT_ANY};
 use log::{error, info, warn};
 use microdroid_metadata::{Metadata, PayloadMetadata};
 use microdroid_payload_config::{
-    ApkConfig, OsConfig, Task, TaskType, TenantConfig, VmPayloadConfig,
+    ApkConfig, CgroupConfig, OsConfig, Task, TaskType, TenantConfig, VmPayloadConfig,
 };
 use nix::mount::{umount2, MntFlags};
 use nix::sys::signal::{
@@ -482,13 +482,6 @@ enum VmInstanceState {
     PreviouslySeen,
 }
 
-struct CgroupConfig {
-    name: &'static str,
-    // Limits how much memory the cgroup (generally just the payload process) can consume before
-    // reclaim starts running on that cgroup.
-    memory_high_mib: u64,
-}
-
 struct EncryptedstoreHandle {
     encryptedstore_thread: Option<JoinHandle<()>>,
 }
@@ -538,38 +531,11 @@ fn try_run_payload(
             },
         )
     };
-
-    // TODO(b/426584173): Add an API for configuring cgroups. For now we hardcode a config for
-    // appsearch's VM, which we detect indirectly via the rollback_index field.
-    let cgroup_config = if instance_data.apk_data.rollback_index.is_some() {
-        Some(CgroupConfig { name: "microdroid_launcher", memory_high_mib: 50 })
-    } else {
-        None
-    };
-
-    if let Some(cgroup_config) = cgroup_config.as_ref() {
-        // We create and configure the cgroup now, then the child process adds itself to the group
-        // before `exec`ing the payload binary (see `exec_task` code).
-        let cgroup_dir = std::path::Path::new("/sys/fs/cgroup").join(cgroup_config.name);
-        std::fs::create_dir(&cgroup_dir).context("failed to create cgroup dir")?;
-        std::fs::write(
-            cgroup_dir.join("memory.high"),
-            format!("{}M", cgroup_config.memory_high_mib),
-        )
-        .context("failed to set cgroup memory.high")?;
-
-        // Spawn thread to monitor the cgroup's behavior.
-        // TODO: (khei@)
-        // Send cgroup kill signal and join cgroup thread for graceful shutdown
-        let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(cgroup_config.name, service)?;
-    }
+    let tenant_apks = integrity_protect_tenant_apks()?;
 
     let payload_metadata = metadata.payload.ok_or_else(|| {
         MicrodroidError::PayloadInvalidConfig("No payload config in metadata".to_string())
     })?;
-
-    let tenant_apks = integrity_protect_tenant_apks()?;
-
     // To minimize the exposure to untrusted data, derive dice profile as soon as possible.
     info!("DICE derivation for payload");
     let dice_artifacts =
@@ -600,6 +566,37 @@ fn try_run_payload(
     };
 
     let config = load_config(payload_metadata).context("Failed to load payload metadata")?;
+    let package_name = instance_data.apk_data.package_name;
+
+    // Before adding a cgroup API, we were checking if the rollback_index field existed to
+    // configure cgroups.
+    let (cgroup_name, cgroup_config) = if config.cgroup_config.is_some() {
+        (package_name, config.cgroup_config.clone())
+    } else if instance_data.apk_data.rollback_index.is_some() {
+        (
+            "microdroid_launcher".to_string(),
+            Some(CgroupConfig { memory_high_mib: 50, increase_high_mib: true }),
+        )
+    } else {
+        ("".to_string(), None)
+    };
+
+    if let Some(cgroup_config) = cgroup_config.as_ref() {
+        // We create and configure the cgroup now, then the child process adds itself to the group
+        // before `exec`ing the payload binary (see `exec_task` code).
+        let cgroup_dir = std::path::Path::new("/sys/fs/cgroup").join(&cgroup_name);
+        std::fs::create_dir(&cgroup_dir).context("failed to create cgroup dir")?;
+        std::fs::write(
+            cgroup_dir.join("memory.high"),
+            format!("{}M", cgroup_config.memory_high_mib),
+        )
+        .context("failed to set cgroup memory.high")?;
+
+        // Spawn thread to monitor the cgroup's behavior.
+        // TODO: (khei@)
+        // Send cgroup kill signal and join cgroup thread for graceful shutdown
+        let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(&cgroup_name, service)?;
+    }
 
     if !config.tenants.is_empty() {
         validate_tenants_against_tenant_config(&tenant_apks, &tenant_apex_data, &config.tenants)?;
@@ -822,6 +819,7 @@ fn try_run_payload(
         Some(
             exec_task(
                 main_command,
+                &cgroup_name,
                 cgroup_config.as_ref(),
                 service,
                 /* notify_payload_started */ true,
@@ -861,6 +859,7 @@ fn try_run_payload(
             .context(format!("Failed to build tenant {name} payload command"))?;
             let tenant_process = exec_task(
                 command,
+                &cgroup_name,
                 cgroup_config.as_ref(),
                 service,
                 /* notify_payload_started */ !notified_payload_started,
@@ -1267,13 +1266,18 @@ fn get_task_command(
 /// Executes the given task.
 fn exec_task(
     payload_cmd: PayloadCommand,
+    cgroup_name: &String,
     cgroup_config: Option<&CgroupConfig>,
     service: &Strong<dyn IVirtualMachineService>,
     notify_payload_started: bool,
 ) -> Result<Child> {
     info!("executing main task {:?}...", payload_cmd);
     let mut command = payload_cmd.command;
-    let cgroup_path = cgroup_config.map(|c| format!("/sys/fs/cgroup/{}/cgroup.procs", c.name));
+    let cgroup_path = if cgroup_config.is_some() {
+        Some(format!("/sys/fs/cgroup/{}/cgroup.procs", cgroup_name))
+    } else {
+        None
+    };
 
     // SAFETY: We are not accessing any resource of the parent process. This means we can't make any
     // log calls inside the closure.
