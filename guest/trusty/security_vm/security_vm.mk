@@ -18,8 +18,12 @@ TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES ?= trusty_security_vm.elf \
 	trusty_security_vm_launcher \
 	trusty_security_vm_launcher.rc \
 	trusty_security_vm_instance_id \
-	trusty_security_vm_rpc_services.json \
+	trusty_security_vm_rpc_services-base.json \
 	early_vms.xml \
+
+ifeq ($(AVF_TRUSTY_ENABLE_SYSTEM_VM_WITH_PLACEHOLDER_THAL),true)
+TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES += trusty_security_vm_rpc_services-with_placeholders_thal.json
+endif
 
 PRODUCT_PACKAGES += \
 	keymint_provisioning_tool \
