@@ -40,34 +40,37 @@ oneway interface IVerifiedDex2OatTaskCallback {
     void onSuccess(in GuestDex2OatMetrics metrics);
 
     /**
+     * Failures where dex2oat returned an exit code.
+     */
+    @RustDerive(PartialEq=true, Clone=true)
+    parcelable Dex2OatExitCode {
+        int exit_code;
+        GuestDex2OatMetrics metrics;
+    }
+    /**
+     * Failures where dex2oat was terminated by a signal.
+     */
+    @RustDerive(PartialEq=true, Clone=true)
+    parcelable Dex2OatSignal {
+        int signal;
+        GuestDex2OatMetrics metrics;
+    }
+    /**
+     * Failures that occurred while preparing to run dex2oat.
+     */
+    @RustDerive(PartialEq=true, Clone=true)
+    parcelable Dex2OatSetupFailure {
+        String message;
+        int[] relevant_fds;
+    }
+    /**
      * The details of why a verifiedDex2Oat failed.
      */
     @RustDerive(PartialEq=true, Clone=true)
-    parcelable GuestFailureDetails {
-        /**
-         * The exit code of dex2oat if available, otherwise this
-         * is set to -1.
-         */
-        int exit_code;
-        /**
-         * If the compilation failed due to a signal this will be set to the
-         * POSIX signal code, otherwise it is set to -1.
-         */
-        int signal;
-        /**
-         * The total amount of time between dex2oat is invoked until the
-         * compilation failed. If dex2oat never ran this is set to -1.
-         */
-        int wallclock_time_milliseconds;
-        /**
-         * The total amount of time dex2oat was actively compiling before
-         * failure.
-         */
-        int cpu_time_milliseconds;
-        /**
-         * Additional description of the failure.
-         */
-        String message;
+    union GuestFailureDetails {
+        Dex2OatExitCode exit_code;
+        Dex2OatSignal signal;
+        Dex2OatSetupFailure setup;
     }
     /**
      * On a failed compilation this function is called.

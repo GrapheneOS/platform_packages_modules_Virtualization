@@ -33,11 +33,17 @@ use std::path::Path;
 
 const FD_SERVER_BIN: &str = "/apex/com.android.virt/bin/fd_server";
 
+#[derive(Debug)]
+pub struct FdWithFsvMeta {
+    pub fd: OwnedFd,
+    pub fsv_meta_fd: Option<OwnedFd>,
+}
+
 /// Config for starting a `FdServer`
 #[derive(Default, Debug)]
 pub struct FdServerConfig {
     /// List of file FDs exposed for read-only operations.
-    pub ro_file_fds: Vec<OwnedFd>,
+    pub ro_file_fds: Vec<FdWithFsvMeta>,
     /// List of file FDs exposed for read-write operations.
     pub rw_file_fds: Vec<OwnedFd>,
     /// List of directory FDs exposed for read-only operations.
@@ -82,10 +88,16 @@ fn do_spawn_fd_server(config: FdServerConfig, ready_file: File) -> Result<Minija
     let mut inheritable_fds = Vec::new();
     let mut args = vec![FD_SERVER_BIN.to_string()];
     for fd in &config.ro_file_fds {
-        let raw_fd = fd.as_raw_fd();
-        args.push("--ro-fds".to_string());
-        args.push(raw_fd.to_string());
+        let raw_fd = fd.fd.as_raw_fd();
         inheritable_fds.push(raw_fd);
+        args.push("--ro-fds".to_string());
+        if let Some(fsv_meta_fd) = &fd.fsv_meta_fd {
+            let raw_fsv_meta_fd = fsv_meta_fd.as_raw_fd();
+            args.push(format!("{}:{}", raw_fd, raw_fsv_meta_fd));
+            inheritable_fds.push(raw_fsv_meta_fd);
+        } else {
+            args.push(raw_fd.to_string());
+        }
     }
     for fd in &config.rw_file_fds {
         let raw_fd = fd.as_raw_fd();

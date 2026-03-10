@@ -40,6 +40,7 @@ use compos_aidl_interface::aidl::com::android::compos::ICompOsService::Compilati
 use compos_common as compos_common_injection;
 #[cfg(test)]
 use compos_common_with_mocks as compos_common_injection;
+use log::error;
 use std::time::Duration;
 
 use compos_common_injection::{
@@ -104,6 +105,7 @@ impl IIsolatedCompilationService for IsolatedCompilationService {
         timeout_seconds: i32,
     ) -> binder::Result<Strong<dyn ICompilationTask>> {
         if !aconfig_compos_flags_rust::verified_dex2oat() {
+            error!("Feature disabled.");
             return Err(Status::new_exception(ExceptionCode::UNSUPPORTED_OPERATION, None));
         }
         check_permissions_for_dex2oat()?;

@@ -138,7 +138,7 @@ fn run_authfs(
     args.push(OsString::from("-o"));
     args.push(OsString::from("fscontext=u:object_r:authfs_fuse:s0"));
     for conf in in_verified_file_fds {
-        args.push(OsString::from("--remote-ro-file-verified"));
+        args.push(OsString::from("--remote-ro-file"));
         args.push(OsString::from(format!("{}:{}", conf.fd, conf.digest)));
     }
     for conf in in_file_fds {

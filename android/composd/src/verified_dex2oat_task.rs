@@ -17,7 +17,7 @@
 //! Handle running dex2oat in the VM, with an async interface to allow cancellation
 use crate::wrappers::compos_wrappers_injection;
 use crate::{
-    fd_server_helper::FdServerConfig,
+    fd_server_helper::{FdServerConfig, FdWithFsvMeta},
     instance_manager::IInstanceManager,
     instance_starter::CompOsInstance,
     util,
@@ -26,7 +26,9 @@ use crate::{
         BUILD_MANIFEST_SYSTEM_EXT_APK_PATH,
     },
 };
-use compos_wrappers_injection::fsverity::{read_digest, read_digest_from_fsv_meta};
+use compos_wrappers_injection::fsverity::{
+    open_fsv_meta_from_target_fd, read_digest, read_digest_from_fsv_meta,
+};
 
 #[cfg(test)]
 use compos_wrappers_injection::mock_paths as paths;
@@ -57,7 +59,7 @@ use nix::{fcntl, fcntl::OFlag};
 use parking_lot::{Condvar, Mutex, WaitTimeoutResult};
 use std::{
     ops::Add,
-    os::fd::{AsFd, AsRawFd, BorrowedFd, RawFd},
+    os::fd::{AsFd, AsRawFd, RawFd},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Weak,
@@ -252,6 +254,7 @@ impl IVerifiedDex2OatTaskCallback for VerifiedDex2OatCompletionCallback {
         Ok(())
     }
     fn onFailure(&self, failure_details: &GuestFailureDetails) -> BinderResult<()> {
+        error!("Compilation failed");
         if let Some(job_state) = self.weak_job_state.upgrade() {
             if let Err(e) =
                 job_state.set_state_if(State::COMPLETED, |state| matches!(state, State::RUNNING(_)))
@@ -259,22 +262,53 @@ impl IVerifiedDex2OatTaskCallback for VerifiedDex2OatCompletionCallback {
                 error!("Unexpected call to onFailure: {:?}", e);
                 return Ok(());
             }
-            let reason = match (failure_details.exit_code, failure_details.signal) {
-                (-1, -1) => FailureReason::CompilationSetupFailed,
-                (_, _) => FailureReason::Dex2OatFailed,
-            };
-            let exit_code = failure_details.exit_code;
-            let signal = if failure_details.signal == -1 { -1 } else { failure_details.signal };
-            let wallclock_time_milliseconds = failure_details.wallclock_time_milliseconds;
-            let cpu_time_milliseconds = failure_details.cpu_time_milliseconds;
-            let message = failure_details.message.clone();
-            let out_failure_details = FailureDetails {
-                reason,
-                exit_code,
-                signal,
-                wallclock_time_milliseconds,
-                cpu_time_milliseconds,
-                message,
+
+            let out_failure_details = match failure_details {
+                GuestFailureDetails::Exit_code(f) => {
+                    error!(
+                        "dex2oat failed, exit code:{}, wallclock_time_ms: {}, cpu_time_ms: {}",
+                        f.exit_code,
+                        f.metrics.wallclock_time_milliseconds,
+                        f.metrics.cpu_time_milliseconds
+                    );
+                    FailureDetails {
+                        reason: FailureReason::Dex2OatFailed,
+                        exit_code: f.exit_code,
+                        signal: 0,
+                        wallclock_time_milliseconds: f.metrics.wallclock_time_milliseconds,
+                        cpu_time_milliseconds: f.metrics.cpu_time_milliseconds,
+                        message: "".to_string(),
+                    }
+                }
+                GuestFailureDetails::Signal(f) => {
+                    error!("dex2oat failed due to signal, signal:{}, wallclock_time_ms: {}, cpu_time_ms: {}",
+                    f.signal, f.metrics.wallclock_time_milliseconds, f.metrics.cpu_time_milliseconds);
+                    FailureDetails {
+                        reason: FailureReason::Dex2OatFailed,
+                        exit_code: -1,
+                        signal: f.signal,
+                        wallclock_time_milliseconds: f.metrics.wallclock_time_milliseconds,
+                        cpu_time_milliseconds: f.metrics.cpu_time_milliseconds,
+                        message: "".to_string(),
+                    }
+                }
+                GuestFailureDetails::Setup(f) => {
+                    let fd_details: Vec<String> = f
+                        .relevant_fds
+                        .iter()
+                        .map(|fd| format!("{}:{}", fd, util::get_path_from_fd(*fd).display()))
+                        .collect();
+                    let fd_details = fd_details.join(",");
+                    error!("compilation setup failed:{} {}", f.message.clone(), fd_details);
+                    FailureDetails {
+                        reason: FailureReason::CompilationSetupFailed,
+                        exit_code: -1,
+                        signal: 0,
+                        wallclock_time_milliseconds: -1,
+                        cpu_time_milliseconds: -1,
+                        message: f.message.clone(),
+                    }
+                }
             };
             return self.composd_completion_callback.onFailure(&out_failure_details);
         }
@@ -398,6 +432,8 @@ impl Dex2OatJob {
                 &self.compsvc_completion_callback,
             )
             .context("Starting verified dex2oat failed")?;
+
+            info!("dex2oat started, waiting for finish");
             // Wait for the job to finish, either by succeeding, failing or getting canceled.
             let result = self.job_state.wait_for_finished_until(self.timeout_at);
             if result.timed_out() {
@@ -410,6 +446,7 @@ impl Dex2OatJob {
                     self.timeout_at
                 ));
             }
+            info!("Compilation finished");
             return Ok(());
         }
         unreachable!("while starting a compilation job state {:?} is not properly handled", state);
@@ -424,6 +461,7 @@ impl Dex2OatJob {
             signal: 0,
             message,
         };
+        error!("compilation timed out: {}", &failure_details.message);
         if let Err(e) = self.composd_completion_callback.onFailure(&failure_details) {
             error!("job timed out but unable to notify the client:{e}");
         }
@@ -542,21 +580,22 @@ impl VerifiedDex2OatTaskQueue {
                 let access_mode =
                     OFlag::from_bits_truncate(fcntl_rval).intersection(OFlag::O_ACCMODE);
                 let file_details = if access_mode == OFlag::O_RDONLY {
-                    let verity_digest_result =
-                        read_digest_from_verity_or_fsv_meta(owned_fd.as_fd());
-                    let verity_digest = match verity_digest_result {
-                        Ok(digest) => digest,
-                        // Missing verity data isn't an error condition. There
-                        // are cases where a ro file isn't expected to have a verity-digest
-                        //, an example would be input vdex file. Just log some information
-                        // and continue.
-                        Err(e) => {
-                            let file_path = util::get_path_from_fd(owned_fd.as_raw_fd());
-                            debug!("No verity-digest for {file_path:?} available:{e}");
-                            "".to_string()
-                        }
+                    let borrowed_fd = owned_fd.as_fd();
+                    let (verity_digest, fsv_meta_fd) = match read_digest(borrowed_fd) {
+                        Ok(result) => (format!("sha256-{}", hex::encode(result)), None),
+                        Err(_) => match read_digest_from_fsv_meta(borrowed_fd) {
+                            Ok(fsv_digest_bytes) => (
+                                format!("sha256-{}", hex::encode(fsv_digest_bytes)),
+                                open_fsv_meta_from_target_fd(borrowed_fd).ok(),
+                            ),
+                            Err(e) => {
+                                let file_path = util::get_path_from_fd(borrowed_fd.as_raw_fd());
+                                debug!("No verity digest for {file_path:?} available: fallback to read from fsv_meta failed ({e})");
+                                ("".to_string(), None)
+                            }
+                        },
                     };
-                    ro_file_fds.push(owned_fd);
+                    ro_file_fds.push(FdWithFsvMeta { fd: owned_fd, fsv_meta_fd });
                     Ok(FileDetails { fd, isRw: false, verityDigest: verity_digest })
                 } else if access_mode == OFlag::O_RDWR {
                     rw_file_fds.push(owned_fd);
@@ -612,14 +651,6 @@ impl VerifiedDex2OatTaskQueue {
     }
 }
 
-fn read_digest_from_verity_or_fsv_meta(fd: BorrowedFd) -> Result<String> {
-    let verity_sha256_digest: [u8; 32] = match read_digest(fd) {
-        Ok(result) => Ok(result),
-        Err(_) => read_digest_from_fsv_meta(fd).context("fall back to read from fsv_meta failed."),
-    }?;
-    Ok(format!("sha256-{}", hex::encode(verity_sha256_digest)))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -641,7 +672,7 @@ mod tests {
         FileDetails::FileDetails
     };
     use compos_common_with_mocks::compos_client::MockComposClient;
-    use std::{collections::{HashMap, HashSet}, fs::{create_dir, File}, io::Write, path::{Path, PathBuf}, os::fd::OwnedFd};
+    use std::{collections::{HashMap, HashSet}, fs::{create_dir, File}, io::Write, path::{Path, PathBuf}, os::fd::{BorrowedFd,OwnedFd}};
     use android_system_composd::aidl::android::system::composd::IIsolatedCompilationService::Dex2OatArg::Dex2OatArg;
 
     const ALLOWLISTED_PROPERTIES: [(&str, &str); 3] = [
@@ -853,8 +884,11 @@ mod tests {
         mock_fd_server_ctx
             .expect()
             .withf(move |fd_cfg| {
-                let actual_ro_dev_inos =
-                    fd_cfg.ro_file_fds.iter().map(|fd| fd_to_st_dev_ino(fd.as_raw_fd())).collect();
+                let actual_ro_dev_inos = fd_cfg
+                    .ro_file_fds
+                    .iter()
+                    .map(|fd| fd_to_st_dev_ino(fd.fd.as_raw_fd()))
+                    .collect();
                 let actual_rw_dev_inos =
                     fd_cfg.rw_file_fds.iter().map(|fd| fd_to_st_dev_ino(fd.as_raw_fd())).collect();
                 let actual_ro_dir_dev_inos =
