@@ -1508,7 +1508,7 @@ fn validate_vsock_port(port: u32) -> binder::Result<()> {
     /// Min vsock port number used by Trusty VMs. See b/427392420 for more context.
     const TRUSTY_VSOCK_PORT_MIN: u32 = 2;
     /// Max vsock port number used by Trusty VMs.
-    const TRUSTY_VSOCK_PORT_MAX: u32 = 20;
+    const TRUSTY_VSOCK_PORT_MAX: u32 = 30;
 
     let is_unprivileged = port >= VSOCK_PRIV_PORT_MAX;
     let is_allowed_trusty_port = (TRUSTY_VSOCK_PORT_MIN..=TRUSTY_VSOCK_PORT_MAX).contains(&port);
