@@ -43,7 +43,8 @@ public final class Pvmfw {
     private static final int PVMFW_ENTRY_DP = 1;
     private static final int PVMFW_ENTRY_VM_DTBO = 2;
     private static final int PVMFW_ENTRY_VM_REFERENCE_DT = 3;
-    private static final int PVMFW_ENTRY_MAX = 4;
+    private static final int PVMFW_ENTRY_RMEM = 4;
+    private static final int PVMFW_ENTRY_MAX = 5;
 
     @NonNull private final File mPvmfwBinFile;
     private final File[] mEntries;
@@ -60,10 +61,13 @@ public final class Pvmfw {
             @Nullable File debugPolicyFile,
             @Nullable File vmDtboFile,
             @Nullable File vmReferenceDtFile,
+            @Nullable File rmemFile,
             int version) {
         mPvmfwBinFile = Objects.requireNonNull(pvmfwBinFile);
 
-        if (version >= makeVersion(1, 2)) {
+        if (version >= makeVersion(1, 3)) {
+            mEntryCnt = PVMFW_ENTRY_RMEM + 1;
+        } else if (version >= makeVersion(1, 2)) {
             mEntryCnt = PVMFW_ENTRY_VM_REFERENCE_DT + 1;
         } else if (version >= makeVersion(1, 1)) {
             mEntryCnt = PVMFW_ENTRY_VM_DTBO + 1;
@@ -80,6 +84,9 @@ public final class Pvmfw {
         }
         if (PVMFW_ENTRY_VM_REFERENCE_DT < mEntryCnt) {
             mEntries[PVMFW_ENTRY_VM_REFERENCE_DT] = Objects.requireNonNull(vmReferenceDtFile);
+        }
+        if (PVMFW_ENTRY_RMEM < mEntryCnt) {
+            mEntries[PVMFW_ENTRY_RMEM] = rmemFile;
         }
 
         mVersion = version;
@@ -174,6 +181,7 @@ public final class Pvmfw {
         @Nullable private File mDebugPolicyFile;
         @Nullable private File mVmDtboFile;
         @Nullable private File mVmReferenceDtFile;
+        @Nullable private File mRmemFile;
         private int mVersion;
 
         public Builder(@NonNull File pvmfwBinFile, @NonNull File bccFile) {
@@ -201,6 +209,12 @@ public final class Pvmfw {
         }
 
         @NonNull
+        public Builder setRmem(@Nullable File rmemFile) {
+            mRmemFile = rmemFile;
+            return this;
+        }
+
+        @NonNull
         public Builder setVersion(int major, int minor) {
             mVersion = makeVersion(major, minor);
             return this;
@@ -214,6 +228,7 @@ public final class Pvmfw {
                     mDebugPolicyFile,
                     mVmDtboFile,
                     mVmReferenceDtFile,
+                    mRmemFile,
                     mVersion);
         }
     }
