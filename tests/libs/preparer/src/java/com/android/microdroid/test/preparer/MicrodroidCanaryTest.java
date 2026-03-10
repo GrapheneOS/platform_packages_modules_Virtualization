@@ -25,6 +25,7 @@ import com.android.tradefed.device.TestDevice.MicrodroidBuilder;
 import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.targetprep.BaseTargetPreparer;
+import com.android.tradefed.targetprep.TargetSetupError;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
 
@@ -92,7 +93,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
 
     public void ensureMicrodroidBoot(
             TestDevice device, String apkPath, String os, boolean protectedVm)
-            throws DeviceNotAvailableException {
+            throws DeviceNotAvailableException, TargetSetupError {
         try {
             if (!device.supportsMicrodroid(protectedVm)) {
                 CLog.d(
@@ -102,8 +103,9 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
             }
         } catch (Exception e) {
             // Workaround to reduce exception
-            throw new DeviceNotAvailableException(
-                    "Failed to check whether Microdroid is supported");
+            throw new TargetSetupError(
+                    "Failed to check whether Microdroid is supported",
+                    device.getDeviceDescriptor());
         }
 
         long timeoutMs = isVirtualDevice(device) ? LONG_TIMEOUT_MS : TIMEOUT_MS;
@@ -126,7 +128,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
                             .enableEarlycon(true)
                             .build(device);
             if (microdroid == null) {
-                throw new DeviceNotAvailableException(errorMessage);
+                throw new TargetSetupError(errorMessage);
             }
             // Note: MicrodroidBuilder#build() checks this, but just in case.
             microdroid.waitForBootComplete(timeoutMs);
@@ -141,10 +143,11 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
 
     /** {@inheritDoc} */
     @Override
-    public void setUp(TestInformation testInfo) throws DeviceNotAvailableException {
+    public void setUp(TestInformation testInfo)
+            throws DeviceNotAvailableException, TargetSetupError {
         ITestDevice device = testInfo.getDevice();
         if (!(device instanceof TestDevice)) {
-            throw new DeviceNotAvailableException("Requires an actual TestDevice");
+            throw new TargetSetupError("Requires an actual TestDevice");
         }
         TestDevice testDevice = (TestDevice) device;
         String apkPath = getPathForPayloadPackage(testDevice);
