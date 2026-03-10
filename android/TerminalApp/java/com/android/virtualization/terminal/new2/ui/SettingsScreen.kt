@@ -15,6 +15,11 @@
  */
 package com.android.virtualization.terminal.new2.ui
 
+import android.icu.number.NumberFormatter
+import android.icu.number.NumberRangeFormatter
+import android.icu.number.Precision
+import android.icu.text.MeasureFormat
+import android.icu.util.MeasureUnit
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,6 +95,8 @@ import com.android.virtualization.terminal.new2.core.VmController
 import com.android.virtualization.terminal.new2.ui.main.DisplayResolution
 import com.android.virtualization.terminal.new2.ui.main.MainViewModel
 import com.android.virtualization.terminal.new2.ui.main.SettingsViewModel
+import java.math.RoundingMode
+import java.util.Locale
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -495,18 +502,15 @@ fun MemorySizeDialog(
                             }
                         }
                     },
-                    label = { Text("MB") },
+                    label = { Text(formatMemoryUnit(MeasureUnit.MEGABYTE)) },
                     isError = isError,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     supportingText = {
                         if (isError) {
+                            val range = formatMemoryRange(minMemoryMb, maxMemoryMb)
                             Text(
-                                stringResource(
-                                    R.string.settings_advanced_memory_valid_range,
-                                    minMemoryMb,
-                                    maxMemoryMb,
-                                )
+                                stringResource(R.string.settings_advanced_memory_valid_range, range)
                             )
                         } else {
                             Text(formatMemorySize(currentParsedMemory ?: currentMemoryMb))
@@ -551,12 +555,34 @@ fun MemorySizeDialog(
     )
 }
 
+private fun formatMemoryUnit(unit: MeasureUnit): String {
+    val formatter = MeasureFormat.getInstance(Locale.getDefault(), MeasureFormat.FormatWidth.NARROW)
+    return formatter.getUnitDisplayName(unit)
+}
+
 private fun formatMemorySize(mib: Int): String {
-    return if (mib >= 1024) {
-        String.format("%.1f GB", mib / 1024f)
+    if (mib >= 1000) {
+        val formatter =
+            NumberFormatter.withLocale(Locale.getDefault())
+                .unit(MeasureUnit.GIGABYTE)
+                .unitWidth(NumberFormatter.UnitWidth.SHORT)
+                .precision(Precision.fixedFraction(1))
+                .roundingMode(RoundingMode.DOWN)
+        return formatter.format(mib.toDouble() / 1000.0).toString()
     } else {
-        "$mib MB"
+        val formatter =
+            NumberFormatter.withLocale(Locale.getDefault())
+                .unit(MeasureUnit.MEGABYTE)
+                .unitWidth(NumberFormatter.UnitWidth.SHORT)
+        return formatter.format(mib).toString()
     }
+}
+
+private fun formatMemoryRange(minMib: Int, maxMib: Int): String {
+    return NumberRangeFormatter.withLocale(Locale.getDefault())
+        .numberFormatterBoth(NumberFormatter.with().unit(MeasureUnit.MEGABYTE))
+        .formatRange(minMib, maxMib)
+        .toString()
 }
 
 @Composable
