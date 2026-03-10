@@ -153,6 +153,12 @@ fun DisplayScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         } else if (!isMouseLocked) {
             dsv.releasePointerCapture()
         }
+
+        if (isWindowFocused) {
+            VmController.pushClipboardToGuest()
+        } else {
+            VmController.pullClipboardFromGuest()
+        }
     }
 
     ImeAwareContainer(
