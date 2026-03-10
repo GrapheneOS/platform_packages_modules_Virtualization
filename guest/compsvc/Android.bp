@@ -15,6 +15,7 @@ rust_defaults {
         "libanyhow",
         "libbinder_rs",
         "libcompos_common",
+        "libcompos_manifest_proto",
         "libhex",
         "liblibc",
         "liblog_rust",
@@ -24,7 +25,9 @@ rust_defaults {
         "libprotobuf",
         "libregex",
         "librpcbinder_rs",
+        "librustix",
         "libscopeguard",
+        "libbssl_crypto",
         "libvm_payload_rs",
     ],
 }

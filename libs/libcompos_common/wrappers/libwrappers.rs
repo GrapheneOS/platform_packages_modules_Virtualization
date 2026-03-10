@@ -35,6 +35,7 @@ pub mod fsverity {
     use std::convert::TryInto;
     use std::fs;
     use std::io;
+    use std::os::fd::OwnedFd;
     use std::os::unix::io::{AsRawFd, BorrowedFd};
 
     /// Wraps fsverity::enable.
@@ -67,6 +68,16 @@ pub mod fsverity {
         };
         fsv_meta.digest.try_into().map_err(|_| anyhow!("Unexpected vector length"))
     }
+
+    /// For a given fd return the owned fd of the corresponding fsv_meta file if available.
+    pub fn open_fsv_meta_from_target_fd<'a>(fd: BorrowedFd<'a>) -> Result<OwnedFd> {
+        let raw_fd = fd.as_raw_fd();
+        let fd_path = format!("/proc/self/fd/{}", raw_fd);
+        let fd_path = fs::read_link(&fd_path)
+            .with_context(|| format!("Failed to read link for {}", fd_path))?;
+        let fsv_meta_path = fsvmeta::get_fsverity_metadata_path(&fd_path);
+        Ok(fs::File::open(&fsv_meta_path)?.into())
+    }
 }
 /// A wrapper for rstutils::system_properties.
 #[cfg_attr(enable_mock, mockall::automock)]
@@ -97,6 +108,32 @@ pub mod system_properties {
         F: FnMut(&str, &str) + 'a,
     {
         rustutils::android::system_properties::foreach(f)
+    }
+}
+/// A wrapper for process related utils.
+#[cfg_attr(enable_mock, mockall::automock)]
+pub mod process_utils {
+    use anyhow::Result;
+    use rustix::{buffer::spare_capacity, event::epoll};
+    use std::os::{fd::OwnedFd, unix::io::FromRawFd};
+
+    /// Waits for a process to terminate.
+    pub fn wait_for_process_terminated(pid: i32) -> Result<()> {
+        // SAFETY: We pass the right type of arguments for the syscall. `SYS_pidfd_open` just
+        // creates an FD, doesn't have any extra safety considerations.
+        let pidfd_result: libc::c_long = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, 0) };
+        if pidfd_result < 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        let fd = pidfd_result as i32;
+        // SAFETY: `fd` is a fresh fd created above so it is
+        // guaranteed to be valid and we are the only users.
+        let pid_fd = unsafe { OwnedFd::from_raw_fd(fd) };
+        let epoll_fd = epoll::create(epoll::CreateFlags::CLOEXEC)?;
+        epoll::add(&epoll_fd, &pid_fd, epoll::EventData::new_u64(1), epoll::EventFlags::IN)?;
+        let mut events = Vec::with_capacity(4);
+        epoll::wait(&epoll_fd, spare_capacity(&mut events), None)?;
+        Ok(())
     }
 }
 

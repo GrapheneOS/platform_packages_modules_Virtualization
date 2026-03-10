@@ -12,6 +12,7 @@ rust_defaults {
         "libfsverity_rs",
         "liblibc",
         "libminijail_rust",
+        "librustix",
         "librustutils",
     ],
 }

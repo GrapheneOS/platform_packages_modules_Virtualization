@@ -19,7 +19,7 @@
 //! actual compiler.
 
 use crate::artifact_signer::ArtifactSigner;
-use crate::compilation::odrefresh;
+use crate::compilation::{odrefresh, run_dex2oat};
 #[cfg(test)]
 use crate::compos_key::mock_wrapper as compos_key;
 #[cfg(not(test))]
@@ -234,7 +234,6 @@ impl IVerifiedDex2OatService for VerifiedDex2OatService {
         self.do_initialize_system_properties(names, values)
     }
 
-    #[allow(unused_variables)]
     fn verifiedDex2Oat(
         &self,
         args: &[Dex2OatArg],
@@ -244,7 +243,7 @@ impl IVerifiedDex2OatService for VerifiedDex2OatService {
         cb: &Strong<dyn IVerifiedDex2OatTaskCallback>,
     ) -> BinderResult<()> {
         self.do_check_initialized()?;
-        todo!("Finish implementing app compilation");
+        to_binder_result(run_dex2oat(args, system_dir_fd, system_ext_dir_fd, manifest_fd, cb))
     }
 
     fn getPublicKey(&self) -> BinderResult<Vec<u8>> {

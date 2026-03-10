@@ -37,8 +37,14 @@ interface IVerifiedDex2OatService {
      */
     byte[] getPublicKey();
 
+    @RustDerive(Clone=true)
     parcelable FileDetails {
-        int fd; /* The fd number the file is identified as. */
+        /**
+         * The fd number authfs will use to mount the file. The expected path of the file will be
+         *  authfs_mountpoint/fd
+         */
+        int fd;
+
         /**
          * Whether or not the file is exposed as a read only(false)
          * or read write(true) file by the client.
@@ -71,22 +77,22 @@ interface IVerifiedDex2OatService {
     }
 
     /** Arguments to run verifiedDex2Oat */
+    @RustDerive(Clone=true)
     parcelable Dex2OatArg {
         /**
-         * A format string where each occurrence of {@code {}} is substituted
+         * A format string where each occurrence of {@code !} is substituted
          * with a file descriptor from the {@code fds} array.
          *
          * <p><b>Formatting Rules:</b></p>
          * <ul>
-         * <li>A literal {@code {}} can be produced by escaping one or both braces, for example:
-         * {@code \{}}, {@code {\}}, or {@code \{\}}.</li>
+         * <li> {@code !} is escapable, for example: {@code \!}
          * <li>Escape characters ({@code \}) can themselves be escaped (e.g., {@code \\}).</li>
-         * <li>Substitution only occurs for adjacent opening and closing braces. For
-         * instance, with a format string of {@code "{{}{}}"} and file descriptors 1 and 2, the
-         * resulting string would be {@code "{12}}"}.</li>
+         * <li> The substitution of {@code !} is positional. In other words the first {@code !}
+         * is substituted with the first fd, the second with the second fd etc..
+         * </li>
          * </ul>
          *
-         * <p>It is an error if the count of non-escaped {@code {}} placeholders does not match the
+         * <p>It is an error if the count of non-escaped {@code !} placeholders does not match the
          * number of file descriptors provided in {@code fds}.</p>
          */
         String formatString;
@@ -94,12 +100,6 @@ interface IVerifiedDex2OatService {
          * An optional list of fds. The number of fds must match the number of
          * substitution {} atoms in formatString, if they do not match then
          * verifiedDex2Oat will fail.
-         */
-        /**
-         * An optional array of file descriptors. If provided, the number of
-         * file descriptors must match the number of {@code {}} substitution
-         * placeholders in {@code formatString}. A mismatch in these counts is
-         * considered a failure.
          */
         FileDetails[] fds;
     }
