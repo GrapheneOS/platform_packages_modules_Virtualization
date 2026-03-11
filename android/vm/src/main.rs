@@ -338,6 +338,18 @@ enum Opt {
         /// CID of the VM
         cid: Option<i32>,
     },
+    /// Sends a command to the VM to start adbd.
+    StartAdbd {
+        /// CID of the VM
+        #[arg(long)]
+        cid: i32,
+    },
+    /// Sends a command to the VM to stop adbd.
+    StopAdbd {
+        /// CID of the VM
+        #[arg(long)]
+        cid: i32,
+    },
 }
 
 fn parse_debug_level(s: &str) -> Result<DebugLevel, String> {
@@ -417,6 +429,8 @@ fn main() -> Result<(), Error> {
         }
         Opt::CreateIdsig { apk, path } => command_create_idsig(service, &apk, &path),
         Opt::Console { cid } => command_console(service, cid),
+        Opt::StartAdbd { cid } => command_start_or_stop_adbd(service, cid, true),
+        Opt::StopAdbd { cid } => command_start_or_stop_adbd(service, cid, false),
     }
 }
 
@@ -500,6 +514,20 @@ fn command_console(service: &dyn IVirtualizationService, cid: Option<i32>) -> Re
     // TODO(b/429049948): Uncomment below after resetting foreground process.
     // Err(Command::new("microcom").arg(host_console_name).exec().into())
     println!("Use `microcom {host_console_name}` to connect to console");
+    Ok(())
+}
+
+fn command_start_or_stop_adbd(
+    service: &dyn IVirtualizationService,
+    cid: i32,
+    start: bool,
+) -> Result<(), Error> {
+    service.startOrStopAdbd(cid, start)?;
+    if start {
+        println!("started adbd for VM with CID {cid}");
+    } else {
+        println!("stopped adbd for VM with CID {cid}");
+    }
     Ok(())
 }
 

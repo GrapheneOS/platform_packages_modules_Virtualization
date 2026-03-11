@@ -39,4 +39,11 @@ interface IGuestAgent {
 
     /** Called when a user is unlocked. */
     void userUnlocked(in int user_id, ICEStoreKEK per_user_kek) = 5;
+
+    /**
+     * Whether to start or stop adbd service in Microdroid guest.
+     *
+     * This function is only supported for debuggable Microdroid guests.
+     */
+    void startOrStopAdbd(in boolean start) = 6;
 }

@@ -207,6 +207,9 @@ pub fn command_run_app(
         hugePages: config.common.hugepages,
         boostUclamp: config.common.boost_uclamp,
         hostServices: host_services,
+        // If a Microdroid VM was started via vm CLI, then most likely a developer would want to
+        // adb shell into it, hence automatically start the adbd service.
+        autoStartAdbd: true,
         ..Default::default()
     });
     run(

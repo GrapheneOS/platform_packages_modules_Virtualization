@@ -686,6 +686,22 @@ impl IVirtualizationServiceInternal for VirtualizationServiceInternal {
         self.try_updating_sk_state(id);
         Ok(())
     }
+
+    fn startOrStopAdbd(&self, cid: i32, start: bool) -> binder::Result<()> {
+        check_debug_access()?;
+        let cid = cid as Cid;
+        let vm = self.state.lock().unwrap().virtual_machines.get(&cid).map(|(vm, _)| vm.clone());
+        if let Some(vm) = vm {
+            if let Some(guest_agent) = vm.getGuestAgent()? {
+                guest_agent.startOrStopAdbd(start)
+            } else {
+                Err(anyhow!("VM with CID {cid} doesn't have guest agent registered"))
+                    .or_binder_exception(ExceptionCode::ILLEGAL_STATE)
+            }
+        } else {
+            Err(anyhow!("Unknown CID {cid}")).or_binder_exception(ExceptionCode::ILLEGAL_STATE)
+        }
+    }
 }
 
 impl IVirtualizationMaintenance for VirtualizationServiceInternal {

@@ -447,6 +447,16 @@ impl aidl::IVirtualizationService for VirtualizationService {
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
         }
     }
+
+    fn startOrStopAdbd(&self, cid: i32, start: bool) -> binder::Result<()> {
+        // Delegate to the global service, including checking the debug permission.
+        if let Some(service) = global_service() {
+            service.startOrStopAdbd(cid, start)
+        } else {
+            Err(anyhow!("early_virtmgr doesn't support startOrStopAdbd"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -1202,6 +1212,10 @@ fn load_app_config(
         vm_config.teeServices.clone_from(&custom_config.teeServices);
 
         vm_config.gdbPort = custom_config.gdbPort;
+    }
+
+    if config.autoStartAdbd && debug_config.debug_level == aidl::DebugLevel::FULL {
+        append_kernel_param("androidboot.microdroid.adbd.start=1", &mut vm_config);
     }
 
     if config.memoryMib > 0 {
@@ -2332,6 +2346,10 @@ impl aidl::IGuestAgent for GuestAgentWrapper {
         let kek_wrapper =
             aidl::BnCEStoreKEK::new_binder(CEStoreKEKWrapper::new(kek), BinderFeatures::default());
         self.wrapped.userUnlocked(user_id, &kek_wrapper)
+    }
+
+    fn startOrStopAdbd(&self, start: bool) -> binder::Result<()> {
+        self.wrapped.startOrStopAdbd(start)
     }
 }
 

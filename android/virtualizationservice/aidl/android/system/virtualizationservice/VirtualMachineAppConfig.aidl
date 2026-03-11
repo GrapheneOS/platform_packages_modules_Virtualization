@@ -177,4 +177,11 @@ parcelable VirtualMachineAppConfig {
      * KEK used to set up the encrypted store or {@code null} if encrypted store uses default mode.
      */
     @nullable IEncryptedStoreKEK encryptedStoreKEK;
+
+    /**
+     * Whether to automatically start adbd during boot.
+     *
+     * For non-debuggable VMs this field is ignored.
+     */
+    boolean autoStartAdbd = true;
 }

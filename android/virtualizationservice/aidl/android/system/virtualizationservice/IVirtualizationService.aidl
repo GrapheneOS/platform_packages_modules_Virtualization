@@ -128,4 +128,11 @@ interface IVirtualizationService {
      * @param instanceId The ID for the VM.
      */
     void claimVmInstance(in byte[64] instanceId);
+
+    /**
+     * Starts or stop adbd inside the VM with given {@code cid}.
+     *
+     * This method is protected by the DEBUG_VIRTUAL_MACHINE permission.
+     */
+    void startOrStopAdbd(in int cid, in boolean start);
 }
