@@ -326,11 +326,34 @@ android_filesystem {
     ],
 }
 
+soong_config_module_type {
+    name: "microdroid_bootconfig_genrule",
+    module_type: "genrule",
+    config_namespace: "ANDROID",
+    value_variables: ["avf_microdroid_page_reporting_order"],
+    properties: [
+        "cmd",
+    ],
+}
+
+microdroid_bootconfig_genrule {
+    name: "microdroid_bootconfig_page_reporting_gen",
+    out: ["bootconfig.page_reporting"],
+    // Use 9 as a default.
+    cmd: "echo 'kernel.page_reporting.page_reporting_order = 9' > $(out)",
+    soong_config_variables: {
+        avf_microdroid_page_reporting_order: {
+            cmd: "echo 'kernel.page_reporting.page_reporting_order = %s' > $(out)",
+        },
+    },
+}
+
 genrule {
     name: "microdroid_bootconfig_arm64_gen",
     srcs: [
         "bootconfig.common",
         "bootconfig.arm64",
+        ":microdroid_bootconfig_page_reporting_gen",
     ],
     out: ["bootconfig"],
     cmd: "cat $(in) > $(out)",
@@ -341,6 +364,7 @@ genrule {
     srcs: [
         "bootconfig.common",
         "bootconfig.x86_64",
+        ":microdroid_bootconfig_page_reporting_gen",
     ],
     out: ["bootconfig"],
     cmd: "cat $(in) > $(out)",
