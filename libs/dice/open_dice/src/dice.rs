@@ -105,15 +105,6 @@ impl KeyAlgorithm {
             KeyAlgorithm::EcdsaP384 => 96,
         }
     }
-
-    /// Returns the size of the private key.
-    pub fn private_key_size(&self) -> usize {
-        match self {
-            KeyAlgorithm::Ed25519 => 64,
-            KeyAlgorithm::EcdsaP256 => 32,
-            KeyAlgorithm::EcdsaP384 => 48,
-        }
-    }
 }
 
 impl TryFrom<iana::Algorithm> for KeyAlgorithm {
@@ -170,23 +161,22 @@ const VM_DICE_CONTEXT: DiceContext_ = DiceContext_ {
 /// call, and the pointer passed to it is further passed to the underlying `libopen_dice` library.
 /// If `context` is `None`, the default context is passed along that sets both authority and
 /// subject algorithms to Ed25519.
-#[cfg(feature = "multialg")]
 pub(crate) fn context(
     context: Option<DiceContext>,
     f: impl FnOnce(*mut c_void) -> Result<()>,
 ) -> Result<()> {
-    let dice_context = context.map(DiceContext_::from).unwrap_or(VM_DICE_CONTEXT);
-    f(&dice_context as *const DiceContext_ as *mut c_void)
-}
-
-/// The non-multialg version of this helper passes `NULL` to the `libopen_dice` functions. In those
-/// versions the context is not used.
-#[cfg(not(feature = "multialg"))]
-pub(crate) fn context(
-    _context: Option<DiceContext>,
-    f: impl FnOnce(*mut c_void) -> Result<()>,
-) -> Result<()> {
-    f(ptr::null_mut())
+    #[cfg(not(feature = "multialg"))]
+    {
+        // The non-multialg version of this helper passes `NULL` to the `libopen_dice` functions. In
+        // those versions the context is not used.
+        let _ = context;
+        f(ptr::null_mut())
+    }
+    #[cfg(feature = "multialg")]
+    {
+        let dice_context = context.map(DiceContext_::from).unwrap_or(VM_DICE_CONTEXT);
+        f(&dice_context as *const DiceContext_ as *mut c_void)
+    }
 }
 
 /// A trait for types that represent Dice artifacts, which include:

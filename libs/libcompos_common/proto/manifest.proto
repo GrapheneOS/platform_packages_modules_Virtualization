@@ -23,7 +23,7 @@ message Signature {
         message SecureCompileManifest {
             message CompilerArgument {
                 message FileDetails {
-                    // The fs-verity digest of the file.
+                    // The fs-verity digest of the file, encoded as lower-case hex.
                     optional string verity_digest = 1;
                 }
 

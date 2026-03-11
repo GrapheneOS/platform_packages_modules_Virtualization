@@ -21,6 +21,10 @@
     </target_preparer>
     <!-- Target Preparer: Disable SELinux to allow the test to call into CompOS binder.-->
     <target_preparer class="com.android.tradefed.targetprep.DisableSELinuxTargetPreparer" />
+    <!-- Target Preparer: Enable the compos feature flag.-->
+    <target_preparer class="com.android.tradefed.targetprep.AFlagsTargetPreparer">
+        <option name="flag-value" value="hardware_backed_security/com.android.compos.verified_dex2oat=true" />
+    </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="cleanup" value="true"/>
         <option name="push" value="verified_dex2oat_api_test->/data/local/tmp/verified_dex2oat_api_test" />

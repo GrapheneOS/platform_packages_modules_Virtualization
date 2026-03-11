@@ -9,6 +9,7 @@ rust_defaults {
     defaults: ["avf_build_flags_rust"],
     prefer_rlib: true,
     apex_available: [
+        "com.android.compos",
         "com.android.virt",
         "//apex_available:platform",
     ],

@@ -87,24 +87,15 @@
     <string name="settings_advanced_title" msgid="1935607224859850897">"Avancé"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Capacité de stockage"</string>
     <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"Plage valide : de %1$d Mo à %2$d Mo"</string>
-    <!-- no translation found for settings_display_resolution_title (2299422750697419842) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full (1934435847075952454) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half (8817295705374047791) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter (3705900552539109641) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_full_hint (5979427185150015339) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_half_hint (7952269802485928968) -->
-    <skip />
-    <!-- no translation found for settings_display_resolution_quarter_hint (770354668663140131) -->
-    <skip />
-    <!-- no translation found for fullscreen_enter (1119690834808193718) -->
-    <skip />
-    <!-- no translation found for fullscreen_exit (2180595836197188247) -->
-    <skip />
+    <string name="settings_display_resolution_title" msgid="2299422750697419842">"Résolution de l\'écran"</string>
+    <string name="settings_display_resolution_full" msgid="1934435847075952454">"Résolution intégrale"</string>
+    <string name="settings_display_resolution_half" msgid="8817295705374047791">"Moitié"</string>
+    <string name="settings_display_resolution_quarter" msgid="3705900552539109641">"Quart"</string>
+    <string name="settings_display_resolution_full_hint" msgid="5979427185150015339">"Les performances peuvent être mauvaises."</string>
+    <string name="settings_display_resolution_half_hint" msgid="7952269802485928968">"Recommandations"</string>
+    <string name="settings_display_resolution_quarter_hint" msgid="770354668663140131">"La qualité peut être mauvaise."</string>
+    <string name="fullscreen_enter" msgid="1119690834808193718">"Plein écran"</string>
+    <string name="fullscreen_exit" msgid="2180595836197188247">"Quitter le plein écran"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"Maintenir activé"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"Désactivé"</string>
     <string name="settings_keep_awake_1m" msgid="3252559467576414987">"1 minute"</string>

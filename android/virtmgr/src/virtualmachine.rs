@@ -958,21 +958,20 @@ fn maybe_create_reference_dt_overlay(
         .context("Failed to extract vendor hashtree digest")
         .or_service_specific_exception(-1)?;
 
-    let mut key_material = None;
-    let mut untrusted_props = Vec::with_capacity(2);
-    untrusted_props.push((c"instance-id", &instance_id[..]));
     let want_updatable = extract_want_updatable(config);
-    if want_updatable && secretkeeper::is_supported() {
-        // Let guest know that it can defer rollback protection to Secretkeeper by setting
-        // an empty property in untrusted node in DT. This enables Updatable VMs.
-        untrusted_props.push((c"defer-rollback-protection", &[]));
+    let defer_rollback_protection = want_updatable && secretkeeper::is_supported();
+    let secretkeeper_public_key = if defer_rollback_protection {
         let sk: Strong<dyn aidl::ISecretkeeper> =
             binder::wait_for_interface(SECRETKEEPER_IDENTIFIER)?;
         if sk.getInterfaceVersion()? >= 2 {
             let aidl::PublicKey { keyMaterial } = sk.getSecretkeeperIdentity()?;
-            key_material = Some(keyMaterial);
+            Some(keyMaterial)
+        } else {
+            None
         }
-    }
+    } else {
+        None
+    };
 
     let mut android_firmware_props_owned = Vec::new();
 
@@ -997,9 +996,10 @@ fn maybe_create_reference_dt_overlay(
         .collect::<Vec<_>>();
     let props = DeviceTreeOverlayProps {
         dt_path: host_ref_dt,
-        untrusted_props: &untrusted_props,
+        instance_id: &instance_id[..],
+        defer_rollback_protection,
         vendor_hashtree_descriptor_root_digest: vendor_hashtree_digest.as_deref(),
-        secretkeeper_public_key: key_material.as_deref(),
+        secretkeeper_public_key: secretkeeper_public_key.as_deref(),
         android_firmware_props: &android_firmware_props,
     };
 
@@ -1508,7 +1508,7 @@ fn validate_vsock_port(port: u32) -> binder::Result<()> {
     /// Min vsock port number used by Trusty VMs. See b/427392420 for more context.
     const TRUSTY_VSOCK_PORT_MIN: u32 = 2;
     /// Max vsock port number used by Trusty VMs.
-    const TRUSTY_VSOCK_PORT_MAX: u32 = 20;
+    const TRUSTY_VSOCK_PORT_MAX: u32 = 30;
 
     let is_unprivileged = port >= VSOCK_PRIV_PORT_MAX;
     let is_allowed_trusty_port = (TRUSTY_VSOCK_PORT_MIN..=TRUSTY_VSOCK_PORT_MAX).contains(&port);

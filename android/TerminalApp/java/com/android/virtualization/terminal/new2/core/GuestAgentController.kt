@@ -19,6 +19,7 @@ import android.content.Context
 import android.system.virtualizationcommon.IGuestAgent
 import android.util.Log
 import com.android.virtualization.debian.aidl.IDebianService
+import com.android.virtualization.terminal.ClipboardController
 import com.android.virtualization.terminal.DebianService
 import com.android.virtualization.terminal.DebianServiceBase
 import com.android.virtualization.terminal.DebianServiceGrpc
@@ -48,6 +49,7 @@ data class OpenPort(val port: Int, val name: String, val isForwarded: Boolean) {
 class GuestAgentController(private val context: Context, private val scope: CoroutineScope) {
     private var server: Server? = null
     private var debianService: DebianServiceBase? = null
+    private var clipboardController: ClipboardController? = null
     private val portsStateManager = PortsStateManager.getInstance(context)
 
     @Volatile private var allowedIpAddress: String? = null
@@ -93,13 +95,24 @@ class GuestAgentController(private val context: Context, private val scope: Coro
             Log.w(TAG, "GuestAgentController is started again. It might had been crashed.")
         }
         debianService = DebianService(context, scope, cid, guestAgent, service)
+        clipboardController = ClipboardController(context, service)
         portsStateManager.registerListener(portsListener)
         updatePortsState()
     }
 
     fun stop() {
         portsStateManager.unregisterListener(portsListener)
+        clipboardController?.onDestroy()
+        clipboardController = null
         stopDebianServer()
+    }
+
+    fun pullClipboardFromGuest() {
+        clipboardController?.pullFromGuest()
+    }
+
+    fun pushClipboardToGuest() {
+        clipboardController?.pushToGuestIfNeeded()
     }
 
     fun shutdownVm() {

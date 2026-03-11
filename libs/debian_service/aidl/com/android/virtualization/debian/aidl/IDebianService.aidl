@@ -18,10 +18,20 @@ package com.android.virtualization.debian.aidl;
 import com.android.virtualization.debian.aidl.IVmActivePortListener;
 
 // Controls debian guest agents from Terminal App
-oneway interface IDebianService {
+interface IDebianService {
     const long VSOCK_PORT = 4000;
 
-    void setVmActivePortListener(IVmActivePortListener listener);
-    void requestForwarding(int guestTcpPort, int vsockPort);
-    void requestStorageBalloon(long availableBytes);
+    oneway void setVmActivePortListener(IVmActivePortListener listener);
+    oneway void requestForwarding(int guestTcpPort, int vsockPort);
+    oneway void requestStorageBalloon(long availableBytes);
+
+    /**
+     * Updates the clipboard in the guest.
+     */
+    oneway void updateClipboard(String text);
+
+    /**
+     * Reads the current clipboard content from the guest.
+     */
+    String readClipboard();
 }

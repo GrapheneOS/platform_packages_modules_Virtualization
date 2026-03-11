@@ -16,20 +16,12 @@
 package com.android.virtualization.terminal.new2.ui.main
 
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.hardware.display.DisplayManager
 import android.hardware.input.InputManager
-import android.util.DisplayMetrics
-import android.view.Display
 import android.view.InputDevice
-import android.view.WindowInsets
-import android.view.WindowManager
-import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.new2.core.InstallState
 import com.android.virtualization.terminal.new2.core.Installer
 import com.android.virtualization.terminal.new2.core.TerminalAddress
@@ -40,7 +32,6 @@ import com.android.virtualization.terminal.new2.core.VmState
 import com.android.virtualization.terminal.new2.ui.MainActivity
 import com.android.virtualization.terminal.new2.ui.PERMISSIONS
 import com.android.virtualization.terminal.new2.ui.SettingsDestination
-import com.android.virtualization.terminal.new2.ui.TAB_BAR_HEIGHT
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -227,8 +218,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         _permissionRequired.value = false
-        val displayInfo = getDisplayInfo(context, _isFullscreen.value)
-        viewModelScope.launch { VmController.start(displayInfo) }
+        viewModelScope.launch { VmController.start() }
     }
 
     fun onPermissionGranted() {
@@ -256,41 +246,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         VmController.stop()
-    }
-
-    private fun getDisplayInfo(context: Context, isFullscreen: Boolean): DisplayInfo {
-        val dm = context.getSystemService(DisplayManager::class.java)
-        val display = dm.getDisplay(Display.DEFAULT_DISPLAY)
-        val windowContext =
-            context.createDisplayContext(display).createWindowContext(TYPE_APPLICATION, null)
-        val wm = windowContext.getSystemService(WindowManager::class.java)
-        val metrics = wm.currentWindowMetrics
-
-        var width = metrics.bounds.width()
-        val density = context.resources.displayMetrics.density
-        var height = metrics.bounds.height()
-
-        if (!isFullscreen) {
-            val insets = metrics.windowInsets.getInsets(WindowInsets.Type.systemBars())
-            width -= (insets.left + insets.right)
-            height -= (insets.top + insets.bottom + (TAB_BAR_HEIGHT.value * density).toInt())
-        }
-
-        val sharedPref =
-            context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
-        val resolutionName =
-            sharedPref.getString(
-                SettingsViewModel.KEY_DISPLAY_RESOLUTION,
-                DisplayResolution.HALF.name,
-            )
-        val resolution = DisplayResolution.valueOf(resolutionName!!)
-
-        width = (width * resolution.scale).toInt()
-        height = (height * resolution.scale).toInt()
-
-        val dpi = (DisplayMetrics.DENSITY_DEFAULT * density * resolution.scale).toInt()
-        val refreshRate = display.refreshRate.toInt()
-        return DisplayInfo(width, height, dpi, refreshRate)
     }
 
     init {

@@ -35,7 +35,6 @@ import com.android.virtualization.debian.aidl.IDebianService
 import com.android.virtualization.terminal.AndroidToVmBridge
 import com.android.virtualization.terminal.CertificateUtils
 import com.android.virtualization.terminal.ConfigJson
-import com.android.virtualization.terminal.DisplayInfo
 import com.android.virtualization.terminal.GraphicsManager
 import com.android.virtualization.terminal.InstalledImage
 import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
@@ -112,6 +111,14 @@ object VmController {
         guestAgentController?.shutdownVm()
     }
 
+    fun pullClipboardFromGuest() {
+        guestAgentController?.pullClipboardFromGuest()
+    }
+
+    fun pushClipboardToGuest() {
+        guestAgentController?.pushClipboardToGuest()
+    }
+
     fun requestSessionDiscard(sessionId: String) {
         repositoryScope.launch { _sessionDiscarded.emit(sessionId) }
     }
@@ -147,7 +154,7 @@ object VmController {
         }
     }
 
-    fun start(displayInfo: DisplayInfo) {
+    fun start() {
         if (_vmState.value is VmState.Running || _vmState.value is VmState.Starting) return
 
         val intent = Intent(context, VmService::class.java)
@@ -183,7 +190,7 @@ object VmController {
                 customImageConfigBuilder.addParam("debian_server_port=$port")
 
                 // Override config for Display
-                setDisplayConfig(customImageConfigBuilder, displayInfo)
+                setDisplayConfig(customImageConfigBuilder)
                 setGpuConfig(context, customImageConfigBuilder)
                 customImageConfigBuilder.setAudioConfig(
                     VirtualMachineCustomImageConfig.AudioConfig.Builder()
@@ -332,18 +339,17 @@ object VmController {
         }
     }
 
-    private fun setDisplayConfig(
-        builder: VirtualMachineCustomImageConfig.Builder,
-        displayInfo: DisplayInfo,
-    ) {
+    private fun setDisplayConfig(builder: VirtualMachineCustomImageConfig.Builder) {
+        // Set a placeholder display config to prevent gfxstream from crashing when it's enabled.
+        // It will be replaced with the actual resolution once the surface is created.
         builder
             .setDisplayConfig(
                 VirtualMachineCustomImageConfig.DisplayConfig.Builder()
-                    .setWidth(displayInfo.width)
-                    .setHeight(displayInfo.height)
-                    .setHorizontalDpi(displayInfo.dpi)
-                    .setVerticalDpi(displayInfo.dpi)
-                    .setRefreshRate(displayInfo.refreshRate)
+                    .setWidth(1280)
+                    .setHeight(720)
+                    .setHorizontalDpi(160)
+                    .setVerticalDpi(160)
+                    .setRefreshRate(60)
                     .build()
             )
             .useKeyboard(true)

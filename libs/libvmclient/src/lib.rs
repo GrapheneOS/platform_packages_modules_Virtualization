@@ -63,6 +63,7 @@ use std::{
 const EARLY_VIRTMGR_PATH: &str = "/apex/com.android.virt/bin/early_virtmgr";
 const VIRTMGR_PATH: &str = "/apex/com.android.virt/bin/virtmgr";
 const VIRTMGR_THREADS: usize = 2;
+const VM_SERVICE_THREADS: usize = 1;
 
 fn posix_pipe() -> Result<(OwnedFd, OwnedFd), io::Error> {
     use nix::fcntl::OFlag;
@@ -343,7 +344,10 @@ impl VmInstance {
         &self,
         port: u32,
     ) -> Result<Strong<T>, StatusCode> {
-        RpcSession::new().setup_preconnected_client(|| {
+        let rpc_session = RpcSession::new();
+        // Allow the service hosted within the VM to call back into the client.
+        rpc_session.set_max_incoming_threads(VM_SERVICE_THREADS);
+        rpc_session.setup_preconnected_client(|| {
             match self.vm.connectVsock(port as i32) {
                 Ok(vsock) => {
                     // Ownership of the fd is transferred to binder

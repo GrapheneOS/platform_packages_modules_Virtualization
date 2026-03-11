@@ -24,7 +24,8 @@ pub mod timeouts;
 use anyhow::{bail, Result};
 use compos_client::{CompOsType, VmParameters};
 
-/// The magic word that is prepended to the secure compilation manifest.
+/// The magic word that is prepended to the sha256 of the secure compilation manifest
+/// before signing and signature verification.
 pub const COMPOS_MANIFEST_MAGIC_PREFIX: &str = "compos_secure_compilation";
 
 /// VSock port that the CompOS server listens on for RPC binder connections. This should be out of

@@ -105,8 +105,11 @@ internal class DisplayProvider(
                 // TODO: don't consume exceptions here too
                 Log.e(TAG, "Failed to configure surface $surfaceKind", e)
             }
-            if (surfaceKind == SurfaceKind.MAIN && mainView is DisplaySurfaceView) {
-                mainView.refreshDisplay()
+            if (surfaceKind == SurfaceKind.MAIN) {
+                syncCursorReparenting()
+                if (mainView is DisplaySurfaceView) {
+                    mainView.refreshDisplay()
+                }
             }
         }
 
@@ -128,6 +131,14 @@ internal class DisplayProvider(
             } catch (e: RemoteException) {
                 throw RuntimeException("Error while destroying surface for $surfaceKind", e)
             }
+        }
+    }
+
+    private fun syncCursorReparenting() {
+        val cursor = cursorView.surfaceControl
+        val main = mainView.surfaceControl
+        if (cursor.isValid && main.isValid) {
+            SurfaceControl.Transaction().reparent(cursor, main).apply()
         }
     }
 
