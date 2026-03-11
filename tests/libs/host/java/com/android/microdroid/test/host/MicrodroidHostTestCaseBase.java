@@ -67,6 +67,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
                             * 60
                             * 1000
                             / MICRODROID_COMMAND_RETRY_INTERVAL_MILLIS);
+    private Boolean mIsUpdatableVMSupported;
 
     // We use a map here because the parameterizer `DeviceParameterizedRunner` doesn't support "-"
     // in test names.
@@ -256,15 +257,30 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
         return ret;
     }
 
-    public boolean isUpdatableVmSupported() throws DeviceNotAvailableException {
+    public boolean isUpdatableVmSupported() throws Exception {
+        if (mIsUpdatableVMSupported != null) {
+            return mIsUpdatableVMSupported;
+        }
+        if (getAndroidDevice().getApiLevel() < 35) {
+            mIsUpdatableVMSupported = false;
+            return false;
+        }
         // Updatable VMs are possible iff device supports Secretkeeper.
-        CommandRunner android = new CommandRunner(getDevice());
-        CommandResult result = android.runForResult("service check", SECRETKEEPER_AIDL);
-        assertWithMessage("Failed to run service check. Result= " + result)
-                .that(result.getStatus() == CommandStatus.SUCCESS && result.getExitCode() == 0)
-                .isTrue();
-        boolean is_sk_supported = !result.getStdout().trim().contains("not found");
-        return is_sk_supported;
+        String updatableVM = parseFieldFromVmInfo("Updatable VM is");
+        if (updatableVM.contains("not supported")) {
+            mIsUpdatableVMSupported = false;
+        } else if (updatableVM.contains("supported")) {
+            mIsUpdatableVMSupported = true;
+        } else {
+            // Use `service check` only for backward compatibility.
+            CommandRunner android = new CommandRunner(getDevice());
+            CommandResult result = android.runForResult("service check", SECRETKEEPER_AIDL);
+            assertWithMessage("Failed to run service check. Result= " + result)
+                    .that(result.getStatus() == CommandStatus.SUCCESS && result.getExitCode() == 0)
+                    .isTrue();
+            mIsUpdatableVMSupported = !result.getStdout().trim().contains("not found");
+        }
+        return mIsUpdatableVMSupported;
     }
 
     public List<String> getSupportedOSList() throws Exception {

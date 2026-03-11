@@ -1656,7 +1656,7 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
                         && device.doesFileExist("/sys/bus/platform/drivers/vfio-platform"));
     }
 
-    private void ensureUpdatableVmSupported() throws DeviceNotAvailableException {
+    private void ensureUpdatableVmSupported() throws Exception {
         if (PropertyUtil.getVsrApiLevel(getAndroidDevice()) >= 202504) {
             assertTrue(
                     "Missing Updatable VM support, have you declared Secretkeeper interface?",

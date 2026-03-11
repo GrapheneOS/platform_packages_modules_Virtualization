@@ -495,6 +495,13 @@ fn command_info(service: &dyn IVirtualizationService) -> Result<(), Error> {
     let debug_policy = service.getDebugPolicy()?;
     println!("Debug policy: {debug_policy}");
 
+    // If strings are changed, also change tests.
+    if service.isUpdatableVmSupported()? {
+        println!("Updatable VM is supported.");
+    } else {
+        println!("Updatable VM is not supported.");
+    }
+
     Ok(())
 }
 
