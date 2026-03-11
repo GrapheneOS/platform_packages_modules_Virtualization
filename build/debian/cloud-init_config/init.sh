@@ -39,3 +39,4 @@ apply_avf_configs() {
 
 install_localdebs
 apply_avf_configs
+sync
