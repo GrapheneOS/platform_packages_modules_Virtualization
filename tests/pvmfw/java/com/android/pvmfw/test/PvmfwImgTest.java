@@ -35,7 +35,7 @@ import java.util.List;
 @RunWith(DeviceJUnit4ClassRunner.class)
 public class PvmfwImgTest extends CustomPvmfwHostTestCaseBase {
     @Test
-    public void testPvmfw_beforeVmReferenceDt_whenSecretKeeperExists() throws Exception {
+    public void testPvmfw_beforeVmReferenceDt_whenUpdatableVMSupported() throws Exception {
         // VM reference DT is added since version 1.2
         List<int[]> earlyVersions = Arrays.asList(new int[] {1, 0}, new int[] {1, 1});
         Pvmfw.Builder builder = new Pvmfw.Builder(getPvmfwBinFile(), getBccFile());
@@ -49,8 +49,8 @@ public class PvmfwImgTest extends CustomPvmfwHostTestCaseBase {
             Pvmfw pvmfw = builder.setVersion(major, minor).build();
             pvmfw.serialize(getCustomPvmfwFile());
 
-            if (isSecretKeeperSupported()) {
-                // If secret keeper is supported, we can't boot with early version
+            if (isUpdatableVMSupported()) {
+                // If updatable VM (=secret keeper) is supported, we can't boot with early version
                 assertThrows(
                         "pvmfw shouldn't boot without VM reference DT, version=" + version,
                         DeviceRuntimeException.class,

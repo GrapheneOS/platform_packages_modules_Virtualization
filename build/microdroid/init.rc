@@ -87,7 +87,7 @@ on init && property:ro.boot.microdroid.debuggable=1
     setprop traced.machine_name ${ro.product.name}
     setprop persist.traced.enable 2
 
-on property:init_debug_policy.adbd.enabled=1
+on property:init_debug_policy.adbd.enabled=1 && property:ro.boot.microdroid.adbd.start=1
     start adbd
 
 # Mount filesystems and start core system services.

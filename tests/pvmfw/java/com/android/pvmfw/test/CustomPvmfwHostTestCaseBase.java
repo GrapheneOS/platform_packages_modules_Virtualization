@@ -69,7 +69,7 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     @Nullable private File mPvmfwBinFileOnHost;
     @Nullable private File mBccFileOnHost;
     @Nullable private File mVmReferenceDtFile;
-    private boolean mSecretKeeperSupported;
+    private boolean mUpdatableVMSupported;
 
     @NonNull private TestDevice mAndroidDevice;
     @Nullable private ITestDevice mMicrodroidDevice;
@@ -92,7 +92,7 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
         // This is prepared by AndroidTest.xml
         mVmReferenceDtFile = mAndroidDevice.pullFile(VM_REFERENCE_DT_PATH);
 
-        mSecretKeeperSupported = isUpdatableVmSupported();
+        mUpdatableVMSupported = isUpdatableVmSupported();
 
         // Prepare for system properties for custom pvmfw.img.
         // File will be prepared later in individual test and then pushed to device
@@ -159,13 +159,13 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
     }
 
     /**
-     * Returns whether a secretkeeper is supported.
+     * Returns whether a updatable VM is supported.
      *
      * <p>If {@code true}, then VM reference DT must exist. (i.e. {@link #getVmReferenceDtFile} must
      * exist {@code null}).
      */
-    public boolean isSecretKeeperSupported() {
-        return mSecretKeeperSupported;
+    public boolean isUpdatableVMSupported() {
+        return mUpdatableVMSupported;
     }
 
     /**

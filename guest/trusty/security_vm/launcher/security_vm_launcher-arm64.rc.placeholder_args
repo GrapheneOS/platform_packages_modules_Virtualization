@@ -1,0 +1,1 @@
+ --rpc-services-config /system_ext/etc/vm/trusty_vm/security_vm_rpc_services-with_placeholders_thal.json

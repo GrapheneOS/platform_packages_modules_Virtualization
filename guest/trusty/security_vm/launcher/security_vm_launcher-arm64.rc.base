@@ -1,7 +1,6 @@
 # Starts the non-secure Trusty VM in /system_ext when the feature is enabled through
 # the system property set in vendor init.
 on init && property:trusty.security_vm.enabled=1
-    setprop trusty.security_vm.nonsecure_vm_ready 1
     setprop trusty.security_vm.vm_cid 200
     start trusty_security_vm_launcher
 
@@ -9,7 +8,7 @@ on init && property:trusty.security_vm.enabled=1
 service trusty_security_vm_launcher /system_ext/bin/trusty_security_vm_launcher \
 --name security_vm \
 --kernel /system_ext/etc/vm/trusty_vm/trusty_security_vm.elf \
---rpc-services-config /system_ext/etc/vm/trusty_vm/security_vm_rpc_services.json \
+--rpc-services-config /system_ext/etc/vm/trusty_vm/security_vm_rpc_services-base.json \
 --vm-instance-id /system_ext/etc/vm/trusty_vm/security_vm_instance_id \
 --memory-size-mib 12 \
 --protected

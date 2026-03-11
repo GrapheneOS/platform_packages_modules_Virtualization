@@ -146,4 +146,11 @@ interface IVirtualizationServiceInternal {
      * @param id Identifier for the secret held in Secretkeeper for the caller
      */
     void claimSecretkeeperEntry(in byte[64] id);
+
+    /**
+     * Starts or stop adbd inside the VM with given {@code cid}.
+     *
+     * This method is protected by the DEBUG_VIRTUAL_MACHINE permission.
+     */
+    void startOrStopAdbd(in int cid, in boolean start);
 }

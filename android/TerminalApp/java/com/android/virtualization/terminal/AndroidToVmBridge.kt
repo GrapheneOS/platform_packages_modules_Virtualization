@@ -139,8 +139,29 @@ class AndroidToVmBridge(
             vmOut.flush()
 
             // 4. Start bidirectional pipe
-            val t1 = thread { pipe("Client->VM", clientIn, vmOut) }
-            val t2 = thread { pipe("VM->Client", vmIn, clientOut) }
+            val closeConnection = {
+                try {
+                    clientSocket.close()
+                } catch (e: Exception) {
+                    Log.v(TAG, "Error closing client socket", e)
+                }
+                if (vsockFd != null && vsockFd.valid()) {
+                    try {
+                        Os.close(vsockFd)
+                    } catch (e: Exception) {
+                        Log.v(TAG, "Error closing vsock", e)
+                    }
+                }
+            }
+
+            val t1 = thread {
+                pipe("Client->VM", clientIn, vmOut)
+                closeConnection()
+            }
+            val t2 = thread {
+                pipe("VM->Client", vmIn, clientOut)
+                closeConnection()
+            }
 
             t1.join()
             t2.join()

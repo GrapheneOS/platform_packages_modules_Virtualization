@@ -1432,6 +1432,22 @@ impl IGuestAgent for GuestAgent {
             .context("Failed to set per user key")
             .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
     }
+
+    fn startOrStopAdbd(&self, start: bool) -> binder::Result<()> {
+        if !system_properties::read_bool("init_debug_policy.adbd.enabled", false).unwrap_or(false) {
+            return Err(anyhow!("adbd is not enabled"))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        if start {
+            system_properties::write("ctl.start", "adbd")
+                .context("failed to start adbd")
+                .or_service_specific_exception(-1)
+        } else {
+            system_properties::write("ctl.stop", "adbd")
+                .context("failed to stop adbd")
+                .or_service_specific_exception(-1)
+        }
+    }
 }
 
 fn set_encrypted_store_per_user_key(

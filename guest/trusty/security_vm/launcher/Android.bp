@@ -7,7 +7,7 @@ genrule {
     srcs: [
         "security_vm_launcher-arm64.rc.base",
     ] + select(soong_config_variable("trusty_system_vm", "placeholder_trusted_hal"), {
-        true: [],
+        true: ["security_vm_launcher-arm64.rc.placeholder_args"],
         default: ["security_vm_launcher-arm64.rc.ffa"],
     }) + [
         "security_vm_launcher-arm64.rc.suffix",
@@ -40,6 +40,22 @@ prebuilt_etc {
     system_ext_specific: true,
     relative_install_path: "vm/trusty_vm",
     filename: "security_vm_rpc_services.json",
+}
+
+prebuilt_etc {
+    name: "trusty_security_vm_rpc_services-base.json",
+    src: "security_vm_rpc_services.json",
+    system_ext_specific: true,
+    relative_install_path: "vm/trusty_vm",
+    filename: "security_vm_rpc_services-base.json",
+}
+
+prebuilt_etc {
+    name: "trusty_security_vm_rpc_services-with_placeholders_thal.json",
+    src: "security_vm_rpc_services-with_placeholders_thal.json",
+    system_ext_specific: true,
+    relative_install_path: "vm/trusty_vm",
+    filename: "security_vm_rpc_services-with_placeholders_thal.json",
 }
 
 rust_binary {

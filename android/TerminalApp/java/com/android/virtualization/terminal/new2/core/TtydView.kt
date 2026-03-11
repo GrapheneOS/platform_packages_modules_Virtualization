@@ -17,6 +17,7 @@ package com.android.virtualization.terminal.new2.core
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.fonts.FontStyle
 import android.net.http.SslError
 import android.util.AttributeSet
@@ -79,6 +80,7 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         settings.domStorageEnabled = true
         settings.javaScriptEnabled = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.textZoom = 100
 
         addJavascriptInterface(
             object {
@@ -120,6 +122,15 @@ class TtydView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         scaleGestureDetector.onTouchEvent(event)
         return super.onTouchEvent(event)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val newFontSize = (newConfig.fontScale * DEFAULT_FONT_SIZE).toInt()
+        if (fontSize != newFontSize) {
+            fontSize = newFontSize
+            updateFontSize()
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {

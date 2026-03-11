@@ -50,10 +50,7 @@ open class TerminalView constructor(context: Context, attrs: AttributeSet?) :
     private val touchToMouseHandler: String =
         readAssetAsString(context, "js/touch_to_mouse_handler.js")
     private val a11yManager =
-        context.getSystemService<AccessibilityManager>(AccessibilityManager::class.java).also {
-            it.addTouchExplorationStateChangeListener(this)
-            it.addAccessibilityStateChangeListener(this)
-        }
+        context.getSystemService<AccessibilityManager>(AccessibilityManager::class.java)
 
     @Throws(IOException::class)
     private fun readAssetAsString(context: Context, filePath: String): String {
@@ -144,10 +141,18 @@ open class TerminalView constructor(context: Context, attrs: AttributeSet?) :
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        a11yManager.addTouchExplorationStateChangeListener(this)
+        a11yManager.addAccessibilityStateChangeListener(this)
         if (a11yManager.isEnabled) {
             val parent = getParent() as View
             parent.setAccessibilityDelegate(a11yEventFilter)
         }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        a11yManager.removeTouchExplorationStateChangeListener(this)
+        a11yManager.removeAccessibilityStateChangeListener(this)
     }
 
     private val a11yNodeProvider: AccessibilityNodeProvider =
