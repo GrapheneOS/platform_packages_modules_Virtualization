@@ -203,6 +203,10 @@ impl ExpectedAuthority {
 pub struct TenantConfiguration {
     /// Tenant package name
     pub name: String,
+    /// The UID of the tenant. It must be in the range
+    /// [`microdroid_uids::MICRODROID_TENANT_UID_RANGE_START`,
+    /// `microdroid_uids::MICRODROID_TENANT_UID_RANGE_END`].
+    pub uid: u32,
     /// Tenant task
     #[serde(default)]
     pub task: Option<Task>,

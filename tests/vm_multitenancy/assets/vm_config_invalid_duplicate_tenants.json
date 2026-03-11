@@ -8,6 +8,7 @@
       "package": "apk",
       "name": "com.android.microdroid.test",
       "min_version": 36,
+      "uid": 10000,
       "expected_authority": {
         "dev-keys": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",
         "test-keys": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",
@@ -23,6 +24,7 @@
       "package": "apk",
       "name": "com.android.microdroid.test",
       "min_version": 36,
+      "uid": 10001,
       "expected_authority": {
         "dev-keys": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",
         "test-keys": "3ccdcd8908b08953041696911a71e55d4e3d14eb7bce8da2124f90ae247f33d5df54cf460b9142710e68cb1b49fd1b2828032afcf33214e215746faabbf9425b",

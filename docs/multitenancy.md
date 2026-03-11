@@ -16,6 +16,7 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
     {
       "package": "apk",
       "name": "com.android.microdroid.test",
+      "uid": 10000,
       "min_version": 36,
       "expected_authority": {
         "dev-keys": "3ccdcd8908b0...",
@@ -31,6 +32,7 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
     {
       "package": "apex",
       "name": "com.android.virt",
+      "uid": 10001,
       "min_version": 1,
       "expected_authority": {
         "dev-keys": "f8d9d9de2...",
@@ -41,6 +43,7 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
     {
       "package": "apk",
       "name": "com.android.othertest",
+      "uid": 10002,
       "min_version": 1,
       "expected_authority": {
         "dev-keys": "a_single_key_for_all_builds",
@@ -51,6 +54,7 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
     {
       "package": "apex",
       "name": "com.android.anothervirt",
+      "uid": 10003,
       "min_version": 1,
       "expected_authority": {
         "dev-keys": "another_single_key_for_all_builds",
@@ -62,7 +66,8 @@ Here is an example of a tenancy config. Use such a tenancy config to configure y
   ...
 }
 ```
-1. `min_version` and `expected_authority` are mandatory fields for each tenant.
-2. For `expected_authority`, use the hex encoding of the SHA-512 hash of the certificate (for APK) or the signing key (for APEX).
+1. `uid`, `min_version` and `expected_authority` are mandatory fields for each tenant.
+2. The `uid` must be unique among tenants and within the range `[10000, 65534]`.
+3. For `expected_authority`, use the hex encoding of the SHA-512 hash of the certificate (for APK) or the signing key (for APEX).
 
 TODO(b/483292362): Add section for configuring inter-tenant communication & SELinux domain for the tenants

@@ -54,7 +54,8 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     private static final String VM_ATTESTATION_MESSAGE = "Hello RKP from AVF!";
     private static final int ENCRYPTED_STORAGE_BYTES = 4_000_000;
     private static final String EXAMPLE_STRING = "Literally any string!! :)";
-    private static final int FIRST_TENANT_UID = 10000;
+    private static final int MICRODROID_TENANT_UID_RANGE_START = 10000;
+    private static final int MICRODROID_TENANT_UID_RANGE_END = 65534;
 
     private static final String RELAXED_ROLLBACK_PROTECTION_SCHEME_TEST_PACKAGE_NAME =
             "com.android.microdroid.test_relaxed_rollback_protection_scheme";
@@ -705,14 +706,8 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     @Test
     public void bootFailsWhenMinVersionIsMissing() throws Exception {
         assumeAdvanceMultiTenancySupport();
-
-        VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig("assets/vm_config_missing_min_version.json")
-                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
-                        .build();
-
-        assertThrowsVmException(
-                () -> tryBootVmWithConfig(config, "test_vm_missing_min_version"),
+        assertBootFailsWithConfig(
+                "assets/vm_config_missing_min_version.json",
                 VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
                 "missing field `min_version`");
     }
@@ -720,17 +715,82 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     @Test
     public void bootFailsWhenExpectedAuthorityIsMissing() throws Exception {
         assumeAdvanceMultiTenancySupport();
+        assertBootFailsWithConfig(
+                "assets/vm_config_missing_expected_authority.json",
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "missing field `expected_authority`");
+    }
+
+    @Test
+    public void bootFailsWhenTenantUidIsMissing() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+        assertBootFailsWithConfig(
+                "assets/vm_config_tenant_no_uid.json",
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "missing field `uid`");
+    }
+
+    @Test
+    public void bootFailsWhenTenantUidIsTooLow() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+        assertBootFailsWithConfig(
+                "assets/vm_config_tenant_uid_too_low.json",
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "Tenant UID 9999 is invalid. It must be in range ["
+                        + MICRODROID_TENANT_UID_RANGE_START
+                        + ", "
+                        + MICRODROID_TENANT_UID_RANGE_END
+                        + "]");
+    }
+
+    @Test
+    public void bootFailsWhenTenantUidIsTooHigh() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+        assertBootFailsWithConfig(
+                "assets/vm_config_tenant_uid_too_high.json",
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "Tenant UID 65535 is invalid. It must be in range ["
+                        + MICRODROID_TENANT_UID_RANGE_START
+                        + ", "
+                        + MICRODROID_TENANT_UID_RANGE_END
+                        + "]");
+    }
+
+    @Test
+    public void bootFailsWhenTenantUidIsNegative() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+        assertBootFailsWithConfig(
+                "assets/vm_config_tenant_uid_negative.json",
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "Tenant UID -1 is invalid. It must be in range ["
+                        + MICRODROID_TENANT_UID_RANGE_START
+                        + ", "
+                        + MICRODROID_TENANT_UID_RANGE_END
+                        + "]");
+    }
+
+    @Test
+    public void bootFailsWhenTenantUidIsDuplicate() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+        assertBootFailsWithConfig(
+                "assets/vm_config_tenant_uid_duplicate.json",
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "Duplicate tenant UID found: 10000");
+    }
+
+    private void assertBootFailsWithConfig(
+            String configPath, int expectedErrorCode, String expectedErrorMessage)
+            throws Exception {
 
         VirtualMachineConfig config =
-                newVmConfigBuilderWithPayloadConfig(
-                                "assets/vm_config_missing_expected_authority.json")
+                newVmConfigBuilderWithPayloadConfig(configPath)
                         .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
                         .build();
 
         assertThrowsVmException(
-                () -> tryBootVmWithConfig(config, "test_vm_missing_expected_authority"),
-                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
-                "missing field `expected_authority`");
+                () -> tryBootVmWithConfig(config, "test_vm_boot_failure"),
+                expectedErrorCode,
+                expectedErrorMessage);
     }
 
     @Test
@@ -912,14 +972,15 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
     }
 
     /**
-     * Generates a list of valid UIDs for tenants, starting from {@code FIRST_TENANT_UID}.
+     * Generates a list of valid UIDs for tenants, starting from {@code
+     * MICRODROID_TENANT_UID_RANGE_START}
      *
      * @param numberOfUids The number of UIDs to generate in the list.
      */
     private List<Integer> generateValidUidsForTenants(int numberOfUids) {
         List<Integer> validUids = new ArrayList<>();
         for (int i = 0; i < numberOfUids; i++) {
-            validUids.add(FIRST_TENANT_UID + i);
+            validUids.add(MICRODROID_TENANT_UID_RANGE_START + i);
         }
         return validUids;
     }

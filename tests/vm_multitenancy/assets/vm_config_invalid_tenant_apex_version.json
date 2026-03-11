@@ -7,6 +7,7 @@
     {
       "package": "apex",
       "name": "com.android.virt",
+      "uid": 10000,
       "min_version": 2147483647,
       "expected_authority": {
         "dev-keys": "7bcf8d9d9de2afdf8ecfc6276325871cf8e24389bd560223deab693a15d0389a0544b47d0ea7ce0ff123db9ca7ea2af97a3c3b02a521be9cc1f699874d1d21f8",
