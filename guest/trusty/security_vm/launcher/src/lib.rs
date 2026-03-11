@@ -128,7 +128,7 @@ pub fn run_vm(config: VmConfig) -> Result<VmInstance> {
         None,
     )
     .context("Failed to create VM")?;
-    vm.start(None /* callback */).context("Failed to start VM")?;
+    vm.vm.start().context("Failed to start VM")?;
     info!("started VM");
 
     Ok(vm)
