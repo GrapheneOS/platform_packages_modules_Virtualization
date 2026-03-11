@@ -2146,35 +2146,60 @@ impl VmInstance {
     }
 
     pub fn add_display(&self, config: &aidl::DisplayConfig) -> Result<()> {
-        let socket_path = &self.crosvm_control_socket_path;
-        crosvm_control::gpu_display_add(
-            socket_path,
-            config.width.try_into()?,
-            config.height.try_into()?,
-            config.refreshRate.try_into()?,
-            config.horizontalDpi.try_into()?,
-            config.verticalDpi.try_into()?,
-        )
-        .map_err(|e| anyhow!("Failed to add display: {}", e))?;
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+
+        // SAFETY: The provided pointer points to a valid C string containing the socket path.
+        let success = unsafe {
+            crosvm_control::crosvm_client_gpu_display_add(
+                socket_path_cstring.as_ptr(),
+                config.width.try_into()?,
+                config.height.try_into()?,
+                config.refreshRate.try_into()?,
+                config.horizontalDpi.try_into()?,
+                config.verticalDpi.try_into()?,
+            )
+        };
+        ensure!(success, "Failed to add display");
 
         // TODO(b/427895310): Return the display ID from add_display
         Ok(())
     }
 
     pub fn remove_display(&self, display_id: i32) -> Result<()> {
-        let socket_path = &self.crosvm_control_socket_path;
-        crosvm_control::gpu_display_remove(socket_path, display_id as u32)
-            .map_err(|e| anyhow!("Failed to remove display: {}", e))?;
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+
+        // SAFETY: The provided pointer points to a valid C string containing the socket path.
+        let success = unsafe {
+            crosvm_control::crosvm_client_gpu_display_remove(
+                socket_path_cstring.as_ptr(),
+                display_id as u32,
+            )
+        };
+        ensure!(success, "Failed to remove display: {}", display_id);
         Ok(())
     }
 
     pub fn list_displays(&self) -> Result<Vec<aidl::VirtualMachineDisplay>> {
-        let socket_path = &self.crosvm_control_socket_path;
-        let displays = crosvm_control::gpu_display_list(socket_path)
-            .map_err(|e| anyhow!("Failed to list displays: {}", e))?;
+        let socket_path_cstring = path_to_cstring(&self.crosvm_control_socket_path);
+        let max_displays = crosvm_control::crosvm_client_max_gpu_displays();
+        let mut entries = vec![zerocopy::FromZeros::new_zeroed(); max_displays];
 
-        Ok(displays
-            .into_iter()
+        // SAFETY: The socket_path pointer points to a valid C string. The entries pointer
+        // points to a valid contiguous array of size max_displays.
+        let num_displays = unsafe {
+            crosvm_control::crosvm_client_gpu_display_list(
+                socket_path_cstring.as_ptr(),
+                entries.as_mut_ptr(),
+                max_displays as isize,
+            )
+        };
+
+        if num_displays < 0 {
+            bail!("Failed to list displays");
+        }
+
+        Ok(entries[0..num_displays as usize]
+            .iter()
             .map(|d| aidl::VirtualMachineDisplay {
                 id: d.id as i32,
                 config: aidl::DisplayConfig {
