@@ -25,7 +25,7 @@ _restart_services() {
 		backup_mount.service
 		mnt-shared.automount
 		ttyd_uds.service
-		ttyd_vsock_bridge.service
+		ttyd_vsock_bridge.path
 		linux_vm_manager.service
 	)
 	systemctl enable --now "${CONFIG_CHANGED_SERVICES[@]}"

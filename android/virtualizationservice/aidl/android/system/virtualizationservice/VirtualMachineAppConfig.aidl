@@ -183,5 +183,5 @@ parcelable VirtualMachineAppConfig {
      *
      * For non-debuggable VMs this field is ignored.
      */
-    boolean autoStartAdbd = true;
+    boolean autoStartAdbd = false;
 }
