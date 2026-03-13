@@ -3,11 +3,6 @@
   "os": {
     "name": "microdroid"
   },
-  "task": {
-    "type": "microdroid_launcher",
-    "command": "MicrodroidTestNativeOnAlternatePortLib.so",
-    "selinux_type": "aiseal_agent_tenant"
-  },
   "tenants": [
     {
       "package": "apk",
@@ -19,9 +14,9 @@
         "release-keys": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime"
       },
       "task": {
-          "type": "microdroid_launcher",
-          "command": "MicrodroidTestNativeLib.so",
-          "selinux_type": "appsearch_tenant"
+        "type": "microdroid_launcher",
+        "command": "MicrodroidTestNativeLib.so",
+        "selinux_type": "appsearch_tenant"
       }
     }
   ],
