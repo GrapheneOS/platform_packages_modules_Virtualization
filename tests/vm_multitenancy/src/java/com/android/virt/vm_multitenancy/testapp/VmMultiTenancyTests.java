@@ -857,6 +857,22 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                         VirtualMachineCallback.STOP_REASON_MICRODROID_PAYLOAD_VERIFICATION_FAILED);
     }
 
+    @Test
+    public void bootFailsWhenBothMainTaskAndTenantTaskArePresent() throws Exception {
+        assumeAdvanceMultiTenancySupport();
+
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_main_and_tenant_tasks.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
+                        .build();
+
+        assertThrowsVmException(
+                () -> tryBootVmWithConfig(config, "test_vm_main_and_tenant_tasks"),
+                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
+                "Both main task and tenant task are present");
+    }
+
     private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)
             throws Exception {
         CompletableFuture<String> prop = new CompletableFuture<>();
