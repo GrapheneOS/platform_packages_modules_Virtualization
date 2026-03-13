@@ -343,7 +343,10 @@ class VmLauncherService : Service() {
                     .setRendererUseSurfaceless(true)
                     .setRendererUseVulkan(true)
                     .setContextTypes(arrayOf<String>("gfxstream-vulkan", "gfxstream-composer"))
-                    .setRendererFeatures("VulkanDisableCoherentMemoryAndEmulate:enabled")
+                    // TODO(b/492372616): check if we need to set these features for kernel 6.12
+                    .setRendererFeatures(
+                        "VulkanDisableCoherentMemoryAndEmulate:enabled;VulkanAllocateHostVisibleAsUdmabuf:enabled;ExternalBlob:enabled"
+                    )
                     .build()
             )
             changed = true
