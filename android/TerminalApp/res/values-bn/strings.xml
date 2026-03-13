@@ -86,7 +86,7 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ফিরে যান"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"উন্নত"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"মেমরি সাইজ"</string>
-    <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"সঠিক রেঞ্জ: %1$d ~ %2$d এমবি"</string>
+    <string name="settings_advanced_memory_valid_range" msgid="5430734730161446612">"সঠিক রেঞ্জ: <xliff:g id="MEMORY_RANGE">%1$s</xliff:g>"</string>
     <string name="settings_display_resolution_title" msgid="2299422750697419842">"ডিসপ্লে রেজোলিউশন"</string>
     <string name="settings_display_resolution_full" msgid="1934435847075952454">"সম্পূর্ণ হয়ে গেছে"</string>
     <string name="settings_display_resolution_half" msgid="8817295705374047791">"হাফ"</string>
