@@ -38,12 +38,14 @@ impl aidl::ISecretkeeper for SecretkeeperProxy {
         Ok(aidl::BnAuthGraphKeyExchange::new_binder(ag, BinderFeatures::default()))
     }
 
-    fn deleteIds(&self, ids: &[aidl::SecretId]) -> binder::Result<()> {
-        self.0.deleteIds(ids)
+    // SecretkeeperProxy is really a RPC binder service for PVM (It is called by
+    // MicrodroidManager). PVMs should not be allowed to trigger secrets' deletion.
+    fn deleteIds(&self, _ids: &[aidl::SecretId]) -> binder::Result<()> {
+        Err(ExceptionCode::UNSUPPORTED_OPERATION.into())
     }
 
     fn deleteAll(&self) -> binder::Result<()> {
-        self.0.deleteAll()
+        Err(ExceptionCode::UNSUPPORTED_OPERATION.into())
     }
 
     fn getSecretkeeperIdentity(&self) -> binder::Result<aidl::PublicKey> {
