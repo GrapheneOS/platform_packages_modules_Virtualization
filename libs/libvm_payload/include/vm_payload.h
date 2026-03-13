@@ -122,7 +122,8 @@ void AVmPayload_notifyPayloadReady(void);
  */
 __attribute__((noreturn)) void AVmPayload_runUnixDomainRpcServer(
         const char* _Nonnull name, AIBinder* _Nonnull service,
-        void (*_Nullable on_ready)(void* _Nullable param), void* _Nullable param);
+        void (*_Nullable on_ready)(void* _Nullable param), void* _Nullable param)
+        __INTRODUCED_IN(37);
 
 /**
  * Runs a binder RPC server, serving the supplied binder service implementation on the given vsock
