@@ -46,7 +46,6 @@ java_defaults {
         "encrypted_assets_test_apk_assets",
         "truth",
         "compatibility-common-util-devicesidelib",
-        "compatibility-device-util-axt",
         "measure_io_as_jar",
     ],
     jni_libs: [
@@ -69,8 +68,6 @@ java_defaults {
 }
 
 DATA = [
-    ":MicrodroidTestHelperApp",
-    ":MicrodroidTestHelperAppUpdated",
     ":MicrodroidTestHelperAppAlternateTenant",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V5",
     ":MicrodroidTestHelperAppRelaxedRollbackProtection_V6",
