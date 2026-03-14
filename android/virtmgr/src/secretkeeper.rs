@@ -15,12 +15,33 @@
 //! Proxy to Secretkeeper
 
 use crate::aidl::{self, Arc as AuthgraphArc};
+use anyhow::Context;
+use anyhow::Result;
+use binder::IntoBinderResult;
 use binder::{self, BinderFeatures, ExceptionCode, Interface, Strong};
+use rustutils::android::system_properties::PropertyWatcher;
+use std::time::Duration;
 
 pub(crate) const IDENTIFIER: &str = "android.hardware.security.secretkeeper.ISecretkeeper/default";
 
 pub(crate) fn is_supported() -> bool {
     binder::is_declared(IDENTIFIER).expect("Could not check for declared Secretkeeper interface")
+}
+
+// TODO(b/377616755): Specretkeeper HAL spec does not specify expected behavior
+// in early boot, in particular at the checkpointing phase during an OTA.
+// In absence of this, ecosystem includes implementations that does not revert
+// the Secretkeeper state on failed OTA can get out of sync with reverted OTA
+// A/B partitions.
+fn wait_till_is_safe_to_call() -> Result<()> {
+    watch_for_boot_completed().context("Failed to watch for boot completed")
+}
+
+fn watch_for_boot_completed() -> Result<()> {
+    let mut w = PropertyWatcher::new("sys.boot_completed")?;
+    // Wait for 5 seconds for sys.boot_completed to be set to "1".
+    w.wait_for_value("1", Some(Duration::from_secs(5)))?;
+    Ok(())
 }
 
 pub(crate) struct SecretkeeperProxy(pub Strong<dyn aidl::ISecretkeeper>);
@@ -29,21 +50,25 @@ impl Interface for SecretkeeperProxy {}
 
 impl aidl::ISecretkeeper for SecretkeeperProxy {
     fn processSecretManagementRequest(&self, req: &[u8]) -> binder::Result<Vec<u8>> {
+        wait_till_is_safe_to_call().or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         // Pass the request to the channel, and read the response.
         self.0.processSecretManagementRequest(req)
     }
 
     fn getAuthGraphKe(&self) -> binder::Result<Strong<dyn aidl::IAuthGraphKeyExchange>> {
+        wait_till_is_safe_to_call().or_binder_exception(ExceptionCode::ILLEGAL_STATE)?;
         let ag = AuthGraphKeyExchangeProxy(self.0.getAuthGraphKe()?);
         Ok(aidl::BnAuthGraphKeyExchange::new_binder(ag, BinderFeatures::default()))
     }
 
-    fn deleteIds(&self, ids: &[aidl::SecretId]) -> binder::Result<()> {
-        self.0.deleteIds(ids)
+    // SecretkeeperProxy is really a RPC binder service for PVM (It is called by
+    // MicrodroidManager). PVMs should not be allowed to trigger secrets' deletion.
+    fn deleteIds(&self, _ids: &[aidl::SecretId]) -> binder::Result<()> {
+        Err(ExceptionCode::UNSUPPORTED_OPERATION.into())
     }
 
     fn deleteAll(&self) -> binder::Result<()> {
-        self.0.deleteAll()
+        Err(ExceptionCode::UNSUPPORTED_OPERATION.into())
     }
 
     fn getSecretkeeperIdentity(&self) -> binder::Result<aidl::PublicKey> {
