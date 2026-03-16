@@ -24,7 +24,7 @@
     <string name="installer_title" msgid="1318592751395646215">"Linux టెర్మినల్‌ను ఇన్‌స్టాల్ చేయండి"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux టెర్మినల్‌ను లాంచ్ చేయడానికి, మీరు నెట్‌వర్క్ ద్వారా దాదాపు <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> డేటాను డౌన్‌లోడ్ చేసుకోవాలి.\nమీరు కొనసాగించాలనుకుంటున్నారా?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fiని ఉపయోగించి మాత్రమే డౌన్‌లోడ్ చేయండి"</string>
-    <string name="installer_btn_install" msgid="1249687873554194768">"ఇన్‌స్టాల్ చేయి"</string>
+    <string name="installer_btn_install" msgid="1249687873554194768">"ఇన్‌స్టాల్"</string>
     <string name="installer_btn_installing" msgid="5333153036855770130">"ఇన్‌స్టాలింగ్"</string>
     <string name="installer_btn_cancel" msgid="3560257458966328733">"ఇన్‌స్టలేషన్‌ రద్దు చేయి"</string>
     <string name="installer_dlg_title_cancel_install" msgid="2347901416414323603">"ఇన్‌స్టలేషన్‌ను రద్దు చేయాలా?"</string>
@@ -86,7 +86,7 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"వెనుకకు"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"అడ్వాన్స్‌డ్"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"మెమరీ సైజ్"</string>
-    <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"చెల్లుబాటు అయ్యే పరిధి: %1$d ~ %2$d ఎమ్‌బి"</string>
+    <string name="settings_advanced_memory_valid_range" msgid="5430734730161446612">"చెల్లుబాటు అయ్యే పరిధి: <xliff:g id="MEMORY_RANGE">%1$s</xliff:g>"</string>
     <string name="settings_display_resolution_title" msgid="2299422750697419842">"డిస్‌ప్లే రిజల్యూషన్"</string>
     <string name="settings_display_resolution_full" msgid="1934435847075952454">"పూర్తిగా"</string>
     <string name="settings_display_resolution_half" msgid="8817295705374047791">"సగం"</string>

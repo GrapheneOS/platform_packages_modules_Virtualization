@@ -86,7 +86,7 @@
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Geri"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Gelişmiş"</string>
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Bellek Boyutu"</string>
-    <string name="settings_advanced_memory_valid_range" msgid="8930390111771410995">"Geçerli aralık: %1$d ~ %2$d MB"</string>
+    <string name="settings_advanced_memory_valid_range" msgid="5430734730161446612">"Geçerli aralık: <xliff:g id="MEMORY_RANGE">%1$s</xliff:g>"</string>
     <string name="settings_display_resolution_title" msgid="2299422750697419842">"Ekran çözünürlüğü"</string>
     <string name="settings_display_resolution_full" msgid="1934435847075952454">"Tam"</string>
     <string name="settings_display_resolution_half" msgid="8817295705374047791">"Yarım"</string>
