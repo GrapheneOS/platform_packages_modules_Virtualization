@@ -617,16 +617,20 @@ fn try_run_payload(
     }
 
     let task = config.task.as_ref();
-    if task.is_none() {
-        let has_tenant_with_task = config.tenants.iter().any(|t| match t {
-            TenantConfig::Apex(c) => c.task.is_some(),
-            TenantConfig::Apk(c) => c.task.is_some(),
-        });
-        if !has_tenant_with_task {
-            bail!(MicrodroidError::PayloadInvalidConfig(
-                "No task in VM config and no tenants with a task".to_string()
-            ));
-        }
+    let has_tenant_with_task = config.tenants.iter().any(|t| match t {
+        TenantConfig::Apex(c) => c.task.is_some(),
+        TenantConfig::Apk(c) => c.task.is_some(),
+    });
+
+    if task.is_some() && has_tenant_with_task {
+        bail!(MicrodroidError::PayloadInvalidConfig(
+            "Both main task and tenant task are present. Only one type is allowed.".to_string()
+        ));
+    }
+    if task.is_none() && !has_tenant_with_task {
+        bail!(MicrodroidError::PayloadInvalidConfig(
+            "No task in VM config and no tenants with a task".to_string()
+        ));
     }
 
     ensure!(
