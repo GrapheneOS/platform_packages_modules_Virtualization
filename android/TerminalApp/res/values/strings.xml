@@ -182,9 +182,9 @@
     <string name="notif_installer_desc">Linux terminal will start after the installation is finished</string>
 
     <!-- Notification title for a new active port [CHAR LIMIT=none] -->
-    <string name="notif_port_title_request">Terminal is requesting to open a new port</string>
-    <!-- Notification content for a new active port [CHAR LIMIT=none] -->
-    <string name="notif_port_content_request">Port requested: <xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>)</string>
+    <string name="notif_port_title_request">New Port Opened</string>
+    <!-- Notification content for a new active port, and asking for forwarding [CHAR LIMIT=none] -->
+    <string name="notif_port_content_request">Port <xliff:g id="port_number" example="8000">%1$d</xliff:g> (<xliff:g id="process_name" example="undefined">%2$s</xliff:g>) is now open. Allow forwarding?</string>
     <!-- Notification action accept [CHAR LIMIT=16] -->
     <string name="notif_port_action_accept">Accept</string>
     <!-- Notification action deny [CHAR LIMIT=16] -->
@@ -193,6 +193,22 @@
     <!-- Action label to retry a failed operation. [CHAR LIMIT=16] -->
     <string name="notif_btn_retry">Retry</string>
 
+    <!-- new UI -->
+    <!-- Notification channel ID for Terminal app status [CHAR LIMIT=40] -->
+    <string name="notif_terminal_status_channel_id">Terminal Status</string>
+    <!-- Notification channel ID for running Terminal app as Keep awake mode [CHAR LIMIT=40] -->
+    <string name="notif_keep_awake_channel_id">Keep Awake</string>
+    <!-- Notification channel ID for port forwarding notification [CHAR LIMIT=40] -->
+    <string name="notif_port_forwarding_channel_id">Port Forwarding</string>
+
+    <!-- Notification content indicates Terminal app is installing [CHAR LIMIT=none] -->
+    <string name="notif_terminal_app_status_installing_content">Terminal is installing</string>
+    <!-- Notification content indicates Terminal app is starting [CHAR LIMIT=none] -->
+    <string name="notif_terminal_app_status_starting_content">Terminal is starting</string>
+    <!-- Notification content indicates Terminal app is running [CHAR LIMIT=none] -->
+    <string name="notif_terminal_app_status_running_content">Terminal is running</string>
+    <!-- Notification content indicates Terminal app is shutting down [CHAR LIMIT=none] -->
+    <string name="notif_terminal_app_status_shutting_down_content">Terminal is shutting down</string>
 
     <!-- ================================================================= -->
     <!-- Settings - Main                                                   -->
