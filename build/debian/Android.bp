@@ -39,7 +39,6 @@ cidata_iso_package {
 
     deps: [
         "linux_vm_manager",
-        "forwarder_guest",
     ],
     enabled: false,
     target: {

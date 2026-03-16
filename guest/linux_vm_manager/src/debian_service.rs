@@ -62,6 +62,17 @@ fn force_send<F: Future + Send>(f: F) -> impl Future<Output = F::Output> + Send 
     f
 }
 
+fn forward_port(tcp_port: u16, vsock_port: u32) {
+    // Use std::process::Command which doesn't require Tokio context.
+    if let Err(e) = std::process::Command::new("socat")
+        .arg(format!("TCP:127.0.0.1:{tcp_port}"))
+        .arg(format!("VSOCK-CONNECT:2:{vsock_port}"))
+        .spawn()
+    {
+        error!("Failed to launch socatwith port forwarding mode, tcp_port={tcp_port}, vsock_port={vsock_port}, err={e:?}");
+    }
+}
+
 impl IDebianService for DebianService {
     fn setVmActivePortListener(
         &self,
@@ -100,7 +111,7 @@ impl IDebianService for DebianService {
         let tcp_port = guest_tcp_port
             .try_into()
             .expect("Failed to call requestForwarding(): {guest_tcp_port} out of range");
-        forwarder_guest_launcher::forward_port(tcp_port, vsock_port as u32);
+        forward_port(tcp_port, vsock_port as u32);
         Ok(())
     }
 
