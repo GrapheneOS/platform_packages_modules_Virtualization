@@ -31,6 +31,7 @@ use vmclient::VmInstance;
 const INSTANCE_ID_SIZE: usize = 64;
 
 /// Config parameters to launch vm
+#[derive(Default)]
 pub struct VmConfig {
     /// Path to the trusty kernel image.
     pub kernel: PathBuf,
