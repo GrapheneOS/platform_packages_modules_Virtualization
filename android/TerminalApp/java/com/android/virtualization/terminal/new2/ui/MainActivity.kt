@@ -91,6 +91,12 @@ class MainActivity : ComponentActivity() {
         viewModel.handleIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel.refreshPermissionState()
+    }
+
     companion object {
         const val ACTION_OPEN_SETTINGS_PORT =
             "android.virtualization.terminal.action.OPEN_SETTINGS_PORT"
