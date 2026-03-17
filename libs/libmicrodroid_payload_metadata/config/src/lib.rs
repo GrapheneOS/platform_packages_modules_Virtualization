@@ -213,6 +213,8 @@ pub struct TenantConfiguration {
     /// b/484251187: This field is mandatory since Microdroid does not support persisting authority
     /// data in replay protected instance spec.
     pub expected_authority: ExpectedAuthority,
+    /// Cgroup config for tenant
+    pub cgroup_config: Option<CgroupConfig>,
 }
 
 /// Cgroup Config

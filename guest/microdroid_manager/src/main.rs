@@ -836,11 +836,13 @@ fn try_run_payload(
         "Run as root not supported with tenants"
     );
     for tenant in config.tenants.iter() {
-        let (task, name, package_path, is_apex) = match tenant {
-            TenantConfig::Apex(c) => (c.task.as_ref(), &c.name, c.name.clone(), true),
+        let (task, name, package_path, is_apex, cgroup_config) = match tenant {
+            TenantConfig::Apex(c) => {
+                (c.task.as_ref(), &c.name, c.name.clone(), true, c.cgroup_config.clone())
+            }
             TenantConfig::Apk(c) => {
                 let mnt_dir = format!("/mnt/tenant-apk/{}", c.name);
-                (c.task.as_ref(), &c.name, mnt_dir, false)
+                (c.task.as_ref(), &c.name, mnt_dir, false, c.cgroup_config.clone())
             }
         };
 
@@ -857,9 +859,21 @@ fn try_run_payload(
                 is_apex,
             )
             .context(format!("Failed to build tenant {name} payload command"))?;
+
+            if let Some(cgroup_config) = cgroup_config.as_ref() {
+                let cgroup_dir = std::path::Path::new("/sys/fs/cgroup").join(name);
+                std::fs::create_dir(&cgroup_dir).context("failed to create cgroup dir")?;
+                std::fs::write(
+                    cgroup_dir.join("memory.high"),
+                    format!("{}M", cgroup_config.memory_high_mib),
+                )
+                .context("failed to set cgroup memory.high")?;
+                let (_cgroup_thread, _cgroup_kill) = start_cgroup_monitor(name, service)?;
+            }
+
             let tenant_process = exec_task(
                 command,
-                &cgroup_name,
+                name,
                 cgroup_config.as_ref(),
                 service,
                 /* notify_payload_started */ !notified_payload_started,
