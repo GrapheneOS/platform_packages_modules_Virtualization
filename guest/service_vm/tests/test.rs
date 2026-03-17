@@ -59,6 +59,7 @@ const UNSIGNED_SERVICE_VM_KERNEL_PATH: &str =
     "/data/local/tmp/service_vm_test/arm64/service_vm_unsigned.bin";
 const INSTANCE_IMG_PATH: &str = "/data/local/tmp/service_vm_test/arm64/instance.img";
 const TEST_CERT_CHAIN_PATH: &str = "testdata/rkp_cert_chain.der";
+const PROTECTED_UDS_CERTS_PATH: &str = "tests/testdata/protected_uds_certs.cbor";
 
 #[test]
 fn process_requests_in_protected_vm() -> Result<()> {
@@ -82,7 +83,7 @@ fn check_processing_requests(vm_type: VmType, vm_memory_mb: Option<i32>) -> Resu
 
     check_processing_reverse_request(&mut vm)?;
     let key_pair = check_processing_generating_key_pair_request(&mut vm)?;
-    check_processing_generating_certificate_request(&mut vm, &key_pair.maced_public_key)?;
+    check_processing_generating_certificate_request(&mut vm, &key_pair.maced_public_key, vm_type)?;
     check_attestation_request(&mut vm, &key_pair, vm_type)?;
     Ok(())
 }
@@ -122,11 +123,18 @@ fn assert_array_has_nonzero(v: &[u8]) {
 fn check_processing_generating_certificate_request(
     vm: &mut ServiceVm,
     maced_public_key: &[u8],
+    vm_type: VmType,
 ) -> Result<()> {
+    let uds_certs = match vm_type {
+        VmType::ProtectedVm => {
+            Some(std::fs::read(PROTECTED_UDS_CERTS_PATH).expect("Failed to read UDS certs"))
+        }
+        VmType::NonProtectedVm => None,
+    };
     let params = GenerateCertificateRequestParams {
         keys_to_sign: vec![maced_public_key.to_vec()],
         challenge: vec![],
-        uds_certs: None,
+        uds_certs,
     };
     let request = Request::GenerateCertificateRequest(params);
 
