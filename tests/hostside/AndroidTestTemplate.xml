@@ -28,6 +28,9 @@
     <!-- Controller that will skip the module if a native bridge situation is detected -->
     <!-- For example: module wants to run arm and device is x86 -->
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
+    <object type="module_controller" class="com.android.microdroid.test.preparer.TestInstallAbiModuleController">
+        <option name="test-apk-name" value="{MODULE}.apk" />
+    </object>
 
     <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer">
         <!-- Permission checks are bypassed if shell is root -->
