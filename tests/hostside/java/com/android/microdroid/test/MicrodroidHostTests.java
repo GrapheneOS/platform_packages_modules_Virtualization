@@ -1466,6 +1466,33 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
         }
     }
 
+    @Test
+    @Parameters(method = "params")
+    @TestCaseName("{method}_protectedVm{0}_os_{1}")
+    public void testDisableCrashKernel(boolean protectedVm, String os) throws Exception {
+        // Preconditions
+        assumeKernelSupported(os);
+        assumeVmTypeSupported(os, protectedVm);
+        ITestDevice device = getDevice();
+        final String configPath = "assets/vm_config.json";
+        MicrodroidBuilder microdroidBuilder =
+                MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
+                        .debugLevel(DEBUG_LEVEL_FULL)
+                        .memoryMib(minMemorySize())
+                        .cpuTopology("match_host")
+                        .protectedVm(protectedVm)
+                        .ramdump(false)
+                        .name("test_disable_crash_kernel");
+
+        // --os flag was introduced in SDK 36
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        mMicrodroidDevice = microdroidBuilder.build(getAndroidDevice());
+        mMicrodroidDevice.waitForBootComplete(BOOT_COMPLETE_TIMEOUT);
+    }
+
     private void checkBacktraceGeneratedWithDebuggerd(
             boolean protectedVm, String os, String configPath) throws Exception {
         MicrodroidBuilder microdroidBuilder =

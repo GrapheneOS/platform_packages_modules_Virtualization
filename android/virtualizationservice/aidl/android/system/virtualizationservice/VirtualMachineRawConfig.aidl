@@ -153,4 +153,11 @@ parcelable VirtualMachineRawConfig {
     String[] hostServices;
 
     @nullable SmbiosOptions smbiosOptions;
+
+    /**
+     * Allow crash kernel for debuggable VMs.
+     *
+     * This is only valid if the VM debug level is higher than NONE.
+     */
+    boolean ramdump = true;
 }

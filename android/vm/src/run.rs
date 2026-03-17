@@ -210,6 +210,7 @@ pub fn command_run_app(
         // If a Microdroid VM was started via vm CLI, then most likely a developer would want to
         // adb shell into it, hence automatically start the adbd service.
         autoStartAdbd: true,
+        ramdump: config.debug.ramdump,
         ..Default::default()
     });
     run(
@@ -304,6 +305,7 @@ pub fn command_run(
     vm_config.hugePages = config.common.hugepages;
     vm_config.boostUclamp = config.common.boost_uclamp;
     vm_config.teeServices = config.common.tee_services;
+    vm_config.ramdump = config.debug.ramdump;
     run(
         service,
         &VirtualMachineConfig::RawConfig(vm_config),

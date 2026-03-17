@@ -125,6 +125,10 @@ pub struct DebugConfig {
     /// Path to file to dump VM device tree.
     #[arg(long)]
     dump_device_tree: Option<PathBuf>,
+
+    /// Enable crash kernel in VM
+    #[arg(short, long, default_value_t = true)]
+    ramdump: bool,
 }
 
 impl DebugConfig {
