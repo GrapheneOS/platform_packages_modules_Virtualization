@@ -1,0 +1,53 @@
+//
+// Copyright (C) 2026 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_test {
+    name: "TrustyBenchmarks",
+    srcs: ["src/**/*.java"],
+    static_libs: [
+        "androidx.test.runner",
+        "androidx.test.rules",
+        "junit",
+        "truth",
+    ],
+    jni_libs: [
+        "libtrustybenchmarks_jni",
+        "libbinder_rpc_unstable",
+    ],
+    test_suites: ["general-tests"],
+    device_first_data: [
+        ":trusty_security_vm.elf",
+    ],
+}
+
+rust_ffi_shared {
+    name: "libtrustybenchmarks_jni",
+    crate_name: "trustybenchmarks_jni",
+    srcs: ["src/native/trusty_benchmarks_jni.rs"],
+    prefer_rlib: true,
+    rustlibs: [
+        "libandroid_logger",
+        "libanyhow",
+        "liblog_rust",
+        "libvm_launcher",
+        "libjni",
+        "libonce_cell",
+        "libvmclient",
+    ],
+}
