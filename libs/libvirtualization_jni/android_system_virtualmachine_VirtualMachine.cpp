@@ -54,7 +54,6 @@ Java_android_system_virtualmachine_VirtualMachine_nativeBinderFromPreconnectedCl
     jmethodID mid = env->GetMethodID(callback_class.get(), "connect", "()I");
     LOG_ALWAYS_FATAL_IF(mid == nullptr, "Could not find method");
 
-    // TODO(b/398890208): make this memory owned by the connection
     struct State {
         JNIEnv *mEnv;
         jobject mProvider;
