@@ -197,6 +197,7 @@ pub struct DebugConfig {
     pub debug_level: aidl::DebugLevel,
     pub dump_device_tree: bool,
     debug_policy: DebugPolicy,
+    ramdump: bool,
 }
 
 impl DebugConfig {
@@ -218,7 +219,11 @@ impl DebugConfig {
             false
         });
 
-        Self { debug_level, debug_policy, dump_device_tree }
+        let ramdump = match config {
+            aidl::VirtualMachineConfig::AppConfig(config) => config.ramdump,
+            aidl::VirtualMachineConfig::RawConfig(config) => config.ramdump,
+        };
+        Self { debug_level, debug_policy, dump_device_tree, ramdump }
     }
 
     pub fn get_debug_policy_overlay(&self) -> Option<&Fdt> {
@@ -270,7 +275,7 @@ impl DebugConfig {
 
     /// Decision to support ramdump
     pub fn is_ramdump_needed(&self) -> bool {
-        self.debug_level != aidl::DebugLevel::NONE || self.debug_policy.ramdump
+        (self.debug_level != aidl::DebugLevel::NONE || self.debug_policy.ramdump) && self.ramdump
     }
 }
 

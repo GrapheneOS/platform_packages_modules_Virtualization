@@ -209,12 +209,26 @@ class VmService : LifecycleService() {
             )
 
         return Notification.Builder(this, PORT_CHANNEL_ID)
-            .setContentTitle("New Port Opened")
-            .setContentText("Port ${port.port} (${port.name}) is now open. Allow forwarding?")
+            .setContentTitle(getString(R.string.notif_port_title_request))
+            .setContentText(getString(R.string.notif_port_content_request, port.port, port.name))
             .setSmallIcon(R.drawable.ic_terminal)
             .setContentIntent(pendingIntent)
-            .addAction(Notification.Action.Builder(null, "Accept", acceptPending).build())
-            .addAction(Notification.Action.Builder(null, "Deny", denyPending).build())
+            .addAction(
+                Notification.Action.Builder(
+                        null,
+                        getString(R.string.notif_port_action_accept),
+                        acceptPending,
+                    )
+                    .build()
+            )
+            .addAction(
+                Notification.Action.Builder(
+                        null,
+                        getString(R.string.notif_port_action_deny),
+                        denyPending,
+                    )
+                    .build()
+            )
             .build()
     }
 
@@ -289,13 +303,17 @@ class VmService : LifecycleService() {
     private fun createNotificationChannel() {
         val manager = getSystemService(NotificationManager::class.java)
         val channel =
-            NotificationChannel(CHANNEL_ID, "VM Service", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.notif_terminal_status_channel_id),
+                NotificationManager.IMPORTANCE_LOW,
+            )
         manager.createNotificationChannel(channel)
 
         val keepAwakeChannel =
             NotificationChannel(
                 KEEP_AWAKE_CHANNEL_ID,
-                "Keep Awake",
+                getString(R.string.notif_keep_awake_channel_id),
                 NotificationManager.IMPORTANCE_HIGH,
             )
         manager.createNotificationChannel(keepAwakeChannel)
@@ -303,7 +321,7 @@ class VmService : LifecycleService() {
         val portChannel =
             NotificationChannel(
                 PORT_CHANNEL_ID,
-                "Port Forwarding",
+                getString(R.string.notif_port_forwarding_channel_id),
                 NotificationManager.IMPORTANCE_HIGH,
             )
         manager.createNotificationChannel(portChannel)
@@ -326,8 +344,8 @@ class VmService : LifecycleService() {
             PendingIntent.getService(this, 1, cancelIntent, PendingIntent.FLAG_IMMUTABLE)
 
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("Terminal Service")
-            .setContentText("Installing...")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notif_terminal_app_status_installing_content))
             .setSmallIcon(R.drawable.ic_terminal)
             .setContentIntent(getMainActivityPendingIntent())
             .setProgress(total, current, total <= 0)
@@ -352,7 +370,7 @@ class VmService : LifecycleService() {
 
         val builder =
             Notification.Builder(this, channelId)
-                .setContentTitle("Terminal Service")
+                .setContentTitle(getString(R.string.app_name))
                 .setSmallIcon(R.drawable.ic_terminal)
                 .setContentIntent(getMainActivityPendingIntent())
 
@@ -409,11 +427,17 @@ class VmService : LifecycleService() {
             )
 
             if (state is VmState.Starting) {
-                builder.setContentText("Terminal is starting...")
+                builder.setContentText(
+                    getString(R.string.notif_terminal_app_status_starting_content)
+                )
             } else if (state is VmState.Running) {
-                builder.setContentText("Terminal is running")
+                builder.setContentText(
+                    getString(R.string.notif_terminal_app_status_running_content)
+                )
             } else if (state is VmState.Stopping) {
-                builder.setContentText("Terminal is shutting down")
+                builder.setContentText(
+                    getString(R.string.notif_terminal_app_status_shutting_down_content)
+                )
             }
         }
 

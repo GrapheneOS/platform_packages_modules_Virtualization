@@ -47,14 +47,19 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 object VmController {
@@ -68,9 +73,20 @@ object VmController {
     private val _sessionDiscarded = MutableSharedFlow<String>()
     val sessionDiscarded: SharedFlow<String> = _sessionDiscarded.asSharedFlow()
 
-    private var guestAgentController: GuestAgentController? = null
-    val ports: StateFlow<List<OpenPort>>
-        get() = guestAgentController?.ports ?: MutableStateFlow(emptyList())
+    private val _guestAgentController = MutableStateFlow<GuestAgentController?>(null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val ports: StateFlow<List<OpenPort>> =
+        _guestAgentController
+            .flatMapLatest { controller ->
+                // If controller is null, emit a flow containing null
+                controller?.ports ?: flowOf(emptyList())
+            }
+            .stateIn(
+                scope = repositoryScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList(),
+            )
 
     var virtualMachine: VirtualMachine? = null
         private set
@@ -92,7 +108,7 @@ object VmController {
     }
 
     fun enablePortForwarding(port: Int, enable: Boolean) {
-        guestAgentController?.enablePortForwarding(port, enable)
+        _guestAgentController.value?.enablePortForwarding(port, enable)
     }
 
     val graphicsAccelerationType: GraphicsManager.AccelerationType
@@ -106,15 +122,15 @@ object VmController {
     }
 
     fun shutdownVm() {
-        guestAgentController?.shutdownVm()
+        _guestAgentController.value?.shutdownVm()
     }
 
     fun pullClipboardFromGuest() {
-        guestAgentController?.pullClipboardFromGuest()
+        _guestAgentController.value?.pullClipboardFromGuest()
     }
 
     fun pushClipboardToGuest() {
-        guestAgentController?.pushClipboardToGuest()
+        _guestAgentController.value?.pushClipboardToGuest()
     }
 
     fun requestSessionDiscard(sessionId: String) {
@@ -163,7 +179,7 @@ object VmController {
                 val image = InstalledImage.getDefault(context)
                 val json = ConfigJson.from(context, image.configPath)
                 val configBuilder = json.toConfigBuilder(context)
-                guestAgentController =
+                _guestAgentController.value =
                     GuestAgentController(context, image.isAidlGuestAgent(), repositoryScope)
 
                 val sharedPref =
@@ -186,7 +202,7 @@ object VmController {
                     )
                 }
 
-                val port = guestAgentController!!.startServer()
+                val port = _guestAgentController.value!!.startServer()
                 customImageConfigBuilder.addParam("debian_server_port=$port")
 
                 // Override config for Display
@@ -233,7 +249,7 @@ object VmController {
                         override fun onError(vm: VirtualMachine, errorCode: Int, message: String) {
                             Log.e(TAG, "VM error: $message ($errorCode)")
                             _vmState.value = VmState.Error(RuntimeException("VM error: $message"))
-                            guestAgentController?.stop()
+                            _guestAgentController.value?.stop()
                         }
 
                         override fun onStopped(vm: VirtualMachine, reason: Int) {
@@ -252,7 +268,7 @@ object VmController {
                                         RuntimeException("VM stopped unexpectedly: $reason")
                                     )
                             }
-                            guestAgentController?.stop()
+                            _guestAgentController.value?.stop()
                         }
 
                         override fun onGuestAgentRegistered(
@@ -274,7 +290,7 @@ object VmController {
                             val debian_service = IDebianService.Stub.asInterface(binder)
 
                             val cid = vm!!.cid
-                            guestAgentController?.start(cid, guestAgent, debian_service)
+                            _guestAgentController.value?.start(cid, guestAgent, debian_service)
 
                             Log.d(TAG, "Guest agent ready")
                         }
@@ -316,7 +332,7 @@ object VmController {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start VM", e)
                 _vmState.value = VmState.Error(e)
-                guestAgentController?.stop()
+                _guestAgentController.value?.stop()
             }
         }
     }
@@ -403,7 +419,7 @@ object VmController {
                                 .firstOrNull { !it.isLinkLocalAddress }!!
                                 .hostAddress!!
                         val port = info.port
-                        guestAgentController?.setAllowedGuestIp(ipAddress)
+                        _guestAgentController.value?.setAllowedGuestIp(ipAddress)
 
                         // If we are using vsock bridge, we already set the state to Running with
                         // localhost and the secret key. Don't overwrite it.
