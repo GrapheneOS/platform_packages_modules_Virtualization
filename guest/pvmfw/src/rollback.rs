@@ -168,7 +168,7 @@ fn criterion_for_vm_from_config_entry<'a>(
             RollbackConfigKeyId::EmbeddedPublicKey,
         ) => FixedRollbackCriterion::RollbackIndexPublicKey { index, public_key: PUBLIC_KEY },
         RollbackConfigPolicy::MinimumRollbackIndex(
-            index,
+            _index,
             RollbackConfigKeyId::ExtraTrustedKey { n },
         ) if extra_keys.get(n).is_none() => {
             error!("Invalid key ID {n}: rejecting payload");
