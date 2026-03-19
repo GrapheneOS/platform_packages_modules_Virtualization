@@ -94,7 +94,7 @@
     <string name="settings_display_resolution_full_hint" msgid="5979427185150015339">"Performans düşebilir."</string>
     <string name="settings_display_resolution_half_hint" msgid="7952269802485928968">"Önerilen"</string>
     <string name="settings_display_resolution_quarter_hint" msgid="770354668663140131">"Kalite düşebilir."</string>
-    <string name="fullscreen_enter" msgid="1119690834808193718">"Tam Ekran"</string>
+    <string name="fullscreen_enter" msgid="1119690834808193718">"Tam ekran"</string>
     <string name="fullscreen_exit" msgid="2180595836197188247">"Tam ekrandan çık"</string>
     <string name="settings_keep_awake_title" msgid="2658491842018373579">"Uyanık tut"</string>
     <string name="settings_keep_awake_off" msgid="1013961007629731438">"Kapalı"</string>
