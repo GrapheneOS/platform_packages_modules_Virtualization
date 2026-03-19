@@ -15,6 +15,7 @@
  */
 package com.android.virtualization.terminal.new2.ui.main
 
+import android.Manifest
 import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -106,8 +107,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _showSettings = MutableStateFlow(false)
     val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
 
+    private val _hasMandatoryPermissions = MutableStateFlow(false)
+    val hasMandatoryPermissions: StateFlow<Boolean> = _hasMandatoryPermissions.asStateFlow()
+
     private val _permissionRequired = MutableStateFlow(false)
     val permissionRequired: StateFlow<Boolean> = _permissionRequired.asStateFlow()
+
+    fun refreshPermissionState() {
+        val context = getApplication<Application>()
+        // TODO(b/492409159): Remove this check if local network is no longer mandatory
+        _hasMandatoryPermissions.value =
+            context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+                PackageManager.PERMISSION_GRANTED
+    }
 
     fun handleIntent(intent: Intent) {
         if (intent.action == MainActivity.ACTION_OPEN_SETTINGS_PORT) {
@@ -210,22 +222,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
 
     fun startVm() {
-        val context = getApplication<Application>()
-        if (
-            PERMISSIONS.any { context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        ) {
-            _permissionRequired.value = true
+        if (!hasMandatoryPermissions.value) {
             return
         }
-        _permissionRequired.value = false
         viewModelScope.launch { VmController.start() }
     }
 
     fun onPermissionGranted() {
+        refreshPermissionState()
         _permissionRequired.value = false
     }
 
     fun onPermissionDenied() {
+        refreshPermissionState()
         _permissionRequired.value = false
     }
 
@@ -254,6 +263,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         _permissionRequired.value =
             PERMISSIONS.any { context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        refreshPermissionState()
 
         val inputManager = context.getSystemService(InputManager::class.java)
         val mouseDeviceIds = mutableSetOf<Int>()
@@ -299,8 +309,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Observe installation and UI states to manage VM lifecycle.
         viewModelScope.launch {
-            permissionRequired.collectLatest { required ->
-                if (!required) {
+            hasMandatoryPermissions.collectLatest { hasMandatory ->
+                if (hasMandatory) {
                     launch {
                         Installer.installState.collectLatest { installState ->
                             if (installState is InstallState.Installed) {

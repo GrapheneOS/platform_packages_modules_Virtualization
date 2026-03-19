@@ -57,6 +57,8 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
     val scope = rememberCoroutineScope()
     var showPermissionRationale by remember { mutableStateOf(false) }
     val permissionRequired by viewModel.permissionRequired.collectAsStateWithLifecycle()
+    val hasMandatoryPermissions by viewModel.hasMandatoryPermissions.collectAsStateWithLifecycle()
+    var previousMandatory by remember { mutableStateOf(hasMandatoryPermissions) }
 
     fun getPermissionLabel(permission: String): String {
         return try {
@@ -72,6 +74,43 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
             viewModel.onPermissionGranted()
         }
 
+    val showMissingPermissionsSnackbar: (List<String>) -> Unit = { missing ->
+        if (missing.isNotEmpty()) {
+            val deniedLabels = missing.map { getPermissionLabel(it) }.joinToString(", ")
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                val result =
+                    snackbarHostState.showSnackbar(
+                        message =
+                            context.getString(
+                                R.string.permission_snkbar_message_missing,
+                                deniedLabels,
+                            ),
+                        actionLabel = context.getString(R.string.action_settings),
+                        duration = SnackbarDuration.Long,
+                    )
+                if (result == SnackbarResult.ActionPerformed) {
+                    val intent =
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                    settingsLauncher.launch(intent)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(hasMandatoryPermissions) {
+        if (!previousMandatory && hasMandatoryPermissions) {
+            val missingPermissions =
+                PERMISSIONS.filter {
+                    context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+                }
+            showMissingPermissionsSnackbar(missingPermissions)
+        }
+        previousMandatory = hasMandatoryPermissions
+    }
+
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             results ->
@@ -79,28 +118,15 @@ fun PermissionChecker(viewModel: MainViewModel, snackbarHostState: SnackbarHostS
                 snackbarHostState.currentSnackbarData?.dismiss()
                 viewModel.onPermissionGranted()
             } else {
-                val deniedPermissions = results.filter { !it.value }.keys
-                val deniedLabels =
-                    deniedPermissions.map { getPermissionLabel(it) }.joinToString(", ")
-
-                scope.launch {
-                    val result =
-                        snackbarHostState.showSnackbar(
-                            message =
-                                context.getString(
-                                    R.string.permission_snkbar_message_missing,
-                                    deniedLabels,
-                                ),
-                            actionLabel = context.getString(R.string.action_settings),
-                            duration = SnackbarDuration.Long,
-                        )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        val intent =
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
-                            }
-                        settingsLauncher.launch(intent)
-                    }
+                viewModel.onPermissionDenied()
+                // TODO(b/492409159): Remove this check if local network is no longer mandatory
+                val hasLocalNetwork =
+                    results[Manifest.permission.ACCESS_LOCAL_NETWORK]
+                        ?: (context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+                            PackageManager.PERMISSION_GRANTED)
+                if (hasLocalNetwork && previousMandatory) {
+                    val deniedPermissions = results.filter { !it.value }.keys.toList()
+                    showMissingPermissionsSnackbar(deniedPermissions)
                 }
             }
         }

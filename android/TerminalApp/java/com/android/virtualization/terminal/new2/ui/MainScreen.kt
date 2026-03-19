@@ -65,6 +65,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val installState by Installer.installState.collectAsStateWithLifecycle()
     val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
     val isFullscreen by viewModel.isFullscreen.collectAsStateWithLifecycle()
+    val hasMandatoryPermissions by viewModel.hasMandatoryPermissions.collectAsStateWithLifecycle()
 
     var lastValidState by remember { mutableStateOf<MainUiState>(MainUiState.Ready) }
     if (uiState !is MainUiState.Error) {
@@ -95,7 +96,9 @@ fun MainScreen(viewModel: MainViewModel) {
 
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                if (installState !is InstallState.Installed) {
+                if (!hasMandatoryPermissions) {
+                    PermissionScreen(viewModel = viewModel)
+                } else if (installState !is InstallState.Installed) {
                     InstallScreen(snackbarHostState = snackbarHostState)
                 } else
                     when (val state = lastValidState) {

@@ -34,9 +34,13 @@
     <!-- Title of the dialog explaining why permissions are needed. [CHAR LIMIT=none] -->
     <string name="permission_dlg_title_required">Permission Required</string>
     <!-- Message explaining required permissions. [CHAR LIMIT=none] -->
-    <string name="permission_dlg_message_required">Terminal requires the following permissions to function correctly: <xliff:g id="permission_list" example="Notification, Local Network">%s</xliff:g></string>
+    <string name="permission_dlg_message_required">Terminal requires the following permissions to function correctly: <xliff:g id="permission_list" example="Notification, Nearby devices">%s</xliff:g></string>
     <!-- Message shown when mandatory permissions are missing. [CHAR LIMIT=none] -->
-    <string name="permission_snkbar_message_missing">The following permissions are missing. Please grant them in Settings: <xliff:g id="permission_list" example="Notification, Local Network">%s</xliff:g></string>
+    <string name="permission_snkbar_message_missing">The following permissions are missing. Please grant them in Settings: <xliff:g id="permission_list" example="Notification, Nearby devices">%s</xliff:g></string>
+    <!-- Title of the screen explaining why nearby devices permissions are needed. [CHAR LIMIT=none] -->
+    <string name="permission_screen_title_required_nearby_devices">Nearby devices Permission Required</string>
+    <!-- Message explaining required nearby devices permissions on the screen. [CHAR LIMIT=none] -->
+    <string name="permission_screen_message_required_nearby_devices">Terminal requires the Nearby devices permission to function correctly.</string>
 
 
     <!-- ================================================================= -->
