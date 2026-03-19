@@ -15,12 +15,6 @@ android_app {
         "x86_64": ["assets-x86_64"],
         default: [],
     }),
-    resource_dirs: [
-        "res",
-    ] + select(release_flag("RELEASE_AVF_SOONG_GENERATED_CIDATA"), {
-        true: ["res-cidata"],
-        default: [],
-    }),
     static_libs: [
         // TODO(b/330257000): will be removed when binder RPC is used
         "android.system.virtualizationservice_internal-java",
