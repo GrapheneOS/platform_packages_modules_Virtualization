@@ -21,7 +21,7 @@ TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES ?= trusty_security_vm.elf \
 	trusty_security_vm_rpc_services-base.json \
 	early_vms.xml \
 
-ifeq ($(AVF_TRUSTY_ENABLE_SYSTEM_VM_WITH_PLACEHOLDER_THAL),true)
+ifeq ($(TRUSTY_SYSTEM_VM), enabled_with_placeholder_trusted_hal)
 TRUSTY_SYSTEM_VM_PRODUCT_PACKAGES += trusty_security_vm_rpc_services-with_placeholders_thal.json
 endif
 
