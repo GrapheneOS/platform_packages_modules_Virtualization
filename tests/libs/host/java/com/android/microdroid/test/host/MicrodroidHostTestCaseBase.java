@@ -200,7 +200,7 @@ public abstract class MicrodroidHostTestCaseBase extends BaseHostJUnit4Test {
     private static String getPathForPackage(ITestDevice device, String packageName)
             throws DeviceNotAvailableException {
         CommandRunner android = new CommandRunner(device);
-        String pathLine = android.run("pm", "path", packageName);
+        String pathLine = android.run("pm", "path", "--user", "0", packageName);
         assertWithMessage("Package " + packageName + " not found")
                 .that(pathLine)
                 .startsWith("package:");
