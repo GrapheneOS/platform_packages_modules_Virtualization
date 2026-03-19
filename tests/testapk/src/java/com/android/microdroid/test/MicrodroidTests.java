@@ -1618,11 +1618,21 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     private RandomAccessFile prepareInstanceImage(String vmName) throws Exception {
-        VirtualMachineConfig config =
+        VirtualMachineConfig.Builder builder =
                 newVmConfigBuilderWithPayloadBinary("MicrodroidTestNativeLib.so")
-                        .setDebugLevel(DEBUG_LEVEL_FULL)
-                        .setDisableUpdatability()
-                        .build();
+                        .setDebugLevel(DEBUG_LEVEL_FULL);
+
+        if (isUpdatableVmSupported()) {
+            // If updatability is supported, then forcing AVF to fallback to use instance.img
+            // requires `setDisableUpdatability`.
+            if (!isApiLevel37Supported()) {
+                throw new UnsupportedOperationException(
+                        "`setDisableUpdatability` API is only supported on API level 37+");
+            }
+            builder.setDisableUpdatability();
+        }
+
+        VirtualMachineConfig config = builder.build();
 
         assertThat(tryBootVmWithConfig(config, vmName).payloadStarted).isTrue();
         File instanceImgPath = getVmFile(vmName, "instance.img");
@@ -1653,6 +1663,12 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     @GmsTest(requirements = {"GMS-3-7.1-006"})
     public void bootFailsWhenMicrodroidDataIsCompromised() throws Exception {
+        if (isUpdatableVmSupported()) {
+            assumeTrue(
+                    "`setDisableUpdatability` API is only supported on API level 37+. Test does not"
+                        + " apply",
+                    isApiLevel37Supported());
+        }
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         assertThatBootFailsAfterCompromisingPartition(MICRODROID_PARTITION_UUID);
     }
@@ -1660,6 +1676,12 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     @Test
     @GmsTest(requirements = {"GMS-3-7.1-006"})
     public void bootFailsWhenPvmFwDataIsCompromised() throws Exception {
+        if (isUpdatableVmSupported()) {
+            assumeTrue(
+                    "`setDisableUpdatability` API is only supported on API level 37+. Test does not"
+                        + " apply",
+                    isApiLevel37Supported());
+        }
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
         if (mProtectedVm) {
             assertThatBootFailsAfterCompromisingPartition(PVM_FW_PARTITION_UUID);
@@ -1800,6 +1822,8 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         // Legacy secret management (which involves storing code hashes in instance.img) is expected
         // to decline VM run with different code, which includes updated code hash.
         // Failure to comply may indicate broken rollback protection.
+        // b/466130991 - The fix (and the test API) was introduced in API 37.
+        assumeTrue(isApiLevel37Supported());
         assumeSupportedDevice();
         assumeProtectedVM();
         grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
