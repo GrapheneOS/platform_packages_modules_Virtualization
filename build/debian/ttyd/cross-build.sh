@@ -84,9 +84,7 @@ EOF
 build_libwebsockets() {
     echo "=== Building libwebsockets-${LIBWEBSOCKETS_VERSION} (${TARGET})..."
     curl -fSsLo- "https://github.com/warmcat/libwebsockets/archive/v${LIBWEBSOCKETS_VERSION}.tar.gz" | tar xz -C "${BUILD_DIR}"
-    cp "$(dirname $0)/client_cert.patch" ${BUILD_DIR}/libwebsockets-${LIBWEBSOCKETS_VERSION}
     pushd "${BUILD_DIR}/libwebsockets-${LIBWEBSOCKETS_VERSION}"
-        patch -p1 < client_cert.patch
         sed -i 's/ websockets_shared//g' cmake/libwebsockets-config.cmake.in
         sed -i 's/ OR PC_OPENSSL_FOUND//g' lib/tls/CMakeLists.txt
         sed -i '/PC_OPENSSL/d' lib/tls/CMakeLists.txt
