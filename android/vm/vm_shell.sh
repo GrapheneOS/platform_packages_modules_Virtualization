@@ -40,6 +40,8 @@ function print_help() {
 
 function connect_vm() {
     cid=$1
+    echo "Starting adbd in a VM with CID ${cid}"
+    adb shell /apex/com.android.virt/bin/vm start-adbd --cid=${cid}
     echo Connecting to CID "${cid}"
     adb disconnect localhost:8000 2>/dev/null
     adb forward tcp:8000 "vsock:${cid}:5555"
