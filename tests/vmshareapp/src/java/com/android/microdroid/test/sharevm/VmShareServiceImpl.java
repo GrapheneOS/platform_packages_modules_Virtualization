@@ -188,6 +188,11 @@ public class VmShareServiceImpl extends Service {
         }
 
         @Override
+        public void consumeMemory(int sizeBytes) throws RemoteException {
+            mServiceInVm.consumeMemory(sizeBytes);
+        }
+
+        @Override
         public int addInteger(int a, int b) throws RemoteException {
             return mServiceInVm.addInteger(a, b);
         }

@@ -51,6 +51,7 @@ java_defaults {
     jni_libs: [
         "MicrodroidTestNativeLib",
         "MicrodroidIdleNativeLib",
+        "MicrodroidCgroupTenantNativeLib",
         "MicrodroidEmptyNativeLib",
         "MicrodroidExitNativeLib",
         "MicrodroidPrivateLinkingNativeLib",
@@ -407,4 +408,12 @@ rust_ffi_shared {
     shared_libs: [
         "libcrypto",
     ],
+}
+
+cc_library_shared {
+    name: "MicrodroidCgroupTenantNativeLib",
+    defaults: ["avf_build_flags_cc"],
+    srcs: ["src/native/cgroup_tenant.cpp"],
+    header_libs: ["vm_payload_headers"],
+    shared_libs: ["libvm_payload#current"],
 }
