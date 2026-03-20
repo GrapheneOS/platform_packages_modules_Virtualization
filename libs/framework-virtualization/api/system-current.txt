@@ -1,9 +1,8 @@
 // Signature format: 6.0
 // - style=java
-// - strip-java-lang-prefix=legacy
 package android.system.virtualmachine {
 
-  public class VirtualMachine implements java.lang.AutoCloseable {
+  public class VirtualMachine implements AutoCloseable {
     method @NonNull @WorkerThread public static android.os.IBinder binderFromPreconnectedClient(@NonNull android.system.virtualmachine.VirtualMachine.VsockConnectionProvider) throws android.system.virtualmachine.VirtualMachineException;
     method public void clearCallback();
     method @WorkerThread public void close();
@@ -94,14 +93,14 @@ package android.system.virtualmachine {
     method @NonNull public android.system.virtualmachine.VirtualMachineConfig.Builder setVmOutputCaptured(boolean);
   }
 
-  public final class VirtualMachineDescriptor implements java.lang.AutoCloseable android.os.Parcelable {
+  public final class VirtualMachineDescriptor implements AutoCloseable android.os.Parcelable {
     method public void close();
     method public int describeContents();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.system.virtualmachine.VirtualMachineDescriptor> CREATOR;
   }
 
-  public class VirtualMachineException extends java.lang.Exception {
+  public class VirtualMachineException extends Exception {
     method @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public int getCode();
     field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_CONFIG_FILE_CORRUPTED = 7; // 0x7
     field @FlaggedApi("com.android.system.virtualmachine.flags.virtualmachineexception_code") public static final int CODE_CONFIG_INCOMPATIBLE = 8; // 0x8
