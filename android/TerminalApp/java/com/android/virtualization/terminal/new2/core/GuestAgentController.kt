@@ -25,17 +25,10 @@ import com.android.virtualization.terminal.DebianServiceBase
 import com.android.virtualization.terminal.DebianServiceGrpc
 import com.android.virtualization.terminal.PortsStateManager
 import com.android.virtualization.terminal.StorageBalloonWorker
-import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
-import io.grpc.Metadata
 import io.grpc.Server
-import io.grpc.ServerCall
-import io.grpc.ServerCallHandler
-import io.grpc.ServerInterceptor
-import io.grpc.Status
 import io.grpc.okhttp.OkHttpServerBuilder
 import java.io.IOException
-import java.net.InetSocketAddress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,8 +47,6 @@ class GuestAgentController(
     private var debianService: DebianServiceBase? = null
     private var clipboardController: ClipboardController? = null
     private val portsStateManager = PortsStateManager.getInstance(context)
-
-    @Volatile private var allowedIpAddress: String? = null
 
     private val _ports = MutableStateFlow<List<OpenPort>>(emptyList())
     val ports: StateFlow<List<OpenPort>> = _ports.asStateFlow()
@@ -80,11 +71,6 @@ class GuestAgentController(
         portsStateManager.registerListener(portsListener)
         updatePortsState()
         return port
-    }
-
-    fun setAllowedGuestIp(ip: String) {
-        Log.d(TAG, "Setting allowed guest IP: $ip")
-        allowedIpAddress = ip
     }
 
     fun start(cid: Int, guestAgent: IGuestAgent, service: IDebianService) {
@@ -145,26 +131,6 @@ class GuestAgentController(
     }
 
     private fun startDebianServerGrpc(): Int {
-        val interceptor: ServerInterceptor =
-            object : ServerInterceptor {
-                override fun <ReqT, RespT> interceptCall(
-                    call: ServerCall<ReqT?, RespT?>,
-                    headers: Metadata?,
-                    next: ServerCallHandler<ReqT?, RespT?>,
-                ): ServerCall.Listener<ReqT?> {
-                    val remoteAddr =
-                        call.attributes.get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR) as? InetSocketAddress
-
-                    val ip = allowedIpAddress
-                    if (ip != null && remoteAddr?.address?.hostAddress == ip) {
-                        // Allow the request only if it is from VM
-                        return next.startCall(call, headers)
-                    }
-                    Log.d(TAG, "blocked grpc request from $remoteAddr (allowed: $ip)")
-                    call.close(Status.Code.PERMISSION_DENIED.toStatus(), Metadata())
-                    return object : ServerCall.Listener<ReqT?>() {}
-                }
-            }
         try {
             // TODO(b/372666638): gRPC for java doesn't support vsock for now.
             val port = 0
@@ -172,7 +138,6 @@ class GuestAgentController(
             debianService = service
             server =
                 OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
-                    .intercept(interceptor)
                     .addService(service)
                     .build()
                     .start()
@@ -191,7 +156,6 @@ class GuestAgentController(
         server?.shutdown()
         server = null
         debianService = null
-        allowedIpAddress = null
     }
 
     companion object {
