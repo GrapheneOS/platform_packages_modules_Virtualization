@@ -1067,7 +1067,10 @@ fn check_permission(perm: &str) -> binder::Result<()> {
         return Ok(());
     }
     let perm_svc: Strong<dyn IPermissionController::IPermissionController> =
-        binder::wait_for_interface("permission")?;
+        binder::wait_for_interface("permission")
+            .context("failed to find 'permission' service")
+            .with_log()
+            .or_service_specific_exception(-1)?;
     if perm_svc.checkPermission(perm, calling_pid, calling_uid as i32)? {
         Ok(())
     } else {
