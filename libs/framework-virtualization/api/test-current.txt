@@ -1,4 +1,6 @@
-// Signature format: 2.0
+// Signature format: 6.0
+// - style=java
+// - strip-java-lang-prefix=legacy
 package android.system.virtualmachine {
 
   public class VirtualMachine implements java.lang.AutoCloseable {
