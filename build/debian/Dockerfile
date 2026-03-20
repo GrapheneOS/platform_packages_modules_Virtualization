@@ -47,28 +47,7 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-arm64-cross \
     qemu-system-arm \
     # x86_64 specific packages
-    qemu-system \
-    # Cloud-init optional package
-    genisoimage
+    qemu-system
 
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-##
-# Install Rust and Tooling
-##
-# This section installs Rust and adds support for both x86_64 and aarch64
-# targets to make the builder image more versatile.
-RUN set -eux; \
-    # Install rustup
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
-    \
-    # Install targets for both architectures
-    rustup target add aarch64-unknown-linux-gnu; \
-    rustup target add x86_64-unknown-linux-gnu; \
-    \
-    # Install common cargo tools
-    cargo install cargo-license --version 0.6.1; \
-    cargo install cargo-deb --version 3.3.0;

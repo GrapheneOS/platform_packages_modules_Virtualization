@@ -35,7 +35,6 @@ MAY_SKIP_BUILD=0
 WORKDIR=""
 DEBIAN_BASE_DIR=""
 CLOUD_INIT_DIR=""
-CIDATA_IMG_NAME="cidata.iso"
 CHROOT_TTYD_DIR=""
 RAW_DISK_IMG=""
 ROOT_PART_FILE=""
@@ -178,59 +177,6 @@ compile_ttyd() {
   popd > /dev/null
 }
 
-# Build a guest-side Rust project as a .deb package
-compile_rust_deb() {
-  local guest_project=$1
-  local deb_output_dir="${CLOUD_INIT_DIR}/localdebs"
-  local deb_name_base="${guest_project//_/-}"
-
-  if [[ "$MAY_SKIP_BUILD" == 1 && -n "$(find "${deb_output_dir}" -name "${deb_name_base}_*.deb")" ]]; then
-    log_info "Skipping Rust build for ${guest_project}: package already exists."
-    return
-  fi
-
-  log_step "Building Rust project: ${guest_project}"
-  pushd "$SCRIPT_DIR/../../guest/${guest_project}" > /dev/null
-  cargo deb --target "${TARGET_ARCH}-unknown-linux-gnu" --output "${deb_output_dir}"
-  popd > /dev/null
-}
-
-# Prepare Android-specific configurations and build custom components
-prepare_android_configs() {
-  log_step "Assembling Android-specific configurations..."
-  mkdir -p "${CLOUD_INIT_DIR}/localdebs"
-
-  log_info "Copying cloud-init configs and local debs..."
-  cp -apR "$SCRIPT_DIR/cloud-init_config"/* "${CLOUD_INIT_DIR}"
-  cp -apR "$SCRIPT_DIR/localdebs/"* "${CLOUD_INIT_DIR}/localdebs" || true
-
-  compile_ttyd
-  compile_rust_deb forwarder_guest
-  compile_rust_deb forwarder_guest_launcher
-  compile_rust_deb shutdown_runner
-  compile_rust_deb storage_balloon_agent
-}
-
-# Create a cloud-init CIDATA ISO image
-build_cidata_iso() {
-  log_step "Building CIDATA configuration ISO..."
-
-  # Calculate a unique instance-id based on the contents of the configuration
-  # TODO (b/477208126) re-implement this in Soong
-  log_info "Generating dynamic instance-id from configuration checksum..."
-  local config_hash=$(find "${SCRIPT_DIR}/cloud-init_config" -type f -exec sha256sum {} + | sort | sha256sum | cut -d' ' -f1 | cut -c1-16)
-
-  # Inject the hash into the copied meta-data file
-  sed -i "s/{INSTANCE_ID}/${config_hash}/g" "${CLOUD_INIT_DIR}/meta-data"
-  log_info "Instance ID set to: ${config_hash}"
-
-  chmod -R o=g "${CLOUD_INIT_DIR}"
-  chown -R 0:0 "${CLOUD_INIT_DIR}"
-
-  rm -f "${WORKDIR}/${CIDATA_IMG_NAME}"
-  genisoimage -output "${WORKDIR}/${CIDATA_IMG_NAME}" -V cidata -J -R "${CLOUD_INIT_DIR}"
-}
-
 # Extract and customize the root filesystem image using chroot
 customize_rootfs() {
   if [[ "$MAY_SKIP_BUILD" == 1 && -f "${ROOT_PART_FILE}" ]]; then
@@ -278,7 +224,7 @@ generate_final_package() {
   wget -q -O vmlinuz "${kernel_url}/${VMLINUZ_NAME}/url"
   wget -q -O initrd.img "${kernel_url}/initramfs.img/url"
 
-  local bundle_contents=(build_id "${ROOT_PART_FILE##*/}" vm_config.json vmlinuz initrd.img "${CIDATA_IMG_NAME}")
+  local bundle_contents=(build_id "${ROOT_PART_FILE##*/}" vm_config.json vmlinuz initrd.img)
   popd > /dev/null
 
   # Compress everything into the final tarball using multi-core pigz
@@ -301,8 +247,7 @@ main() {
   # Run the build process with internal timestamps
   {
     fetch_debian_image
-    prepare_android_configs
-    build_cidata_iso
+    compile_ttyd
     customize_rootfs
     generate_final_package
   } 2>&1 | ts -s
