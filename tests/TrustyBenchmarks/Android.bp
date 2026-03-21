@@ -25,6 +25,8 @@ android_test {
         "androidx.test.rules",
         "junit",
         "truth",
+        "compatibility-device-util-axt",
+        "MicrodroidCommonTestLib",
     ],
     jni_libs: [
         "libtrustybenchmarks_jni",

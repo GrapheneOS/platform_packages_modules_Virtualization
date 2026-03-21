@@ -52,7 +52,9 @@
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.NativeBridgeModuleController" />
     <!-- Test only needs to run on Android U (SDK 34) and above -->
     <object type="module_controller" class="com.android.tradefed.testtype.suite.module.Sdk34ModuleController" />
-
+    <object type="module_controller" class="com.android.microdroid.test.preparer.TestInstallAbiModuleController">
+        <option name="test-apk-name" value="{MODULE}.apk" />
+    </object>
 
     {EXTRA_CONFIGS}
 </configuration>

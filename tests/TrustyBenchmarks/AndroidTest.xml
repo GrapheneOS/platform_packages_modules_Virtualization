@@ -18,6 +18,10 @@
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
         <option name="test-file-name" value="TrustyBenchmarks.apk" />
     </target_preparer>
+    <!-- Need root to access /proc/$pid/smaps when measuring memory usage. -->
+    <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer">
+        <option name="force-root" value="true" />
+    </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="run-command" value="mkdir -p /data/local/tmp/trusty_vm" />
         <option name="teardown-command" value="rm -rf /data/local/tmp/trusty_vm" />

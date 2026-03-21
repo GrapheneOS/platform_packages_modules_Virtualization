@@ -19,7 +19,7 @@
  * instructions, so it can be used in exception handlers with 18 instructions
  * left.
  *
- * On return, x0 and x1 are initialised to elr_el2 and spsr_el2 respectively,
+ * On return, x0 and x1 are initialised to elr_el1 and spsr_el1 respectively,
  * which can be used as the first and second arguments of a subsequent call.
  */
 .macro save_volatile_to_stack
