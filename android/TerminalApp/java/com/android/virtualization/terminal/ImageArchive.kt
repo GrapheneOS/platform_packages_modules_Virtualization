@@ -35,7 +35,6 @@ import java.nio.file.StandardCopyOption
 import java.util.function.Function
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.path.exists
-import kotlin.io.path.fileSize
 import kotlin.io.path.writeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -189,37 +188,23 @@ internal class ImageArchive {
                         }
                     }
 
-                    Log.d(TAG, "DBG: debuggable=" + Build.isDebuggable())
-                    Log.d(
-                        TAG,
-                        "DBG: extra_source=" + extra_source + ", exist=" + extra_source.exists(),
-                    )
-
                     // Override cidata if necessary. Assume overridden cidata uses AIDL guest agent.
                     if (Build.isDebuggable() && extra_source.exists() == true) {
-                        if (
-                            extra_source.fileSize() == 0L ||
-                                context.resources.getBoolean(R.bool.soong_generated_cidata)
-                        ) {
-                            Log.d(TAG, "Installing bundled cidata.iso")
+                        Log.d(TAG, "Installing /sdcard/linux/cidata.iso")
 
+                        val cidataPath = dir.resolve(extra_source.fileName)
+                        Files.copy(extra_source, cidataPath, StandardCopyOption.REPLACE_EXISTING)
+
+                        // Also create cidata.build_id, so it can be recognized as AIDL guest
+                        // agent.
+                        val cidataBuildIdPath = dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
+                        cidataBuildIdPath.writeText("dev")
+                    } else {
+                        val installedCidata = dir.resolve(CIDATA_NAME)
+                        if (!installedCidata.exists()) {
+                            Log.d(TAG, "Installing bundled cidata.iso")
                             copyAsset(context, CIDATA_NAME, dir)
                             copyAsset(context, InstalledImage.CIDATA_BUILD_ID_FILENAME, dir)
-                        } else {
-                            Log.d(TAG, "Installing /sdcard/linux/cidata.iso")
-
-                            val cidataPath = dir.resolve(extra_source.fileName)
-                            Files.copy(
-                                extra_source,
-                                cidataPath,
-                                StandardCopyOption.REPLACE_EXISTING,
-                            )
-
-                            // Also create cidata.build_id, so it can be recognized as AIDL guest
-                            // agent.
-                            val cidataBuildIdPath =
-                                dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
-                            cidataBuildIdPath.writeText("dev")
                         }
                     }
 

@@ -73,6 +73,11 @@ apex_defaults {
     }),
 
     canned_fs_config: "canned_fs_config",
+
+    payload_fs_type: "erofs",
+    erofs: {
+        pcluster_size: 32768,
+    },
 }
 
 apex_defaults {
