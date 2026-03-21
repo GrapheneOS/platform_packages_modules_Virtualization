@@ -25,10 +25,7 @@ set -eo pipefail
 GUEST_PACKAGES=(
   kmod
   udev
-  avahi-daemon
-  avahi-utils
   libbpf-tools
-  libnss-mdns
   libvulkan1
   mesa-vulkan-drivers
   procps

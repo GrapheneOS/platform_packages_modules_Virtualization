@@ -39,9 +39,6 @@ internal class DebianServiceGrpc(context: Context) : DebianServiceImplBase(), De
     private var shutdownRunnable: Runnable? = null
     private val mLock = Object()
     @GuardedBy("mLock") private var storageBalloonCallback: StorageBalloonCallback? = null
-    @Volatile
-    internal var allowedIpAddress: String? = null
-        private set
 
     override fun reportVmActivePorts(
         request: ReportVmActivePortsRequest,
@@ -81,10 +78,6 @@ internal class DebianServiceGrpc(context: Context) : DebianServiceImplBase(), De
         }
         shutdownRunnable!!.run()
         return true
-    }
-
-    override fun setAllowedGuestIp(ip: String) {
-        allowedIpAddress = ip
     }
 
     override fun openShutdownRequestQueue(
