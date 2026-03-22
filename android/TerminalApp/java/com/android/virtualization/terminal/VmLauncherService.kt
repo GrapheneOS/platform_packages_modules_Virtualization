@@ -44,18 +44,10 @@ import com.android.virtualization.terminal.InstalledImage.Companion.roundUp
 import com.android.virtualization.terminal.MainActivity.Companion.PREFIX
 import com.android.virtualization.terminal.MainActivity.Companion.TAG
 import com.android.virtualization.terminal.proto.DebianServiceGrpc.DebianServiceImplBase
-import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
-import io.grpc.Metadata
 import io.grpc.Server
-import io.grpc.ServerCall
-import io.grpc.ServerCallHandler
-import io.grpc.ServerInterceptor
-import io.grpc.Status
 import io.grpc.okhttp.OkHttpServerBuilder
 import java.io.IOException
-import java.net.InetSocketAddress
-import java.net.SocketAddress
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -206,47 +198,47 @@ class VmLauncherService : Service() {
 
         portNotifier = PortNotifier(this)
 
-        getTerminalServiceInfo(timeout_secs)
-            .thenAcceptAsync(
-                { info ->
-                    // It must exist because it is checked in `getTerminalServiceInfo`
-                    val guestIpAddress =
-                        info.hostAddresses.firstOrNull { !it.isLinkLocalAddress }!!.hostAddress!!
+        if (canUseTtydOverVsock()) {
+            val bridge = AndroidToVmBridge(virtualMachine.getCid())
+            val port = bridge.start()
+            if (port == null) {
+                Log.e(TAG, "Failed to start bridge")
+                resultReceiver.send(RESULT_ERROR, null)
+                stopSelf()
+            } else {
+                val bundle = Bundle()
+                bundle.putString(KEY_TERMINAL_IPADDRESS, "localhost")
+                bundle.putInt(KEY_TERMINAL_PORT, port)
+                bundle.putString(KEY_TERMINAL_KEY, bridge.secretKey)
+                resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
+            }
+        } else {
+            getTerminalServiceInfo(timeout_secs)
+                .thenAcceptAsync(
+                    { info ->
+                        // It must exist because it is checked in `getTerminalServiceInfo`
+                        val guestIpAddress =
+                            info.hostAddresses
+                                .firstOrNull { !it.isLinkLocalAddress }!!
+                                .hostAddress!!
 
-                    debianService!!.setAllowedGuestIp(guestIpAddress)
-
-                    if (canUseTtydOverVsock()) {
-                        val bridge = AndroidToVmBridge(virtualMachine.getCid())
-                        val port = bridge.start()
-                        if (port == null) {
-                            Log.e(TAG, "Failed to start bridge")
-                            resultReceiver.send(RESULT_ERROR, null)
-                            stopSelf()
-                        } else {
-                            val bundle = Bundle()
-                            bundle.putString(KEY_TERMINAL_IPADDRESS, "localhost")
-                            bundle.putInt(KEY_TERMINAL_PORT, port)
-                            bundle.putString(KEY_TERMINAL_KEY, bridge.secretKey)
-                            resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-                        }
-                    } else {
                         val bundle = Bundle()
                         bundle.putString(KEY_TERMINAL_IPADDRESS, guestIpAddress)
                         bundle.putInt(KEY_TERMINAL_PORT, info.port)
                         resultReceiver.send(RESULT_TERMINAL_AVAIL, bundle)
-                    }
-                },
-                bgThreads,
-            )
-            .exceptionallyAsync(
-                { e ->
-                    Log.e(TAG, "Failed to start VM", e)
-                    resultReceiver.send(RESULT_ERROR, null)
-                    stopSelf()
-                    null
-                },
-                bgThreads,
-            )
+                    },
+                    bgThreads,
+                )
+                .exceptionallyAsync(
+                    { e ->
+                        Log.e(TAG, "Failed to start VM", e)
+                        resultReceiver.send(RESULT_ERROR, null)
+                        stopSelf()
+                        null
+                    },
+                    bgThreads,
+                )
+        }
     }
 
     private fun canUseTtydOverVsock(): Boolean {
@@ -257,6 +249,9 @@ class VmLauncherService : Service() {
     }
 
     private fun getTerminalServiceInfo(timeout_secs: Int): CompletableFuture<NsdServiceInfo> {
+        check(!canUseTtydOverVsock()) {
+            "getTerminalServiceInfo should only be called when ttyd over vsock is not supported"
+        }
         val executor = Executors.newSingleThreadExecutor(TerminalThreadFactory(applicationContext))
         val nsdManager = getSystemService(NsdManager::class.java)!!
         val queryInfo = NsdServiceInfo()
@@ -379,36 +374,12 @@ class VmLauncherService : Service() {
     }
 
     private fun startDebianServer(): Int {
-        val interceptor: ServerInterceptor =
-            object : ServerInterceptor {
-                override fun <ReqT, RespT> interceptCall(
-                    call: ServerCall<ReqT?, RespT?>,
-                    headers: Metadata?,
-                    next: ServerCallHandler<ReqT?, RespT?>,
-                ): ServerCall.Listener<ReqT?>? {
-                    val remoteAddr =
-                        call.attributes.get<SocketAddress?>(Grpc.TRANSPORT_ATTR_REMOTE_ADDR)
-                            as InetSocketAddress?
-
-                    val service = debianService as? DebianServiceGrpc
-                    val allowedIp = service?.allowedIpAddress
-
-                    if (allowedIp != null && remoteAddr?.address?.hostAddress == allowedIp) {
-                        // Allow the request only if it is from VM
-                        return next.startCall(call, headers)
-                    }
-                    Log.d(TAG, "blocked grpc request from $remoteAddr (allowed: $allowedIp)")
-                    call.close(Status.Code.PERMISSION_DENIED.toStatus(), Metadata())
-                    return object : ServerCall.Listener<ReqT?>() {}
-                }
-            }
         try {
             // TODO(b/372666638): gRPC for java doesn't support vsock for now.
             val port = 0
             debianService = DebianServiceGrpc(this)
             server =
                 OkHttpServerBuilder.forPort(port, InsecureServerCredentials.create())
-                    .intercept(interceptor)
                     .addService(debianService as DebianServiceImplBase)
                     .build()
                     .start()

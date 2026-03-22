@@ -326,7 +326,7 @@ object VmController {
                                 )
                         }
                     }
-                } else {
+                } else if (!canUseTtydOverVsock()) {
                     startTtydDiscovery(effectiveTimeout.toLong())
                 }
             } catch (e: Exception) {
@@ -377,10 +377,10 @@ object VmController {
             .useTrackpad(true)
     }
 
-    // We still need this logic to retrieve the IP address of the VM to use it for guest agent
-    // connection
-    // It will be replaced with RpcBinder with vsock.
     private fun startTtydDiscovery(timeoutSecs: Long) {
+        check(!canUseTtydOverVsock()) {
+            "startTtydDiscovery should only be called when ttyd over http is used"
+        }
         val executor =
             Executors.newSingleThreadExecutor(TerminalThreadFactory(context.applicationContext))
         val nsdManager = context.getSystemService<NsdManager>(NsdManager::class.java)!!
@@ -419,13 +419,8 @@ object VmController {
                                 .firstOrNull { !it.isLinkLocalAddress }!!
                                 .hostAddress!!
                         val port = info.port
-                        _guestAgentController.value?.setAllowedGuestIp(ipAddress)
 
-                        // If we are using vsock bridge, we already set the state to Running with
-                        // localhost and the secret key. Don't overwrite it.
-                        if (!canUseTtydOverVsock()) {
-                            _vmState.value = VmState.Running(TerminalAddress(ipAddress, port))
-                        }
+                        _vmState.value = VmState.Running(TerminalAddress(ipAddress, port))
                     }
                 }
             }
