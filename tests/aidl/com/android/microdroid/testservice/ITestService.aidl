@@ -78,6 +78,13 @@ interface ITestService {
     /** Returns page size of the VM. */
     int getPageSize();
 
+    /**
+     * Consumes memory to test cgroup memory reclaiming.
+     *
+     * @param sizeBytes The number of bytes to consume.
+     */
+    void consumeMemory(int sizeBytes);
+
     /** Requests the VM to asynchronously call appCallback.setVmCallback() */
     void requestCallback(IAppCallback appCallback);
 

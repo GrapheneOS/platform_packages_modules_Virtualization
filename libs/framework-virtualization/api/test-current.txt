@@ -1,14 +1,15 @@
-// Signature format: 2.0
+// Signature format: 6.0
+// - style=java
 package android.system.virtualmachine {
 
-  public class VirtualMachine implements java.lang.AutoCloseable {
+  public class VirtualMachine implements AutoCloseable {
     method @RequiresPermission(android.system.virtualmachine.VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION) public void enableTestAttestation() throws android.system.virtualmachine.VirtualMachineException;
     method @NonNull @WorkerThread public java.io.OutputStream getConsoleInput() throws android.system.virtualmachine.VirtualMachineException;
     method @NonNull public java.io.File getRootDir();
   }
 
   public final class VirtualMachineConfig {
-    method @NonNull public java.util.List<java.lang.String> getExtraApks();
+    method @NonNull public java.util.List<String> getExtraApks();
     method @NonNull public String getOs();
     method @Nullable public String getPayloadConfigPath();
     method public boolean isVmConsoleInputSupported();
@@ -25,7 +26,7 @@ package android.system.virtualmachine {
   }
 
   public class VirtualMachineManager {
-    method @NonNull public java.util.List<java.lang.String> getSupportedOSList() throws android.system.virtualmachine.VirtualMachineException;
+    method @NonNull public java.util.List<String> getSupportedOSList() throws android.system.virtualmachine.VirtualMachineException;
     method @RequiresPermission(android.system.virtualmachine.VirtualMachine.MANAGE_VIRTUAL_MACHINE_PERMISSION) public boolean isFeatureEnabled(String) throws android.system.virtualmachine.VirtualMachineException;
     method public void testOnlyClearCache();
     field public static final String FEATURE_DICE_CHANGES = "com.android.kvm.DICE_CHANGES";

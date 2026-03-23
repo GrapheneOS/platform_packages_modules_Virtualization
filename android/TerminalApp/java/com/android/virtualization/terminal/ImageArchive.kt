@@ -256,9 +256,9 @@ internal class ImageArchive {
         private const val ARCHIVE_NAME = "images.tar.gz"
         private const val CIDATA_NAME = "cidata.iso"
         // TODO(b/403131508): externalize the version number
-        private const val VERSION_INT = 5_000_000 // 5.0.0
+        private const val VERSION_INT = 5_100_000 // 5.1.0
         private val BUILD_TAG =
-            (VERSION_INT / 1_000_000 * 1_000_000).toString() // Use only the major version
+            (VERSION_INT / 1_000 * 1_000).toString() // Ignore patch version number
         private val HOST_URL = "https://dl.google.com/android/ferrochrome/$BUILD_TAG"
 
         fun getSdcardPathForTesting(): Path {

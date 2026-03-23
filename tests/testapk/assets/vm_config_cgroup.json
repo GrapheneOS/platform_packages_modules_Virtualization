@@ -1,0 +1,11 @@
+{
+  "task": {
+    "type": "microdroid_launcher",
+    "command": "MicrodroidTestNativeLib.so"
+  },
+  "export_tombstones": true,
+  "cgroup_config": {
+     "memory_high_mib": 60,
+     "increase_high_mib": true
+  }
+}

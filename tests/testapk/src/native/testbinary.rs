@@ -65,6 +65,10 @@ impl ITestService for TestService {
         exit(0)
     }
 
+    fn consumeMemory(&self, _size_bytes: i32) -> BinderResult<()> {
+        unimplemented()
+    }
+
     fn addInteger(&self, a: i32, b: i32) -> BinderResult<i32> {
         a.checked_add(b).ok_or_else(|| Status::new_exception(ExceptionCode::ILLEGAL_ARGUMENT, None))
     }

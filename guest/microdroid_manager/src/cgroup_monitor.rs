@@ -221,19 +221,20 @@ fn monitor_events(
 }
 
 pub fn start_cgroup_monitor(
-    cgroup_name: &'static str,
+    cgroup_name: &str,
     service: &Strong<dyn IVirtualMachineService>,
 ) -> Result<(thread::JoinHandle<()>, Arc<EventFd>)> {
+    let cgroup_name = cgroup_name.to_owned();
     let cgroup_evt_fd = Arc::new(EventFd::new()?);
     let cgroup_evt_fd_clone = cgroup_evt_fd.clone();
     let service_clone = service.clone();
     let cgroup_thread = thread::Builder::new()
         .name("microdroid_cgroup_monitor".to_string())
         .spawn(move || {
-            let events_file_path = get_cgroup_file_path(cgroup_name, "memory.events");
-            let high_limit_file_path = get_cgroup_file_path(cgroup_name, "memory.high");
-            let current_usage_file_path = get_cgroup_file_path(cgroup_name, "memory.current");
-            let peak_usage_file_path = get_cgroup_file_path(cgroup_name, "memory.peak");
+            let events_file_path = get_cgroup_file_path(&cgroup_name, "memory.events");
+            let high_limit_file_path = get_cgroup_file_path(&cgroup_name, "memory.high");
+            let current_usage_file_path = get_cgroup_file_path(&cgroup_name, "memory.current");
+            let peak_usage_file_path = get_cgroup_file_path(&cgroup_name, "memory.peak");
 
             info!("Monitoring cgroup memory.events at {}", events_file_path.display());
 
