@@ -127,7 +127,9 @@ fn test_hyp_tracing_events() {
         id_file.read_to_string(&mut contents).unwrap();
         info!("contents: {contents}");
         let id = contents.trim().parse::<u32>().unwrap();
-        assert!(id > 0);
+        // Perfetto expects ids to be positive, howerver it's fine for __hyp_printk to have zero as
+        // id, since we will never use it in perfetto tracing configs.
+        assert!(id > 0 || event.file_name().to_string_lossy() == "__hyp_printk");
     }
 }
 
