@@ -16,5 +16,6 @@
 
 //! Common items used by CompOS clients.
 
+pub mod manifest_verification;
 pub mod verified_dex2oat;
 pub mod wrappers;

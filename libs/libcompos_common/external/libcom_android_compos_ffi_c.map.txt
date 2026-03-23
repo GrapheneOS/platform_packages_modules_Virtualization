@@ -1,20 +1,31 @@
 VERIFIED_DEX2OAT{ # introduced=38
     global:
-        AVerifiedDex2Oat_SuccessData_getCpuClockTimeMs; # apex
-        AVerifiedDex2Oat_SuccessData_getWallClockTimeMs; # apex
-        AVerifiedDex2Oat_FailureData_getReason; # apex
-        AVerifiedDex2Oat_FailureData_getExitCode; # apex
-        AVerifiedDex2Oat_FailureData_getSignal; # apex
-        AVerifiedDex2Oat_FailureData_getCpuClockTimeMs; # apex
-        AVerifiedDex2Oat_FailureData_getWallClockTimeMs; # apex
-        AVerifiedDex2Oat_FailureData_getMessage; # apex
-        AVerifiedDex2Oat_FailureReason_toString; # apex
-        AVerifiedDex2Oat_CompilationContext_create; #apex
-        AVerifiedDex2Oat_CompilationContext_destroy; #apex
-        AVerifiedDex2Oat_CompilationContext_addArg; #apex
-        AVerifiedDex2Oat_start; # apex
-        AVerifiedDex2Oat_cancel; # apex
-        AVerifiedDex2Oat_Status_toString; # apex
+        # Dex2Oat Compilation API.
+        AVerifiedDex2Oat_SuccessData_getCpuClockTimeMs; # apex introduced=38
+        AVerifiedDex2Oat_SuccessData_getWallClockTimeMs; # apex introduced=38
+        AVerifiedDex2Oat_FailureData_getReason; # apex introduced=38
+        AVerifiedDex2Oat_FailureData_getExitCode; # apex introduced=38
+        AVerifiedDex2Oat_FailureData_getSignal; # apex introduced=38
+        AVerifiedDex2Oat_FailureData_getCpuClockTimeMs; # apex introduced=38
+        AVerifiedDex2Oat_FailureData_getWallClockTimeMs; # apex introduced=38
+        AVerifiedDex2Oat_FailureData_getMessage; # apex introduced=38
+        AVerifiedDex2Oat_FailureReason_toString; # apex introduced=38
+        AVerifiedDex2Oat_CompilationContext_create; # apex introduced=38
+        AVerifiedDex2Oat_CompilationContext_destroy; # apex introduced=38
+        AVerifiedDex2Oat_CompilationContext_addArg; # apex introduced=38
+        AVerifiedDex2Oat_start; # apex introduced=38
+        AVerifiedDex2Oat_cancel; # apex introduced=38
+        AVerifiedDex2Oat_Status_toString; # apex introduced=38
+
+        # Manifest Verification API.
+        AVerifiedDex2Oat_Verifier_Expectation_create; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_destroy; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_addExactMatchRule; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_addDisallowedArgumentRule; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_combineWithPreviousMatchRule; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_addIgnoredArgumentRule; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_verify; # apex introduced=38
+        AVerifiedDex2Oat_Verifier_Expectation_getErrorMessage; # apex introduced=38
     local:
         *;
 };
