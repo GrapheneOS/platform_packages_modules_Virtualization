@@ -131,6 +131,8 @@ As a reference, in Pixel phones, debug policy is loaded as below:
 AVF currently supports the following debugging features:
 
 * ADB connection (only for Microdroid)
+    * By default the adbd won't be started. You can use the following command to start adbd for
+      a given VM: `adb shell /apex/com.android.virt/bin/vm start-adbd --cid {VM_CID}`
 * Capturing console output
 * Capturing logcat output (only for Microdroid)
 * [Capturing kernel ramdump](ramdump.md) (only for Microdroid)
