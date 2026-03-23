@@ -272,7 +272,7 @@ object Installer {
     private suspend fun checkInstallStatus() {
         _installState.value = InstallState.Checking
         if (installedImage.isInstalled()) {
-            if (installedImage.isCompatible()) {
+            if (installedImage.isCompatible(context)) {
                 _installState.value = InstallState.Installed
             } else {
                 try {
