@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.trusty.benchmark;
+package com.android.trusty.vm.benchmarks;
 
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
 
@@ -38,8 +38,8 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(JUnit4.class)
-public class TrustyBenchmarks {
-    private static final String TAG = "TrustyBenchmarks";
+public class TrustyVmBenchmarks {
+    private static final String TAG = "TrustyVmBenchmarks";
     private static final String VM_KERNEL_PATH = "/data/local/tmp/trusty_vm/trusty_security_vm.elf";
     private static final int ITERATIONS = 5;
 
