@@ -774,6 +774,98 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
     }
 
     @Test
+    public void testTenantCgroupMemoryReclaim() throws Exception {
+        assumeSupportedDevice();
+        assumeTrue("MultiTenancy feature not supported", isFeatureMultiTenantSupported());
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_tenant_cgroup.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setVmOutputCaptured(true)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_cgroup", config);
+
+        CompletableFuture<Boolean> testCompleted = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            // The tenant task (MicrodroidCgroupTenantNativeLib) automatically
+                            // consumes memory on startup and hits the limit.
+                            Thread.sleep(4000); // Wait for cgroup monitor to react to tenant memory
+                            // allocation
+                            testCompleted.complete(true);
+                        } catch (Exception e) {
+                            testCompleted.completeExceptionally(e);
+                        } finally {
+                            forceStop(vm);
+                        }
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+
+        if (!testCompleted.getNow(false)) {
+            try {
+                testCompleted.get();
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Test failed with exception. Log output: " + listener.getLogOutput(), e);
+            }
+        }
+        assertThat(listener.getConsoleOutput() + listener.getLogOutput())
+                .contains("memory.high breach event detected");
+    }
+
+    @Test
+    public void testCgroupMemoryReclaim() throws Exception {
+        assumeSupportedDevice();
+
+        grantPermission(VirtualMachine.USE_CUSTOM_VIRTUAL_MACHINE_PERMISSION);
+        VirtualMachineConfig config =
+                newVmConfigBuilderWithPayloadConfig("assets/vm_config_cgroup.json")
+                        .setMemoryBytes(minMemoryRequired())
+                        .setDebugLevel(DEBUG_LEVEL_FULL)
+                        .setVmOutputCaptured(true)
+                        .build();
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_cgroup", config);
+
+        CompletableFuture<Boolean> testCompleted = new CompletableFuture<>();
+        VmEventListener listener =
+                new VmEventListener() {
+                    @Override
+                    public void onPayloadReady(VirtualMachine vm) {
+                        try {
+                            ITestService mTestService =
+                                    ITestService.Stub.asInterface(
+                                            vm.connectToVsockServer(ITestService.PORT));
+                            mTestService.consumeMemory(85 * 1024 * 1024);
+                            Thread.sleep(4000); // Wait for cgroup monitor to react
+                            testCompleted.complete(true);
+                        } catch (Exception e) {
+                            testCompleted.completeExceptionally(e);
+                        } finally {
+                            forceStop(vm);
+                        }
+                    }
+                };
+        listener.runToFinish(TAG, vm);
+
+        if (!testCompleted.getNow(false)) {
+            try {
+                testCompleted.get();
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Test failed with exception. Log output: " + listener.getLogOutput(), e);
+            }
+        }
+        assertThat(listener.getConsoleOutput() + listener.getLogOutput())
+                .contains("memory.high breach event detected");
+    }
+
+    @Test
     @CddTest(requirements = {"3.1/C-0-1"})
     public void binderCallbacksWork() throws Exception {
         assumeSupportedDevice();

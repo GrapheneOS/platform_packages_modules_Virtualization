@@ -167,6 +167,7 @@ mod tests {
             task: None,
             min_version,
             expected_authority: create_authority(expected_authority),
+            cgroup_config: None,
         })
     }
 
@@ -180,6 +181,7 @@ mod tests {
             task: None,
             min_version,
             expected_authority: create_authority(expected_authority),
+            cgroup_config: None,
         })
     }
 
@@ -396,6 +398,7 @@ mod tests {
             task: None,
             min_version: 10,
             expected_authority: authority,
+            cgroup_config: None,
         })];
 
         assert!(validate_tenants_against_tenant_config(&tenant_apk, &[], &tenant_config).is_ok());

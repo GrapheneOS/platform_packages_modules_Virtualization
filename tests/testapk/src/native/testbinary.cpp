@@ -189,6 +189,23 @@ Result<void> start_test_service() {
 
     class TestService : public BnTestService {
     public:
+        std::vector<uint8_t*> mMemoryHogs;
+
+        ScopedAStatus consumeMemory(int32_t sizeBytes) override {
+            std::thread([this, sizeBytes]() {
+                mMemoryHogs.reserve(mMemoryHogs.size() + (sizeBytes / 4096));
+                for (size_t i = 0; i < sizeBytes; i += 4096) {
+                    uint8_t* page = (uint8_t*)malloc(4096);
+                    if (!page) {
+                        break;
+                    }
+                    page[0] = rand() % 256;
+                    mMemoryHogs.push_back(page);
+                }
+            }).detach();
+            return ScopedAStatus::ok();
+        }
+
         ScopedAStatus addInteger(int32_t a, int32_t b, int32_t* out) override {
             *out = a + b;
             return ScopedAStatus::ok();

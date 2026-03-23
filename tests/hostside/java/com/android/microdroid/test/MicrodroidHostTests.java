@@ -1069,6 +1069,31 @@ public class MicrodroidHostTests extends MicrodroidHostTestCaseBase {
     }
 
     @Test
+    @Parameters(method = "params")
+    @TestCaseName("{method}_protectedVm_{0}_os_{1}")
+    @CddTest(requirements = {"3.1/C-0-1"})
+    @GmsTest(requirements = {"GMS-3-7.1-001.002"})
+    public void testMicrodroidCgroupConfig(boolean protectedVm, String os) throws Exception {
+        // Preconditions
+        assumeKernelSupported(os);
+        assumeVmTypeSupported(os, protectedVm);
+
+        final String configPath = "assets/vm_config_cgroup.json"; // path inside the APK
+        MicrodroidBuilder microdroidBuilder =
+                MicrodroidBuilder.fromDevicePath(getPathForPackage(PACKAGE_NAME), configPath)
+                        .debugLevel(DEBUG_LEVEL_FULL)
+                        .memoryMib(minMemorySize())
+                        .cpuTopology("match_host")
+                        .protectedVm(protectedVm)
+                        .name("test_microdroid_boots_with_cgroup_config");
+        if (getAndroidDevice().getApiLevel() >= 36) {
+            microdroidBuilder.os(SUPPORTED_OSES.get(os));
+        }
+
+        testMicrodroidBootsWithBuilder(microdroidBuilder);
+    }
+
+    @Test
     public void testMicrodroidRamUsage_protectedVm_true_os_microdroid() throws Exception {
         checkMicrodroidRamUsage(/* protectedVm= */ true, /* os= */ "microdroid");
     }
