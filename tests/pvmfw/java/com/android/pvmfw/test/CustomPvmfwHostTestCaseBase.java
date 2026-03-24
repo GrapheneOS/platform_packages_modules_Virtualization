@@ -195,6 +195,7 @@ public class CustomPvmfwHostTestCaseBase extends MicrodroidHostTestCaseBase {
                         .debugLevel(debugLevel)
                         .protectedVm(protectedVm)
                         .addBootFile(mCustomPvmfwFileOnHost, PVMFW_FILE_NAME)
+                        .forceStartAdbd(MICRODROID_DEBUG_NONE.equals(debugLevel))
                         .setAdbConnectTimeoutMs(adbTimeoutMs);
         for (String name : bootFiles.keySet()) {
             File file = bootFiles.get(name);
