@@ -21,6 +21,10 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"অনুমতি দিতে হবে"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"সঠিকভাবে কাজ করার জন্য টার্মিনালের নিম্নলিখিত অনুমতিগুলি প্রয়োজন: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"নিম্নলিখিত অনুমতিগুলি নেই। সেটিংস থেকে এগুলিকে অনুমতি দিন: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
+    <skip />
+    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
+    <skip />
     <string name="installer_title" msgid="1318592751395646215">"Linux টার্মিনাল ইনস্টল করুন"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux টার্মিনাল চালু করতে, নেটওয়ার্কের মাধ্যমে মোটামুটি <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g>-র ডেটা ডাউনলোড করতে হবে।\nআপনি কি এগোতে চান?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"শুধুমাত্র ওয়াই-ফাই ব্যবহার করে ডাউনলোড করুন"</string>
@@ -77,11 +81,27 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"সিস্টেম ইভেন্ট"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux টার্মিনাল ইনস্টল করা হচ্ছে"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"ইনস্টলেশন সম্পূর্ণ হওয়ার পরে Linux টার্মিনাল চালু হবে"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"টার্মিনাল নতুন পোর্ট খোলার অনুরোধ করছে"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"পোর্টের অনুরোধ করা হয়েছে: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
+    <skip />
+    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
+    <skip />
     <string name="notif_port_action_accept" msgid="3820564627354207468">"সম্মতি জানান"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"অস্বীকার করুন"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"আবার চেষ্টা করুন"</string>
+    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
+    <skip />
+    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
+    <skip />
+    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
+    <skip />
     <string name="settings_title" msgid="3035373808103055663">"সেটিংস"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ফিরে যান"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"উন্নত"</string>

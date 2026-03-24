@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"પરવાનગી જરૂરી છે"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"યોગ્ય રીતે કાર્ય કરવા માટે Terminalને નીચે મુજબની પરવાનગીઓની જરૂર છે: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"નીચે મુજબની પરવાનગીઓ ખૂટે છે. કૃપા કરીને સેટિંગમાં જઈને પરવાનગીઓ આપો: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"નજીકના ડિવાઇસની પરવાનગી જરૂરી છે"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"યોગ્ય રીતે કાર્ય કરવા માટે Terminalને નજીકના ડિવાઇસની પરવાનગીની જરૂર છે."</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux ટર્મિનલ ઇન્સ્ટૉલ કરો"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux ટર્મિનલ લૉન્ચ કરવા માટે, તમારે નેટવર્ક પર આશરે <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ડેટા ડાઉનલોડ કરવાની જરૂર છે.\nશું તમે આગળ વધવા માગો છો?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"માત્ર વાઇ-ફાઇનો ઉપયોગ કરીને ડાઉનલોડ કરો"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"સિસ્ટમ ઇવેન્ટ"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux ટર્મિનલ ઇન્સ્ટૉલ કરી રહ્યાં છીએ"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"ઇન્સ્ટૉલેશનની પ્રક્રિયા સમાપ્ત થયા પછી Linux ટર્મિનલ શરૂ થશે"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"ટર્મિનલ નવો પોર્ટ ખોલવાની વિનંતી કરી રહ્યું છે"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"પોર્ટની વિનંતી કરવામાં આવી: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"નવો પોર્ટ ખોલવામાં આવ્યો"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"પોર્ટ <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) હવે ખુલ્લો છે. શું ફૉરવર્ડિંગની મંજૂરી આપીએ?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"સ્વીકારો"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"નકારો"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"ફરી પ્રયાસ કરો"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"ટર્મિનલનું સ્ટેટસ"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"સક્રિય રાખો"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"પોર્ટ ફૉરવર્ડિંગ"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"ટર્મિનલ ઇન્સ્ટૉલ થઈ રહ્યું છે"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"ટર્મિનલ શરૂ થઈ રહ્યું છે"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"ટર્મિનલ ચાલી રહ્યું છે"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"ટર્મિનલ બંધ થઈ રહ્યું છે"</string>
     <string name="settings_title" msgid="3035373808103055663">"સેટિંગ"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"પાછળ"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"વિગતવાર"</string>

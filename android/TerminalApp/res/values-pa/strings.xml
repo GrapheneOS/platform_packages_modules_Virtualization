@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"ਟਰਮੀਨਲ ਨੂੰ ਸਹੀ ਢੰਗ ਨਾਲ ਕੰਮ ਕਰਨ ਲਈ ਅੱਗੇ ਦਿੱਤੀਆਂ ਇਜਾਜ਼ਤਾਂ ਦੀ ਲੋੜ ਹੈ: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"ਅੱਗੇ ਦਿੱਤੀਆਂ ਇਜਾਜ਼ਤਾਂ ਮੌਜੂਦ ਨਹੀਂ ਹਨ। ਕਿਰਪਾ ਕਰਕੇ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਜਾ ਕੇ ਉਨ੍ਹਾਂ ਨੂੰ ਇਜਾਜ਼ਤਾਂ ਦਿਓ: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"ਨਜ਼ਦੀਕੀ ਡੀਵਾਈਸਾਂ ਸੰਬੰਧੀ ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"ਟਰਮੀਨਲ ਨੂੰ ਸਹੀ ਢੰਗ ਨਾਲ ਕੰਮ ਕਰਨ ਲਈ ਨਜ਼ਦੀਕੀ ਡੀਵਾਈਸਾਂ ਸੰਬੰਧੀ ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ।"</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux ਟਰਮੀਨਲ ਐਪ ਸਥਾਪਤ ਕਰੋ"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux ਟਰਮੀਨਲ ਐਪ ਨੂੰ ਲਾਂਚ ਕਰਨ ਲਈ, ਤੁਹਾਨੂੰ ਨੈੱਟਵਰਕ \'ਤੇ ਲਗਭਗ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ਡਾਟਾ ਡਾਊਨਲੋਡ ਕਰਨ ਦੀ ਲੋੜ ਹੈ।\nਕੀ ਤੁਸੀਂ ਅੱਗੇ ਵਧਣਾ ਚਾਹੋਗੇ?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"ਸਿਰਫ਼ ਵਾਈ-ਫਾਈ ਦੀ ਵਰਤੋਂ ਨਾਲ ਡਾਊਨਲੋਡ ਕਰੋ"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"ਸਿਸਟਮ ਇਵੈਂਟ"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux ਟਰਮੀਨਲ ਐਪ ਸਥਾਪਤ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"ਸਥਾਪਤ ਕਰਨ ਦੀ ਪ੍ਰਕਿਰਿਆ ਸਮਾਪਤ ਹੋਣ ਤੋਂ ਬਾਅਦ, Linux ਟਰਮੀਨਲ ਸ਼ੁਰੂ ਹੋ ਜਾਵੇਗਾ"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"ਟਰਮੀਨਲ ਇੱਕ ਨਵੇਂ ਪੋਰਟ ਨੂੰ ਖੋਲ੍ਹਣ ਦੀ ਬੇਨਤੀ ਕਰ ਰਿਹਾ ਹੈ"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"ਪੋਰਟ ਸੰਬੰਧੀ ਬੇਨਤੀ ਕੀਤੀ ਗਈ: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"ਨਵਾਂ ਪੋਰਟ ਖੋਲ੍ਹਿਆ ਗਿਆ"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"ਪੋਰਟ <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) ਹੁਣ ਖੁੱਲ੍ਹਾ ਹੈ। ਕੀ ਅੱਗੇ ਭੇਜਣ ਦੀ ਆਗਿਆ ਦੇਣੀ ਹੈ?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"ਸਵੀਕਾਰ ਕਰੋ"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"ਮਨ੍ਹਾ ਕਰੋ"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"ਮੁੜ-ਕੋਸ਼ਿਸ਼ ਕਰੋ"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"ਟਰਮੀਨਲ ਸਥਿਤੀ"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"ਕਿਰਿਆਸ਼ੀਲ ਰੱਖੋ"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"ਪੋਰਟ ਫਾਰਵਰਡਿੰਗ"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"ਟਰਮੀਨਲ ਸਥਾਪਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"ਟਰਮੀਨਲ ਸ਼ੁਰੂ ਹੋ ਰਿਹਾ ਹੈ"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"ਟਰਮੀਨਲ ਚਾਲੂ ਹੈ"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"ਟਰਮੀਨਲ ਬੰਦ ਹੋ ਰਿਹਾ ਹੈ"</string>
     <string name="settings_title" msgid="3035373808103055663">"ਸੈਟਿੰਗਾਂ"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ਪਿੱਛੇ"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"ਅਡਵਾਂਸ"</string>
