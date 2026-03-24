@@ -59,7 +59,6 @@ import android.system.virtualmachine.VirtualMachineConfig;
 import android.system.virtualmachine.VirtualMachineDescriptor;
 import android.system.virtualmachine.VirtualMachineException;
 import android.system.virtualmachine.VirtualMachineManager;
-import android.util.Log;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -100,7 +99,6 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -3860,5 +3858,55 @@ public class MicrodroidTests extends MicrodroidDeviceTestBase {
         assertThat(e).hasMessageThat().contains(expectedContents);
     }
 
+    @Test
+    public void testVirtmgrExitsWhenClientIsGarbageCollected() throws Exception {
+        // 1. Ensure virtmgr is running by accessing the manager.
+        // vmm.getCapabilities() doesn't always trigger VirtualizationService creation.
+        // isFeatureEnabled() does call VirtualizationService.getInstance().
+        VirtualMachineManager vmm = getVirtualMachineManager();
+        vmm.isFeatureEnabled(VirtualMachineManager.FEATURE_NETWORK);
+        String oldPid = getVirtmgrPid();
+        assertWithMessage("virtmgr should be running").that(oldPid).isNotEmpty();
 
+        // 2. Discard all references to VirtualizationService and trigger GC.
+        vmm = null;
+
+        // Trigger GC multiple times to increase the chance of collection.
+        for (int i = 0; i < 5; i++) {
+            Runtime.getRuntime().gc();
+            Runtime.getRuntime().runFinalization();
+            TimeUnit.MILLISECONDS.sleep(200);
+        }
+
+        // 3. Check if the old virtmgr process is gone.
+        boolean processGone = false;
+        for (int i = 0; i < 20; i++) {
+            String currentPid = getVirtmgrPid();
+            if (currentPid.isEmpty() || !currentPid.contains(oldPid)) {
+                processGone = true;
+                break;
+            }
+            TimeUnit.MILLISECONDS.sleep(500);
+        }
+
+        assertWithMessage("virtmgr (pid " + oldPid + ") should have exited after client GC")
+                .that(processGone)
+                .isTrue();
+    }
+
+    private String getVirtmgrPid() throws Exception {
+        UiAutomation uiAutomation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        int myUid = android.os.Process.myUid();
+        // Use pgrep with full command line match (-f) and filtered by UID (-u) to find virtmgr
+        String command = "pgrep -u " + myUid + " -f virtmgr";
+        try (ParcelFileDescriptor pfd = uiAutomation.executeShellCommand(command)) {
+            try (BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(
+                                    new ParcelFileDescriptor.AutoCloseInputStream(pfd)))) {
+                String line = reader.readLine();
+                return line == null ? "" : line.trim();
+            }
+        }
+    }
 }
