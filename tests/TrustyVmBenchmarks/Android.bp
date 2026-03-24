@@ -18,7 +18,7 @@ package {
 }
 
 android_test {
-    name: "TrustyBenchmarks",
+    name: "TrustyVmBenchmarks",
     srcs: ["src/**/*.java"],
     static_libs: [
         "androidx.test.runner",
@@ -29,7 +29,7 @@ android_test {
         "MicrodroidCommonTestLib",
     ],
     jni_libs: [
-        "libtrustybenchmarks_jni",
+        "libtrusty_vm_benchmarks_jni",
         "libbinder_rpc_unstable",
     ],
     test_suites: ["general-tests"],
@@ -39,9 +39,9 @@ android_test {
 }
 
 rust_ffi_shared {
-    name: "libtrustybenchmarks_jni",
-    crate_name: "trustybenchmarks_jni",
-    srcs: ["src/native/trusty_benchmarks_jni.rs"],
+    name: "libtrusty_vm_benchmarks_jni",
+    crate_name: "trusty_vm_benchmarks_jni",
+    srcs: ["src/native/trusty_vm_benchmarks_jni.rs"],
     prefer_rlib: true,
     rustlibs: [
         "libandroid_logger",

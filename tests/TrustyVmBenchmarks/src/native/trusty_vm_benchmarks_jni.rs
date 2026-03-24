@@ -30,7 +30,7 @@ static RUNNING_VM: Lazy<Mutex<Option<vmclient::VmInstance>>> = Lazy::new(|| Mute
 
 /// Initializes the logger. Called once from Java's static block.
 #[no_mangle]
-pub extern "system" fn Java_com_android_trusty_benchmark_TrustyJni_init(
+pub extern "system" fn Java_com_android_trusty_vm_benchmarks_TrustyJni_init(
     _env: JNIEnv,
     _class: JClass,
 ) {
@@ -43,7 +43,7 @@ pub extern "system" fn Java_com_android_trusty_benchmark_TrustyJni_init(
 
 /// Boots up trusty vm
 #[no_mangle]
-pub extern "system" fn Java_com_android_trusty_benchmark_TrustyJni_bootVm(
+pub extern "system" fn Java_com_android_trusty_vm_benchmarks_TrustyJni_bootVm(
     mut env: JNIEnv,
     _class: JClass,
     kernel_path: JString,
@@ -86,7 +86,7 @@ fn try_boot_vm(mut env: JNIEnv, kernel_path: JString, vm_name: String) -> Result
 
 /// Shuts down security_vm
 #[no_mangle]
-pub extern "system" fn Java_com_android_trusty_benchmark_TrustyJni_shutdownVm(
+pub extern "system" fn Java_com_android_trusty_vm_benchmarks_TrustyJni_shutdownVm(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {

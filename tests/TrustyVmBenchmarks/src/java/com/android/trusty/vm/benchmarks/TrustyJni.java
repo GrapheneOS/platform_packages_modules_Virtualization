@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.android.trusty.benchmark;
+package com.android.trusty.vm.benchmarks;
 
 class TrustyJni {
     static {
-        System.loadLibrary("trustybenchmarks_jni");
+        System.loadLibrary("trusty_vm_benchmarks_jni");
         init();
     }
 
